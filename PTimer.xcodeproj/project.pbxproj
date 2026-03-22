@@ -6,12 +6,14 @@
 /* Begin PBXBuildFile section */
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
+		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A00000000000000000000013 /* ExposureCalculatorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +40,7 @@
 			children = (
 				A00000000000000000000011 /* PTimerApp.swift */,
 				A00000000000000000000012 /* ContentView.swift */,
+				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 			);
 			path = PTimer;
 			sourceTree = "<group>";
@@ -126,6 +129,7 @@
 			files = (
 				A00000000000000000000001 /* PTimerApp.swift in Sources */,
 				A00000000000000000000002 /* ContentView.swift in Sources */,
+				A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,18 +1,30 @@
 import SwiftUI
 
 struct ExposureCalculatorScreen: View {
+    @State private var baseShutterInput = "1/30"
+    @State private var ndInput = "ND64"
+
+    private let calculator = ExposureCalculator()
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HeaderView()
-                VariableSectionView()
-                ResultSectionView()
+                VariableSectionView(
+                    baseShutterInput: $baseShutterInput,
+                    ndInput: $ndInput
+                )
+                ResultSectionView(calculationResult: calculationResult)
                 TimerActionView()
                 RunningTimerPanelView()
             }
             .padding(20)
         }
         .background(Color(.systemGroupedBackground))
+    }
+
+    private var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
+        calculator.calculate(baseShutterInput: baseShutterInput, ndInput: ndInput)
     }
 }
 
@@ -51,28 +63,29 @@ struct HeaderView: View {
 }
 
 struct VariableSectionView: View {
+    @Binding var baseShutterInput: String
+    @Binding var ndInput: String
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Variable Controls")
                 .font(.headline)
 
             VStack(spacing: 14) {
-                ExposureFieldPlaceholderRow(
+                ExposureFieldInputRow(
                     title: "Shutter",
-                    value: "1/30s",
-                    detail: "Preset or manual input placeholder",
-                    roleLabel: "Fixed",
-                    roleSystemImage: "lock.fill"
+                    text: $baseShutterInput,
+                    prompt: "1/30 or 2s",
+                    detail: "Base shutter reference input"
                 )
 
                 Divider()
 
-                ExposureFieldPlaceholderRow(
+                ExposureFieldInputRow(
                     title: "ND",
-                    value: "ND64",
-                    detail: "Preset or manual input placeholder",
-                    roleLabel: "Fixed",
-                    roleSystemImage: "lock.fill"
+                    text: $ndInput,
+                    prompt: "ND64 or 64",
+                    detail: "ND filter factor input"
                 )
 
                 Divider()
@@ -102,6 +115,10 @@ struct VariableSectionView: View {
 }
 
 struct ResultSectionView: View {
+    let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
+
+    private let calculator = ExposureCalculator()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Result Set")
@@ -113,21 +130,76 @@ struct ResultSectionView: View {
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
 
-                    Text("Result will appear here")
+                    Text(primaryResultText)
                         .font(.title3.weight(.semibold))
                 }
 
                 Divider()
 
-                ResultPlaceholderRow(label: "Aperture", value: "Placeholder")
-                ResultPlaceholderRow(label: "ISO", value: "Placeholder")
-                ResultPlaceholderRow(label: "ND", value: "Placeholder")
+                ResultPlaceholderRow(label: "Base Shutter", value: baseShutterText)
+                ResultPlaceholderRow(label: "ND", value: ndText)
+                ResultPlaceholderRow(label: "Status", value: statusText)
+
+                if let validationMessage {
+                    Text(validationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .sectionCardStyle()
+    }
+
+    private var primaryResultText: String {
+        switch calculationResult {
+        case .success(let result):
+            return calculator.formatShutter(result.resultShutterSeconds)
+        case .failure:
+            return "Result unavailable"
+        }
+    }
+
+    private var baseShutterText: String {
+        switch calculationResult {
+        case .success(let result):
+            return calculator.formatShutter(result.baseShutterSeconds)
+        case .failure:
+            return "-"
+        }
+    }
+
+    private var ndText: String {
+        switch calculationResult {
+        case .success(let result):
+            if abs(result.ndFactor.rounded() - result.ndFactor) < 0.0001 {
+                return "ND\(Int(result.ndFactor.rounded()))"
+            }
+
+            return "ND\(result.ndFactor)"
+        case .failure:
+            return "-"
+        }
+    }
+
+    private var statusText: String {
+        switch calculationResult {
+        case .success:
+            return "Updated instantly"
+        case .failure:
+            return "Needs valid input"
+        }
+    }
+
+    private var validationMessage: String? {
+        switch calculationResult {
+        case .success:
+            return nil
+        case .failure(let error):
+            return error.errorDescription
+        }
     }
 }
 
@@ -182,12 +254,11 @@ struct RunningTimerPanelView: View {
     }
 }
 
-private struct ExposureFieldPlaceholderRow: View {
+private struct ExposureFieldInputRow: View {
     let title: String
-    let value: String
+    @Binding var text: String
+    let prompt: String
     let detail: String
-    let roleLabel: String
-    let roleSystemImage: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -197,7 +268,7 @@ private struct ExposureFieldPlaceholderRow: View {
 
                 Spacer()
 
-                Label(roleLabel, systemImage: roleSystemImage)
+                Label("Fixed", systemImage: "lock.fill")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
@@ -207,15 +278,16 @@ private struct ExposureFieldPlaceholderRow: View {
             }
 
             HStack(spacing: 12) {
-                Text(value)
+                TextField(prompt, text: $text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.numbersAndPunctuation)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.primary)
 
                 Spacer()
 
                 HStack(spacing: 8) {
-                    Label("Preset", systemImage: "list.bullet")
-                    Image(systemName: "chevron.right")
+                    Label("Input", systemImage: "slider.horizontal.3")
                 }
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(.tertiary)

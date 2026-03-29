@@ -1,57 +1,32 @@
 import SwiftUI
 
 struct ExposureCalculatorScreen: View {
-    @State private var baseShutterInput = "1/30"
-    @State private var ndInput = "ND64"
-    @StateObject private var timerManager = TimerManager()
-
-    private let calculator = ExposureCalculator()
+    @StateObject private var viewModel = ExposureCalculatorViewModel()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HeaderView()
                 VariableSectionView(
-                    baseShutterInput: $baseShutterInput,
-                    ndInput: $ndInput
+                    baseShutterInput: $viewModel.baseShutterInput,
+                    ndInput: $viewModel.ndInput
                 )
-                ResultSectionView(calculationResult: calculationResult)
+                ResultSectionView(calculationResult: viewModel.calculationResult)
                 TimerActionView(
-                    calculationResult: calculationResult,
-                    onStart: startTimer
+                    canStartTimer: viewModel.canStartTimer,
+                    onStart: viewModel.startTimer
                 )
                 RunningTimerPanelView(
-                    timerState: timerManager.state,
-                    formattedDuration: formattedDuration
+                    timers: viewModel.timers,
+                    runningTimerCount: viewModel.runningTimerCount,
+                    formattedDuration: viewModel.formatDuration,
+                    onStopTimer: viewModel.stopTimer,
+                    onClearCompleted: viewModel.clearCompletedTimers
                 )
             }
             .padding(20)
         }
         .background(Color(.systemGroupedBackground))
-    }
-
-    private var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
-        calculator.calculate(baseShutterInput: baseShutterInput, ndInput: ndInput)
-    }
-
-    private func startTimer() {
-        guard case .success(let result) = calculationResult else {
-            return
-        }
-
-        let snapshot = TimerSnapshot(
-            name: "ND\(Int(result.ndFactor.rounded())) - \(calculator.formatShutter(result.resultShutterSeconds))",
-            totalDuration: result.resultShutterSeconds,
-            baseShutterSeconds: result.baseShutterSeconds,
-            ndFactor: result.ndFactor,
-            resultShutterSeconds: result.resultShutterSeconds
-        )
-
-        timerManager.start(snapshot: snapshot)
-    }
-
-    private func formattedDuration(_ seconds: TimeInterval) -> String {
-        calculator.formatShutter(seconds)
     }
 }
 
@@ -231,7 +206,7 @@ struct ResultSectionView: View {
 }
 
 struct TimerActionView: View {
-    let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
+    let canStartTimer: Bool
     let onStart: () -> Void
 
     var body: some View {
@@ -248,20 +223,14 @@ struct TimerActionView: View {
         }
         .sectionCardStyle()
     }
-
-    private var canStartTimer: Bool {
-        switch calculationResult {
-        case .success(let result):
-            return result.resultShutterSeconds > 0
-        case .failure:
-            return false
-        }
-    }
 }
 
 struct RunningTimerPanelView: View {
-    let timerState: TimerState
+    let timers: [RunningTimerItem]
+    let runningTimerCount: Int
     let formattedDuration: (TimeInterval) -> String
+    let onStopTimer: (UUID) -> Void
+    let onClearCompleted: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -273,40 +242,68 @@ struct RunningTimerPanelView: View {
 
                 Button("보기") {
                 }
-                .font(.footnote.weight(.semibold))
-                .disabled(true)
+                    .font(.footnote.weight(.semibold))
+                    .disabled(true)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                if let snapshot = timerState.snapshot {
-                    Text(snapshot.name)
-                        .font(.subheadline.weight(.semibold))
-
-                    ResultPlaceholderRow(
-                        label: "Total",
-                        value: formattedDuration(timerState.duration)
-                    )
-                    ResultPlaceholderRow(
-                        label: "Elapsed",
-                        value: formattedDuration(timerState.elapsedTime)
-                    )
-                    ResultPlaceholderRow(
-                        label: "Remaining",
-                        value: formattedDuration(timerState.remainingTime)
-                    )
-                    ResultPlaceholderRow(
-                        label: "Status",
-                        value: statusText
-                    )
-                    ProgressView(value: progressValue)
-                        .tint(timerState.status == .completed ? .green : .accentColor)
-                } else {
+            if timers.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("No running timers")
                         .font(.subheadline.weight(.semibold))
 
                     Text("Compact running timer summary cards will appear here.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(timers) { timer in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .center, spacing: 12) {
+                                Text(timer.name)
+                                    .font(.subheadline.weight(.semibold))
+
+                                Spacer()
+
+                                if timer.status == .running {
+                                    Button("중지") {
+                                        onStopTimer(timer.id)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .font(.footnote.weight(.medium))
+                                }
+                            }
+
+                            ResultPlaceholderRow(
+                                label: "Total",
+                                value: formattedDuration(timer.duration)
+                            )
+                            ResultPlaceholderRow(
+                                label: "Elapsed",
+                                value: formattedDuration(timer.elapsedTime)
+                            )
+                            ResultPlaceholderRow(
+                                label: "Remaining",
+                                value: formattedDuration(timer.remainingTime)
+                            )
+                            ResultPlaceholderRow(
+                                label: "Status",
+                                value: statusText(for: timer.status)
+                            )
+                            ProgressView(value: progressValue(for: timer))
+                                .tint(timer.status == .completed ? .green : .accentColor)
+                        }
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+
+                    if hasCompletedTimers {
+                        Button("완료 항목 지우기") {
+                            onClearCompleted()
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
             }
         }
@@ -321,26 +318,30 @@ struct RunningTimerPanelView: View {
     }
 
     private var panelTitle: String {
-        timerState.snapshot == nil ? "실행 중 타이머 0개" : "실행 중 타이머 1개"
+        "실행 중 타이머 \(runningTimerCount)개"
     }
 
-    private var statusText: String {
-        switch timerState.status {
-        case .idle:
-            return "Idle"
+    private var hasCompletedTimers: Bool {
+        timers.contains { $0.status == .completed }
+    }
+
+    private func statusText(for status: TimerStatus) -> String {
+        switch status {
         case .running:
             return "Running"
         case .completed:
             return "Completed"
+        case .stopped:
+            return "Stopped"
         }
     }
 
-    private var progressValue: Double {
-        guard timerState.duration > 0 else {
-            return timerState.status == .completed ? 1 : 0
+    private func progressValue(for timer: RunningTimerItem) -> Double {
+        guard timer.duration > 0 else {
+            return timer.status == .completed ? 1 : 0
         }
 
-        return min(max(timerState.elapsedTime / timerState.duration, 0), 1)
+        return min(max(timer.elapsedTime / timer.duration, 0), 1)
     }
 }
 

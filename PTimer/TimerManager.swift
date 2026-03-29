@@ -1,44 +1,94 @@
+import Combine
 import Foundation
 
 enum TimerStatus: String, Equatable {
-    case idle
     case running
     case completed
+    case stopped
 }
 
-struct TimerSnapshot: Equatable {
-    let name: String
-    let totalDuration: TimeInterval
-    let baseShutterSeconds: Double
-    let ndFactor: Double
-    let resultShutterSeconds: Double
-}
-
-struct TimerState: Equatable {
+struct TimerState: Identifiable, Equatable {
+    let id: UUID
     let duration: TimeInterval
-    let remainingTime: TimeInterval
-    let elapsedTime: TimeInterval
+    let startDate: Date
+    let endDate: Date?
+    let pausedRemainingTime: TimeInterval?
     let status: TimerStatus
-    let snapshot: TimerSnapshot?
 
-    static let idle = TimerState(
-        duration: 0,
-        remainingTime: 0,
-        elapsedTime: 0,
-        status: .idle,
-        snapshot: nil
-    )
+    var remainingTime: TimeInterval {
+        switch status {
+        case .running:
+            guard let endDate else {
+                return 0
+            }
+            return max(0, endDate.timeIntervalSinceNow)
+        case .stopped:
+            return max(0, pausedRemainingTime ?? 0)
+        case .completed:
+            return 0
+        }
+    }
+
+    func remainingTime(at now: Date) -> TimeInterval {
+        switch status {
+        case .running:
+            guard let endDate else {
+                return 0
+            }
+            return max(0, endDate.timeIntervalSince(now))
+        case .stopped:
+            return max(0, pausedRemainingTime ?? 0)
+        case .completed:
+            return 0
+        }
+    }
+
+    func status(at now: Date) -> TimerStatus {
+        if status == .running,
+           let endDate,
+           now >= endDate {
+            return .completed
+        }
+
+        return status
+    }
+
+    func stopping(at now: Date) -> TimerState {
+        let remaining = remainingTime(at: now)
+
+        return TimerState(
+            id: id,
+            duration: duration,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: remaining,
+            status: .stopped
+        )
+    }
+
+    func completed() -> TimerState {
+        TimerState(
+            id: id,
+            duration: duration,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            status: .completed
+        )
+    }
 }
 
 @MainActor
 final class TimerManager: ObservableObject {
-    @Published private(set) var state: TimerState = .idle
+    @Published private(set) var timers: [TimerState] = []
+
+    var currentDate: Date {
+        dateProvider()
+    }
 
     private let tickInterval: TimeInterval
     private let dateProvider: () -> Date
     private var timer: Timer?
-    private var endDate: Date?
-
     init(
         tickInterval: TimeInterval = 0.1,
         dateProvider: @escaping () -> Date = Date.init
@@ -47,31 +97,74 @@ final class TimerManager: ObservableObject {
         self.dateProvider = dateProvider
     }
 
-    func start(snapshot: TimerSnapshot) {
-        stopTimer()
-
-        guard snapshot.totalDuration > 0 else {
-            state = TimerState(
-                duration: 0,
-                remainingTime: 0,
-                elapsedTime: 0,
-                status: .completed,
-                snapshot: snapshot
-            )
-            return
+    @discardableResult
+    func start(duration: TimeInterval) -> UUID? {
+        guard duration > 0 else {
+            return nil
         }
 
         let now = dateProvider()
-        let endDate = now.addingTimeInterval(snapshot.totalDuration)
-        self.endDate = endDate
-
-        state = TimerState(
-            duration: snapshot.totalDuration,
-            remainingTime: snapshot.totalDuration,
-            elapsedTime: 0,
-            status: .running,
-            snapshot: snapshot
+        let id = UUID()
+        let endDate = now.addingTimeInterval(duration)
+        timers.append(
+            TimerState(
+                id: id,
+                duration: duration,
+                startDate: now,
+                endDate: endDate,
+                pausedRemainingTime: nil,
+                status: .running
+            )
         )
+        ensureTimerLoop()
+        return id
+    }
+
+    func stop(id: UUID) {
+        guard let index = timers.firstIndex(where: { $0.id == id }) else {
+            stopLoopIfNeeded()
+            return
+        }
+
+        let currentDate = dateProvider()
+        timers[index] = timers[index].stopping(at: currentDate)
+        stopLoopIfNeeded(now: currentDate)
+    }
+
+    func tick(now: Date? = nil) {
+        guard !timers.isEmpty else {
+            stopLoop()
+            return
+        }
+
+        let currentDate = now ?? dateProvider()
+        timers = timers.map { timerState in
+            guard timerState.status == .running,
+                  let endDate = timerState.endDate,
+                  currentDate >= endDate else {
+                return timerState
+            }
+
+            return timerState.completed()
+        }
+        stopLoopIfNeeded(now: currentDate)
+    }
+
+    func removeCompletedTimers() {
+        let currentDate = dateProvider()
+        timers.removeAll { $0.status(at: currentDate) == .completed }
+
+        stopLoopIfNeeded(now: currentDate)
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+
+    private func ensureTimerLoop() {
+        guard timer == nil else {
+            return
+        }
 
         let timer = Timer(timeInterval: tickInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -83,47 +176,16 @@ final class TimerManager: ObservableObject {
         RunLoop.main.add(timer, forMode: .common)
     }
 
-    func stop() {
-        stopTimer()
-        state = .idle
-    }
-
-    func tick(now: Date? = nil) {
-        guard state.status == .running, let endDate else {
-            return
-        }
-
+    private func stopLoopIfNeeded(now: Date? = nil) {
         let currentDate = now ?? dateProvider()
-        let remaining = max(0, endDate.timeIntervalSince(currentDate))
 
-        if remaining <= 0 {
-            stopTimer()
-            state = TimerState(
-                duration: state.duration,
-                remainingTime: 0,
-                elapsedTime: state.duration,
-                status: .completed,
-                snapshot: state.snapshot
-            )
-            return
+        if !timers.contains(where: { $0.status(at: currentDate) == .running }) {
+            stopLoop()
         }
-
-        state = TimerState(
-            duration: state.duration,
-            remainingTime: remaining,
-            elapsedTime: state.duration - remaining,
-            status: .running,
-            snapshot: state.snapshot
-        )
     }
 
-    deinit {
-        timer?.invalidate()
-    }
-
-    private func stopTimer() {
+    private func stopLoop() {
         timer?.invalidate()
         timer = nil
-        endDate = nil
     }
 }

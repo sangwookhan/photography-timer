@@ -11,7 +11,20 @@
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
 		A00000000000000000000004 /* ExposureCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000014 /* ExposureCalculator.swift */; };
+		A00000000000000000000005 /* TimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* TimerManager.swift */; };
+		A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* ExposureCalculatorTests.swift */; };
+		A00000000000000000000007 /* TimerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TimerManagerTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A00000000000000000000080 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000060 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000040;
+			remoteInfo = PTimer;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -19,10 +32,21 @@
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A00000000000000000000013 /* ExposureCalculatorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorScreen.swift; sourceTree = "<group>"; };
 		A00000000000000000000014 /* ExposureCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculator.swift; sourceTree = "<group>"; };
+		A00000000000000000000015 /* TimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManager.swift; sourceTree = "<group>"; };
+		A00000000000000000000016 /* ExposureCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000017 /* TimerManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A00000000000000000000020 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000023 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -36,6 +60,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000031 /* PTimer */,
+				A00000000000000000000033 /* PTimerTests */,
 				A00000000000000000000032 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -47,6 +72,7 @@
 				A00000000000000000000012 /* ContentView.swift */,
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 				A00000000000000000000014 /* ExposureCalculator.swift */,
+				A00000000000000000000015 /* TimerManager.swift */,
 			);
 			path = PTimer;
 			sourceTree = "<group>";
@@ -55,8 +81,18 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000010 /* PTimer.app */,
+				A00000000000000000000018 /* PTimerTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000033 /* PTimerTests */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000016 /* ExposureCalculatorTests.swift */,
+				A00000000000000000000017 /* TimerManagerTests.swift */,
+			);
+			path = PTimerTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -84,6 +120,26 @@
 			productReference = A00000000000000000000010 /* PTimer.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A00000000000000000000041 /* PTimerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000051 /* Build configuration list for PBXNativeTarget "PTimerTests" */;
+			buildPhases = (
+				A00000000000000000000024 /* Sources */,
+				A00000000000000000000023 /* Frameworks */,
+				A00000000000000000000025 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A00000000000000000000081 /* PBXTargetDependency */,
+			);
+			name = PTimerTests;
+			packageProductDependencies = (
+			);
+			productName = PTimerTests;
+			productReference = A00000000000000000000018 /* PTimerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -96,6 +152,10 @@
 				TargetAttributes = {
 					A00000000000000000000040 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					A00000000000000000000041 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = A00000000000000000000040;
 					};
 				};
 			};
@@ -114,12 +174,20 @@
 			projectRoot = "";
 			targets = (
 				A00000000000000000000040 /* PTimer */,
+				A00000000000000000000041 /* PTimerTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A00000000000000000000022 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000025 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -137,10 +205,28 @@
 				A00000000000000000000002 /* ContentView.swift in Sources */,
 				A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */,
 				A00000000000000000000004 /* ExposureCalculator.swift in Sources */,
+				A00000000000000000000005 /* TimerManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000024 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */,
+				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000081 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A00000000000000000000040 /* PTimer */;
+			targetProxy = A00000000000000000000080 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A00000000000000000000070 /* Debug */ = {
@@ -197,6 +283,48 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		A00000000000000000000074 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZGHBLMT3UR;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PTimer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PTimer";
+			};
+			name = Debug;
+		};
+		A00000000000000000000075 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZGHBLMT3UR;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PTimer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PTimer";
 			};
 			name = Release;
 		};
@@ -313,6 +441,15 @@
 			buildConfigurations = (
 				A00000000000000000000070 /* Debug */,
 				A00000000000000000000071 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000051 /* Build configuration list for PBXNativeTarget "PTimerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000074 /* Debug */,
+				A00000000000000000000075 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

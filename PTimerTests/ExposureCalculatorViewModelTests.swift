@@ -3,6 +3,25 @@ import XCTest
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
     @MainActor
+    func testCanStartTimerDependsOnValidCalculationInputs() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutterInput = ""
+        viewModel.ndInput = "ND64"
+        XCTAssertFalse(viewModel.canStartTimer)
+
+        viewModel.baseShutterInput = "1/30"
+        viewModel.ndInput = "ND64"
+        XCTAssertTrue(viewModel.canStartTimer)
+    }
+
+    @MainActor
     func testFormatTimerClockUsesLeadingZeroMinutesAndSeconds() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
@@ -55,6 +74,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.timers[0].name, "ND64 - 2.1s")
         XCTAssertEqual(viewModel.timers[0].status, TimerStatus.running)
         XCTAssertEqual(viewModel.timers[0].remainingTime, 2.1333333333, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · ND64")
     }
 
     @MainActor
@@ -177,5 +197,33 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let remainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
         XCTAssertEqual(remainingTime, 0, accuracy: 0.0001)
         XCTAssertEqual(viewModel.formatTimerClock(remainingTime), "00:00")
+    }
+
+    @MainActor
+    func testExistingTimerMetadataDoesNotChangeAfterInputUpdates() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.baseShutterInput = "1/30"
+        viewModel.ndInput = "ND64"
+        viewModel.startTimer()
+
+        let initialTimer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(initialTimer.name, "ND64 - 2.1s")
+        XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · ND64")
+
+        viewModel.baseShutterInput = "1"
+        viewModel.ndInput = "ND8"
+
+        let timerAfterInputChange = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timerAfterInputChange.name, "ND64 - 2.1s")
+        XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · ND64")
     }
 }

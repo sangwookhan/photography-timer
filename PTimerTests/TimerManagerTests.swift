@@ -46,6 +46,35 @@ final class TimerManagerTests: XCTestCase {
     }
 
     @MainActor
+    func testRemainingTimeCalculationTracksEndDateAndClampsAtZero() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+
+        XCTAssertEqual(timer.remainingTime(at: startDate), 10, accuracy: 0.0001)
+        XCTAssertEqual(
+            timer.remainingTime(at: startDate.addingTimeInterval(5)),
+            5,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            timer.remainingTime(at: startDate.addingTimeInterval(10)),
+            0,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            timer.remainingTime(at: startDate.addingTimeInterval(14)),
+            0,
+            accuracy: 0.0001
+        )
+    }
+
+    @MainActor
     func testTickCompletesExpiredTimerWithoutAffectingOthers() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         let manager = TimerManager(
@@ -121,6 +150,25 @@ final class TimerManagerTests: XCTestCase {
         let timerAfterTick = tryUnwrapTimer(withID: id, from: manager.timers)
         XCTAssertEqual(timerAfterTick.status(at: muchLaterDate), TimerStatus.stopped)
         XCTAssertEqual(timerAfterTick.remainingTime(at: muchLaterDate), 7, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testStopAtSixSecondsPreservesApproximatelyFourSecondsRemaining() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(6)
+        manager.stop(id: id)
+
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(timer.status(at: currentDate), TimerStatus.stopped)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 4, accuracy: 0.0001)
     }
 
     @MainActor

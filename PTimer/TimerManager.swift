@@ -157,6 +157,11 @@ final class TimerManager: ObservableObject {
         stopLoopIfNeeded(now: currentDate)
     }
 
+    func remove(id: UUID) {
+        timers.removeAll { $0.id == id }
+        stopLoopIfNeeded()
+    }
+
     deinit {
         timer?.invalidate()
     }

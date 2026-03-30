@@ -3,6 +3,38 @@ import XCTest
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
     @MainActor
+    func testFormatTimerClockUsesLeadingZeroMinutesAndSeconds() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertEqual(viewModel.formatTimerClock(0), "00:00")
+        XCTAssertEqual(viewModel.formatTimerClock(5), "00:05")
+        XCTAssertEqual(viewModel.formatTimerClock(59), "00:59")
+        XCTAssertEqual(viewModel.formatTimerClock(60), "01:00")
+        XCTAssertEqual(viewModel.formatTimerClock(65), "01:05")
+        XCTAssertEqual(viewModel.formatTimerClock(3599), "59:59")
+    }
+
+    @MainActor
+    func testFormatTimerClockClampsSubsecondAndNegativeValuesToZero() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertEqual(viewModel.formatTimerClock(0.9), "00:00")
+        XCTAssertEqual(viewModel.formatTimerClock(-3), "00:00")
+    }
+
+    @MainActor
     func testStartTimerCreatesDisplayItemThroughManager() {
         let timerManager = TimerManager(
             tickInterval: 60,
@@ -144,5 +176,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.completed)
         let remainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
         XCTAssertEqual(remainingTime, 0, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.formatTimerClock(remainingTime), "00:00")
     }
 }

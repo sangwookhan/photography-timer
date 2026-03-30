@@ -20,8 +20,9 @@ struct ExposureCalculatorScreen: View {
                     timers: viewModel.timers,
                     runningTimerCount: viewModel.runningTimerCount,
                     formattedDuration: viewModel.formatDuration,
+                    formattedClock: viewModel.formatTimerClock,
                     onStopTimer: viewModel.stopTimer,
-                    onClearCompleted: viewModel.clearCompletedTimers
+                    onRemoveTimer: viewModel.removeTimer
                 )
             }
             .padding(20)
@@ -229,8 +230,9 @@ struct RunningTimerPanelView: View {
     let timers: [RunningTimerItem]
     let runningTimerCount: Int
     let formattedDuration: (TimeInterval) -> String
+    let formattedClock: (TimeInterval) -> String
     let onStopTimer: (UUID) -> Void
-    let onClearCompleted: () -> Void
+    let onRemoveTimer: (UUID) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -247,62 +249,27 @@ struct RunningTimerPanelView: View {
             }
 
             if timers.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("No running timers")
-                        .font(.subheadline.weight(.semibold))
+                VStack(spacing: 8) {
+                    Image(systemName: "timer")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
 
-                    Text("Compact running timer summary cards will appear here.")
-                        .font(.footnote)
+                    Text("No active timers")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(timers) { timer in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .center, spacing: 12) {
-                                Text(timer.name)
-                                    .font(.subheadline.weight(.semibold))
-
-                                Spacer()
-
-                                if timer.status == .running {
-                                    Button("중지") {
-                                        onStopTimer(timer.id)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .font(.footnote.weight(.medium))
-                                }
-                            }
-
-                            ResultPlaceholderRow(
-                                label: "Total",
-                                value: formattedDuration(timer.duration)
-                            )
-                            ResultPlaceholderRow(
-                                label: "Elapsed",
-                                value: formattedDuration(timer.elapsedTime)
-                            )
-                            ResultPlaceholderRow(
-                                label: "Remaining",
-                                value: formattedDuration(timer.remainingTime)
-                            )
-                            ResultPlaceholderRow(
-                                label: "Status",
-                                value: statusText(for: timer.status)
-                            )
-                            ProgressView(value: progressValue(for: timer))
-                                .tint(timer.status == .completed ? .green : .accentColor)
-                        }
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-
-                    if hasCompletedTimers {
-                        Button("완료 항목 지우기") {
-                            onClearCompleted()
-                        }
-                        .buttonStyle(.bordered)
+                        TimerSummaryCard(
+                            timer: timer,
+                            formattedDuration: formattedDuration,
+                            formattedClock: formattedClock,
+                            onStop: { onStopTimer(timer.id) },
+                            onRemove: { onRemoveTimer(timer.id) }
+                        )
                     }
                 }
             }
@@ -320,28 +287,201 @@ struct RunningTimerPanelView: View {
     private var panelTitle: String {
         "실행 중 타이머 \(runningTimerCount)개"
     }
+}
 
-    private var hasCompletedTimers: Bool {
-        timers.contains { $0.status == .completed }
+private struct TimerSummaryCard: View {
+    let timer: RunningTimerItem
+    let formattedDuration: (TimeInterval) -> String
+    let formattedClock: (TimeInterval) -> String
+    let onStop: () -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("Timer \(timer.order)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    statusBadge
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(formattedClock(timer.remainingTime))
+                        .font(.system(size: 38, weight: .bold, design: .rounded))
+                        .foregroundStyle(primaryTimeColor)
+                        .monospacedDigit()
+                        .lineLimit(1)
+
+                    Text("/ \(formattedDuration(timer.duration))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(timer.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(timer.status == .completed ? .secondary : .primary)
+                    .lineLimit(1)
+
+                Text(timer.basisSummary)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                HStack(spacing: 16) {
+                    timerMetric(label: "Elapsed", value: formattedClock(timer.elapsedTime))
+                    timerMetric(label: "Duration", value: formattedClock(timer.duration))
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .trailing, spacing: 10) {
+                if timer.status == .running {
+                    iconActionButton(
+                        systemName: "pause.circle",
+                        tint: .orange,
+                        accessibilityLabel: "Stop timer",
+                        action: onStop
+                    )
+                }
+
+                if timer.status != .running {
+                    iconActionButton(
+                        systemName: "trash",
+                        tint: .secondary,
+                        accessibilityLabel: "Remove timer",
+                        action: onRemove
+                    )
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(16)
+        .background(cardBackgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(borderColor, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 
-    private func statusText(for status: TimerStatus) -> String {
-        switch status {
+    private var statusBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: statusSymbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(statusColor)
+
+            Text(statusText)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(statusColor)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(statusColor.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private func timerMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.footnote.weight(.semibold))
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func iconActionButton(
+        systemName: String,
+        tint: Color,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.title3)
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(tint)
+        .background(
+            Circle()
+                .fill(tint.opacity(0.12))
+        )
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var statusText: String {
+        switch timer.status {
         case .running:
             return "Running"
-        case .completed:
-            return "Completed"
         case .stopped:
             return "Stopped"
+        case .completed:
+            return "Completed"
         }
     }
 
-    private func progressValue(for timer: RunningTimerItem) -> Double {
-        guard timer.duration > 0 else {
-            return timer.status == .completed ? 1 : 0
+    private var statusSymbol: String {
+        switch timer.status {
+        case .running:
+            return "circle.fill"
+        case .stopped:
+            return "square.fill"
+        case .completed:
+            return "checkmark"
         }
+    }
 
-        return min(max(timer.elapsedTime / timer.duration, 0), 1)
+    private var statusColor: Color {
+        switch timer.status {
+        case .running:
+            return .green
+        case .stopped:
+            return .orange
+        case .completed:
+            return .gray
+        }
+    }
+
+    private var primaryTimeColor: Color {
+        switch timer.status {
+        case .running:
+            return .primary
+        case .stopped:
+            return .orange
+        case .completed:
+            return .secondary
+        }
+    }
+
+    private var cardBackgroundColor: Color {
+        switch timer.status {
+        case .running:
+            return Color(.secondarySystemBackground)
+        case .stopped:
+            return Color(.systemGray6)
+        case .completed:
+            return Color(.tertiarySystemBackground)
+        }
+    }
+
+    private var borderColor: Color {
+        switch timer.status {
+        case .running:
+            return .green.opacity(0.18)
+        case .stopped:
+            return .orange.opacity(0.18)
+        case .completed:
+            return .gray.opacity(0.18)
+        }
     }
 }
 

@@ -3,7 +3,9 @@ import Foundation
 
 struct RunningTimerItem: Identifiable, Equatable {
     let id: UUID
+    let order: Int
     let name: String
+    let basisSummary: String
     let duration: TimeInterval
     let endDate: Date?
     let pausedRemainingTime: TimeInterval?
@@ -38,6 +40,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private let calculator: ExposureCalculator
     private let timerManager: TimerManager
     private var timerMetadata: [UUID: TimerMetadata] = [:]
+    private var nextTimerOrder = 1
     private var cancellables: Set<AnyCancellable> = []
 
     init() {
@@ -101,6 +104,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         syncTimers(with: timerManager.timers)
     }
 
+    func removeTimer(id: UUID) {
+        timerManager.remove(id: id)
+        timerMetadata.removeValue(forKey: id)
+        syncTimers(with: timerManager.timers)
+    }
+
     private func startTimer(
         from resultShutter: TimeInterval,
         result: ExposureCalculationResult?
@@ -116,8 +125,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
             timerName = defaultName(for: resultShutter)
         }
 
+        let order = nextTimerOrder
+        nextTimerOrder += 1
         timerMetadata[id] = TimerMetadata(
-            name: timerName
+            order: order,
+            name: timerName,
+            basisSummary: makeBasisSummary(for: result)
         )
         syncTimers(with: timerManager.timers)
     }
@@ -129,6 +142,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func formatDuration(_ seconds: TimeInterval) -> String {
         calculator.formatShutter(seconds)
+    }
+
+    func formatTimerClock(_ seconds: TimeInterval) -> String {
+        let safeSeconds = max(0, Int(seconds.rounded(.down)))
+        let minutes = safeSeconds / 60
+        let remainingSeconds = safeSeconds % 60
+
+        return String(format: "%02d:%02d", minutes, remainingSeconds)
     }
 
     var runningTimerCount: Int {
@@ -157,7 +178,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .map { state in
                 RunningTimerItem(
                     id: state.id,
+                    order: timerMetadata[state.id]?.order ?? 0,
                     name: timerMetadata[state.id]?.name ?? defaultName(for: state.duration),
+                    basisSummary: timerMetadata[state.id]?.basisSummary ?? "Manual timer",
                     duration: state.duration,
                     endDate: state.endDate,
                     pausedRemainingTime: state.pausedRemainingTime,
@@ -194,6 +217,24 @@ final class ExposureCalculatorViewModel: ObservableObject {
         "Timer - \(calculator.formatShutter(duration))"
     }
 
+    private func makeBasisSummary(for result: ExposureCalculationResult?) -> String {
+        guard let result else {
+            return "Manual timer"
+        }
+
+        return "Base \(calculator.formatShutter(result.baseShutterSeconds)) · \(ndLabel(for: result.ndFactor))"
+    }
+
+    private func ndLabel(for factor: Double) -> String {
+        let roundedFactor = factor.rounded()
+
+        if abs(roundedFactor - factor) < 0.0001 {
+            return "ND\(Int(roundedFactor))"
+        }
+
+        return "ND\(factor)"
+    }
+
     private func calculationPayload(for resultShutter: TimeInterval) -> ExposureCalculationResult? {
         guard case .success(let result) = calculationResult else {
             return nil
@@ -208,5 +249,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 }
 
 private struct TimerMetadata {
+    let order: Int
     let name: String
+    let basisSummary: String
 }

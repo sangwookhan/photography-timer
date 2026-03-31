@@ -16,6 +16,7 @@
 		A00000000000000000000007 /* TimerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TimerManagerTests.swift */; };
 		A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ExposureCalculatorViewModel.swift */; };
 		A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */; };
+		A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +41,7 @@
 		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000019 /* ExposureCalculatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculationAccuracyTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -99,6 +101,7 @@
 				A00000000000000000000016 /* ExposureCalculatorTests.swift */,
 				A00000000000000000000017 /* TimerManagerTests.swift */,
 				A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */,
+				A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */,
 			);
 			path = PTimerTests;
 			sourceTree = "<group>";
@@ -225,6 +228,7 @@
 				A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */,
 				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 				A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */,
+				A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

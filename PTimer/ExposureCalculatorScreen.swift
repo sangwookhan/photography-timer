@@ -90,15 +90,15 @@ struct VariableSectionView: View {
                 .font(.headline)
 
             VStack(spacing: 14) {
-                ShutterSelectionRow(
-                    baseShutter: $baseShutter,
-                    shutterSpeeds: shutterSpeeds,
-                    formatShutter: formatShutter
-                )
+                HStack(alignment: .top, spacing: 12) {
+                    ShutterSelectionRow(
+                        baseShutter: $baseShutter,
+                        shutterSpeeds: shutterSpeeds,
+                        formatShutter: formatShutter
+                    )
 
-                Divider()
-
-                NDStopSelectionRow(ndStop: $ndStop)
+                    NDStopSelectionRow(ndStop: $ndStop)
+                }
 
                 Divider()
 
@@ -244,6 +244,7 @@ private struct NDStopSelectionRow: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
@@ -281,6 +282,7 @@ private struct ShutterSelectionRow: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 

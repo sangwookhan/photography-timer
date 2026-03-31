@@ -12,11 +12,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             )
         )
 
-        viewModel.baseShutterInput = ""
-        viewModel.ndStop = 6
-        XCTAssertFalse(viewModel.canStartTimer)
-
-        viewModel.baseShutterInput = "1/30"
+        viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
         XCTAssertTrue(viewModel.canStartTimer)
     }
@@ -64,7 +60,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             timerManager: timerManager
         )
 
-        viewModel.baseShutterInput = "1/30"
+        viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
         viewModel.startTimer()
 
@@ -107,7 +103,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             timerManager: timerManager
         )
 
-        viewModel.baseShutterInput = "1"
+        viewModel.baseShutter = 1
         viewModel.ndStop = 0
         viewModel.startTimer()
 
@@ -211,7 +207,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             timerManager: timerManager
         )
 
-        viewModel.baseShutterInput = "1/30"
+        viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
         viewModel.startTimer()
 
@@ -219,7 +215,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(initialTimer.name, "6 stop - 2s")
         XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · 6 stop")
 
-        viewModel.baseShutterInput = "1"
+        viewModel.baseShutter = 1
         viewModel.ndStop = 3
 
         let timerAfterInputChange = try XCTUnwrap(viewModel.timers.first)
@@ -237,7 +233,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             )
         )
 
-        viewModel.baseShutterInput = "1/30"
+        viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
 
         guard case .success(let nd64Result) = viewModel.calculationResult else {

@@ -16,8 +16,10 @@ struct ExposureCalculatorScreen: View {
             VStack(alignment: .leading, spacing: 20) {
                 HeaderView()
                 VariableSectionView(
-                    baseShutterInput: $viewModel.baseShutterInput,
-                    ndStop: $viewModel.ndStop
+                    baseShutter: $viewModel.baseShutter,
+                    ndStop: $viewModel.ndStop,
+                    shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
+                    formatShutter: viewModel.formatShutter
                 )
                 ResultSectionView(
                     calculationResult: viewModel.calculationResult,
@@ -77,8 +79,10 @@ struct HeaderView: View {
 }
 
 struct VariableSectionView: View {
-    @Binding var baseShutterInput: String
+    @Binding var baseShutter: Double
     @Binding var ndStop: Int
+    let shutterSpeeds: [Double]
+    let formatShutter: (TimeInterval) -> String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -86,11 +90,10 @@ struct VariableSectionView: View {
                 .font(.headline)
 
             VStack(spacing: 14) {
-                ExposureFieldInputRow(
-                    title: "Shutter",
-                    text: $baseShutterInput,
-                    prompt: "1/30 or 2s",
-                    detail: "Base shutter reference input"
+                ShutterSelectionRow(
+                    baseShutter: $baseShutter,
+                    shutterSpeeds: shutterSpeeds,
+                    formatShutter: formatShutter
                 )
 
                 Divider()
@@ -238,6 +241,43 @@ private struct NDStopSelectionRow: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Text("Stop-based ND selection")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct ShutterSelectionRow: View {
+    @Binding var baseShutter: Double
+    let shutterSpeeds: [Double]
+    let formatShutter: (TimeInterval) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                Text("Shutter")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer()
+
+                Text(formatShutter(baseShutter))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Picker("Shutter", selection: $baseShutter) {
+                ForEach(shutterSpeeds, id: \.self) { speed in
+                    Text(formatShutter(speed)).tag(speed)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .frame(height: 140)
+            .clipped()
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            Text("Full-stop shutter selection")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -519,55 +559,6 @@ private struct TimerSummaryCard: View {
             return .orange.opacity(0.18)
         case .completed:
             return .gray.opacity(0.18)
-        }
-    }
-}
-
-private struct ExposureFieldInputRow: View {
-    let title: String
-    @Binding var text: String
-    let prompt: String
-    let detail: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 12) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-
-                Spacer()
-
-                Label("Fixed", systemImage: "lock.fill")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.tertiarySystemBackground))
-                    .clipShape(Capsule())
-            }
-
-            HStack(spacing: 12) {
-                TextField(prompt, text: $text)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.numbersAndPunctuation)
-                    .font(.body.weight(.medium))
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Label("Input", systemImage: "slider.horizontal.3")
-                }
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(.tertiary)
-            }
-            .padding()
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            Text(detail)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
     }
 }

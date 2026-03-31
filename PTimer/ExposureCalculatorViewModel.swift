@@ -33,9 +33,16 @@ struct RunningTimerItem: Identifiable, Equatable {
 
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
-    @Published var baseShutterInput = "1/30"
+    @Published var baseShutter = 1.0 / 30.0
     @Published var ndStop = 0
     @Published private(set) var timers: [RunningTimerItem] = []
+
+    static let shutterSpeeds: [Double] = [
+        1.0 / 8000, 1.0 / 4000, 1.0 / 2000, 1.0 / 1000,
+        1.0 / 500, 1.0 / 250, 1.0 / 125, 1.0 / 60,
+        1.0 / 30, 1.0 / 15, 1.0 / 8, 1.0 / 4,
+        1.0 / 2, 1, 2, 4, 8, 15, 30
+    ]
 
     private let calculator: ExposureCalculator
     private let timerManager: TimerManager
@@ -70,7 +77,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
         do {
-            let baseShutter = try calculator.parseBaseShutter(baseShutterInput)
             let ndFactor = ndFactor(for: ndStop)
             let resultShutter = try calculator.calculate(
                 baseShutterSeconds: baseShutter,
@@ -157,6 +163,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func formatDuration(_ seconds: TimeInterval) -> String {
+        calculator.formatShutter(seconds)
+    }
+
+    func formatShutter(_ seconds: TimeInterval) -> String {
         calculator.formatShutter(seconds)
     }
 

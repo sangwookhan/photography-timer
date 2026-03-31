@@ -36,6 +36,36 @@ enum ExposureCalculatorError: LocalizedError, Equatable {
 }
 
 struct ExposureCalculator {
+    private let ndStopMappings: [Double: Double] = [
+        1: 0,
+        2: 1,
+        4: 2,
+        8: 3,
+        16: 4,
+        32: 5,
+        64: 6,
+        128: 7,
+        200: 8,
+        256: 8,
+        400: 9,
+        512: 9,
+        1000: 10
+    ]
+
+    private let subsecondShutterStops: [(seconds: Double, stopOffset: Double)] = [
+        (1.0 / 2.0, -1),
+        (1.0 / 4.0, -2),
+        (1.0 / 8.0, -3),
+        (1.0 / 15.0, -4),
+        (1.0 / 30.0, -5),
+        (1.0 / 60.0, -6),
+        (1.0 / 125.0, -7),
+        (1.0 / 250.0, -8),
+        (1.0 / 500.0, -9),
+        (1.0 / 1000.0, -10),
+        (1.0 / 2000.0, -11)
+    ]
+
     func calculate(baseShutterInput: String, ndInput: String) -> Result<ExposureCalculationResult, ExposureCalculatorError> {
         do {
             let baseShutter = try parseBaseShutter(baseShutterInput)
@@ -114,12 +144,63 @@ struct ExposureCalculator {
             throw ExposureCalculatorError.nonPositiveND
         }
 
-        let result = baseShutterSeconds * ndFactor
+        let shutterStop = try shutterStopOffset(for: baseShutterSeconds)
+        let ndStop = try ndStops(for: ndFactor)
+        let result = pow(2, shutterStop + ndStop)
         guard result.isFinite else {
             throw ExposureCalculatorError.overflow
         }
 
         return result
+    }
+
+    func ndStops(for ndFactor: Double) throws -> Double {
+        guard ndFactor.isFinite else {
+            throw ExposureCalculatorError.invalidND
+        }
+
+        guard ndFactor > 0 else {
+            throw ExposureCalculatorError.nonPositiveND
+        }
+
+        let roundedFactor = ndFactor.rounded()
+        if abs(roundedFactor - ndFactor) < 0.0001,
+           let mappedStop = ndStopMappings[roundedFactor] {
+            return mappedStop
+        }
+
+        let computedStop = log2(ndFactor)
+        guard computedStop.isFinite else {
+            throw ExposureCalculatorError.overflow
+        }
+
+        return computedStop
+    }
+
+    func shutterStopOffset(for seconds: Double) throws -> Double {
+        guard seconds.isFinite else {
+            throw ExposureCalculatorError.invalidBaseShutter
+        }
+
+        guard seconds > 0 else {
+            throw ExposureCalculatorError.nonPositiveBaseShutter
+        }
+
+        if seconds >= 1 {
+            let computedStop = log2(seconds)
+            guard computedStop.isFinite else {
+                throw ExposureCalculatorError.overflow
+            }
+            return computedStop
+        }
+
+        guard let nearest = subsecondShutterStops.min(by: { lhs, rhs in
+            abs(lhs.seconds - seconds) < abs(rhs.seconds - seconds)
+        }) else {
+            throw ExposureCalculatorError.invalidBaseShutter
+        }
+
+        return nearest.stopOffset
     }
 
     func formatShutter(_ seconds: Double) -> String {

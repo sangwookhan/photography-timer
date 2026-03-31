@@ -71,9 +71,9 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(timerManager.timers.count, 1)
         XCTAssertEqual(viewModel.timers.count, 1)
         XCTAssertEqual(viewModel.runningTimerCount, 1)
-        XCTAssertEqual(viewModel.timers[0].name, "ND64 - 2.1s")
+        XCTAssertEqual(viewModel.timers[0].name, "ND64 - 2s")
         XCTAssertEqual(viewModel.timers[0].status, TimerStatus.running)
-        XCTAssertEqual(viewModel.timers[0].remainingTime, 2.1333333333, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.timers[0].remainingTime, 2, accuracy: 0.0001)
         XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · ND64")
     }
 
@@ -216,14 +216,14 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.startTimer()
 
         let initialTimer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(initialTimer.name, "ND64 - 2.1s")
+        XCTAssertEqual(initialTimer.name, "ND64 - 2s")
         XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · ND64")
 
         viewModel.baseShutterInput = "1"
         viewModel.ndInput = "ND8"
 
         let timerAfterInputChange = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timerAfterInputChange.name, "ND64 - 2.1s")
+        XCTAssertEqual(timerAfterInputChange.name, "ND64 - 2s")
         XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · ND64")
     }
 }

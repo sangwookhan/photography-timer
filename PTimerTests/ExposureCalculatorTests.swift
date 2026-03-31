@@ -5,9 +5,9 @@ final class ExposureCalculatorTests: XCTestCase {
     func testCalculateRepresentativeExposureCases() {
         let calculator = ExposureCalculator()
         let cases: [(base: String, nd: String, expectedBase: Double, expectedND: Double, expectedResult: Double)] = [
-            ("1/30", "ND64", 1.0 / 30.0, 64, 64.0 / 30.0),
-            ("1/125", "8", 1.0 / 125.0, 8, 8.0 / 125.0),
-            ("0.5", "ND1000", 0.5, 1000, 500)
+            ("1/30", "ND64", 1.0 / 30.0, 64, 2),
+            ("1/125", "8", 1.0 / 125.0, 8, 1.0 / 16.0),
+            ("0.5", "ND1000", 0.5, 1000, 512)
         ]
 
         for testCase in cases {
@@ -39,10 +39,46 @@ final class ExposureCalculatorTests: XCTestCase {
         case .success(let value):
             XCTAssertEqual(value.baseShutterSeconds, 1.0 / 30.0, accuracy: 0.0001)
             XCTAssertEqual(value.ndFactor, 64, accuracy: 0.0001)
-            XCTAssertEqual(value.resultShutterSeconds, 64.0 / 30.0, accuracy: 0.0001)
+            XCTAssertEqual(value.resultShutterSeconds, 2, accuracy: 0.0001)
         case .failure(let error):
             XCTFail("Expected valid result, got \(error)")
         }
+    }
+
+    func testNDStopsUsesCameraConventionMappings() throws {
+        let calculator = ExposureCalculator()
+
+        XCTAssertEqual(try calculator.ndStops(for: 64), 6, accuracy: 0.0001)
+        XCTAssertEqual(try calculator.ndStops(for: 1000), 10, accuracy: 0.0001)
+        XCTAssertEqual(try calculator.ndStops(for: 400), 9, accuracy: 0.0001)
+    }
+
+    func testShutterStopOffsetUsesCameraScaleForSubsecondValues() throws {
+        let calculator = ExposureCalculator()
+
+        XCTAssertEqual(try calculator.shutterStopOffset(for: 1), 0, accuracy: 0.0001)
+        XCTAssertEqual(try calculator.shutterStopOffset(for: 1.0 / 8.0), -3, accuracy: 0.0001)
+        XCTAssertEqual(try calculator.shutterStopOffset(for: 1.0 / 30.0), -5, accuracy: 0.0001)
+    }
+
+    func testStopBasedCalculationMatchesRepresentativeCases() throws {
+        let calculator = ExposureCalculator()
+
+        XCTAssertEqual(
+            try calculator.calculate(baseShutterSeconds: 1.0 / 30.0, ndFactor: 64),
+            2,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            try calculator.calculate(baseShutterSeconds: 1.0 / 8.0, ndFactor: 1000),
+            128,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            try calculator.calculate(baseShutterSeconds: 1, ndFactor: 1),
+            1,
+            accuracy: 0.0001
+        )
     }
 
     func testCalculateRejectsNonPositiveInput() {
@@ -90,6 +126,23 @@ final class ExposureCalculatorTests: XCTestCase {
 
         XCTAssertEqual(try calculator.parseNDFactor("64"), 64, accuracy: 0.0001)
         XCTAssertEqual(try calculator.parseNDFactor("ND1000"), 1000, accuracy: 0.0001)
+    }
+
+    func testNDStopConversionRejectsNonPositiveValues() {
+        let calculator = ExposureCalculator()
+
+        XCTAssertThrowsError(try calculator.ndStops(for: 0)) { error in
+            XCTAssertEqual(error as? ExposureCalculatorError, .nonPositiveND)
+        }
+        XCTAssertThrowsError(try calculator.ndStops(for: -1)) { error in
+            XCTAssertEqual(error as? ExposureCalculatorError, .nonPositiveND)
+        }
+    }
+
+    func testNDStopConversionComputesVeryLargeFallbackValues() throws {
+        let calculator = ExposureCalculator()
+
+        XCTAssertEqual(try calculator.ndStops(for: 4096), 12, accuracy: 0.0001)
     }
 
     func testFormatShutterReturnsExpectedReadableStrings() {

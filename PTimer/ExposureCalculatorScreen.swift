@@ -3,6 +3,14 @@ import SwiftUI
 struct ExposureCalculatorScreen: View {
     @StateObject private var viewModel = ExposureCalculatorViewModel()
 
+    init() {
+        assertNoKoreanUIStrings([
+            "Exposure",
+            "Show Advanced Options",
+            "View All"
+        ])
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -37,7 +45,7 @@ struct ExposureCalculatorScreen: View {
 struct HeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("계산")
+            Text("Exposure")
                 .font(.largeTitle.weight(.bold))
 
             HStack(alignment: .top, spacing: 12) {
@@ -92,7 +100,7 @@ struct VariableSectionView: View {
                 Divider()
 
                 HStack {
-                    Text("고급 옵션 펼치기")
+                    Text("Show Advanced Options")
                         .font(.subheadline.weight(.semibold))
 
                     Spacer()
@@ -272,7 +280,7 @@ struct RunningTimerPanelView: View {
 
                 Spacer()
 
-                Button("보기") {
+                Button("View All") {
                 }
                     .font(.footnote.weight(.semibold))
                     .disabled(true)
@@ -315,7 +323,7 @@ struct RunningTimerPanelView: View {
     }
 
     private var panelTitle: String {
-        "실행 중 타이머 \(runningTimerCount)개"
+        "Running Timers: \(runningTimerCount)"
     }
 }
 
@@ -593,4 +601,18 @@ private extension View {
                     .stroke(Color(.separator), lineWidth: 1)
             )
     }
+}
+
+private extension String {
+    var containsKoreanCharacters: Bool {
+        unicodeScalars.contains { scalar in
+            (0xAC00...0xD7A3).contains(scalar.value)
+        }
+    }
+}
+
+private func assertNoKoreanUIStrings(_ strings: [String]) {
+#if DEBUG
+    assert(strings.allSatisfy { !$0.containsKoreanCharacters })
+#endif
 }

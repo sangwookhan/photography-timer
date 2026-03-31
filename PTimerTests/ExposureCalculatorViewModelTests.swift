@@ -13,11 +13,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         viewModel.baseShutterInput = ""
-        viewModel.ndInput = "ND64"
+        viewModel.ndStop = 6
         XCTAssertFalse(viewModel.canStartTimer)
 
         viewModel.baseShutterInput = "1/30"
-        viewModel.ndInput = "ND64"
+        viewModel.ndStop = 6
         XCTAssertTrue(viewModel.canStartTimer)
     }
 
@@ -65,16 +65,16 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         viewModel.baseShutterInput = "1/30"
-        viewModel.ndInput = "ND64"
+        viewModel.ndStop = 6
         viewModel.startTimer()
 
         XCTAssertEqual(timerManager.timers.count, 1)
         XCTAssertEqual(viewModel.timers.count, 1)
         XCTAssertEqual(viewModel.runningTimerCount, 1)
-        XCTAssertEqual(viewModel.timers[0].name, "ND64 - 2s")
+        XCTAssertEqual(viewModel.timers[0].name, "6 stop - 2s")
         XCTAssertEqual(viewModel.timers[0].status, TimerStatus.running)
         XCTAssertEqual(viewModel.timers[0].remainingTime, 2, accuracy: 0.0001)
-        XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · ND64")
+        XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · 6 stop")
     }
 
     @MainActor
@@ -108,7 +108,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         viewModel.baseShutterInput = "1"
-        viewModel.ndInput = "1"
+        viewModel.ndStop = 0
         viewModel.startTimer()
 
         timerManager.tick(now: startDate.addingTimeInterval(1))
@@ -212,18 +212,46 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         viewModel.baseShutterInput = "1/30"
-        viewModel.ndInput = "ND64"
+        viewModel.ndStop = 6
         viewModel.startTimer()
 
         let initialTimer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(initialTimer.name, "ND64 - 2s")
-        XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · ND64")
+        XCTAssertEqual(initialTimer.name, "6 stop - 2s")
+        XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · 6 stop")
 
         viewModel.baseShutterInput = "1"
-        viewModel.ndInput = "ND8"
+        viewModel.ndStop = 3
 
         let timerAfterInputChange = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timerAfterInputChange.name, "ND64 - 2s")
-        XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · ND64")
+        XCTAssertEqual(timerAfterInputChange.name, "6 stop - 2s")
+        XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · 6 stop")
+    }
+
+    @MainActor
+    func testNDStopSelectionUpdatesCalculationImmediately() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutterInput = "1/30"
+        viewModel.ndStop = 6
+
+        guard case .success(let nd64Result) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result for 6-stop ND")
+        }
+
+        XCTAssertEqual(nd64Result.resultShutterSeconds, 2, accuracy: 0.0001)
+
+        viewModel.ndStop = 10
+
+        guard case .success(let nd1000Result) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result for 10-stop ND")
+        }
+
+        XCTAssertEqual(nd1000Result.resultShutterSeconds, 32, accuracy: 0.0001)
     }
 }

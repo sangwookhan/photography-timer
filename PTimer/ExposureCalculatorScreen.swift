@@ -9,9 +9,12 @@ struct ExposureCalculatorScreen: View {
                 HeaderView()
                 VariableSectionView(
                     baseShutterInput: $viewModel.baseShutterInput,
-                    ndInput: $viewModel.ndInput
+                    ndStop: $viewModel.ndStop
                 )
-                ResultSectionView(calculationResult: viewModel.calculationResult)
+                ResultSectionView(
+                    calculationResult: viewModel.calculationResult,
+                    ndStop: viewModel.ndStop
+                )
                 TimerActionView(
                     canStartTimer: viewModel.canStartTimer,
                     onStart: viewModel.startTimer
@@ -67,7 +70,7 @@ struct HeaderView: View {
 
 struct VariableSectionView: View {
     @Binding var baseShutterInput: String
-    @Binding var ndInput: String
+    @Binding var ndStop: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -84,12 +87,7 @@ struct VariableSectionView: View {
 
                 Divider()
 
-                ExposureFieldInputRow(
-                    title: "ND",
-                    text: $ndInput,
-                    prompt: "ND64 or 64",
-                    detail: "ND filter factor input"
-                )
+                NDStopSelectionRow(ndStop: $ndStop)
 
                 Divider()
 
@@ -119,6 +117,7 @@ struct VariableSectionView: View {
 
 struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
+    let ndStop: Int
 
     private let calculator = ExposureCalculator()
 
@@ -176,14 +175,10 @@ struct ResultSectionView: View {
 
     private var ndText: String {
         switch calculationResult {
-        case .success(let result):
-            if abs(result.ndFactor.rounded() - result.ndFactor) < 0.0001 {
-                return "ND\(Int(result.ndFactor.rounded()))"
-            }
-
-            return "ND\(result.ndFactor)"
+        case .success:
+            return "\(ndStop) stop"
         case .failure:
-            return "-"
+            return "\(ndStop) stop"
         }
     }
 
@@ -202,6 +197,41 @@ struct ResultSectionView: View {
             return nil
         case .failure(let error):
             return error.errorDescription
+        }
+    }
+}
+
+private struct NDStopSelectionRow: View {
+    @Binding var ndStop: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                Text("ND")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer()
+
+                Text("\(ndStop) stop")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Picker("ND", selection: $ndStop) {
+                ForEach(0...30, id: \.self) { stop in
+                    Text("\(stop) stop").tag(stop)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .frame(height: 140)
+            .clipped()
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            Text("Stop-based ND selection")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 }

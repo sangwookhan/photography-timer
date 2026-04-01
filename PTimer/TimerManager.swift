@@ -13,6 +13,7 @@ struct TimerState: Identifiable, Equatable {
     let startDate: Date
     let endDate: Date?
     let pausedRemainingTime: TimeInterval?
+    let pausedAt: Date?
     let status: TimerStatus
 
     var remainingTime: TimeInterval {
@@ -62,6 +63,7 @@ struct TimerState: Identifiable, Equatable {
             startDate: startDate,
             endDate: endDate,
             pausedRemainingTime: remaining,
+            pausedAt: now,
             status: .stopped
         )
     }
@@ -73,6 +75,7 @@ struct TimerState: Identifiable, Equatable {
             startDate: startDate,
             endDate: endDate,
             pausedRemainingTime: nil,
+            pausedAt: pausedAt,
             status: .completed
         )
     }
@@ -113,6 +116,7 @@ final class TimerManager: ObservableObject {
                 startDate: now,
                 endDate: endDate,
                 pausedRemainingTime: nil,
+                pausedAt: nil,
                 status: .running
             )
         )

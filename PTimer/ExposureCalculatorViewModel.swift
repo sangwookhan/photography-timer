@@ -7,8 +7,10 @@ struct RunningTimerItem: Identifiable, Equatable {
     let name: String
     let basisSummary: String
     let duration: TimeInterval
+    let startDate: Date
     let endDate: Date?
     let pausedRemainingTime: TimeInterval?
+    let pausedAt: Date?
     let status: TimerStatus
     let referenceDate: Date
 
@@ -28,6 +30,14 @@ struct RunningTimerItem: Identifiable, Equatable {
 
     var elapsedTime: TimeInterval {
         max(0, duration - remainingTime)
+    }
+
+    var completedAt: Date? {
+        guard status == .completed, let endDate else {
+            return nil
+        }
+
+        return endDate
     }
 }
 
@@ -160,16 +170,55 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculator.formatShutter(seconds)
     }
 
+    func formatTimeDisplay(_ seconds: TimeInterval) -> TimeDisplay {
+        calculator.formatTimeDisplay(seconds)
+    }
+
     func formatShutter(_ seconds: TimeInterval) -> String {
         calculator.formatShutter(seconds)
     }
 
     func formatTimerClock(_ seconds: TimeInterval) -> String {
-        let safeSeconds = max(0, Int(seconds.rounded(.down)))
-        let minutes = safeSeconds / 60
-        let remainingSeconds = safeSeconds % 60
+        calculator.formatExtendedClock(seconds)
+    }
 
-        return String(format: "%02d:%02d", minutes, remainingSeconds)
+    func formatClockTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    func formatDateTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "MMM d HH:mm"
+        return formatter.string(from: date)
+    }
+
+    func timerTargetContext(for timer: RunningTimerItem) -> String? {
+        let targetDisplay = formatTimeDisplay(timer.duration)
+
+        switch timer.status {
+        case .running, .stopped:
+            return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
+        case .completed:
+            return nil
+        }
+    }
+
+    func timerTimeContext(for timer: RunningTimerItem) -> String? {
+        switch timer.status {
+        case .running:
+            let completionText = timer.endDate.map(formatDateTime) ?? "--"
+            return "Ends \(completionText)"
+        case .completed:
+            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
+            return "Completed \(completionText)"
+        case .stopped:
+            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
+            return "Paused \(pausedText)"
+        }
     }
 
     var runningTimerCount: Int {
@@ -193,8 +242,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
                     name: timerMetadata[state.id]?.name ?? defaultName(for: state.duration),
                     basisSummary: timerMetadata[state.id]?.basisSummary ?? "Manual timer",
                     duration: state.duration,
+                    startDate: state.startDate,
                     endDate: state.endDate,
                     pausedRemainingTime: state.pausedRemainingTime,
+                    pausedAt: state.pausedAt,
                     status: state.status,
                     referenceDate: referenceDate
                 )
@@ -217,9 +268,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
         switch status {
         case .running:
             return 0
-        case .completed:
-            return 1
         case .stopped:
+            return 1
+        case .completed:
             return 2
         }
     }

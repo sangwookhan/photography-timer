@@ -6,6 +6,11 @@ struct ExposureCalculationResult: Equatable {
     let resultShutterSeconds: Double
 }
 
+struct TimeDisplay: Equatable {
+    let primary: String
+    let secondary: String
+}
+
 enum ExposureCalculatorError: LocalizedError, Equatable {
     case emptyBaseShutter
     case invalidBaseShutter
@@ -91,6 +96,90 @@ struct ExposureCalculator {
             return "-"
         }
 
+        return formatRawSeconds(seconds)
+    }
+
+    func formatTimeDisplay(_ seconds: Double) -> TimeDisplay {
+        let safeSeconds = normalizeDuration(seconds)
+        return TimeDisplay(
+            primary: formatExtendedClock(safeSeconds),
+            secondary: formatRawDurationSeconds(safeSeconds)
+        )
+    }
+
+    func formatExtendedClock(_ seconds: Double) -> String {
+        let safeSeconds = normalizeDuration(seconds)
+
+        if safeSeconds < 1 {
+            return "\(trimmedMilliseconds(safeSeconds))s"
+        }
+
+        if safeSeconds < 60 {
+            return shortSecondsText(safeSeconds)
+        }
+
+        let secondsPerMinute = 60
+        let secondsPerHour = 60 * secondsPerMinute
+        let secondsPerDay = 24 * secondsPerHour
+        let secondsPerMonth = 30 * secondsPerDay
+        let secondsPerYear = 365 * secondsPerDay
+
+        let years = Int(safeSeconds / Double(secondsPerYear))
+        var remainder = safeSeconds - (Double(years) * Double(secondsPerYear))
+        let months = Int(remainder / Double(secondsPerMonth))
+        remainder -= Double(months) * Double(secondsPerMonth)
+        let days = Int(remainder / Double(secondsPerDay))
+        remainder -= Double(days) * Double(secondsPerDay)
+        let hours = Int(remainder / Double(secondsPerHour))
+        remainder -= Double(hours) * Double(secondsPerHour)
+        let minutes = Int(remainder / Double(secondsPerMinute))
+        remainder -= Double(minutes) * Double(secondsPerMinute)
+        let secondText = formattedClockSeconds(remainder)
+
+        if years > 0 {
+            return formatDatePrefix(
+                years: years,
+                months: months,
+                days: days,
+                timeText: String(format: "%02d:%02d:%@", hours, minutes, secondText)
+            )
+        }
+
+        if months > 0 {
+            return formatDatePrefix(
+                years: 0,
+                months: months,
+                days: days,
+                timeText: String(format: "%02d:%02d:%@", hours, minutes, secondText)
+            )
+        }
+
+        if days > 0 {
+            return formatDatePrefix(
+                years: 0,
+                months: 0,
+                days: days,
+                timeText: String(format: "%02d:%02d:%@", hours, minutes, secondText)
+            )
+        }
+
+        if safeSeconds >= Double(secondsPerHour) {
+            let totalHours = Int(safeSeconds / Double(secondsPerHour))
+            return String(format: "%02d:%02d:%@", totalHours, minutes, secondText)
+        }
+
+        if safeSeconds >= Double(secondsPerMinute) {
+            return String(format: "%02d:%@", minutes, secondText)
+        }
+
+        return "00:\(secondText)"
+    }
+
+    private func formatRawSeconds(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds > 0 else {
+            return "-"
+        }
+
         if seconds >= 1 {
             if abs(seconds.rounded() - seconds) < 0.0001 {
                 return "\(Int(seconds.rounded()))s"
@@ -105,6 +194,71 @@ struct ExposureCalculator {
         }
 
         return String(format: "%.3fs", seconds)
+    }
+
+    private func formatRawDurationSeconds(_ seconds: Double) -> String {
+        if abs(seconds.rounded() - seconds) < 0.0001 {
+            return "\(Int(seconds.rounded()))s"
+        }
+
+        if seconds < 1 {
+            return "\(trimmedMilliseconds(seconds))s"
+        }
+
+        return "\(String(format: "%.1f", seconds))s"
+    }
+
+    private func normalizeDuration(_ seconds: Double) -> Double {
+        seconds.isFinite ? max(0, seconds) : 0
+    }
+
+    private func formattedClockSeconds(_ seconds: Double) -> String {
+        if abs(seconds.rounded() - seconds) < 0.0001 {
+            return String(format: "%02d", Int(seconds.rounded()))
+        }
+        
+        return String(format: "%02d", Int(seconds.rounded()))
+    }
+
+    private func trimmedMilliseconds(_ seconds: Double) -> String {
+        let raw = String(format: "%.3f", seconds)
+        return raw.replacingOccurrences(
+            of: #"(\.\d*?[1-9])0+$|\.0+$"#,
+            with: "$1",
+            options: .regularExpression
+        )
+    }
+
+    private func shortSecondsText(_ seconds: Double) -> String {
+        if abs(seconds.rounded() - seconds) < 0.0001 {
+            return "\(Int(seconds.rounded()))s"
+        }
+
+        return "\(String(format: "%.1f", seconds))s"
+    }
+
+    private func formatDatePrefix(
+        years: Int,
+        months: Int,
+        days: Int,
+        timeText: String
+    ) -> String {
+        var prefixParts: [String] = []
+
+        if years > 0 {
+            prefixParts.append("\(years)y")
+        }
+
+        if months > 0 {
+            prefixParts.append("\(months)mo")
+        }
+
+        if days > 0 {
+            prefixParts.append("\(days)d")
+        }
+
+        let prefix = prefixParts.joined(separator: " ")
+        return prefix.isEmpty ? timeText : "\(prefix) \(timeText)"
     }
 
     private func normalize(_ input: String) -> String {

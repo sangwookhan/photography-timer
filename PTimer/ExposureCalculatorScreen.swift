@@ -23,7 +23,8 @@ struct ExposureCalculatorScreen: View {
                 )
                 ResultSectionView(
                     calculationResult: viewModel.calculationResult,
-                    ndStop: viewModel.ndStop
+                    ndStop: viewModel.ndStop,
+                    formatTimeDisplay: viewModel.formatTimeDisplay
                 )
                 TimerActionView(
                     canStartTimer: viewModel.canStartTimer,
@@ -33,7 +34,9 @@ struct ExposureCalculatorScreen: View {
                     timers: viewModel.timers,
                     runningTimerCount: viewModel.runningTimerCount,
                     formattedDuration: viewModel.formatDuration,
-                    formattedClock: viewModel.formatTimerClock,
+                    formatTimeDisplay: viewModel.formatTimeDisplay,
+                    formatClockTime: viewModel.formatClockTime,
+                    formatDateTime: viewModel.formatDateTime,
                     onStopTimer: viewModel.stopTimer,
                     onRemoveTimer: viewModel.removeTimer
                 )
@@ -115,7 +118,7 @@ struct VariableSectionView: View {
 
                 Text("Aperture and ISO placeholders will expand here later.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
                     .background(Color(.tertiarySystemBackground))
@@ -129,7 +132,7 @@ struct VariableSectionView: View {
 struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let ndStop: Int
-
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     private let calculator = ExposureCalculator()
 
     var body: some View {
@@ -143,15 +146,28 @@ struct ResultSectionView: View {
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
 
-                    Text(primaryResultText)
-                        .font(.title3.weight(.semibold))
+                    if case .success(let result) = calculationResult {
+                        let display = formatTimeDisplay(result.resultShutterSeconds)
+                        DurationDisplayBlock(
+                            primaryText: display.primary,
+                            secondaryText: display.secondary,
+                            primaryColor: .primary,
+                            primaryFont: .system(size: 28, weight: .bold, design: .rounded),
+                            secondaryFont: .footnote
+                        )
+                    } else {
+                        Text(primaryResultText)
+                            .font(.title3.weight(.semibold))
+                    }
                 }
 
                 Divider()
 
-                ResultPlaceholderRow(label: "Base Shutter", value: baseShutterText)
-                ResultPlaceholderRow(label: "ND", value: ndText)
-                ResultPlaceholderRow(label: "Status", value: statusText)
+                HStack(spacing: 12) {
+                    CompactInfoPill(label: "Base", value: baseShutterText)
+                    CompactInfoPill(label: "ND", value: ndText)
+                    CompactInfoPill(label: "Status", value: statusText)
+                }
 
                 if let validationMessage {
                     Text(validationMessage)
@@ -169,7 +185,7 @@ struct ResultSectionView: View {
     private var primaryResultText: String {
         switch calculationResult {
         case .success(let result):
-            return calculator.formatShutter(result.resultShutterSeconds)
+            return formatTimeDisplay(result.resultShutterSeconds).primary
         case .failure:
             return "Result unavailable"
         }
@@ -196,7 +212,7 @@ struct ResultSectionView: View {
     private var statusText: String {
         switch calculationResult {
         case .success:
-            return "Updated instantly"
+            return "Live update"
         case .failure:
             return "Needs valid input"
         }
@@ -310,7 +326,9 @@ struct RunningTimerPanelView: View {
     let timers: [RunningTimerItem]
     let runningTimerCount: Int
     let formattedDuration: (TimeInterval) -> String
-    let formattedClock: (TimeInterval) -> String
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let formatClockTime: (Date) -> String
+    let formatDateTime: (Date) -> String
     let onStopTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
 
@@ -346,7 +364,9 @@ struct RunningTimerPanelView: View {
                         TimerSummaryCard(
                             timer: timer,
                             formattedDuration: formattedDuration,
-                            formattedClock: formattedClock,
+                            formatTimeDisplay: formatTimeDisplay,
+                            formatClockTime: formatClockTime,
+                            formatDateTime: formatDateTime,
                             onStop: { onStopTimer(timer.id) },
                             onRemove: { onRemoveTimer(timer.id) }
                         )
@@ -372,11 +392,16 @@ struct RunningTimerPanelView: View {
 private struct TimerSummaryCard: View {
     let timer: RunningTimerItem
     let formattedDuration: (TimeInterval) -> String
-    let formattedClock: (TimeInterval) -> String
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let formatClockTime: (Date) -> String
+    let formatDateTime: (Date) -> String
     let onStop: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
+        let primaryDisplay = formatTimeDisplay(primaryDuration)
+        let targetDisplay = formatTimeDisplay(timer.duration)
+
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
@@ -388,31 +413,42 @@ private struct TimerSummaryCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(formattedClock(timer.remainingTime))
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
-                        .foregroundStyle(primaryTimeColor)
-                        .monospacedDigit()
-                        .lineLimit(1)
+                    DurationDisplayBlock(
+                        primaryText: primaryDisplay.primary,
+                        secondaryText: primaryDisplay.secondary,
+                        primaryColor: primaryTimeColor,
+                        primaryFont: .system(size: 28, weight: .bold, design: .rounded),
+                        secondaryFont: .footnote
+                    )
 
-                    Text("/ \(formattedDuration(timer.duration))")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
+                    if timer.status == .stopped {
+                        Text("Remaining \(primaryDisplay.primary)")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 }
 
-                Text(timer.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(timer.status == .completed ? .secondary : .primary)
-                    .lineLimit(1)
+                if let targetContextText = targetContextText(targetDisplay: targetDisplay) {
+                    Text(targetContextText)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                if let timeContextText {
+                    Text(timeContextText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
 
                 Text(timer.basisSummary)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-
-                HStack(spacing: 16) {
-                    timerMetric(label: "Elapsed", value: formattedClock(timer.elapsedTime))
-                    timerMetric(label: "Duration", value: formattedClock(timer.duration))
-                }
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
 
             Spacer(minLength: 0)
@@ -449,6 +485,40 @@ private struct TimerSummaryCard: View {
         .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 
+    private var primaryDuration: TimeInterval {
+        switch timer.status {
+        case .running, .stopped:
+            return timer.remainingTime
+        case .completed:
+            return timer.duration
+        }
+    }
+
+    private func targetContextText(targetDisplay: TimeDisplay) -> String? {
+        switch timer.status {
+        case .running:
+            return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
+        case .completed:
+            return nil
+        case .stopped:
+            return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
+        }
+    }
+
+    private var timeContextText: String? {
+        switch timer.status {
+        case .running:
+            let completionText = timer.endDate.map(formatDateTime) ?? "--"
+            return "Ends \(completionText)"
+        case .completed:
+            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
+            return "Completed \(completionText)"
+        case .stopped:
+            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
+            return "Paused \(pausedText)"
+        }
+    }
+
     private var statusBadge: some View {
         HStack(spacing: 6) {
             Image(systemName: statusSymbol)
@@ -463,19 +533,6 @@ private struct TimerSummaryCard: View {
         .padding(.vertical, 6)
         .background(statusColor.opacity(0.12))
         .clipShape(Capsule())
-    }
-
-    private func timerMetric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(value)
-                .font(.footnote.weight(.semibold))
-                .monospacedDigit()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func iconActionButton(
@@ -564,6 +621,62 @@ private struct TimerSummaryCard: View {
         }
     }
 }
+
+private struct DurationDisplayBlock: View {
+    let primaryText: String
+    let secondaryText: String
+    let primaryColor: Color
+    let primaryFont: Font
+    let secondaryFont: Font
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Spacer()
+                Text(primaryText)
+                    .font(primaryFont)
+                    .foregroundStyle(primaryColor)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Spacer()
+            }
+
+            HStack {
+                Spacer()
+                Spacer()
+                Text(secondaryText)
+                    .font(secondaryFont)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct CompactInfoPill: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 
 private struct ResultPlaceholderRow: View {
     let label: String

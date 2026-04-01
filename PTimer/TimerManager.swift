@@ -68,6 +68,23 @@ struct TimerState: Identifiable, Equatable {
         )
     }
 
+    func resuming(at now: Date) -> TimerState? {
+        let remaining = max(0, pausedRemainingTime ?? 0)
+        guard remaining > 0 else {
+            return nil
+        }
+
+        return TimerState(
+            id: id,
+            duration: duration,
+            startDate: startDate,
+            endDate: now.addingTimeInterval(remaining),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+    }
+
     func completed() -> TimerState {
         TimerState(
             id: id,
@@ -133,6 +150,23 @@ final class TimerManager: ObservableObject {
         let currentDate = dateProvider()
         timers[index] = timers[index].stopping(at: currentDate)
         stopLoopIfNeeded(now: currentDate)
+    }
+
+    func resume(id: UUID) {
+        guard let index = timers.firstIndex(where: { $0.id == id }) else {
+            stopLoopIfNeeded()
+            return
+        }
+
+        let currentDate = dateProvider()
+        guard let resumedState = timers[index].resuming(at: currentDate) else {
+            timers.remove(at: index)
+            stopLoopIfNeeded(now: currentDate)
+            return
+        }
+
+        timers[index] = resumedState
+        ensureTimerLoop()
     }
 
     func tick(now: Date? = nil) {

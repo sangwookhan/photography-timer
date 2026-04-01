@@ -38,6 +38,7 @@ struct ExposureCalculatorScreen: View {
                     formatClockTime: viewModel.formatClockTime,
                     formatDateTime: viewModel.formatDateTime,
                     onStopTimer: viewModel.stopTimer,
+                    onResumeTimer: viewModel.resumeTimer,
                     onRemoveTimer: viewModel.removeTimer
                 )
             }
@@ -330,6 +331,7 @@ struct RunningTimerPanelView: View {
     let formatClockTime: (Date) -> String
     let formatDateTime: (Date) -> String
     let onStopTimer: (UUID) -> Void
+    let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
 
     var body: some View {
@@ -368,6 +370,7 @@ struct RunningTimerPanelView: View {
                             formatClockTime: formatClockTime,
                             formatDateTime: formatDateTime,
                             onStop: { onStopTimer(timer.id) },
+                            onResume: { onResumeTimer(timer.id) },
                             onRemove: { onRemoveTimer(timer.id) }
                         )
                     }
@@ -396,6 +399,7 @@ private struct TimerSummaryCard: View {
     let formatClockTime: (Date) -> String
     let formatDateTime: (Date) -> String
     let onStop: () -> Void
+    let onResume: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
@@ -460,6 +464,15 @@ private struct TimerSummaryCard: View {
                         tint: .orange,
                         accessibilityLabel: "Stop timer",
                         action: onStop
+                    )
+                }
+
+                if timer.status == .stopped {
+                    iconActionButton(
+                        systemName: "play.circle",
+                        tint: .blue,
+                        accessibilityLabel: "Resume timer",
+                        action: onResume
                     )
                 }
 

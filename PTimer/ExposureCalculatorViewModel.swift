@@ -130,6 +130,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         syncTimers(with: timerManager.timers)
     }
 
+    func resumeTimer(id: UUID) {
+        timerManager.resume(id: id)
+        syncTimers(with: timerManager.timers)
+    }
+
     func removeTimer(id: UUID) {
         timerManager.remove(id: id)
         timerMetadata.removeValue(forKey: id)

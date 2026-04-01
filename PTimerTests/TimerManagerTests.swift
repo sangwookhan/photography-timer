@@ -172,6 +172,137 @@ final class TimerManagerTests: XCTestCase {
     }
 
     @MainActor
+    func testResumeContinuesFromPausedRemainingTime() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: id)
+
+        let stoppedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(stoppedTimer.status(at: currentDate), .stopped)
+        XCTAssertEqual(stoppedTimer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+
+        currentDate = startDate.addingTimeInterval(7)
+        manager.resume(id: id)
+
+        let resumedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(resumedTimer.status(at: currentDate), .running)
+        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+
+        let laterDate = currentDate.addingTimeInterval(2)
+        XCTAssertEqual(resumedTimer.remainingTime(at: laterDate), 4, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testResumeRecalculatesEndDateFromPausedRemainingTime() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 12))
+
+        currentDate = startDate.addingTimeInterval(5)
+        manager.stop(id: id)
+
+        let stoppedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
+        let pausedRemaining = try XCTUnwrap(stoppedTimer.pausedRemainingTime)
+        XCTAssertEqual(pausedRemaining, 7, accuracy: 0.0001)
+
+        currentDate = startDate.addingTimeInterval(9)
+        manager.resume(id: id)
+
+        let resumedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(resumedTimer.status(at: currentDate), .running)
+        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 7, accuracy: 0.0001)
+        XCTAssertEqual(
+            resumedTimer.endDate,
+            currentDate.addingTimeInterval(pausedRemaining)
+        )
+    }
+
+    @MainActor
+    func testStoppedTimerPreservesPauseMetadata() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: id)
+
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(timer.status(at: currentDate), .stopped)
+        XCTAssertEqual(timer.startDate, startDate)
+        XCTAssertEqual(timer.pausedAt, currentDate)
+        XCTAssertEqual(try XCTUnwrap(timer.pausedRemainingTime), 6, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testCompletedTimerPreservesOriginalDurationMetadata() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 3))
+        let completionDate = startDate.addingTimeInterval(5)
+        manager.tick(now: completionDate)
+
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(timer.status(at: completionDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: completionDate), 0, accuracy: 0.0001)
+        XCTAssertEqual(timer.duration, 3, accuracy: 0.0001)
+        XCTAssertEqual(timer.startDate, startDate)
+        XCTAssertEqual(timer.endDate, startDate.addingTimeInterval(3))
+    }
+
+    @MainActor
+    func testRemoveCompletedTimersKeepsStoppedTimersResumable() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let stoppedID = try XCTUnwrap(manager.start(duration: 10))
+        let completedID = try XCTUnwrap(manager.start(duration: 1))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: stoppedID)
+        manager.tick(now: currentDate)
+        manager.removeCompletedTimers()
+
+        XCTAssertNil(manager.timers.first { $0.id == completedID })
+
+        let stoppedTimer = tryUnwrapTimer(withID: stoppedID, from: manager.timers)
+        XCTAssertEqual(stoppedTimer.status(at: currentDate), .stopped)
+        XCTAssertEqual(stoppedTimer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+
+        currentDate = startDate.addingTimeInterval(8)
+        manager.resume(id: stoppedID)
+
+        let resumedTimer = tryUnwrapTimer(withID: stoppedID, from: manager.timers)
+        XCTAssertEqual(resumedTimer.status(at: currentDate), .running)
+        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+    }
+
+    @MainActor
     func testNonPositiveDurationIsIgnored() {
         let manager = TimerManager(tickInterval: 60, dateProvider: Date.init)
 
@@ -274,6 +405,7 @@ final class TimerManagerTests: XCTestCase {
                 startDate: .distantPast,
                 endDate: nil,
                 pausedRemainingTime: 0,
+                pausedAt: nil,
                 status: .stopped
             )
         }

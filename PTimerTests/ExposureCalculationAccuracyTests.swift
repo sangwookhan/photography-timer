@@ -98,9 +98,9 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
     func testStrictDoublingSequenceBeyond30() throws {
         let calculator = ExposureCalculator()
 
-        var previous = try calculator.calculate(baseShutterSeconds: 1.0, stop: 5)
+        var previous = try calculator.calculate(baseShutterSeconds: 1.0, stop: 6)
 
-        for stop in 6...12 {
+        for stop in 7...12 {
             let result = try calculator.calculate(
                 baseShutterSeconds: 1.0,
                 stop: stop

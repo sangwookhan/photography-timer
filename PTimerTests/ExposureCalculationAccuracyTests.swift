@@ -5,7 +5,7 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
     private let tolerance = 0.0001
 
     func testFullStopMatrixFromOneThirtiethMatchesCameraScale() throws {
-        let cases: [(stop: Double, expected: Double)] = [
+        let cases: [(stop: Int, expected: Double)] = [
             (1, 1.0 / 15.0),
             (2, 1.0 / 8.0),
             (3, 1.0 / 4.0),
@@ -24,7 +24,7 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
                 result,
                 testCase.expected,
                 accuracy: tolerance,
-                "Expected 1/30 + \(Int(testCase.stop)) stop to match the camera full-stop scale."
+                "Expected 1/30 + \(testCase.stop) stop to match the camera full-stop scale."
             )
         }
     }
@@ -33,6 +33,12 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
         let result = try calculate(baseShutter: 1.0 / 8.0, stop: 10)
 
         XCTAssertEqual(result, 128.0, accuracy: tolerance)
+    }
+
+    func testLiteralOneThirtiethPlusSixStopsSnapsToTwoSeconds() throws {
+        let result = try calculate(baseShutter: 1.0 / 30.0, stop: 6)
+
+        XCTAssertEqual(result, 2.0, accuracy: tolerance)
     }
 
     func testBoundaryRangeCalculationsStayPositive() throws {
@@ -56,13 +62,98 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
         XCTAssertNotEqual(result, 2.1, accuracy: tolerance)
     }
 
-    private func calculate(baseShutter: Double, stop: Double) throws -> Double {
+    func testBoundaryValuesClampToCanonicalRange() throws {
+        XCTAssertEqual(try calculate(baseShutter: 1.0 / 10000.0, stop: 0), 1.0 / 8000.0, accuracy: tolerance)
+    }
+
+    func testOneSecondTransitionsFromCameraStopsToExactDoubling() throws {
+        XCTAssertEqual(try calculate(baseShutter: 1.0, stop: 3), 8.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0, stop: 4), 15.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0, stop: 5), 30.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0 / 30.0, stop: 10), 30.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0 / 30.0, stop: 11), 64.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0, stop: 6), 64.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0, stop: 7), 128.0, accuracy: tolerance)
+        XCTAssertEqual(try calculate(baseShutter: 1.0, stop: 20), 1_048_576.0, accuracy: tolerance)
+    }
+
+    func testNoSnapAbove30SecondsExactness() throws {
         let calculator = ExposureCalculator()
-        let ndFactor = pow(2.0, stop)
+
+        let base = 1.0 / 30.0
+        let stop = 11
+        let raw = base * pow(2.0, Double(stop))
+
+        let result = try calculator.calculate(
+            baseShutterSeconds: base,
+            stop: stop
+        )
+
+        XCTAssertNotEqual(result, 60, accuracy: tolerance)
+        XCTAssertNotEqual(result, 30, accuracy: tolerance)
+        XCTAssertEqual(result, 64, accuracy: tolerance)
+        XCTAssertLessThan(result, raw)
+    }
+
+    func testStrictDoublingSequenceBeyond30() throws {
+        let calculator = ExposureCalculator()
+
+        var previous = try calculator.calculate(baseShutterSeconds: 1.0, stop: 5)
+
+        for stop in 6...12 {
+            let result = try calculator.calculate(
+                baseShutterSeconds: 1.0,
+                stop: stop
+            )
+
+            XCTAssertEqual(result, previous * 2, accuracy: tolerance)
+            previous = result
+        }
+    }
+
+    func testNoIntermediateSnapDriftAbove30() throws {
+        let calculator = ExposureCalculator()
+
+        let base = 1.0 / 30.0
+        let result11 = try calculator.calculate(baseShutterSeconds: base, stop: 11)
+        let result12 = try calculator.calculate(baseShutterSeconds: base, stop: 12)
+
+        XCTAssertEqual(result12, result11 * 2, accuracy: tolerance)
+    }
+
+    func testDoesNotSnapToNearestPowerOfTwo() throws {
+        let calculator = ExposureCalculator()
+
+        let base = 1.0 / 30.0
+        let stop = 11
+        let raw = base * pow(2.0, Double(stop))
+
+        let result = try calculator.calculate(
+            baseShutterSeconds: base,
+            stop: stop
+        )
+
+        XCTAssertEqual(result, 64, accuracy: tolerance)
+        XCTAssertTrue(result < raw)
+    }
+
+    func testHighStopDoesNotSnap() throws {
+        let calculator = ExposureCalculator()
+
+        let result = try calculator.calculate(
+            baseShutterSeconds: 1.0,
+            stop: 24
+        )
+
+        XCTAssertEqual(result, pow(2.0, 24), accuracy: tolerance)
+    }
+
+    private func calculate(baseShutter: Double, stop: Int) throws -> Double {
+        let calculator = ExposureCalculator()
 
         return try calculator.calculate(
             baseShutterSeconds: baseShutter,
-            ndFactor: ndFactor
+            stop: stop
         )
     }
 }

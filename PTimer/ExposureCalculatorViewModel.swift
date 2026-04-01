@@ -37,12 +37,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     @Published var ndStop = 0
     @Published private(set) var timers: [RunningTimerItem] = []
 
-    static let shutterSpeeds: [Double] = [
-        1.0 / 8000, 1.0 / 4000, 1.0 / 2000, 1.0 / 1000,
-        1.0 / 500, 1.0 / 250, 1.0 / 125, 1.0 / 60,
-        1.0 / 30, 1.0 / 15, 1.0 / 8, 1.0 / 4,
-        1.0 / 2, 1, 2, 4, 8, 15, 30
-    ]
+    nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
 
     private let calculator: ExposureCalculator
     private let timerManager: TimerManager
@@ -77,16 +72,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
         do {
-            let ndFactor = ndFactor(for: ndStop)
             let resultShutter = try calculator.calculate(
                 baseShutterSeconds: baseShutter,
-                ndFactor: ndFactor
+                stop: ndStop
             )
 
             return .success(
                 ExposureCalculationResult(
                     baseShutterSeconds: baseShutter,
-                    ndFactor: ndFactor,
+                    stop: ndStop,
                     resultShutterSeconds: resultShutter
                 )
             )
@@ -183,7 +177,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func makeTimerName(for result: ExposureCalculationResult) -> String {
-        "\(ndStopLabel(for: result.ndFactor)) - \(calculator.formatShutter(result.resultShutterSeconds))"
+        "\(ndStopLabel(for: result.stop)) - \(calculator.formatShutter(result.resultShutterSeconds))"
     }
 
     private func syncTimers(with states: [TimerState]) {
@@ -239,19 +233,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return "Manual timer"
         }
 
-        return "Base \(calculator.formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.ndFactor))"
+        return "Base \(calculator.formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.stop))"
     }
 
-    private func ndStopLabel(for factor: Double) -> String {
-        let computedStop: Int
-
-        do {
-            computedStop = Int(try calculator.ndStops(for: factor).rounded())
-        } catch {
-            computedStop = 0
-        }
-
-        return "\(computedStop) stop"
+    private func ndStopLabel(for stop: Int) -> String {
+        "\(stop) stop"
     }
 
     private func calculationPayload(for resultShutter: TimeInterval) -> ExposureCalculationResult? {
@@ -264,11 +250,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         return result
-    }
-
-    private func ndFactor(for stop: Int) -> Double {
-        // TODO: remove ndFactor when PTIMER-22 is complete
-        pow(2.0, Double(stop))
     }
 }
 

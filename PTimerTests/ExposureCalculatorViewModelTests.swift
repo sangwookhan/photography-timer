@@ -248,6 +248,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             return XCTFail("Expected valid result for 10-stop ND")
         }
 
-        XCTAssertEqual(nd1000Result.resultShutterSeconds, 32, accuracy: 0.0001)
+        XCTAssertEqual(nd1000Result.resultShutterSeconds, 30, accuracy: 0.0001)
     }
 }

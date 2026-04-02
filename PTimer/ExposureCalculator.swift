@@ -35,6 +35,7 @@ enum ExposureCalculatorError: LocalizedError, Equatable {
 }
 
 struct ExposureCalculator {
+    static let stabilityEpsilon = 0.000_001
     static let fullStopShutterSpeeds: [Double] = [
         1.0 / 8000, 1.0 / 4000, 1.0 / 2000, 1.0 / 1000,
         1.0 / 500, 1.0 / 250, 1.0 / 125, 1.0 / 60,
@@ -197,19 +198,26 @@ struct ExposureCalculator {
     }
 
     private func formatRawDurationSeconds(_ seconds: Double) -> String {
-        if abs(seconds.rounded() - seconds) < 0.0001 {
-            return "\(Int(seconds.rounded()))s"
+        let normalized = normalizeDuration(seconds)
+
+        if isEffectivelyInteger(normalized) {
+            return "\(Int(normalized.rounded()))s"
         }
 
-        if seconds < 1 {
-            return "\(trimmedMilliseconds(seconds))s"
+        if normalized < 1 {
+            return "\(trimmedMilliseconds(normalized))s"
         }
 
-        return "\(String(format: "%.1f", seconds))s"
+        return "\(roundedTenthsText(normalized))s"
     }
 
     private func normalizeDuration(_ seconds: Double) -> Double {
-        seconds.isFinite ? max(0, seconds) : 0
+        guard seconds.isFinite else {
+            return 0
+        }
+
+        let clamped = max(0, seconds)
+        return clamped < Self.stabilityEpsilon ? 0 : clamped
     }
 
     private func formattedClockSeconds(_ seconds: Double) -> String {
@@ -221,7 +229,7 @@ struct ExposureCalculator {
     }
 
     private func trimmedMilliseconds(_ seconds: Double) -> String {
-        let raw = String(format: "%.3f", seconds)
+        let raw = String(format: "%.3f", (seconds * 1_000).rounded() / 1_000)
         return raw.replacingOccurrences(
             of: #"(\.\d*?[1-9])0+$|\.0+$"#,
             with: "$1",
@@ -230,11 +238,11 @@ struct ExposureCalculator {
     }
 
     private func shortSecondsText(_ seconds: Double) -> String {
-        if abs(seconds.rounded() - seconds) < 0.0001 {
+        if isEffectivelyInteger(seconds) {
             return "\(Int(seconds.rounded()))s"
         }
 
-        return "\(String(format: "%.1f", seconds))s"
+        return "\(roundedTenthsText(seconds))s"
     }
 
     private func formatDatePrefix(
@@ -273,25 +281,75 @@ struct ExposureCalculator {
     }
 
     private func snapToFullStop(_ value: Double) -> Double {
-        guard value.isFinite, value > 0 else {
-            return value
+        let normalized = normalizeDuration(value)
+        guard normalized > 0 else {
+            return normalized
         }
 
-        if value <= 30 {
+        if normalized <= 30 + Self.stabilityEpsilon {
             return Self.fullStopShutterSpeeds.min(
-                by: { abs($0 - value) < abs($1 - value) }
-            ) ?? value
+                by: { abs($0 - normalized) < abs($1 - normalized) }
+            ) ?? normalized
         }
 
-        if value < 64 {
-            return abs(value - 30) <= abs(64 - value) ? 30 : 64
+        if normalized < 64 - Self.stabilityEpsilon {
+            return abs(normalized - 30) <= abs(64 - normalized) ? 30 : 64
         }
 
-        let lowerExponent = floor(log2(value))
-        let upperExponent = ceil(log2(value))
+        let lowerExponent = floor(log2(normalized))
+        let upperExponent = ceil(log2(normalized))
         let lower = pow(2.0, lowerExponent)
         let upper = pow(2.0, upperExponent)
 
-        return abs(value - lower) <= abs(upper - value) ? lower : upper
+        return abs(normalized - lower) <= abs(upper - normalized) ? lower : upper
+    }
+
+    func reconstructedStop(
+        baseShutterSeconds: Double,
+        resultShutterSeconds: Double,
+        maxStop: Int = 64
+    ) -> Int? {
+        guard baseShutterSeconds.isFinite,
+              resultShutterSeconds.isFinite,
+              baseShutterSeconds > 0,
+              resultShutterSeconds > 0,
+              maxStop >= 0 else {
+            return nil
+        }
+
+        var bestStop: Int?
+        var bestDistance = Double.infinity
+
+        for stop in 0...maxStop {
+            guard let candidate = try? calculate(
+                baseShutterSeconds: baseShutterSeconds,
+                stop: stop
+            ) else {
+                continue
+            }
+
+            let distance = abs(candidate - resultShutterSeconds)
+            if distance < bestDistance - Self.stabilityEpsilon {
+                bestDistance = distance
+                bestStop = stop
+            } else if abs(distance - bestDistance) <= Self.stabilityEpsilon,
+                      let currentBestStop = bestStop,
+                      stop < currentBestStop {
+                bestStop = stop
+            }
+        }
+
+        return bestStop
+    }
+
+    private func roundedTenthsText(_ value: Double) -> String {
+        let scaled = value * 10
+        let rounded = floor(scaled + 0.5 - Self.stabilityEpsilon) / 10
+        let text = String(format: "%.1f", rounded)
+        return text.replacingOccurrences(of: ".0", with: "")
+    }
+
+    private func isEffectivelyInteger(_ value: Double) -> Bool {
+        abs(value.rounded() - value) < Self.stabilityEpsilon
     }
 }

@@ -148,6 +148,76 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
         XCTAssertEqual(result, pow(2.0, 24), accuracy: tolerance)
     }
 
+    func testOneThirtiethPlusTenStopsExactlyThirtySeconds() throws {
+        XCTAssertEqual(
+            try calculate(baseShutter: 1.0 / 30.0, stop: 10),
+            30.0,
+            accuracy: tolerance
+        )
+    }
+
+    func testOneSecondPlusFiveStopsExactlyThirtySeconds() throws {
+        XCTAssertEqual(
+            try calculate(baseShutter: 1.0, stop: 5),
+            30.0,
+            accuracy: tolerance
+        )
+    }
+
+    func testTransitionFromThirtyToSixtyFourIsExactBoundary() throws {
+        XCTAssertEqual(
+            try calculate(baseShutter: 1.0 / 30.0, stop: 10),
+            30.0,
+            accuracy: tolerance
+        )
+        XCTAssertEqual(
+            try calculate(baseShutter: 1.0 / 30.0, stop: 11),
+            64.0,
+            accuracy: tolerance
+        )
+    }
+
+    func testResultMonotonicIncreaseAcrossStops() throws {
+        var previous = -Double.infinity
+
+        for stop in 0...15 {
+            let result = try calculate(baseShutter: 1.0 / 30.0, stop: stop)
+            XCTAssertGreaterThan(result, previous)
+            previous = result
+        }
+    }
+
+    func testExactPowerOfTwoSequenceFromOneSecond() throws {
+        var previous = try calculate(baseShutter: 1.0, stop: 6)
+
+        for stop in 7...15 {
+            let result = try calculate(baseShutter: 1.0, stop: stop)
+            XCTAssertEqual(result, previous * 2, accuracy: tolerance)
+            previous = result
+        }
+    }
+
+    func testInverseConsistencyUsingReconstructedStops() throws {
+        let cases: [(base: Double, stop: Int)] = [
+            (1.0, 6),
+            (1.0, 10),
+            (1.0, 20),
+            (1.0 / 8.0, 10)
+        ]
+
+        for testCase in cases {
+            let result = try calculate(baseShutter: testCase.base, stop: testCase.stop)
+            let reconstructed = log2(result / testCase.base)
+
+            XCTAssertEqual(
+                reconstructed,
+                Double(testCase.stop),
+                accuracy: tolerance,
+                "Expected reconstructed stop to stay stable for base \(testCase.base) stop \(testCase.stop)."
+            )
+        }
+    }
+
     private func calculate(baseShutter: Double, stop: Int) throws -> Double {
         let calculator = ExposureCalculator()
 
@@ -155,5 +225,31 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
             baseShutterSeconds: baseShutter,
             stop: stop
         )
+    }
+
+    func testCameraScaleTransitionsCleanlyIntoDoublingSequence() throws {
+        let base = 1.0 / 30.0
+
+        let result10 = try calculate(baseShutter: base, stop: 10)
+        let result11 = try calculate(baseShutter: base, stop: 11)
+        let result12 = try calculate(baseShutter: base, stop: 12)
+
+        XCTAssertEqual(result10, 30.0, accuracy: tolerance)
+        XCTAssertEqual(result11, 64.0, accuracy: tolerance)
+        XCTAssertEqual(result12, 128.0, accuracy: tolerance)
+
+        XCTAssertEqual(result12, result11 * 2, accuracy: tolerance)
+    }
+
+    func testInverseConsistencyAtSnapBoundary() throws {
+        let base = 1.0 / 30.0
+        let stop = 10
+
+        let result = try calculate(baseShutter: base, stop: stop)
+        let reconstructed = log2(result / base)
+
+        XCTAssertEqual(result, 30.0, accuracy: tolerance)
+        XCTAssertLessThan(reconstructed, Double(stop))
+        XCTAssertGreaterThan(reconstructed, Double(stop) - 0.25)
     }
 }

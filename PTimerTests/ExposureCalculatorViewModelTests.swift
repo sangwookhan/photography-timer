@@ -446,6 +446,258 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testRunningTimerPrimaryIsRemainingSecondaryIsExactSeconds() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 90)
+        currentDate = startDate.addingTimeInterval(8)
+        timerManager.tick(now: currentDate)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        let display = viewModel.formatTimeDisplay(timer.remainingTime)
+        XCTAssertEqual(display.primary, "01:22")
+        XCTAssertEqual(display.secondary, "82s")
+    }
+
+    @MainActor
+    func testCompletedTimerDisplaysOriginalDurationNotZero() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 90)
+
+        currentDate = startDate.addingTimeInterval(120)
+        timerManager.tick(now: currentDate)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        let display = viewModel.formatTimeDisplay(timer.duration)
+        XCTAssertEqual(timer.status, .completed)
+        XCTAssertEqual(display.primary, "01:30")
+        XCTAssertNotEqual(display.primary, "0s")
+    }
+
+    @MainActor
+    func testRunningTimerIncludesEndDateWithFullDateFormat() throws {
+        let currentDate = Date(timeIntervalSince1970: 100)
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 120)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        let context = try XCTUnwrap(viewModel.timerTimeContext(for: timer))
+        XCTAssertTrue(context.hasPrefix("Ends "))
+        XCTAssertTrue(context.contains(viewModel.formatDateTime(try XCTUnwrap(timer.endDate))))
+    }
+
+    @MainActor
+    func testStoppedTimerIncludesPausedDateWithFullDateFormat() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 120)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+        currentDate = startDate.addingTimeInterval(10)
+        viewModel.stopTimer(id: id)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(
+            viewModel.timerTimeContext(for: timer),
+            "Paused \(viewModel.formatDateTime(try XCTUnwrap(timer.pausedAt)))"
+        )
+    }
+
+    @MainActor
+    func testCompletedTimerIncludesCompletedDateWithFullDateFormat() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 2)
+        currentDate = startDate.addingTimeInterval(5)
+        timerManager.tick(now: currentDate)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(
+            viewModel.timerTimeContext(for: timer),
+            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
+        )
+    }
+
+    @MainActor
+    func testTimerDisplayDoesNotDuplicateInformation() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 10
+        viewModel.startTimer()
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        let primary = viewModel.formatTimeDisplay(timer.remainingTime)
+        let targetContext = try XCTUnwrap(viewModel.timerTargetContext(for: timer))
+        let timeContext = try XCTUnwrap(viewModel.timerTimeContext(for: timer))
+
+        XCTAssertFalse(targetContext.contains("Ends "))
+        XCTAssertFalse(timeContext.contains(timer.basisSummary))
+        XCTAssertFalse(targetContext.contains("Base "))
+        XCTAssertFalse(targetContext.contains("ND "))
+        XCTAssertFalse(timeContext.contains(primary.primary))
+        XCTAssertFalse(timeContext.contains(primary.secondary))
+    }
+
+    @MainActor
+    func testTimerDisplayHandlesLargeDurationsInReadableFormat() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertEqual(
+            viewModel.formatTimeDisplay(2_592_000),
+            TimeDisplay(primary: "1mo 00:00:00", secondary: "2592000s")
+        )
+        XCTAssertEqual(
+            viewModel.formatTimeDisplay(31_536_000),
+            TimeDisplay(primary: "1y 00:00:00", secondary: "31536000s")
+        )
+    }
+
+    @MainActor
+    func testTimerDisplayPrecisionDoesNotShowExcessiveDecimals() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertEqual(viewModel.formatTimeDisplay(128).secondary, "128s")
+        XCTAssertEqual(viewModel.formatTimeDisplay(21.158).secondary, "21.2s")
+        XCTAssertFalse(viewModel.formatTimeDisplay(128).secondary.contains(".000"))
+    }
+
+    @MainActor
+    func testBasisSummaryRemainsStableAcrossStateChanges() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.startTimer()
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+        let originalSummary = viewModel.timers.first?.basisSummary
+
+        currentDate = startDate.addingTimeInterval(1)
+        viewModel.stopTimer(id: id)
+        XCTAssertEqual(viewModel.timers.first?.basisSummary, originalSummary)
+
+        currentDate = startDate.addingTimeInterval(3)
+        viewModel.resumeTimer(id: id)
+        XCTAssertEqual(viewModel.timers.first?.basisSummary, originalSummary)
+    }
+
+    @MainActor
+    func testTimerStateTransitionDoesNotCorruptDisplayModel() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 8)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+
+        var timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.status, .running)
+        XCTAssertEqual(viewModel.formatTimeDisplay(timer.remainingTime).primary, "8s")
+
+        currentDate = startDate.addingTimeInterval(3)
+        viewModel.stopTimer(id: id)
+        timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.status, .stopped)
+        XCTAssertEqual(viewModel.formatTimeDisplay(timer.remainingTime).primary, "5s")
+
+        currentDate = startDate.addingTimeInterval(5)
+        viewModel.resumeTimer(id: id)
+        timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.status, .running)
+        XCTAssertEqual(viewModel.formatTimeDisplay(timer.remainingTime).primary, "5s")
+
+        currentDate = startDate.addingTimeInterval(11)
+        timerManager.tick(now: currentDate)
+        timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.status, .completed)
+        XCTAssertEqual(viewModel.formatTimeDisplay(timer.duration).primary, "8s")
+    }
+
+    @MainActor
     func testExistingTimerMetadataDoesNotChangeAfterInputUpdates() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         let timerManager = TimerManager(
@@ -499,5 +751,65 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         }
 
         XCTAssertEqual(nd1000Result.resultShutterSeconds, 30, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testTargetDurationNeverChangesAcrossStateTransitions() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 10)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+
+        let originalDuration = try XCTUnwrap(viewModel.timers.first?.duration)
+
+        currentDate = startDate.addingTimeInterval(3)
+        viewModel.stopTimer(id: id)
+        XCTAssertEqual(viewModel.timers.first?.duration, originalDuration)
+
+        currentDate = startDate.addingTimeInterval(6)
+        viewModel.resumeTimer(id: id)
+        XCTAssertEqual(viewModel.timers.first?.duration, originalDuration)
+
+        currentDate = startDate.addingTimeInterval(15)
+        timerManager.tick(now: currentDate)
+        XCTAssertEqual(viewModel.timers.first?.duration, originalDuration)
+    }
+
+    @MainActor
+    func testDisplayDoesNotUseForbiddenCharacters() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { startDate }
+            )
+        )
+
+        viewModel.startTimer(from: 128)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+
+        let primary = viewModel.formatTimeDisplay(timer.duration).primary
+        let secondary = viewModel.formatTimeDisplay(timer.duration).secondary
+        let context = viewModel.timerTimeContext(for: timer) ?? ""
+
+        let allText = primary + secondary + context
+
+        XCTAssertFalse(allText.contains("/"))
+        XCTAssertFalse(allText.contains("("))
+        XCTAssertFalse(allText.contains(")"))
     }
 }

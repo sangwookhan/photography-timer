@@ -2,6 +2,8 @@ import Combine
 import Foundation
 
 struct RunningTimerItem: Identifiable, Equatable {
+    private static let stabilityEpsilon = ExposureCalculator.stabilityEpsilon
+
     let id: UUID
     let order: Int
     let name: String
@@ -20,9 +22,9 @@ struct RunningTimerItem: Identifiable, Equatable {
             guard let endDate else {
                 return 0
             }
-            return max(0, endDate.timeIntervalSince(referenceDate))
+            return sanitizeRemainingTime(endDate.timeIntervalSince(referenceDate))
         case .stopped:
-            return max(0, pausedRemainingTime ?? 0)
+            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
         case .completed:
             return 0
         }
@@ -38,6 +40,11 @@ struct RunningTimerItem: Identifiable, Equatable {
         }
 
         return endDate
+    }
+
+    private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
+        let clamped = max(0, value)
+        return clamped < Self.stabilityEpsilon ? 0 : clamped
     }
 }
 
@@ -188,17 +195,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func formatClockTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        Self.clockTimeFormatter.string(from: date)
     }
 
     func formatDateTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "MMM d HH:mm"
-        return formatter.string(from: date)
+        Self.dateTimeFormatter.string(from: date)
     }
 
     func timerTargetContext(for timer: RunningTimerItem) -> String? {
@@ -307,6 +308,24 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         return result
     }
+
+    private static let clockTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+
+    private static let dateTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "MMM d HH:mm"
+        return formatter
+    }()
 }
 
 private struct TimerMetadata {

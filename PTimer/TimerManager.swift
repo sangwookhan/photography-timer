@@ -1,6 +1,8 @@
 import Combine
 import Foundation
 
+private let timerStabilityEpsilon: TimeInterval = ExposureCalculator.stabilityEpsilon
+
 enum TimerStatus: String, Equatable {
     case running
     case completed
@@ -22,9 +24,9 @@ struct TimerState: Identifiable, Equatable {
             guard let endDate else {
                 return 0
             }
-            return max(0, endDate.timeIntervalSinceNow)
+            return sanitizeRemainingTime(endDate.timeIntervalSinceNow)
         case .stopped:
-            return max(0, pausedRemainingTime ?? 0)
+            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
         case .completed:
             return 0
         }
@@ -36,9 +38,9 @@ struct TimerState: Identifiable, Equatable {
             guard let endDate else {
                 return 0
             }
-            return max(0, endDate.timeIntervalSince(now))
+            return sanitizeRemainingTime(endDate.timeIntervalSince(now))
         case .stopped:
-            return max(0, pausedRemainingTime ?? 0)
+            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
         case .completed:
             return 0
         }
@@ -47,7 +49,7 @@ struct TimerState: Identifiable, Equatable {
     func status(at now: Date) -> TimerStatus {
         if status == .running,
            let endDate,
-           now >= endDate {
+           now.addingTimeInterval(timerStabilityEpsilon) >= endDate {
             return .completed
         }
 
@@ -56,6 +58,10 @@ struct TimerState: Identifiable, Equatable {
 
     func stopping(at now: Date) -> TimerState {
         let remaining = remainingTime(at: now)
+
+        guard remaining > 0 else {
+            return completed()
+        }
 
         return TimerState(
             id: id,
@@ -69,9 +75,22 @@ struct TimerState: Identifiable, Equatable {
     }
 
     func resuming(at now: Date) -> TimerState? {
-        let remaining = max(0, pausedRemainingTime ?? 0)
+        let remaining = sanitizeRemainingTime(pausedRemainingTime ?? 0)
         guard remaining > 0 else {
             return nil
+        }
+
+        if let pausedAt,
+           pausedAt.addingTimeInterval(remaining) <= now.addingTimeInterval(timerStabilityEpsilon) {
+            return TimerState(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                endDate: endDate,
+                pausedRemainingTime: nil,
+                pausedAt: pausedAt,
+                status: .completed
+            )
         }
 
         return TimerState(
@@ -95,6 +114,11 @@ struct TimerState: Identifiable, Equatable {
             pausedAt: pausedAt,
             status: .completed
         )
+    }
+
+    private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
+        let clamped = max(0, value)
+        return clamped < timerStabilityEpsilon ? 0 : clamped
     }
 }
 
@@ -160,7 +184,7 @@ final class TimerManager: ObservableObject {
 
         let currentDate = dateProvider()
         guard let resumedState = timers[index].resuming(at: currentDate) else {
-            timers.remove(at: index)
+            timers[index] = timers[index].completed()
             stopLoopIfNeeded(now: currentDate)
             return
         }

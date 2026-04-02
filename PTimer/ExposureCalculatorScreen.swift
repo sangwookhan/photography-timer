@@ -424,13 +424,6 @@ private struct TimerSummaryCard: View {
                         primaryFont: .system(size: 28, weight: .bold, design: .rounded),
                         secondaryFont: .footnote
                     )
-
-                    if timer.status == .stopped {
-                        Text("Remaining \(primaryDisplay.primary)")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
                 }
 
                 if let targetContextText = targetContextText(targetDisplay: targetDisplay) {

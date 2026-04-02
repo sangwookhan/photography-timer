@@ -216,14 +216,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     func timerTimeContext(for timer: RunningTimerItem) -> String? {
         switch timer.status {
         case .running:
-            let completionText = timer.endDate.map(formatDateTime) ?? "--"
-            return "Ends \(completionText)"
+            return timer.endDate.map(formatDateTime) ?? "--"
         case .completed:
-            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
-            return "Completed \(completionText)"
+            return timer.completedAt.map(formatDateTime) ?? "--"
         case .stopped:
-            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
-            return "Paused \(pausedText)"
+            return timer.pausedAt.map(formatDateTime) ?? "--"
         }
     }
 
@@ -294,7 +291,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func ndStopLabel(for stop: Int) -> String {
-        "\(stop) stop"
+        stop == 1 ? "1 stop" : "\(stop) stops"
     }
 
     private func calculationPayload(for resultShutter: TimeInterval) -> ExposureCalculationResult? {

@@ -328,8 +328,8 @@ final class TimerManagerTests: XCTestCase {
         currentDate = startDate.addingTimeInterval(30)
         manager.resume(id: id)
         let resumedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(resumedTimer.status(at: currentDate), .running)
-        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 12, accuracy: 0.0001)
+        XCTAssertEqual(resumedTimer.status(at: currentDate), .completed)
+        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
     }
 
     @MainActor
@@ -350,8 +350,8 @@ final class TimerManagerTests: XCTestCase {
         manager.resume(id: id)
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+        XCTAssertEqual(timer.status(at: currentDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
     }
 
     @MainActor
@@ -514,6 +514,345 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(timer.remainingTime(at: completedDate.addingTimeInterval(20)), 0, accuracy: 0.0001)
     }
 
+    @MainActor
+    func testTimerStateResumeReturnsCompletedWhenNoRemainingTime() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(5)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: 0,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let resumed = timer.resume(at: pausedAt.addingTimeInterval(1))
+
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.remainingTime(at: pausedAt.addingTimeInterval(1)), 0, accuracy: 0.0001)
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertNil(resumed.pausedRemainingTime)
+        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+    }
+
+    @MainActor
+    func testTimerStateResumeReturnsCompletedWhenPauseWindowHasExpired() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(4)
+        let remainingTime: TimeInterval = 6
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: remainingTime,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let now = pausedAt.addingTimeInterval(remainingTime + 1)
+        let resumed = timer.resume(at: now)
+
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.remainingTime(at: now), 0, accuracy: 0.0001)
+        XCTAssertNil(resumed.pausedRemainingTime)
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertEqual(resumed.endDate, pausedAt.addingTimeInterval(remainingTime))
+    }
+
+    @MainActor
+    func testTimerStateResumeReturnsRunningWithNewEndDateWhenStillResumable() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(4)
+        let remainingTime: TimeInterval = 6
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: remainingTime,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let now = pausedAt.addingTimeInterval(2)
+        let resumed = timer.resume(at: now)
+
+        XCTAssertEqual(resumed.status, .running)
+        XCTAssertNil(resumed.pausedRemainingTime)
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remainingTime))
+    }
+
+    @MainActor
+    func testResumeAfterLogicalCompletionKeepsTimerAndMarksItCompleted() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 5))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: id)
+
+        currentDate = startDate.addingTimeInterval(10)
+        manager.resume(id: id)
+
+        XCTAssertEqual(manager.timers.count, 1)
+
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(timer.status(at: currentDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
+        XCTAssertNil(timer.pausedAt)
+        XCTAssertNil(timer.pausedRemainingTime)
+        XCTAssertEqual(timer.endDate, startDate.addingTimeInterval(5))
+    }
+
+    @MainActor
+    func testCompletedStateHasNoPausedMetadata() {
+        let start = Date(timeIntervalSince1970: 100)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: start,
+            endDate: start.addingTimeInterval(10),
+            pausedRemainingTime: 5,
+            pausedAt: start,
+            status: .stopped
+        )
+
+        let completed = timer.completed()
+
+        XCTAssertEqual(completed.status, .completed)
+        XCTAssertNil(completed.pausedAt)
+        XCTAssertNil(completed.pausedRemainingTime)
+    }
+
+    @MainActor
+    func testStatusTransitionsAtEpsilonBoundary() {
+        let epsilon = ExposureCalculator.stabilityEpsilon
+        let startDate = Date(timeIntervalSince1970: 100)
+        let endDate = startDate.addingTimeInterval(10)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        XCTAssertEqual(
+            timer.status(at: endDate.addingTimeInterval(-(epsilon * 2))),
+            .running
+        )
+        XCTAssertEqual(
+            timer.status(at: endDate.addingTimeInterval(-epsilon / 2)),
+            .completed
+        )
+        XCTAssertEqual(
+            timer.status(at: endDate.addingTimeInterval(epsilon / 2)),
+            .completed
+        )
+    }
+
+    @MainActor
+    func testRemainingTimeClampsBelowEpsilonToZero() {
+        let epsilon = ExposureCalculator.stabilityEpsilon
+        let startDate = Date(timeIntervalSince1970: 100)
+        let endDate = startDate.addingTimeInterval(epsilon / 2)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 1,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        XCTAssertEqual(timer.remainingTime(at: startDate), 0, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testRemainingTimeKeepsValueAboveEpsilon() {
+        let epsilon = ExposureCalculator.stabilityEpsilon
+        let startDate = Date(timeIntervalSince1970: 100)
+        let remaining = epsilon * 2
+        let endDate = startDate.addingTimeInterval(remaining)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 1,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        XCTAssertGreaterThan(timer.remainingTime(at: startDate), 0)
+        XCTAssertEqual(timer.remainingTime(at: startDate), remaining, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testStoppingWhenRemainingIsZeroImmediatelyCompletes() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let endDate = startDate.addingTimeInterval(10)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        let stopped = timer.stopping(at: endDate)
+
+        XCTAssertEqual(stopped.status, .completed)
+        XCTAssertEqual(stopped.remainingTime(at: endDate), 0, accuracy: 0.0001)
+        XCTAssertNil(stopped.pausedRemainingTime)
+    }
+
+    @MainActor
+    func testResumeBranch_remainingZero() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(5)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: 0,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let resumed = timer.resume(at: pausedAt.addingTimeInterval(1))
+
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertNil(resumed.pausedRemainingTime)
+    }
+
+    @MainActor
+    func testResumeBranch_expiredWhilePaused() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(4)
+        let remaining: TimeInterval = 6
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: remaining,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let resumed = timer.resume(at: pausedAt.addingTimeInterval(remaining + 1))
+
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.endDate, pausedAt.addingTimeInterval(remaining))
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertNil(resumed.pausedRemainingTime)
+    }
+
+    @MainActor
+    func testResumeBranch_validResume() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(4)
+        let remaining: TimeInterval = 6
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: remaining,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let now = pausedAt.addingTimeInterval(2)
+        let resumed = timer.resume(at: now)
+
+        XCTAssertEqual(resumed.status, .running)
+        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remaining))
+    }
+
+    @MainActor
+    func testCompletionDateMatchesRegardlessOfCompletionPath() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+
+        let tickManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+        let tickID = try XCTUnwrap(tickManager.start(duration: 10))
+        tickManager.tick(now: startDate.addingTimeInterval(12))
+        let tickCompleted = tryUnwrapTimer(withID: tickID, from: tickManager.timers)
+
+        var currentDate = startDate
+        let resumeManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let resumeID = try XCTUnwrap(resumeManager.start(duration: 10))
+        currentDate = startDate.addingTimeInterval(4)
+        resumeManager.stop(id: resumeID)
+        currentDate = startDate.addingTimeInterval(11)
+        resumeManager.resume(id: resumeID)
+        let resumeCompleted = tryUnwrapTimer(withID: resumeID, from: resumeManager.timers)
+
+        XCTAssertEqual(tickCompleted.status(at: startDate.addingTimeInterval(12)), .completed)
+        XCTAssertEqual(resumeCompleted.status(at: currentDate), .completed)
+        XCTAssertEqual(tickCompleted.endDate, startDate.addingTimeInterval(10))
+        XCTAssertEqual(resumeCompleted.endDate, startDate.addingTimeInterval(10))
+    }
+
+    @MainActor
+    func testStatusAtDoesNotChangeOriginalState() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        let original = timer
+        _ = timer.status(at: startDate.addingTimeInterval(20))
+
+        XCTAssertEqual(timer, original)
+    }
+
+    @MainActor
+    func testTimerManagerStopsLoopWhenNoRunningTimers() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 1))
+        manager.tick(now: startDate.addingTimeInterval(2))
+
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(timer.status(at: startDate.addingTimeInterval(2)), .completed)
+        XCTAssertFalse(manager.timers.contains { $0.status(at: startDate.addingTimeInterval(2)) == .running })
+    }
+
     private func tryUnwrapTimer(
         withID id: UUID,
         from timers: [TimerState],
@@ -556,7 +895,7 @@ final class TimerManagerTests: XCTestCase {
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
 
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 1, accuracy: 0.0001)
+        XCTAssertEqual(timer.status(at: currentDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
     }
 }

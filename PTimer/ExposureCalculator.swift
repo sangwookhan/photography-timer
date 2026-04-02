@@ -204,11 +204,7 @@ struct ExposureCalculator {
             return "\(Int(normalized.rounded()))s"
         }
 
-        if normalized < 1 {
-            return "\(trimmedMilliseconds(normalized))s"
-        }
-
-        return "\(roundedTenthsText(normalized))s"
+        return "\(trimmedMilliseconds(normalized))s"
     }
 
     private func normalizeDuration(_ seconds: Double) -> Double {
@@ -224,8 +220,15 @@ struct ExposureCalculator {
         if abs(seconds.rounded() - seconds) < 0.0001 {
             return String(format: "%02d", Int(seconds.rounded()))
         }
-        
-        return String(format: "%02d", Int(seconds.rounded()))
+
+        let wholeSeconds = Int(seconds)
+        let milliseconds = Int(((seconds - Double(wholeSeconds)) * 1_000).rounded())
+
+        if milliseconds == 1_000 {
+            return String(format: "%02d", wholeSeconds + 1)
+        }
+
+        return String(format: "%02d.%03d", wholeSeconds, milliseconds)
     }
 
     private func trimmedMilliseconds(_ seconds: Double) -> String {
@@ -242,7 +245,7 @@ struct ExposureCalculator {
             return "\(Int(seconds.rounded()))s"
         }
 
-        return "\(roundedTenthsText(seconds))s"
+        return "\(trimmedMilliseconds(seconds))s"
     }
 
     private func formatDatePrefix(

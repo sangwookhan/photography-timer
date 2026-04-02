@@ -119,14 +119,14 @@ final class ExposureCalculatorTests: XCTestCase {
         XCTAssertEqual(calculator.formatTimeDisplay(0), TimeDisplay(primary: "0s", secondary: "0s"))
         XCTAssertEqual(calculator.formatTimeDisplay(-3), TimeDisplay(primary: "0s", secondary: "0s"))
         XCTAssertEqual(calculator.formatTimeDisplay(0.125), TimeDisplay(primary: "0.125s", secondary: "0.125s"))
-        XCTAssertEqual(calculator.formatTimeDisplay(12.345), TimeDisplay(primary: "12.3s", secondary: "12.3s"))
+        XCTAssertEqual(calculator.formatTimeDisplay(12.345), TimeDisplay(primary: "12.345s", secondary: "12.345s"))
         XCTAssertEqual(calculator.formatTimeDisplay(128), TimeDisplay(primary: "02:08", secondary: "128s"))
         XCTAssertEqual(calculator.formatTimeDisplay(3728), TimeDisplay(primary: "01:02:08", secondary: "3728s"))
         XCTAssertEqual(calculator.formatTimeDisplay(90_000), TimeDisplay(primary: "1d 01:00:00", secondary: "90000s"))
         XCTAssertEqual(calculator.formatTimeDisplay(2_592_000), TimeDisplay(primary: "1mo 00:00:00", secondary: "2592000s"))
         XCTAssertEqual(calculator.formatTimeDisplay(2_766_245), TimeDisplay(primary: "1mo 2d 00:24:05", secondary: "2766245s"))
         XCTAssertEqual(calculator.formatTimeDisplay(31_536_000), TimeDisplay(primary: "1y 00:00:00", secondary: "31536000s"))
-        XCTAssertEqual(calculator.formatTimeDisplay(128.25), TimeDisplay(primary: "02:08", secondary: "128.2s"))
+        XCTAssertEqual(calculator.formatTimeDisplay(128.25), TimeDisplay(primary: "02:08.250", secondary: "128.25s"))
     }
 
     func testSnapToFullStopClampsToCanonicalBounds() throws {

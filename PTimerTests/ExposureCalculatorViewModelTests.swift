@@ -85,7 +85,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.formatTimeDisplay(0.9), TimeDisplay(primary: "0.9s", secondary: "0.9s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(1), TimeDisplay(primary: "1s", secondary: "1s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(5), TimeDisplay(primary: "5s", secondary: "5s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(21.158), TimeDisplay(primary: "21.2s", secondary: "21.2s"))
+        XCTAssertEqual(viewModel.formatTimeDisplay(21.158), TimeDisplay(primary: "21.158s", secondary: "21.158s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(59.9), TimeDisplay(primary: "59.9s", secondary: "59.9s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(60), TimeDisplay(primary: "01:00", secondary: "60s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(61), TimeDisplay(primary: "01:01", secondary: "61s"))
@@ -107,8 +107,8 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(viewModel.formatTimeDisplay(128.25), TimeDisplay(primary: "02:08", secondary: "128.2s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(12.345), TimeDisplay(primary: "12.3s", secondary: "12.3s"))
+        XCTAssertEqual(viewModel.formatTimeDisplay(128.25), TimeDisplay(primary: "02:08.250", secondary: "128.25s"))
+        XCTAssertEqual(viewModel.formatTimeDisplay(12.345), TimeDisplay(primary: "12.345s", secondary: "12.345s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(0.033), TimeDisplay(primary: "0.033s", secondary: "0.033s"))
     }
 
@@ -129,7 +129,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             id: UUID(),
             order: 1,
             name: "Timer 1",
-            basisSummary: "Base 1/30s · 6 stop",
+            basisSummary: "Base 1/30s · 6 stops",
             duration: 120,
             startDate: Date(timeIntervalSince1970: 8_940),
             endDate: endDate,
@@ -143,7 +143,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             id: UUID(),
             order: 2,
             name: "Timer 2",
-            basisSummary: "Base 1/30s · 6 stop",
+            basisSummary: "Base 1/30s · 6 stops",
             duration: 120,
             startDate: Date(timeIntervalSince1970: 8_820),
             endDate: nil,
@@ -157,7 +157,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             id: UUID(),
             order: 3,
             name: "Timer 3",
-            basisSummary: "Base 1/30s · 6 stop",
+            basisSummary: "Base 1/30s · 6 stops",
             duration: 120,
             startDate: Date(timeIntervalSince1970: 8_700),
             endDate: pausedDate,
@@ -167,9 +167,9 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             referenceDate: currentDate
         )
 
-        XCTAssertEqual(viewModel.timerTimeContext(for: running), "Ends \(viewModel.formatDateTime(endDate))")
-        XCTAssertEqual(viewModel.timerTimeContext(for: stopped), "Paused \(viewModel.formatDateTime(pausedDate))")
-        XCTAssertEqual(viewModel.timerTimeContext(for: completed), "Completed \(viewModel.formatDateTime(pausedDate))")
+        XCTAssertEqual(viewModel.timerTimeContext(for: running), viewModel.formatDateTime(endDate))
+        XCTAssertEqual(viewModel.timerTimeContext(for: stopped), viewModel.formatDateTime(pausedDate))
+        XCTAssertEqual(viewModel.timerTimeContext(for: completed), viewModel.formatDateTime(pausedDate))
     }
 
     @MainActor
@@ -190,11 +190,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(timerManager.timers.count, 1)
         XCTAssertEqual(viewModel.timers.count, 1)
         XCTAssertEqual(viewModel.runningTimerCount, 1)
-        XCTAssertEqual(viewModel.timers[0].name, "6 stop - 2s")
+        XCTAssertEqual(viewModel.timers[0].name, "6 stops - 2s")
         XCTAssertEqual(viewModel.timers[0].status, TimerStatus.running)
         XCTAssertEqual(viewModel.timers[0].remainingTime, 2, accuracy: 0.0001)
         XCTAssertEqual(viewModel.formatTimeDisplay(viewModel.timers[0].remainingTime), TimeDisplay(primary: "2s", secondary: "2s"))
-        XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · 6 stop")
+        XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · 6 stops")
     }
 
     @MainActor
@@ -217,11 +217,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(timer.status, .running)
         XCTAssertEqual(timer.remainingTime, 2, accuracy: 0.0001)
         XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertEqual(timer.basisSummary, "Base 1/30s · 6 stop")
+        XCTAssertEqual(timer.basisSummary, "Base 1/30s · 6 stops")
         XCTAssertEqual(viewModel.timerTargetContext(for: timer), "2s · 2s")
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Ends \(viewModel.formatDateTime(try XCTUnwrap(timer.endDate)))"
+            viewModel.formatDateTime(try XCTUnwrap(timer.endDate))
         )
     }
 
@@ -352,7 +352,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.timerTargetContext(for: timer), "8s · 8s")
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Paused \(viewModel.formatDateTime(try XCTUnwrap(timer.pausedAt)))"
+            viewModel.formatDateTime(try XCTUnwrap(timer.pausedAt))
         )
 
         currentDate = startDate.addingTimeInterval(6)
@@ -441,7 +441,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.timerTargetContext(for: timer))
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
+            viewModel.formatDateTime(try XCTUnwrap(timer.completedAt))
         )
     }
 
@@ -509,8 +509,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let timer = try XCTUnwrap(viewModel.timers.first)
         let context = try XCTUnwrap(viewModel.timerTimeContext(for: timer))
-        XCTAssertTrue(context.hasPrefix("Ends "))
-        XCTAssertTrue(context.contains(viewModel.formatDateTime(try XCTUnwrap(timer.endDate))))
+        XCTAssertEqual(context, viewModel.formatDateTime(try XCTUnwrap(timer.endDate)))
     }
 
     @MainActor
@@ -534,7 +533,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Paused \(viewModel.formatDateTime(try XCTUnwrap(timer.pausedAt)))"
+            viewModel.formatDateTime(try XCTUnwrap(timer.pausedAt))
         )
     }
 
@@ -558,7 +557,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
+            viewModel.formatDateTime(try XCTUnwrap(timer.completedAt))
         )
     }
 
@@ -626,7 +625,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         XCTAssertEqual(viewModel.formatTimeDisplay(128).secondary, "128s")
-        XCTAssertEqual(viewModel.formatTimeDisplay(21.158).secondary, "21.2s")
+        XCTAssertEqual(viewModel.formatTimeDisplay(21.158).secondary, "21.158s")
         XCTAssertFalse(viewModel.formatTimeDisplay(128).secondary.contains(".000"))
     }
 
@@ -714,15 +713,15 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.startTimer()
 
         let initialTimer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(initialTimer.name, "6 stop - 2s")
-        XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · 6 stop")
+        XCTAssertEqual(initialTimer.name, "6 stops - 2s")
+        XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · 6 stops")
 
         viewModel.baseShutter = 1
         viewModel.ndStop = 3
 
         let timerAfterInputChange = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timerAfterInputChange.name, "6 stop - 2s")
-        XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · 6 stop")
+        XCTAssertEqual(timerAfterInputChange.name, "6 stops - 2s")
+        XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · 6 stops")
     }
 
     @MainActor

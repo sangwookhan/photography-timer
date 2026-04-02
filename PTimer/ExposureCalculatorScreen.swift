@@ -204,9 +204,9 @@ struct ResultSectionView: View {
     private var ndText: String {
         switch calculationResult {
         case .success:
-            return "\(ndStop) stop"
+            return ndStop == 1 ? "1 stop" : "\(ndStop) stops"
         case .failure:
-            return "\(ndStop) stop"
+            return ndStop == 1 ? "1 stop" : "\(ndStop) stops"
         }
     }
 
@@ -240,14 +240,14 @@ private struct NDStopSelectionRow: View {
 
                 Spacer()
 
-                Text("\(ndStop) stop")
+                Text(ndStop == 1 ? "1 stop" : "\(ndStop) stops")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
 
             Picker("ND", selection: $ndStop) {
                 ForEach(0...30, id: \.self) { stop in
-                    Text("\(stop) stop").tag(stop)
+                    Text(stop == 1 ? "1 stop" : "\(stop) stops").tag(stop)
                 }
             }
             .pickerStyle(.wheel)
@@ -521,14 +521,11 @@ private struct TimerSummaryCard: View {
     private var timeContextText: String? {
         switch timer.status {
         case .running:
-            let completionText = timer.endDate.map(formatDateTime) ?? "--"
-            return "Ends \(completionText)"
+            return timer.endDate.map(formatDateTime) ?? "--"
         case .completed:
-            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
-            return "Completed \(completionText)"
+            return timer.completedAt.map(formatDateTime) ?? "--"
         case .stopped:
-            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
-            return "Paused \(pausedText)"
+            return timer.pausedAt.map(formatDateTime) ?? "--"
         }
     }
 

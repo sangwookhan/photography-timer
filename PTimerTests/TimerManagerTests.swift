@@ -853,6 +853,97 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertFalse(manager.timers.contains { $0.status(at: startDate.addingTimeInterval(2)) == .running })
     }
 
+    @MainActor
+    func testRunningTimerAutoCompletesViaUpdatingStatus() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let endDate = startDate.addingTimeInterval(10)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        let updated = timer.updatingStatus(at: endDate.addingTimeInterval(1))
+
+        XCTAssertEqual(updated.status, .completed)
+        XCTAssertEqual(updated.endDate, endDate)
+        XCTAssertEqual(updated.remainingTime(at: endDate.addingTimeInterval(1)), 0, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testBoundaryCompletionWithEpsilon() {
+        let epsilon = ExposureCalculator.stabilityEpsilon
+        let startDate = Date(timeIntervalSince1970: 100)
+        let endDate = startDate.addingTimeInterval(10)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        XCTAssertEqual(
+            timer.updatingStatus(at: endDate.addingTimeInterval(-(epsilon * 2))).status,
+            .running
+        )
+        XCTAssertEqual(
+            timer.updatingStatus(at: endDate.addingTimeInterval(-epsilon / 2)).status,
+            .completed
+        )
+        XCTAssertEqual(
+            timer.updatingStatus(at: endDate.addingTimeInterval(epsilon / 2)).status,
+            .completed
+        )
+    }
+
+    @MainActor
+    func testResumeAfterExpirationBecomesCompleted() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(4)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(10),
+            pausedRemainingTime: 6,
+            pausedAt: pausedAt,
+            status: .stopped
+        )
+
+        let resumed = timer.resume(at: pausedAt.addingTimeInterval(10))
+
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertNil(resumed.pausedRemainingTime)
+    }
+
+    @MainActor
+    func testStopLoopUsesResolvedState() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 1))
+        currentDate = startDate.addingTimeInterval(2)
+
+        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
+        XCTAssertEqual(timer.updatingStatus(at: currentDate).status, .completed)
+        XCTAssertFalse(manager.timers.contains {
+            $0.updatingStatus(at: currentDate).status == .running
+        })
+    }
+
     private func tryUnwrapTimer(
         withID id: UUID,
         from timers: [TimerState],

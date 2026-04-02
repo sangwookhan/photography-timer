@@ -19,6 +19,7 @@ struct TimerState: Identifiable, Equatable {
     let status: TimerStatus
 
     var remainingTime: TimeInterval {
+        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
         switch status {
         case .running:
             guard let endDate else {
@@ -33,6 +34,7 @@ struct TimerState: Identifiable, Equatable {
     }
 
     func remainingTime(at now: Date) -> TimeInterval {
+        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
         switch status {
         case .running:
             guard let endDate else {
@@ -47,13 +49,23 @@ struct TimerState: Identifiable, Equatable {
     }
 
     func status(at now: Date) -> TimerStatus {
-        if status == .running,
-           let endDate,
-           now.addingTimeInterval(timerStabilityEpsilon) >= endDate {
-            return .completed
+        guard status == .running,
+              let endDate,
+              now.addingTimeInterval(timerStabilityEpsilon) >= endDate else {
+            return status
         }
 
-        return status
+        return .completed
+    }
+
+    func updatingStatus(at now: Date) -> TimerState {
+        guard status == .running,
+              let endDate,
+              now.addingTimeInterval(timerStabilityEpsilon) >= endDate else {
+            return self
+        }
+
+        return completed(at: endDate)
     }
 
     func stopping(at now: Date) -> TimerState {
@@ -204,15 +216,7 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        timers = timers.map { timerState in
-            guard timerState.status == .running,
-                  let endDate = timerState.endDate,
-                  currentDate >= endDate else {
-                return timerState
-            }
-
-            return timerState.completed(at: endDate)
-        }
+        timers = timers.map { $0.updatingStatus(at: currentDate) }
         stopLoopIfNeeded(now: currentDate)
     }
 

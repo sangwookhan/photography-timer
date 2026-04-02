@@ -17,6 +17,7 @@ struct RunningTimerItem: Identifiable, Equatable {
     let referenceDate: Date
 
     var remainingTime: TimeInterval {
+        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
         switch status {
         case .running:
             guard let endDate else {
@@ -31,7 +32,8 @@ struct RunningTimerItem: Identifiable, Equatable {
     }
 
     var elapsedTime: TimeInterval {
-        max(0, duration - remainingTime)
+        assert(!remainingTime.isNaN, "Remaining time must not be NaN.")
+        return max(0, duration - remainingTime)
     }
 
     var completedAt: Date? {
@@ -43,6 +45,7 @@ struct RunningTimerItem: Identifiable, Equatable {
     }
 
     private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
+        assert(!value.isNaN, "Remaining time input must not be NaN.")
         let clamped = max(0, value)
         return clamped < Self.stabilityEpsilon ? 0 : clamped
     }
@@ -195,7 +198,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func formatClockTime(_ date: Date) -> String {
-        Self.clockTimeFormatter.string(from: date)
+        Self.dateTimeFormatter.string(from: date)
     }
 
     func formatDateTime(_ date: Date) -> String {
@@ -216,11 +219,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
     func timerTimeContext(for timer: RunningTimerItem) -> String? {
         switch timer.status {
         case .running:
-            return timer.endDate.map(formatDateTime) ?? "--"
+            let completionText = timer.endDate.map(formatDateTime) ?? "--"
+            return "Ends \(completionText)"
         case .completed:
-            return timer.completedAt.map(formatDateTime) ?? "--"
+            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
+            return "Completed \(completionText)"
         case .stopped:
-            return timer.pausedAt.map(formatDateTime) ?? "--"
+            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
+            return "Paused \(pausedText)"
         }
     }
 
@@ -306,21 +312,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return result
     }
 
-    private static let clockTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
-
     private static let dateTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "MMM d HH:mm"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()
 }

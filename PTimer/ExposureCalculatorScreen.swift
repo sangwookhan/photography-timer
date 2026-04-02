@@ -514,11 +514,14 @@ private struct TimerSummaryCard: View {
     private var timeContextText: String? {
         switch timer.status {
         case .running:
-            return timer.endDate.map(formatDateTime) ?? "--"
+            let completionText = timer.endDate.map(formatDateTime) ?? "--"
+            return "Ends \(completionText)"
         case .completed:
-            return timer.completedAt.map(formatDateTime) ?? "--"
+            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
+            return "Completed \(completionText)"
         case .stopped:
-            return timer.pausedAt.map(formatDateTime) ?? "--"
+            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
+            return "Paused \(pausedText)"
         }
     }
 

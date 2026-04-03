@@ -13,14 +13,14 @@ struct RunningTimerItem: Identifiable, Equatable {
     let pausedRemainingTime: TimeInterval?
     let pausedAt: Date?
     let timerState: TimerState
-    let referenceDateProvider: () -> Date
+    let referenceDate: Date
 
     var status: TimerStatus {
-        timerState.status(at: referenceDateProvider())
+        timerState.status(at: referenceDate)
     }
 
     var remainingTime: TimeInterval {
-        timerState.remainingTime(at: referenceDateProvider())
+        timerState.remainingTime(at: referenceDate)
     }
 
     var elapsedTime: TimeInterval {
@@ -39,7 +39,8 @@ struct RunningTimerItem: Identifiable, Equatable {
         lhs.completionDate == rhs.completionDate &&
         lhs.pausedRemainingTime == rhs.pausedRemainingTime &&
         lhs.pausedAt == rhs.pausedAt &&
-        lhs.timerState == rhs.timerState
+        lhs.timerState == rhs.timerState &&
+        lhs.referenceDate == rhs.referenceDate
     }
 }
 
@@ -61,9 +62,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.calculator = ExposureCalculator()
         self.timerManager = TimerManager()
 
-        timerManager.$timers
+        Publishers.CombineLatest(timerManager.$timers, timerManager.$currentDate)
             .sink { [weak self] states in
-                self?.syncTimers(with: states)
+                self?.syncTimers(with: states.0, referenceDate: states.1)
             }
             .store(in: &cancellables)
     }
@@ -75,9 +76,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.calculator = calculator
         self.timerManager = timerManager
 
-        timerManager.$timers
+        Publishers.CombineLatest(timerManager.$timers, timerManager.$currentDate)
             .sink { [weak self] states in
-                self?.syncTimers(with: states)
+                self?.syncTimers(with: states.0, referenceDate: states.1)
             }
             .store(in: &cancellables)
     }
@@ -129,18 +130,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func stopTimer(id: UUID) {
         timerManager.stop(id: id)
-        syncTimers(with: timerManager.timers)
     }
 
     func resumeTimer(id: UUID) {
         timerManager.resume(id: id)
-        syncTimers(with: timerManager.timers)
     }
 
     func removeTimer(id: UUID) {
         timerManager.remove(id: id)
         timerMetadata.removeValue(forKey: id)
-        syncTimers(with: timerManager.timers)
     }
 
     private func startTimer(
@@ -165,12 +163,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
             name: timerName,
             basisSummary: makeBasisSummary(for: result)
         )
-        syncTimers(with: timerManager.timers)
+        syncTimers(with: timerManager.timers, referenceDate: timerManager.currentDate)
     }
 
     func clearCompletedTimers() {
         timerManager.removeCompletedTimers()
-        syncTimers(with: timerManager.timers)
     }
 
     func formatDuration(_ seconds: TimeInterval) -> String {
@@ -230,7 +227,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         "\(ndStopLabel(for: result.stop)) - \(calculator.formatShutter(result.resultShutterSeconds))"
     }
 
-    private func syncTimers(with states: [TimerState]) {
+    private func syncTimers(with states: [TimerState], referenceDate: Date) {
         let validIDs = Set(states.map(\.id))
         timerMetadata = timerMetadata.filter { validIDs.contains($0.key) }
         timers = states
@@ -247,9 +244,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                     pausedRemainingTime: state.pausedRemainingTime,
                     pausedAt: state.pausedAt,
                     timerState: state,
-                    referenceDateProvider: { [weak timerManager = self.timerManager] in
-                        timerManager?.currentDate ?? Date()
-                    }
+                    referenceDate: referenceDate
                 )
             }
             .sorted(by: sortTimers)

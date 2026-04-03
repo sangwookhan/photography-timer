@@ -517,7 +517,7 @@ private struct TimerSummaryCard: View {
             let completionText = timer.endDate.map(formatDateTime) ?? "--"
             return "Ends \(completionText)"
         case .completed:
-            let completionText = timer.completionDate.map(formatDateTime) ?? "--"
+            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
             return "Completed \(completionText)"
         case .stopped:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"

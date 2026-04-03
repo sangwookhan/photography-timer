@@ -117,7 +117,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let currentDate = Date(timeIntervalSince1970: 100)
         let endDate = Date(timeIntervalSince1970: 9_060)
         let pausedDate = Date(timeIntervalSince1970: 8_940)
-        let completionDate = Date(timeIntervalSince1970: 8_880)
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -134,20 +133,10 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             duration: 120,
             startDate: Date(timeIntervalSince1970: 8_940),
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
-            timerState: TimerState(
-                id: UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID(),
-                duration: 120,
-                startDate: Date(timeIntervalSince1970: 8_940),
-                endDate: endDate,
-                completionDate: nil,
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running
-            ),
-            referenceDateProvider: { currentDate }
+            status: .running,
+            referenceDate: currentDate
         )
 
         let stopped = RunningTimerItem(
@@ -158,20 +147,10 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             duration: 120,
             startDate: Date(timeIntervalSince1970: 8_820),
             endDate: nil,
-            completionDate: nil,
             pausedRemainingTime: 45,
             pausedAt: pausedDate,
-            timerState: TimerState(
-                id: UUID(uuidString: "00000000-0000-0000-0000-000000000002") ?? UUID(),
-                duration: 120,
-                startDate: Date(timeIntervalSince1970: 8_820),
-                endDate: nil,
-                completionDate: nil,
-                pausedRemainingTime: 45,
-                pausedAt: pausedDate,
-                status: .stopped
-            ),
-            referenceDateProvider: { currentDate }
+            status: .stopped,
+            referenceDate: currentDate
         )
 
         let completed = RunningTimerItem(
@@ -181,26 +160,16 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             basisSummary: "Base 1/30s · 6 stops",
             duration: 120,
             startDate: Date(timeIntervalSince1970: 8_700),
-            endDate: nil,
-            completionDate: completionDate,
+            endDate: pausedDate,
             pausedRemainingTime: nil,
             pausedAt: nil,
-            timerState: TimerState(
-                id: UUID(uuidString: "00000000-0000-0000-0000-000000000003") ?? UUID(),
-                duration: 120,
-                startDate: Date(timeIntervalSince1970: 8_700),
-                endDate: nil,
-                completionDate: completionDate,
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .completed
-            ),
-            referenceDateProvider: { currentDate }
+            status: .completed,
+            referenceDate: currentDate
         )
 
         XCTAssertEqual(viewModel.timerTimeContext(for: running), "Ends \(viewModel.formatDateTime(endDate))")
         XCTAssertEqual(viewModel.timerTimeContext(for: stopped), "Paused \(viewModel.formatDateTime(pausedDate))")
-        XCTAssertEqual(viewModel.timerTimeContext(for: completed), "Completed \(viewModel.formatDateTime(completionDate))")
+        XCTAssertEqual(viewModel.timerTimeContext(for: completed), "Completed \(viewModel.formatDateTime(pausedDate))")
     }
 
     @MainActor
@@ -468,12 +437,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(timer.status, .completed)
         XCTAssertEqual(timer.remainingTime, 0, accuracy: 0.0001)
         XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertNil(timer.endDate)
-        XCTAssertEqual(timer.completionDate, startDate.addingTimeInterval(2))
+        XCTAssertEqual(timer.completedAt, startDate.addingTimeInterval(2))
         XCTAssertNil(viewModel.timerTargetContext(for: timer))
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completionDate)))"
+            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
         )
     }
 
@@ -589,7 +557,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completionDate)))"
+            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
         )
     }
 
@@ -842,111 +810,5 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertFalse(allText.contains("/"))
         XCTAssertFalse(allText.contains("("))
         XCTAssertFalse(allText.contains(")"))
-    }
-
-    @MainActor
-    func testRemainingTimeConsistencyBetweenStateAndDisplay() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let referenceDate = startDate.addingTimeInterval(4)
-        let endDate = startDate.addingTimeInterval(10)
-
-        let state = TimerState(
-            id: UUID(),
-            duration: 10,
-            startDate: startDate,
-            endDate: endDate,
-            completionDate: nil,
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running
-        )
-
-        let item = RunningTimerItem(
-            id: state.id,
-            order: 1,
-            name: "Timer 1",
-            basisSummary: "Manual timer",
-            duration: state.duration,
-            startDate: state.startDate,
-            endDate: state.endDate,
-            completionDate: state.completionDate,
-            pausedRemainingTime: state.pausedRemainingTime,
-            pausedAt: state.pausedAt,
-            timerState: state,
-            referenceDateProvider: { referenceDate }
-        )
-
-        XCTAssertEqual(item.remainingTime, state.remainingTime(at: referenceDate), accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testRemainingTimeDoesNotDriftOverMultipleReads() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let referenceDate = startDate.addingTimeInterval(4)
-        let item = RunningTimerItem(
-            id: UUID(),
-            order: 1,
-            name: "Timer 1",
-            basisSummary: "Manual timer",
-            duration: 10,
-            startDate: startDate,
-            endDate: startDate.addingTimeInterval(10),
-            completionDate: nil,
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            timerState: TimerState(
-                id: UUID(),
-                duration: 10,
-                startDate: startDate,
-                endDate: startDate.addingTimeInterval(10),
-                completionDate: nil,
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running
-            ),
-            referenceDateProvider: { referenceDate }
-        )
-
-        let firstRead = item.remainingTime
-        let secondRead = item.remainingTime
-        let thirdRead = item.remainingTime
-
-        XCTAssertEqual(firstRead, secondRead, accuracy: 0.0001)
-        XCTAssertEqual(secondRead, thirdRead, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testRunningTimerItemDoesNotUseSystemClock() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let referenceDate = startDate.addingTimeInterval(4)
-        let item = RunningTimerItem(
-            id: UUID(),
-            order: 1,
-            name: "Timer 1",
-            basisSummary: "Manual timer",
-            duration: 10,
-            startDate: startDate,
-            endDate: startDate.addingTimeInterval(10),
-            completionDate: nil,
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            timerState: TimerState(
-                id: UUID(),
-                duration: 10,
-                startDate: startDate,
-                endDate: startDate.addingTimeInterval(10),
-                completionDate: nil,
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running
-            ),
-            referenceDateProvider: { referenceDate }
-        )
-
-        let initialRemainingTime = item.remainingTime
-        Thread.sleep(forTimeInterval: 0.05)
-        let delayedRemainingTime = item.remainingTime
-
-        XCTAssertEqual(initialRemainingTime, delayedRemainingTime, accuracy: 0.0001)
     }
 }

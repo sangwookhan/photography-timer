@@ -2,6 +2,8 @@ import Combine
 import Foundation
 
 struct RunningTimerItem: Identifiable, Equatable {
+    private static let stabilityEpsilon = ExposureCalculator.stabilityEpsilon
+
     let id: UUID
     let order: Int
     let name: String
@@ -9,18 +11,24 @@ struct RunningTimerItem: Identifiable, Equatable {
     let duration: TimeInterval
     let startDate: Date
     let endDate: Date?
-    let completionDate: Date?
     let pausedRemainingTime: TimeInterval?
     let pausedAt: Date?
-    let timerState: TimerState
-    let referenceDateProvider: () -> Date
-
-    var status: TimerStatus {
-        timerState.status(at: referenceDateProvider())
-    }
+    let status: TimerStatus
+    let referenceDate: Date
 
     var remainingTime: TimeInterval {
-        timerState.remainingTime(at: referenceDateProvider())
+        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
+        switch status {
+        case .running:
+            guard let endDate else {
+                return 0
+            }
+            return sanitizeRemainingTime(endDate.timeIntervalSince(referenceDate))
+        case .stopped:
+            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
+        case .completed:
+            return 0
+        }
     }
 
     var elapsedTime: TimeInterval {
@@ -28,18 +36,18 @@ struct RunningTimerItem: Identifiable, Equatable {
         return max(0, duration - remainingTime)
     }
 
-    static func == (lhs: RunningTimerItem, rhs: RunningTimerItem) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.order == rhs.order &&
-        lhs.name == rhs.name &&
-        lhs.basisSummary == rhs.basisSummary &&
-        lhs.duration == rhs.duration &&
-        lhs.startDate == rhs.startDate &&
-        lhs.endDate == rhs.endDate &&
-        lhs.completionDate == rhs.completionDate &&
-        lhs.pausedRemainingTime == rhs.pausedRemainingTime &&
-        lhs.pausedAt == rhs.pausedAt &&
-        lhs.timerState == rhs.timerState
+    var completedAt: Date? {
+        guard status == .completed, let endDate else {
+            return nil
+        }
+
+        return endDate
+    }
+
+    private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
+        assert(!value.isNaN, "Remaining time input must not be NaN.")
+        let clamped = max(0, value)
+        return clamped < Self.stabilityEpsilon ? 0 : clamped
     }
 }
 
@@ -214,7 +222,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             let completionText = timer.endDate.map(formatDateTime) ?? "--"
             return "Ends \(completionText)"
         case .completed:
-            let completionText = timer.completionDate.map(formatDateTime) ?? "--"
+            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
             return "Completed \(completionText)"
         case .stopped:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
@@ -233,6 +241,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private func syncTimers(with states: [TimerState]) {
         let validIDs = Set(states.map(\.id))
         timerMetadata = timerMetadata.filter { validIDs.contains($0.key) }
+        let referenceDate = timerManager.currentDate
+
         timers = states
             .map { state in
                 RunningTimerItem(
@@ -243,13 +253,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
                     duration: state.duration,
                     startDate: state.startDate,
                     endDate: state.endDate,
-                    completionDate: state.completionDate,
                     pausedRemainingTime: state.pausedRemainingTime,
                     pausedAt: state.pausedAt,
-                    timerState: state,
-                    referenceDateProvider: { [weak timerManager = self.timerManager] in
-                        timerManager?.currentDate ?? Date()
-                    }
+                    status: state.status,
+                    referenceDate: referenceDate
                 )
             }
             .sorted(by: sortTimers)

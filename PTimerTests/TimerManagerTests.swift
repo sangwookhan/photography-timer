@@ -268,8 +268,7 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(timer.remainingTime(at: completionDate), 0, accuracy: 0.0001)
         XCTAssertEqual(timer.duration, 3, accuracy: 0.0001)
         XCTAssertEqual(timer.startDate, startDate)
-        XCTAssertNil(timer.endDate)
-        XCTAssertEqual(timer.completionDate, startDate.addingTimeInterval(3))
+        XCTAssertEqual(timer.endDate, startDate.addingTimeInterval(3))
     }
 
     @MainActor
@@ -329,8 +328,8 @@ final class TimerManagerTests: XCTestCase {
         currentDate = startDate.addingTimeInterval(30)
         manager.resume(id: id)
         let resumedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(resumedTimer.status(at: currentDate), .running)
-        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 12, accuracy: 0.0001)
+        XCTAssertEqual(resumedTimer.status(at: currentDate), .completed)
+        XCTAssertEqual(resumedTimer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
     }
 
     @MainActor
@@ -351,8 +350,8 @@ final class TimerManagerTests: XCTestCase {
         manager.resume(id: id)
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+        XCTAssertEqual(timer.status(at: currentDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
     }
 
     @MainActor
@@ -365,12 +364,13 @@ final class TimerManagerTests: XCTestCase {
         )
 
         let id = try XCTUnwrap(manager.start(duration: 10))
+        let originalEndDate = try XCTUnwrap(tryUnwrapTimer(withID: id, from: manager.timers).endDate)
 
         currentDate = startDate.addingTimeInterval(4)
         manager.stop(id: id)
 
         let stoppedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertNil(stoppedTimer.endDate)
+        XCTAssertEqual(stoppedTimer.endDate, originalEndDate)
     }
 
     @MainActor
@@ -406,8 +406,6 @@ final class TimerManagerTests: XCTestCase {
         manager.tick(now: startDate.addingTimeInterval(31_536_001))
         let completedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
         XCTAssertEqual(completedTimer.status(at: startDate.addingTimeInterval(31_536_001)), .completed)
-        XCTAssertNil(completedTimer.endDate)
-        XCTAssertEqual(completedTimer.completionDate, startDate.addingTimeInterval(31_536_000))
     }
 
     @MainActor
@@ -424,8 +422,7 @@ final class TimerManagerTests: XCTestCase {
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
         XCTAssertEqual(timer.status(at: completionDate), .completed)
-        XCTAssertNil(timer.endDate)
-        XCTAssertEqual(timer.completionDate, startDate.addingTimeInterval(10))
+        XCTAssertEqual(timer.endDate, startDate.addingTimeInterval(10))
     }
 
     @MainActor
@@ -525,8 +522,7 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: 0,
             pausedAt: pausedAt,
             status: .stopped
@@ -538,12 +534,11 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(resumed.remainingTime(at: pausedAt.addingTimeInterval(1)), 0, accuracy: 0.0001)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
-        XCTAssertNil(resumed.endDate)
-        XCTAssertEqual(resumed.completionDate, pausedAt.addingTimeInterval(1))
+        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
     }
 
     @MainActor
-    func testTimerStateResumePreservesRemainingTimeAfterLongWallClockPause() {
+    func testTimerStateResumeReturnsCompletedWhenPauseWindowHasExpired() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(4)
         let remainingTime: TimeInterval = 6
@@ -551,8 +546,7 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: remainingTime,
             pausedAt: pausedAt,
             status: .stopped
@@ -561,11 +555,11 @@ final class TimerManagerTests: XCTestCase {
         let now = pausedAt.addingTimeInterval(remainingTime + 1)
         let resumed = timer.resume(at: now)
 
-        XCTAssertEqual(resumed.status, .running)
-        XCTAssertEqual(resumed.remainingTime(at: now), remainingTime, accuracy: 0.0001)
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.remainingTime(at: now), 0, accuracy: 0.0001)
         XCTAssertNil(resumed.pausedRemainingTime)
         XCTAssertNil(resumed.pausedAt)
-        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remainingTime))
+        XCTAssertEqual(resumed.endDate, pausedAt.addingTimeInterval(remainingTime))
     }
 
     @MainActor
@@ -577,8 +571,7 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: remainingTime,
             pausedAt: pausedAt,
             status: .stopped
@@ -613,11 +606,11 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(manager.timers.count, 1)
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 1, accuracy: 0.0001)
+        XCTAssertEqual(timer.status(at: currentDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
         XCTAssertNil(timer.pausedAt)
         XCTAssertNil(timer.pausedRemainingTime)
-        XCTAssertEqual(timer.endDate, currentDate.addingTimeInterval(1))
+        XCTAssertEqual(timer.endDate, startDate.addingTimeInterval(5))
     }
 
     @MainActor
@@ -627,18 +620,15 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: start,
-            endDate: nil,
-            completionDate: nil,
+            endDate: start.addingTimeInterval(10),
             pausedRemainingTime: 5,
             pausedAt: start,
             status: .stopped
         )
 
-        let completed = timer.completed(at: start.addingTimeInterval(5))
+        let completed = timer.completed()
 
         XCTAssertEqual(completed.status, .completed)
-        XCTAssertNil(completed.endDate)
-        XCTAssertEqual(completed.completionDate, start.addingTimeInterval(5))
         XCTAssertNil(completed.pausedAt)
         XCTAssertNil(completed.pausedRemainingTime)
     }
@@ -653,7 +643,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 10,
             startDate: startDate,
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -683,7 +672,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 1,
             startDate: startDate,
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -703,7 +691,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 1,
             startDate: startDate,
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -722,7 +709,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 10,
             startDate: startDate,
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -733,8 +719,6 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(stopped.status, .completed)
         XCTAssertEqual(stopped.remainingTime(at: endDate), 0, accuracy: 0.0001)
         XCTAssertNil(stopped.pausedRemainingTime)
-        XCTAssertNil(stopped.endDate)
-        XCTAssertEqual(stopped.completionDate, endDate)
     }
 
     @MainActor
@@ -745,8 +729,7 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: 0,
             pausedAt: pausedAt,
             status: .stopped
@@ -755,8 +738,7 @@ final class TimerManagerTests: XCTestCase {
         let resumed = timer.resume(at: pausedAt.addingTimeInterval(1))
 
         XCTAssertEqual(resumed.status, .completed)
-        XCTAssertNil(resumed.endDate)
-        XCTAssertEqual(resumed.completionDate, pausedAt.addingTimeInterval(1))
+        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
     }
@@ -770,18 +752,16 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: remaining,
             pausedAt: pausedAt,
             status: .stopped
         )
 
-        let now = pausedAt.addingTimeInterval(remaining + 1)
-        let resumed = timer.resume(at: now)
+        let resumed = timer.resume(at: pausedAt.addingTimeInterval(remaining + 1))
 
-        XCTAssertEqual(resumed.status, .running)
-        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remaining))
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.endDate, pausedAt.addingTimeInterval(remaining))
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
     }
@@ -795,8 +775,7 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: remaining,
             pausedAt: pausedAt,
             status: .stopped
@@ -831,15 +810,12 @@ final class TimerManagerTests: XCTestCase {
         resumeManager.stop(id: resumeID)
         currentDate = startDate.addingTimeInterval(11)
         resumeManager.resume(id: resumeID)
-        resumeManager.tick(now: currentDate.addingTimeInterval(6))
         let resumeCompleted = tryUnwrapTimer(withID: resumeID, from: resumeManager.timers)
 
         XCTAssertEqual(tickCompleted.status(at: startDate.addingTimeInterval(12)), .completed)
-        XCTAssertEqual(resumeCompleted.status(at: currentDate.addingTimeInterval(6)), .completed)
-        XCTAssertNil(tickCompleted.endDate)
-        XCTAssertEqual(tickCompleted.completionDate, startDate.addingTimeInterval(10))
-        XCTAssertNil(resumeCompleted.endDate)
-        XCTAssertEqual(resumeCompleted.completionDate, startDate.addingTimeInterval(17))
+        XCTAssertEqual(resumeCompleted.status(at: currentDate), .completed)
+        XCTAssertEqual(tickCompleted.endDate, startDate.addingTimeInterval(10))
+        XCTAssertEqual(resumeCompleted.endDate, startDate.addingTimeInterval(10))
     }
 
     @MainActor
@@ -850,7 +826,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 10,
             startDate: startDate,
             endDate: startDate.addingTimeInterval(10),
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -887,7 +862,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 10,
             startDate: startDate,
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -896,8 +870,7 @@ final class TimerManagerTests: XCTestCase {
         let updated = timer.updatingStatus(at: endDate.addingTimeInterval(1))
 
         XCTAssertEqual(updated.status, .completed)
-        XCTAssertNil(updated.endDate)
-        XCTAssertEqual(updated.completionDate, endDate)
+        XCTAssertEqual(updated.endDate, endDate)
         XCTAssertEqual(updated.remainingTime(at: endDate.addingTimeInterval(1)), 0, accuracy: 0.0001)
     }
 
@@ -911,7 +884,6 @@ final class TimerManagerTests: XCTestCase {
             duration: 10,
             startDate: startDate,
             endDate: endDate,
-            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -939,156 +911,18 @@ final class TimerManagerTests: XCTestCase {
             id: UUID(),
             duration: 10,
             startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
+            endDate: startDate.addingTimeInterval(10),
             pausedRemainingTime: 6,
             pausedAt: pausedAt,
             status: .stopped
         )
 
-        let now = pausedAt.addingTimeInterval(10)
-        let resumed = timer.resume(at: now)
+        let resumed = timer.resume(at: pausedAt.addingTimeInterval(10))
 
-        XCTAssertEqual(resumed.status, .running)
-        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(6))
-        XCTAssertNil(resumed.completionDate)
+        XCTAssertEqual(resumed.status, .completed)
+        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
-    }
-
-    @MainActor
-    func test_resume_after_long_pause_preserves_remaining_time() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 10))
-        currentDate = startDate.addingTimeInterval(4)
-        manager.stop(id: id)
-
-        currentDate = startDate.addingTimeInterval(10_000)
-        manager.resume(id: id)
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func test_stopped_timer_never_completes_while_time_passes() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 8))
-        currentDate = startDate.addingTimeInterval(3)
-        manager.stop(id: id)
-
-        let futureDate = startDate.addingTimeInterval(300)
-        manager.tick(now: futureDate)
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: futureDate), .stopped)
-        XCTAssertEqual(timer.remainingTime(at: futureDate), 5, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func test_resume_does_not_auto_complete_even_if_time_passed() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let pausedAt = startDate.addingTimeInterval(4)
-        let remaining: TimeInterval = 6
-        let timer = TimerState(
-            id: UUID(),
-            duration: 10,
-            startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
-            pausedRemainingTime: remaining,
-            pausedAt: pausedAt,
-            status: .stopped
-        )
-
-        let now = pausedAt.addingTimeInterval(600)
-        let resumed = timer.resume(at: now)
-
-        XCTAssertEqual(resumed.status, .running)
-        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remaining))
-        XCTAssertNil(resumed.completionDate)
-        XCTAssertNil(resumed.pausedAt)
-        XCTAssertNil(resumed.pausedRemainingTime)
-    }
-
-    @MainActor
-    func test_resume_recalculates_endDate_from_now() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let pausedAt = startDate.addingTimeInterval(4)
-        let remaining: TimeInterval = 6
-        let timer = TimerState(
-            id: UUID(),
-            duration: 10,
-            startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
-            pausedRemainingTime: remaining,
-            pausedAt: pausedAt,
-            status: .stopped
-        )
-
-        let now = startDate.addingTimeInterval(100)
-        let resumed = timer.resume(at: now)
-
-        XCTAssertEqual(resumed.status, .running)
-        XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remaining))
-        XCTAssertNil(resumed.completionDate)
-    }
-
-    @MainActor
-    func test_stopping_sets_endDate_nil() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let timer = TimerState(
-            id: UUID(),
-            duration: 10,
-            startDate: startDate,
-            endDate: startDate.addingTimeInterval(10),
-            completionDate: nil,
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running
-        )
-
-        let stopped = timer.stopping(at: startDate.addingTimeInterval(4))
-
-        XCTAssertEqual(stopped.status, .stopped)
-        XCTAssertNil(stopped.endDate)
-        XCTAssertEqual(stopped.remainingTime(at: startDate.addingTimeInterval(400)), 6, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func test_tick_does_not_affect_stopped_timer() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 12))
-        currentDate = startDate.addingTimeInterval(5)
-        manager.stop(id: id)
-
-        manager.tick(now: startDate.addingTimeInterval(500))
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: startDate.addingTimeInterval(500)), .stopped)
-        XCTAssertEqual(timer.remainingTime(at: startDate.addingTimeInterval(500)), 7, accuracy: 0.0001)
-        XCTAssertNil(timer.endDate)
-        XCTAssertNil(timer.completionDate)
     }
 
     @MainActor
@@ -1123,7 +957,6 @@ final class TimerManagerTests: XCTestCase {
                 duration: 0,
                 startDate: .distantPast,
                 endDate: nil,
-                completionDate: nil,
                 pausedRemainingTime: 0,
                 pausedAt: nil,
                 status: .stopped
@@ -1153,114 +986,7 @@ final class TimerManagerTests: XCTestCase {
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
 
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 1, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testPauseWaitResumeStillRunning() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 10))
-
-        currentDate = startDate.addingTimeInterval(4)
-        manager.stop(id: id)
-
-        currentDate = startDate.addingTimeInterval(20)
-        manager.resume(id: id)
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testPausedTimerNeverAutoCompletes() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 8))
-
-        currentDate = startDate.addingTimeInterval(3)
-        manager.stop(id: id)
-
-        let futureDate = startDate.addingTimeInterval(300)
-        manager.tick(now: futureDate)
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: futureDate), .stopped)
-        XCTAssertEqual(timer.remainingTime(at: futureDate), 5, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testStoppedTimerRemainsStableOverTime() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 12))
-
-        currentDate = startDate.addingTimeInterval(5)
-        manager.stop(id: id)
-
-        let stoppedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
-        let pausedRemainingTime = try XCTUnwrap(stoppedTimer.pausedRemainingTime)
-
-        currentDate = startDate.addingTimeInterval(5_000)
-        XCTAssertEqual(stoppedTimer.status(at: currentDate), .stopped)
-        XCTAssertEqual(stoppedTimer.remainingTime(at: currentDate), pausedRemainingTime, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testRunningTimerCompletesNormally() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { startDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 4))
-        manager.tick(now: startDate.addingTimeInterval(5))
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: startDate.addingTimeInterval(5)), .completed)
-        XCTAssertEqual(timer.remainingTime(at: startDate.addingTimeInterval(5)), 0, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testResumeFromNearZeroBehavesCorrectly() {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let remaining = ExposureCalculator.stabilityEpsilon / 2
-        let timer = TimerState(
-            id: UUID(),
-            duration: 10,
-            startDate: startDate,
-            endDate: nil,
-            completionDate: nil,
-            pausedRemainingTime: remaining,
-            pausedAt: startDate.addingTimeInterval(9.999),
-            status: .stopped
-        )
-
-        let resumed = timer.resume(at: startDate.addingTimeInterval(20))
-
-        XCTAssertEqual(resumed.status, .completed)
-        XCTAssertEqual(resumed.remainingTime(at: startDate.addingTimeInterval(20)), 0, accuracy: 0.0001)
-        XCTAssertNil(resumed.endDate)
-        XCTAssertEqual(resumed.completionDate, startDate.addingTimeInterval(20))
-        XCTAssertNil(resumed.pausedAt)
-        XCTAssertNil(resumed.pausedRemainingTime)
+        XCTAssertEqual(timer.status(at: currentDate), .completed)
+        XCTAssertEqual(timer.remainingTime(at: currentDate), 0, accuracy: 0.0001)
     }
 }

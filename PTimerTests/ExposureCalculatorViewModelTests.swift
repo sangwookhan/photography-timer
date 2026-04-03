@@ -147,7 +147,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 pausedAt: nil,
                 status: .running
             ),
-            referenceDate: currentDate
+            referenceDateProvider: { currentDate }
         )
 
         let stopped = RunningTimerItem(
@@ -171,7 +171,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 pausedAt: pausedDate,
                 status: .stopped
             ),
-            referenceDate: currentDate
+            referenceDateProvider: { currentDate }
         )
 
         let completed = RunningTimerItem(
@@ -195,7 +195,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 pausedAt: nil,
                 status: .completed
             ),
-            referenceDate: currentDate
+            referenceDateProvider: { currentDate }
         )
 
         XCTAssertEqual(viewModel.timerTimeContext(for: running), "Ends \(viewModel.formatDateTime(endDate))")
@@ -873,7 +873,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             pausedRemainingTime: state.pausedRemainingTime,
             pausedAt: state.pausedAt,
             timerState: state,
-            referenceDate: referenceDate
+            referenceDateProvider: { referenceDate }
         )
 
         XCTAssertEqual(item.remainingTime, state.remainingTime(at: referenceDate), accuracy: 0.0001)
@@ -904,7 +904,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 pausedAt: nil,
                 status: .running
             ),
-            referenceDate: referenceDate
+            referenceDateProvider: { referenceDate }
         )
 
         let firstRead = item.remainingTime
@@ -940,7 +940,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 pausedAt: nil,
                 status: .running
             ),
-            referenceDate: referenceDate
+            referenceDateProvider: { referenceDate }
         )
 
         let initialRemainingTime = item.remainingTime

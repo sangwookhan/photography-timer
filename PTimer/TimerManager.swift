@@ -156,7 +156,10 @@ struct TimerState: Identifiable, Equatable {
 @MainActor
 final class TimerManager: ObservableObject {
     @Published private(set) var timers: [TimerState] = []
-    @Published private(set) var currentDate: Date
+
+    var currentDate: Date {
+        dateProvider()
+    }
 
     private let tickInterval: TimeInterval
     private let dateProvider: () -> Date
@@ -167,7 +170,6 @@ final class TimerManager: ObservableObject {
     ) {
         self.tickInterval = tickInterval
         self.dateProvider = dateProvider
-        self.currentDate = dateProvider()
     }
 
     @discardableResult
@@ -177,7 +179,6 @@ final class TimerManager: ObservableObject {
         }
 
         let now = dateProvider()
-        currentDate = now
         let id = UUID()
         let endDate = now.addingTimeInterval(duration)
         timers.append(
@@ -203,7 +204,6 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = dateProvider()
-        self.currentDate = currentDate
         timers[index] = timers[index].stopping(at: currentDate)
         stopLoopIfNeeded(now: currentDate)
     }
@@ -215,7 +215,6 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = dateProvider()
-        self.currentDate = currentDate
         let newState = timers[index].resume(at: currentDate)
         timers[index] = newState
 
@@ -233,7 +232,6 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        self.currentDate = currentDate
         timers = timers.map {
             $0.status == .running
                 ? $0.updatingStatus(at: currentDate)
@@ -244,14 +242,12 @@ final class TimerManager: ObservableObject {
 
     func removeCompletedTimers() {
         let currentDate = dateProvider()
-        self.currentDate = currentDate
         timers.removeAll { $0.status(at: currentDate) == .completed }
 
         stopLoopIfNeeded(now: currentDate)
     }
 
     func remove(id: UUID) {
-        currentDate = dateProvider()
         timers.removeAll { $0.id == id }
         stopLoopIfNeeded()
     }

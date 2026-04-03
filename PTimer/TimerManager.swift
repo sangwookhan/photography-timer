@@ -14,23 +14,45 @@ struct TimerState: Identifiable, Equatable {
     let duration: TimeInterval
     let startDate: Date
     let endDate: Date?
+    let completionDate: Date?
     let pausedRemainingTime: TimeInterval?
     let pausedAt: Date?
     let status: TimerStatus
 
+    init(
+        id: UUID,
+        duration: TimeInterval,
+        startDate: Date,
+        endDate: Date?,
+        completionDate: Date?,
+        pausedRemainingTime: TimeInterval?,
+        pausedAt: Date?,
+        status: TimerStatus
+    ) {
+        assert(
+            status == .running ? endDate != nil : endDate == nil,
+            "endDate must exist ONLY for running timers"
+        )
+        assert(
+            status == .completed ? completionDate != nil : completionDate == nil,
+            "completionDate must exist ONLY for completed timers"
+        )
+        assert(!(status == .completed && endDate != nil))
+        assert(!(status == .running && completionDate != nil))
+
+        self.id = id
+        self.duration = duration
+        self.startDate = startDate
+        self.endDate = endDate
+        self.completionDate = completionDate
+        self.pausedRemainingTime = pausedRemainingTime
+        self.pausedAt = pausedAt
+        self.status = status
+    }
+
     var remainingTime: TimeInterval {
-        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
-        switch status {
-        case .running:
-            guard let endDate else {
-                return 0
-            }
-            return sanitizeRemainingTime(endDate.timeIntervalSinceNow)
-        case .stopped:
-            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
-        case .completed:
-            return 0
-        }
+        assertionFailure("Use remainingTime(at:) with explicit referenceDate")
+        return remainingTime(at: Date())
     }
 
     func remainingTime(at now: Date) -> TimeInterval {
@@ -59,9 +81,15 @@ struct TimerState: Identifiable, Equatable {
     }
 
     func updatingStatus(at now: Date) -> TimerState {
-        guard status == .running,
-              let endDate,
-              now.addingTimeInterval(timerStabilityEpsilon) >= endDate else {
+        guard status == .running else {
+            return self
+        }
+
+        guard let endDate else {
+            return completed(at: now)
+        }
+
+        guard now.addingTimeInterval(timerStabilityEpsilon) >= endDate else {
             return self
         }
 
@@ -79,7 +107,8 @@ struct TimerState: Identifiable, Equatable {
             id: id,
             duration: duration,
             startDate: startDate,
-            endDate: endDate,
+            endDate: nil,
+            completionDate: nil,
             pausedRemainingTime: remaining,
             pausedAt: now,
             status: .stopped
@@ -89,12 +118,7 @@ struct TimerState: Identifiable, Equatable {
     func resume(at now: Date) -> TimerState {
         let remaining = sanitizeRemainingTime(pausedRemainingTime ?? 0)
         guard remaining > 0 else {
-            return completed(at: resolvedCompletionDate())
-        }
-
-        if let pausedAt,
-           pausedAt.addingTimeInterval(remaining) <= now.addingTimeInterval(timerStabilityEpsilon) {
-            return completed(at: pausedAt.addingTimeInterval(remaining))
+            return completed(at: now)
         }
 
         return TimerState(
@@ -102,6 +126,7 @@ struct TimerState: Identifiable, Equatable {
             duration: duration,
             startDate: startDate,
             endDate: now.addingTimeInterval(remaining),
+            completionDate: nil,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running
@@ -109,27 +134,17 @@ struct TimerState: Identifiable, Equatable {
     }
 
     func completed(at completionDate: Date? = nil) -> TimerState {
-        TimerState(
+        let resolvedCompletionDate = completionDate ?? self.completionDate ?? endDate ?? startDate
+        return TimerState(
             id: id,
             duration: duration,
             startDate: startDate,
-            endDate: completionDate ?? resolvedCompletionDate(),
+            endDate: nil,
+            completionDate: resolvedCompletionDate,
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .completed
         )
-    }
-
-    private func resolvedCompletionDate() -> Date {
-        if let endDate {
-            return endDate
-        }
-
-        if let pausedAt {
-            return pausedAt.addingTimeInterval(sanitizeRemainingTime(pausedRemainingTime ?? 0))
-        }
-
-        return startDate.addingTimeInterval(duration)
     }
 
     private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
@@ -172,6 +187,7 @@ final class TimerManager: ObservableObject {
                 duration: duration,
                 startDate: now,
                 endDate: endDate,
+                completionDate: nil,
                 pausedRemainingTime: nil,
                 pausedAt: nil,
                 status: .running
@@ -216,7 +232,11 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        timers = timers.map { $0.updatingStatus(at: currentDate) }
+        timers = timers.map {
+            $0.status == .running
+                ? $0.updatingStatus(at: currentDate)
+                : $0
+        }
         stopLoopIfNeeded(now: currentDate)
     }
 

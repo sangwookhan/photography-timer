@@ -1,7 +1,40 @@
+import Combine
 import XCTest
+import SwiftUI
+import UIKit
 @testable import PTimer
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
+    func testDockCompactTimeFormatterUsesTopLevelUnitsForLongDurations() {
+        XCTAssertEqual(
+            DockCompactTimeFormatter.format((3 * 3_600) + (20 * 60)),
+            DockCompactTimeDisplay(primaryText: "3h", secondaryText: "20m", accessibilityText: "3h 20m")
+        )
+        XCTAssertEqual(
+            DockCompactTimeFormatter.format((2 * 86_400) + (3 * 3_600)),
+            DockCompactTimeDisplay(primaryText: "2d", secondaryText: "3h", accessibilityText: "2d 3h")
+        )
+        XCTAssertEqual(
+            DockCompactTimeFormatter.format((3 * 30 * 86_400) + (12 * 86_400)),
+            DockCompactTimeDisplay(primaryText: "3mo", secondaryText: "12d", accessibilityText: "3mo 12d")
+        )
+        XCTAssertEqual(
+            DockCompactTimeFormatter.format((2 * 365 * 86_400) + (23 * 86_400)),
+            DockCompactTimeDisplay(primaryText: "2y", secondaryText: "", accessibilityText: "2y")
+        )
+    }
+
+    func testDockCompactTimeFormatterUsesMinuteSecondBreakdownWithinHour() {
+        XCTAssertEqual(
+            DockCompactTimeFormatter.format((12 * 60) + 30),
+            DockCompactTimeDisplay(primaryText: "12m", secondaryText: "30s", accessibilityText: "12m 30s")
+        )
+        XCTAssertEqual(
+            DockCompactTimeFormatter.format(45),
+            DockCompactTimeDisplay(primaryText: "45s", secondaryText: "", accessibilityText: "45s")
+        )
+    }
+
     @MainActor
     func testCanStartTimerDependsOnValidCalculationInputs() {
         let viewModel = ExposureCalculatorViewModel(
@@ -811,4 +844,813 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertFalse(allText.contains("("))
         XCTAssertFalse(allText.contains(")"))
     }
+
+    @MainActor
+    func testViewModelForwardsRuntimeStoreObjectWillChange() {
+        let store = TimerRuntimeStore(
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerRuntimeStore: store
+        )
+        var changeCount = 0
+        let cancellable = viewModel.objectWillChange.sink {
+            changeCount += 1
+        }
+
+        store.startTimer(
+            TimerCreationRequest(duration: 8, name: "Timer - 8s", basisSummary: "Manual timer")
+        )
+
+        XCTAssertGreaterThanOrEqual(changeCount, 1)
+        XCTAssertEqual(viewModel.timers.count, 1)
+        withExtendedLifetime(cancellable) {}
+    }
+
+    @MainActor
+    func testStartingTimerTriggersViewModelChangePropagation() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        var changeCount = 0
+        let cancellable = viewModel.objectWillChange.sink {
+            changeCount += 1
+        }
+
+        viewModel.startTimer(from: 8)
+
+        XCTAssertGreaterThanOrEqual(changeCount, 1)
+        XCTAssertEqual(viewModel.timers.first?.status, .running)
+        XCTAssertEqual(try XCTUnwrap(viewModel.timers.first?.remainingTime), 8, accuracy: 0.0001)
+        withExtendedLifetime(cancellable) {}
+    }
+
+    @MainActor
+    func testRuntimeTickTriggersViewModelChangePropagationWhileTimerRemainsRunning() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+        var changeCount = 0
+        let cancellable = viewModel.objectWillChange.sink {
+            changeCount += 1
+        }
+
+        viewModel.startTimer(from: 8)
+        let countAfterStart = changeCount
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        XCTAssertGreaterThan(changeCount, countAfterStart)
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.status, .running)
+        XCTAssertEqual(timer.remainingTime, 5, accuracy: 0.0001)
+        withExtendedLifetime(cancellable) {}
+    }
+}
+
+@MainActor
+final class TimerRuntimeStoreTests: XCTestCase {
+    func testVisibleTimersSortRunningPausedCompleted() {
+        let now = Date(timeIntervalSince1970: 100)
+        var currentDate = now
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let store = TimerRuntimeStore(timerManager: timerManager)
+
+        store.startTimer(
+            TimerCreationRequest(duration: 10, name: "Completed", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 12, name: "Paused", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 14, name: "Running", basisSummary: "Manual timer")
+        )
+
+        let completedID = try! XCTUnwrap(store.timers.first(where: { $0.name == "Completed" })?.id)
+        let pausedID = try! XCTUnwrap(store.timers.first(where: { $0.name == "Paused" })?.id)
+
+        currentDate = now.addingTimeInterval(3)
+        store.stopTimer(id: pausedID)
+
+        currentDate = now.addingTimeInterval(11)
+        timerManager.tick(now: currentDate)
+
+        XCTAssertEqual(store.visibleTimers.map(\.name), ["Running", "Paused", "Completed"])
+        XCTAssertEqual(store.timers.first(where: { $0.id == completedID })?.status, .completed)
+    }
+
+    func testVisibleTimersEmptyWhenNoTimersExist() {
+        let store = TimerRuntimeStore(
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertTrue(store.visibleTimers.isEmpty)
+    }
+}
+
+@MainActor
+final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
+    func testDockDisplayModeIsResolvedInPresentationLayer() {
+        XCTAssertEqual(FloatingTimerDockDisplayMode.resolve(hasVisibleTimers: false), .collapsed)
+        XCTAssertEqual(FloatingTimerDockDisplayMode.resolve(hasVisibleTimers: true), .expanded)
+    }
+
+    func testWorkspaceRendersCalculatorPanelAndCollapsedDock() {
+        let store = TimerRuntimeStore(
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen)
+
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.calculatorPanel", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.collapsed", in: hostingController.view))
+        XCTAssertNil(nearestAncestorScrollView(for: try! XCTUnwrap(findView(withAccessibilityIdentifier: "exposure.workspace.calculatorPanel", in: hostingController.view))))
+    }
+
+    func testWorkspaceShowsExpandedDockWithIndependentScrollRegion() {
+        let store = populatedRuntimeStore()
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen)
+
+        let dockScrollMarker = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.dock.scrollContent", in: hostingController.view)
+        )
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.expanded", in: hostingController.view))
+        XCTAssertNotNil(nearestAncestorScrollView(for: dockScrollMarker))
+        XCTAssertNotNil(findTextLabel(containing: "Add Timer", in: hostingController.view))
+        XCTAssertNotNil(findTextLabel(containing: "Timers 2", in: hostingController.view))
+    }
+
+    func testWorkspaceDoesNotWrapWholeScreenInPageScrollView() {
+        let store = populatedRuntimeStore()
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen)
+
+        let rootView = try! XCTUnwrap(findView(withAccessibilityIdentifier: "exposure.workspace.root", in: hostingController.view))
+        let rootScrollAncestor = nearestAncestorScrollView(for: rootView)
+        XCTAssertNil(rootScrollAncestor)
+    }
+
+    func testNarrowPortraitWorkspaceKeepsDockReadableWithoutBrokenPlaceholderButtons() {
+        let store = populatedRuntimeStore()
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(
+            for: screen,
+            size: CGSize(width: 390, height: 844)
+        )
+
+        XCTAssertNotNil(findTextLabel(containing: "Exposure", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.expanded", in: hostingController.view))
+        XCTAssertNil(findTextLabel(containing: "View All", in: hostingController.view))
+        XCTAssertNil(findTextLabel(containing: "Details", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowList", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.running", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.compactTime", in: hostingController.view))
+        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Pause", in: hostingController.view))
+    }
+
+    func testExpandedDockUsesPlaceholderLabelForViewAllInsteadOfDisabledButton() {
+        let store = populatedRuntimeStore()
+        let dock = FloatingTimerDock(
+            timers: store.visibleTimers,
+            displayMode: .expanded,
+            formatTimeDisplay: store.formatTimeDisplay,
+            onPauseTimer: { _ in },
+            onResumeTimer: { _ in },
+            onOpenCompletedTimer: { _ in },
+            onViewAll: nil
+        )
+        let hostingController = makeHostingController(
+            for: dock,
+            size: CGSize(width: 220, height: 500)
+        )
+
+        XCTAssertNotNil(findTextLabel(containing: "View All", in: hostingController.view))
+        XCTAssertNil(findButton(titled: "View All", in: hostingController.view))
+    }
+
+    func testCompletedTileUsesConsistentPlaceholderInsteadOfDetailsButtonInCompactMode() {
+        let completedTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Completed",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 8,
+            startDate: Date(timeIntervalSince1970: 100),
+            endDate: Date(timeIntervalSince1970: 108),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
+            referenceDate: Date(timeIntervalSince1970: 120)
+        )
+        let dock = FloatingTimerDock(
+            timers: [completedTimer],
+            displayMode: .expanded,
+            formatTimeDisplay: { _ in TimeDisplay(primary: "8s", secondary: "8s") },
+            onPauseTimer: { _ in },
+            onResumeTimer: { _ in },
+            onOpenCompletedTimer: { _ in },
+            onViewAll: nil
+        )
+        let hostingController = makeHostingController(
+            for: dock,
+            size: CGSize(width: 132, height: 420)
+        )
+
+        XCTAssertNotNil(findTextLabel(containing: "Done", in: hostingController.view))
+        XCTAssertNil(findTextLabel(containing: "Details", in: hostingController.view))
+        XCTAssertNil(findButton(titled: "Details", in: hostingController.view))
+    }
+
+    func testDockQuickActionsEmitCallbacksWithoutOwningRuntimeMutation() throws {
+        let store = populatedRuntimeStore()
+        let runningTimer = try XCTUnwrap(store.visibleTimers.first(where: { $0.status == .running }))
+        let recorder = DockIntentRecorder()
+        let dock = FloatingTimerDock(
+            timers: [runningTimer],
+            displayMode: .expanded,
+            formatTimeDisplay: store.formatTimeDisplay,
+            onPauseTimer: { recorder.pauseIDs.append($0) },
+            onResumeTimer: { recorder.resumeIDs.append($0) },
+            onOpenCompletedTimer: { recorder.openIDs.append($0) },
+            onViewAll: nil
+        )
+        let hostingController = makeHostingController(
+            for: dock,
+            size: CGSize(width: 220, height: 320)
+        )
+
+        let pauseButton = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Pause", in: hostingController.view)
+        )
+        pauseButton.sendActions(for: .touchUpInside)
+
+        XCTAssertEqual(recorder.pauseIDs, [runningTimer.id])
+        XCTAssertTrue(recorder.resumeIDs.isEmpty)
+        XCTAssertEqual(store.timers.first(where: { $0.id == runningTimer.id })?.status, .running)
+    }
+
+    func testNarrowPortraitKeepsCalculatorWidthStableWhenTimersAppear() {
+        let size = CGSize(width: 390, height: 844)
+        let collapsedStore = TimerRuntimeStore(
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        let expandedStore = populatedRuntimeStore()
+
+        let collapsedScreen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: collapsedStore
+            )
+        )
+        let expandedScreen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: expandedStore
+            )
+        )
+
+        let collapsedHost = makeHostingController(for: collapsedScreen, size: size)
+        let expandedHost = makeHostingController(for: expandedScreen, size: size)
+
+        let collapsedPanel = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.calculatorPanel", in: collapsedHost.view)
+        )
+        let expandedPanel = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.calculatorPanel", in: expandedHost.view)
+        )
+
+        XCTAssertEqual(collapsedPanel.frame.width, expandedPanel.frame.width, accuracy: 1.0)
+    }
+
+    func testNarrowPortraitKeepsShutterAndNDOnSameStructuralRowWhenTimersAppear() {
+        let size = CGSize(width: 390, height: 844)
+        let collapsedStore = TimerRuntimeStore(
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        let expandedStore = populatedRuntimeStore()
+
+        let collapsedHost = makeHostingController(
+            for: ExposureWorkspaceScreen(
+                viewModel: ExposureCalculatorViewModel(
+                    calculator: ExposureCalculator(),
+                    timerRuntimeStore: collapsedStore
+                )
+            ),
+            size: size
+        )
+        let expandedHost = makeHostingController(
+            for: ExposureWorkspaceScreen(
+                viewModel: ExposureCalculatorViewModel(
+                    calculator: ExposureCalculator(),
+                    timerRuntimeStore: expandedStore
+                )
+            ),
+            size: size
+        )
+
+        let collapsedShutter = try! XCTUnwrap(findTextLabel(containing: "Shutter", in: collapsedHost.view))
+        let collapsedND = try! XCTUnwrap(findTextLabel(containing: "ND", in: collapsedHost.view))
+        let expandedShutter = try! XCTUnwrap(findTextLabel(containing: "Shutter", in: expandedHost.view))
+        let expandedND = try! XCTUnwrap(findTextLabel(containing: "ND", in: expandedHost.view))
+
+        XCTAssertEqual(collapsedShutter.frame.minY, collapsedND.frame.minY, accuracy: 6.0)
+        XCTAssertEqual(expandedShutter.frame.minY, expandedND.frame.minY, accuracy: 6.0)
+    }
+
+    func testNarrowPortraitKeepsTimerActionVisibleInsideCalculatorPanel() {
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: populatedRuntimeStore()
+            )
+        )
+        let hostingController = makeHostingController(
+            for: screen,
+            size: CGSize(width: 390, height: 844)
+        )
+
+        let panel = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.calculatorPanel", in: hostingController.view)
+        )
+        let timerAction = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.timerAction", in: hostingController.view)
+        )
+
+        let timerActionFrame = timerAction.convert(timerAction.bounds, to: hostingController.view)
+        let panelFrame = panel.convert(panel.bounds, to: hostingController.view)
+
+        XCTAssertLessThanOrEqual(timerActionFrame.maxY, panelFrame.maxY)
+        XCTAssertTrue(panelFrame.intersects(timerActionFrame))
+    }
+
+    func testNarrowPortraitDockSurfacesMultipleTimersTruthfully() {
+        let size = CGSize(width: 390, height: 844)
+        let now = Date(timeIntervalSince1970: 100)
+        var currentDate = now
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let store = TimerRuntimeStore(timerManager: timerManager)
+
+        store.startTimer(
+            TimerCreationRequest(duration: 200, name: "Long", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 3, name: "Short 1", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 3, name: "Short 2", basisSummary: "Manual timer")
+        )
+
+        currentDate = now.addingTimeInterval(5)
+        timerManager.tick(now: currentDate)
+
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen, size: size)
+
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowList", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.1", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.2", in: hostingController.view))
+        XCTAssertNil(findTextLabel(containing: "Completed", in: hostingController.view))
+    }
+
+    func testNarrowPortraitDockAllowsCompletedTimersToAccumulateInScroll() {
+        let size = CGSize(width: 390, height: 844)
+        let now = Date(timeIntervalSince1970: 100)
+        var currentDate = now
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let store = TimerRuntimeStore(timerManager: timerManager)
+
+        store.startTimer(
+            TimerCreationRequest(duration: 200, name: "Long", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 12, name: "Paused", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 3, name: "Done 1", basisSummary: "Manual timer")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 3, name: "Done 2", basisSummary: "Manual timer")
+        )
+
+        let pausedID = try! XCTUnwrap(store.timers.first(where: { $0.name == "Paused" })?.id)
+        currentDate = now.addingTimeInterval(2)
+        store.stopTimer(id: pausedID)
+        currentDate = now.addingTimeInterval(5)
+        timerManager.tick(now: currentDate)
+
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen, size: size)
+
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.scrollView", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.1", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.2", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.3", in: hostingController.view))
+    }
+
+    func testPausedCellUsesFullCellResumeAffordance() throws {
+        let pausedTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Paused",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 90,
+            startDate: Date(timeIntervalSince1970: 100),
+            endDate: Date(timeIntervalSince1970: 190),
+            pausedRemainingTime: 65,
+            pausedAt: Date(timeIntervalSince1970: 125),
+            status: .stopped,
+            referenceDate: Date(timeIntervalSince1970: 130)
+        )
+        let recorder = DockIntentRecorder()
+        let dock = FloatingTimerDock(
+            timers: [pausedTimer],
+            displayMode: .expanded,
+            formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+            onPauseTimer: { recorder.pauseIDs.append($0) },
+            onResumeTimer: { recorder.resumeIDs.append($0) },
+            onOpenCompletedTimer: { recorder.openIDs.append($0) },
+            onViewAll: nil
+        )
+        let hostingController = makeHostingController(for: dock, size: CGSize(width: 86, height: 180))
+
+        let resumeControl = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.pausedResume", in: hostingController.view)
+        )
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.pausedOverlay", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.paused", in: hostingController.view))
+
+        resumeControl.sendActions(for: .touchUpInside)
+        XCTAssertEqual(recorder.resumeIDs, [pausedTimer.id])
+    }
+
+    func testCompletedCellStaysQuietWithoutInlineActionControls() {
+        let completedTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Completed",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 8,
+            startDate: Date(timeIntervalSince1970: 100),
+            endDate: Date(timeIntervalSince1970: 108),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
+            referenceDate: Date(timeIntervalSince1970: 120)
+        )
+        let dock = FloatingTimerDock(
+            timers: [completedTimer],
+            displayMode: .expanded,
+            formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+            onPauseTimer: { _ in },
+            onResumeTimer: { _ in },
+            onOpenCompletedTimer: { _ in },
+            onViewAll: nil
+        )
+        let hostingController = makeHostingController(for: dock, size: CGSize(width: 86, height: 180))
+
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.completed", in: hostingController.view))
+        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.pausedResume", in: hostingController.view))
+        XCTAssertNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.pausedOverlay", in: hostingController.view))
+        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Pause", in: hostingController.view))
+        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Resume", in: hostingController.view))
+    }
+
+    func testNarrowPortraitDockWidthRemainsAggressivelyBounded() {
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: populatedRuntimeStore()
+            )
+        )
+        let hostingController = makeHostingController(
+            for: screen,
+            size: CGSize(width: 390, height: 844)
+        )
+
+        let dock = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.dock", in: hostingController.view)
+        )
+
+        XCTAssertLessThanOrEqual(dock.frame.width, 90)
+    }
+
+    func testCompactDockRowHeightRemainsStableAcrossDisplayThresholds() {
+        let longTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Long",
+            basisSummary: "Base 1/30s · 10 stops",
+            duration: 12_000,
+            startDate: Date(timeIntervalSince1970: 100),
+            endDate: Date(timeIntervalSince1970: 12_100),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: Date(timeIntervalSince1970: 100)
+        )
+        let shortTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Short",
+            basisSummary: "Base 1/30s · 10 stops",
+            duration: 45,
+            startDate: Date(timeIntervalSince1970: 100),
+            endDate: Date(timeIntervalSince1970: 145),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: Date(timeIntervalSince1970: 100)
+        )
+
+        let longDock = FloatingTimerDock(
+            timers: [longTimer],
+            displayMode: .expanded,
+            formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+            onPauseTimer: { _ in },
+            onResumeTimer: { _ in },
+            onOpenCompletedTimer: { _ in },
+            onViewAll: nil
+        )
+        let shortDock = FloatingTimerDock(
+            timers: [shortTimer],
+            displayMode: .expanded,
+            formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+            onPauseTimer: { _ in },
+            onResumeTimer: { _ in },
+            onOpenCompletedTimer: { _ in },
+            onViewAll: nil
+        )
+
+        let longHost = makeHostingController(for: longDock, size: CGSize(width: 86, height: 180))
+        let shortHost = makeHostingController(for: shortDock, size: CGSize(width: 86, height: 180))
+
+        let longRow = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: longHost.view)
+        )
+        let shortRow = try! XCTUnwrap(
+            findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: shortHost.view)
+        )
+
+        XCTAssertEqual(longRow.frame.height, shortRow.frame.height, accuracy: 1.0)
+    }
+
+    func testCompactDockRowHeightRemainsStableAcrossStatuses() {
+        let baseDate = Date(timeIntervalSince1970: 100)
+        let runningTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Running",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 200,
+            startDate: baseDate,
+            endDate: baseDate.addingTimeInterval(200),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: baseDate
+        )
+        let pausedTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Paused",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 200,
+            startDate: baseDate,
+            endDate: baseDate.addingTimeInterval(200),
+            pausedRemainingTime: 120,
+            pausedAt: baseDate.addingTimeInterval(80),
+            status: .stopped,
+            referenceDate: baseDate.addingTimeInterval(80)
+        )
+        let completedTimer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Completed",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 8,
+            startDate: baseDate,
+            endDate: baseDate.addingTimeInterval(8),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
+            referenceDate: baseDate.addingTimeInterval(10)
+        )
+
+        let runningHost = makeHostingController(
+            for: FloatingTimerDock(
+                timers: [runningTimer],
+                displayMode: .expanded,
+                formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+                onPauseTimer: { _ in },
+                onResumeTimer: { _ in },
+                onOpenCompletedTimer: { _ in },
+                onViewAll: nil
+            ),
+            size: CGSize(width: 86, height: 180)
+        )
+        let pausedHost = makeHostingController(
+            for: FloatingTimerDock(
+                timers: [pausedTimer],
+                displayMode: .expanded,
+                formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+                onPauseTimer: { _ in },
+                onResumeTimer: { _ in },
+                onOpenCompletedTimer: { _ in },
+                onViewAll: nil
+            ),
+            size: CGSize(width: 86, height: 180)
+        )
+        let completedHost = makeHostingController(
+            for: FloatingTimerDock(
+                timers: [completedTimer],
+                displayMode: .expanded,
+                formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
+                onPauseTimer: { _ in },
+                onResumeTimer: { _ in },
+                onOpenCompletedTimer: { _ in },
+                onViewAll: nil
+            ),
+            size: CGSize(width: 86, height: 180)
+        )
+
+        let runningRow = try! XCTUnwrap(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: runningHost.view))
+        let pausedRow = try! XCTUnwrap(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: pausedHost.view))
+        let completedRow = try! XCTUnwrap(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: completedHost.view))
+
+        XCTAssertEqual(runningRow.frame.height, pausedRow.frame.height, accuracy: 1.0)
+        XCTAssertEqual(pausedRow.frame.height, completedRow.frame.height, accuracy: 1.0)
+    }
+
+    private func populatedRuntimeStore() -> TimerRuntimeStore {
+        let store = TimerRuntimeStore(
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 2, name: "Cam A", basisSummary: "Base 1/30s · 6 stops")
+        )
+        store.startTimer(
+            TimerCreationRequest(duration: 8, name: "Cam B", basisSummary: "Base 1/15s · 8 stops")
+        )
+        return store
+    }
+
+    private func makeHostingController(
+        for screen: some View,
+        size: CGSize = CGSize(width: 900, height: 700)
+    ) -> UIHostingController<some View> {
+        let hostingController = UIHostingController(rootView: screen.frame(width: size.width, height: size.height))
+        hostingController.loadViewIfNeeded()
+        hostingController.view.frame = CGRect(origin: .zero, size: size)
+        hostingController.view.setNeedsLayout()
+        hostingController.view.layoutIfNeeded()
+        return hostingController
+    }
+
+    private func findView(withAccessibilityIdentifier identifier: String, in view: UIView) -> UIView? {
+        if view.accessibilityIdentifier == identifier {
+            return view
+        }
+
+        for subview in view.subviews {
+            if let match = findView(withAccessibilityIdentifier: identifier, in: subview) {
+                return match
+            }
+        }
+
+        return nil
+    }
+
+    private func findControl(withAccessibilityIdentifier identifier: String, in view: UIView) -> UIControl? {
+        if let control = view as? UIControl, control.accessibilityIdentifier == identifier {
+            return control
+        }
+
+        for subview in view.subviews {
+            if let match = findControl(withAccessibilityIdentifier: identifier, in: subview) {
+                return match
+            }
+        }
+
+        return nil
+    }
+
+    private func findButton(titled title: String, in view: UIView) -> UIButton? {
+        if let button = view as? UIButton, button.currentTitle?.contains(title) == true {
+            return button
+        }
+
+        for subview in view.subviews {
+            if let match = findButton(titled: title, in: subview) {
+                return match
+            }
+        }
+
+        return nil
+    }
+
+    private func nearestAncestorScrollView(for view: UIView) -> UIScrollView? {
+        var ancestor = view.superview
+        while let current = ancestor {
+            if let scrollView = current as? UIScrollView {
+                return scrollView
+            }
+            ancestor = current.superview
+        }
+        return nil
+    }
+
+    private func findTextLabel(containing text: String, in view: UIView) -> UILabel? {
+        if let label = view as? UILabel, label.text?.contains(text) == true {
+            return label
+        }
+
+        for subview in view.subviews {
+            if let match = findTextLabel(containing: text, in: subview) {
+                return match
+            }
+        }
+
+        return nil
+    }
+}
+
+@MainActor
+private final class DockIntentRecorder {
+    var pauseIDs: [UUID] = []
+    var resumeIDs: [UUID] = []
+    var openIDs: [UUID] = []
 }

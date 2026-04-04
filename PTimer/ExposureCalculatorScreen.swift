@@ -1,61 +1,638 @@
 import SwiftUI
 
-struct ExposureCalculatorScreen: View {
-    @StateObject private var viewModel = ExposureCalculatorViewModel()
+enum FloatingTimerDockDisplayMode: Equatable {
+    case collapsed
+    case expanded
 
-    init() {
+    static func resolve(hasVisibleTimers: Bool) -> FloatingTimerDockDisplayMode {
+        hasVisibleTimers ? .expanded : .collapsed
+    }
+}
+
+struct ExposureWorkspaceScreen: View {
+    @StateObject private var viewModel: ExposureCalculatorViewModel
+
+    init(
+        viewModel: ExposureCalculatorViewModel? = nil,
+        timerRuntimeStore: TimerRuntimeStore? = nil
+    ) {
+        let resolvedViewModel: ExposureCalculatorViewModel
+
+        if let timerRuntimeStore {
+            resolvedViewModel = viewModel ?? ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: timerRuntimeStore
+            )
+        } else if let viewModel {
+            resolvedViewModel = viewModel
+        } else {
+            resolvedViewModel = ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: TimerRuntimeStore()
+            )
+        }
+
+        _viewModel = StateObject(wrappedValue: resolvedViewModel)
+
         assertNoKoreanUIStrings([
             "Exposure",
             "Show Advanced Options",
-            "View All"
+            "View All",
+            "Add Timer",
+            "Timers"
         ])
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HeaderView()
+        GeometryReader { proxy in
+            let visibleTimers = viewModel.timerRuntimeStore.visibleTimers
+            let dockDisplayMode = FloatingTimerDockDisplayMode.resolve(
+                hasVisibleTimers: !visibleTimers.isEmpty
+            )
+            let narrowPortraitLayout = proxy.size.width < 430 && proxy.size.height > proxy.size.width
+            let workspaceSpacing: CGFloat = narrowPortraitLayout ? 10 : 16
+            let workspacePadding: CGFloat = narrowPortraitLayout ? 10 : (proxy.size.width < 430 ? 12 : 16)
+
+            HStack(alignment: .top, spacing: workspaceSpacing) {
+                ExposureCalculatorPanel(
+                    viewModel: viewModel,
+                    onAddTimer: viewModel.startTimer,
+                    usesStableCompactLayout: narrowPortraitLayout
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .accessibilityIdentifier("exposure.workspace.calculatorPanel")
+
+                FloatingTimerDock(
+                    timers: visibleTimers,
+                    displayMode: dockDisplayMode,
+                    formatTimeDisplay: viewModel.formatTimeDisplay,
+                    onPauseTimer: viewModel.stopTimer,
+                    onResumeTimer: viewModel.resumeTimer,
+                    onOpenCompletedTimer: { _ in },
+                    onViewAll: nil
+                )
+                .frame(
+                    width: dockWidth(
+                        for: proxy.size.width,
+                        displayMode: dockDisplayMode,
+                        isNarrowPortrait: narrowPortraitLayout
+                    )
+                )
+                .frame(maxHeight: .infinity, alignment: .top)
+                .accessibilityIdentifier("exposure.workspace.dock")
+            }
+            .padding(workspacePadding)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .background(Color(.systemGroupedBackground))
+            .accessibilityIdentifier("exposure.workspace.root")
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func dockWidth(
+        for availableWidth: CGFloat,
+        displayMode: FloatingTimerDockDisplayMode,
+        isNarrowPortrait: Bool
+    ) -> CGFloat {
+        switch displayMode {
+        case .collapsed:
+            if isNarrowPortrait {
+                return 86
+            }
+            return 84
+        case .expanded:
+            if isNarrowPortrait {
+                return 86
+            }
+
+            if availableWidth < 390 {
+                return 130
+            }
+
+            if availableWidth < 430 {
+                return 144
+            }
+
+            if availableWidth < 520 {
+                return 160
+            }
+
+            return min(max(220, availableWidth * 0.3), 280)
+        }
+    }
+}
+
+struct ExposureCalculatorScreen: View {
+    var body: some View {
+        ExposureWorkspaceScreen()
+    }
+}
+
+struct ExposureCalculatorPanel: View {
+    @ObservedObject var viewModel: ExposureCalculatorViewModel
+    let onAddTimer: () -> Void
+    let usesStableCompactLayout: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let metrics = ExposureCalculatorPanelMetrics(
+                containerHeight: proxy.size.height,
+                containerWidth: proxy.size.width,
+                prefersCompactLayout: usesStableCompactLayout
+            )
+
+            VStack(alignment: .leading, spacing: metrics.sectionSpacing) {
+                HeaderView(metrics: metrics)
                 VariableSectionView(
                     baseShutter: $viewModel.baseShutter,
                     ndStop: $viewModel.ndStop,
                     shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
-                    formatShutter: viewModel.formatShutter
+                    formatShutter: viewModel.formatShutter,
+                    metrics: metrics
                 )
                 ResultSectionView(
                     calculationResult: viewModel.calculationResult,
                     ndStop: viewModel.ndStop,
-                    formatTimeDisplay: viewModel.formatTimeDisplay
+                    formatTimeDisplay: viewModel.formatTimeDisplay,
+                    metrics: metrics
                 )
                 TimerActionView(
                     canStartTimer: viewModel.canStartTimer,
-                    onStart: viewModel.startTimer
-                )
-                RunningTimerPanelView(
-                    timers: viewModel.timers,
-                    runningTimerCount: viewModel.runningTimerCount,
-                    formattedDuration: viewModel.formatDuration,
-                    formatTimeDisplay: viewModel.formatTimeDisplay,
-                    formatClockTime: viewModel.formatClockTime,
-                    formatDateTime: viewModel.formatDateTime,
-                    onStopTimer: viewModel.stopTimer,
-                    onResumeTimer: viewModel.resumeTimer,
-                    onRemoveTimer: viewModel.removeTimer
+                    onStart: onAddTimer,
+                    metrics: metrics
                 )
             }
-            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .background(Color(.systemGroupedBackground))
+    }
+}
+
+struct FloatingTimerDock: View {
+    let timers: [RunningTimerItem]
+    let displayMode: FloatingTimerDockDisplayMode
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let onPauseTimer: (UUID) -> Void
+    let onResumeTimer: (UUID) -> Void
+    let onOpenCompletedTimer: (UUID) -> Void
+    let onViewAll: (() -> Void)?
+
+    var body: some View {
+        GeometryReader { proxy in
+            dockBody(for: proxy.size.width)
+        }
+    }
+
+    @ViewBuilder
+    private func dockBody(for dockWidth: CGFloat) -> some View {
+        let isNarrow = dockWidth < 120
+
+        Group {
+            switch displayMode {
+            case .collapsed:
+                collapsedDock
+            case .expanded:
+                expandedDock(isCompact: dockWidth < 180, isNarrow: isNarrow)
+            }
+        }
+        .padding(isNarrow ? 8 : 12)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color(.separator), lineWidth: 1)
+        )
+    }
+
+    private var collapsedDock: some View {
+        VStack(spacing: 12) {
+            Text("T(0)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "plus")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 40, height: 40)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            Spacer(minLength: 0)
+
+            Text("Dock")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .rotationEffect(.degrees(-90))
+                .frame(height: 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("exposure.workspace.dock.collapsed")
+    }
+
+    private func expandedDock(isCompact: Bool, isNarrow: Bool) -> some View {
+        VStack(alignment: .leading, spacing: isNarrow ? 7 : 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if isNarrow {
+                    Text("\(timers.count)")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .monospacedDigit()
+
+                    Text("Timers")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Timers \(timers.count)")
+                        .font(isCompact ? .subheadline.weight(.semibold) : .headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer()
+
+                if !isNarrow {
+                    if let onViewAll {
+                        Button("View All", action: onViewAll)
+                            .font((isCompact ? Font.caption2 : Font.footnote).weight(.semibold))
+                    } else {
+                        Text("View All")
+                            .font((isCompact ? Font.caption2 : Font.footnote).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("exposure.workspace.dock.viewAllPlaceholder")
+                    }
+                }
+            }
+
+            ScrollView {
+                Group {
+                    if isNarrow {
+                        narrowPortraitDockList
+                    } else {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(timers) { timer in
+                                FloatingTimerDockTile(
+                                    timer: timer,
+                                    timeDisplay: formatTimeDisplay(timerPrimaryDuration(for: timer)),
+                                    targetContext: nil,
+                                    isCompact: isCompact,
+                                    isNarrow: isNarrow,
+                                    onPauseTimer: { onPauseTimer(timer.id) },
+                                    onResumeTimer: { onResumeTimer(timer.id) },
+                                    onOpenCompletedTimer: { onOpenCompletedTimer(timer.id) }
+                                )
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .accessibilityIdentifier("exposure.workspace.dock.scrollContent")
+            }
+            .accessibilityIdentifier("exposure.workspace.dock.scrollView")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("exposure.workspace.dock.expanded")
+    }
+
+    private var narrowPortraitDockList: some View {
+        return VStack(alignment: .leading, spacing: 5) {
+            ForEach(Array(timers.enumerated()), id: \.element.id) { index, timer in
+                UltraCompactTimerRow(
+                    timer: timer,
+                    timeDisplay: DockCompactTimeFormatter.format(timerPrimaryDuration(for: timer)),
+                    onPauseTimer: { onPauseTimer(timer.id) },
+                    onResumeTimer: { onResumeTimer(timer.id) }
+                )
+                .accessibilityIdentifier("exposure.workspace.dock.narrowRow.\(index)")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("exposure.workspace.dock.narrowList")
+    }
+
+    private func timerPrimaryDuration(for timer: RunningTimerItem) -> TimeInterval {
+        switch timer.status {
+        case .running, .stopped:
+            return timer.remainingTime
+        case .completed:
+            return timer.duration
+        }
+    }
+
+}
+
+private struct FloatingTimerDockTile: View {
+    let timer: RunningTimerItem
+    let timeDisplay: TimeDisplay
+    let targetContext: String?
+    let isCompact: Bool
+    let isNarrow: Bool
+    let onPauseTimer: () -> Void
+    let onResumeTimer: () -> Void
+    let onOpenCompletedTimer: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(compactTitleText)
+                        .font((isCompact ? Font.caption : Font.subheadline).weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .accessibilityIdentifier("exposure.workspace.dock.primaryTitle")
+
+                    Text(statusText)
+                        .font((isCompact ? Font.caption2 : Font.caption).weight(.medium))
+                        .foregroundStyle(statusColor)
+                }
+
+                Spacer(minLength: 0)
+
+                quickActionView
+            }
+
+            DurationDisplayBlock(
+                primaryText: timeDisplay.primary,
+                secondaryText: (isCompact || isNarrow) ? nil : timeDisplay.secondary,
+                primaryColor: statusColor == .gray ? .secondary : .primary,
+                primaryFont: .system(size: isNarrow ? 16 : (isCompact ? 20 : 24), weight: .bold, design: .rounded),
+                secondaryFont: isCompact ? .caption : .footnote
+            )
+
+            if let targetContext {
+                Text(targetContext)
+                    .font((isCompact ? Font.caption2 : Font.footnote).weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            if !isCompact {
+                Text(timer.basisSummary)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(isCompact ? 10 : 14)
+        .background(tileBackgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(statusColor.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    private var statusText: String {
+        switch timer.status {
+        case .running:
+            return "Running"
+        case .stopped:
+            return "Paused"
+        case .completed:
+            return "Completed"
+        }
+    }
+
+    private var compactTitleText: String {
+        guard isNarrow else {
+            return timer.name
+        }
+
+        switch timer.status {
+        case .running:
+            return "Running"
+        case .stopped:
+            return "Paused"
+        case .completed:
+            return "Done"
+        }
+    }
+
+    @ViewBuilder
+    private var quickActionView: some View {
+        switch timer.status {
+        case .running:
+            timerActionButton(
+                title: "Pause",
+                systemImage: "pause.fill",
+                action: onPauseTimer
+            )
+        case .stopped:
+            timerActionButton(
+                title: "Resume",
+                systemImage: "play.fill",
+                action: onResumeTimer
+            )
+        case .completed:
+            if isCompact || isNarrow {
+                Text("Done")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("exposure.workspace.dock.completedPlaceholder")
+            } else {
+                Button("Open") {
+                    onOpenCompletedTimer()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityIdentifier("exposure.workspace.dock.completedIntent")
+            }
+        }
+    }
+
+    private func timerActionButton(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            if isCompact {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.bold))
+                    .frame(width: 28, height: 28)
+            } else {
+                Text(title)
+                    .lineLimit(1)
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(isCompact ? .mini : .small)
+        .accessibilityIdentifier("exposure.workspace.dock.timerAction.\(title)")
+    }
+
+    private var statusColor: Color {
+        switch timer.status {
+        case .running:
+            return .green
+        case .stopped:
+            return .orange
+        case .completed:
+            return .gray
+        }
+    }
+
+    private var tileBackgroundColor: Color {
+        switch timer.status {
+        case .running:
+            return Color(.secondarySystemBackground)
+        case .stopped:
+            return Color(.systemGray6)
+        case .completed:
+            return Color(.tertiarySystemBackground)
+        }
+    }
+}
+
+struct UltraCompactTimerRow: View {
+    let timer: RunningTimerItem
+    let timeDisplay: DockCompactTimeDisplay
+    let onPauseTimer: () -> Void
+    let onResumeTimer: () -> Void
+
+    private static let rowHeight: CGFloat = 44
+
+    var body: some View {
+        Group {
+            if timer.status == .stopped {
+                Button(action: onResumeTimer) {
+                    rowContainer
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("exposure.workspace.dock.pausedResume")
+            } else {
+                rowContainer
+            }
+        }
+    }
+
+    private var rowContainer: some View {
+        let isCompleted = timer.status == .completed
+
+        return ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(backgroundColor)
+
+            Rectangle()
+                .fill(statusColor.opacity(isCompleted ? 0.28 : 0.72))
+                .frame(height: isCompleted ? 2 : 2.5)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityIdentifier("exposure.workspace.dock.stateAccent")
+
+            HStack(spacing: 0) {
+                CompactDockTimeBlock(timeDisplay: timeDisplay, isCompleted: isCompleted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("exposure.workspace.dock.compactTime")
+
+                if timer.status == .stopped {
+                    Image(systemName: "play.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 24, height: 24)
+                        .background(statusColor)
+                        .clipShape(Circle())
+                        .accessibilityIdentifier("exposure.workspace.dock.pausedOverlay")
+                } else {
+                    Color.clear.frame(width: 24, height: 24)
+                }
+            }
+            .padding(.horizontal, 7)
+            .padding(.top, 5)
+            .padding(.bottom, 4)
+        }
+        .frame(height: Self.rowHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(statusColor.opacity(isCompleted ? 0.05 : 0.14), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(fullStatusText) \(timeDisplay.accessibilityText)")
+        .accessibilityIdentifier("exposure.workspace.dock.cell.\(statusIdentifier)")
+    }
+
+    private var statusIdentifier: String {
+        switch timer.status {
+        case .running:
+            return "running"
+        case .stopped:
+            return "paused"
+        case .completed:
+            return "completed"
+        }
+    }
+
+    private var fullStatusText: String {
+        switch timer.status {
+        case .running:
+            return "Running"
+        case .stopped:
+            return "Paused"
+        case .completed:
+            return "Completed"
+        }
+    }
+
+    private var statusColor: Color {
+        switch timer.status {
+        case .running:
+            return Color.green
+        case .stopped:
+            return Color.orange
+        case .completed:
+            return Color.gray
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch timer.status {
+        case .running:
+            return Color.green.opacity(0.09)
+        case .stopped:
+            return Color.orange.opacity(0.12)
+        case .completed:
+            return Color.gray.opacity(0.04)
+        }
+    }
+}
+
+private struct CompactDockTimeBlock: View {
+    let timeDisplay: DockCompactTimeDisplay
+    var isCompleted = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: -1) {
+            Text(timeDisplay.primaryText)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isCompleted ? Color.secondary : Color.primary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(timeDisplay.secondaryText.isEmpty ? "00" : timeDisplay.secondaryText)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(isCompleted ? Color.secondary.opacity(0.62) : Color.secondary.opacity(0.88))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .opacity(timeDisplay.secondaryText.isEmpty ? 0 : 1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
     }
 }
 
 struct HeaderView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Exposure")
-                .font(.largeTitle.weight(.bold))
+    let metrics: ExposureCalculatorPanelMetrics
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 10) {
+    var body: some View {
+        VStack(alignment: .leading, spacing: metrics.contentSpacing) {
+            Text("Exposure")
+                .font(metrics.titleFont)
+
+            HStack(alignment: .top, spacing: metrics.inlineSpacing) {
+                VStack(alignment: .leading, spacing: metrics.compactHeaderSpacing) {
                     Picker("Mode", selection: .constant(0)) {
                         Text("Digital").tag(0)
                         Text("Film").tag(1)
@@ -64,21 +641,21 @@ struct HeaderView: View {
                     .disabled(true)
 
                     Text("Film mode: placeholder")
-                        .font(.footnote)
+                        .font(metrics.captionFont)
                         .foregroundStyle(.secondary)
                 }
 
                 Button {
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.headline)
-                        .frame(width: 36, height: 36)
+                        .font(metrics.controlIconFont)
+                        .frame(width: metrics.compactButtonSize, height: metrics.compactButtonSize)
                 }
                 .buttonStyle(.bordered)
                 .disabled(true)
             }
         }
-        .sectionCardStyle()
+        .sectionCardStyle(metrics: metrics)
     }
 }
 
@@ -87,46 +664,69 @@ struct VariableSectionView: View {
     @Binding var ndStop: Int
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
+    let metrics: ExposureCalculatorPanelMetrics
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: metrics.contentSpacing) {
             Text("Variable Controls")
                 .font(.headline)
 
-            VStack(spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    ShutterSelectionRow(
-                        baseShutter: $baseShutter,
-                        shutterSpeeds: shutterSpeeds,
-                        formatShutter: formatShutter
-                    )
+            VStack(spacing: metrics.contentSpacing) {
+                if metrics.stackControlsVertically {
+                    VStack(alignment: .leading, spacing: metrics.contentSpacing) {
+                        ShutterSelectionRow(
+                            baseShutter: $baseShutter,
+                            shutterSpeeds: shutterSpeeds,
+                            formatShutter: formatShutter,
+                            metrics: metrics
+                        )
 
-                    NDStopSelectionRow(ndStop: $ndStop)
+                        NDStopSelectionRow(ndStop: $ndStop, metrics: metrics)
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 12) {
+                        ShutterSelectionRow(
+                            baseShutter: $baseShutter,
+                            shutterSpeeds: shutterSpeeds,
+                            formatShutter: formatShutter,
+                            metrics: metrics
+                        )
+
+                        NDStopSelectionRow(ndStop: $ndStop, metrics: metrics)
+                    }
                 }
 
                 Divider()
 
-                HStack {
-                    Text("Show Advanced Options")
-                        .font(.subheadline.weight(.semibold))
+                HStack(spacing: metrics.inlineSpacing) {
+                    Text(metrics.advancedTitle)
+                        .font(metrics.advancedTitleFont)
+                        .lineLimit(1)
 
                     Spacer()
 
-                    Label("Aperture / ISO", systemImage: "chevron.down")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    if metrics.showsAdvancedTrailingText {
+                        Label(metrics.advancedTrailingLabel, systemImage: "chevron.down")
+                            .font(metrics.advancedTrailingFont)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: "chevron.down")
+                            .font(metrics.advancedTrailingFont.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
-                Text("Aperture and ISO placeholders will expand here later.")
-                    .font(.footnote)
+                Text(metrics.advancedPlaceholderText)
+                    .font(metrics.captionFont)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
+                    .padding(metrics.advancedPlaceholderPadding)
                     .background(Color(.tertiarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .lineLimit(metrics.showsFullAdvancedPlaceholder ? nil : 1)
             }
         }
-        .sectionCardStyle()
+        .sectionCardStyle(metrics: metrics)
     }
 }
 
@@ -134,17 +734,18 @@ struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let ndStop: Int
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let metrics: ExposureCalculatorPanelMetrics
     private let calculator = ExposureCalculator()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: metrics.contentSpacing) {
             Text("Result Set")
                 .font(.headline)
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: metrics.contentSpacing) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Final Shutter")
-                        .font(.footnote.weight(.medium))
+                        .font(metrics.captionFont.weight(.medium))
                         .foregroundStyle(.secondary)
 
                     if case .success(let result) = calculationResult {
@@ -153,8 +754,8 @@ struct ResultSectionView: View {
                             primaryText: display.primary,
                             secondaryText: display.secondary,
                             primaryColor: .primary,
-                            primaryFont: .system(size: 28, weight: .bold, design: .rounded),
-                            secondaryFont: .footnote
+                            primaryFont: metrics.resultFont,
+                            secondaryFont: metrics.captionFont
                         )
                     } else {
                         Text(primaryResultText)
@@ -164,7 +765,7 @@ struct ResultSectionView: View {
 
                 Divider()
 
-                HStack(spacing: 12) {
+                HStack(spacing: metrics.inlineSpacing) {
                     CompactInfoPill(label: "Base", value: baseShutterText)
                     CompactInfoPill(label: "ND", value: ndText)
                     CompactInfoPill(label: "Status", value: statusText)
@@ -172,15 +773,15 @@ struct ResultSectionView: View {
 
                 if let validationMessage {
                     Text(validationMessage)
-                        .font(.footnote)
+                        .font(metrics.captionFont)
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding()
+            .padding(metrics.innerPadding)
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .sectionCardStyle()
+        .sectionCardStyle(metrics: metrics)
     }
 
     private var primaryResultText: String {
@@ -202,12 +803,7 @@ struct ResultSectionView: View {
     }
 
     private var ndText: String {
-        switch calculationResult {
-        case .success:
-            return ndStop == 1 ? "1 stop" : "\(ndStop) stops"
-        case .failure:
-            return ndStop == 1 ? "1 stop" : "\(ndStop) stops"
-        }
+        ndStop == 1 ? "1 stop" : "\(ndStop) stops"
     }
 
     private var statusText: String {
@@ -231,6 +827,7 @@ struct ResultSectionView: View {
 
 private struct NDStopSelectionRow: View {
     @Binding var ndStop: Int
+    let metrics: ExposureCalculatorPanelMetrics
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -252,13 +849,13 @@ private struct NDStopSelectionRow: View {
             }
             .pickerStyle(.wheel)
             .frame(maxWidth: .infinity)
-            .frame(height: 140)
+            .frame(height: metrics.pickerHeight)
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Text("Stop-based ND selection")
-                .font(.footnote)
+                .font(metrics.captionFont)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -269,6 +866,7 @@ private struct ShutterSelectionRow: View {
     @Binding var baseShutter: Double
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
+    let metrics: ExposureCalculatorPanelMetrics
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -290,13 +888,13 @@ private struct ShutterSelectionRow: View {
             }
             .pickerStyle(.wheel)
             .frame(maxWidth: .infinity)
-            .frame(height: 140)
+            .frame(height: metrics.pickerHeight)
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Text("Full-stop shutter selection")
-                .font(.footnote)
+                .font(metrics.captionFont)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -306,331 +904,30 @@ private struct ShutterSelectionRow: View {
 struct TimerActionView: View {
     let canStartTimer: Bool
     let onStart: () -> Void
+    let metrics: ExposureCalculatorPanelMetrics
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: metrics.contentSpacing) {
             Text("Timer Action")
                 .font(.headline)
 
-            Button("Start Timer") {
+            Button("Add Timer") {
                 onStart()
             }
             .buttonStyle(.borderedProminent)
             .frame(maxWidth: .infinity)
             .disabled(!canStartTimer)
+            .controlSize(metrics.isUltraCompact ? .small : .regular)
+            .accessibilityIdentifier("exposure.workspace.timerAction.button")
         }
-        .sectionCardStyle()
-    }
-}
-
-struct RunningTimerPanelView: View {
-    let timers: [RunningTimerItem]
-    let runningTimerCount: Int
-    let formattedDuration: (TimeInterval) -> String
-    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
-    let formatClockTime: (Date) -> String
-    let formatDateTime: (Date) -> String
-    let onStopTimer: (UUID) -> Void
-    let onResumeTimer: (UUID) -> Void
-    let onRemoveTimer: (UUID) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(panelTitle)
-                    .font(.headline)
-
-                Spacer()
-
-                Button("View All") {
-                }
-                    .font(.footnote.weight(.semibold))
-                    .disabled(true)
-            }
-
-            if timers.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "timer")
-                        .font(.title3)
-                        .foregroundStyle(.tertiary)
-
-                    Text("No active timers")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(timers) { timer in
-                        TimerSummaryCard(
-                            timer: timer,
-                            formattedDuration: formattedDuration,
-                            formatTimeDisplay: formatTimeDisplay,
-                            formatClockTime: formatClockTime,
-                            formatDateTime: formatDateTime,
-                            onStop: { onStopTimer(timer.id) },
-                            onResume: { onResumeTimer(timer.id) },
-                            onRemove: { onRemoveTimer(timer.id) }
-                        )
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(.tertiarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color(.separator), lineWidth: 1)
-        )
-    }
-
-    private var panelTitle: String {
-        "Running Timers: \(runningTimerCount)"
-    }
-}
-
-private struct TimerSummaryCard: View {
-    let timer: RunningTimerItem
-    let formattedDuration: (TimeInterval) -> String
-    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
-    let formatClockTime: (Date) -> String
-    let formatDateTime: (Date) -> String
-    let onStop: () -> Void
-    let onResume: () -> Void
-    let onRemove: () -> Void
-
-    var body: some View {
-        let primaryDisplay = formatTimeDisplay(primaryDuration)
-        let targetDisplay = formatTimeDisplay(timer.duration)
-
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Text("Timer \(timer.order)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    statusBadge
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    DurationDisplayBlock(
-                        primaryText: primaryDisplay.primary,
-                        secondaryText: primaryDisplay.secondary,
-                        primaryColor: primaryTimeColor,
-                        primaryFont: .system(size: 28, weight: .bold, design: .rounded),
-                        secondaryFont: .footnote
-                    )
-                }
-
-                if let targetContextText = targetContextText(targetDisplay: targetDisplay) {
-                    Text(targetContextText)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-
-                if let timeContextText {
-                    Text(timeContextText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Text(timer.basisSummary)
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(alignment: .trailing, spacing: 10) {
-                if timer.status == .running {
-                    iconActionButton(
-                        systemName: "pause.circle",
-                        tint: .orange,
-                        accessibilityLabel: "Stop timer",
-                        action: onStop
-                    )
-                }
-
-                if timer.status == .stopped {
-                    iconActionButton(
-                        systemName: "play.circle",
-                        tint: .blue,
-                        accessibilityLabel: "Resume timer",
-                        action: onResume
-                    )
-                }
-
-                if timer.status != .running {
-                    iconActionButton(
-                        systemName: "trash",
-                        tint: .secondary,
-                        accessibilityLabel: "Remove timer",
-                        action: onRemove
-                    )
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-        .padding(16)
-        .background(cardBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(borderColor, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-    }
-
-    private var primaryDuration: TimeInterval {
-        switch timer.status {
-        case .running, .stopped:
-            return timer.remainingTime
-        case .completed:
-            return timer.duration
-        }
-    }
-
-    private func targetContextText(targetDisplay: TimeDisplay) -> String? {
-        switch timer.status {
-        case .running:
-            return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
-        case .completed:
-            return nil
-        case .stopped:
-            return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
-        }
-    }
-
-    private var timeContextText: String? {
-        switch timer.status {
-        case .running:
-            let completionText = timer.endDate.map(formatDateTime) ?? "--"
-            return "Ends \(completionText)"
-        case .completed:
-            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
-            return "Completed \(completionText)"
-        case .stopped:
-            let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
-            return "Paused \(pausedText)"
-        }
-    }
-
-    private var statusBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: statusSymbol)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(statusColor)
-
-            Text(statusText)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(statusColor)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(statusColor.opacity(0.12))
-        .clipShape(Capsule())
-    }
-
-    private func iconActionButton(
-        systemName: String,
-        tint: Color,
-        accessibilityLabel: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.title3)
-                .frame(width: 36, height: 36)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(tint)
-        .background(
-            Circle()
-                .fill(tint.opacity(0.12))
-        )
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var statusText: String {
-        switch timer.status {
-        case .running:
-            return "Running"
-        case .stopped:
-            return "Stopped"
-        case .completed:
-            return "Completed"
-        }
-    }
-
-    private var statusSymbol: String {
-        switch timer.status {
-        case .running:
-            return "circle.fill"
-        case .stopped:
-            return "square.fill"
-        case .completed:
-            return "checkmark"
-        }
-    }
-
-    private var statusColor: Color {
-        switch timer.status {
-        case .running:
-            return .green
-        case .stopped:
-            return .orange
-        case .completed:
-            return .gray
-        }
-    }
-
-    private var primaryTimeColor: Color {
-        switch timer.status {
-        case .running:
-            return .primary
-        case .stopped:
-            return .orange
-        case .completed:
-            return .secondary
-        }
-    }
-
-    private var cardBackgroundColor: Color {
-        switch timer.status {
-        case .running:
-            return Color(.secondarySystemBackground)
-        case .stopped:
-            return Color(.systemGray6)
-        case .completed:
-            return Color(.tertiarySystemBackground)
-        }
-    }
-
-    private var borderColor: Color {
-        switch timer.status {
-        case .running:
-            return .green.opacity(0.18)
-        case .stopped:
-            return .orange.opacity(0.18)
-        case .completed:
-            return .gray.opacity(0.18)
-        }
+        .sectionCardStyle(metrics: metrics)
+        .accessibilityIdentifier("exposure.workspace.timerAction")
     }
 }
 
 private struct DurationDisplayBlock: View {
     let primaryText: String
-    let secondaryText: String
+    let secondaryText: String?
     let primaryColor: Color
     let primaryFont: Font
     let secondaryFont: Font
@@ -648,17 +945,19 @@ private struct DurationDisplayBlock: View {
                 Spacer()
             }
 
-            HStack {
-                Spacer()
-                Spacer()
-                Text(secondaryText)
-                    .font(secondaryFont)
-                    .foregroundStyle(.tertiary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+            if let secondaryText {
+                HStack {
+                    Spacer()
+                    Spacer()
+                    Text(secondaryText)
+                        .font(secondaryFont)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
     }
@@ -683,35 +982,117 @@ private struct CompactInfoPill: View {
     }
 }
 
-
-private struct ResultPlaceholderRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .foregroundStyle(.secondary)
-
-            Spacer()
-
-            Text(value)
-                .fontWeight(.medium)
-        }
-    }
-}
-
 private extension View {
-    func sectionCardStyle() -> some View {
+    func sectionCardStyle(metrics: ExposureCalculatorPanelMetrics) -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .padding(metrics.cardPadding)
             .background(Color(.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(Color(.separator), lineWidth: 1)
             )
+    }
+}
+
+struct ExposureCalculatorPanelMetrics {
+    let sectionSpacing: CGFloat
+    let contentSpacing: CGFloat
+    let cardPadding: CGFloat
+    let innerPadding: CGFloat
+    let pickerHeight: CGFloat
+    let titleFont: Font
+    let resultFont: Font
+    let captionFont: Font
+    let stackControlsVertically: Bool
+    let inlineSpacing: CGFloat
+    let compactButtonSize: CGFloat
+    let compactHeaderSpacing: CGFloat
+    let controlIconFont: Font
+    let advancedTitle: String
+    let advancedTitleFont: Font
+    let advancedTrailingLabel: String
+    let advancedTrailingFont: Font
+    let advancedPlaceholderText: String
+    let advancedPlaceholderPadding: CGFloat
+    let showsAdvancedTrailingText: Bool
+    let showsFullAdvancedPlaceholder: Bool
+    let isUltraCompact: Bool
+
+    init(
+        containerHeight: CGFloat,
+        containerWidth: CGFloat,
+        prefersCompactLayout: Bool
+    ) {
+        let compactLayout = prefersCompactLayout || containerHeight < 760 || containerWidth < 250
+        isUltraCompact = prefersCompactLayout || containerHeight < 860 || containerWidth < 270
+        stackControlsVertically = prefersCompactLayout ? false : containerWidth < 250
+
+        if isUltraCompact {
+            sectionSpacing = 10
+            contentSpacing = 8
+            cardPadding = 10
+            innerPadding = 10
+            inlineSpacing = 8
+            compactButtonSize = 32
+            compactHeaderSpacing = 8
+            pickerHeight = 72
+            titleFont = .title2.weight(.bold)
+            resultFont = .system(size: 18, weight: .bold, design: .rounded)
+            captionFont = .caption2
+            controlIconFont = .subheadline.weight(.semibold)
+            advancedTitle = "Advanced"
+            advancedTitleFont = .subheadline.weight(.semibold)
+            advancedTrailingLabel = "Aperture / ISO"
+            advancedTrailingFont = .caption
+            advancedPlaceholderText = "Aperture and ISO placeholders."
+            advancedPlaceholderPadding = 8
+            showsAdvancedTrailingText = false
+            showsFullAdvancedPlaceholder = false
+        } else if compactLayout {
+            sectionSpacing = 12
+            contentSpacing = 10
+            cardPadding = 12
+            innerPadding = 12
+            inlineSpacing = 10
+            compactButtonSize = 36
+            compactHeaderSpacing = 10
+            pickerHeight = stackControlsVertically ? 82 : 96
+            titleFont = .title.weight(.bold)
+            resultFont = .system(size: 24, weight: .bold, design: .rounded)
+            captionFont = .caption
+            controlIconFont = .headline
+            advancedTitle = "Show Advanced Options"
+            advancedTitleFont = .subheadline.weight(.semibold)
+            advancedTrailingLabel = "Aperture / ISO"
+            advancedTrailingFont = .footnote
+            advancedPlaceholderText = "Aperture and ISO placeholders will expand here later."
+            advancedPlaceholderPadding = innerPadding
+            showsAdvancedTrailingText = true
+            showsFullAdvancedPlaceholder = true
+        } else {
+            sectionSpacing = 16
+            contentSpacing = 14
+            cardPadding = 16
+            innerPadding = 16
+            inlineSpacing = 12
+            compactButtonSize = 36
+            compactHeaderSpacing = 10
+            pickerHeight = 140
+            titleFont = .largeTitle.weight(.bold)
+            resultFont = .system(size: 28, weight: .bold, design: .rounded)
+            captionFont = .footnote
+            controlIconFont = .headline
+            advancedTitle = "Show Advanced Options"
+            advancedTitleFont = .subheadline.weight(.semibold)
+            advancedTrailingLabel = "Aperture / ISO"
+            advancedTrailingFont = .footnote
+            advancedPlaceholderText = "Aperture and ISO placeholders will expand here later."
+            advancedPlaceholderPadding = innerPadding
+            showsAdvancedTrailingText = true
+            showsFullAdvancedPlaceholder = true
+        }
     }
 }
 

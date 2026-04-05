@@ -227,6 +227,17 @@ final class TimerManager: ObservableObject {
         stopLoopIfNeeded(now: currentDate)
     }
 
+    func complete(id: UUID) {
+        guard let index = timers.firstIndex(where: { $0.id == id }) else {
+            stopLoopIfNeeded()
+            return
+        }
+
+        let currentDate = dateProvider()
+        timers[index] = timers[index].completed(at: currentDate)
+        stopLoopIfNeeded(now: currentDate)
+    }
+
     func remove(id: UUID) {
         timers.removeAll { $0.id == id }
         stopLoopIfNeeded()

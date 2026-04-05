@@ -11,6 +11,7 @@ enum FloatingTimerDockDisplayMode: Equatable {
 
 struct ExposureWorkspaceScreen: View {
     @StateObject private var viewModel: ExposureCalculatorViewModel
+    @State private var selectedTimerId: UUID?
 
     init(
         viewModel: ExposureCalculatorViewModel? = nil,
@@ -52,39 +53,75 @@ struct ExposureWorkspaceScreen: View {
             let narrowPortraitLayout = proxy.size.width < 430 && proxy.size.height > proxy.size.width
             let workspaceSpacing: CGFloat = narrowPortraitLayout ? 10 : 16
             let workspacePadding: CGFloat = narrowPortraitLayout ? 10 : (proxy.size.width < 430 ? 12 : 16)
+            let selectedTimer = selectedTimerId.flatMap(viewModel.timerRuntimeStore.timer(id:))
 
-            HStack(alignment: .top, spacing: workspaceSpacing) {
-                ExposureCalculatorPanel(
-                    viewModel: viewModel,
-                    onAddTimer: viewModel.startTimer,
-                    usesStableCompactLayout: narrowPortraitLayout
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .accessibilityIdentifier("exposure.workspace.calculatorPanel")
-
-                FloatingTimerDock(
-                    timers: visibleTimers,
-                    displayMode: dockDisplayMode,
-                    formatTimeDisplay: viewModel.formatTimeDisplay,
-                    onPauseTimer: viewModel.stopTimer,
-                    onResumeTimer: viewModel.resumeTimer,
-                    onOpenCompletedTimer: { _ in },
-                    onViewAll: nil
-                )
-                .frame(
-                    width: dockWidth(
-                        for: proxy.size.width,
-                        displayMode: dockDisplayMode,
-                        isNarrowPortrait: narrowPortraitLayout
+            ZStack {
+                HStack(alignment: .top, spacing: workspaceSpacing) {
+                    ExposureCalculatorPanel(
+                        viewModel: viewModel,
+                        onAddTimer: viewModel.startTimer,
+                        usesStableCompactLayout: narrowPortraitLayout
                     )
-                )
-                .frame(maxHeight: .infinity, alignment: .top)
-                .accessibilityIdentifier("exposure.workspace.dock")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .accessibilityIdentifier("exposure.workspace.calculatorPanel")
+
+                    FloatingTimerDock(
+                        timers: visibleTimers,
+                        displayMode: dockDisplayMode,
+                        formatTimeDisplay: viewModel.formatTimeDisplay,
+                        onOpenTimerDetail: { selectedTimerId = $0 },
+                        onViewAll: nil
+                    )
+                    .frame(
+                        width: dockWidth(
+                            for: proxy.size.width,
+                            displayMode: dockDisplayMode,
+                            isNarrowPortrait: narrowPortraitLayout
+                        )
+                    )
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .accessibilityIdentifier("exposure.workspace.dock")
+                }
+                .padding(workspacePadding)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+                .background(Color(.systemGroupedBackground))
+                .accessibilityIdentifier("exposure.workspace.root")
+
+                if let selectedTimer {
+                    Color.black.opacity(0.18)
+                        .ignoresSafeArea()
+                        .accessibilityIdentifier("exposure.workspace.timerDetail.scrim")
+                        .onTapGesture {
+                            selectedTimerId = nil
+                        }
+
+                    TimerDetailOverlay(
+                        timer: selectedTimer,
+                        formatTimeDisplay: viewModel.formatTimeDisplay,
+                        formatClockTime: viewModel.formatClockTime,
+                        formatDateTime: viewModel.formatDateTime,
+                        timerTargetContext: viewModel.timerTargetContext(for:),
+                        timerTimeContext: viewModel.timerTimeContext(for:),
+                        onPause: { viewModel.stopTimer(id: selectedTimer.id) },
+                        onResume: { viewModel.resumeTimer(id: selectedTimer.id) },
+                        onStop: { viewModel.completeTimer(id: selectedTimer.id) },
+                        onDelete: {
+                            viewModel.removeTimer(id: selectedTimer.id)
+                            selectedTimerId = nil
+                        },
+                        onDismiss: {
+                            selectedTimerId = nil
+                        }
+                    )
+                    .frame(maxWidth: min(proxy.size.width - 32, 360))
+                    .padding(.horizontal, 16)
+                }
             }
-            .padding(workspacePadding)
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-            .background(Color(.systemGroupedBackground))
-            .accessibilityIdentifier("exposure.workspace.root")
+            .onChange(of: visibleTimers.map(\.id)) { _, ids in
+                if let selectedTimerId, !ids.contains(selectedTimerId) {
+                    self.selectedTimerId = nil
+                }
+            }
         }
         .background(Color(.systemGroupedBackground))
     }
@@ -171,9 +208,7 @@ struct FloatingTimerDock: View {
     let timers: [RunningTimerItem]
     let displayMode: FloatingTimerDockDisplayMode
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
-    let onPauseTimer: (UUID) -> Void
-    let onResumeTimer: (UUID) -> Void
-    let onOpenCompletedTimer: (UUID) -> Void
+    let onOpenTimerDetail: (UUID) -> Void
     let onViewAll: (() -> Void)?
 
     var body: some View {
@@ -277,9 +312,7 @@ struct FloatingTimerDock: View {
                                     targetContext: nil,
                                     isCompact: isCompact,
                                     isNarrow: isNarrow,
-                                    onPauseTimer: { onPauseTimer(timer.id) },
-                                    onResumeTimer: { onResumeTimer(timer.id) },
-                                    onOpenCompletedTimer: { onOpenCompletedTimer(timer.id) }
+                                    onOpenTimerDetail: { onOpenTimerDetail(timer.id) }
                                 )
                             }
                         }
@@ -300,8 +333,7 @@ struct FloatingTimerDock: View {
                 UltraCompactTimerRow(
                     timer: timer,
                     timeDisplay: DockCompactTimeFormatter.format(timerPrimaryDuration(for: timer)),
-                    onPauseTimer: { onPauseTimer(timer.id) },
-                    onResumeTimer: { onResumeTimer(timer.id) }
+                    onOpenTimerDetail: { onOpenTimerDetail(timer.id) }
                 )
                 .accessibilityIdentifier("exposure.workspace.dock.narrowRow.\(index)")
             }
@@ -327,61 +359,65 @@ private struct FloatingTimerDockTile: View {
     let targetContext: String?
     let isCompact: Bool
     let isNarrow: Bool
-    let onPauseTimer: () -> Void
-    let onResumeTimer: () -> Void
-    let onOpenCompletedTimer: () -> Void
+    let onOpenTimerDetail: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(compactTitleText)
-                        .font((isCompact ? Font.caption : Font.subheadline).weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .accessibilityIdentifier("exposure.workspace.dock.primaryTitle")
+        Button(action: onOpenTimerDetail) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(compactTitleText)
+                            .font((isCompact ? Font.caption : Font.subheadline).weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .accessibilityIdentifier("exposure.workspace.dock.primaryTitle")
 
-                    Text(statusText)
-                        .font((isCompact ? Font.caption2 : Font.caption).weight(.medium))
-                        .foregroundStyle(statusColor)
+                        Text(statusText)
+                            .font((isCompact ? Font.caption2 : Font.caption).weight(.medium))
+                            .foregroundStyle(statusColor)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "chevron.left.circle.fill")
+                        .font(isCompact ? .footnote.weight(.semibold) : .subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
 
-                Spacer(minLength: 0)
+                DurationDisplayBlock(
+                    primaryText: timeDisplay.primary,
+                    secondaryText: (isCompact || isNarrow) ? nil : timeDisplay.secondary,
+                    primaryColor: statusColor == .gray ? .secondary : .primary,
+                    primaryFont: .system(size: isNarrow ? 16 : (isCompact ? 20 : 24), weight: .bold, design: .rounded),
+                    secondaryFont: isCompact ? .caption : .footnote
+                )
 
-                quickActionView
+                if let targetContext {
+                    Text(targetContext)
+                        .font((isCompact ? Font.caption2 : Font.footnote).weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                if !isCompact {
+                    Text(timer.basisSummary)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
             }
-
-            DurationDisplayBlock(
-                primaryText: timeDisplay.primary,
-                secondaryText: (isCompact || isNarrow) ? nil : timeDisplay.secondary,
-                primaryColor: statusColor == .gray ? .secondary : .primary,
-                primaryFont: .system(size: isNarrow ? 16 : (isCompact ? 20 : 24), weight: .bold, design: .rounded),
-                secondaryFont: isCompact ? .caption : .footnote
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(isCompact ? 10 : 14)
+            .background(tileBackgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(statusColor.opacity(0.16), lineWidth: 1)
             )
-
-            if let targetContext {
-                Text(targetContext)
-                    .font((isCompact ? Font.caption2 : Font.footnote).weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-
-            if !isCompact {
-                Text(timer.basisSummary)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(isCompact ? 10 : 14)
-        .background(tileBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(statusColor.opacity(0.16), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("exposure.workspace.dock.tile.\(timer.id.uuidString)")
     }
 
     private var statusText: String {
@@ -410,58 +446,6 @@ private struct FloatingTimerDockTile: View {
         }
     }
 
-    @ViewBuilder
-    private var quickActionView: some View {
-        switch timer.status {
-        case .running:
-            timerActionButton(
-                title: "Pause",
-                systemImage: "pause.fill",
-                action: onPauseTimer
-            )
-        case .stopped:
-            timerActionButton(
-                title: "Resume",
-                systemImage: "play.fill",
-                action: onResumeTimer
-            )
-        case .completed:
-            if isCompact || isNarrow {
-                Text("Done")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("exposure.workspace.dock.completedPlaceholder")
-            } else {
-                Button("Open") {
-                    onOpenCompletedTimer()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .accessibilityIdentifier("exposure.workspace.dock.completedIntent")
-            }
-        }
-    }
-
-    private func timerActionButton(
-        title: String,
-        systemImage: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            if isCompact {
-                Image(systemName: systemImage)
-                    .font(.caption.weight(.bold))
-                    .frame(width: 28, height: 28)
-            } else {
-                Text(title)
-                    .lineLimit(1)
-            }
-        }
-        .buttonStyle(.bordered)
-        .controlSize(isCompact ? .mini : .small)
-        .accessibilityIdentifier("exposure.workspace.dock.timerAction.\(title)")
-    }
-
     private var statusColor: Color {
         switch timer.status {
         case .running:
@@ -488,23 +472,15 @@ private struct FloatingTimerDockTile: View {
 struct UltraCompactTimerRow: View {
     let timer: RunningTimerItem
     let timeDisplay: DockCompactTimeDisplay
-    let onPauseTimer: () -> Void
-    let onResumeTimer: () -> Void
+    let onOpenTimerDetail: () -> Void
 
     private static let rowHeight: CGFloat = 44
 
     var body: some View {
-        Group {
-            if timer.status == .stopped {
-                Button(action: onResumeTimer) {
-                    rowContainer
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("exposure.workspace.dock.pausedResume")
-            } else {
-                rowContainer
-            }
+        Button(action: onOpenTimerDetail) {
+            rowContainer
         }
+        .buttonStyle(.plain)
     }
 
     private var rowContainer: some View {
@@ -525,17 +501,10 @@ struct UltraCompactTimerRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("exposure.workspace.dock.compactTime")
 
-                if timer.status == .stopped {
-                    Image(systemName: "play.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 24, height: 24)
-                        .background(statusColor)
-                        .clipShape(Circle())
-                        .accessibilityIdentifier("exposure.workspace.dock.pausedOverlay")
-                } else {
-                    Color.clear.frame(width: 24, height: 24)
-                }
+                Image(systemName: "chevron.left")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 24)
             }
             .padding(.horizontal, 7)
             .padding(.top, 5)
@@ -594,6 +563,187 @@ struct UltraCompactTimerRow: View {
             return Color.orange.opacity(0.12)
         case .completed:
             return Color.gray.opacity(0.04)
+        }
+    }
+}
+
+private struct TimerDetailOverlay: View {
+    let timer: RunningTimerItem
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let formatClockTime: (Date) -> String
+    let formatDateTime: (Date) -> String
+    let timerTargetContext: (RunningTimerItem) -> String?
+    let timerTimeContext: (RunningTimerItem) -> String?
+    let onPause: () -> Void
+    let onResume: () -> Void
+    let onStop: () -> Void
+    let onDelete: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(timer.name)
+                        .font(.title3.weight(.bold))
+                        .accessibilityIdentifier("exposure.workspace.timerDetail.title")
+
+                    Text(statusText)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(statusColor)
+                        .accessibilityIdentifier("exposure.workspace.timerDetail.status")
+                }
+
+                Spacer()
+
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.subheadline.weight(.bold))
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("exposure.workspace.timerDetail.dismiss")
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                detailRow(label: "Remaining", value: preciseRemainingTime)
+                    .accessibilityIdentifier("exposure.workspace.timerDetail.remaining")
+                detailRow(label: "Total", value: preciseTotalTime)
+                detailRow(label: "Elapsed", value: preciseElapsedTime)
+
+                if let targetContext = timerTargetContext(timer) {
+                    detailRow(label: "Target", value: targetContext)
+                }
+
+                detailRow(label: "Summary", value: timer.basisSummary)
+
+                detailRow(label: "Started", value: formatClockTime(timer.startDate))
+
+                if let timeContext = timerTimeContext(timer) {
+                    detailRow(label: "Context", value: timeContext)
+                }
+
+                if let endDate = timer.endDate {
+                    detailRow(label: timer.status == .completed ? "Completed" : "Ends", value: formatDateTime(endDate))
+                }
+
+                if let pausedAt = timer.pausedAt {
+                    detailRow(label: "Paused", value: formatDateTime(pausedAt))
+                }
+            }
+
+            HStack(spacing: 10) {
+                if timer.status == .running {
+                    actionButton("Pause", style: .borderedProminent, action: onPause)
+                        .accessibilityIdentifier("exposure.workspace.timerDetail.action.pause")
+                }
+
+                if timer.status == .stopped {
+                    actionButton("Resume", style: .borderedProminent, action: onResume)
+                        .accessibilityIdentifier("exposure.workspace.timerDetail.action.resume")
+                }
+
+                if timer.status != .completed {
+                    actionButton("Stop", style: .bordered, action: onStop)
+                        .accessibilityIdentifier("exposure.workspace.timerDetail.action.stop")
+                }
+
+                actionButton("Delete", style: .bordered, role: .destructive, action: onDelete)
+                    .accessibilityIdentifier("exposure.workspace.timerDetail.action.delete")
+            }
+
+            HStack {
+                Spacer()
+                Button("Close", action: onDismiss)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("exposure.workspace.timerDetail.close")
+            }
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color(.separator), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.12), radius: 18, y: 10)
+        .accessibilityIdentifier("exposure.workspace.timerDetail.overlay")
+    }
+
+    private var statusText: String {
+        switch timer.status {
+        case .running:
+            return "Running"
+        case .stopped:
+            return "Paused"
+        case .completed:
+            return "Completed"
+        }
+    }
+
+    private var statusColor: Color {
+        switch timer.status {
+        case .running:
+            return .green
+        case .stopped:
+            return .orange
+        case .completed:
+            return .secondary
+        }
+    }
+
+    private var preciseRemainingTime: String {
+        formatPreciseDuration(timer.remainingTime)
+    }
+
+    private var preciseTotalTime: String {
+        formatPreciseDuration(timer.duration)
+    }
+
+    private var preciseElapsedTime: String {
+        formatPreciseDuration(timer.elapsedTime)
+    }
+
+    private func formatPreciseDuration(_ seconds: TimeInterval) -> String {
+        let display = formatTimeDisplay(seconds)
+        if display.secondary.isEmpty {
+            return display.primary
+        }
+        return "\(display.primary) \(display.secondary)"
+    }
+
+    private func detailRow(label: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 72, alignment: .leading)
+
+            Text(value)
+                .font(.body.monospacedDigit())
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private enum OverlayActionStyle {
+        case bordered
+        case borderedProminent
+    }
+
+    private func actionButton(
+        _ title: String,
+        style: OverlayActionStyle,
+        role: ButtonRole? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        let button = Button(title, role: role, action: action)
+
+        switch style {
+        case .bordered:
+            return AnyView(button.buttonStyle(.bordered))
+        case .borderedProminent:
+            return AnyView(button.buttonStyle(.borderedProminent))
         }
     }
 }

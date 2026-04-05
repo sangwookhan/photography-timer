@@ -1052,7 +1052,6 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
         XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.0", in: hostingController.view))
         XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.running", in: hostingController.view))
         XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.compactTime", in: hostingController.view))
-        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Pause", in: hostingController.view))
     }
 
     func testExpandedDockUsesPlaceholderLabelForViewAllInsteadOfDisabledButton() {
@@ -1061,9 +1060,7 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
             timers: store.visibleTimers,
             displayMode: .expanded,
             formatTimeDisplay: store.formatTimeDisplay,
-            onPauseTimer: { _ in },
-            onResumeTimer: { _ in },
-            onOpenCompletedTimer: { _ in },
+            onOpenTimerDetail: { _ in },
             onViewAll: nil
         )
         let hostingController = makeHostingController(
@@ -1093,9 +1090,7 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
             timers: [completedTimer],
             displayMode: .expanded,
             formatTimeDisplay: { _ in TimeDisplay(primary: "8s", secondary: "8s") },
-            onPauseTimer: { _ in },
-            onResumeTimer: { _ in },
-            onOpenCompletedTimer: { _ in },
+            onOpenTimerDetail: { _ in },
             onViewAll: nil
         )
         let hostingController = makeHostingController(
@@ -1108,32 +1103,28 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
         XCTAssertNil(findButton(titled: "Details", in: hostingController.view))
     }
 
-    func testDockQuickActionsEmitCallbacksWithoutOwningRuntimeMutation() throws {
+    func testDockTapOpensOverlayForSelectedTimer() throws {
         let store = populatedRuntimeStore()
         let runningTimer = try XCTUnwrap(store.visibleTimers.first(where: { $0.status == .running }))
-        let recorder = DockIntentRecorder()
-        let dock = FloatingTimerDock(
-            timers: [runningTimer],
-            displayMode: .expanded,
-            formatTimeDisplay: store.formatTimeDisplay,
-            onPauseTimer: { recorder.pauseIDs.append($0) },
-            onResumeTimer: { recorder.resumeIDs.append($0) },
-            onOpenCompletedTimer: { recorder.openIDs.append($0) },
-            onViewAll: nil
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
         )
         let hostingController = makeHostingController(
-            for: dock,
-            size: CGSize(width: 220, height: 320)
+            for: screen,
+            size: CGSize(width: 430, height: 844)
         )
 
-        let pauseButton = try XCTUnwrap(
-            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Pause", in: hostingController.view)
+        let tile = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(runningTimer.id.uuidString)", in: hostingController.view)
         )
-        pauseButton.sendActions(for: .touchUpInside)
+        tile.sendActions(for: .touchUpInside)
+        refresh(hostingController)
 
-        XCTAssertEqual(recorder.pauseIDs, [runningTimer.id])
-        XCTAssertTrue(recorder.resumeIDs.isEmpty)
-        XCTAssertEqual(store.timers.first(where: { $0.id == runningTimer.id })?.status, .running)
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.timerDetail.overlay", in: hostingController.view))
+        XCTAssertNotNil(findTextLabel(containing: runningTimer.name, in: hostingController.view))
     }
 
     func testNarrowPortraitKeepsCalculatorWidthStableWhenTimersAppear() {
@@ -1318,42 +1309,6 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
         XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.narrowRow.3", in: hostingController.view))
     }
 
-    func testPausedCellUsesFullCellResumeAffordance() throws {
-        let pausedTimer = RunningTimerItem(
-            id: UUID(),
-            order: 1,
-            name: "Paused",
-            basisSummary: "Base 1/30s · 6 stops",
-            duration: 90,
-            startDate: Date(timeIntervalSince1970: 100),
-            endDate: Date(timeIntervalSince1970: 190),
-            pausedRemainingTime: 65,
-            pausedAt: Date(timeIntervalSince1970: 125),
-            status: .stopped,
-            referenceDate: Date(timeIntervalSince1970: 130)
-        )
-        let recorder = DockIntentRecorder()
-        let dock = FloatingTimerDock(
-            timers: [pausedTimer],
-            displayMode: .expanded,
-            formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-            onPauseTimer: { recorder.pauseIDs.append($0) },
-            onResumeTimer: { recorder.resumeIDs.append($0) },
-            onOpenCompletedTimer: { recorder.openIDs.append($0) },
-            onViewAll: nil
-        )
-        let hostingController = makeHostingController(for: dock, size: CGSize(width: 86, height: 180))
-
-        let resumeControl = try XCTUnwrap(
-            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.pausedResume", in: hostingController.view)
-        )
-        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.pausedOverlay", in: hostingController.view))
-        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.paused", in: hostingController.view))
-
-        resumeControl.sendActions(for: .touchUpInside)
-        XCTAssertEqual(recorder.resumeIDs, [pausedTimer.id])
-    }
-
     func testCompletedCellStaysQuietWithoutInlineActionControls() {
         let completedTimer = RunningTimerItem(
             id: UUID(),
@@ -1372,18 +1327,179 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
             timers: [completedTimer],
             displayMode: .expanded,
             formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-            onPauseTimer: { _ in },
-            onResumeTimer: { _ in },
-            onOpenCompletedTimer: { _ in },
+            onOpenTimerDetail: { _ in },
             onViewAll: nil
         )
         let hostingController = makeHostingController(for: dock, size: CGSize(width: 86, height: 180))
 
         XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.completed", in: hostingController.view))
-        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.pausedResume", in: hostingController.view))
-        XCTAssertNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.pausedOverlay", in: hostingController.view))
         XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Pause", in: hostingController.view))
         XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.timerAction.Resume", in: hostingController.view))
+    }
+
+    func testOverlayUsesLiveSharedStateWhileOpen() throws {
+        let now = Date(timeIntervalSince1970: 100)
+        var currentDate = now
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let store = TimerRuntimeStore(timerManager: timerManager)
+        store.startTimer(
+            TimerCreationRequest(duration: 8, name: "Cam A", basisSummary: "Base 1/30s · 6 stops")
+        )
+        let timer = try XCTUnwrap(store.visibleTimers.first)
+        currentDate = now.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(
+            for: screen,
+            size: CGSize(width: 430, height: 844)
+        )
+
+        let tile = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(timer.id.uuidString)", in: hostingController.view)
+        )
+        tile.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        XCTAssertNotNil(findTextLabel(containing: "5s", in: hostingController.view))
+
+        currentDate = now.addingTimeInterval(4)
+        timerManager.tick(now: currentDate)
+        refresh(hostingController)
+
+        XCTAssertNotNil(findTextLabel(containing: "4s", in: hostingController.view))
+    }
+
+    func testPauseActionPausesTimerAndKeepsDockAndOverlayInSync() throws {
+        let store = populatedRuntimeStore()
+        let timer = try XCTUnwrap(store.visibleTimers.first(where: { $0.status == .running }))
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen, size: CGSize(width: 430, height: 844))
+
+        let tile = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(timer.id.uuidString)", in: hostingController.view)
+        )
+        tile.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        let pauseButton = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.timerDetail.action.pause", in: hostingController.view)
+        )
+        pauseButton.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        XCTAssertEqual(store.timer(id: timer.id)?.status, .stopped)
+        XCTAssertNotNil(findTextLabel(containing: "Paused", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.paused", in: hostingController.view))
+    }
+
+    func testResumeActionResumesTimerAndKeepsDockAndOverlayInSync() throws {
+        let now = Date(timeIntervalSince1970: 100)
+        var currentDate = now
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let store = TimerRuntimeStore(timerManager: timerManager)
+        store.startTimer(
+            TimerCreationRequest(duration: 12, name: "Cam A", basisSummary: "Base 1/30s · 6 stops")
+        )
+        let timer = try XCTUnwrap(store.visibleTimers.first)
+        currentDate = now.addingTimeInterval(3)
+        store.stopTimer(id: timer.id)
+
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen, size: CGSize(width: 430, height: 844))
+
+        let tile = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(timer.id.uuidString)", in: hostingController.view)
+        )
+        tile.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        let resumeButton = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.timerDetail.action.resume", in: hostingController.view)
+        )
+        resumeButton.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        XCTAssertEqual(store.timer(id: timer.id)?.status, .running)
+        XCTAssertNotNil(findTextLabel(containing: "Running", in: hostingController.view))
+        XCTAssertNotNil(findView(withAccessibilityIdentifier: "exposure.workspace.dock.cell.running", in: hostingController.view))
+    }
+
+    func testDeleteActionClosesOverlayAndRemovesTimerImmediately() throws {
+        let store = populatedRuntimeStore()
+        let timer = try XCTUnwrap(store.visibleTimers.first)
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen, size: CGSize(width: 430, height: 844))
+
+        let tile = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(timer.id.uuidString)", in: hostingController.view)
+        )
+        tile.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        let deleteButton = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.timerDetail.action.delete", in: hostingController.view)
+        )
+        deleteButton.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        XCTAssertNil(store.timer(id: timer.id))
+        XCTAssertNil(findView(withAccessibilityIdentifier: "exposure.workspace.timerDetail.overlay", in: hostingController.view))
+        XCTAssertNil(findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(timer.id.uuidString)", in: hostingController.view))
+    }
+
+    func testDismissActionClosesOverlayWithoutMutatingTimerState() throws {
+        let store = populatedRuntimeStore()
+        let timer = try XCTUnwrap(store.visibleTimers.first)
+        let originalStatus = try XCTUnwrap(store.timer(id: timer.id)?.status)
+        let screen = ExposureWorkspaceScreen(
+            viewModel: ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerRuntimeStore: store
+            )
+        )
+        let hostingController = makeHostingController(for: screen, size: CGSize(width: 430, height: 844))
+
+        let tile = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.dock.tile.\(timer.id.uuidString)", in: hostingController.view)
+        )
+        tile.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        let dismissButton = try XCTUnwrap(
+            findControl(withAccessibilityIdentifier: "exposure.workspace.timerDetail.dismiss", in: hostingController.view)
+        )
+        dismissButton.sendActions(for: .touchUpInside)
+        refresh(hostingController)
+
+        XCTAssertEqual(store.timer(id: timer.id)?.status, originalStatus)
+        XCTAssertNil(findView(withAccessibilityIdentifier: "exposure.workspace.timerDetail.overlay", in: hostingController.view))
     }
 
     func testNarrowPortraitDockWidthRemainsAggressivelyBounded() {
@@ -1437,18 +1553,14 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
             timers: [longTimer],
             displayMode: .expanded,
             formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-            onPauseTimer: { _ in },
-            onResumeTimer: { _ in },
-            onOpenCompletedTimer: { _ in },
+            onOpenTimerDetail: { _ in },
             onViewAll: nil
         )
         let shortDock = FloatingTimerDock(
             timers: [shortTimer],
             displayMode: .expanded,
             formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-            onPauseTimer: { _ in },
-            onResumeTimer: { _ in },
-            onOpenCompletedTimer: { _ in },
+            onOpenTimerDetail: { _ in },
             onViewAll: nil
         )
 
@@ -1512,9 +1624,7 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
                 timers: [runningTimer],
                 displayMode: .expanded,
                 formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-                onPauseTimer: { _ in },
-                onResumeTimer: { _ in },
-                onOpenCompletedTimer: { _ in },
+                onOpenTimerDetail: { _ in },
                 onViewAll: nil
             ),
             size: CGSize(width: 86, height: 180)
@@ -1524,9 +1634,7 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
                 timers: [pausedTimer],
                 displayMode: .expanded,
                 formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-                onPauseTimer: { _ in },
-                onResumeTimer: { _ in },
-                onOpenCompletedTimer: { _ in },
+                onOpenTimerDetail: { _ in },
                 onViewAll: nil
             ),
             size: CGSize(width: 86, height: 180)
@@ -1536,9 +1644,7 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
                 timers: [completedTimer],
                 displayMode: .expanded,
                 formatTimeDisplay: { _ in TimeDisplay(primary: "dummy", secondary: "dummy") },
-                onPauseTimer: { _ in },
-                onResumeTimer: { _ in },
-                onOpenCompletedTimer: { _ in },
+                onOpenTimerDetail: { _ in },
                 onViewAll: nil
             ),
             size: CGSize(width: 86, height: 180)
@@ -1578,6 +1684,12 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
         hostingController.view.setNeedsLayout()
         hostingController.view.layoutIfNeeded()
         return hostingController
+    }
+
+    private func refresh(_ hostingController: UIViewController) {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+        hostingController.view.setNeedsLayout()
+        hostingController.view.layoutIfNeeded()
     }
 
     private func findView(withAccessibilityIdentifier identifier: String, in view: UIView) -> UIView? {
@@ -1646,11 +1758,4 @@ final class ExposureWorkspaceScreenLayoutTests: XCTestCase {
 
         return nil
     }
-}
-
-@MainActor
-private final class DockIntentRecorder {
-    var pauseIDs: [UUID] = []
-    var resumeIDs: [UUID] = []
-    var openIDs: [UUID] = []
 }

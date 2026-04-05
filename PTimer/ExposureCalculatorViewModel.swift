@@ -161,6 +161,10 @@ final class TimerRuntimeStore: ObservableObject {
         timers.filter { $0.status == .running }.count
     }
 
+    func timer(id: UUID) -> RunningTimerItem? {
+        timers.first(where: { $0.id == id })
+    }
+
     func startTimer(_ request: TimerCreationRequest) {
         guard let id = timerManager.start(duration: request.duration) else {
             return
@@ -183,6 +187,11 @@ final class TimerRuntimeStore: ObservableObject {
 
     func resumeTimer(id: UUID) {
         timerManager.resume(id: id)
+        syncTimers(with: timerManager.timers)
+    }
+
+    func completeTimer(id: UUID) {
+        timerManager.complete(id: id)
         syncTimers(with: timerManager.timers)
     }
 
@@ -395,6 +404,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func resumeTimer(id: UUID) {
         timerRuntimeStore.resumeTimer(id: id)
+    }
+
+    func completeTimer(id: UUID) {
+        timerRuntimeStore.completeTimer(id: id)
     }
 
     func removeTimer(id: UUID) {

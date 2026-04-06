@@ -32,6 +32,19 @@ struct ExposureCalculatorScreen: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
+                if bottomSheetStateStore.isExpanded {
+                    Button {
+                        bottomSheetStateStore.collapse()
+                    } label: {
+                        Color.black
+                            .opacity(BottomSheetLayoutMetrics.dimOpacity(for: bottomSheetStateStore.detent))
+                            .ignoresSafeArea()
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("bottom-sheet-dim-background")
+                }
+
                 VStack(spacing: 10) {
                     if !bottomSheetStateStore.isExpanded {
                         TimerActionView(
@@ -45,23 +58,19 @@ struct ExposureCalculatorScreen: View {
 
                     BottomSheetWorkspaceShell(
                         stateStore: bottomSheetStateStore,
-                        snapshot: BottomSheetWorkspaceSnapshot.make(from: viewModel.timers)
+                        snapshot: BottomSheetWorkspaceSnapshot.make(
+                            from: viewModel.timers,
+                            formatRemaining: viewModel.formatTimerClock,
+                            targetContext: viewModel.timerTargetContext,
+                            timeContext: viewModel.timerTimeContext
+                        ),
+                        onStopTimer: viewModel.stopTimer,
+                        onResumeTimer: viewModel.resumeTimer,
+                        onRemoveTimer: viewModel.removeTimer,
+                        onClearCompletedTimers: viewModel.clearCompletedTimers
                     )
                 }
                 .padding(.bottom, geometry.safeAreaInsets.bottom)
-
-                if bottomSheetStateStore.isExpanded {
-                    Button {
-                        bottomSheetStateStore.collapse()
-                    } label: {
-                        Color.black
-                            .opacity(BottomSheetLayoutMetrics.dimOpacity(for: bottomSheetStateStore.detent))
-                            .ignoresSafeArea()
-                    }
-                    .buttonStyle(.plain)
-                    .transition(.opacity)
-                    .accessibilityIdentifier("bottom-sheet-dim-background")
-                }
             }
         }
     }

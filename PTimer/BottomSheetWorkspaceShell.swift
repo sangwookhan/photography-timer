@@ -11,14 +11,11 @@ struct BottomSheetWorkspaceShell: View {
     var body: some View {
         BottomSheetContainer(
             detent: stateStore.detent,
-            onExpand: stateStore.expand,
-            onCollapse: stateStore.collapse,
             onDragEnded: stateStore.handleDragEnd(translation:),
             content: {
                 BottomSheetContentHost(
                     detent: stateStore.detent,
                     snapshot: snapshot,
-                    onExpand: stateStore.expand,
                     onCollapse: stateStore.collapse,
                     onStopTimer: onStopTimer,
                     onResumeTimer: onResumeTimer,
@@ -32,7 +29,6 @@ struct BottomSheetWorkspaceShell: View {
 
 enum BottomSheetDetent: String, CaseIterable, Identifiable {
     case compact
-    case medium
     case large
 
     static let `default`: BottomSheetDetent = .compact
@@ -46,6 +42,11 @@ enum BottomSheetDetent: String, CaseIterable, Identifiable {
 
 @MainActor
 final class BottomSheetWorkspaceStateStore: ObservableObject {
+    private enum DragThreshold {
+        static let compactExpand: CGFloat = 92
+        static let expandedCollapse: CGFloat = 64
+    }
+
     @Published private(set) var detent: BottomSheetDetent
 
     init(detent: BottomSheetDetent = .default) {
@@ -69,10 +70,15 @@ final class BottomSheetWorkspaceStateStore: ObservableObject {
     }
 
     func handleDragEnd(translation: CGFloat) {
-        if translation < -56 {
-            expand()
-        } else if translation > 56 {
-            collapse()
+        switch detent {
+        case .compact:
+            if translation <= -DragThreshold.compactExpand {
+                expand()
+            }
+        case .large:
+            if translation >= DragThreshold.expandedCollapse {
+                collapse()
+            }
         }
     }
 }
@@ -82,8 +88,6 @@ struct BottomSheetLayoutMetrics {
         switch detent {
         case .compact:
             return 122
-        case .medium:
-            return 360
         case .large:
             return 560
         }
@@ -93,8 +97,6 @@ struct BottomSheetLayoutMetrics {
         switch detent {
         case .compact:
             return 0
-        case .medium:
-            return 0.12
         case .large:
             return 0.2
         }
@@ -222,18 +224,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         "Running \(runningCount) · Paused \(stoppedCount) · Done \(completedCount)"
     }
 
-    var compactSummaryText: String {
-        if totalCount == 0 {
-            return "No timers yet"
-        }
-
-        if hiddenCompactItemCount > 0 {
-            return "+\(hiddenCompactItemCount) more"
-        }
-
-        return compactCountText
-    }
-
     var expandedSummaryText: String {
         if totalCount == 0 {
             return "No timers in workspace"
@@ -248,16 +238,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         }
 
         return "+\(hiddenCompactItemCount)"
-    }
-
-    private var compactCountText: String {
-        let parts = [
-            runningCount > 0 ? "\(runningCount) running" : nil,
-            stoppedCount > 0 ? "\(stoppedCount) paused" : nil,
-            completedCount > 0 ? "\(completedCount) done" : nil
-        ].compactMap { $0 }
-
-        return parts.isEmpty ? "No timers yet" : parts.joined(separator: " · ")
     }
 
     private static func makeSections(
@@ -461,10 +441,15 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
 
 private struct BottomSheetContainer<Content: View>: View {
     let detent: BottomSheetDetent
-    let onExpand: () -> Void
-    let onCollapse: () -> Void
     let onDragEnded: (CGFloat) -> Void
     @ViewBuilder let content: Content
+
+    private var handleDragGesture: some Gesture {
+        DragGesture(minimumDistance: detent == .compact ? 20 : 14)
+            .onEnded { value in
+                onDragEnded(value.translation.height)
+            }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -473,31 +458,13 @@ private struct BottomSheetContainer<Content: View>: View {
                     .fill(Color.secondary.opacity(0.35))
                     .frame(width: detent == .compact ? 34 : 42, height: 5)
                     .frame(maxWidth: .infinity)
-
-                if detent.isExpanded {
-                    Button {
-                        onCollapse()
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 34, height: 34)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("bottom-sheet-collapse-button")
-                }
             }
             .padding(.top, detent == .compact ? 5 : 10)
             .padding(.bottom, detent.isExpanded ? 8 : 6)
             .padding(.horizontal, 18)
             .contentShape(Rectangle())
-            .onTapGesture {
-                if !detent.isExpanded {
-                    onExpand()
-                }
-            }
+            .gesture(handleDragGesture)
+            .accessibilityIdentifier("bottom-sheet-handle-area")
 
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -516,22 +483,14 @@ private struct BottomSheetContainer<Content: View>: View {
         .padding(.horizontal, 8)
         .padding(.top, 6)
         .padding(.bottom, 0)
-        .offset(y: detent == .medium ? -8 : 0)
         .accessibilityIdentifier("bottom-sheet-shell")
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: detent)
-        .gesture(
-            DragGesture(minimumDistance: 12)
-                .onEnded { value in
-                    onDragEnded(value.translation.height)
-                }
-        )
     }
 }
 
 private struct BottomSheetContentHost: View {
     let detent: BottomSheetDetent
     let snapshot: BottomSheetWorkspaceSnapshot
-    let onExpand: () -> Void
     let onCollapse: () -> Void
     let onStopTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
@@ -561,7 +520,7 @@ private struct BottomSheetContentHost: View {
                 switch detent {
                 case .compact:
                     CompactTimerMiniDockView(snapshot: snapshot)
-                case .medium, .large:
+                case .large:
                     ExpandedTimerWorkspaceView(
                         snapshot: snapshot,
                         onStopTimer: onStopTimer,

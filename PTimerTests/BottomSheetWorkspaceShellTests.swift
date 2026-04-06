@@ -12,14 +12,14 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testStateStoreTransitionsBetweenDetents() {
+    func testStateStoreTransitionsBetweenCompactAndExpandedDetents() {
         let store = BottomSheetWorkspaceStateStore()
-
-        store.transition(to: .medium)
-        XCTAssertEqual(store.detent, .medium)
 
         store.transition(to: .large)
         XCTAssertEqual(store.detent, .large)
+
+        store.transition(to: .compact)
+        XCTAssertEqual(store.detent, .compact)
     }
 
     @MainActor
@@ -41,29 +41,54 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     func testStateStoreDragEndSupportsExpandAndCollapseReturnPath() {
         let store = BottomSheetWorkspaceStateStore()
 
-        store.handleDragEnd(translation: -80)
+        store.handleDragEnd(translation: -70)
+        XCTAssertEqual(store.detent, .compact)
+
+        store.handleDragEnd(translation: -110)
+        XCTAssertEqual(store.detent, .large)
+
+        store.handleDragEnd(translation: 40)
         XCTAssertEqual(store.detent, .large)
 
         store.handleDragEnd(translation: 92)
         XCTAssertEqual(store.detent, .compact)
     }
 
-    func testLayoutMetricsIncreaseByDetent() {
+    @MainActor
+    func testCompactRequiresIntentionalUpwardDragToExpand() {
+        let store = BottomSheetWorkspaceStateStore()
+
+        store.handleDragEnd(translation: -91)
+        XCTAssertEqual(store.detent, .compact)
+
+        store.handleDragEnd(translation: -92)
+        XCTAssertEqual(store.detent, .large)
+    }
+
+    @MainActor
+    func testExpandedCollapsesWithMoreForgivingDownwardDrag() {
+        let store = BottomSheetWorkspaceStateStore(detent: .large)
+
+        store.handleDragEnd(translation: 63)
+        XCTAssertEqual(store.detent, .large)
+
+        store.handleDragEnd(translation: 64)
+        XCTAssertEqual(store.detent, .compact)
+    }
+
+    func testLayoutMetricsReflectCompactAndExpandedHeights() {
         let compact = BottomSheetLayoutMetrics.height(for: .compact)
-        let medium = BottomSheetLayoutMetrics.height(for: .medium)
         let large = BottomSheetLayoutMetrics.height(for: .large)
 
-        XCTAssertLessThan(compact, medium)
-        XCTAssertLessThan(medium, large)
+        XCTAssertLessThan(compact, large)
         XCTAssertGreaterThanOrEqual(large, 560)
         XCTAssertLessThanOrEqual(compact, 122)
         XCTAssertGreaterThanOrEqual(compact, 110)
     }
 
-    func testDimOpacityOnlyAppearsForExpandedStates() {
+    func testDimOpacityOnlyAppearsForExpandedState() {
         XCTAssertEqual(BottomSheetLayoutMetrics.dimOpacity(for: .compact), 0)
-        XCTAssertGreaterThan(BottomSheetLayoutMetrics.dimOpacity(for: .medium), 0)
-        XCTAssertGreaterThan(BottomSheetLayoutMetrics.dimOpacity(for: .large), BottomSheetLayoutMetrics.dimOpacity(for: .medium))
+        XCTAssertGreaterThan(BottomSheetLayoutMetrics.dimOpacity(for: .large), 0)
     }
 
     func testSnapshotSummarizesTimerCounts() {
@@ -103,11 +128,10 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         )
     }
 
-    func testCompactSummaryCalculatesHiddenCountAndSummaryText() {
+    func testCompactSummaryCalculatesHiddenCountAndOverflowText() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
         XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
-        XCTAssertEqual(snapshot.compactSummaryText, "+1 more")
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
     }
 
@@ -216,9 +240,17 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertFalse(host.view.containsText(snapshot.compactSummaryText))
         XCTAssertFalse(host.view.containsText("Open"))
         XCTAssertTrue(host.view.containsText("Timer Workspace"))
+    }
+
+    @MainActor
+    func testBottomSheetUsesHandleAreaAndRemovesExpandedChevronButton() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
+
+        XCTAssertNotNil(host.view.findView(accessibilityIdentifier: "bottom-sheet-handle-area"))
+        XCTAssertNil(host.view.findView(accessibilityIdentifier: "bottom-sheet-collapse-button"))
     }
 
     @MainActor
@@ -229,8 +261,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertEqual(snapshot.compactSummaryText, "No timers yet")
-        XCTAssertFalse(host.view.containsText(snapshot.compactSummaryText))
         XCTAssertFalse(host.view.containsText("Open"))
         XCTAssertFalse(host.view.containsText("Open Workspace"))
     }
@@ -425,5 +455,19 @@ private extension UIView {
         }
 
         return false
+    }
+
+    func findView(accessibilityIdentifier: String) -> UIView? {
+        if self.accessibilityIdentifier == accessibilityIdentifier {
+            return self
+        }
+
+        for subview in subviews {
+            if let match = subview.findView(accessibilityIdentifier: accessibilityIdentifier) {
+                return match
+            }
+        }
+
+        return nil
     }
 }

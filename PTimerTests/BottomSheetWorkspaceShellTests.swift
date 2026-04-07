@@ -170,6 +170,10 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
+        XCTAssertEqual(
+            snapshot.firstHiddenCompactItemID,
+            UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        )
     }
 
     func testCompactPresentationSimplifiesLongDurationContent() {
@@ -178,6 +182,60 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.compactItems.count, 1)
         XCTAssertEqual(snapshot.compactItems[0].primaryRemainingText, "4d 6h")
         XCTAssertEqual(snapshot.compactItems[0].secondaryTotalText, "4d 6h")
+    }
+
+    func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
+        let before = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .running))
+        let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .stopped))
+
+        XCTAssertEqual(
+            before.compactItems.map(\.id),
+            [
+                UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!,
+                UUID(uuidString: "bbbbbbb2-2222-2222-2222-222222222222")!,
+                UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!
+            ]
+        )
+        XCTAssertEqual(before.compactItems.map(\.id), after.compactItems.map(\.id))
+        XCTAssertEqual(before.sections.first?.items.map(\.id), after.sections.first?.items.map(\.id))
+    }
+
+    func testCompletedTimersAreDeferredBehindActiveTimersInWorkspaceOrdering() {
+        let ordered = TimerWorkspaceOrdering.sort(completedAheadOfActiveTimers())
+
+        XCTAssertEqual(
+            ordered.map(\.id),
+            [
+                UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
+                UUID(uuidString: "eeeeeee5-5555-5555-5555-555555555555")!,
+                UUID(uuidString: "fffffff6-6666-6666-6666-666666666666")!,
+                UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
+            ]
+        )
+        XCTAssertEqual(ordered.prefix(2).map(\.status), [.running, .stopped])
+        XCTAssertEqual(ordered.suffix(2).map(\.status), [.completed, .completed])
+    }
+
+    @MainActor
+    func testOverflowFocusTargetUsesFirstHiddenCompactItem() {
+        let snapshot = makeSnapshot(from: completedAheadOfActiveTimers())
+        let store = BottomSheetWorkspaceStateStore()
+
+        XCTAssertEqual(snapshot.compactOverflowText, "+1")
+        XCTAssertEqual(
+            snapshot.firstHiddenCompactItemID,
+            UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
+        )
+
+        if let targetID = snapshot.firstHiddenCompactItemID {
+            store.expandAndFocusTimer(targetID)
+        }
+
+        XCTAssertEqual(store.detent, .large)
+        XCTAssertEqual(
+            store.selectedTimerID,
+            UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
+        )
     }
 
     func testCompletedCompactCardUsesZeroRemainingWithoutDoneLabel() {
@@ -203,10 +261,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     func testExpandedSectionsGroupTimersByPresentationStatus() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
-        XCTAssertEqual(snapshot.sections.map(\.title), ["Running", "Stopped", "Recently Completed"])
-        XCTAssertEqual(snapshot.sections[0].items.count, 1)
-        XCTAssertEqual(snapshot.sections[1].items.count, 1)
-        XCTAssertEqual(snapshot.sections[2].items.count, 2)
+        XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
+        XCTAssertEqual(snapshot.sections[0].items.count, 2)
+        XCTAssertEqual(snapshot.sections[1].items.count, 2)
     }
 
     func testExpandedSummaryTextReflectsWorkspaceCounts() {
@@ -267,9 +324,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertEqual(snapshot.sections.map(\.title), ["Running", "Stopped", "Recently Completed"])
+        XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
         XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Running Soon")
-        XCTAssertEqual(snapshot.sections[1].items.first?.actions.map(\.title), ["Resume", "Remove"])
+        XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Resume", "Remove"])
         XCTAssertGreaterThan(snapshot.completedCount, 0)
     }
 
@@ -441,6 +498,111 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             status: .running,
             referenceDate: now
         )
+    }
+
+    private func activeOrderingTimers(pausedFirstTimerStatus: TimerStatus) -> [RunningTimerItem] {
+        let now = Date(timeIntervalSince1970: 2_000)
+
+        return [
+            RunningTimerItem(
+                id: UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!,
+                order: 1,
+                name: "First Active",
+                basisSummary: "Base 1/30s · 6 stops",
+                duration: 90,
+                startDate: now.addingTimeInterval(-10),
+                endDate: pausedFirstTimerStatus == .running ? now.addingTimeInterval(50) : now.addingTimeInterval(80),
+                pausedRemainingTime: pausedFirstTimerStatus == .stopped ? 50 : nil,
+                pausedAt: pausedFirstTimerStatus == .stopped ? now.addingTimeInterval(-5) : nil,
+                status: pausedFirstTimerStatus,
+                referenceDate: now
+            ),
+            RunningTimerItem(
+                id: UUID(uuidString: "bbbbbbb2-2222-2222-2222-222222222222")!,
+                order: 2,
+                name: "Second Active",
+                basisSummary: "Base 1/60s · 10 stops",
+                duration: 200,
+                startDate: now,
+                endDate: now.addingTimeInterval(20),
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .running,
+                referenceDate: now
+            ),
+            RunningTimerItem(
+                id: UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!,
+                order: 3,
+                name: "Third Active",
+                basisSummary: "Base 1/15s · 8 stops",
+                duration: 140,
+                startDate: now.addingTimeInterval(-15),
+                endDate: now.addingTimeInterval(110),
+                pausedRemainingTime: 70,
+                pausedAt: now.addingTimeInterval(-12),
+                status: .stopped,
+                referenceDate: now
+            )
+        ]
+    }
+
+    private func completedAheadOfActiveTimers() -> [RunningTimerItem] {
+        let now = Date(timeIntervalSince1970: 3_000)
+
+        return [
+            RunningTimerItem(
+                id: UUID(uuidString: "fffffff6-6666-6666-6666-666666666666")!,
+                order: 3,
+                name: "Completed Latest",
+                basisSummary: "Base 1/8s · 5 stops",
+                duration: 30,
+                startDate: now.addingTimeInterval(-30),
+                endDate: now.addingTimeInterval(-5),
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .completed,
+                referenceDate: now
+            ),
+            RunningTimerItem(
+                id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
+                order: 4,
+                name: "Completed Earlier",
+                basisSummary: "Base 1/4s · 4 stops",
+                duration: 20,
+                startDate: now.addingTimeInterval(-50),
+                endDate: now.addingTimeInterval(-20),
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .completed,
+                referenceDate: now
+            ),
+            RunningTimerItem(
+                id: UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
+                order: 1,
+                name: "Active First",
+                basisSummary: "Base 1/2s · 2 stops",
+                duration: 180,
+                startDate: now,
+                endDate: now.addingTimeInterval(90),
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .running,
+                referenceDate: now
+            ),
+            RunningTimerItem(
+                id: UUID(uuidString: "eeeeeee5-5555-5555-5555-555555555555")!,
+                order: 2,
+                name: "Active Second",
+                basisSummary: "Base 1/1s · 1 stop",
+                duration: 240,
+                startDate: now.addingTimeInterval(-20),
+                endDate: now.addingTimeInterval(160),
+                pausedRemainingTime: 55,
+                pausedAt: now.addingTimeInterval(-10),
+                status: .stopped,
+                referenceDate: now
+            )
+        ]
     }
 
     private func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {

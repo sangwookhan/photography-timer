@@ -196,6 +196,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
     let completedCount: Int
     let compactItems: [BottomSheetCompactItem]
     let hiddenCompactItemCount: Int
+    let firstHiddenCompactItemID: UUID?
     let sections: [TimerWorkspaceSection]
 
     static func make(
@@ -204,7 +205,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         targetContext: (RunningTimerItem) -> String?,
         timeContext: (RunningTimerItem) -> String?
     ) -> BottomSheetWorkspaceSnapshot {
-        let orderedTimers = timers.sorted(by: presentationSort)
+        let orderedTimers = TimerWorkspaceOrdering.sort(timers)
 
         let compactItems = orderedTimers
             .prefix(Self.compactVisibleLimit)
@@ -232,6 +233,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
             completedCount: timers.filter { $0.status == .completed }.count,
             compactItems: compactItems,
             hiddenCompactItemCount: max(0, orderedTimers.count - compactItems.count),
+            firstHiddenCompactItemID: orderedTimers.dropFirst(compactItems.count).first?.id,
             sections: sections
         )
     }
@@ -262,16 +264,41 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         targetContext: (RunningTimerItem) -> String?,
         timeContext: (RunningTimerItem) -> String?
     ) -> [TimerWorkspaceSection] {
-        let grouped = Dictionary(grouping: timers, by: \.status)
+        let activeTimers = timers.filter { $0.status != .completed }
+        let completedTimers = timers.filter { $0.status == .completed }
 
-        return [TimerStatus.running, .stopped, .completed].compactMap { status in
-            guard let timers = grouped[status], !timers.isEmpty else {
-                return nil
-            }
+        return [
+            makeSection(
+                title: "Active",
+                timers: activeTimers,
+                formatRemaining: formatRemaining,
+                targetContext: targetContext,
+                timeContext: timeContext
+            ),
+            makeSection(
+                title: "Recently Completed",
+                timers: completedTimers,
+                formatRemaining: formatRemaining,
+                targetContext: targetContext,
+                timeContext: timeContext
+            )
+        ].compactMap { $0 }
+    }
 
-            return TimerWorkspaceSection(
-                title: sectionTitle(for: status),
-                items: timers.map { timer in
+    private static func makeSection(
+        title: String,
+        timers: [RunningTimerItem],
+        formatRemaining: (TimeInterval) -> String,
+        targetContext: (RunningTimerItem) -> String?,
+        timeContext: (RunningTimerItem) -> String?
+    ) -> TimerWorkspaceSection? {
+        guard !timers.isEmpty else {
+            return nil
+        }
+
+        return TimerWorkspaceSection(
+            title: title,
+            items: timers.map { timer in
                     BottomSheetExpandedItem(
                         id: timer.id,
                         title: timer.name,
@@ -285,59 +312,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                         actions: expandedActions(for: timer.status)
                     )
                 }
-            )
-        }
-    }
-
-    private static func presentationSort(lhs: RunningTimerItem, rhs: RunningTimerItem) -> Bool {
-        let lhsRank = statusRank(lhs.status)
-        let rhsRank = statusRank(rhs.status)
-
-        if lhsRank != rhsRank {
-            return lhsRank < rhsRank
-        }
-
-        switch lhs.status {
-        case .running:
-            if lhs.remainingTime != rhs.remainingTime {
-                return lhs.remainingTime < rhs.remainingTime
-            }
-        case .stopped:
-            if lhs.remainingTime != rhs.remainingTime {
-                return lhs.remainingTime < rhs.remainingTime
-            }
-            if lhs.pausedAt != rhs.pausedAt {
-                return (lhs.pausedAt ?? .distantPast) > (rhs.pausedAt ?? .distantPast)
-            }
-        case .completed:
-            if lhs.completedAt != rhs.completedAt {
-                return (lhs.completedAt ?? .distantPast) > (rhs.completedAt ?? .distantPast)
-            }
-        }
-
-        return lhs.order < rhs.order
-    }
-
-    private static func statusRank(_ status: TimerStatus) -> Int {
-        switch status {
-        case .running:
-            return 0
-        case .stopped:
-            return 1
-        case .completed:
-            return 2
-        }
-    }
-
-    private static func sectionTitle(for status: TimerStatus) -> String {
-        switch status {
-        case .running:
-            return "Running"
-        case .stopped:
-            return "Stopped"
-        case .completed:
-            return "Recently Completed"
-        }
+        )
     }
 
     private static func progress(for timer: RunningTimerItem) -> Double {
@@ -591,8 +566,16 @@ private struct CompactTimerMiniDockView: View {
                             )
                         }
 
-                        if let overflowText = snapshot.compactOverflowText {
-                            CompactOverflowMiniCard(text: overflowText)
+                        if
+                            let overflowText = snapshot.compactOverflowText,
+                            let overflowTargetID = snapshot.firstHiddenCompactItemID
+                        {
+                            CompactOverflowMiniCard(
+                                text: overflowText,
+                                onTap: {
+                                    onItemTap(overflowTargetID)
+                                }
+                            )
                         }
                     }
                     .padding(.vertical, 1)
@@ -719,6 +702,7 @@ private struct CompactTimerMiniCardView: View {
 
 private struct CompactOverflowMiniCard: View {
     let text: String
+    let onTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -740,7 +724,9 @@ private struct CompactOverflowMiniCard: View {
         .frame(width: 86, height: 96, alignment: .topLeading)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityIdentifier("bottom-sheet-compact-overflow-card")
+        .onTapGesture(perform: onTap)
     }
 }
 

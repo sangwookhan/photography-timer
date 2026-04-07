@@ -38,6 +38,43 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
+    func testCompactCardTapSelectionExpandsAndStoresFocusedTimer() {
+        let store = BottomSheetWorkspaceStateStore()
+        let selectedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+
+        store.expandAndFocusTimer(selectedID)
+
+        XCTAssertEqual(store.detent, .large)
+        XCTAssertEqual(store.selectedTimerID, selectedID)
+    }
+
+    @MainActor
+    func testCollapseClearsFocusedTimerSelection() {
+        let store = BottomSheetWorkspaceStateStore(detent: .large)
+        let selectedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+
+        store.focusTimer(selectedID)
+        XCTAssertEqual(store.selectedTimerID, selectedID)
+
+        store.collapse()
+
+        XCTAssertEqual(store.detent, .compact)
+        XCTAssertNil(store.selectedTimerID)
+    }
+
+    @MainActor
+    func testTransitionToCompactClearsFocusedTimerSelection() {
+        let store = BottomSheetWorkspaceStateStore(detent: .large)
+        let selectedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+
+        store.focusTimer(selectedID)
+        store.transition(to: .compact)
+
+        XCTAssertEqual(store.detent, .compact)
+        XCTAssertNil(store.selectedTimerID)
+    }
+
+    @MainActor
     func testStateStoreDragEndSupportsExpandAndCollapseReturnPath() {
         let store = BottomSheetWorkspaceStateStore()
 
@@ -178,6 +215,18 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.expandedSummaryText, "Running 1 · Paused 1 · Done 2")
     }
 
+    func testExpandedSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+
+        let focusedItem = snapshot.sections
+            .flatMap(\.items)
+            .first { $0.id == focusedID }
+
+        XCTAssertEqual(focusedItem?.title, "Stopped Hold")
+        XCTAssertEqual(focusedItem?.status, .stopped)
+    }
+
     func testExpandedHeightCreatesLargerManagementViewportBudget() {
         let compactHeight = BottomSheetLayoutMetrics.height(for: .compact)
         let expandedHeight = BottomSheetLayoutMetrics.height(for: .large)
@@ -222,6 +271,23 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Running Soon")
         XCTAssertEqual(snapshot.sections[1].items.first?.actions.map(\.title), ["Resume", "Remove"])
         XCTAssertGreaterThan(snapshot.completedCount, 0)
+    }
+
+    @MainActor
+    func testExpandedStateMarksFocusedRowForTappedCompactTimer() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let store = BottomSheetWorkspaceStateStore(detent: .large)
+
+        store.focusTimer(focusedID)
+
+        let host = makeBottomSheetHost(store: store, snapshot: snapshot)
+
+        XCTAssertNotNil(
+            host.view.findView(
+                accessibilityIdentifier: "bottom-sheet-expanded-row-focused-\(focusedID.uuidString)"
+            )
+        )
     }
 
     @MainActor
@@ -419,6 +485,14 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         snapshot: BottomSheetWorkspaceSnapshot
     ) -> UIViewController {
         let store = BottomSheetWorkspaceStateStore(detent: detent)
+        return makeBottomSheetHost(store: store, snapshot: snapshot)
+    }
+
+    @MainActor
+    private func makeBottomSheetHost(
+        store: BottomSheetWorkspaceStateStore,
+        snapshot: BottomSheetWorkspaceSnapshot
+    ) -> UIViewController {
         let host = UIHostingController(
             rootView: BottomSheetWorkspaceShell(
                 stateStore: store,

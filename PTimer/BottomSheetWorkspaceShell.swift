@@ -16,6 +16,8 @@ struct BottomSheetWorkspaceShell: View {
                 BottomSheetContentHost(
                     detent: stateStore.detent,
                     snapshot: snapshot,
+                    focusedTimerID: stateStore.selectedTimerID,
+                    onCompactItemTap: stateStore.expandAndFocusTimer(_:),
                     onCollapse: stateStore.collapse,
                     onStopTimer: onStopTimer,
                     onResumeTimer: onResumeTimer,
@@ -48,6 +50,7 @@ final class BottomSheetWorkspaceStateStore: ObservableObject {
     }
 
     @Published private(set) var detent: BottomSheetDetent
+    @Published private(set) var selectedTimerID: UUID?
 
     init(detent: BottomSheetDetent = .default) {
         self.detent = detent
@@ -59,13 +62,26 @@ final class BottomSheetWorkspaceStateStore: ObservableObject {
 
     func transition(to detent: BottomSheetDetent) {
         self.detent = detent
+        if detent == .compact {
+            selectedTimerID = nil
+        }
     }
 
     func expand() {
         detent = .large
     }
 
+    func expandAndFocusTimer(_ id: UUID) {
+        selectedTimerID = id
+        expand()
+    }
+
+    func focusTimer(_ id: UUID) {
+        selectedTimerID = id
+    }
+
     func collapse() {
+        selectedTimerID = nil
         detent = .compact
     }
 
@@ -491,6 +507,8 @@ private struct BottomSheetContainer<Content: View>: View {
 private struct BottomSheetContentHost: View {
     let detent: BottomSheetDetent
     let snapshot: BottomSheetWorkspaceSnapshot
+    let focusedTimerID: UUID?
+    let onCompactItemTap: (UUID) -> Void
     let onCollapse: () -> Void
     let onStopTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
@@ -519,10 +537,14 @@ private struct BottomSheetContentHost: View {
             Group {
                 switch detent {
                 case .compact:
-                    CompactTimerMiniDockView(snapshot: snapshot)
+                    CompactTimerMiniDockView(
+                        snapshot: snapshot,
+                        onItemTap: onCompactItemTap
+                    )
                 case .large:
                     ExpandedTimerWorkspaceView(
                         snapshot: snapshot,
+                        focusedTimerID: focusedTimerID,
                         onStopTimer: onStopTimer,
                         onResumeTimer: onResumeTimer,
                         onRemoveTimer: onRemoveTimer,
@@ -541,6 +563,7 @@ private struct BottomSheetContentHost: View {
 
 private struct CompactTimerMiniDockView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
+    let onItemTap: (UUID) -> Void
 
     var body: some View {
         Group {
@@ -560,7 +583,12 @@ private struct CompactTimerMiniDockView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(snapshot.compactItems) { item in
-                            CompactTimerMiniCardView(item: item)
+                            CompactTimerMiniCardView(
+                                item: item,
+                                onTap: {
+                                    onItemTap(item.id)
+                                }
+                            )
                         }
 
                         if let overflowText = snapshot.compactOverflowText {
@@ -580,6 +608,7 @@ private struct CompactTimerMiniCardView: View {
     @State private var isRunningPulseActive = false
 
     let item: BottomSheetCompactItem
+    let onTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -643,7 +672,9 @@ private struct CompactTimerMiniCardView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(statusColor(for: item.status).opacity(0.16), lineWidth: 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityIdentifier("bottom-sheet-compact-mini-card-\(item.id.uuidString)")
+        .onTapGesture(perform: onTap)
         .onAppear {
             updateRunningPulse()
         }
@@ -715,11 +746,13 @@ private struct CompactOverflowMiniCard: View {
 
 private struct ExpandedTimerWorkspaceView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
+    let focusedTimerID: UUID?
     let onStopTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onCollapse: () -> Void
+    @State private var hasAppliedInitialFocus = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -745,30 +778,63 @@ private struct ExpandedTimerWorkspaceView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(snapshot.sections) { section in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(section.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.secondary)
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(snapshot.sections) { section in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(section.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.secondary)
 
-                                ForEach(section.items) { item in
-                                    ExpandedTimerRowView(
-                                        item: item,
-                                        onAction: { action in
-                                            handle(action: action, for: item.id)
-                                        }
-                                    )
+                                    ForEach(section.items) { item in
+                                        ExpandedTimerRowView(
+                                            item: item,
+                                            isFocused: item.id == focusedTimerID,
+                                            onAction: { action in
+                                                handle(action: action, for: item.id)
+                                            }
+                                        )
+                                        .id(item.id)
+                                    }
                                 }
                             }
+                        }
+                        .onAppear {
+                            applyFocusIfNeeded(using: proxy, animated: false)
+                        }
+                        .onChange(of: focusedTimerID) { _, _ in
+                            applyFocusIfNeeded(using: proxy, animated: true)
                         }
                     }
                     .padding(.top, 2)
                     .padding(.bottom, 8)
+                    .accessibilityIdentifier("bottom-sheet-expanded-workspace")
                 }
-                .accessibilityIdentifier("bottom-sheet-expanded-workspace")
             }
+        }
+    }
+
+    private func applyFocusIfNeeded(using proxy: ScrollViewProxy, animated: Bool) {
+        guard let focusedTimerID else {
+            return
+        }
+
+        if !animated && hasAppliedInitialFocus {
+            return
+        }
+
+        let scroll = {
+            proxy.scrollTo(focusedTimerID, anchor: .top)
+        }
+
+        if animated {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                scroll()
+            }
+        } else {
+            scroll()
+            hasAppliedInitialFocus = true
         }
     }
 
@@ -810,6 +876,7 @@ private struct ExpandedSummaryStrip: View {
 
 private struct ExpandedTimerRowView: View {
     let item: BottomSheetExpandedItem
+    let isFocused: Bool
     let onAction: (BottomSheetExpandedAction) -> Void
 
     var body: some View {
@@ -870,12 +937,28 @@ private struct ExpandedTimerRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
-        .background(Color(.secondarySystemBackground))
+        .background(
+            isFocused
+                ? statusColor(for: item.status).opacity(0.10)
+                : Color(.secondarySystemBackground)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(statusColor(for: item.status).opacity(0.18), lineWidth: 1)
+                .stroke(
+                    statusColor(for: item.status).opacity(isFocused ? 0.42 : 0.18),
+                    lineWidth: isFocused ? 1.5 : 1
+                )
         )
+        .accessibilityIdentifier(rowAccessibilityIdentifier)
+    }
+
+    private var rowAccessibilityIdentifier: String {
+        if isFocused {
+            return "bottom-sheet-expanded-row-focused-\(item.id.uuidString)"
+        }
+
+        return "bottom-sheet-expanded-row-\(item.id.uuidString)"
     }
 
     private func tint(for action: BottomSheetExpandedAction) -> Color {

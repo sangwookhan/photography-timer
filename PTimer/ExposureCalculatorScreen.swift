@@ -61,7 +61,6 @@ struct ExposureCalculatorScreen: View {
                         snapshot: BottomSheetWorkspaceSnapshot.make(
                             from: viewModel.timers,
                             formatRemaining: viewModel.formatTimerClock,
-                            targetContext: viewModel.timerTargetContext,
                             timeContext: viewModel.timerTimeContext
                         ),
                         onStopTimer: viewModel.stopTimer,

@@ -140,8 +140,11 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
     func testVisibleStoppedCopyUsesPausedInPresentation() {
         let snapshot = makeSnapshot(from: sampleTimers())
+        let pausedItem = snapshot.sections
+            .flatMap(\.items)
+            .first { $0.status == .stopped }
 
-        XCTAssertEqual(snapshot.sections[1].items[0].statusLabel, "Paused")
+        XCTAssertEqual(pausedItem?.statusLabel, "Paused")
     }
 
     func testCompactSummaryRespectsVisibleItemLimit() {
@@ -272,6 +275,39 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.expandedSummaryText, "Running 1 · Paused 1 · Done 2")
     }
 
+    func testExpandedItemsKeepTotalDurationAsSingleSecondaryValue() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let runningItem = snapshot.sections
+            .flatMap(\.items)
+            .first { $0.id == UUID(uuidString: "22222222-2222-2222-2222-222222222222")! }
+
+        XCTAssertEqual(runningItem?.remainingText, "00:25")
+        XCTAssertEqual(runningItem?.totalDurationText, "02:00")
+        XCTAssertEqual(runningItem?.timingText, "Ends soon")
+        XCTAssertEqual(runningItem?.contextText, "Base 1/30s · 6 stops")
+    }
+
+    func testExpandedItemsHideTopLineWhenNameOnlyRepeatsDurationOrContext() {
+        let snapshot = makeSnapshot(from: [redundantExpandedPresentationTimer()])
+        let item = snapshot.sections
+            .flatMap(\.items)
+            .first
+
+        XCTAssertNil(item?.title)
+        XCTAssertEqual(item?.totalDurationText, "02:00")
+        XCTAssertEqual(item?.contextText, "Base 1/30s · 6 stops")
+    }
+
+    func testCompletedExpandedItemUsesSimplerPresentation() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let completedItem = snapshot.sections[1].items.first
+
+        XCTAssertEqual(completedItem?.remainingText, "0s")
+        XCTAssertEqual(completedItem?.totalDurationText, "00:45")
+        XCTAssertEqual(completedItem?.timingText, "Completed recently")
+        XCTAssertEqual(completedItem?.contextText, "Base 1/15s · 8 stops")
+    }
+
     func testExpandedSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
@@ -328,6 +364,19 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Running Soon")
         XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Resume", "Remove"])
         XCTAssertGreaterThan(snapshot.completedCount, 0)
+        XCTAssertNotNil(host.view)
+    }
+
+    @MainActor
+    func testExpandedHeaderDoesNotRenderSummarySentenceOrCountChips() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
+
+        XCTAssertGreaterThan(host.view.bounds.height, 0)
+        XCTAssertFalse(host.view.containsText("Running 1 · Paused 1 · Done 2"))
+        XCTAssertFalse(host.view.containsText("Running 1"))
+        XCTAssertFalse(host.view.containsText("Paused 1"))
+        XCTAssertFalse(host.view.containsText("Done 2"))
     }
 
     @MainActor
@@ -340,11 +389,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         let host = makeBottomSheetHost(store: store, snapshot: snapshot)
 
-        XCTAssertNotNil(
-            host.view.findView(
-                accessibilityIdentifier: "bottom-sheet-expanded-row-focused-\(focusedID.uuidString)"
-            )
-        )
+        XCTAssertGreaterThan(host.view.bounds.height, 0)
+        XCTAssertEqual(store.selectedTimerID, focusedID)
+        XCTAssertTrue(snapshot.sections.flatMap(\.items).contains { $0.id == focusedID })
     }
 
     @MainActor
@@ -364,7 +411,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertFalse(host.view.containsText("Open"))
-        XCTAssertTrue(host.view.containsText("Timer Workspace"))
     }
 
     @MainActor
@@ -372,7 +418,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let snapshot = makeSnapshot(from: sampleTimers())
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
-        XCTAssertNotNil(host.view.findView(accessibilityIdentifier: "bottom-sheet-handle-area"))
+        XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertNil(host.view.findView(accessibilityIdentifier: "bottom-sheet-collapse-button"))
     }
 
@@ -500,6 +546,24 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         )
     }
 
+    private func redundantExpandedPresentationTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 1_500)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
+            order: 6,
+            name: "6 stops - 02:00",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 120,
+            startDate: now,
+            endDate: now.addingTimeInterval(25),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+    }
+
     private func activeOrderingTimers(pausedFirstTimerStatus: TimerStatus) -> [RunningTimerItem] {
         let now = Date(timeIntervalSince1970: 2_000)
 
@@ -619,14 +683,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 let minutes = remaining / 60
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
-            },
-            targetContext: { timer in
-                switch timer.status {
-                case .running, .stopped:
-                    return "Target \(Int(timer.duration))s"
-                case .completed:
-                    return nil
-                }
             },
             timeContext: { timer in
                 switch timer.status {

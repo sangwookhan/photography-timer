@@ -169,13 +169,13 @@ struct BottomSheetCompactItem: Identifiable, Equatable {
 
 struct BottomSheetExpandedItem: Identifiable, Equatable {
     let id: UUID
-    let title: String
+    let title: String?
     let statusLabel: String
     let status: TimerStatus
     let remainingText: String
-    let targetText: String?
-    let timeText: String?
-    let basisText: String
+    let totalDurationText: String?
+    let timingText: String?
+    let contextText: String?
     let progress: Double
     let actions: [BottomSheetExpandedAction]
 }
@@ -202,7 +202,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
     static func make(
         from timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
-        targetContext: (RunningTimerItem) -> String?,
         timeContext: (RunningTimerItem) -> String?
     ) -> BottomSheetWorkspaceSnapshot {
         let orderedTimers = TimerWorkspaceOrdering.sort(timers)
@@ -222,7 +221,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         let sections = makeSections(
             from: orderedTimers,
             formatRemaining: formatRemaining,
-            targetContext: targetContext,
             timeContext: timeContext
         )
 
@@ -261,7 +259,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
     private static func makeSections(
         from timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
-        targetContext: (RunningTimerItem) -> String?,
         timeContext: (RunningTimerItem) -> String?
     ) -> [TimerWorkspaceSection] {
         let activeTimers = timers.filter { $0.status != .completed }
@@ -272,14 +269,12 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                 title: "Active",
                 timers: activeTimers,
                 formatRemaining: formatRemaining,
-                targetContext: targetContext,
                 timeContext: timeContext
             ),
             makeSection(
                 title: "Recently Completed",
                 timers: completedTimers,
                 formatRemaining: formatRemaining,
-                targetContext: targetContext,
                 timeContext: timeContext
             )
         ].compactMap { $0 }
@@ -289,7 +284,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         title: String,
         timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
-        targetContext: (RunningTimerItem) -> String?,
         timeContext: (RunningTimerItem) -> String?
     ) -> TimerWorkspaceSection? {
         guard !timers.isEmpty else {
@@ -299,19 +293,26 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         return TimerWorkspaceSection(
             title: title,
             items: timers.map { timer in
-                    BottomSheetExpandedItem(
-                        id: timer.id,
-                        title: timer.name,
-                        statusLabel: visibleStatusLabel(for: timer.status),
-                        status: timer.status,
-                        remainingText: expandedRemainingText(for: timer, formatRemaining: formatRemaining),
-                        targetText: targetContext(timer),
-                        timeText: timeContext(timer),
-                        basisText: timer.basisSummary,
-                        progress: progress(for: timer),
-                        actions: expandedActions(for: timer.status)
-                    )
-                }
+                let totalDurationText = expandedTotalDurationText(for: timer, formatRemaining: formatRemaining)
+                let contextText = expandedContextText(for: timer)
+
+                return BottomSheetExpandedItem(
+                    id: timer.id,
+                    title: expandedTitleText(
+                        for: timer,
+                        totalDurationText: totalDurationText,
+                        contextText: contextText
+                    ),
+                    statusLabel: visibleStatusLabel(for: timer.status),
+                    status: timer.status,
+                    remainingText: expandedRemainingText(for: timer, formatRemaining: formatRemaining),
+                    totalDurationText: totalDurationText,
+                    timingText: timeContext(timer),
+                    contextText: contextText,
+                    progress: progress(for: timer),
+                    actions: expandedActions(for: timer.status)
+                )
+            }
         )
     }
 
@@ -362,8 +363,58 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         case .running, .stopped:
             return formatRemaining(timer.remainingTime)
         case .completed:
-            return "Completed"
+            return "0s"
         }
+    }
+
+    private static func expandedTotalDurationText(
+        for timer: RunningTimerItem,
+        formatRemaining: (TimeInterval) -> String
+    ) -> String? {
+        guard timer.duration > 0 else {
+            return nil
+        }
+
+        return formatRemaining(timer.duration)
+    }
+
+    private static func expandedContextText(for timer: RunningTimerItem) -> String? {
+        let summary = timer.basisSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return summary.isEmpty ? nil : summary
+    }
+
+    private static func expandedTitleText(
+        for timer: RunningTimerItem,
+        totalDurationText: String?,
+        contextText: String?
+    ) -> String? {
+        let rawTitle = timer.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawTitle.isEmpty else {
+            return nil
+        }
+
+        var normalizedTitle = rawTitle
+
+        if let totalDurationText, normalizedTitle.contains(totalDurationText) {
+            normalizedTitle = normalizedTitle
+                .replacingOccurrences(of: totalDurationText, with: "")
+                .trimmingCharacters(in: CharacterSet(charactersIn: " -:."))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard !normalizedTitle.isEmpty else {
+            return nil
+        }
+
+        if let contextText, contextText.localizedCaseInsensitiveContains(normalizedTitle) {
+            return nil
+        }
+
+        if normalizedTitle == "Timer" || normalizedTitle == "Manual timer" {
+            return nil
+        }
+
+        return normalizedTitle
     }
 
     private static func visibleStatusLabel(for status: TimerStatus) -> String {
@@ -493,18 +544,8 @@ private struct BottomSheetContentHost: View {
     var body: some View {
         VStack(alignment: .leading, spacing: detent.isExpanded ? 10 : 6) {
             HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: detent == .compact ? 2 : 4) {
-                    Text("Timer Workspace")
-                        .font(detent == .compact ? .subheadline.weight(.semibold) : .headline)
-
-                    if detent.isExpanded {
-                        Text(snapshot.expandedSummaryText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                }
+                Text("Timer Workspace")
+                    .font(detent == .compact ? .subheadline.weight(.semibold) : .headline)
 
                 Spacer()
             }
@@ -841,11 +882,7 @@ private struct ExpandedSummaryStrip: View {
     let onClearCompletedTimers: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 6) {
-            SummaryPill(title: "Running", value: "\(snapshot.runningCount)")
-            SummaryPill(title: "Paused", value: "\(snapshot.stoppedCount)")
-            SummaryPill(title: "Done", value: "\(snapshot.completedCount)")
-
+        HStack {
             Spacer(minLength: 0)
 
             if snapshot.completedCount > 0 {
@@ -868,41 +905,51 @@ private struct ExpandedTimerRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(item.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                if let title = item.title {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
 
                 Spacer(minLength: 0)
 
                 StatusChip(status: item.status, label: item.statusLabel, size: .regular)
             }
 
-            Text(item.remainingText)
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
+            VStack(alignment: .trailing, spacing: 2) {
+                if let totalDurationText = item.totalDurationText {
+                    Text(totalDurationText)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
 
-            if let targetText = item.targetText {
-                Text(targetText)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                Text(item.remainingText)
+                    .font(.title3.weight(.bold))
+                    .monospacedDigit()
                     .lineLimit(1)
-                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            if let timeText = item.timeText {
-                Text(timeText)
+            if let timingText = item.timingText {
+                Text(timingText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
 
-            Text(item.basisText)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            if let contextText = item.contextText {
+                Text(contextText)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
 
             ProgressView(value: item.progress)
                 .tint(statusColor(for: item.status))
@@ -1005,27 +1052,6 @@ private struct StatusChip: View {
         .padding(.vertical, size.verticalPadding)
         .background(statusColor(for: status).opacity(0.12))
         .clipShape(Capsule())
-        .fixedSize(horizontal: true, vertical: true)
-    }
-}
-
-private struct SummaryPill: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(value)
-                .font(.footnote.weight(.semibold))
-        }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 5)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .fixedSize(horizontal: true, vertical: true)
     }
 }

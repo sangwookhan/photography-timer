@@ -159,12 +159,24 @@ enum BottomSheetExpandedAction: String, Equatable {
     }
 }
 
+struct CompactRemainingScaleLayer: Equatable {
+    let fraction: Double
+}
+
 struct BottomSheetCompactItem: Identifiable, Equatable {
     let id: UUID
     let status: TimerStatus
     let primaryRemainingText: String
     let secondaryTotalText: String?
-    let progress: Double
+    let secondLayer: CompactRemainingScaleLayer
+    let minuteLayer: CompactRemainingScaleLayer?
+    let hourLayer: CompactRemainingScaleLayer?
+
+    var visibleLayerCount: Int {
+        [hourLayer, minuteLayer, secondLayer as CompactRemainingScaleLayer?]
+            .compactMap { $0 }
+            .count
+    }
 }
 
 struct BottomSheetExpandedItem: Identifiable, Equatable {
@@ -214,7 +226,9 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                     status: timer.status,
                     primaryRemainingText: compactRemainingText(for: timer, formatRemaining: formatRemaining),
                     secondaryTotalText: compactTotalText(for: timer),
-                    progress: progress(for: timer)
+                    secondLayer: compactSecondLayer(for: timer),
+                    minuteLayer: compactMinuteLayer(for: timer),
+                    hourLayer: compactHourLayer(for: timer)
                 )
             }
 
@@ -322,6 +336,73 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         }
 
         return min(max(timer.elapsedTime / timer.duration, 0), 1)
+    }
+
+    private static func compactSecondLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer {
+        CompactRemainingScaleLayer(
+            fraction: repeatingRemainingFraction(
+                remainingTime: timer.remainingTime,
+                unitDuration: 60,
+                status: timer.status
+            )
+        )
+    }
+
+    private static func compactMinuteLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer? {
+        guard timer.duration >= 60 else {
+            return nil
+        }
+
+        return CompactRemainingScaleLayer(
+            fraction: repeatingRemainingFraction(
+                remainingTime: timer.remainingTime,
+                unitDuration: 3_600,
+                status: timer.status
+            )
+        )
+    }
+
+    private static func compactHourLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer? {
+        guard timer.duration >= 3_600 else {
+            return nil
+        }
+
+        switch timer.status {
+        case .completed:
+            return CompactRemainingScaleLayer(fraction: 0)
+        case .running, .stopped:
+            let cappedOriginalDuration = min(max(timer.duration, 0), 86_400)
+            let cappedRemainingTime = min(max(timer.remainingTime, 0), cappedOriginalDuration)
+            let fraction = cappedOriginalDuration > 0 ? cappedRemainingTime / 86_400 : 0
+            return CompactRemainingScaleLayer(fraction: min(max(fraction, 0), 1))
+        }
+    }
+
+    private static func repeatingRemainingFraction(
+        remainingTime: TimeInterval,
+        unitDuration: TimeInterval,
+        status: TimerStatus
+    ) -> Double {
+        switch status {
+        case .completed:
+            return 0
+        case .running, .stopped:
+            guard unitDuration > 0 else {
+                return 0
+            }
+
+            let clampedRemaining = max(0, remainingTime)
+            guard clampedRemaining > 0 else {
+                return 0
+            }
+
+            let remainder = clampedRemaining.truncatingRemainder(dividingBy: unitDuration)
+            if remainder == 0 {
+                return 1
+            }
+
+            return min(max(remainder / unitDuration, 0), 1)
+        }
     }
 
     private static func expandedActions(for status: TimerStatus) -> [BottomSheetExpandedAction] {
@@ -635,7 +716,7 @@ private struct CompactTimerMiniCardView: View {
     let onTap: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 6) {
                 ZStack {
                     if shouldAnimateRunningCue {
@@ -661,6 +742,12 @@ private struct CompactTimerMiniCardView: View {
                         .opacity(shouldAnimateRunningCue ? (isRunningPulseActive ? 1 : 0.72) : 1)
                 }
                 .frame(width: 22, height: 22)
+                .animation(
+                    shouldAnimateRunningCue
+                        ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
+                        : .default,
+                    value: isRunningPulseActive
+                )
 
                 Spacer(minLength: 0)
 
@@ -672,23 +759,54 @@ private struct CompactTimerMiniCardView: View {
                         .lineLimit(1)
                 }
             }
+            .frame(height: 22, alignment: .top)
 
-            Spacer(minLength: 4)
+            VStack(spacing: 0) {
+                Text(item.primaryRemainingText)
+                    .font(.title3.weight(.bold))
+                    .monospacedDigit()
+                    .frame(maxWidth: .infinity, minHeight: 30, alignment: .center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.top, 5)
 
-            Text(item.primaryRemainingText)
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
-                .frame(maxWidth: .infinity, minHeight: 28, alignment: .center)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: 34, alignment: .top)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 6)
 
-            ProgressView(value: item.progress)
-                .tint(statusColor(for: item.status))
-                .scaleEffect(x: 1, y: 0.75, anchor: .center)
+            VStack(spacing: 4) {
+                if let hourLayer = item.hourLayer {
+                    CompactProgressBar(
+                        progress: hourLayer.fraction,
+                        fillColor: hourFillColor,
+                        trackColor: hourTrackColor,
+                        height: 1
+                    )
+                }
+
+                if let minuteLayer = item.minuteLayer {
+                    CompactProgressBar(
+                        progress: minuteLayer.fraction,
+                        fillColor: minuteFillColor,
+                        trackColor: minuteTrackColor,
+                        height: 1
+                    )
+                }
+
+                CompactProgressBar(
+                    progress: item.secondLayer.fraction,
+                    fillColor: secondFillColor,
+                    trackColor: secondTrackColor,
+                    height: 1
+                )
+            }
+            .frame(maxWidth: .infinity, minHeight: 12, alignment: .bottom)
         }
-        .padding(10)
+        .padding(.top, 9)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 12)
         .frame(width: 96, height: 96, alignment: .topLeading)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -708,12 +826,6 @@ private struct CompactTimerMiniCardView: View {
         .onChange(of: reduceMotion) { _, _ in
             updateRunningPulse()
         }
-        .animation(
-            shouldAnimateRunningCue
-                ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
-                : .default,
-            value: isRunningPulseActive
-        )
     }
 
     private var shouldAnimateRunningCue: Bool {
@@ -738,6 +850,98 @@ private struct CompactTimerMiniCardView: View {
         case .completed:
             return "checkmark"
         }
+    }
+
+    private var secondFillColor: Color {
+        switch item.status {
+        case .completed:
+            return statusColor(for: item.status).opacity(0.72)
+        case .stopped:
+            return Color.orange.opacity(0.88)
+        case .running:
+            return Color.red.opacity(0.92)
+        }
+    }
+
+    private var secondTrackColor: Color {
+        switch item.status {
+        case .completed:
+            return statusColor(for: item.status).opacity(0.16)
+        case .stopped:
+            return Color.orange.opacity(0.16)
+        case .running:
+            return Color.red.opacity(0.18)
+        }
+    }
+
+    private var minuteFillColor: Color {
+        switch item.status {
+        case .completed:
+            return statusColor(for: item.status).opacity(0.56)
+        case .stopped:
+            return Color.yellow.opacity(0.72)
+        case .running:
+            return Color.orange.opacity(0.74)
+        }
+    }
+
+    private var minuteTrackColor: Color {
+        switch item.status {
+        case .completed:
+            return statusColor(for: item.status).opacity(0.12)
+        case .stopped:
+            return Color.yellow.opacity(0.11)
+        case .running:
+            return Color.orange.opacity(0.12)
+        }
+    }
+
+    private var hourFillColor: Color {
+        switch item.status {
+        case .completed:
+            return statusColor(for: item.status).opacity(0.38)
+        case .stopped:
+            return Color.mint.opacity(0.48)
+        case .running:
+            return Color.teal.opacity(0.46)
+        }
+    }
+
+    private var hourTrackColor: Color {
+        switch item.status {
+        case .completed:
+            return statusColor(for: item.status).opacity(0.08)
+        case .stopped:
+            return Color.mint.opacity(0.08)
+        case .running:
+            return Color.teal.opacity(0.08)
+        }
+    }
+}
+
+private struct CompactProgressBar: View {
+    let progress: Double
+    let fillColor: Color
+    let trackColor: Color
+    let height: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            let clampedProgress = min(max(progress, 0), 1)
+            let width = max(geometry.size.width * clampedProgress, clampedProgress > 0 ? height : 0)
+
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous)
+                    .fill(trackColor)
+
+                Capsule(style: .continuous)
+                    .fill(fillColor)
+                    .frame(width: width)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .accessibilityHidden(true)
     }
 }
 

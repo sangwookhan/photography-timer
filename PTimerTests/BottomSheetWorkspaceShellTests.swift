@@ -187,6 +187,118 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.compactItems[0].secondaryTotalText, "4d 6h")
     }
 
+    func testCompactProgressUsesSecondLayerForShortRunningTimer() {
+        let snapshot = makeSnapshot(from: [secondsScaleTimer()]) // 30s timer, 25s remaining
+        let item = tryUnwrapCompactItem(from: snapshot)
+
+        XCTAssertEqual(item.visibleLayerCount, 1)
+        XCTAssertNil(item.hourLayer)
+        XCTAssertNil(item.minuteLayer)
+        XCTAssertEqual(item.secondLayer.fraction, 25.0 / 60.0, accuracy: 0.001)
+    }
+
+    func testCompactProgressUsesMinuteAndSecondLayersForSixtyFourSecondTimer() throws {
+        let snapshot = makeSnapshot(from: [minuteScaleTimer()]) // 64s timer, 54s remaining
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 2)
+        XCTAssertNil(item.hourLayer)
+        XCTAssertEqual(minuteLayer.fraction, 54.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.secondLayer.fraction, 54.0 / 60.0, accuracy: 0.001)
+    }
+
+    func testCompactProgressUsesMinuteAndSecondLayersForEightMinuteTimer() throws {
+        let snapshot = makeSnapshot(from: [eightMinuteScaleTimer()]) // 480s timer, 478s remaining
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 2)
+        XCTAssertNil(item.hourLayer)
+        XCTAssertEqual(minuteLayer.fraction, 478.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.secondLayer.fraction, 58.0 / 60.0, accuracy: 0.001) // 478 % 60 = 58
+    }
+
+    func testCompactProgressUsesMinuteAndSecondLayersForThirtyFourMinuteTimer() throws {
+        let snapshot = makeSnapshot(from: [thirtyFourMinuteScaleTimer()]) // 2048s timer, 2048s remaining
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 2)
+        XCTAssertNil(item.hourLayer)
+        XCTAssertEqual(minuteLayer.fraction, 2048.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.secondLayer.fraction, 8.0 / 60.0, accuracy: 0.001) // 2048 % 60 = 8
+    }
+
+    func testCompactProgressUsesHourMinuteAndSecondLayersForLongRunningTimer() throws {
+        let snapshot = makeSnapshot(from: [hourScaleTimer()]) // 7200s (2h) timer, 7200s remaining
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let hourLayer = try XCTUnwrap(item.hourLayer)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 3)
+        XCTAssertEqual(hourLayer.fraction, 2.0 / 24.0, accuracy: 0.001)
+        XCTAssertEqual(minuteLayer.fraction, 1.0, accuracy: 0.001) // 7200 % 3600 = 0 -> 1.0
+        XCTAssertEqual(item.secondLayer.fraction, 1.0, accuracy: 0.001) // 7200 % 60 = 0 -> 1.0
+    }
+
+    func testCompactProgressUsesExactFractionsForComplexRemainingTimes() throws {
+        let now = Date(timeIntervalSince1970: 10_000)
+        let timer = RunningTimerItem(
+            id: UUID(),
+            order: 1,
+            name: "Complex Timer",
+            basisSummary: "...",
+            duration: 120, // 2 minutes
+            startDate: now.addingTimeInterval(-35),
+            endDate: now.addingTimeInterval(85), // 85s remaining (1m 25s)
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let item = tryUnwrapCompactItem(from: snapshot)
+
+        XCTAssertEqual(item.visibleLayerCount, 2)
+        XCTAssertEqual(item.secondLayer.fraction, 25.0 / 60.0, accuracy: 0.001) // 85 % 60 = 25
+    }
+
+    func testCompactProgressStaysFrozenForPausedTimer() throws {
+        let snapshot = makeSnapshot(from: [pausedProgressTimer()]) // 120s duration, 45s paused remaining
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 2)
+        XCTAssertNil(item.hourLayer)
+        XCTAssertEqual(minuteLayer.fraction, 45.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.secondLayer.fraction, 45.0 / 60.0, accuracy: 0.001)
+    }
+
+    func testCompactProgressSettlesAtCompleteForCompletedTimer() throws {
+        let snapshot = makeSnapshot(from: [completedProgressTimer()]) // 75s duration, completed
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 2)
+        XCTAssertNil(item.hourLayer)
+        XCTAssertEqual(minuteLayer.fraction, 0, accuracy: 0.001)
+        XCTAssertEqual(item.secondLayer.fraction, 0, accuracy: 0.001)
+    }
+
+    func testCompactProgressClampsHourLayerForMultiDayTimer() throws {
+        let snapshot = makeSnapshot(from: [longDurationTimer()]) // 367200s (>24h), running
+        let item = tryUnwrapCompactItem(from: snapshot)
+        let hourLayer = try XCTUnwrap(item.hourLayer)
+        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+
+        XCTAssertEqual(item.visibleLayerCount, 3)
+        XCTAssertEqual(hourLayer.fraction, 1, accuracy: 0.001) // Clamped to 24h
+        XCTAssertEqual(minuteLayer.fraction, 1, accuracy: 0.001)
+        XCTAssertEqual(item.secondLayer.fraction, 1, accuracy: 0.001)
+    }
+
     func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
         let before = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .running))
         let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .stopped))
@@ -536,12 +648,138 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             order: 5,
             name: "Very Long Timer Name That Exceeds Compact Width",
             basisSummary: "Base 1/2s · 18 stops",
-            duration: 367_384,
+            duration: 367_200,
             startDate: now,
-            endDate: now.addingTimeInterval(367_384),
+            endDate: now.addingTimeInterval(367_200),
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running,
+            referenceDate: now
+        )
+    }
+
+    private func secondsScaleTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 4_000)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "12121212-1212-1212-1212-121212121212")!,
+            order: 7,
+            name: "Seconds Scale",
+            basisSummary: "Base 1/15s · 3 stops",
+            duration: 30,
+            startDate: now.addingTimeInterval(-5),
+            endDate: now.addingTimeInterval(25),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+    }
+
+    private func minuteScaleTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 5_000)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "23232323-2323-2323-2323-232323232323")!,
+            order: 8,
+            name: "Minute Scale",
+            basisSummary: "Base 1/30s · 5 stops",
+            duration: 64,
+            startDate: now.addingTimeInterval(-10),
+            endDate: now.addingTimeInterval(54),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+    }
+
+    private func eightMinuteScaleTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 5_500)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "28282828-2828-2828-2828-282828282828")!,
+            order: 12,
+            name: "Eight Minute Scale",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 480,
+            startDate: now.addingTimeInterval(-2),
+            endDate: now.addingTimeInterval(478),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+    }
+
+    private func thirtyFourMinuteScaleTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 5_800)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "38383838-3838-3838-3838-383838383838")!,
+            order: 13,
+            name: "Thirty Four Minute Scale",
+            basisSummary: "Base 1/60s · 7 stops",
+            duration: 2_048,
+            startDate: now,
+            endDate: now.addingTimeInterval(2_048),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+    }
+
+    private func hourScaleTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 6_000)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "34343434-3434-3434-3434-343434343434")!,
+            order: 9,
+            name: "Hour Scale",
+            basisSummary: "Base 1/60s · 7 stops",
+            duration: 7_200,
+            startDate: now,
+            endDate: now.addingTimeInterval(7_200),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+    }
+
+    private func pausedProgressTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 7_000)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "45454545-4545-4545-4545-454545454545")!,
+            order: 10,
+            name: "Paused Progress",
+            basisSummary: "Base 1/8s · 4 stops",
+            duration: 120,
+            startDate: now.addingTimeInterval(-80),
+            endDate: now.addingTimeInterval(60),
+            pausedRemainingTime: 45,
+            pausedAt: now.addingTimeInterval(-10),
+            status: .stopped,
+            referenceDate: now
+        )
+    }
+
+    private func completedProgressTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 8_000)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "56565656-5656-5656-5656-565656565656")!,
+            order: 11,
+            name: "Completed Progress",
+            basisSummary: "Base 1/4s · 2 stops",
+            duration: 75,
+            startDate: now.addingTimeInterval(-90),
+            endDate: now.addingTimeInterval(-15),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
             referenceDate: now
         )
     }
@@ -695,6 +933,15 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 }
             }
         )
+    }
+
+    private func tryUnwrapCompactItem(from snapshot: BottomSheetWorkspaceSnapshot) -> BottomSheetCompactItem {
+        guard let item = snapshot.compactItems.first else {
+            XCTFail("Expected a compact item in snapshot")
+            fatalError("Missing compact item")
+        }
+
+        return item
     }
 
     @MainActor

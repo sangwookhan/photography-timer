@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExposureCalculatorScreen: View {
     @StateObject private var viewModel = ExposureCalculatorViewModel()
+    @StateObject private var bottomSheetStateStore = BottomSheetWorkspaceStateStore()
 
     init() {
         assertNoKoreanUIStrings([
@@ -12,47 +13,312 @@ struct ExposureCalculatorScreen: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HeaderView()
-                VariableSectionView(
-                    baseShutter: $viewModel.baseShutter,
-                    ndStop: $viewModel.ndStop,
-                    shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
-                    formatShutter: viewModel.formatShutter
+        GeometryReader { geometry in
+            let compactReservedHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
+                screenHeight: geometry.size.height,
+                bottomSheetDetent: .compact,
+                topSafeArea: geometry.safeAreaInsets.top,
+                bottomSafeArea: geometry.safeAreaInsets.bottom
+            )
+
+            ZStack(alignment: .bottom) {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+
+                ExposureWorkspaceMainContent(
+                    style: layoutStyle(for: compactReservedHeight),
+                    viewModel: viewModel,
+                    availableHeight: compactReservedHeight
                 )
-                ResultSectionView(
-                    calculationResult: viewModel.calculationResult,
-                    ndStop: viewModel.ndStop,
-                    formatTimeDisplay: viewModel.formatTimeDisplay
-                )
-                TimerActionView(
-                    canStartTimer: viewModel.canStartTimer,
-                    onStart: viewModel.startTimer
-                )
-                RunningTimerPanelView(
-                    timers: viewModel.timers,
-                    runningTimerCount: viewModel.runningTimerCount,
-                    formattedDuration: viewModel.formatDuration,
-                    formatTimeDisplay: viewModel.formatTimeDisplay,
-                    formatClockTime: viewModel.formatClockTime,
-                    formatDateTime: viewModel.formatDateTime,
-                    onStopTimer: viewModel.stopTimer,
-                    onResumeTimer: viewModel.resumeTimer,
-                    onRemoveTimer: viewModel.removeTimer
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                if bottomSheetStateStore.isExpanded {
+                    Button {
+                        bottomSheetStateStore.collapse()
+                    } label: {
+                        Color.black
+                            .opacity(BottomSheetLayoutMetrics.dimOpacity(for: bottomSheetStateStore.detent))
+                            .ignoresSafeArea()
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("bottom-sheet-dim-background")
+                }
+
+                VStack(spacing: 10) {
+                    if !bottomSheetStateStore.isExpanded {
+                        TimerActionView(
+                            canStartTimer: viewModel.canStartTimer,
+                            onStart: viewModel.startTimer,
+                            style: layoutStyle(for: compactReservedHeight)
+                        )
+                        .padding(.horizontal, 16)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+
+                    BottomSheetWorkspaceShell(
+                        stateStore: bottomSheetStateStore,
+                        snapshot: BottomSheetWorkspaceSnapshot.make(
+                            from: viewModel.timers,
+                            formatRemaining: viewModel.formatTimerClock,
+                            timeContext: viewModel.timerTimeContext
+                        ),
+                        onStopTimer: viewModel.stopTimer,
+                        onResumeTimer: viewModel.resumeTimer,
+                        onRemoveTimer: viewModel.removeTimer,
+                        onClearCompletedTimers: viewModel.clearCompletedTimers
+                    )
+                }
+                .padding(.bottom, geometry.safeAreaInsets.bottom)
             }
-            .padding(20)
         }
-        .background(Color(.systemGroupedBackground))
+    }
+
+    private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
+        if availableHeight >= ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .regular) {
+            return .regular
+        }
+
+        if availableHeight >= ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .compact) {
+            return .compact
+        }
+
+        return .dense
     }
 }
 
-struct HeaderView: View {
+private struct ExposureWorkspaceMainContent: View {
+    let style: ExposureWorkspaceMainLayoutStyle
+    @ObservedObject var viewModel: ExposureCalculatorViewModel
+    let availableHeight: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: style.sectionSpacing) {
+            HeaderView(style: style)
+            VariableSectionView(
+                baseShutter: $viewModel.baseShutter,
+                ndStop: $viewModel.ndStop,
+                shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
+                formatShutter: viewModel.formatShutter,
+                style: style
+            )
+            ResultSectionView(
+                calculationResult: viewModel.calculationResult,
+                ndStop: viewModel.ndStop,
+                formatTimeDisplay: viewModel.formatTimeDisplay,
+                style: style
+            )
+        }
+        .padding(.horizontal, style.horizontalPadding)
+        .padding(.top, style.topPadding)
+        .padding(.bottom, style.bottomPadding)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: availableHeight,
+            maxHeight: availableHeight,
+            alignment: .top
+        )
+        .accessibilityIdentifier("exposure-main-content")
+    }
+}
+
+enum ExposureWorkspaceLayoutDensity {
+    case regular
+    case compact
+    case dense
+}
+
+struct ExposureWorkspaceLayoutMetrics {
+    static func availableMainContentHeight(
+        screenHeight: CGFloat,
+        bottomSheetDetent: BottomSheetDetent,
+        topSafeArea: CGFloat = 0,
+        bottomSafeArea: CGFloat = 34
+    ) -> CGFloat {
+        screenHeight
+            - topSafeArea
+            - BottomSheetLayoutMetrics.height(for: bottomSheetDetent)
+            - bottomSafeArea
+    }
+
+    static func estimatedMainContentHeight(for density: ExposureWorkspaceLayoutDensity) -> CGFloat {
+        switch density {
+        case .regular:
+            return 620
+        case .compact:
+            return 560
+        case .dense:
+            return 500
+        }
+    }
+}
+
+private enum ExposureWorkspaceMainLayoutStyle {
+    case regular
+    case compact
+    case dense
+
+    var density: ExposureWorkspaceLayoutDensity {
+        switch self {
+        case .regular:
+            return .regular
+        case .compact:
+            return .compact
+        case .dense:
+            return .dense
+        }
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .regular:
+            return 20
+        case .compact, .dense:
+            return 16
+        }
+    }
+
+    var topPadding: CGFloat {
+        switch self {
+        case .regular:
+            return 16
+        case .compact:
+            return 12
+        case .dense:
+            return 8
+        }
+    }
+
+    var bottomPadding: CGFloat {
+        switch self {
+        case .regular:
+            return 12
+        case .compact, .dense:
+            return 8
+        }
+    }
+
+    var sectionSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 16
+        case .compact:
+            return 12
+        case .dense:
+            return 10
+        }
+    }
+
+    var interSectionSpacer: CGFloat {
+        switch self {
+        case .regular:
+            return 8
+        case .compact:
+            return 6
+        case .dense:
+            return 4
+        }
+    }
+
+    var sectionCardPadding: CGFloat {
+        switch self {
+        case .regular:
+            return 14
+        case .compact:
+            return 12
+        case .dense:
+            return 10
+        }
+    }
+
+    var sectionCornerRadius: CGFloat {
+        switch self {
+        case .regular:
+            return 18
+        case .compact, .dense:
+            return 16
+        }
+    }
+
+    var headerTitleFont: Font {
+        switch self {
+        case .regular:
+            return .largeTitle.weight(.bold)
+        case .compact:
+            return .title.weight(.bold)
+        case .dense:
+            return .title2.weight(.bold)
+        }
+    }
+
+    var modePlaceholderHidden: Bool {
+        self == .dense
+    }
+
+    var bodySpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 12
+        case .compact, .dense:
+            return 8
+        }
+    }
+
+    var pickerHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 108
+        case .compact:
+            return 76
+        case .dense:
+            return 56
+        }
+    }
+
+    var resultPrimaryFont: Font {
+        switch self {
+        case .regular:
+            return .system(size: 28, weight: .bold, design: .rounded)
+        case .compact:
+            return .system(size: 24, weight: .bold, design: .rounded)
+        case .dense:
+            return .system(size: 22, weight: .bold, design: .rounded)
+        }
+    }
+
+    var resultBlockPadding: CGFloat {
+        switch self {
+        case .regular:
+            return 14
+        case .compact:
+            return 12
+        case .dense:
+            return 10
+        }
+    }
+
+    var actionTitleHidden: Bool {
+        self == .dense
+    }
+
+    var actionVerticalSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 12
+        case .compact, .dense:
+            return 8
+        }
+    }
+
+}
+
+private struct HeaderView: View {
+    let style: ExposureWorkspaceMainLayoutStyle
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Exposure")
-                .font(.largeTitle.weight(.bold))
+                .font(style.headerTitleFont)
 
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 10) {
@@ -63,9 +329,11 @@ struct HeaderView: View {
                     .pickerStyle(.segmented)
                     .disabled(true)
 
-                    Text("Film mode: placeholder")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    if !style.modePlaceholderHidden {
+                        Text("Film mode: placeholder")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Button {
@@ -78,30 +346,35 @@ struct HeaderView: View {
                 .disabled(true)
             }
         }
-        .sectionCardStyle()
+        .sectionCardStyle(style: style)
     }
 }
 
-struct VariableSectionView: View {
+private struct VariableSectionView: View {
     @Binding var baseShutter: Double
     @Binding var ndStop: Int
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
+    let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: style.bodySpacing) {
             Text("Variable Controls")
                 .font(.headline)
 
-            VStack(spacing: 14) {
+            VStack(spacing: style.bodySpacing) {
                 HStack(alignment: .top, spacing: 12) {
                     ShutterSelectionRow(
                         baseShutter: $baseShutter,
                         shutterSpeeds: shutterSpeeds,
-                        formatShutter: formatShutter
+                        formatShutter: formatShutter,
+                        pickerHeight: style.pickerHeight
                     )
 
-                    NDStopSelectionRow(ndStop: $ndStop)
+                    NDStopSelectionRow(
+                        ndStop: $ndStop,
+                        pickerHeight: style.pickerHeight
+                    )
                 }
 
                 Divider()
@@ -117,31 +390,34 @@ struct VariableSectionView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text("Aperture and ISO placeholders will expand here later.")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color(.tertiarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                if style != .dense {
+                    Text("Aperture and ISO placeholders will expand here later.")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color(.tertiarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
             }
         }
-        .sectionCardStyle()
+        .sectionCardStyle(style: style)
     }
 }
 
-struct ResultSectionView: View {
+private struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let ndStop: Int
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let style: ExposureWorkspaceMainLayoutStyle
     private let calculator = ExposureCalculator()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: style.bodySpacing) {
             Text("Result Set")
                 .font(.headline)
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: style.bodySpacing) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Final Shutter")
                         .font(.footnote.weight(.medium))
@@ -153,7 +429,7 @@ struct ResultSectionView: View {
                             primaryText: display.primary,
                             secondaryText: display.secondary,
                             primaryColor: .primary,
-                            primaryFont: .system(size: 28, weight: .bold, design: .rounded),
+                            primaryFont: style.resultPrimaryFont,
                             secondaryFont: .footnote
                         )
                     } else {
@@ -176,11 +452,11 @@ struct ResultSectionView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding()
+            .padding(style.resultBlockPadding)
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .sectionCardStyle()
+        .sectionCardStyle(style: style)
     }
 
     private var primaryResultText: String {
@@ -231,6 +507,7 @@ struct ResultSectionView: View {
 
 private struct NDStopSelectionRow: View {
     @Binding var ndStop: Int
+    let pickerHeight: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -252,7 +529,7 @@ private struct NDStopSelectionRow: View {
             }
             .pickerStyle(.wheel)
             .frame(maxWidth: .infinity)
-            .frame(height: 140)
+            .frame(height: pickerHeight)
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -269,6 +546,7 @@ private struct ShutterSelectionRow: View {
     @Binding var baseShutter: Double
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
+    let pickerHeight: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -290,7 +568,7 @@ private struct ShutterSelectionRow: View {
             }
             .pickerStyle(.wheel)
             .frame(maxWidth: .infinity)
-            .frame(height: 140)
+            .frame(height: pickerHeight)
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -303,23 +581,29 @@ private struct ShutterSelectionRow: View {
     }
 }
 
-struct TimerActionView: View {
+private struct TimerActionView: View {
     let canStartTimer: Bool
     let onStart: () -> Void
+    let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Timer Action")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: style.actionVerticalSpacing) {
+            if !style.actionTitleHidden {
+                Text("Timer Action")
+                    .font(.headline)
+            }
 
             Button("Start Timer") {
                 onStart()
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(style == .dense ? .regular : .large)
+            .buttonBorderShape(.roundedRectangle(radius: 14))
             .frame(maxWidth: .infinity)
             .disabled(!canStartTimer)
+            .accessibilityIdentifier("start-timer-button")
         }
-        .sectionCardStyle()
+        .sectionCardStyle(style: style)
     }
 }
 
@@ -702,14 +986,14 @@ private struct ResultPlaceholderRow: View {
 }
 
 private extension View {
-    func sectionCardStyle() -> some View {
+    func sectionCardStyle(style: ExposureWorkspaceMainLayoutStyle = .regular) -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .padding(style.sectionCardPadding)
             .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: style.sectionCornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: style.sectionCornerRadius, style: .continuous)
                     .stroke(Color(.separator), lineWidth: 1)
             )
     }

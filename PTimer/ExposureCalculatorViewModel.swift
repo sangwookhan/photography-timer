@@ -51,6 +51,49 @@ struct RunningTimerItem: Identifiable, Equatable {
     }
 }
 
+enum TimerWorkspaceOrdering {
+    static func sort(_ timers: [RunningTimerItem]) -> [RunningTimerItem] {
+        timers.sorted(by: areInPresentationOrder(lhs:rhs:))
+    }
+
+    static func areInPresentationOrder(lhs: RunningTimerItem, rhs: RunningTimerItem) -> Bool {
+        let lhsGroup = presentationGroup(lhs.status)
+        let rhsGroup = presentationGroup(rhs.status)
+
+        if lhsGroup != rhsGroup {
+            return lhsGroup < rhsGroup
+        }
+
+        switch lhsGroup {
+        case 0:
+            if lhs.order != rhs.order {
+                return lhs.order > rhs.order
+            }
+        case 1:
+            if lhs.completedAt != rhs.completedAt {
+                return (lhs.completedAt ?? .distantPast) > (rhs.completedAt ?? .distantPast)
+            }
+
+            if lhs.order != rhs.order {
+                return lhs.order > rhs.order
+            }
+        default:
+            break
+        }
+
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private static func presentationGroup(_ status: TimerStatus) -> Int {
+        switch status {
+        case .running, .stopped:
+            return 0
+        case .completed:
+            return 1
+        }
+    }
+}
+
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
     @Published var baseShutter = 1.0 / 30.0
@@ -259,29 +302,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                     referenceDate: referenceDate
                 )
             }
-            .sorted(by: sortTimers)
-    }
-
-    private func sortTimers(lhs: RunningTimerItem, rhs: RunningTimerItem) -> Bool {
-        let lhsRank = statusRank(lhs.status)
-        let rhsRank = statusRank(rhs.status)
-
-        if lhsRank != rhsRank {
-            return lhsRank < rhsRank
-        }
-
-        return lhs.duration > rhs.duration
-    }
-
-    private func statusRank(_ status: TimerStatus) -> Int {
-        switch status {
-        case .running:
-            return 0
-        case .stopped:
-            return 1
-        case .completed:
-            return 2
-        }
+            .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
     }
 
     private func defaultName(for duration: TimeInterval) -> String {

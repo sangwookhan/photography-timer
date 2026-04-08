@@ -168,12 +168,12 @@ struct BottomSheetCompactItem: Identifiable, Equatable {
     let status: TimerStatus
     let primaryRemainingText: String
     let secondaryTotalText: String?
-    let secondLayer: CompactRemainingScaleLayer
-    let minuteLayer: CompactRemainingScaleLayer?
-    let hourLayer: CompactRemainingScaleLayer?
+    let sixtySecondLayer: CompactRemainingScaleLayer
+    let sixtyMinuteLayer: CompactRemainingScaleLayer?
+    let originalScaleLayer: CompactRemainingScaleLayer?
 
     var visibleLayerCount: Int {
-        [hourLayer, minuteLayer, secondLayer as CompactRemainingScaleLayer?]
+        [originalScaleLayer, sixtyMinuteLayer, sixtySecondLayer as CompactRemainingScaleLayer?]
             .compactMap { $0 }
             .count
     }
@@ -202,14 +202,36 @@ struct TimerWorkspaceSection: Identifiable, Equatable {
 struct BottomSheetWorkspaceSnapshot: Equatable {
     static let compactVisibleLimit = 3
 
-    let totalCount: Int
-    let runningCount: Int
-    let stoppedCount: Int
+    /// Number of completed timers, used to determine if "Clear" button should be shown in expanded view.
     let completedCount: Int
+
+    /// The top-N timers to be shown in the compact mini dock.
     let compactItems: [BottomSheetCompactItem]
+
+    /// Number of timers not shown in the compact dock due to the visible limit.
     let hiddenCompactItemCount: Int
+
+    /// The ID of the first timer that is hidden in the compact dock, used for "tap to focus" from overflow card.
     let firstHiddenCompactItemID: UUID?
+
+    /// Sections for the expanded workspace list (e.g. "Active", "Recently Completed").
     let sections: [TimerWorkspaceSection]
+
+    /// Defines the number of visible remaining scale layers based on timer duration.
+    ///
+    /// The policy is:
+    /// - < 60s: 1 layer (sixtySecondLayer only)
+    /// - 60s <= d < 3600s: 2 layers (sixtySecondLayer + sixtyMinuteLayer)
+    /// - >= 3600s: 3 layers (sixtySecondLayer + sixtyMinuteLayer + originalScaleLayer)
+    static func compactLayerCount(for duration: TimeInterval) -> Int {
+        if duration < 60 {
+            return 1
+        } else if duration < 3600 {
+            return 2
+        } else {
+            return 3
+        }
+    }
 
     static func make(
         from timers: [RunningTimerItem],
@@ -226,9 +248,9 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                     status: timer.status,
                     primaryRemainingText: compactRemainingText(for: timer, formatRemaining: formatRemaining),
                     secondaryTotalText: compactTotalText(for: timer),
-                    secondLayer: compactSecondLayer(for: timer),
-                    minuteLayer: compactMinuteLayer(for: timer),
-                    hourLayer: compactHourLayer(for: timer)
+                    sixtySecondLayer: compactSixtySecondLayer(for: timer),
+                    sixtyMinuteLayer: compactSixtyMinuteLayer(for: timer),
+                    originalScaleLayer: compactOriginalScaleLayer(for: timer)
                 )
             }
 
@@ -239,27 +261,12 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         )
 
         return BottomSheetWorkspaceSnapshot(
-            totalCount: timers.count,
-            runningCount: timers.filter { $0.status == .running }.count,
-            stoppedCount: timers.filter { $0.status == .stopped }.count,
             completedCount: timers.filter { $0.status == .completed }.count,
             compactItems: compactItems,
             hiddenCompactItemCount: max(0, orderedTimers.count - compactItems.count),
             firstHiddenCompactItemID: orderedTimers.dropFirst(compactItems.count).first?.id,
             sections: sections
         )
-    }
-
-    var summaryText: String {
-        "Running \(runningCount) · Paused \(stoppedCount) · Done \(completedCount)"
-    }
-
-    var expandedSummaryText: String {
-        if totalCount == 0 {
-            return "No timers in workspace"
-        }
-
-        return summaryText
     }
 
     var compactOverflowText: String? {
@@ -338,7 +345,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         return min(max(timer.elapsedTime / timer.duration, 0), 1)
     }
 
-    private static func compactSecondLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer {
+    private static func compactSixtySecondLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer {
         CompactRemainingScaleLayer(
             fraction: repeatingRemainingFraction(
                 remainingTime: timer.remainingTime,
@@ -348,8 +355,8 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         )
     }
 
-    private static func compactMinuteLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer? {
-        guard timer.duration >= 60 else {
+    private static func compactSixtyMinuteLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer? {
+        guard compactLayerCount(for: timer.duration) >= 2 else {
             return nil
         }
 
@@ -362,8 +369,8 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         )
     }
 
-    private static func compactHourLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer? {
-        guard timer.duration >= 3_600 else {
+    private static func compactOriginalScaleLayer(for timer: RunningTimerItem) -> CompactRemainingScaleLayer? {
+        guard compactLayerCount(for: timer.duration) >= 3 else {
             return nil
         }
 
@@ -777,28 +784,28 @@ private struct CompactTimerMiniCardView: View {
             Spacer(minLength: 6)
 
             VStack(spacing: 4) {
-                if let hourLayer = item.hourLayer {
+                if let originalScaleLayer = item.originalScaleLayer {
                     CompactProgressBar(
-                        progress: hourLayer.fraction,
-                        fillColor: hourFillColor,
-                        trackColor: hourTrackColor,
+                        progress: originalScaleLayer.fraction,
+                        fillColor: originalScaleFillColor,
+                        trackColor: originalScaleTrackColor,
                         height: 1
                     )
                 }
 
-                if let minuteLayer = item.minuteLayer {
+                if let sixtyMinuteLayer = item.sixtyMinuteLayer {
                     CompactProgressBar(
-                        progress: minuteLayer.fraction,
-                        fillColor: minuteFillColor,
-                        trackColor: minuteTrackColor,
+                        progress: sixtyMinuteLayer.fraction,
+                        fillColor: sixtyMinuteFillColor,
+                        trackColor: sixtyMinuteTrackColor,
                         height: 1
                     )
                 }
 
                 CompactProgressBar(
-                    progress: item.secondLayer.fraction,
-                    fillColor: secondFillColor,
-                    trackColor: secondTrackColor,
+                    progress: item.sixtySecondLayer.fraction,
+                    fillColor: sixtySecondFillColor,
+                    trackColor: sixtySecondTrackColor,
                     height: 1
                 )
             }
@@ -852,7 +859,7 @@ private struct CompactTimerMiniCardView: View {
         }
     }
 
-    private var secondFillColor: Color {
+    private var sixtySecondFillColor: Color {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.72)
@@ -863,7 +870,7 @@ private struct CompactTimerMiniCardView: View {
         }
     }
 
-    private var secondTrackColor: Color {
+    private var sixtySecondTrackColor: Color {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.16)
@@ -874,7 +881,7 @@ private struct CompactTimerMiniCardView: View {
         }
     }
 
-    private var minuteFillColor: Color {
+    private var sixtyMinuteFillColor: Color {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.56)
@@ -885,7 +892,7 @@ private struct CompactTimerMiniCardView: View {
         }
     }
 
-    private var minuteTrackColor: Color {
+    private var sixtyMinuteTrackColor: Color {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.12)
@@ -896,7 +903,7 @@ private struct CompactTimerMiniCardView: View {
         }
     }
 
-    private var hourFillColor: Color {
+    private var originalScaleFillColor: Color {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.38)
@@ -907,7 +914,7 @@ private struct CompactTimerMiniCardView: View {
         }
     }
 
-    private var hourTrackColor: Color {
+    private var originalScaleTrackColor: Color {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.08)

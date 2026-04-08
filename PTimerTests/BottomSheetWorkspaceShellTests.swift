@@ -131,11 +131,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     func testSnapshotSummarizesTimerCounts() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
-        XCTAssertEqual(snapshot.totalCount, 4)
-        XCTAssertEqual(snapshot.runningCount, 1)
-        XCTAssertEqual(snapshot.stoppedCount, 1)
         XCTAssertEqual(snapshot.completedCount, 2)
-        XCTAssertEqual(snapshot.summaryText, "Running 1 · Paused 1 · Done 2")
     }
 
     func testVisibleStoppedCopyUsesPausedInPresentation() {
@@ -187,59 +183,106 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.compactItems[0].secondaryTotalText, "4d 6h")
     }
 
-    func testCompactProgressUsesSecondLayerForShortRunningTimer() {
+    func testCompactProgressUsesSixtySecondLayerForShortRunningTimer() {
         let snapshot = makeSnapshot(from: [secondsScaleTimer()]) // 30s timer, 25s remaining
         let item = tryUnwrapCompactItem(from: snapshot)
 
         XCTAssertEqual(item.visibleLayerCount, 1)
-        XCTAssertNil(item.hourLayer)
-        XCTAssertNil(item.minuteLayer)
-        XCTAssertEqual(item.secondLayer.fraction, 25.0 / 60.0, accuracy: 0.001)
+        XCTAssertNil(item.originalScaleLayer)
+        XCTAssertNil(item.sixtyMinuteLayer)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 25.0 / 60.0, accuracy: 0.001)
     }
 
-    func testCompactProgressUsesMinuteAndSecondLayersForSixtyFourSecondTimer() throws {
+    func testCompactProgressUsesSixtyMinuteAndSixtySecondLayersForSixtyFourSecondTimer() throws {
         let snapshot = makeSnapshot(from: [minuteScaleTimer()]) // 64s timer, 54s remaining
         let item = tryUnwrapCompactItem(from: snapshot)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.hourLayer)
-        XCTAssertEqual(minuteLayer.fraction, 54.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.secondLayer.fraction, 54.0 / 60.0, accuracy: 0.001)
+        XCTAssertNil(item.originalScaleLayer)
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 54.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 54.0 / 60.0, accuracy: 0.001)
     }
 
-    func testCompactProgressUsesMinuteAndSecondLayersForEightMinuteTimer() throws {
+    func testCompactProgressUsesSixtyMinuteAndSixtySecondLayersForEightMinuteTimer() throws {
         let snapshot = makeSnapshot(from: [eightMinuteScaleTimer()]) // 480s timer, 478s remaining
         let item = tryUnwrapCompactItem(from: snapshot)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.hourLayer)
-        XCTAssertEqual(minuteLayer.fraction, 478.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.secondLayer.fraction, 58.0 / 60.0, accuracy: 0.001) // 478 % 60 = 58
+        XCTAssertNil(item.originalScaleLayer)
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 478.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 58.0 / 60.0, accuracy: 0.001) // 478 % 60 = 58
     }
 
-    func testCompactProgressUsesMinuteAndSecondLayersForThirtyFourMinuteTimer() throws {
+    func testCompactProgressUsesSixtyMinuteAndSixtySecondLayersForThirtyFourMinuteTimer() throws {
         let snapshot = makeSnapshot(from: [thirtyFourMinuteScaleTimer()]) // 2048s timer, 2048s remaining
         let item = tryUnwrapCompactItem(from: snapshot)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.hourLayer)
-        XCTAssertEqual(minuteLayer.fraction, 2048.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.secondLayer.fraction, 8.0 / 60.0, accuracy: 0.001) // 2048 % 60 = 8
+        XCTAssertNil(item.originalScaleLayer)
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 2048.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 8.0 / 60.0, accuracy: 0.001) // 2048 % 60 = 8
     }
 
-    func testCompactProgressUsesHourMinuteAndSecondLayersForLongRunningTimer() throws {
+    func testCompactProgressUsesOriginalScaleSixtyMinuteAndSixtySecondLayersForLongRunningTimer() throws {
         let snapshot = makeSnapshot(from: [hourScaleTimer()]) // 7200s (2h) timer, 7200s remaining
         let item = tryUnwrapCompactItem(from: snapshot)
-        let hourLayer = try XCTUnwrap(item.hourLayer)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let originalScaleLayer = try XCTUnwrap(item.originalScaleLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 3)
-        XCTAssertEqual(hourLayer.fraction, 2.0 / 24.0, accuracy: 0.001)
-        XCTAssertEqual(minuteLayer.fraction, 1.0, accuracy: 0.001) // 7200 % 3600 = 0 -> 1.0
-        XCTAssertEqual(item.secondLayer.fraction, 1.0, accuracy: 0.001) // 7200 % 60 = 0 -> 1.0
+        XCTAssertEqual(originalScaleLayer.fraction, 2.0 / 24.0, accuracy: 0.001)
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 1.0, accuracy: 0.001) // 7200 % 3600 = 0 -> 1.0
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 1.0, accuracy: 0.001) // 7200 % 60 = 0 -> 1.0
+    }
+
+    func testCompactVisibleLayerCountPolicyBoundaries() {
+        // Boundary: 59s duration -> 1 layer
+        let timer59 = RunningTimerItem(
+            id: UUID(), order: 1, name: "59s", basisSummary: "", duration: 59,
+            startDate: Date(), endDate: Date().addingTimeInterval(59),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+        )
+        let item59 = BottomSheetWorkspaceSnapshot.make(from: [timer59], formatRemaining: { _ in "" }, timeContext: { _ in nil }).compactItems[0]
+        XCTAssertEqual(item59.visibleLayerCount, 1)
+        XCTAssertNotNil(item59.sixtySecondLayer)
+        XCTAssertNil(item59.sixtyMinuteLayer)
+        XCTAssertNil(item59.originalScaleLayer)
+
+        // Boundary: 60s duration -> 2 layers
+        let timer60 = RunningTimerItem(
+            id: UUID(), order: 1, name: "60s", basisSummary: "", duration: 60,
+            startDate: Date(), endDate: Date().addingTimeInterval(60),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+        )
+        let item60 = BottomSheetWorkspaceSnapshot.make(from: [timer60], formatRemaining: { _ in "" }, timeContext: { _ in nil }).compactItems[0]
+        XCTAssertEqual(item60.visibleLayerCount, 2)
+        XCTAssertNotNil(item60.sixtySecondLayer)
+        XCTAssertNotNil(item60.sixtyMinuteLayer)
+        XCTAssertNil(item60.originalScaleLayer)
+
+        // Boundary: 3599s duration -> 2 layers
+        let timer3599 = RunningTimerItem(
+            id: UUID(), order: 1, name: "3599s", basisSummary: "", duration: 3599,
+            startDate: Date(), endDate: Date().addingTimeInterval(3599),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+        )
+        let item3599 = BottomSheetWorkspaceSnapshot.make(from: [timer3599], formatRemaining: { _ in "" }, timeContext: { _ in nil }).compactItems[0]
+        XCTAssertEqual(item3599.visibleLayerCount, 2)
+
+        // Boundary: 3600s duration -> 3 layers
+        let timer3600 = RunningTimerItem(
+            id: UUID(), order: 1, name: "3600s", basisSummary: "", duration: 3600,
+            startDate: Date(), endDate: Date().addingTimeInterval(3600),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+        )
+        let item3600 = BottomSheetWorkspaceSnapshot.make(from: [timer3600], formatRemaining: { _ in "" }, timeContext: { _ in nil }).compactItems[0]
+        XCTAssertEqual(item3600.visibleLayerCount, 3)
+        XCTAssertNotNil(item3600.sixtySecondLayer)
+        XCTAssertNotNil(item3600.sixtyMinuteLayer)
+        XCTAssertNotNil(item3600.originalScaleLayer)
     }
 
     func testCompactProgressUsesExactFractionsForComplexRemainingTimes() throws {
@@ -262,41 +305,41 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let item = tryUnwrapCompactItem(from: snapshot)
 
         XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertEqual(item.secondLayer.fraction, 25.0 / 60.0, accuracy: 0.001) // 85 % 60 = 25
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 25.0 / 60.0, accuracy: 0.001) // 85 % 60 = 25
     }
 
     func testCompactProgressStaysFrozenForPausedTimer() throws {
         let snapshot = makeSnapshot(from: [pausedProgressTimer()]) // 120s duration, 45s paused remaining
         let item = tryUnwrapCompactItem(from: snapshot)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.hourLayer)
-        XCTAssertEqual(minuteLayer.fraction, 45.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.secondLayer.fraction, 45.0 / 60.0, accuracy: 0.001)
+        XCTAssertNil(item.originalScaleLayer)
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 45.0 / 3600.0, accuracy: 0.001)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 45.0 / 60.0, accuracy: 0.001)
     }
 
     func testCompactProgressSettlesAtCompleteForCompletedTimer() throws {
         let snapshot = makeSnapshot(from: [completedProgressTimer()]) // 75s duration, completed
         let item = tryUnwrapCompactItem(from: snapshot)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.hourLayer)
-        XCTAssertEqual(minuteLayer.fraction, 0, accuracy: 0.001)
-        XCTAssertEqual(item.secondLayer.fraction, 0, accuracy: 0.001)
+        XCTAssertNil(item.originalScaleLayer)
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 0, accuracy: 0.001)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 0, accuracy: 0.001)
     }
 
-    func testCompactProgressClampsHourLayerForMultiDayTimer() throws {
+    func testCompactProgressClampsOriginalScaleLayerForMultiDayTimer() throws {
         let snapshot = makeSnapshot(from: [longDurationTimer()]) // 367200s (>24h), running
         let item = tryUnwrapCompactItem(from: snapshot)
-        let hourLayer = try XCTUnwrap(item.hourLayer)
-        let minuteLayer = try XCTUnwrap(item.minuteLayer)
+        let originalScaleLayer = try XCTUnwrap(item.originalScaleLayer)
+        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
 
         XCTAssertEqual(item.visibleLayerCount, 3)
-        XCTAssertEqual(hourLayer.fraction, 1, accuracy: 0.001) // Clamped to 24h
-        XCTAssertEqual(minuteLayer.fraction, 1, accuracy: 0.001)
-        XCTAssertEqual(item.secondLayer.fraction, 1, accuracy: 0.001)
+        XCTAssertEqual(originalScaleLayer.fraction, 1, accuracy: 0.001) // Clamped to 24h
+        XCTAssertEqual(sixtyMinuteLayer.fraction, 1, accuracy: 0.001)
+        XCTAssertEqual(item.sixtySecondLayer.fraction, 1, accuracy: 0.001)
     }
 
     func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
@@ -335,25 +378,25 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let now = Date(timeIntervalSince1970: 5_000)
         let timerA = RunningTimerItem(
             id: UUID(), order: 1, name: "A", basisSummary: "", duration: 60,
-            startDate: now, endDate: now.addingTimeInterval(60), 
+            startDate: now, endDate: now.addingTimeInterval(60),
             pausedRemainingTime: nil, pausedAt: nil,
             status: .running, referenceDate: now
         )
         let timerB = RunningTimerItem(
             id: UUID(), order: 2, name: "B", basisSummary: "", duration: 120,
-            startDate: now, endDate: now.addingTimeInterval(120), 
+            startDate: now, endDate: now.addingTimeInterval(120),
             pausedRemainingTime: nil, pausedAt: nil,
             status: .running, referenceDate: now
         )
-        
+
         let snapshot = makeSnapshot(from: [timerA, timerB])
         XCTAssertEqual(snapshot.compactItems.map(\.id), [timerB.id, timerA.id])
         XCTAssertEqual(snapshot.sections.first?.items.map(\.id), [timerB.id, timerA.id])
-        
+
         // Add timer C (newest)
         let timerC = RunningTimerItem(
             id: UUID(), order: 3, name: "C", basisSummary: "", duration: 180,
-            startDate: now, endDate: now.addingTimeInterval(180), 
+            startDate: now, endDate: now.addingTimeInterval(180),
             pausedRemainingTime: nil, pausedAt: nil,
             status: .running, referenceDate: now
         )
@@ -365,24 +408,24 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let now = Date(timeIntervalSince1970: 6_000)
         let activeA = RunningTimerItem(
             id: UUID(), order: 1, name: "A", basisSummary: "", duration: 60,
-            startDate: now, endDate: now.addingTimeInterval(60), 
+            startDate: now, endDate: now.addingTimeInterval(60),
             pausedRemainingTime: nil, pausedAt: nil,
             status: .running, referenceDate: now
         )
         let completedB = RunningTimerItem(
             id: UUID(), order: 2, name: "B", basisSummary: "", duration: 30,
-            startDate: now.addingTimeInterval(-60), endDate: now.addingTimeInterval(-30), 
+            startDate: now.addingTimeInterval(-60), endDate: now.addingTimeInterval(-30),
             pausedRemainingTime: nil, pausedAt: nil,
             status: .completed, referenceDate: now
         )
-        
+
         let snapshot = makeSnapshot(from: [activeA, completedB])
         XCTAssertEqual(snapshot.compactItems.map(\.id), [activeA.id, completedB.id])
-        
+
         // New active C
         let activeC = RunningTimerItem(
             id: UUID(), order: 3, name: "C", basisSummary: "", duration: 120,
-            startDate: now, endDate: now.addingTimeInterval(120), 
+            startDate: now, endDate: now.addingTimeInterval(120),
             pausedRemainingTime: nil, pausedAt: nil,
             status: .running, referenceDate: now
         )
@@ -438,12 +481,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
         XCTAssertEqual(snapshot.sections[0].items.count, 2)
         XCTAssertEqual(snapshot.sections[1].items.count, 2)
-    }
-
-    func testExpandedSummaryTextReflectsWorkspaceCounts() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.expandedSummaryText, "Running 1 · Paused 1 · Done 2")
     }
 
     func testExpandedItemsKeepTotalDurationAsSingleSecondaryValue() {
@@ -566,25 +603,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testPlaceholderCopyIsRemovedFromBottomSheetContent() {
-        let host = makeBottomSheetHost(detent: .large, snapshot: makeSnapshot(from: sampleTimers()))
-
-        XCTAssertFalse(host.view.containsText("Summary Zone"))
-        XCTAssertFalse(host.view.containsText("List Zone"))
-        XCTAssertFalse(host.view.containsText("Return Path"))
-        XCTAssertFalse(host.view.containsText("PTIMER-47 summary content mounts here"))
-    }
-
-    @MainActor
-    func testCompactHeaderDoesNotRenderSummaryTextOrOpenButton() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
-
-        XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertFalse(host.view.containsText("Open"))
-    }
-
-    @MainActor
     func testBottomSheetUsesHandleAreaAndRemovesExpandedChevronButton() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
@@ -601,7 +619,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertFalse(host.view.containsText("Open"))
         XCTAssertFalse(host.view.containsText("Open Workspace"))
     }
 

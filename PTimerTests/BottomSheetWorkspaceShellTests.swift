@@ -154,15 +154,15 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
     }
 
-    func testCompactSummaryPrioritizesRunningThenStoppedThenRecentlyCompleted() {
+    func testCompactSummaryPrioritizesNewerActiveTimersThenRecentlyCompleted() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
-        XCTAssertEqual(snapshot.compactItems.map(\.status), [.running, .stopped, .completed])
+        XCTAssertEqual(snapshot.compactItems.map(\.status), [.stopped, .running, .completed])
         XCTAssertEqual(
             snapshot.compactItems.map(\.id),
             [
-                UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
                 UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+                UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
                 UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
             ]
         )
@@ -306,9 +306,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(
             before.compactItems.map(\.id),
             [
-                UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!,
+                UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!,
                 UUID(uuidString: "bbbbbbb2-2222-2222-2222-222222222222")!,
-                UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!
+                UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!
             ]
         )
         XCTAssertEqual(before.compactItems.map(\.id), after.compactItems.map(\.id))
@@ -321,14 +321,73 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(
             ordered.map(\.id),
             [
-                UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
                 UUID(uuidString: "eeeeeee5-5555-5555-5555-555555555555")!,
+                UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
                 UUID(uuidString: "fffffff6-6666-6666-6666-666666666666")!,
                 UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
             ]
         )
-        XCTAssertEqual(ordered.prefix(2).map(\.status), [.running, .stopped])
+        XCTAssertEqual(ordered.prefix(2).map(\.status), [.stopped, .running])
         XCTAssertEqual(ordered.suffix(2).map(\.status), [.completed, .completed])
+    }
+
+    func testNewTimerIsAlwaysInsertedAtTheTop() {
+        let now = Date(timeIntervalSince1970: 5_000)
+        let timerA = RunningTimerItem(
+            id: UUID(), order: 1, name: "A", basisSummary: "", duration: 60,
+            startDate: now, endDate: now.addingTimeInterval(60), 
+            pausedRemainingTime: nil, pausedAt: nil,
+            status: .running, referenceDate: now
+        )
+        let timerB = RunningTimerItem(
+            id: UUID(), order: 2, name: "B", basisSummary: "", duration: 120,
+            startDate: now, endDate: now.addingTimeInterval(120), 
+            pausedRemainingTime: nil, pausedAt: nil,
+            status: .running, referenceDate: now
+        )
+        
+        let snapshot = makeSnapshot(from: [timerA, timerB])
+        XCTAssertEqual(snapshot.compactItems.map(\.id), [timerB.id, timerA.id])
+        XCTAssertEqual(snapshot.sections.first?.items.map(\.id), [timerB.id, timerA.id])
+        
+        // Add timer C (newest)
+        let timerC = RunningTimerItem(
+            id: UUID(), order: 3, name: "C", basisSummary: "", duration: 180,
+            startDate: now, endDate: now.addingTimeInterval(180), 
+            pausedRemainingTime: nil, pausedAt: nil,
+            status: .running, referenceDate: now
+        )
+        let snapshot2 = makeSnapshot(from: [timerA, timerB, timerC])
+        XCTAssertEqual(snapshot2.compactItems.map(\.id), [timerC.id, timerB.id, timerA.id])
+    }
+
+    func testNewTimerInsertedAtTopEvenWhenCompletedTimersExist() {
+        let now = Date(timeIntervalSince1970: 6_000)
+        let activeA = RunningTimerItem(
+            id: UUID(), order: 1, name: "A", basisSummary: "", duration: 60,
+            startDate: now, endDate: now.addingTimeInterval(60), 
+            pausedRemainingTime: nil, pausedAt: nil,
+            status: .running, referenceDate: now
+        )
+        let completedB = RunningTimerItem(
+            id: UUID(), order: 2, name: "B", basisSummary: "", duration: 30,
+            startDate: now.addingTimeInterval(-60), endDate: now.addingTimeInterval(-30), 
+            pausedRemainingTime: nil, pausedAt: nil,
+            status: .completed, referenceDate: now
+        )
+        
+        let snapshot = makeSnapshot(from: [activeA, completedB])
+        XCTAssertEqual(snapshot.compactItems.map(\.id), [activeA.id, completedB.id])
+        
+        // New active C
+        let activeC = RunningTimerItem(
+            id: UUID(), order: 3, name: "C", basisSummary: "", duration: 120,
+            startDate: now, endDate: now.addingTimeInterval(120), 
+            pausedRemainingTime: nil, pausedAt: nil,
+            status: .running, referenceDate: now
+        )
+        let snapshot2 = makeSnapshot(from: [activeA, completedB, activeC])
+        XCTAssertEqual(snapshot2.compactItems.map(\.id), [activeC.id, activeA.id, completedB.id])
     }
 
     @MainActor
@@ -446,8 +505,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertFalse(snapshot.compactItems.isEmpty)
-        XCTAssertEqual(snapshot.compactItems.first?.primaryRemainingText, "25s")
-        XCTAssertEqual(snapshot.compactItems.first?.secondaryTotalText, "02:00")
+        XCTAssertEqual(snapshot.compactItems.first?.primaryRemainingText, "55s")
+        XCTAssertEqual(snapshot.compactItems.first?.secondaryTotalText, "03:00")
         XCTAssertEqual(snapshot.compactItems.count, 3)
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
         XCTAssertFalse(host.view.containsText("+2 more in workspace"))
@@ -473,8 +532,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
-        XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Running Soon")
-        XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Resume", "Remove"])
+        XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Stopped Hold")
+        XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Pause"])
         XCTAssertGreaterThan(snapshot.completedCount, 0)
         XCTAssertNotNil(host.view)
     }

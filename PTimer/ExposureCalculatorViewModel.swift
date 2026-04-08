@@ -67,7 +67,7 @@ enum TimerWorkspaceOrdering {
         switch lhsGroup {
         case 0:
             if lhs.order != rhs.order {
-                return lhs.order < rhs.order
+                return lhs.order > rhs.order
             }
         case 1:
             if lhs.completedAt != rhs.completedAt {
@@ -75,7 +75,7 @@ enum TimerWorkspaceOrdering {
             }
 
             if lhs.order != rhs.order {
-                return lhs.order < rhs.order
+                return lhs.order > rhs.order
             }
         default:
             break

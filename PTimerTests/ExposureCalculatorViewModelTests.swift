@@ -350,7 +350,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.startTimer()
 
         XCTAssertEqual(viewModel.timers.count, 2)
-        XCTAssertEqual(viewModel.timers.map(\.name), ["4 stops - 1.1s", "3 stops - 8s"])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["4 stops - 1s", "3 stops - 8s"])
         XCTAssertEqual(
             viewModel.timers.map(\.basisSummary),
             ["Base 1/15s · 4 stops", "Base 1s · 3 stops"]

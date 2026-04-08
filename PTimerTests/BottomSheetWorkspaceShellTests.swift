@@ -5,6 +5,136 @@ import XCTest
 
 final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
+    func testSnapshotStoreReflectsTimerCreationInCompactAndLargeFromSameRuntimeTruth() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.baseShutter = 1.0 / 30.0
+        harness.viewModel.ndStop = 6
+        harness.viewModel.startTimer()
+
+        let timer = try XCTUnwrap(harness.viewModel.timers.first)
+        let compactItem = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
+        let largeItem = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(harness.stateStore.detent, .compact)
+        XCTAssertEqual(compactItem.id, timer.id)
+        XCTAssertEqual(largeItem.id, timer.id)
+        XCTAssertEqual(compactItem.primaryRemainingText, "2s")
+        XCTAssertEqual(largeItem.remainingText, "2s")
+        XCTAssertEqual(largeItem.contextText, "Base 1/30s · 6 stops")
+        XCTAssertFalse(harness.stateStore.isExpanded)
+    }
+
+    @MainActor
+    func testSnapshotStoreReflectsTickVisibilityForCompactAndLarge() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 10)
+        let initialCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
+        let initialLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
+
+        harness.currentDate = Date(timeIntervalSince1970: 104)
+        harness.timerManager.tick(now: harness.currentDate)
+
+        let updatedCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
+        let updatedLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(initialCompact.primaryRemainingText, "10s")
+        XCTAssertEqual(updatedCompact.primaryRemainingText, "6s")
+        XCTAssertEqual(initialLarge.remainingText, "10s")
+        XCTAssertEqual(updatedLarge.remainingText, "6s")
+        XCTAssertLessThan(initialLarge.progress, updatedLarge.progress)
+    }
+
+    @MainActor
+    func testSnapshotStorePropagatesPauseResumeRemoveAndClearCompletedActionsConsistently() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 10)
+        let id = try XCTUnwrap(harness.viewModel.timers.first?.id)
+
+        harness.currentDate = Date(timeIntervalSince1970: 103)
+        harness.viewModel.stopTimer(id: id)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .stopped)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .stopped)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, "7s")
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, "7s")
+
+        harness.currentDate = Date(timeIntervalSince1970: 105)
+        harness.viewModel.resumeTimer(id: id)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .running)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .running)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, "7s")
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, "7s")
+
+        harness.currentDate = Date(timeIntervalSince1970: 120)
+        harness.timerManager.tick(now: harness.currentDate)
+        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.last?.items.first?.status, .completed)
+
+        harness.viewModel.clearCompletedTimers()
+        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 0)
+        XCTAssertTrue(harness.snapshotStore.snapshot.compactItems.isEmpty)
+        XCTAssertTrue(harness.snapshotStore.snapshot.sections.isEmpty)
+
+        harness.viewModel.baseShutter = 1.0 / 15.0
+        harness.viewModel.ndStop = 4
+        harness.viewModel.startTimer(from: 12)
+        let removeID = try XCTUnwrap(harness.viewModel.timers.first?.id)
+        XCTAssertEqual(harness.viewModel.timers.first?.name, "Timer - 12s")
+        XCTAssertEqual(harness.viewModel.timers.first?.basisSummary, "Manual timer")
+        harness.viewModel.removeTimer(id: removeID)
+        XCTAssertTrue(harness.snapshotStore.snapshot.compactItems.isEmpty)
+        XCTAssertTrue(harness.snapshotStore.snapshot.sections.isEmpty)
+    }
+
+    @MainActor
+    func testSnapshotStoreKeepsExistingTimerMetadataIndependentFromLaterCalculatorEdits() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.baseShutter = 1.0 / 30.0
+        harness.viewModel.ndStop = 6
+        harness.viewModel.startTimer()
+
+        let originalCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
+        let originalLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
+
+        harness.viewModel.baseShutter = 1
+        harness.viewModel.ndStop = 3
+
+        let updatedCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
+        let updatedLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(updatedCompact.id, originalCompact.id)
+        XCTAssertEqual(updatedCompact.primaryRemainingText, originalCompact.primaryRemainingText)
+        XCTAssertEqual(updatedLarge.id, originalLarge.id)
+        XCTAssertEqual(updatedLarge.title, originalLarge.title)
+        XCTAssertEqual(updatedLarge.contextText, "Base 1/30s · 6 stops")
+    }
+
+    @MainActor
+    func testSnapshotStoreKeepsCompactAndLargeViewsConsistentThroughCompletionOrdering() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 10)
+        harness.viewModel.startTimer(from: 30)
+
+        let newestID = try XCTUnwrap(harness.viewModel.timers.first?.id)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.id, newestID)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.id, newestID)
+
+        harness.currentDate = Date(timeIntervalSince1970: 200)
+        harness.timerManager.tick(now: harness.currentDate)
+
+        let compactIDs = harness.snapshotStore.snapshot.compactItems.map(\.id)
+        let largeIDs = harness.snapshotStore.snapshot.sections.flatMap(\.items).map(\.id)
+
+        XCTAssertEqual(Set(compactIDs), Set(largeIDs))
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Recently Completed"])
+        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 2)
+    }
+
+    @MainActor
     func testStateStoreDefaultsToCompact() {
         let store = BottomSheetWorkspaceStateStore()
 
@@ -1048,6 +1178,69 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         }
 
         return item
+    }
+
+    @MainActor
+    private func makeRuntimeHarness(now: TimeInterval) -> RuntimeHarness {
+        var currentDate = Date(timeIntervalSince1970: now)
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+        let adapter = BottomSheetWorkspacePresentationAdapter(
+            formatRemaining: viewModel.formatTimerClock,
+            timeContext: viewModel.timerTimeContext
+        )
+        let snapshotStore = BottomSheetWorkspaceSnapshotStore(
+            initialTimers: viewModel.timers,
+            timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
+            adapter: adapter
+        )
+        let stateStore = BottomSheetWorkspaceStateStore()
+
+        return RuntimeHarness(
+            timerManager: timerManager,
+            viewModel: viewModel,
+            snapshotStore: snapshotStore,
+            stateStore: stateStore,
+            currentDate: { currentDate },
+            setCurrentDate: { currentDate = $0 }
+        )
+    }
+
+    @MainActor
+    private struct RuntimeHarness {
+        let timerManager: TimerManager
+        let viewModel: ExposureCalculatorViewModel
+        let snapshotStore: BottomSheetWorkspaceSnapshotStore
+        let stateStore: BottomSheetWorkspaceStateStore
+        let currentDateProvider: () -> Date
+        let setCurrentDate: (Date) -> Void
+
+        var currentDate: Date {
+            get { currentDateProvider() }
+            nonmutating set { setCurrentDate(newValue) }
+        }
+
+        init(
+            timerManager: TimerManager,
+            viewModel: ExposureCalculatorViewModel,
+            snapshotStore: BottomSheetWorkspaceSnapshotStore,
+            stateStore: BottomSheetWorkspaceStateStore,
+            currentDate: @escaping () -> Date,
+            setCurrentDate: @escaping (Date) -> Void
+        ) {
+            self.timerManager = timerManager
+            self.viewModel = viewModel
+            self.snapshotStore = snapshotStore
+            self.stateStore = stateStore
+            self.currentDateProvider = currentDate
+            self.setCurrentDate = setCurrentDate
+        }
     }
 
     @MainActor

@@ -3,6 +3,36 @@ import XCTest
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
     @MainActor
+    func testStartTimerPublishesCapturedMetadataOnFirstRuntimeEmission() {
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+        var nonEmptyEmissions: [[RunningTimerItem]] = []
+
+        let cancellable = viewModel.$timers.sink { timers in
+            guard !timers.isEmpty else {
+                return
+            }
+
+            nonEmptyEmissions.append(timers)
+        }
+        defer { cancellable.cancel() }
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.startTimer()
+
+        XCTAssertEqual(nonEmptyEmissions.count, 1)
+        XCTAssertEqual(nonEmptyEmissions.first?.first?.name, "6 stops - 2s")
+        XCTAssertEqual(nonEmptyEmissions.first?.first?.basisSummary, "Base 1/30s · 6 stops")
+    }
+
+    @MainActor
     func testCanStartTimerDependsOnValidCalculationInputs() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
@@ -266,6 +296,65 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertTrue(viewModel.timers.isEmpty)
         XCTAssertTrue(timerManager.timers.isEmpty)
+    }
+
+    @MainActor
+    func testClearCompletedTimersPreservesActiveMetadataAndRemovesCompletedMetadataBeforeNewTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.startTimer()
+
+        viewModel.baseShutter = 1
+        viewModel.ndStop = 3
+        viewModel.startTimer()
+
+        XCTAssertEqual(viewModel.timers.count, 2)
+        XCTAssertEqual(viewModel.timers.map(\.name), ["3 stops - 8s", "6 stops - 2s"])
+        XCTAssertEqual(
+            viewModel.timers.map(\.basisSummary),
+            ["Base 1s · 3 stops", "Base 1/30s · 6 stops"]
+        )
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        let completedTimer = try XCTUnwrap(viewModel.timers.first { $0.status == .completed })
+        let activeTimer = try XCTUnwrap(viewModel.timers.first { $0.status == .running })
+
+        XCTAssertEqual(completedTimer.name, "6 stops - 2s")
+        XCTAssertEqual(completedTimer.basisSummary, "Base 1/30s · 6 stops")
+        XCTAssertEqual(activeTimer.name, "3 stops - 8s")
+        XCTAssertEqual(activeTimer.basisSummary, "Base 1s · 3 stops")
+
+        viewModel.clearCompletedTimers()
+
+        XCTAssertEqual(viewModel.timers.count, 1)
+        let survivingTimer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(survivingTimer.status, .running)
+        XCTAssertEqual(survivingTimer.name, "3 stops - 8s")
+        XCTAssertEqual(survivingTimer.basisSummary, "Base 1s · 3 stops")
+
+        viewModel.baseShutter = 1.0 / 15.0
+        viewModel.ndStop = 4
+        viewModel.startTimer()
+
+        XCTAssertEqual(viewModel.timers.count, 2)
+        XCTAssertEqual(viewModel.timers.map(\.name), ["4 stops - 1.1s", "3 stops - 8s"])
+        XCTAssertEqual(
+            viewModel.timers.map(\.basisSummary),
+            ["Base 1/15s · 4 stops", "Base 1s · 3 stops"]
+        )
     }
 
     @MainActor

@@ -3,6 +3,7 @@ import SwiftUI
 struct ExposureCalculatorScreen: View {
     @StateObject private var viewModel: ExposureCalculatorViewModel
     @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
+    @StateObject private var bottomSheetSnapshotStore: BottomSheetWorkspaceSnapshotStore
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
@@ -19,11 +20,20 @@ struct ExposureCalculatorScreen: View {
         viewModel: ExposureCalculatorViewModel,
         bottomSheetStateStore: BottomSheetWorkspaceStateStore
     ) {
-        _viewModel = StateObject(wrappedValue: viewModel)
-        _bottomSheetStateStore = StateObject(wrappedValue: bottomSheetStateStore)
-        self.bottomSheetAdapter = BottomSheetWorkspacePresentationAdapter(
+        let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
             timeContext: viewModel.timerTimeContext
+        )
+
+        _viewModel = StateObject(wrappedValue: viewModel)
+        _bottomSheetStateStore = StateObject(wrappedValue: bottomSheetStateStore)
+        self.bottomSheetAdapter = adapter
+        _bottomSheetSnapshotStore = StateObject(
+            wrappedValue: BottomSheetWorkspaceSnapshotStore(
+                initialTimers: viewModel.timers,
+                timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
+                adapter: adapter
+            )
         )
 
         assertNoKoreanUIStrings([
@@ -80,7 +90,7 @@ struct ExposureCalculatorScreen: View {
 
                     BottomSheetWorkspaceShell(
                         stateStore: bottomSheetStateStore,
-                        snapshot: bottomSheetAdapter.makeSnapshot(from: viewModel.timers),
+                        snapshot: bottomSheetSnapshotStore.snapshot,
                         onStopTimer: viewModel.stopTimer,
                         onResumeTimer: viewModel.resumeTimer,
                         onRemoveTimer: viewModel.removeTimer,

@@ -180,27 +180,22 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func stopTimer(id: UUID) {
         timerManager.stop(id: id)
-        syncTimers(with: timerManager.timers)
     }
 
     func resumeTimer(id: UUID) {
         timerManager.resume(id: id)
-        syncTimers(with: timerManager.timers)
     }
 
     func removeTimer(id: UUID) {
         timerManager.remove(id: id)
         timerMetadata.removeValue(forKey: id)
-        syncTimers(with: timerManager.timers)
     }
 
     private func startTimer(
         from resultShutter: TimeInterval,
         result: ExposureCalculationResult?
     ) {
-        guard let id = timerManager.start(duration: resultShutter) else {
-            return
-        }
+        let id = UUID()
 
         let timerName: String
         if let result {
@@ -210,18 +205,30 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         let order = nextTimerOrder
-        nextTimerOrder += 1
         timerMetadata[id] = TimerMetadata(
             order: order,
             name: timerName,
             basisSummary: makeBasisSummary(for: result)
         )
-        syncTimers(with: timerManager.timers)
+
+        guard timerManager.start(id: id, duration: resultShutter) != nil else {
+            timerMetadata.removeValue(forKey: id)
+            return
+        }
+
+        nextTimerOrder += 1
     }
 
     func clearCompletedTimers() {
+        let completedIDs = Set(
+            timers
+                .filter { $0.status == .completed }
+                .map(\.id)
+        )
         timerManager.removeCompletedTimers()
-        syncTimers(with: timerManager.timers)
+        completedIDs.forEach { id in
+            timerMetadata.removeValue(forKey: id)
+        }
     }
 
     func formatDuration(_ seconds: TimeInterval) -> String {

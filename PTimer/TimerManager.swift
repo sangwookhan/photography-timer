@@ -158,13 +158,12 @@ final class TimerManager: ObservableObject {
     }
 
     @discardableResult
-    func start(duration: TimeInterval) -> UUID? {
+    func start(id: UUID = UUID(), duration: TimeInterval) -> UUID? {
         guard duration > 0 else {
             return nil
         }
 
         let now = dateProvider()
-        let id = UUID()
         let endDate = now.addingTimeInterval(duration)
         timers.append(
             TimerState(

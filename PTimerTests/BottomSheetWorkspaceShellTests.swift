@@ -20,7 +20,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(compactItem.id, timer.id)
         XCTAssertEqual(largeItem.id, timer.id)
         XCTAssertEqual(compactItem.identityCue, largeItem.identityCue)
-        XCTAssertEqual(compactItem.primaryRemainingText, harness.viewModel.formatTimerClock(timer.remainingTime))
+        XCTAssertEqual(compactItem.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(timer.remainingTime))
         XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(timer.remainingTime))
         XCTAssertEqual(largeItem.contextText, "Base 1/30s · 6 stops")
         XCTAssertFalse(harness.stateStore.isExpanded)
@@ -42,8 +42,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertEqual(initialCompact.identityCue, updatedCompact.identityCue)
         XCTAssertEqual(initialLarge.identityCue, updatedLarge.identityCue)
-        XCTAssertEqual(initialCompact.primaryRemainingText, harness.viewModel.formatTimerClock(10))
-        XCTAssertEqual(updatedCompact.primaryRemainingText, harness.viewModel.formatTimerClock(6))
+        XCTAssertEqual(initialCompact.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(10))
+        XCTAssertEqual(updatedCompact.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(6))
         XCTAssertEqual(initialLarge.remainingText, harness.viewModel.formatTimerClock(10))
         XCTAssertEqual(updatedLarge.remainingText, harness.viewModel.formatTimerClock(6))
         XCTAssertLessThan(initialLarge.progress, updatedLarge.progress)
@@ -62,7 +62,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .stopped)
         let pausedCompactCue = harness.snapshotStore.snapshot.compactItems.first?.identityCue
         let pausedLargeCue = harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, harness.viewModel.formatTimerClock(7))
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7))
 
         harness.currentDate = Date(timeIntervalSince1970: 105)
@@ -71,7 +71,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .running)
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.identityCue, pausedCompactCue)
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue, pausedLargeCue)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, harness.viewModel.formatTimerClock(7))
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7))
 
         harness.currentDate = Date(timeIntervalSince1970: 120)
@@ -739,13 +739,24 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertFalse(snapshot.compactItems.isEmpty)
-        XCTAssertTrue(host.view.containsText("T2"))
-        XCTAssertTrue(host.view.containsText("T1"))
         XCTAssertEqual(snapshot.compactItems.first?.primaryRemainingText, "55s")
         XCTAssertEqual(snapshot.compactItems.first?.secondaryTotalText, "03:00")
+        XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
         XCTAssertEqual(snapshot.compactItems.count, 3)
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
         XCTAssertFalse(host.view.containsText("+2 more in workspace"))
+    }
+
+    @MainActor
+    func testCompactIdentityCueRemainsSeparateFromPrimaryAndSecondaryTimeText() throws {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let item = try XCTUnwrap(snapshot.compactItems.first)
+
+        XCTAssertEqual(item.identityCue.markerText, "T2")
+        XCTAssertFalse(item.primaryRemainingText.contains(item.identityCue.markerText))
+        XCTAssertFalse((item.secondaryTotalText ?? "").contains(item.identityCue.markerText))
+        XCTAssertEqual(item.primaryRemainingText, "55s")
+        XCTAssertEqual(item.secondaryTotalText, "03:00")
     }
 
     @MainActor
@@ -767,13 +778,27 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertTrue(host.view.containsText("T2"))
-        XCTAssertTrue(host.view.containsText("T3"))
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
         XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Stopped Hold")
+        XCTAssertEqual(snapshot.sections.first?.items.first?.identityCue.markerText, "T2")
+        XCTAssertEqual(snapshot.sections.last?.items.first?.identityCue.markerText, "T3")
         XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Pause"])
         XCTAssertGreaterThan(snapshot.completedCount, 0)
         XCTAssertNotNil(host.view)
+    }
+
+    @MainActor
+    func testLargeIdentityCueRemainsSeparateFromTitleTimeAndStatusValues() throws {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let row = try XCTUnwrap(snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(row.identityCue.markerText, "T2")
+        XCTAssertFalse((row.title ?? "").contains(row.identityCue.markerText))
+        XCTAssertFalse(row.statusLabel.contains(row.identityCue.markerText))
+        XCTAssertFalse(row.remainingText.contains(row.identityCue.markerText))
+        XCTAssertFalse((row.totalDurationText ?? "").contains(row.identityCue.markerText))
+        XCTAssertFalse((row.timingText ?? "").contains(row.identityCue.markerText))
+        XCTAssertFalse((row.contextText ?? "").contains(row.identityCue.markerText))
     }
 
     @MainActor
@@ -826,11 +851,42 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testOverflowCardKeepsViewAllRoleWithoutTimerIdentityMarker() {
         let snapshot = makeSnapshot(from: sampleTimers())
-        let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
 
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertTrue(host.view.containsText("View all"))
-        XCTAssertFalse(host.view.containsText("T4"))
+        XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
+        XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
+        XCTAssertFalse(snapshot.compactItems.map(\.identityCue.markerText).contains("T4"))
+    }
+
+    @MainActor
+    func testClearCompletedRemovesCompletedSectionMetadataAndIdentityMarkers() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.baseShutter = 1.0 / 30.0
+        harness.viewModel.ndStop = 6
+        harness.viewModel.startTimer()
+
+        harness.viewModel.baseShutter = 1
+        harness.viewModel.ndStop = 3
+        harness.viewModel.startTimer()
+
+        harness.currentDate = Date(timeIntervalSince1970: 103)
+        harness.timerManager.tick(now: harness.currentDate)
+
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active", "Recently Completed"])
+        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
+
+        harness.viewModel.clearCompletedTimers()
+
+        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 0)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active"])
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.count, 1)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue.markerText, "T2")
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.contextText, "Base 1s · 3 stops")
+
+        XCTAssertFalse(harness.snapshotStore.snapshot.sections.contains { $0.title == "Recently Completed" })
+        XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.timingText == "Completed recently" })
+        XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.identityCue.markerText == "T1" })
     }
 
     @MainActor
@@ -1393,4 +1449,5 @@ private extension UIView {
 
         return nil
     }
+
 }

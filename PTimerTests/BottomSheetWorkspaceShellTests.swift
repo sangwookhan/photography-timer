@@ -12,7 +12,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testStateStoreTransitionsBetweenCompactAndExpandedDetents() {
+    func testStateStoreTransitionsBetweenCompactAndLargeDetents() {
         let store = BottomSheetWorkspaceStateStore()
 
         store.transition(to: .large)
@@ -23,7 +23,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testStateStoreExpandAndCollapseModelCompactVsExpandedFlow() {
+    func testStateStoreExpandAndCollapseModelCompactVsLargeFlow() {
         let store = BottomSheetWorkspaceStateStore()
 
         XCTAssertFalse(store.isExpanded)
@@ -103,7 +103,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testExpandedCollapsesWithMoreForgivingDownwardDrag() {
+    func testLargeCollapsesWithMoreForgivingDownwardDrag() {
         let store = BottomSheetWorkspaceStateStore(detent: .large)
 
         store.handleDragEnd(translation: 63)
@@ -113,7 +113,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(store.detent, .compact)
     }
 
-    func testLayoutMetricsReflectCompactAndExpandedHeights() {
+    func testLayoutMetricsReflectCompactAndLargeHeights() {
         let compact = BottomSheetLayoutMetrics.height(for: .compact)
         let large = BottomSheetLayoutMetrics.height(for: .large)
 
@@ -123,9 +123,17 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(compact, 110)
     }
 
-    func testDimOpacityOnlyAppearsForExpandedState() {
+    func testDimOpacityOnlyAppearsForLargeState() {
         XCTAssertEqual(BottomSheetLayoutMetrics.dimOpacity(for: .compact), 0)
         XCTAssertGreaterThan(BottomSheetLayoutMetrics.dimOpacity(for: .large), 0)
+    }
+
+    @MainActor
+    func testLargeDragDownCollapsesDirectlyToCompact() {
+        let store = BottomSheetWorkspaceStateStore(detent: .large)
+
+        store.handleDragEnd(translation: 92)
+        XCTAssertEqual(store.detent, .compact)
     }
 
     func testSnapshotSummarizesTimerCounts() {
@@ -169,10 +177,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertEqual(
-            snapshot.firstHiddenCompactItemID,
-            UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
-        )
     }
 
     func testCompactPresentationSimplifiesLongDurationContent() {
@@ -434,25 +438,17 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testOverflowFocusTargetUsesFirstHiddenCompactItem() {
+    func testOverflowTapExpandsToLargeWithoutForcingSelection() {
         let snapshot = makeSnapshot(from: completedAheadOfActiveTimers())
         let store = BottomSheetWorkspaceStateStore()
 
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertEqual(
-            snapshot.firstHiddenCompactItemID,
-            UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
-        )
+        XCTAssertNil(store.selectedTimerID)
 
-        if let targetID = snapshot.firstHiddenCompactItemID {
-            store.expandAndFocusTimer(targetID)
-        }
+        store.expand()
 
         XCTAssertEqual(store.detent, .large)
-        XCTAssertEqual(
-            store.selectedTimerID,
-            UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
-        )
+        XCTAssertNil(store.selectedTimerID)
     }
 
     func testCompletedCompactCardUsesZeroRemainingWithoutDoneLabel() {
@@ -475,7 +471,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(34_218_061), "1y 1m")
     }
 
-    func testExpandedSectionsGroupTimersByPresentationStatus() {
+    func testLargeSectionsGroupTimersByPresentationStatus() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
@@ -483,7 +479,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.sections[1].items.count, 2)
     }
 
-    func testExpandedItemsKeepTotalDurationAsSingleSecondaryValue() {
+    func testLargeItemsKeepTotalDurationAsSingleSecondaryValue() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let runningItem = snapshot.sections
             .flatMap(\.items)
@@ -495,8 +491,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(runningItem?.contextText, "Base 1/30s · 6 stops")
     }
 
-    func testExpandedItemsHideTopLineWhenNameOnlyRepeatsDurationOrContext() {
-        let snapshot = makeSnapshot(from: [redundantExpandedPresentationTimer()])
+    func testLargeItemsHideTopLineWhenNameOnlyRepeatsDurationOrContext() {
+        let snapshot = makeSnapshot(from: [redundantLargePresentationTimer()])
         let item = snapshot.sections
             .flatMap(\.items)
             .first
@@ -506,7 +502,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(item?.contextText, "Base 1/30s · 6 stops")
     }
 
-    func testCompletedExpandedItemUsesSimplerPresentation() {
+    func testCompletedLargeItemUsesSimplerPresentation() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let completedItem = snapshot.sections[1].items.first
 
@@ -516,7 +512,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(completedItem?.contextText, "Base 1/15s · 8 stops")
     }
 
-    func testExpandedSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
+    func testLargeSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
 
@@ -528,11 +524,11 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(focusedItem?.status, .stopped)
     }
 
-    func testExpandedHeightCreatesLargerManagementViewportBudget() {
+    func testLargeHeightCreatesLargerManagementViewportBudget() {
         let compactHeight = BottomSheetLayoutMetrics.height(for: .compact)
-        let expandedHeight = BottomSheetLayoutMetrics.height(for: .large)
+        let largeHeight = BottomSheetLayoutMetrics.height(for: .large)
 
-        XCTAssertGreaterThan(expandedHeight - compactHeight, 300)
+        XCTAssertGreaterThan(largeHeight - compactHeight, 300)
     }
 
     @MainActor
@@ -563,7 +559,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testExpandedStateRendersActualWorkspaceListContent() {
+    func testLargeStateRendersActualWorkspaceListContent() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
@@ -576,7 +572,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testExpandedHeaderDoesNotRenderSummarySentenceOrCountChips() {
+    func testLargeHeaderDoesNotRenderSummarySentenceOrCountChips() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
@@ -588,7 +584,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testExpandedStateMarksFocusedRowForTappedCompactTimer() {
+    func testLargeStateMarksFocusedRowForTappedCompactTimer() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
         let store = BottomSheetWorkspaceStateStore(detent: .large)
@@ -603,7 +599,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testBottomSheetUsesHandleAreaAndRemovesExpandedChevronButton() {
+    func testBottomSheetUsesHandleAreaAndRemovesLargeDetentChevronButton() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
@@ -637,6 +633,40 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertGreaterThan(host.view.bounds.height, 0)
     }
 
+    func testExposureScreenPinsCalculatorReservedHeightToCompactSheetBudget() {
+        let reservedHeight = ExposureCalculatorScreen.calculatorReservedHeight(
+            screenHeight: 844,
+            topSafeArea: 59,
+            bottomSafeArea: 34
+        )
+        let compactHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
+            screenHeight: 844,
+            bottomSheetDetent: .compact,
+            topSafeArea: 59,
+            bottomSafeArea: 34
+        )
+        let largeHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
+            screenHeight: 844,
+            bottomSheetDetent: .large,
+            topSafeArea: 59,
+            bottomSafeArea: 34
+        )
+
+        XCTAssertEqual(reservedHeight, compactHeight)
+        XCTAssertGreaterThan(reservedHeight, largeHeight)
+    }
+
+    @MainActor
+    func testLargeStateRendersLargeWorkspaceShell() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
+
+        XCTAssertGreaterThan(host.view.bounds.height, 0)
+        XCTAssertFalse(snapshot.sections.isEmpty)
+        XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
+        XCTAssertFalse(host.view.containsText("Start a timer to pin it here."))
+    }
+
     func testIPhone17ViewportKeepsDenseMainContentAboveCompactSheet() {
         let availableHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
             screenHeight: 844,
@@ -651,10 +681,10 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(availableHeight, requiredHeight)
     }
 
-    func testIPhone17ViewportLeavesMeaningfulExpandedWorkspaceHeight() {
-        let expandedHeight = BottomSheetLayoutMetrics.height(for: .large)
+    func testIPhone17ViewportLeavesMeaningfulLargeWorkspaceHeight() {
+        let largeHeight = BottomSheetLayoutMetrics.height(for: .large)
 
-        XCTAssertGreaterThanOrEqual(expandedHeight, 560)
+        XCTAssertGreaterThanOrEqual(largeHeight, 560)
     }
 
     private func sampleTimers() -> [RunningTimerItem] {
@@ -860,7 +890,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         )
     }
 
-    private func redundantExpandedPresentationTimer() -> RunningTimerItem {
+    private func redundantLargePresentationTimer() -> RunningTimerItem {
         let now = Date(timeIntervalSince1970: 1_500)
 
         return RunningTimerItem(

@@ -1,10 +1,31 @@
 import SwiftUI
 
 struct ExposureCalculatorScreen: View {
-    @StateObject private var viewModel = ExposureCalculatorViewModel()
-    @StateObject private var bottomSheetStateStore = BottomSheetWorkspaceStateStore()
+    @StateObject private var viewModel: ExposureCalculatorViewModel
+    @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
 
+    private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
+
+    @MainActor
     init() {
+        self.init(
+            viewModel: ExposureCalculatorViewModel(),
+            bottomSheetStateStore: BottomSheetWorkspaceStateStore()
+        )
+    }
+
+    @MainActor
+    init(
+        viewModel: ExposureCalculatorViewModel,
+        bottomSheetStateStore: BottomSheetWorkspaceStateStore
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+        _bottomSheetStateStore = StateObject(wrappedValue: bottomSheetStateStore)
+        self.bottomSheetAdapter = BottomSheetWorkspacePresentationAdapter(
+            formatRemaining: viewModel.formatTimerClock,
+            timeContext: viewModel.timerTimeContext
+        )
+
         assertNoKoreanUIStrings([
             "Exposure",
             "Show Advanced Options",
@@ -14,9 +35,10 @@ struct ExposureCalculatorScreen: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let compactReservedHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
+            // Keep the calculator on a stable footprint so sheet detent changes do
+            // not cause the core exposure workflow to relayout underneath runtime UI.
+            let compactReservedHeight = Self.calculatorReservedHeight(
                 screenHeight: geometry.size.height,
-                bottomSheetDetent: .compact,
                 topSafeArea: geometry.safeAreaInsets.top,
                 bottomSafeArea: geometry.safeAreaInsets.bottom
             )
@@ -58,11 +80,7 @@ struct ExposureCalculatorScreen: View {
 
                     BottomSheetWorkspaceShell(
                         stateStore: bottomSheetStateStore,
-                        snapshot: BottomSheetWorkspaceSnapshot.make(
-                            from: viewModel.timers,
-                            formatRemaining: viewModel.formatTimerClock,
-                            timeContext: viewModel.timerTimeContext
-                        ),
+                        snapshot: bottomSheetAdapter.makeSnapshot(from: viewModel.timers),
                         onStopTimer: viewModel.stopTimer,
                         onResumeTimer: viewModel.resumeTimer,
                         onRemoveTimer: viewModel.removeTimer,
@@ -72,6 +90,19 @@ struct ExposureCalculatorScreen: View {
                 .padding(.bottom, geometry.safeAreaInsets.bottom)
             }
         }
+    }
+
+    static func calculatorReservedHeight(
+        screenHeight: CGFloat,
+        topSafeArea: CGFloat,
+        bottomSafeArea: CGFloat
+    ) -> CGFloat {
+        ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
+            screenHeight: screenHeight,
+            bottomSheetDetent: .compact,
+            topSafeArea: topSafeArea,
+            bottomSafeArea: bottomSafeArea
+        )
     }
 
     private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
@@ -148,7 +179,7 @@ struct ExposureWorkspaceLayoutMetrics {
         case .compact:
             return 560
         case .dense:
-            return 500
+            return 488
         }
     }
 }
@@ -185,7 +216,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
         case .compact:
             return 12
         case .dense:
-            return 8
+            return 6
         }
     }
 
@@ -193,8 +224,10 @@ private enum ExposureWorkspaceMainLayoutStyle {
         switch self {
         case .regular:
             return 12
-        case .compact, .dense:
+        case .compact:
             return 8
+        case .dense:
+            return 6
         }
     }
 
@@ -205,7 +238,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
         case .compact:
             return 12
         case .dense:
-            return 10
+            return 8
         }
     }
 
@@ -293,7 +326,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
         case .compact:
             return 12
         case .dense:
-            return 10
+            return 9
         }
     }
 

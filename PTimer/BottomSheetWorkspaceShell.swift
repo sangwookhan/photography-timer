@@ -18,6 +18,7 @@ struct BottomSheetWorkspaceShell: View {
                     snapshot: snapshot,
                     focusedTimerID: stateStore.selectedTimerID,
                     onCompactItemTap: stateStore.expandAndFocusTimer(_:),
+                    onOverflowTap: stateStore.expand,
                     onCollapse: stateStore.collapse,
                     onStopTimer: onStopTimer,
                     onResumeTimer: onResumeTimer,
@@ -40,20 +41,44 @@ enum BottomSheetDetent: String, CaseIterable, Identifiable {
     var isExpanded: Bool {
         self != .compact
     }
+
+    var showsLargeWorkspace: Bool {
+        self == .large
+    }
+}
+
+struct BottomSheetPresentationState: Equatable {
+    var detent: BottomSheetDetent
+    var selectedTimerID: UUID?
+
+    static let `default` = BottomSheetPresentationState(
+        detent: .default,
+        selectedTimerID: nil
+    )
 }
 
 @MainActor
 final class BottomSheetWorkspaceStateStore: ObservableObject {
     private enum DragThreshold {
         static let compactExpand: CGFloat = 92
-        static let expandedCollapse: CGFloat = 64
+        static let largeCollapse: CGFloat = 64
     }
 
-    @Published private(set) var detent: BottomSheetDetent
-    @Published private(set) var selectedTimerID: UUID?
+    @Published private(set) var presentationState: BottomSheetPresentationState
 
     init(detent: BottomSheetDetent = .default) {
-        self.detent = detent
+        self.presentationState = BottomSheetPresentationState(
+            detent: detent,
+            selectedTimerID: nil
+        )
+    }
+
+    var detent: BottomSheetDetent {
+        presentationState.detent
+    }
+
+    var selectedTimerID: UUID? {
+        presentationState.selectedTimerID
     }
 
     var isExpanded: Bool {
@@ -61,28 +86,27 @@ final class BottomSheetWorkspaceStateStore: ObservableObject {
     }
 
     func transition(to detent: BottomSheetDetent) {
-        self.detent = detent
+        presentationState.detent = detent
         if detent == .compact {
-            selectedTimerID = nil
+            presentationState.selectedTimerID = nil
         }
     }
 
     func expand() {
-        detent = .large
+        transition(to: .large)
     }
 
     func expandAndFocusTimer(_ id: UUID) {
-        selectedTimerID = id
+        presentationState.selectedTimerID = id
         expand()
     }
 
     func focusTimer(_ id: UUID) {
-        selectedTimerID = id
+        presentationState.selectedTimerID = id
     }
 
     func collapse() {
-        selectedTimerID = nil
-        detent = .compact
+        transition(to: .compact)
     }
 
     func handleDragEnd(translation: CGFloat) {
@@ -92,7 +116,7 @@ final class BottomSheetWorkspaceStateStore: ObservableObject {
                 expand()
             }
         case .large:
-            if translation >= DragThreshold.expandedCollapse {
+            if translation >= DragThreshold.largeCollapse {
                 collapse()
             }
         }
@@ -119,6 +143,19 @@ struct BottomSheetLayoutMetrics {
     }
 }
 
+struct BottomSheetWorkspacePresentationAdapter {
+    let formatRemaining: (TimeInterval) -> String
+    let timeContext: (RunningTimerItem) -> String?
+
+    func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {
+        BottomSheetWorkspaceSnapshot.make(
+            from: timers,
+            formatRemaining: formatRemaining,
+            timeContext: timeContext
+        )
+    }
+}
+
 enum BottomSheetQuickAction: String, Equatable {
     case pause
     case resume
@@ -142,7 +179,7 @@ enum BottomSheetQuickAction: String, Equatable {
     }
 }
 
-enum BottomSheetExpandedAction: String, Equatable {
+enum BottomSheetLargeAction: String, Equatable {
     case pause
     case resume
     case remove
@@ -179,7 +216,7 @@ struct BottomSheetCompactItem: Identifiable, Equatable {
     }
 }
 
-struct BottomSheetExpandedItem: Identifiable, Equatable {
+struct BottomSheetLargeItem: Identifiable, Equatable {
     let id: UUID
     let title: String?
     let statusLabel: String
@@ -189,12 +226,12 @@ struct BottomSheetExpandedItem: Identifiable, Equatable {
     let timingText: String?
     let contextText: String?
     let progress: Double
-    let actions: [BottomSheetExpandedAction]
+    let actions: [BottomSheetLargeAction]
 }
 
 struct TimerWorkspaceSection: Identifiable, Equatable {
     let title: String
-    let items: [BottomSheetExpandedItem]
+    let items: [BottomSheetLargeItem]
 
     var id: String { title }
 }
@@ -202,7 +239,7 @@ struct TimerWorkspaceSection: Identifiable, Equatable {
 struct BottomSheetWorkspaceSnapshot: Equatable {
     static let compactVisibleLimit = 3
 
-    /// Number of completed timers, used to determine if "Clear" button should be shown in expanded view.
+    /// Number of completed timers, used to determine if "Clear" button should be shown in the large workspace.
     let completedCount: Int
 
     /// The top-N timers to be shown in the compact mini dock.
@@ -211,10 +248,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
     /// Number of timers not shown in the compact dock due to the visible limit.
     let hiddenCompactItemCount: Int
 
-    /// The ID of the first timer that is hidden in the compact dock, used for "tap to focus" from overflow card.
-    let firstHiddenCompactItemID: UUID?
-
-    /// Sections for the expanded workspace list (e.g. "Active", "Recently Completed").
+    /// Sections for the large workspace list (e.g. "Active", "Recently Completed").
     let sections: [TimerWorkspaceSection]
 
     /// Defines the number of visible remaining scale layers based on timer duration.
@@ -264,7 +298,6 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
             completedCount: timers.filter { $0.status == .completed }.count,
             compactItems: compactItems,
             hiddenCompactItemCount: max(0, orderedTimers.count - compactItems.count),
-            firstHiddenCompactItemID: orderedTimers.dropFirst(compactItems.count).first?.id,
             sections: sections
         )
     }
@@ -314,24 +347,24 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         return TimerWorkspaceSection(
             title: title,
             items: timers.map { timer in
-                let totalDurationText = expandedTotalDurationText(for: timer, formatRemaining: formatRemaining)
-                let contextText = expandedContextText(for: timer)
+                let totalDurationText = largeTotalDurationText(for: timer, formatRemaining: formatRemaining)
+                let contextText = largeContextText(for: timer)
 
-                return BottomSheetExpandedItem(
+                return BottomSheetLargeItem(
                     id: timer.id,
-                    title: expandedTitleText(
+                    title: largeTitleText(
                         for: timer,
                         totalDurationText: totalDurationText,
                         contextText: contextText
                     ),
                     statusLabel: visibleStatusLabel(for: timer.status),
                     status: timer.status,
-                    remainingText: expandedRemainingText(for: timer, formatRemaining: formatRemaining),
+                    remainingText: largeRemainingText(for: timer, formatRemaining: formatRemaining),
                     totalDurationText: totalDurationText,
                     timingText: timeContext(timer),
                     contextText: contextText,
                     progress: progress(for: timer),
-                    actions: expandedActions(for: timer.status)
+                    actions: largeActions(for: timer.status)
                 )
             }
         )
@@ -412,7 +445,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         }
     }
 
-    private static func expandedActions(for status: TimerStatus) -> [BottomSheetExpandedAction] {
+    private static func largeActions(for status: TimerStatus) -> [BottomSheetLargeAction] {
         switch status {
         case .running:
             return [.pause]
@@ -443,7 +476,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         return compactDurationText(timer.duration)
     }
 
-    private static func expandedRemainingText(
+    private static func largeRemainingText(
         for timer: RunningTimerItem,
         formatRemaining: (TimeInterval) -> String
     ) -> String {
@@ -455,7 +488,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         }
     }
 
-    private static func expandedTotalDurationText(
+    private static func largeTotalDurationText(
         for timer: RunningTimerItem,
         formatRemaining: (TimeInterval) -> String
     ) -> String? {
@@ -466,12 +499,12 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         return formatRemaining(timer.duration)
     }
 
-    private static func expandedContextText(for timer: RunningTimerItem) -> String? {
+    private static func largeContextText(for timer: RunningTimerItem) -> String? {
         let summary = timer.basisSummary.trimmingCharacters(in: .whitespacesAndNewlines)
         return summary.isEmpty ? nil : summary
     }
 
-    private static func expandedTitleText(
+    private static func largeTitleText(
         for timer: RunningTimerItem,
         totalDurationText: String?,
         contextText: String?
@@ -623,6 +656,7 @@ private struct BottomSheetContentHost: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let focusedTimerID: UUID?
     let onCompactItemTap: (UUID) -> Void
+    let onOverflowTap: () -> Void
     let onCollapse: () -> Void
     let onStopTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
@@ -641,12 +675,13 @@ private struct BottomSheetContentHost: View {
             Group {
                 switch detent {
                 case .compact:
-                    CompactTimerMiniDockView(
+                    BottomSheetCompactSummaryView(
                         snapshot: snapshot,
-                        onItemTap: onCompactItemTap
+                        onItemTap: onCompactItemTap,
+                        onOverflowTap: onOverflowTap
                     )
                 case .large:
-                    ExpandedTimerWorkspaceView(
+                    BottomSheetLargeWorkspaceView(
                         snapshot: snapshot,
                         focusedTimerID: focusedTimerID,
                         onStopTimer: onStopTimer,
@@ -665,9 +700,10 @@ private struct BottomSheetContentHost: View {
     }
 }
 
-private struct CompactTimerMiniDockView: View {
+private struct BottomSheetCompactSummaryView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let onItemTap: (UUID) -> Void
+    let onOverflowTap: () -> Void
 
     var body: some View {
         Group {
@@ -695,15 +731,10 @@ private struct CompactTimerMiniDockView: View {
                             )
                         }
 
-                        if
-                            let overflowText = snapshot.compactOverflowText,
-                            let overflowTargetID = snapshot.firstHiddenCompactItemID
-                        {
+                        if let overflowText = snapshot.compactOverflowText {
                             CompactOverflowMiniCard(
                                 text: overflowText,
-                                onTap: {
-                                    onItemTap(overflowTargetID)
-                                }
+                                onTap: onOverflowTap
                             )
                         }
                     }
@@ -965,7 +996,7 @@ private struct CompactOverflowMiniCard: View {
                 .monospacedDigit()
                 .lineLimit(1)
 
-            Text("more timers")
+            Text("View all")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -982,7 +1013,7 @@ private struct CompactOverflowMiniCard: View {
     }
 }
 
-private struct ExpandedTimerWorkspaceView: View {
+private struct BottomSheetLargeWorkspaceView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let focusedTimerID: UUID?
     let onStopTimer: (UUID) -> Void
@@ -994,7 +1025,7 @@ private struct ExpandedTimerWorkspaceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ExpandedSummaryStrip(
+            LargeWorkspaceSummaryStrip(
                 snapshot: snapshot,
                 onClearCompletedTimers: onClearCompletedTimers
             )
@@ -1026,7 +1057,7 @@ private struct ExpandedTimerWorkspaceView: View {
                                         .foregroundStyle(.secondary)
 
                                     ForEach(section.items) { item in
-                                        ExpandedTimerRowView(
+                                        LargeWorkspaceTimerRowView(
                                             item: item,
                                             isFocused: item.id == focusedTimerID,
                                             onAction: { action in
@@ -1047,7 +1078,7 @@ private struct ExpandedTimerWorkspaceView: View {
                     }
                     .padding(.top, 2)
                     .padding(.bottom, 8)
-                    .accessibilityIdentifier("bottom-sheet-expanded-workspace")
+                    .accessibilityIdentifier("bottom-sheet-large-workspace")
                 }
             }
         }
@@ -1076,7 +1107,7 @@ private struct ExpandedTimerWorkspaceView: View {
         }
     }
 
-    private func handle(action: BottomSheetExpandedAction, for id: UUID) {
+    private func handle(action: BottomSheetLargeAction, for id: UUID) {
         switch action {
         case .pause:
             onStopTimer(id)
@@ -1088,7 +1119,7 @@ private struct ExpandedTimerWorkspaceView: View {
     }
 }
 
-private struct ExpandedSummaryStrip: View {
+private struct LargeWorkspaceSummaryStrip: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let onClearCompletedTimers: () -> Void
 
@@ -1108,10 +1139,10 @@ private struct ExpandedSummaryStrip: View {
     }
 }
 
-private struct ExpandedTimerRowView: View {
-    let item: BottomSheetExpandedItem
+private struct LargeWorkspaceTimerRowView: View {
+    let item: BottomSheetLargeItem
     let isFocused: Bool
-    let onAction: (BottomSheetExpandedAction) -> Void
+    let onAction: (BottomSheetLargeAction) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1168,7 +1199,7 @@ private struct ExpandedTimerRowView: View {
             if !item.actions.isEmpty {
                 HStack(spacing: 8) {
                     ForEach(item.actions, id: \.rawValue) { action in
-                        ExpandedActionButton(
+                        LargeActionButton(
                             action: action,
                             tint: tint(for: action),
                             onTap: {
@@ -1199,13 +1230,13 @@ private struct ExpandedTimerRowView: View {
 
     private var rowAccessibilityIdentifier: String {
         if isFocused {
-            return "bottom-sheet-expanded-row-focused-\(item.id.uuidString)"
+            return "bottom-sheet-large-row-focused-\(item.id.uuidString)"
         }
 
-        return "bottom-sheet-expanded-row-\(item.id.uuidString)"
+        return "bottom-sheet-large-row-\(item.id.uuidString)"
     }
 
-    private func tint(for action: BottomSheetExpandedAction) -> Color {
+    private func tint(for action: BottomSheetLargeAction) -> Color {
         switch action {
         case .pause:
             return .orange
@@ -1217,8 +1248,8 @@ private struct ExpandedTimerRowView: View {
     }
 }
 
-private struct ExpandedActionButton: View {
-    let action: BottomSheetExpandedAction
+private struct LargeActionButton: View {
+    let action: BottomSheetLargeAction
     let tint: Color
     let onTap: () -> Void
 

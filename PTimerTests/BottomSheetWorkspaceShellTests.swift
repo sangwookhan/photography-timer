@@ -19,6 +19,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(harness.stateStore.detent, .compact)
         XCTAssertEqual(compactItem.id, timer.id)
         XCTAssertEqual(largeItem.id, timer.id)
+        XCTAssertEqual(compactItem.identityCue, largeItem.identityCue)
         XCTAssertEqual(compactItem.primaryRemainingText, "2s")
         XCTAssertEqual(largeItem.remainingText, "2s")
         XCTAssertEqual(largeItem.contextText, "Base 1/30s · 6 stops")
@@ -39,6 +40,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let updatedCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
         let updatedLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
 
+        XCTAssertEqual(initialCompact.identityCue, updatedCompact.identityCue)
+        XCTAssertEqual(initialLarge.identityCue, updatedLarge.identityCue)
         XCTAssertEqual(initialCompact.primaryRemainingText, "10s")
         XCTAssertEqual(updatedCompact.primaryRemainingText, "6s")
         XCTAssertEqual(initialLarge.remainingText, "10s")
@@ -57,6 +60,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         harness.viewModel.stopTimer(id: id)
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .stopped)
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .stopped)
+        let pausedCompactCue = harness.snapshotStore.snapshot.compactItems.first?.identityCue
+        let pausedLargeCue = harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, "7s")
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, "7s")
 
@@ -64,6 +69,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         harness.viewModel.resumeTimer(id: id)
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .running)
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .running)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.identityCue, pausedCompactCue)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue, pausedLargeCue)
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, "7s")
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, "7s")
 
@@ -71,6 +78,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         harness.timerManager.tick(now: harness.currentDate)
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.last?.items.first?.status, .completed)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.last?.items.first?.identityCue, pausedLargeCue)
 
         harness.viewModel.clearCompletedTimers()
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 0)
@@ -106,8 +114,10 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let updatedLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
 
         XCTAssertEqual(updatedCompact.id, originalCompact.id)
+        XCTAssertEqual(updatedCompact.identityCue, originalCompact.identityCue)
         XCTAssertEqual(updatedCompact.primaryRemainingText, originalCompact.primaryRemainingText)
         XCTAssertEqual(updatedLarge.id, originalLarge.id)
+        XCTAssertEqual(updatedLarge.identityCue, originalLarge.identityCue)
         XCTAssertEqual(updatedLarge.title, originalLarge.title)
         XCTAssertEqual(updatedLarge.contextText, "Base 1/30s · 6 stops")
     }
@@ -292,6 +302,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let snapshot = makeSnapshot(from: sampleTimers())
 
         XCTAssertEqual(snapshot.compactItems.map(\.status), [.stopped, .running, .completed])
+        XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
         XCTAssertEqual(
             snapshot.compactItems.map(\.id),
             [
@@ -586,6 +597,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let snapshot = makeSnapshot(from: [completedTimer])
 
         XCTAssertEqual(snapshot.compactItems.count, 1)
+        XCTAssertEqual(snapshot.compactItems[0].identityCue.markerText, "T3")
         XCTAssertEqual(snapshot.compactItems[0].primaryRemainingText, "0s")
         XCTAssertEqual(snapshot.compactItems[0].secondaryTotalText, "45s")
     }
@@ -615,6 +627,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             .flatMap(\.items)
             .first { $0.id == UUID(uuidString: "22222222-2222-2222-2222-222222222222")! }
 
+        XCTAssertEqual(runningItem?.identityCue.markerText, "T1")
         XCTAssertEqual(runningItem?.remainingText, "00:25")
         XCTAssertEqual(runningItem?.totalDurationText, "02:00")
         XCTAssertEqual(runningItem?.timingText, "Ends soon")
@@ -636,10 +649,68 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let snapshot = makeSnapshot(from: sampleTimers())
         let completedItem = snapshot.sections[1].items.first
 
+        XCTAssertEqual(completedItem?.identityCue.markerText, "T3")
         XCTAssertEqual(completedItem?.remainingText, "0s")
         XCTAssertEqual(completedItem?.totalDurationText, "00:45")
         XCTAssertEqual(completedItem?.timingText, "Completed recently")
         XCTAssertEqual(completedItem?.contextText, "Base 1/15s · 8 stops")
+    }
+
+    func testIdentityCueStaysConsistentAcrossCompactAndLargePresentations() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let compactByID = Dictionary(uniqueKeysWithValues: snapshot.compactItems.map { ($0.id, $0.identityCue) })
+        let largeByID = Dictionary(
+            uniqueKeysWithValues: snapshot.sections.flatMap(\.items).map { ($0.id, $0.identityCue) }
+        )
+
+        XCTAssertEqual(compactByID[UUID(uuidString: "33333333-3333-3333-3333-333333333333")!], largeByID[UUID(uuidString: "33333333-3333-3333-3333-333333333333")!])
+        XCTAssertEqual(compactByID[UUID(uuidString: "22222222-2222-2222-2222-222222222222")!], largeByID[UUID(uuidString: "22222222-2222-2222-2222-222222222222")!])
+        XCTAssertEqual(compactByID[UUID(uuidString: "11111111-1111-1111-1111-111111111111")!], largeByID[UUID(uuidString: "11111111-1111-1111-1111-111111111111")!])
+    }
+
+    func testIdentityCueRemainsStableWhenTimerMovesToCompletedSection() {
+        let now = Date(timeIntervalSince1970: 9_000)
+        let timerID = UUID(uuidString: "abababab-abab-abab-abab-abababababab")!
+        let runningTimer = RunningTimerItem(
+            id: timerID,
+            order: 9,
+            name: "Completion Shift",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 90,
+            startDate: now.addingTimeInterval(-15),
+            endDate: now.addingTimeInterval(75),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now
+        )
+        let completedTimer = RunningTimerItem(
+            id: timerID,
+            order: 9,
+            name: "Completion Shift",
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 90,
+            startDate: now.addingTimeInterval(-90),
+            endDate: now.addingTimeInterval(-1),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
+            referenceDate: now
+        )
+
+        let runningSnapshot = makeSnapshot(from: [runningTimer])
+        let completedSnapshot = makeSnapshot(from: [completedTimer])
+
+        XCTAssertEqual(runningSnapshot.compactItems.first?.identityCue, completedSnapshot.compactItems.first?.identityCue)
+        XCTAssertEqual(runningSnapshot.sections.first?.items.first?.identityCue, completedSnapshot.sections.first?.items.first?.identityCue)
+    }
+
+    func testMultipleTimersGetDistinguishableIdentityCues() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let visibleCompactCues = snapshot.compactItems.map(\.identityCue)
+
+        XCTAssertEqual(Set(visibleCompactCues.map(\.markerText)).count, 3)
+        XCTAssertGreaterThanOrEqual(Set(visibleCompactCues.map(\.tintSlot)).count, 2)
     }
 
     func testLargeSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
@@ -668,6 +739,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertFalse(snapshot.compactItems.isEmpty)
+        XCTAssertTrue(host.view.containsText("T2"))
+        XCTAssertTrue(host.view.containsText("T1"))
         XCTAssertEqual(snapshot.compactItems.first?.primaryRemainingText, "55s")
         XCTAssertEqual(snapshot.compactItems.first?.secondaryTotalText, "03:00")
         XCTAssertEqual(snapshot.compactItems.count, 3)
@@ -694,6 +767,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
+        XCTAssertTrue(host.view.containsText("T2"))
+        XCTAssertTrue(host.view.containsText("T3"))
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
         XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Stopped Hold")
         XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Pause"])
@@ -746,6 +821,16 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertFalse(host.view.containsText("Open Workspace"))
+    }
+
+    @MainActor
+    func testOverflowCardKeepsViewAllRoleWithoutTimerIdentityMarker() {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
+
+        XCTAssertEqual(snapshot.compactOverflowText, "+1")
+        XCTAssertTrue(host.view.containsText("View all"))
+        XCTAssertFalse(host.view.containsText("T4"))
     }
 
     @MainActor

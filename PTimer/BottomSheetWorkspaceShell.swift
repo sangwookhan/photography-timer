@@ -224,9 +224,15 @@ struct CompactRemainingScaleLayer: Equatable {
     let fraction: Double
 }
 
+struct BottomSheetIdentityCue: Equatable {
+    let markerText: String
+    let tintSlot: Int
+}
+
 struct BottomSheetCompactItem: Identifiable, Equatable {
     let id: UUID
     let status: TimerStatus
+    let identityCue: BottomSheetIdentityCue
     let primaryRemainingText: String
     let secondaryTotalText: String?
     let sixtySecondLayer: CompactRemainingScaleLayer
@@ -245,6 +251,7 @@ struct BottomSheetLargeItem: Identifiable, Equatable {
     let title: String?
     let statusLabel: String
     let status: TimerStatus
+    let identityCue: BottomSheetIdentityCue
     let remainingText: String
     let totalDurationText: String?
     let timingText: String?
@@ -301,9 +308,12 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         let compactItems = orderedTimers
             .prefix(Self.compactVisibleLimit)
             .map { timer in
-                BottomSheetCompactItem(
+                let identityCue = identityCue(for: timer)
+
+                return BottomSheetCompactItem(
                     id: timer.id,
                     status: timer.status,
+                    identityCue: identityCue,
                     primaryRemainingText: compactRemainingText(for: timer, formatRemaining: formatRemaining),
                     secondaryTotalText: compactTotalText(for: timer),
                     sixtySecondLayer: compactSixtySecondLayer(for: timer),
@@ -373,6 +383,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
             items: timers.map { timer in
                 let totalDurationText = largeTotalDurationText(for: timer, formatRemaining: formatRemaining)
                 let contextText = largeContextText(for: timer)
+                let identityCue = identityCue(for: timer)
 
                 return BottomSheetLargeItem(
                     id: timer.id,
@@ -383,6 +394,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                     ),
                     statusLabel: visibleStatusLabel(for: timer.status),
                     status: timer.status,
+                    identityCue: identityCue,
                     remainingText: largeRemainingText(for: timer, formatRemaining: formatRemaining),
                     totalDurationText: totalDurationText,
                     timingText: timeContext(timer),
@@ -392,6 +404,19 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                 )
             }
         )
+    }
+
+    private static func identityCue(for timer: RunningTimerItem) -> BottomSheetIdentityCue {
+        BottomSheetIdentityCue(
+            markerText: "T\(timer.order)",
+            tintSlot: stableIdentityTintSlot(for: timer.id)
+        )
+    }
+
+    private static func stableIdentityTintSlot(for id: UUID) -> Int {
+        id.uuidString.utf8.reduce(0) { partial, byte in
+            ((partial * 33) + Int(byte)) % BottomSheetIdentityPalette.slotCount
+        }
     }
 
     private static func progress(for timer: RunningTimerItem) -> Double {
@@ -779,7 +804,7 @@ private struct CompactTimerMiniCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 6) {
+            HStack(alignment: .center, spacing: 5) {
                 ZStack {
                     if shouldAnimateRunningCue {
                         Circle()
@@ -816,7 +841,7 @@ private struct CompactTimerMiniCardView: View {
                 if let totalText = item.secondaryTotalText {
                     Text(totalText)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.secondary.opacity(0.86))
                         .monospacedDigit()
                         .lineLimit(1)
                 }
@@ -838,7 +863,7 @@ private struct CompactTimerMiniCardView: View {
 
             Spacer(minLength: 6)
 
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 if let originalScaleLayer = item.originalScaleLayer {
                     CompactProgressBar(
                         progress: originalScaleLayer.fraction,
@@ -864,7 +889,19 @@ private struct CompactTimerMiniCardView: View {
                     height: 1
                 )
             }
-            .frame(maxWidth: .infinity, minHeight: 12, alignment: .bottom)
+            .frame(maxWidth: .infinity, minHeight: 9, alignment: .bottom)
+
+            HStack {
+                Spacer(minLength: 0)
+
+                IdentityMarkerBadge(
+                    cue: item.identityCue,
+                    size: .compact
+                )
+            }
+            .padding(.top, 3)
+            .padding(.trailing, 1)
+            .frame(maxWidth: .infinity, minHeight: 10, alignment: .bottomTrailing)
         }
         .padding(.top, 9)
         .padding(.horizontal, 10)
@@ -1004,6 +1041,73 @@ private struct CompactProgressBar: View {
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .accessibilityHidden(true)
+    }
+}
+
+private struct IdentityMarkerBadge: View {
+    let cue: BottomSheetIdentityCue
+    let size: IdentityMarkerBadgeSize
+
+    var body: some View {
+        Text(cue.markerText)
+            .font(size.font)
+            .foregroundStyle(identityTintColor(for: cue).opacity(size.foregroundOpacity))
+            .lineLimit(1)
+            .padding(.horizontal, size.horizontalPadding)
+            .padding(.vertical, size.verticalPadding)
+            .background(identityTintColor(for: cue).opacity(size.backgroundOpacity))
+            .clipShape(Capsule())
+            .fixedSize(horizontal: true, vertical: true)
+    }
+}
+
+private enum IdentityMarkerBadgeSize {
+    case compact
+    case regular
+
+    var font: Font {
+        switch self {
+        case .compact:
+            return .caption2.weight(.medium)
+        case .regular:
+            return .caption2.weight(.medium)
+        }
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .compact:
+            return 3
+        case .regular:
+            return 5
+        }
+    }
+
+    var verticalPadding: CGFloat {
+        switch self {
+        case .compact:
+            return 1
+        case .regular:
+            return 2
+        }
+    }
+
+    var backgroundOpacity: Double {
+        switch self {
+        case .compact:
+            return 0.06
+        case .regular:
+            return 0.06
+        }
+    }
+
+    var foregroundOpacity: Double {
+        switch self {
+        case .compact:
+            return 0.68
+        case .regular:
+            return 0.68
+        }
     }
 }
 
@@ -1201,24 +1305,38 @@ private struct LargeWorkspaceTimerRowView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            if let timingText = item.timingText {
-                Text(timingText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+            if item.timingText != nil || item.contextText != nil {
+                HStack(alignment: .lastTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let timingText = item.timingText {
+                            Text(timingText)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
 
-            if let contextText = item.contextText {
-                Text(contextText)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                        if let contextText = item.contextText {
+                            Text(contextText)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    IdentityMarkerBadge(
+                        cue: item.identityCue,
+                        size: .regular
+                    )
+                }
             }
 
             ProgressView(value: item.progress)
                 .tint(statusColor(for: item.status))
+                .opacity(0.88)
 
             if !item.actions.isEmpty {
                 HStack(spacing: 8) {
@@ -1238,14 +1356,14 @@ private struct LargeWorkspaceTimerRowView: View {
         .padding(.vertical, 11)
         .background(
             isFocused
-                ? statusColor(for: item.status).opacity(0.10)
+                ? statusColor(for: item.status).opacity(0.04)
                 : Color(.secondarySystemBackground)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(
-                    statusColor(for: item.status).opacity(isFocused ? 0.42 : 0.18),
+                    statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
                     lineWidth: isFocused ? 1.5 : 1
                 )
         )
@@ -1361,6 +1479,35 @@ private enum StatusChipSize {
             return .caption.weight(.semibold)
         }
     }
+}
+
+private enum BottomSheetIdentityPalette {
+    static let slotCount = 6
+
+    static func color(for slot: Int) -> Color {
+        switch normalized(slot) {
+        case 0:
+            return Color(red: 0.14, green: 0.43, blue: 0.78)
+        case 1:
+            return Color(red: 0.00, green: 0.53, blue: 0.60)
+        case 2:
+            return Color(red: 0.74, green: 0.27, blue: 0.40)
+        case 3:
+            return Color(red: 0.43, green: 0.34, blue: 0.72)
+        case 4:
+            return Color(red: 0.55, green: 0.39, blue: 0.25)
+        default:
+            return Color(red: 0.10, green: 0.56, blue: 0.73)
+        }
+    }
+
+    private static func normalized(_ slot: Int) -> Int {
+        ((slot % slotCount) + slotCount) % slotCount
+    }
+}
+
+private func identityTintColor(for cue: BottomSheetIdentityCue) -> Color {
+    BottomSheetIdentityPalette.color(for: cue.tintSlot)
 }
 
 private func statusColor(for status: TimerStatus) -> Color {

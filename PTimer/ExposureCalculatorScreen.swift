@@ -38,7 +38,6 @@ struct ExposureCalculatorScreen: View {
 
         assertNoKoreanUIStrings([
             "Exposure",
-            "Show Advanced Options",
             "View All"
         ])
     }
@@ -145,7 +144,6 @@ private struct ExposureWorkspaceMainContent: View {
             )
             ResultSectionView(
                 calculationResult: viewModel.calculationResult,
-                ndStop: viewModel.ndStop,
                 formatTimeDisplay: viewModel.formatTimeDisplay,
                 style: style
             )
@@ -294,10 +292,6 @@ private enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
-    var modePlaceholderHidden: Bool {
-        self == .dense
-    }
-
     var bodySpacing: CGFloat {
         switch self {
         case .regular:
@@ -310,11 +304,11 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var pickerHeight: CGFloat {
         switch self {
         case .regular:
-            return 108
+            return 124
         case .compact:
-            return 76
+            return 88
         case .dense:
-            return 56
+            return 64
         }
     }
 
@@ -340,19 +334,6 @@ private enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
-    var actionTitleHidden: Bool {
-        self == .dense
-    }
-
-    var actionVerticalSpacing: CGFloat {
-        switch self {
-        case .regular:
-            return 12
-        case .compact, .dense:
-            return 8
-        }
-    }
-
 }
 
 private struct HeaderView: View {
@@ -363,31 +344,12 @@ private struct HeaderView: View {
             Text("Exposure")
                 .font(style.headerTitleFont)
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Picker("Mode", selection: .constant(0)) {
-                        Text("Digital").tag(0)
-                        Text("Film").tag(1)
-                    }
-                    .pickerStyle(.segmented)
-                    .disabled(true)
-
-                    if !style.modePlaceholderHidden {
-                        Text("Film mode: placeholder")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Button {
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.headline)
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.bordered)
-                .disabled(true)
+            Picker("Mode", selection: .constant(0)) {
+                Text("Digital").tag(0)
+                Text("Film").tag(1)
             }
+            .pickerStyle(.segmented)
+            .disabled(true)
         }
         .sectionCardStyle(style: style)
     }
@@ -402,46 +364,18 @@ private struct VariableSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
-            Text("Variable Controls")
-                .font(.headline)
+            HStack(alignment: .top, spacing: 12) {
+                ShutterSelectionRow(
+                    baseShutter: $baseShutter,
+                    shutterSpeeds: shutterSpeeds,
+                    formatShutter: formatShutter,
+                    pickerHeight: style.pickerHeight
+                )
 
-            VStack(spacing: style.bodySpacing) {
-                HStack(alignment: .top, spacing: 12) {
-                    ShutterSelectionRow(
-                        baseShutter: $baseShutter,
-                        shutterSpeeds: shutterSpeeds,
-                        formatShutter: formatShutter,
-                        pickerHeight: style.pickerHeight
-                    )
-
-                    NDStopSelectionRow(
-                        ndStop: $ndStop,
-                        pickerHeight: style.pickerHeight
-                    )
-                }
-
-                Divider()
-
-                HStack {
-                    Text("Show Advanced Options")
-                        .font(.subheadline.weight(.semibold))
-
-                    Spacer()
-
-                    Label("Aperture / ISO", systemImage: "chevron.down")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                if style != .dense {
-                    Text("Aperture and ISO placeholders will expand here later.")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(Color(.tertiarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
+                NDStopSelectionRow(
+                    ndStop: $ndStop,
+                    pickerHeight: style.pickerHeight
+                )
             }
         }
         .sectionCardStyle(style: style)
@@ -450,46 +384,29 @@ private struct VariableSectionView: View {
 
 private struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
-    let ndStop: Int
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let style: ExposureWorkspaceMainLayoutStyle
-    private let calculator = ExposureCalculator()
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
-            Text("Result Set")
-                .font(.headline)
-
             VStack(alignment: .leading, spacing: style.bodySpacing) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Final Shutter")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(.secondary)
-
-                    if case .success(let result) = calculationResult {
-                        let display = formatTimeDisplay(result.resultShutterSeconds)
-                        DurationDisplayBlock(
-                            primaryText: display.primary,
-                            secondaryText: display.secondary,
-                            primaryColor: .primary,
-                            primaryFont: style.resultPrimaryFont,
-                            secondaryFont: .footnote
-                        )
-                    } else {
-                        Text(primaryResultText)
-                            .font(.title3.weight(.semibold))
-                    }
-                }
-
-                Divider()
-
-                HStack(spacing: 12) {
-                    CompactInfoPill(label: "Base", value: baseShutterText)
-                    CompactInfoPill(label: "ND", value: ndText)
-                    CompactInfoPill(label: "Status", value: statusText)
+                if case .success(let result) = calculationResult {
+                    let display = formatTimeDisplay(result.resultShutterSeconds)
+                    DurationDisplayBlock(
+                        primaryText: display.primary,
+                        secondaryText: display.secondary,
+                        primaryColor: .primary,
+                        primaryFont: style.resultPrimaryFont,
+                        secondaryFont: .footnote
+                    )
+                } else {
+                    Text(primaryResultText)
+                        .font(.title3.weight(.semibold))
                 }
 
                 if let validationMessage {
+                    Divider()
+
                     Text(validationMessage)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -511,33 +428,6 @@ private struct ResultSectionView: View {
         }
     }
 
-    private var baseShutterText: String {
-        switch calculationResult {
-        case .success(let result):
-            return calculator.formatShutter(result.baseShutterSeconds)
-        case .failure:
-            return "-"
-        }
-    }
-
-    private var ndText: String {
-        switch calculationResult {
-        case .success:
-            return ndStop == 1 ? "1 stop" : "\(ndStop) stops"
-        case .failure:
-            return ndStop == 1 ? "1 stop" : "\(ndStop) stops"
-        }
-    }
-
-    private var statusText: String {
-        switch calculationResult {
-        case .success:
-            return "Live update"
-        case .failure:
-            return "Needs valid input"
-        }
-    }
-
     private var validationMessage: String? {
         switch calculationResult {
         case .success:
@@ -554,16 +444,8 @@ private struct NDStopSelectionRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 12) {
-                Text("ND")
-                    .font(.subheadline.weight(.semibold))
-
-                Spacer()
-
-                Text(ndStop == 1 ? "1 stop" : "\(ndStop) stops")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+            Text("ND")
+                .font(.subheadline.weight(.semibold))
 
             Picker("ND", selection: $ndStop) {
                 ForEach(0...30, id: \.self) { stop in
@@ -576,10 +458,6 @@ private struct NDStopSelectionRow: View {
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            Text("Stop-based ND selection")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
@@ -593,16 +471,8 @@ private struct ShutterSelectionRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 12) {
-                Text("Shutter")
-                    .font(.subheadline.weight(.semibold))
-
-                Spacer()
-
-                Text(formatShutter(baseShutter))
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+            Text("Shutter")
+                .font(.subheadline.weight(.semibold))
 
             Picker("Shutter", selection: $baseShutter) {
                 ForEach(shutterSpeeds, id: \.self) { speed in
@@ -615,10 +485,6 @@ private struct ShutterSelectionRow: View {
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            Text("Full-stop shutter selection")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
@@ -630,23 +496,15 @@ private struct TimerActionView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: style.actionVerticalSpacing) {
-            if !style.actionTitleHidden {
-                Text("Timer Action")
-                    .font(.headline)
-            }
-
-            Button("Start Timer") {
-                onStart()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(style == .dense ? .regular : .large)
-            .buttonBorderShape(.roundedRectangle(radius: 14))
-            .frame(maxWidth: .infinity)
-            .disabled(!canStartTimer)
-            .accessibilityIdentifier("start-timer-button")
+        Button("Start Timer") {
+            onStart()
         }
-        .sectionCardStyle(style: style)
+        .buttonStyle(.borderedProminent)
+        .controlSize(style == .dense ? .regular : .large)
+        .buttonBorderShape(.roundedRectangle(radius: 14))
+        .frame(maxWidth: .infinity)
+        .disabled(!canStartTimer)
+        .accessibilityIdentifier("start-timer-button")
     }
 }
 
@@ -990,44 +848,6 @@ private struct DurationDisplayBlock: View {
         .frame(maxWidth: .infinity)
     }
 }
-
-private struct CompactInfoPill: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(value)
-                .font(.footnote.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-
-private struct ResultPlaceholderRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .foregroundStyle(.secondary)
-
-            Spacer()
-
-            Text(value)
-                .fontWeight(.medium)
-        }
-    }
-}
-
 private extension View {
     func sectionCardStyle(style: ExposureWorkspaceMainLayoutStyle = .regular) -> some View {
         self

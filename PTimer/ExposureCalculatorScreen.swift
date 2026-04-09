@@ -76,26 +76,14 @@ struct ExposureCalculatorScreen: View {
                     .accessibilityIdentifier("bottom-sheet-dim-background")
                 }
 
-                VStack(spacing: 10) {
-                    if !bottomSheetStateStore.isExpanded {
-                        TimerActionView(
-                            canStartTimer: viewModel.canStartTimer,
-                            onStart: viewModel.startTimer,
-                            style: layoutStyle(for: compactReservedHeight)
-                        )
-                        .padding(.horizontal, 16)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-
-                    BottomSheetWorkspaceShell(
-                        stateStore: bottomSheetStateStore,
-                        snapshot: bottomSheetSnapshotStore.snapshot,
-                        onStopTimer: viewModel.stopTimer,
-                        onResumeTimer: viewModel.resumeTimer,
-                        onRemoveTimer: viewModel.removeTimer,
-                        onClearCompletedTimers: viewModel.clearCompletedTimers
-                    )
-                }
+                BottomSheetWorkspaceShell(
+                    stateStore: bottomSheetStateStore,
+                    snapshot: bottomSheetSnapshotStore.snapshot,
+                    onStopTimer: viewModel.stopTimer,
+                    onResumeTimer: viewModel.resumeTimer,
+                    onRemoveTimer: viewModel.removeTimer,
+                    onClearCompletedTimers: viewModel.clearCompletedTimers
+                )
                 .padding(.bottom, geometry.safeAreaInsets.bottom)
             }
         }
@@ -133,18 +121,25 @@ private struct ExposureWorkspaceMainContent: View {
     let availableHeight: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: style.sectionSpacing) {
-            HeaderView(style: style)
-            VariableSectionView(
-                baseShutter: $viewModel.baseShutter,
-                ndStop: $viewModel.ndStop,
-                shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
-                formatShutter: viewModel.formatShutter,
-                style: style
-            )
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: style.sectionSpacing) {
+                HeaderView(style: style)
+                VariableSectionView(
+                    baseShutter: $viewModel.baseShutter,
+                    ndStop: $viewModel.ndStop,
+                    shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
+                    formatShutter: viewModel.formatShutter,
+                    style: style
+                )
+            }
+
+            Spacer(minLength: style.resultTopSpacerMinLength)
+
             ResultSectionView(
                 calculationResult: viewModel.calculationResult,
                 formatTimeDisplay: viewModel.formatTimeDisplay,
+                canStartTimer: viewModel.canStartTimer,
+                onStartTimer: viewModel.startTimer,
                 style: style
             )
         }
@@ -231,11 +226,11 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var bottomPadding: CGFloat {
         switch self {
         case .regular:
-            return 12
-        case .compact:
             return 8
-        case .dense:
+        case .compact:
             return 6
+        case .dense:
+            return 4
         }
     }
 
@@ -304,11 +299,11 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var pickerHeight: CGFloat {
         switch self {
         case .regular:
-            return 148
+            return 164
         case .compact:
-            return 112
+            return 124
         case .dense:
-            return 84
+            return 92
         }
     }
 
@@ -375,6 +370,54 @@ private enum ExposureWorkspaceMainLayoutStyle {
             return 12
         case .dense:
             return 9
+        }
+    }
+
+    var resultActionSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 12
+        case .compact:
+            return 10
+        case .dense:
+            return 8
+        }
+    }
+
+    var timerActionSize: CGFloat {
+        switch self {
+        case .regular:
+            return 44
+        case .compact:
+            return 42
+        case .dense:
+            return 40
+        }
+    }
+
+    var timerActionIconSize: CGFloat {
+        switch self {
+        case .regular:
+            return 15
+        case .compact:
+            return 14
+        case .dense:
+            return 13
+        }
+    }
+
+    var resultActionFootprint: CGFloat {
+        timerActionSize
+    }
+
+    var resultTopSpacerMinLength: CGFloat {
+        switch self {
+        case .regular:
+            return 8
+        case .compact:
+            return 6
+        case .dense:
+            return 4
         }
     }
 
@@ -494,6 +537,8 @@ private struct VariableSectionView: View {
 private struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let canStartTimer: Bool
+    let onStartTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -501,13 +546,26 @@ private struct ResultSectionView: View {
             VStack(alignment: .leading, spacing: style.bodySpacing) {
                 if case .success(let result) = calculationResult {
                     let display = formatTimeDisplay(result.resultShutterSeconds)
-                    DurationDisplayBlock(
-                        primaryText: display.primary,
-                        secondaryText: display.secondary,
-                        primaryColor: .primary,
-                        primaryFont: style.resultPrimaryFont,
-                        secondaryFont: .footnote
-                    )
+                    HStack(alignment: .center, spacing: style.resultActionSpacing) {
+                        Color.clear
+                            .frame(width: style.resultActionFootprint, height: 1)
+                            .accessibilityHidden(true)
+
+                        DurationDisplayBlock(
+                            primaryText: display.primary,
+                            secondaryText: display.secondary,
+                            primaryColor: .primary,
+                            primaryFont: style.resultPrimaryFont,
+                            secondaryFont: .footnote
+                        )
+                        .frame(maxWidth: .infinity)
+
+                        TimerActionView(
+                            canStartTimer: canStartTimer,
+                            onStart: onStartTimer,
+                            style: style
+                        )
+                    }
                 } else {
                     Text(primaryResultText)
                         .font(.title3.weight(.semibold))
@@ -688,14 +746,26 @@ private struct TimerActionView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        Button("Start Timer") {
+        Button {
             onStart()
+        } label: {
+            Image(systemName: "play.fill")
+                .font(.system(size: style.timerActionIconSize, weight: .semibold))
+                .foregroundStyle(canStartTimer ? Color.accentColor : Color.secondary.opacity(0.8))
+                .frame(width: style.timerActionSize, height: style.timerActionSize)
+                .background(
+                    Circle()
+                        .fill(Color(.tertiarySystemFill))
+                )
+                .overlay(
+                    Circle()
+                        .stroke(Color(.separator).opacity(0.55), lineWidth: 0.8)
+                )
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(style == .dense ? .regular : .large)
-        .buttonBorderShape(.roundedRectangle(radius: 14))
-        .frame(maxWidth: .infinity)
+        .buttonStyle(.plain)
         .disabled(!canStartTimer)
+        .accessibilityLabel("Start Timer")
+        .accessibilityHint("Starts a timer using the calculated result")
         .accessibilityIdentifier("start-timer-button")
     }
 }
@@ -1013,29 +1083,20 @@ private struct DurationDisplayBlock: View {
     let secondaryFont: Font
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Spacer()
-                Text(primaryText)
-                    .font(primaryFont)
-                    .foregroundStyle(primaryColor)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Spacer()
-            }
+        VStack(spacing: 2) {
+            Text(primaryText)
+                .font(primaryFont)
+                .foregroundStyle(primaryColor)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
 
-            HStack {
-                Spacer()
-                Spacer()
-                Text(secondaryText)
-                    .font(secondaryFont)
-                    .foregroundStyle(.tertiary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-            .frame(maxWidth: .infinity)
+            Text(secondaryText)
+                .font(secondaryFont)
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
     }

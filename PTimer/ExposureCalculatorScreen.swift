@@ -304,11 +304,55 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var pickerHeight: CGFloat {
         switch self {
         case .regular:
-            return 124
+            return 148
         case .compact:
-            return 88
+            return 112
         case .dense:
-            return 64
+            return 84
+        }
+    }
+
+    var pickerValueFont: Font {
+        switch self {
+        case .regular:
+            return .system(size: 32, weight: .bold, design: .rounded)
+        case .compact:
+            return .system(size: 26, weight: .bold, design: .rounded)
+        case .dense:
+            return .system(size: 19, weight: .semibold, design: .rounded)
+        }
+    }
+
+    var pickerUnitFont: Font {
+        switch self {
+        case .regular:
+            return .footnote.weight(.medium)
+        case .compact:
+            return .caption.weight(.medium)
+        case .dense:
+            return .caption2.weight(.medium)
+        }
+    }
+
+    var pickerOverlayUnitFont: Font {
+        switch self {
+        case .regular:
+            return .system(size: 22, weight: .medium, design: .rounded)
+        case .compact:
+            return .system(size: 18, weight: .medium, design: .rounded)
+        case .dense:
+            return .system(size: 16, weight: .medium, design: .rounded)
+        }
+    }
+
+    var pickerSelectionBandHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 42
+        case .compact:
+            return 36
+        case .dense:
+            return 30
         }
     }
 
@@ -332,6 +376,69 @@ private enum ExposureWorkspaceMainLayoutStyle {
         case .dense:
             return 9
         }
+    }
+
+    var pickerSelectionBandTrailingInset: CGFloat {
+        switch self {
+        case .regular:
+            return 14
+        case .compact:
+            return 12
+        case .dense:
+            return 10
+        }
+    }
+
+    var ndUnitSlotWidth: CGFloat {
+        switch self {
+        case .regular:
+            return 88
+        case .compact:
+            return 72
+        case .dense:
+            return 60
+        }
+    }
+
+    var ndUnitTrailingInset: CGFloat {
+        switch self {
+        case .regular:
+            return 6
+        case .compact:
+            return 5
+        case .dense:
+            return 4
+        }
+    }
+
+    var ndValueTrailingPadding: CGFloat {
+        ndUnitSlotWidth + pickerSelectionBandTrailingInset - 8
+    }
+
+    var shutterUnitSlotWidth: CGFloat {
+        switch self {
+        case .regular:
+            return 30
+        case .compact:
+            return 26
+        case .dense:
+            return 22
+        }
+    }
+
+    var shutterUnitLeadingInset: CGFloat {
+        switch self {
+        case .regular:
+            return 3
+        case .compact:
+            return 2
+        case .dense:
+            return 2
+        }
+    }
+
+    var shutterValueTrailingPadding: CGFloat {
+        shutterUnitSlotWidth + shutterUnitLeadingInset + pickerSelectionBandTrailingInset + 1
     }
 
 }
@@ -369,12 +476,14 @@ private struct VariableSectionView: View {
                     baseShutter: $baseShutter,
                     shutterSpeeds: shutterSpeeds,
                     formatShutter: formatShutter,
-                    pickerHeight: style.pickerHeight
+                    pickerHeight: style.pickerHeight,
+                    style: style
                 )
 
                 NDStopSelectionRow(
                     ndStop: $ndStop,
-                    pickerHeight: style.pickerHeight
+                    pickerHeight: style.pickerHeight,
+                    style: style
                 )
             }
         }
@@ -436,20 +545,28 @@ private struct ResultSectionView: View {
             return error.errorDescription
         }
     }
+
 }
 
 private struct NDStopSelectionRow: View {
     @Binding var ndStop: Int
     let pickerHeight: CGFloat
+    let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("ND")
+            Text("ND Filter")
                 .font(.subheadline.weight(.semibold))
 
-            Picker("ND", selection: $ndStop) {
+            Picker("ND Filter", selection: $ndStop) {
                 ForEach(0...30, id: \.self) { stop in
-                    Text(stop == 1 ? "1 stop" : "\(stop) stops").tag(stop)
+                    PickerRowValue(
+                        valueText: "\(stop)",
+                        style: style,
+                        alignment: .trailing,
+                        trailingPadding: style.ndValueTrailingPadding
+                    )
+                    .tag(stop)
                 }
             }
             .pickerStyle(.wheel)
@@ -458,6 +575,14 @@ private struct NDStopSelectionRow: View {
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                PickerUnitSelectionBand(
+                    unitText: "stops",
+                    style: style,
+                    slotWidth: style.ndUnitSlotWidth,
+                    unitTrailingInset: style.ndUnitTrailingInset
+                )
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
@@ -468,15 +593,22 @@ private struct ShutterSelectionRow: View {
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
     let pickerHeight: CGFloat
+    let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Shutter")
+            Text("Base Shutter")
                 .font(.subheadline.weight(.semibold))
 
-            Picker("Shutter", selection: $baseShutter) {
+            Picker("Base Shutter", selection: $baseShutter) {
                 ForEach(shutterSpeeds, id: \.self) { speed in
-                    Text(formatShutter(speed)).tag(speed)
+                    PickerRowValue(
+                        valueText: shutterValueText(for: speed),
+                        style: style,
+                        alignment: .trailing,
+                        trailingPadding: style.shutterValueTrailingPadding
+                    )
+                    .tag(speed)
                 }
             }
             .pickerStyle(.wheel)
@@ -485,8 +617,68 @@ private struct ShutterSelectionRow: View {
             .clipped()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                PickerUnitSelectionBand(
+                    unitText: "s",
+                    style: style,
+                    slotWidth: style.shutterUnitSlotWidth,
+                    unitTrailingInset: style.shutterUnitLeadingInset
+                )
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private func shutterValueText(for speed: TimeInterval) -> String {
+        formatShutter(speed)
+            .replacingOccurrences(of: "s", with: "")
+    }
+}
+
+private struct PickerRowValue: View {
+    let valueText: String
+    let style: ExposureWorkspaceMainLayoutStyle
+    var alignment: Alignment = .center
+    var trailingPadding: CGFloat = 0
+
+    var body: some View {
+        Text(valueText)
+            .font(style.pickerValueFont)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .frame(maxWidth: .infinity, alignment: alignment)
+            .padding(.trailing, trailingPadding)
+    }
+}
+
+private struct PickerUnitSelectionBand: View {
+    let unitText: String
+    let style: ExposureWorkspaceMainLayoutStyle
+    let slotWidth: CGFloat
+    let unitTrailingInset: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color(.tertiarySystemFill))
+            .frame(height: style.pickerSelectionBandHeight)
+            .overlay {
+                HStack {
+                    Spacer()
+
+                    Text(unitText)
+                        .font(style.pickerOverlayUnitFont)
+                        .foregroundStyle(.secondary)
+                        .opacity(unitText == "s" ? 0.92 : 0.96)
+                        .frame(width: slotWidth, alignment: .trailing)
+                        .padding(.trailing, unitTrailingInset)
+                        .frame(maxHeight: .infinity, alignment: .center)
+                }
+                .padding(.trailing, style.pickerSelectionBandTrailingInset)
+            }
+            .padding(.horizontal, 10)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 

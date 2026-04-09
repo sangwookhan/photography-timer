@@ -122,18 +122,16 @@ private struct ExposureWorkspaceMainContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: style.sectionSpacing) {
-                HeaderView(style: style)
-                VariableSectionView(
-                    baseShutter: $viewModel.baseShutter,
-                    ndStop: $viewModel.ndStop,
-                    shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
-                    formatShutter: viewModel.formatShutter,
-                    style: style
-                )
-            }
+            HeaderView(style: style)
+            VariableSectionView(
+                baseShutter: $viewModel.baseShutter,
+                ndStop: $viewModel.ndStop,
+                shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
+                formatShutter: viewModel.formatShutter,
+                style: style
+            )
 
-            Spacer(minLength: style.resultTopSpacerMinLength)
+            Spacer(minLength: style.resultFlowSpacerMinLength)
 
             ResultSectionView(
                 calculationResult: viewModel.calculationResult,
@@ -142,6 +140,10 @@ private struct ExposureWorkspaceMainContent: View {
                 onStartTimer: viewModel.startTimer,
                 style: style
             )
+
+            Color.clear
+                .frame(height: style.workspaceSeparation)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, style.horizontalPadding)
         .padding(.top, style.topPadding)
@@ -206,7 +208,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var horizontalPadding: CGFloat {
         switch self {
         case .regular:
-            return 20
+            return 18
         case .compact, .dense:
             return 16
         }
@@ -215,9 +217,9 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var topPadding: CGFloat {
         switch self {
         case .regular:
-            return 16
+            return 14
         case .compact:
-            return 12
+            return 10
         case .dense:
             return 6
         }
@@ -226,44 +228,44 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var bottomPadding: CGFloat {
         switch self {
         case .regular:
-            return 8
-        case .compact:
             return 6
-        case .dense:
+        case .compact:
             return 4
+        case .dense:
+            return 2
         }
     }
 
     var sectionSpacing: CGFloat {
         switch self {
         case .regular:
-            return 16
-        case .compact:
             return 12
+        case .compact:
+            return 10
         case .dense:
             return 8
         }
     }
 
-    var interSectionSpacer: CGFloat {
+    var resultFlowSpacerMinLength: CGFloat {
         switch self {
         case .regular:
-            return 8
+            return 14
         case .compact:
-            return 6
+            return 10
         case .dense:
-            return 4
+            return 8
         }
     }
 
     var sectionCardPadding: CGFloat {
         switch self {
         case .regular:
-            return 14
+            return 13
         case .compact:
-            return 12
+            return 11
         case .dense:
-            return 10
+            return 9
         }
     }
 
@@ -290,9 +292,20 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var bodySpacing: CGFloat {
         switch self {
         case .regular:
-            return 12
+            return 10
         case .compact, .dense:
             return 8
+        }
+    }
+
+    var headerContentSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 10
+        case .compact:
+            return 8
+        case .dense:
+            return 6
         }
     }
 
@@ -365,11 +378,11 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var resultBlockPadding: CGFloat {
         switch self {
         case .regular:
-            return 14
-        case .compact:
             return 12
+        case .compact:
+            return 11
         case .dense:
-            return 9
+            return 8
         }
     }
 
@@ -413,11 +426,40 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var resultTopSpacerMinLength: CGFloat {
         switch self {
         case .regular:
-            return 8
+            return 10
         case .compact:
-            return 6
+            return 8
         case .dense:
-            return 4
+            return 6
+        }
+    }
+
+    var inputColumnSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 10
+        case .compact, .dense:
+            return 8
+        }
+    }
+
+    var pickerLabelSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 6
+        case .compact, .dense:
+            return 5
+        }
+    }
+
+    var workspaceSeparation: CGFloat {
+        switch self {
+        case .regular:
+            return 10
+        case .compact:
+            return 8
+        case .dense:
+            return 6
         }
     }
 
@@ -483,14 +525,13 @@ private enum ExposureWorkspaceMainLayoutStyle {
     var shutterValueTrailingPadding: CGFloat {
         shutterUnitSlotWidth + shutterUnitLeadingInset + pickerSelectionBandTrailingInset + 1
     }
-
 }
 
 private struct HeaderView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: style.headerContentSpacing) {
             Text("Exposure")
                 .font(style.headerTitleFont)
 
@@ -514,7 +555,7 @@ private struct VariableSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: style.inputColumnSpacing) {
                 ShutterSelectionRow(
                     baseShutter: $baseShutter,
                     shutterSpeeds: shutterSpeeds,
@@ -543,7 +584,7 @@ private struct ResultSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
-            VStack(alignment: .leading, spacing: style.bodySpacing) {
+            VStack(alignment: .leading, spacing: style.resultTopSpacerMinLength) {
                 if case .success(let result) = calculationResult {
                     let display = formatTimeDisplay(result.resultShutterSeconds)
                     HStack(alignment: .center, spacing: style.resultActionSpacing) {
@@ -612,7 +653,7 @@ private struct NDStopSelectionRow: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             Text("ND Filter")
                 .font(.subheadline.weight(.semibold))
 
@@ -654,7 +695,7 @@ private struct ShutterSelectionRow: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             Text("Base Shutter")
                 .font(.subheadline.weight(.semibold))
 

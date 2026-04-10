@@ -468,7 +468,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
-    var pickerSelectionBandTrailingInset: CGFloat {
+    var pickerSelectionBandContentTrailingInset: CGFloat {
         switch self {
         case .regular:
             return 14
@@ -479,73 +479,105 @@ private enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
-    var ndUnitSlotWidth: CGFloat {
-        switch self {
-        case .regular:
-            return 88
-        case .compact:
-            return 72
-        case .dense:
-            return 60
+    var pickerSelectionBandHorizontalInset: CGFloat {
+        10
+    }
+
+    func pickerColumnLayout(for column: CalculatorPickerColumn) -> PickerColumnLayout {
+        switch (self, column) {
+        case (.regular, .ndStop):
+            return PickerColumnLayout(
+                unitTextWidth: 88,
+                unitTextTrailingInset: 6,
+                valueAlignmentPolicy: .offsetBeforeWideUnitLabel,
+                valueAlignmentCompensation: -8
+            )
+        case (.compact, .ndStop):
+            return PickerColumnLayout(
+                unitTextWidth: 72,
+                unitTextTrailingInset: 5,
+                valueAlignmentPolicy: .offsetBeforeWideUnitLabel,
+                valueAlignmentCompensation: -8
+            )
+        case (.dense, .ndStop):
+            return PickerColumnLayout(
+                unitTextWidth: 60,
+                unitTextTrailingInset: 4,
+                valueAlignmentPolicy: .offsetBeforeWideUnitLabel,
+                valueAlignmentCompensation: -8
+            )
+        case (.regular, .shutter):
+            return PickerColumnLayout(
+                unitTextWidth: 30,
+                unitTextTrailingInset: 3,
+                valueAlignmentPolicy: .offsetBeforeCompactUnitGlyph,
+                valueAlignmentCompensation: 1
+            )
+        case (.compact, .shutter):
+            return PickerColumnLayout(
+                unitTextWidth: 26,
+                unitTextTrailingInset: 2,
+                valueAlignmentPolicy: .offsetBeforeCompactUnitGlyph,
+                valueAlignmentCompensation: 0
+            )
+        case (.dense, .shutter):
+            return PickerColumnLayout(
+                unitTextWidth: 22,
+                unitTextTrailingInset: 2,
+                valueAlignmentPolicy: .offsetBeforeCompactUnitGlyph,
+                valueAlignmentCompensation: 0
+            )
         }
     }
+}
 
-    var ndUnitTrailingInset: CGFloat {
-        switch self {
-        case .regular:
-            return 6
-        case .compact:
-            return 5
-        case .dense:
-            return 4
+private enum CalculatorPickerColumn {
+    case ndStop
+    case shutter
+}
+
+private enum PickerValueAlignmentPolicy {
+    case offsetBeforeWideUnitLabel
+    case offsetBeforeCompactUnitGlyph
+}
+
+private struct PickerColumnLayout {
+    let unitTextWidth: CGFloat
+    let unitTextTrailingInset: CGFloat
+    let valueAlignmentPolicy: PickerValueAlignmentPolicy
+    let valueAlignmentCompensation: CGFloat
+
+    func valueTextTrailingInset(selectionBandContentTrailingInset: CGFloat) -> CGFloat {
+        let baseInset = unitTextWidth + selectionBandContentTrailingInset
+
+        switch valueAlignmentPolicy {
+        case .offsetBeforeWideUnitLabel:
+            return baseInset + valueAlignmentCompensation
+        case .offsetBeforeCompactUnitGlyph:
+            return baseInset + unitTextTrailingInset + valueAlignmentCompensation
         }
-    }
-
-    var ndValueTrailingPadding: CGFloat {
-        ndUnitSlotWidth + pickerSelectionBandTrailingInset - 8
-    }
-
-    var shutterUnitSlotWidth: CGFloat {
-        switch self {
-        case .regular:
-            return 30
-        case .compact:
-            return 26
-        case .dense:
-            return 22
-        }
-    }
-
-    var shutterUnitLeadingInset: CGFloat {
-        switch self {
-        case .regular:
-            return 3
-        case .compact:
-            return 2
-        case .dense:
-            return 2
-        }
-    }
-
-    var shutterValueTrailingPadding: CGFloat {
-        shutterUnitSlotWidth + shutterUnitLeadingInset + pickerSelectionBandTrailingInset + 1
     }
 }
 
 private struct HeaderView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
+    // The segmented control stays visible to preserve the accepted header shape
+    // while calculator mode remains intentionally fixed to the current variant.
+    private let fixedModeSelection = 0
+
     var body: some View {
         VStack(alignment: .leading, spacing: style.headerContentSpacing) {
             Text("Exposure")
                 .font(style.headerTitleFont)
 
-            Picker("Mode", selection: .constant(0)) {
+            Picker("Mode", selection: .constant(fixedModeSelection)) {
                 Text("Digital").tag(0)
                 Text("Film").tag(1)
             }
             .pickerStyle(.segmented)
             .disabled(true)
+            .accessibilityHint("Mode selection is not available in this layout")
         }
         .sectionCardStyle(style: style)
     }
@@ -667,6 +699,10 @@ private struct NDStopSelectionRow: View {
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
 
+    private var layout: PickerColumnLayout {
+        style.pickerColumnLayout(for: .ndStop)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             Text("ND Filter")
@@ -674,11 +710,10 @@ private struct NDStopSelectionRow: View {
 
             Picker("ND Filter", selection: $ndStop) {
                 ForEach(0...30, id: \.self) { stop in
-                    PickerRowValue(
+                    NDStopPickerValue(
                         valueText: "\(stop)",
                         style: style,
-                        alignment: .trailing,
-                        trailingPadding: style.ndValueTrailingPadding
+                        layout: layout
                     )
                     .tag(stop)
                 }
@@ -705,8 +740,7 @@ private struct NDStopSelectionRow: View {
                 PickerUnitSelectionBand(
                     unitText: "stops",
                     style: style,
-                    slotWidth: style.ndUnitSlotWidth,
-                    unitTrailingInset: style.ndUnitTrailingInset
+                    layout: layout
                 )
             }
         }
@@ -723,6 +757,10 @@ private struct ShutterSelectionRow: View {
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
 
+    private var layout: PickerColumnLayout {
+        style.pickerColumnLayout(for: .shutter)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             Text("Base Shutter")
@@ -730,11 +768,10 @@ private struct ShutterSelectionRow: View {
 
             Picker("Base Shutter", selection: $baseShutter) {
                 ForEach(shutterSpeeds, id: \.self) { speed in
-                    PickerRowValue(
+                    ShutterPickerValue(
                         valueText: shutterValueText(for: speed),
                         style: style,
-                        alignment: .trailing,
-                        trailingPadding: style.shutterValueTrailingPadding
+                        layout: layout
                     )
                     .tag(speed)
                 }
@@ -761,8 +798,7 @@ private struct ShutterSelectionRow: View {
                 PickerUnitSelectionBand(
                     unitText: "s",
                     style: style,
-                    slotWidth: style.shutterUnitSlotWidth,
-                    unitTrailingInset: style.shutterUnitLeadingInset
+                    layout: layout
                 )
             }
         }
@@ -775,11 +811,10 @@ private struct ShutterSelectionRow: View {
     }
 }
 
-private struct PickerRowValue: View {
+private struct NDStopPickerValue: View {
     let valueText: String
     let style: ExposureWorkspaceMainLayoutStyle
-    var alignment: Alignment = .center
-    var trailingPadding: CGFloat = 0
+    let layout: PickerColumnLayout
 
     var body: some View {
         Text(valueText)
@@ -787,16 +822,41 @@ private struct PickerRowValue: View {
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.72)
-            .frame(maxWidth: .infinity, alignment: alignment)
-            .padding(.trailing, trailingPadding)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(
+                .trailing,
+                layout.valueTextTrailingInset(
+                    selectionBandContentTrailingInset: style.pickerSelectionBandContentTrailingInset
+                )
+            )
+    }
+}
+
+private struct ShutterPickerValue: View {
+    let valueText: String
+    let style: ExposureWorkspaceMainLayoutStyle
+    let layout: PickerColumnLayout
+
+    var body: some View {
+        Text(valueText)
+            .font(style.pickerValueFont)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(
+                .trailing,
+                layout.valueTextTrailingInset(
+                    selectionBandContentTrailingInset: style.pickerSelectionBandContentTrailingInset
+                )
+            )
     }
 }
 
 private struct PickerUnitSelectionBand: View {
     let unitText: String
     let style: ExposureWorkspaceMainLayoutStyle
-    let slotWidth: CGFloat
-    let unitTrailingInset: CGFloat
+    let layout: PickerColumnLayout
 
     var body: some View {
         RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -810,13 +870,13 @@ private struct PickerUnitSelectionBand: View {
                         .font(style.pickerOverlayUnitFont)
                         .foregroundStyle(.secondary)
                         .opacity(unitText == "s" ? 0.92 : 0.96)
-                        .frame(width: slotWidth, alignment: .trailing)
-                        .padding(.trailing, unitTrailingInset)
+                        .frame(width: layout.unitTextWidth, alignment: .trailing)
+                        .padding(.trailing, layout.unitTextTrailingInset)
                         .frame(maxHeight: .infinity, alignment: .center)
                 }
-                .padding(.trailing, style.pickerSelectionBandTrailingInset)
+                .padding(.trailing, style.pickerSelectionBandContentTrailingInset)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, style.pickerSelectionBandHorizontalInset)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }

@@ -4,6 +4,15 @@ import XCTest
 @testable import PTimer
 
 final class BottomSheetWorkspaceShellTests: XCTestCase {
+    func testAppDelegateAdvertisesPortraitOnlyOrientation() {
+        let appDelegate = PTimerAppDelegate()
+
+        XCTAssertEqual(
+            appDelegate.application(UIApplication.shared, supportedInterfaceOrientationsFor: nil),
+            .portrait
+        )
+    }
+
     @MainActor
     func testSnapshotStoreReflectsTimerCreationInCompactAndLargeFromSameRuntimeTruth() throws {
         let harness = makeRuntimeHarness(now: 100)
@@ -22,7 +31,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(compactItem.identityCue, largeItem.identityCue)
         XCTAssertEqual(compactItem.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(timer.remainingTime))
         XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(timer.remainingTime))
-        XCTAssertEqual(largeItem.contextText, "Base 1/30s · 6 stops")
+        XCTAssertEqual(largeItem.contextText, timer.basisSummary)
         XCTAssertFalse(harness.stateStore.isExpanded)
     }
 
@@ -119,7 +128,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(updatedLarge.id, originalLarge.id)
         XCTAssertEqual(updatedLarge.identityCue, originalLarge.identityCue)
         XCTAssertEqual(updatedLarge.title, originalLarge.title)
-        XCTAssertEqual(updatedLarge.contextText, "Base 1/30s · 6 stops")
+        XCTAssertEqual(updatedLarge.contextText, harness.viewModel.timers.first?.basisSummary)
     }
 
     @MainActor
@@ -902,6 +911,30 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         host.view.layoutIfNeeded()
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
+    }
+
+    @MainActor
+    func testSnapshotStoreReflectsPreviewStateTimerStartWithoutChangingWorkspaceFlow() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.baseShutter = 1.0 / 30.0
+        harness.viewModel.ndStop = 6
+        harness.viewModel.updateLiveBaseShutter(1.0 / 15.0)
+        harness.viewModel.startTimer()
+
+        let timer = try XCTUnwrap(harness.viewModel.timers.first)
+        let compactItem = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
+        let largeItem = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(timer.name, "6 stops - 4s")
+        XCTAssertEqual(timer.basisSummary, "Base 1/15s · 6 stops")
+        XCTAssertEqual(timer.duration, 4, accuracy: 0.0001)
+        XCTAssertEqual(compactItem.id, timer.id)
+        XCTAssertEqual(largeItem.id, timer.id)
+        XCTAssertEqual(largeItem.contextText, timer.basisSummary)
+        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(4))
+        XCTAssertFalse(harness.stateStore.isExpanded)
+        XCTAssertEqual(harness.stateStore.detent, .compact)
     }
 
     func testExposureScreenPinsCalculatorReservedHeightToCompactSheetBudget() {

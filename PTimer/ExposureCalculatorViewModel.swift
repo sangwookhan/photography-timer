@@ -96,9 +96,23 @@ enum TimerWorkspaceOrdering {
 
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
-    @Published var baseShutter = 1.0 / 30.0
-    @Published var ndStop = 0
+    @Published var baseShutter = 1.0 / 30.0 {
+        didSet {
+            if liveBaseShutter == baseShutter {
+                liveBaseShutter = nil
+            }
+        }
+    }
+    @Published var ndStop = 0 {
+        didSet {
+            if liveNDStop == ndStop {
+                liveNDStop = nil
+            }
+        }
+    }
     @Published private(set) var timers: [RunningTimerItem] = []
+    @Published private var liveBaseShutter: Double?
+    @Published private var liveNDStop: Int?
 
     nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
 
@@ -136,14 +150,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
         do {
             let resultShutter = try calculator.calculate(
-                baseShutterSeconds: baseShutter,
-                stop: ndStop
+                baseShutterSeconds: effectiveBaseShutter,
+                stop: effectiveNDStop
             )
 
             return .success(
                 ExposureCalculationResult(
-                    baseShutterSeconds: baseShutter,
-                    stop: ndStop,
+                    baseShutterSeconds: effectiveBaseShutter,
+                    stop: effectiveNDStop,
                     resultShutterSeconds: resultShutter
                 )
             )
@@ -282,6 +296,30 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var runningTimerCount: Int {
         timers.filter { $0.status == .running }.count
+    }
+
+    func updateLiveBaseShutter(_ value: Double) {
+        liveBaseShutter = value == baseShutter ? nil : value
+    }
+
+    func updateLiveNDStop(_ value: Int) {
+        liveNDStop = value == ndStop ? nil : value
+    }
+
+    func clearLiveBaseShutterPreview() {
+        liveBaseShutter = nil
+    }
+
+    func clearLiveNDStopPreview() {
+        liveNDStop = nil
+    }
+
+    private var effectiveBaseShutter: Double {
+        liveBaseShutter ?? baseShutter
+    }
+
+    private var effectiveNDStop: Int {
+        liveNDStop ?? ndStop
     }
 
     private func makeTimerName(for result: ExposureCalculationResult) -> String {

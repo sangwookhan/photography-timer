@@ -842,6 +842,161 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testLiveNDStopPreviewFeedsCalculationBeforeSettledSelection() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.updateLiveNDStop(10)
+
+        guard case .success(let result) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result for live 10-stop preview")
+        }
+
+        XCTAssertEqual(result.stop, 10)
+        XCTAssertEqual(result.resultShutterSeconds, 30, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testLiveBaseShutterPreviewFeedsCalculationBeforeSettledSelection() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.updateLiveBaseShutter(1.0 / 15.0)
+
+        guard case .success(let result) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result for live 1/15s preview")
+        }
+
+        XCTAssertEqual(result.baseShutterSeconds, 1.0 / 15.0, accuracy: 0.0001)
+        XCTAssertEqual(result.stop, 6)
+        XCTAssertEqual(result.resultShutterSeconds, 4, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testSettledNDStopClearsMatchingLivePreview() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.updateLiveNDStop(10)
+        viewModel.ndStop = 10
+
+        guard case .success(let result) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result after settled 10-stop selection")
+        }
+
+        XCTAssertEqual(result.stop, 10)
+        XCTAssertEqual(result.resultShutterSeconds, 30, accuracy: 0.0001)
+
+        viewModel.clearLiveNDStopPreview()
+
+        guard case .success(let settledResult) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result after live preview reset")
+        }
+
+        XCTAssertEqual(settledResult.stop, 10)
+        XCTAssertEqual(settledResult.resultShutterSeconds, 30, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testSettledBaseShutterClearsMatchingLivePreview() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.updateLiveBaseShutter(1.0 / 15.0)
+        viewModel.baseShutter = 1.0 / 15.0
+
+        guard case .success(let result) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result after settled 1/15s selection")
+        }
+
+        XCTAssertEqual(result.baseShutterSeconds, 1.0 / 15.0, accuracy: 0.0001)
+        XCTAssertEqual(result.stop, 6)
+        XCTAssertEqual(result.resultShutterSeconds, 4, accuracy: 0.0001)
+
+        viewModel.clearLiveBaseShutterPreview()
+
+        guard case .success(let settledResult) = viewModel.calculationResult else {
+            return XCTFail("Expected valid result after live base shutter reset")
+        }
+
+        XCTAssertEqual(settledResult.baseShutterSeconds, 1.0 / 15.0, accuracy: 0.0001)
+        XCTAssertEqual(settledResult.stop, 6)
+        XCTAssertEqual(settledResult.resultShutterSeconds, 4, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testStartTimerUsesLivePreviewCalculationWhenPresent() throws {
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.updateLiveNDStop(10)
+        viewModel.startTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.name, "10 stops - 30s")
+        XCTAssertEqual(timer.basisSummary, "Base 1/30s · 10 stops")
+        XCTAssertEqual(timer.duration, 30, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testStartTimerUsesLiveBaseShutterPreviewCalculationWhenPresent() throws {
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.updateLiveBaseShutter(1.0 / 15.0)
+        viewModel.startTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.name, "6 stops - 4s")
+        XCTAssertEqual(timer.basisSummary, "Base 1/15s · 6 stops")
+        XCTAssertEqual(timer.duration, 4, accuracy: 0.0001)
+    }
+
+    @MainActor
     func testTargetDurationNeverChangesAcrossStateTransitions() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate

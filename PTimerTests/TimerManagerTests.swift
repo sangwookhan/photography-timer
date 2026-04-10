@@ -120,6 +120,192 @@ final class TimerManagerTests: XCTestCase {
     }
 
     @MainActor
+    func testStartSchedulesCompletionNotificationForRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 3))
+
+        XCTAssertEqual(schedulerSpy.authorizationRequestCount, 1)
+        XCTAssertEqual(schedulerSpy.scheduledTimers, [
+            ScheduledTimerNotification(
+                timerID: id,
+                endDate: startDate.addingTimeInterval(3),
+                status: .running
+            )
+        ])
+    }
+
+    @MainActor
+    func testStopCancelsPendingCompletionNotification() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: id)
+
+        XCTAssertEqual(schedulerSpy.canceledTimerIDs, [id])
+    }
+
+    @MainActor
+    func testResumeReschedulesCompletionNotificationUsingNewEndDate() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: id)
+
+        currentDate = startDate.addingTimeInterval(9)
+        manager.resume(id: id)
+
+        XCTAssertEqual(schedulerSpy.authorizationRequestCount, 2)
+        XCTAssertEqual(schedulerSpy.scheduledTimers, [
+            ScheduledTimerNotification(
+                timerID: id,
+                endDate: startDate.addingTimeInterval(10),
+                status: .running
+            ),
+            ScheduledTimerNotification(
+                timerID: id,
+                endDate: currentDate.addingTimeInterval(6),
+                status: .running
+            )
+        ])
+        XCTAssertEqual(schedulerSpy.canceledTimerIDs, [id])
+    }
+
+    @MainActor
+    func testRemoveCancelsRelatedCompletionNotification() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 5))
+
+        manager.remove(id: id)
+
+        XCTAssertEqual(schedulerSpy.canceledTimerIDs, [id])
+    }
+
+    @MainActor
+    func testForegroundCompletionCleansUpStalePendingNotification() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 2))
+
+        manager.tick(now: startDate.addingTimeInterval(2))
+
+        XCTAssertEqual(schedulerSpy.canceledTimerIDs, [id])
+    }
+
+    @MainActor
+    func testRemoveCompletedTimersCancelsStalePendingNotificationsForCompletedTimers() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let completedID = try XCTUnwrap(manager.start(duration: 1))
+        let stoppedID = try XCTUnwrap(manager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(4)
+        manager.stop(id: stoppedID)
+        manager.tick(now: currentDate)
+        schedulerSpy.resetHistory()
+
+        manager.removeCompletedTimers()
+
+        XCTAssertEqual(schedulerSpy.canceledTimerIDs, [completedID])
+    }
+
+    @MainActor
+    func testPausedAndStoppedTimersDoNotLeaveScheduledNotifications() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 6))
+
+        currentDate = startDate.addingTimeInterval(1)
+        manager.stop(id: id)
+        manager.tick(now: startDate.addingTimeInterval(10))
+
+        let activeScheduleIDs = schedulerSpy.scheduledTimers
+            .map(\.timerID)
+            .filter { id in !schedulerSpy.canceledTimerIDs.contains(id) }
+        XCTAssertTrue(activeScheduleIDs.isEmpty)
+    }
+
+    @MainActor
+    func testMultipleTimersScheduleAndCancelUsingDeterministicPerTimerLifecycle() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let schedulerSpy = CompletionNotificationSchedulerSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            completionNotificationScheduler: schedulerSpy
+        )
+
+        let firstID = try XCTUnwrap(manager.start(duration: 2))
+        let secondID = try XCTUnwrap(manager.start(duration: 5))
+
+        currentDate = startDate.addingTimeInterval(1)
+        manager.stop(id: secondID)
+        currentDate = startDate.addingTimeInterval(2)
+        manager.tick(now: currentDate)
+
+        XCTAssertEqual(
+            schedulerSpy.scheduledTimers.map(\.timerID),
+            [firstID, secondID]
+        )
+        XCTAssertEqual(
+            schedulerSpy.canceledTimerIDs,
+            [secondID, firstID]
+        )
+    }
+
+    @MainActor
     func testCompletedTimerDoesNotTriggerDuplicateAlertOnRepeatedTickOrReevaluation() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         let alertSpy = CompletionAlertSpy()
@@ -233,6 +419,16 @@ final class TimerManagerTests: XCTestCase {
         inactiveService.handleTimerCompletion(event)
 
         XCTAssertEqual(feedbackSpy.playCount, 1)
+    }
+
+    @MainActor
+    func testNotificationIdentifierIsDeterministicFromTimerUUID() {
+        let timerID = UUID(uuidString: "12345678-1234-1234-1234-123456789ABC")!
+
+        XCTAssertEqual(
+            UserNotificationTimerCompletionScheduler.notificationIdentifier(for: timerID),
+            "timer-completion-12345678-1234-1234-1234-123456789abc"
+        )
     }
 
     @MainActor
@@ -1282,5 +1478,42 @@ private final class CompletionFeedbackSpy: TimerCompletionFeedbackPlaying {
 
     func playCompletionFeedback() {
         playCount += 1
+    }
+}
+
+private struct ScheduledTimerNotification: Equatable {
+    let timerID: UUID
+    let endDate: Date
+    let status: TimerStatus
+}
+
+@MainActor
+private final class CompletionNotificationSchedulerSpy: TimerCompletionNotificationScheduling {
+    private(set) var authorizationRequestCount = 0
+    private(set) var scheduledTimers: [ScheduledTimerNotification] = []
+    private(set) var canceledTimerIDs: [UUID] = []
+
+    func requestAuthorizationIfNeeded() {
+        authorizationRequestCount += 1
+    }
+
+    func scheduleCompletionNotification(for timer: TimerState) {
+        scheduledTimers.append(
+            ScheduledTimerNotification(
+                timerID: timer.id,
+                endDate: timer.endDate ?? .distantPast,
+                status: timer.status
+            )
+        )
+    }
+
+    func cancelCompletionNotification(forTimerID timerID: UUID) {
+        canceledTimerIDs.append(timerID)
+    }
+
+    func resetHistory() {
+        authorizationRequestCount = 0
+        scheduledTimers = []
+        canceledTimerIDs = []
     }
 }

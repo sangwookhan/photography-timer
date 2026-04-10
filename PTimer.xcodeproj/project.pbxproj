@@ -19,6 +19,7 @@
 		A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */; };
 		A0000000000000000000000B /* BottomSheetWorkspaceShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* BottomSheetWorkspaceShell.swift */; };
 		A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */; };
+		A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +47,7 @@
 		A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculationAccuracyTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001C /* BottomSheetWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShell.swift; sourceTree = "<group>"; };
 		A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCompletionNotificationScheduler.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -85,6 +87,7 @@
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 				A00000000000000000000014 /* ExposureCalculator.swift */,
 				A00000000000000000000015 /* TimerManager.swift */,
+				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
 				A0000000000000000000001C /* BottomSheetWorkspaceShell.swift */,
 			);
@@ -223,6 +226,7 @@
 				A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */,
 				A00000000000000000000004 /* ExposureCalculator.swift in Sources */,
 				A00000000000000000000005 /* TimerManager.swift in Sources */,
+				A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */,
 				A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */,
 				A0000000000000000000000B /* BottomSheetWorkspaceShell.swift in Sources */,
 			);

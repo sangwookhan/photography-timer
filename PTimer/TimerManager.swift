@@ -24,6 +24,23 @@ protocol TimerCompletionFeedbackPlaying {
     func playCompletionFeedback()
 }
 
+protocol TimerCompletionNotificationScheduling {
+    @MainActor
+    func requestAuthorizationIfNeeded()
+
+    @MainActor
+    func scheduleCompletionNotification(for timer: TimerState)
+
+    @MainActor
+    func cancelCompletionNotification(forTimerID timerID: UUID)
+}
+
+struct NoOpTimerCompletionScheduler: TimerCompletionNotificationScheduling {
+    func requestAuthorizationIfNeeded() {}
+    func scheduleCompletionNotification(for timer: TimerState) {}
+    func cancelCompletionNotification(forTimerID timerID: UUID) {}
+}
+
 struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
     func playCompletionFeedback() {
         let generator = UINotificationFeedbackGenerator()
@@ -200,16 +217,19 @@ final class TimerManager: ObservableObject {
     private let tickInterval: TimeInterval
     private let dateProvider: () -> Date
     private let completionAlertService: TimerCompletionAlerting
+    private let completionNotificationScheduler: TimerCompletionNotificationScheduling
     private var timer: Timer?
 
     init(
         tickInterval: TimeInterval = 0.1,
         dateProvider: @escaping () -> Date = Date.init,
-        completionAlertService: TimerCompletionAlerting = NoOpTimerCompletionAlertService()
+        completionAlertService: TimerCompletionAlerting = NoOpTimerCompletionAlertService(),
+        completionNotificationScheduler: TimerCompletionNotificationScheduling = NoOpTimerCompletionScheduler()
     ) {
         self.tickInterval = tickInterval
         self.dateProvider = dateProvider
         self.completionAlertService = completionAlertService
+        self.completionNotificationScheduler = completionNotificationScheduler
     }
 
     @discardableResult
@@ -231,6 +251,10 @@ final class TimerManager: ObservableObject {
                 status: .running
             )
         )
+        completionNotificationScheduler.requestAuthorizationIfNeeded()
+        if let timer = timers.last {
+            completionNotificationScheduler.scheduleCompletionNotification(for: timer)
+        }
         ensureTimerLoop()
         return id
     }
@@ -243,6 +267,7 @@ final class TimerManager: ObservableObject {
 
         let currentDate = dateProvider()
         timers[index] = timers[index].stopping(at: currentDate)
+        completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
         stopLoopIfNeeded(now: currentDate)
     }
 
@@ -257,8 +282,11 @@ final class TimerManager: ObservableObject {
         timers[index] = newState
 
         if newState.status == .running {
+            completionNotificationScheduler.requestAuthorizationIfNeeded()
+            completionNotificationScheduler.scheduleCompletionNotification(for: newState)
             ensureTimerLoop()
         } else {
+            completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
             stopLoopIfNeeded(now: currentDate)
         }
     }
@@ -296,12 +324,19 @@ final class TimerManager: ObservableObject {
 
     func removeCompletedTimers() {
         let currentDate = dateProvider()
+        let completedIDs = timers
+            .filter { $0.status(at: currentDate) == .completed }
+            .map(\.id)
+        completedIDs.forEach { id in
+            completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
+        }
         timers.removeAll { $0.status(at: currentDate) == .completed }
 
         stopLoopIfNeeded(now: currentDate)
     }
 
     func remove(id: UUID) {
+        completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
         timers.removeAll { $0.id == id }
         stopLoopIfNeeded()
     }
@@ -372,6 +407,14 @@ final class TimerManager: ObservableObject {
                 .compactMap(\.1)
                 .forEach(completionAlertService.handleTimerCompletion)
         }
+
+        transitionResult
+            .filter { $0.1 != nil }
+            .forEach { updated, _ in
+                completionNotificationScheduler.cancelCompletionNotification(
+                    forTimerID: updated.id
+                )
+            }
 
         let hasRunningTimers = timers.contains { $0.status(at: currentDate) == .running }
         if hasRunningTimers {

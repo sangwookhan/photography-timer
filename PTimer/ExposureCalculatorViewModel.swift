@@ -127,7 +127,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.timerManager = TimerManager(
             completionAlertService: ForegroundTimerCompletionAlertService(
                 feedbackPlayer: SystemTimerCompletionFeedbackPlayer()
-            )
+            ),
+            completionNotificationScheduler: UserNotificationTimerCompletionScheduler()
         )
 
         timerManager.$timers

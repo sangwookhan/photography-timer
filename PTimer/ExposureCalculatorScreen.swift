@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct ExposureCalculatorScreen: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: ExposureCalculatorViewModel
     @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
     @StateObject private var bottomSheetSnapshotStore: BottomSheetWorkspaceSnapshotStore
@@ -87,6 +88,13 @@ struct ExposureCalculatorScreen: View {
                 )
                 .padding(.bottom, geometry.safeAreaInsets.bottom)
             }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else {
+                return
+            }
+
+            viewModel.reconcileTimersAfterAppBecomesActive()
         }
     }
 

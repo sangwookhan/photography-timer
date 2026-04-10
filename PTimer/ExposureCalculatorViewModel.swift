@@ -209,6 +209,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
         timerMetadata.removeValue(forKey: id)
     }
 
+    func reconcileTimersAfterAppBecomesActive() {
+        timerManager.reconcileAfterAppBecomesActive()
+    }
+
     private func startTimer(
         from resultShutter: TimeInterval,
         result: ExposureCalculationResult?

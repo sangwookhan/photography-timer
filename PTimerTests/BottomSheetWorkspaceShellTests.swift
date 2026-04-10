@@ -59,6 +59,37 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
+    func testWorkspaceSnapshotReflectsAppReactivationStateReconciliationForCompactAndLarge() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 10)
+        harness.viewModel.startTimer(from: 3)
+
+        let initialCompact = harness.snapshotStore.snapshot.compactItems
+        XCTAssertEqual(initialCompact.map(\.status), [.running, .running])
+
+        harness.currentDate = Date(timeIntervalSince1970: 104)
+        harness.viewModel.reconcileTimersAfterAppBecomesActive()
+
+        let compactItems = harness.snapshotStore.snapshot.compactItems
+        let activeSection = try XCTUnwrap(
+            harness.snapshotStore.snapshot.sections.first(where: { $0.title == "Active" })
+        )
+        let completedSection = try XCTUnwrap(
+            harness.snapshotStore.snapshot.sections.first(where: { $0.title == "Recently Completed" })
+        )
+
+        XCTAssertEqual(compactItems.count, 2)
+        XCTAssertEqual(compactItems.map(\.status), [.running, .completed])
+        XCTAssertEqual(compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(6))
+        XCTAssertEqual(activeSection.items.count, 1)
+        XCTAssertEqual(activeSection.items.first?.remainingText, harness.viewModel.formatTimerClock(6))
+        XCTAssertEqual(completedSection.items.count, 1)
+        XCTAssertEqual(completedSection.items.first?.status, .completed)
+        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
+    }
+
+    @MainActor
     func testSnapshotStorePropagatesPauseResumeRemoveAndClearCompletedActionsConsistently() throws {
         let harness = makeRuntimeHarness(now: 100)
 

@@ -270,16 +270,28 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        let transitionResult = timers.map { state in
-            let updated = state.updatingStatus(at: currentDate)
-            return (updated, completionEvent(from: state, to: updated))
+        // Regular foreground ticking keeps timer state fresh and is allowed to
+        // emit foreground completion alerts when a running timer finishes now.
+        applyRunningStateReconciliation(
+            now: currentDate,
+            shouldEmitCompletionAlerts: true
+        )
+    }
+
+    func reconcileAfterAppBecomesActive(now: Date? = nil) {
+        guard !timers.isEmpty else {
+            stopLoop()
+            return
         }
 
-        timers = transitionResult.map(\.0)
-        transitionResult
-            .compactMap(\.1)
-            .forEach(completionAlertService.handleTimerCompletion)
-        stopLoopIfNeeded(now: currentDate)
+        let currentDate = now ?? dateProvider()
+        // Reactivation reconciliation is state-only. It catches timers up to
+        // wall clock time after inactive/background/lock without replaying
+        // completion feedback that belongs to the foreground tick path.
+        applyRunningStateReconciliation(
+            now: currentDate,
+            shouldEmitCompletionAlerts: false
+        )
     }
 
     func removeCompletedTimers() {
@@ -340,5 +352,32 @@ final class TimerManager: ObservableObject {
             timerID: updated.id,
             completionDate: completionDate
         )
+    }
+
+    private func applyRunningStateReconciliation(
+        now currentDate: Date,
+        shouldEmitCompletionAlerts: Bool
+    ) {
+        // Only running timers can advance to completed here. Stopped timers keep
+        // their preserved remaining time, and completed timers remain completed.
+        let transitionResult = timers.map { state in
+            let updated = state.updatingStatus(at: currentDate)
+            return (updated, completionEvent(from: state, to: updated))
+        }
+
+        timers = transitionResult.map(\.0)
+
+        if shouldEmitCompletionAlerts {
+            transitionResult
+                .compactMap(\.1)
+                .forEach(completionAlertService.handleTimerCompletion)
+        }
+
+        let hasRunningTimers = timers.contains { $0.status(at: currentDate) == .running }
+        if hasRunningTimers {
+            ensureTimerLoop()
+        } else {
+            stopLoop()
+        }
     }
 }

@@ -124,7 +124,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     init() {
         self.calculator = ExposureCalculator()
-        self.timerManager = TimerManager()
+        self.timerManager = TimerManager(
+            completionAlertService: ForegroundTimerCompletionAlertService(
+                feedbackPlayer: SystemTimerCompletionFeedbackPlayer()
+            )
+        )
 
         timerManager.$timers
             .sink { [weak self] states in

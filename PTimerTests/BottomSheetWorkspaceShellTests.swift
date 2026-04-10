@@ -291,7 +291,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.completedCount, 2)
     }
 
-    func testVisibleStoppedCopyUsesPausedInPresentation() {
+    func testVisibleStoppedCopyUsesStoppedPresentationLabel() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let pausedItem = snapshot.sections
             .flatMap(\.items)
@@ -462,7 +462,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(item.sixtySecondLayer.fraction, 25.0 / 60.0, accuracy: 0.001) // 85 % 60 = 25
     }
 
-    func testCompactProgressStaysFrozenForPausedTimer() throws {
+    func testCompactProgressStaysFrozenForStoppedTimer() throws {
         let snapshot = makeSnapshot(from: [pausedProgressTimer()]) // 120s duration, 45s paused remaining
         let item = tryUnwrapCompactItem(from: snapshot)
         let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)

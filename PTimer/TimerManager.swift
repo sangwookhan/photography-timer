@@ -1,7 +1,63 @@
 import Combine
 import Foundation
+import AudioToolbox
+import UIKit
 
 private let timerStabilityEpsilon: TimeInterval = ExposureCalculator.stabilityEpsilon
+
+struct TimerCompletionEvent: Equatable {
+    let timerID: UUID
+    let completionDate: Date
+}
+
+protocol TimerCompletionAlerting {
+    @MainActor
+    func handleTimerCompletion(_ event: TimerCompletionEvent)
+}
+
+struct NoOpTimerCompletionAlertService: TimerCompletionAlerting {
+    func handleTimerCompletion(_ event: TimerCompletionEvent) {}
+}
+
+protocol TimerCompletionFeedbackPlaying {
+    @MainActor
+    func playCompletionFeedback()
+}
+
+struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
+    func playCompletionFeedback() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.success)
+        AudioServicesPlaySystemSound(Self.completionSoundID)
+    }
+
+    private static let completionSoundID: SystemSoundID = 1005
+}
+
+@MainActor
+final class ForegroundTimerCompletionAlertService: TimerCompletionAlerting {
+    private let feedbackPlayer: TimerCompletionFeedbackPlaying
+    private let applicationStateProvider: @MainActor () -> UIApplication.State
+
+    init(
+        feedbackPlayer: TimerCompletionFeedbackPlaying,
+        applicationStateProvider: @escaping @MainActor () -> UIApplication.State = {
+            UIApplication.shared.applicationState
+        }
+    ) {
+        self.feedbackPlayer = feedbackPlayer
+        self.applicationStateProvider = applicationStateProvider
+    }
+
+    func handleTimerCompletion(_ event: TimerCompletionEvent) {
+        guard applicationStateProvider() == .active else {
+            return
+        }
+
+        feedbackPlayer.playCompletionFeedback()
+    }
+}
 
 enum TimerStatus: String, Equatable {
     case running
@@ -92,11 +148,6 @@ struct TimerState: Identifiable, Equatable {
             return completed(at: resolvedCompletionDate())
         }
 
-        if let pausedAt,
-           pausedAt.addingTimeInterval(remaining) <= now.addingTimeInterval(timerStabilityEpsilon) {
-            return completed(at: pausedAt.addingTimeInterval(remaining))
-        }
-
         return TimerState(
             id: id,
             duration: duration,
@@ -148,13 +199,17 @@ final class TimerManager: ObservableObject {
 
     private let tickInterval: TimeInterval
     private let dateProvider: () -> Date
+    private let completionAlertService: TimerCompletionAlerting
     private var timer: Timer?
+
     init(
         tickInterval: TimeInterval = 0.1,
-        dateProvider: @escaping () -> Date = Date.init
+        dateProvider: @escaping () -> Date = Date.init,
+        completionAlertService: TimerCompletionAlerting = NoOpTimerCompletionAlertService()
     ) {
         self.tickInterval = tickInterval
         self.dateProvider = dateProvider
+        self.completionAlertService = completionAlertService
     }
 
     @discardableResult
@@ -215,7 +270,15 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        timers = timers.map { $0.updatingStatus(at: currentDate) }
+        let transitionResult = timers.map { state in
+            let updated = state.updatingStatus(at: currentDate)
+            return (updated, completionEvent(from: state, to: updated))
+        }
+
+        timers = transitionResult.map(\.0)
+        transitionResult
+            .compactMap(\.1)
+            .forEach(completionAlertService.handleTimerCompletion)
         stopLoopIfNeeded(now: currentDate)
     }
 
@@ -261,5 +324,21 @@ final class TimerManager: ObservableObject {
     private func stopLoop() {
         timer?.invalidate()
         timer = nil
+    }
+
+    private func completionEvent(
+        from previous: TimerState,
+        to updated: TimerState
+    ) -> TimerCompletionEvent? {
+        guard previous.status == .running,
+              updated.status == .completed,
+              let completionDate = updated.endDate else {
+            return nil
+        }
+
+        return TimerCompletionEvent(
+            timerID: updated.id,
+            completionDate: completionDate
+        )
     }
 }

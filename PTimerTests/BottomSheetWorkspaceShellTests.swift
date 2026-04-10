@@ -4,6 +4,15 @@ import XCTest
 @testable import PTimer
 
 final class BottomSheetWorkspaceShellTests: XCTestCase {
+    func testAppDelegateAdvertisesPortraitOnlyOrientation() {
+        let appDelegate = PTimerAppDelegate()
+
+        XCTAssertEqual(
+            appDelegate.application(UIApplication.shared, supportedInterfaceOrientationsFor: nil),
+            .portrait
+        )
+    }
+
     @MainActor
     func testSnapshotStoreReflectsTimerCreationInCompactAndLargeFromSameRuntimeTruth() throws {
         let harness = makeRuntimeHarness(now: 100)

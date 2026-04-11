@@ -95,6 +95,46 @@ enum TimerWorkspaceOrdering {
 }
 
 @MainActor
+final class LockScreenTimerTargetCoordinator {
+    private let exposer: LockScreenTimerTargetExposing
+    private var activeTarget: LockScreenTimerTarget?
+
+    init(exposer: LockScreenTimerTargetExposing) {
+        self.exposer = exposer
+    }
+
+    func sync(with timers: [RunningTimerItem]) {
+        // PTIMER-69 selection rule: expose the first running timer in the
+        // existing workspace presentation order.
+        let nextTarget = timers
+            .first(where: { $0.status == .running && $0.endDate != nil })
+            .flatMap { timer -> LockScreenTimerTarget? in
+                guard let endDate = timer.endDate else {
+                    return nil
+                }
+
+                return LockScreenTimerTarget(
+                    timerID: timer.id,
+                    timerName: timer.name,
+                    endDate: endDate
+                )
+            }
+
+        guard nextTarget != activeTarget else {
+            return
+        }
+
+        activeTarget = nextTarget
+
+        if let nextTarget {
+            exposer.expose(nextTarget)
+        } else {
+            exposer.clear()
+        }
+    }
+}
+
+@MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
     @Published var baseShutter = 1.0 / 30.0 {
         didSet {
@@ -118,6 +158,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private let calculator: ExposureCalculator
     private let timerManager: TimerManager
+    private let lockScreenTargetCoordinator: LockScreenTimerTargetCoordinator
     private var timerMetadata: [UUID: TimerMetadata] = [:]
     private var nextTimerOrder = 1
     private var cancellables: Set<AnyCancellable> = []
@@ -130,6 +171,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
             ),
             completionNotificationScheduler: UserNotificationTimerCompletionScheduler()
         )
+        self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
+            exposer: ActivityKitLockScreenTimerTargetExposer()
+        )
 
         timerManager.$timers
             .sink { [weak self] states in
@@ -140,10 +184,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     init(
         calculator: ExposureCalculator,
-        timerManager: TimerManager
+        timerManager: TimerManager,
+        lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
         self.calculator = calculator
         self.timerManager = timerManager
+        self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
+            exposer: lockScreenTargetExposer
+        )
 
         timerManager.$timers
             .sink { [weak self] states in
@@ -357,6 +405,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
+
+        lockScreenTargetCoordinator.sync(with: timers)
     }
 
     private func defaultName(for duration: TimeInterval) -> String {

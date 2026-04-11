@@ -382,6 +382,201 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testRunningTimerExposesLockScreenTargetUsingTimerEndDate() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 10)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(exposer.exposedTargets, [
+            LockScreenTimerTarget(
+                timerID: timer.id,
+                timerName: timer.name,
+                endDate: try XCTUnwrap(timer.endDate)
+            )
+        ])
+        XCTAssertEqual(exposer.currentTarget?.endDate, timer.endDate)
+        XCTAssertEqual(exposer.clearCount, 0)
+    }
+
+    @MainActor
+    func testStoppedTimerIsNotKeptAsActiveLockScreenTargetAndFallsBackToNextRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 12)
+        let olderRunning = try XCTUnwrap(viewModel.timers.first)
+        viewModel.startTimer(from: 20)
+        let selectedRunning = try XCTUnwrap(viewModel.timers.first)
+
+        currentDate = startDate.addingTimeInterval(5)
+        viewModel.stopTimer(id: selectedRunning.id)
+
+        XCTAssertEqual(viewModel.timers.first?.status, .stopped)
+        XCTAssertEqual(exposer.currentTarget?.timerID, olderRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.endDate, olderRunning.endDate)
+    }
+
+    @MainActor
+    func testCompletedTimerIsRemovedFromActiveLockScreenTarget() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 2)
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        XCTAssertNil(exposer.currentTarget)
+        XCTAssertEqual(exposer.clearCount, 1)
+    }
+
+    @MainActor
+    func testCompletedSelectedTimerFallsBackToNextRunningLockScreenTarget() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 10)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first)
+        viewModel.startTimer(from: 2)
+        _ = try XCTUnwrap(viewModel.timers.first)
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        XCTAssertEqual(exposer.currentTarget?.timerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.endDate, fallbackRunning.endDate)
+    }
+
+    @MainActor
+    func testResumeUpdatesLockScreenTargetToRecalculatedEndDate() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 8)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+
+        currentDate = startDate.addingTimeInterval(3)
+        viewModel.stopTimer(id: id)
+
+        currentDate = startDate.addingTimeInterval(10)
+        viewModel.resumeTimer(id: id)
+
+        let resumed = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(resumed.status, .running)
+        XCTAssertEqual(exposer.currentTarget?.timerID, resumed.id)
+        XCTAssertEqual(exposer.currentTarget?.endDate, resumed.endDate)
+        XCTAssertEqual(resumed.endDate, currentDate.addingTimeInterval(5))
+    }
+
+    @MainActor
+    func testLockScreenTargetSelectionUsesFirstRunningTimerInPresentationOrder() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 30)
+        let firstRunningID = try XCTUnwrap(viewModel.timers.first?.id)
+        viewModel.startTimer(from: 40)
+        let secondRunningID = try XCTUnwrap(viewModel.timers.first?.id)
+
+        currentDate = startDate.addingTimeInterval(5)
+        viewModel.stopTimer(id: secondRunningID)
+
+        viewModel.startTimer(from: 50)
+        let newestRunning = try XCTUnwrap(viewModel.timers.first)
+
+        XCTAssertNotEqual(firstRunningID, secondRunningID)
+        XCTAssertEqual(newestRunning.status, .running)
+        XCTAssertEqual(exposer.currentTarget?.timerID, newestRunning.id)
+        XCTAssertNotEqual(exposer.currentTarget?.timerID, firstRunningID)
+    }
+
+    @MainActor
+    func testNoRunningTimerClearsStaleLockScreenTargetExposure() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 6)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+
+        currentDate = startDate.addingTimeInterval(2)
+        viewModel.stopTimer(id: id)
+
+        XCTAssertNil(exposer.currentTarget)
+        XCTAssertEqual(exposer.clearCount, 1)
+    }
+
+    @MainActor
     func testStoppedTimerRemainingTimeStaysStableInViewModel() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
@@ -1112,5 +1307,22 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertFalse(allText.contains("/"))
         XCTAssertFalse(allText.contains("("))
         XCTAssertFalse(allText.contains(")"))
+    }
+}
+
+@MainActor
+private final class LockScreenTimerTargetExposerSpy: LockScreenTimerTargetExposing {
+    private(set) var exposedTargets: [LockScreenTimerTarget] = []
+    private(set) var clearCount = 0
+    private(set) var currentTarget: LockScreenTimerTarget?
+
+    func expose(_ target: LockScreenTimerTarget) {
+        currentTarget = target
+        exposedTargets.append(target)
+    }
+
+    func clear() {
+        currentTarget = nil
+        clearCount += 1
     }
 }

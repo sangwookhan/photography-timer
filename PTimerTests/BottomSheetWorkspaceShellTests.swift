@@ -97,9 +97,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let id = try XCTUnwrap(harness.viewModel.timers.first?.id)
 
         harness.currentDate = Date(timeIntervalSince1970: 103)
-        harness.viewModel.stopTimer(id: id)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .stopped)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .stopped)
+        harness.viewModel.pauseTimer(id: id)
+        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .paused)
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .paused)
         let pausedCompactCue = harness.snapshotStore.snapshot.compactItems.first?.identityCue
         let pausedLargeCue = harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
@@ -322,11 +322,11 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.completedCount, 2)
     }
 
-    func testVisibleStoppedCopyUsesStoppedPresentationLabel() {
+    func testVisiblePausedCopyUsesPausedPresentationLabel() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let pausedItem = snapshot.sections
             .flatMap(\.items)
-            .first { $0.status == .stopped }
+            .first { $0.status == .paused }
 
         XCTAssertEqual(pausedItem?.statusLabel, "Paused")
     }
@@ -341,7 +341,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     func testCompactSummaryPrioritizesNewerActiveTimersThenRecentlyCompleted() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
-        XCTAssertEqual(snapshot.compactItems.map(\.status), [.stopped, .running, .completed])
+        XCTAssertEqual(snapshot.compactItems.map(\.status), [.paused, .running, .completed])
         XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
         XCTAssertEqual(
             snapshot.compactItems.map(\.id),
@@ -493,7 +493,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(item.sixtySecondLayer.fraction, 25.0 / 60.0, accuracy: 0.001) // 85 % 60 = 25
     }
 
-    func testCompactProgressStaysFrozenForStoppedTimer() throws {
+    func testCompactProgressStaysFrozenForPausedTimer() throws {
         let snapshot = makeSnapshot(from: [pausedProgressTimer()]) // 120s duration, 45s paused remaining
         let item = tryUnwrapCompactItem(from: snapshot)
         let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
@@ -529,7 +529,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
     func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
         let before = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .running))
-        let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .stopped))
+        let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .paused))
 
         XCTAssertEqual(
             before.compactItems.map(\.id),
@@ -555,7 +555,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
             ]
         )
-        XCTAssertEqual(ordered.prefix(2).map(\.status), [.stopped, .running])
+        XCTAssertEqual(ordered.prefix(2).map(\.status), [.paused, .running])
         XCTAssertEqual(ordered.suffix(2).map(\.status), [.completed, .completed])
     }
 
@@ -761,8 +761,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             .flatMap(\.items)
             .first { $0.id == focusedID }
 
-        XCTAssertEqual(focusedItem?.title, "Stopped Hold")
-        XCTAssertEqual(focusedItem?.status, .stopped)
+        XCTAssertEqual(focusedItem?.title, "Paused Hold")
+        XCTAssertEqual(focusedItem?.status, .paused)
     }
 
     func testLargeHeightCreatesLargerManagementViewportBudget() {
@@ -819,7 +819,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
-        XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Stopped Hold")
+        XCTAssertEqual(snapshot.sections.first?.items.first?.title, "Paused Hold")
         XCTAssertEqual(snapshot.sections.first?.items.first?.identityCue.markerText, "T2")
         XCTAssertEqual(snapshot.sections.last?.items.first?.identityCue.markerText, "T3")
         XCTAssertEqual(snapshot.sections.first?.items.last?.actions.map(\.title), ["Pause"])
@@ -1055,14 +1055,14 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             RunningTimerItem(
                 id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
                 order: 2,
-                name: "Stopped Hold",
+                name: "Paused Hold",
                 basisSummary: "Base 1/60s · 10 stops",
                 duration: 180,
                 startDate: now.addingTimeInterval(-20),
                 endDate: now.addingTimeInterval(160),
                 pausedRemainingTime: 55,
                 pausedAt: now.addingTimeInterval(-15),
-                status: .stopped,
+                status: .paused,
                 referenceDate: now
             ),
             RunningTimerItem(
@@ -1202,7 +1202,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             endDate: now.addingTimeInterval(60),
             pausedRemainingTime: 45,
             pausedAt: now.addingTimeInterval(-10),
-            status: .stopped,
+            status: .paused,
             referenceDate: now
         )
     }
@@ -1255,8 +1255,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 duration: 90,
                 startDate: now.addingTimeInterval(-10),
                 endDate: pausedFirstTimerStatus == .running ? now.addingTimeInterval(50) : now.addingTimeInterval(80),
-                pausedRemainingTime: pausedFirstTimerStatus == .stopped ? 50 : nil,
-                pausedAt: pausedFirstTimerStatus == .stopped ? now.addingTimeInterval(-5) : nil,
+                pausedRemainingTime: pausedFirstTimerStatus == .paused ? 50 : nil,
+                pausedAt: pausedFirstTimerStatus == .paused ? now.addingTimeInterval(-5) : nil,
                 status: pausedFirstTimerStatus,
                 referenceDate: now
             ),
@@ -1283,7 +1283,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 endDate: now.addingTimeInterval(110),
                 pausedRemainingTime: 70,
                 pausedAt: now.addingTimeInterval(-12),
-                status: .stopped,
+                status: .paused,
                 referenceDate: now
             )
         ]
@@ -1342,7 +1342,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 endDate: now.addingTimeInterval(160),
                 pausedRemainingTime: 55,
                 pausedAt: now.addingTimeInterval(-10),
-                status: .stopped,
+                status: .paused,
                 referenceDate: now
             )
         ]
@@ -1367,7 +1367,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 switch timer.status {
                 case .running:
                     return "Ends soon"
-                case .stopped:
+                case .paused:
                     return "Paused recently"
                 case .completed:
                     return "Completed recently"
@@ -1466,7 +1466,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             rootView: BottomSheetWorkspaceShell(
                 stateStore: store,
                 snapshot: snapshot,
-                onStopTimer: { _ in },
+                onPauseTimer: { _ in },
                 onResumeTimer: { _ in },
                 onRemoveTimer: { _ in },
                 onClearCompletedTimers: {}

@@ -81,7 +81,7 @@ struct ExposureCalculatorScreen: View {
                 BottomSheetWorkspaceShell(
                     stateStore: bottomSheetStateStore,
                     snapshot: bottomSheetSnapshotStore.snapshot,
-                    onStopTimer: viewModel.stopTimer,
+                    onPauseTimer: viewModel.pauseTimer,
                     onResumeTimer: viewModel.resumeTimer,
                     onRemoveTimer: viewModel.removeTimer,
                     onClearCompletedTimers: viewModel.clearCompletedTimers
@@ -1158,7 +1158,7 @@ struct RunningTimerPanelView: View {
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let formatClockTime: (Date) -> String
     let formatDateTime: (Date) -> String
-    let onStopTimer: (UUID) -> Void
+    let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
 
@@ -1197,7 +1197,7 @@ struct RunningTimerPanelView: View {
                             formatTimeDisplay: formatTimeDisplay,
                             formatClockTime: formatClockTime,
                             formatDateTime: formatDateTime,
-                            onStop: { onStopTimer(timer.id) },
+                            onPause: { onPauseTimer(timer.id) },
                             onResume: { onResumeTimer(timer.id) },
                             onRemove: { onRemoveTimer(timer.id) }
                         )
@@ -1226,7 +1226,7 @@ private struct TimerSummaryCard: View {
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let formatClockTime: (Date) -> String
     let formatDateTime: (Date) -> String
-    let onStop: () -> Void
+    let onPause: () -> Void
     let onResume: () -> Void
     let onRemove: () -> Void
 
@@ -1283,12 +1283,12 @@ private struct TimerSummaryCard: View {
                     iconActionButton(
                         systemName: "pause.circle",
                         tint: .orange,
-                        accessibilityLabel: "Stop timer",
-                        action: onStop
+                        accessibilityLabel: "Pause timer",
+                        action: onPause
                     )
                 }
 
-                if timer.status == .stopped {
+                if timer.status == .paused {
                     iconActionButton(
                         systemName: "play.circle",
                         tint: .blue,
@@ -1321,7 +1321,7 @@ private struct TimerSummaryCard: View {
 
     private var primaryDuration: TimeInterval {
         switch timer.status {
-        case .running, .stopped:
+        case .running, .paused:
             return timer.remainingTime
         case .completed:
             return timer.duration
@@ -1334,7 +1334,7 @@ private struct TimerSummaryCard: View {
             return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
         case .completed:
             return nil
-        case .stopped:
+        case .paused:
             return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
         }
     }
@@ -1347,7 +1347,7 @@ private struct TimerSummaryCard: View {
         case .completed:
             let completionText = timer.completedAt.map(formatDateTime) ?? "--"
             return "Completed \(completionText)"
-        case .stopped:
+        case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
             return "Paused \(pausedText)"
         }
@@ -1393,8 +1393,8 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return "Running"
-        case .stopped:
-            return "Stopped"
+        case .paused:
+            return "Paused"
         case .completed:
             return "Completed"
         }
@@ -1404,7 +1404,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return "circle.fill"
-        case .stopped:
+        case .paused:
             return "square.fill"
         case .completed:
             return "checkmark"
@@ -1415,7 +1415,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return .green
-        case .stopped:
+        case .paused:
             return .orange
         case .completed:
             return .gray
@@ -1426,7 +1426,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return .primary
-        case .stopped:
+        case .paused:
             return .orange
         case .completed:
             return .secondary
@@ -1437,7 +1437,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return Color(.secondarySystemBackground)
-        case .stopped:
+        case .paused:
             return Color(.systemGray6)
         case .completed:
             return Color(.tertiarySystemBackground)
@@ -1448,7 +1448,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return .green.opacity(0.18)
-        case .stopped:
+        case .paused:
             return .orange.opacity(0.18)
         case .completed:
             return .gray.opacity(0.18)

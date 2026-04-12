@@ -24,7 +24,7 @@ struct RunningTimerItem: Identifiable, Equatable {
                 return 0
             }
             return sanitizeRemainingTime(endDate.timeIntervalSince(referenceDate))
-        case .stopped:
+        case .paused:
             return sanitizeRemainingTime(pausedRemainingTime ?? 0)
         case .completed:
             return 0
@@ -86,7 +86,7 @@ enum TimerWorkspaceOrdering {
 
     private static func presentationGroup(_ status: TimerStatus) -> Int {
         switch status {
-        case .running, .stopped:
+        case .running, .paused:
             return 0
         case .completed:
             return 1
@@ -363,8 +363,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    func stopTimer(id: UUID) {
-        timerManager.stop(id: id)
+    func pauseTimer(id: UUID) {
+        timerManager.pause(id: id)
     }
 
     func resumeTimer(id: UUID) {
@@ -451,7 +451,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         let targetDisplay = formatTimeDisplay(timer.duration)
 
         switch timer.status {
-        case .running, .stopped:
+        case .running, .paused:
             return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
         case .completed:
             return nil
@@ -466,7 +466,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case .completed:
             let completionText = timer.completedAt.map(formatDateTime) ?? "--"
             return "Completed \(completionText)"
-        case .stopped:
+        case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
             return "Paused \(pausedText)"
         }

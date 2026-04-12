@@ -32,7 +32,8 @@ behavior and stable card identity after relaunch.
 - `id`
   - preserves timer identity so cards and actions keep targeting the same item
 - `status`
-  - chooses the correct restore rule for running, stopped, or completed timers
+  - chooses the correct restore rule for running, paused, or completed timers
+  - here `paused` means a frozen, resumable state rather than a terminal stop
 - `duration`
   - preserves the original timer target for display and elapsed calculations
 - `startDate`
@@ -40,7 +41,7 @@ behavior and stable card identity after relaunch.
 - `expectedCompletionAt`
   - lets running timers reconcile against real wall clock time on relaunch
 - `pausedRemainingDuration`
-  - keeps stopped timers frozen without consuming time while the app is gone
+  - keeps paused timers frozen without consuming time while the app is gone
 - `pausedAt`
   - preserves paused-state context shown in the UI
 - `completedAt`
@@ -66,7 +67,7 @@ needed to restore card identity.
 
 - `testRestoreRunningTimerAfterTerminationKeepsItRunningWithWallClockRemainingTime`
 - `testRestoreRunningTimerAfterTerminationCompletesIfExpectedCompletionAlreadyPassed`
-- `testRestoreStoppedTimerAfterTerminationPreservesRemainingTime`
+- `testRestorePausedTimerAfterTerminationPreservesFrozenRemainingTime`
 - `testRestoreCompletedTimerAfterTerminationKeepsCompletedState`
 - `testRestoreMultipleTimersAfterTerminationPreservesIDsAndStatuses`
 - `testRestoreEntryPointLoadsSnapshotOnlyDuringInitialization`
@@ -95,16 +96,16 @@ needed to restore card identity.
 5. Relaunch the app.
 6. Confirm the timer is restored as completed.
 
-### Stopped timer remains frozen across relaunch
+### Paused timer remains frozen across relaunch
 
 1. Launch the app.
 2. Create a timer.
-3. Stop it with a visible amount of remaining time.
+3. Pause it with a visible amount of remaining time.
 4. Force quit the app.
 5. Wait longer than the remaining time.
 6. Relaunch the app.
-7. Confirm the timer is still stopped.
-8. Confirm the remaining time is unchanged from when it was stopped.
+7. Confirm the timer is still paused in its frozen resumable state.
+8. Confirm the remaining time is unchanged from when it was paused.
 
 ### Completed timer remains completed across relaunch
 
@@ -118,7 +119,7 @@ needed to restore card identity.
 
 1. Launch the app.
 2. Create at least two timers with different durations and names/context.
-3. Stop one timer and leave another running.
+3. Pause one timer and leave another running.
 4. Force quit the app.
 5. Relaunch the app.
 6. Confirm each restored card keeps the same title, subtitle, order, and status.

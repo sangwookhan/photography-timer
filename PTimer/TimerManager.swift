@@ -43,10 +43,12 @@ struct NoOpTimerCompletionScheduler: TimerCompletionNotificationScheduling {
 
 // Snapshot schema is intentionally minimal:
 // - id keeps timer identity stable across relaunch.
-// - status selects the restore rule for running/stopped/completed.
+// - status selects the restore rule for running/paused/completed.
+//   In this model, `paused` means a frozen, later-resumable timer rather
+//   than a terminal "done" state.
 // - duration/startDate preserve the original timer semantics and UI context.
 // - expectedCompletionAt lets PTIMER-70 reconcile running timers to wall clock time.
-// - pausedRemainingDuration/pausedAt keep stopped timers frozen without drifting.
+// - pausedRemainingDuration/pausedAt keep paused timers frozen without drifting.
 // - completedAt preserves the final timestamp for completed timers.
 struct PersistentTimerSnapshot: Codable, Equatable {
     let id: UUID
@@ -70,8 +72,8 @@ struct PersistentTimerSnapshot: Codable, Equatable {
             self.status = .running
             self.expectedCompletionAt = timer.endDate
             self.completedAt = nil
-        case .stopped:
-            self.status = .stopped
+        case .paused:
+            self.status = .paused
             self.expectedCompletionAt = timer.endDate
             self.completedAt = nil
         case .completed:
@@ -101,7 +103,9 @@ struct PersistentTimerSnapshot: Codable, Equatable {
                 pausedAt: nil,
                 status: .running
             )
-        case .stopped:
+        case .paused:
+            // `paused` restores as the same frozen, resumable state. It must
+            // not consume wall-clock time or auto-complete while the app was dead.
             return TimerState(
                 id: id,
                 duration: duration,
@@ -109,7 +113,7 @@ struct PersistentTimerSnapshot: Codable, Equatable {
                 endDate: expectedCompletionAt,
                 pausedRemainingTime: pausedRemainingDuration,
                 pausedAt: pausedAt,
-                status: .stopped
+                status: .paused
             )
         case .completed:
             return makeCompletedTimer(completionDate: completedAt)
@@ -130,8 +134,27 @@ struct PersistentTimerSnapshot: Codable, Equatable {
 
     enum SnapshotStatus: String, Codable, Equatable {
         case running
-        case stopped
+        case paused
         case completed
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+
+            switch rawValue {
+            case "running":
+                self = .running
+            case "paused", "stopped":
+                self = .paused
+            case "completed":
+                self = .completed
+            default:
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Unsupported snapshot status: \(rawValue)"
+                )
+            }
+        }
     }
 }
 
@@ -227,8 +250,9 @@ final class ForegroundTimerCompletionAlertService: TimerCompletionAlerting {
 
 enum TimerStatus: String, Equatable {
     case running
+    // `paused` is a frozen, resumable state that preserves remaining time.
+    case paused
     case completed
-    case stopped
 }
 
 struct TimerState: Identifiable, Equatable {
@@ -248,7 +272,7 @@ struct TimerState: Identifiable, Equatable {
                 return 0
             }
             return sanitizeRemainingTime(endDate.timeIntervalSinceNow)
-        case .stopped:
+        case .paused:
             return sanitizeRemainingTime(pausedRemainingTime ?? 0)
         case .completed:
             return 0
@@ -263,7 +287,7 @@ struct TimerState: Identifiable, Equatable {
                 return 0
             }
             return sanitizeRemainingTime(endDate.timeIntervalSince(now))
-        case .stopped:
+        case .paused:
             return sanitizeRemainingTime(pausedRemainingTime ?? 0)
         case .completed:
             return 0
@@ -290,13 +314,15 @@ struct TimerState: Identifiable, Equatable {
         return completed(at: endDate)
     }
 
-    func stopping(at now: Date) -> TimerState {
+    func pausing(at now: Date) -> TimerState {
         let remaining = remainingTime(at: now)
 
         guard remaining > 0 else {
             return completed(at: endDate ?? now)
         }
 
+        // Freeze the timer with its remaining duration intact so it can be
+        // resumed later from the same logical point.
         return TimerState(
             id: id,
             duration: duration,
@@ -304,7 +330,7 @@ struct TimerState: Identifiable, Equatable {
             endDate: endDate,
             pausedRemainingTime: remaining,
             pausedAt: now,
-            status: .stopped
+            status: .paused
         )
     }
 
@@ -314,6 +340,8 @@ struct TimerState: Identifiable, Equatable {
             return completed(at: resolvedCompletionDate())
         }
 
+        // Resume recalculates the end date from "now" because `paused`
+        // preserves remaining time as a frozen resumable state.
         return TimerState(
             id: id,
             duration: duration,
@@ -415,14 +443,14 @@ final class TimerManager: ObservableObject {
         return id
     }
 
-    func stop(id: UUID) {
+    func pause(id: UUID) {
         guard let index = timers.firstIndex(where: { $0.id == id }) else {
             stopLoopIfNeeded()
             return
         }
 
         let currentDate = dateProvider()
-        timers[index] = timers[index].stopping(at: currentDate)
+        timers[index] = timers[index].pausing(at: currentDate)
         completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
         stopLoopIfNeeded(now: currentDate)
         persistTimers()
@@ -554,8 +582,9 @@ final class TimerManager: ObservableObject {
         now currentDate: Date,
         shouldEmitCompletionAlerts: Bool
     ) {
-        // Only running timers can advance to completed here. Stopped timers keep
-        // their preserved remaining time, and completed timers remain completed.
+        // Only running timers can advance to completed here. Paused timers are
+        // frozen/resumable and keep their preserved remaining time regardless of
+        // wall-clock passage, and completed timers remain completed.
         let transitionResult = timers.map { state in
             let updated = state.updatingStatus(at: currentDate)
             return (updated, completionEvent(from: state, to: updated))
@@ -608,8 +637,9 @@ final class TimerManager: ObservableObject {
         }
 
         // PTIMER-70 restore is deterministic and init-only: relaunch reads the
-        // saved snapshot once, reconciles running timers against wall clock
-        // time, and writes the normalized result back as the new source.
+        // saved snapshot once, reconciles only running timers against wall
+        // clock time, preserves paused timers as frozen resumable state, and
+        // writes the normalized result back as the new source.
         persistTimers()
     }
 

@@ -4,7 +4,7 @@ import SwiftUI
 struct BottomSheetWorkspaceShell: View {
     @ObservedObject var stateStore: BottomSheetWorkspaceStateStore
     let snapshot: BottomSheetWorkspaceSnapshot
-    let onStopTimer: (UUID) -> Void
+    let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
@@ -21,7 +21,7 @@ struct BottomSheetWorkspaceShell: View {
                     onCompactItemTap: stateStore.expandAndFocusTimer(_:),
                     onOverflowTap: stateStore.expand,
                     onCollapse: stateStore.collapse,
-                    onStopTimer: onStopTimer,
+                    onPauseTimer: onPauseTimer,
                     onResumeTimer: onResumeTimer,
                     onRemoveTimer: onRemoveTimer,
                     onClearCompletedTimers: onClearCompletedTimers
@@ -459,7 +459,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         switch timer.status {
         case .completed:
             return CompactRemainingScaleLayer(fraction: 0)
-        case .running, .stopped:
+        case .running, .paused:
             let cappedOriginalDuration = min(max(timer.duration, 0), 86_400)
             let cappedRemainingTime = min(max(timer.remainingTime, 0), cappedOriginalDuration)
             let fraction = cappedOriginalDuration > 0 ? cappedRemainingTime / 86_400 : 0
@@ -475,7 +475,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         switch status {
         case .completed:
             return 0
-        case .running, .stopped:
+        case .running, .paused:
             guard unitDuration > 0 else {
                 return 0
             }
@@ -498,7 +498,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         switch status {
         case .running:
             return [.pause]
-        case .stopped:
+        case .paused:
             return [.resume, .remove]
         case .completed:
             return [.remove]
@@ -510,7 +510,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         formatRemaining: (TimeInterval) -> String
     ) -> String {
         switch timer.status {
-        case .running, .stopped:
+        case .running, .paused:
             return compactDurationText(timer.remainingTime)
         case .completed:
             return "0s"
@@ -530,7 +530,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         formatRemaining: (TimeInterval) -> String
     ) -> String {
         switch timer.status {
-        case .running, .stopped:
+        case .running, .paused:
             return formatRemaining(timer.remainingTime)
         case .completed:
             return "0s"
@@ -591,7 +591,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         switch status {
         case .running:
             return "Running"
-        case .stopped:
+        case .paused:
             return "Paused"
         case .completed:
             return "Done"
@@ -707,7 +707,7 @@ private struct BottomSheetContentHost: View {
     let onCompactItemTap: (UUID) -> Void
     let onOverflowTap: () -> Void
     let onCollapse: () -> Void
-    let onStopTimer: (UUID) -> Void
+    let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
@@ -733,7 +733,7 @@ private struct BottomSheetContentHost: View {
                     BottomSheetLargeWorkspaceView(
                         snapshot: snapshot,
                         focusedTimerID: focusedTimerID,
-                        onStopTimer: onStopTimer,
+                        onPauseTimer: onPauseTimer,
                         onResumeTimer: onResumeTimer,
                         onRemoveTimer: onRemoveTimer,
                         onClearCompletedTimers: onClearCompletedTimers,
@@ -944,7 +944,7 @@ private struct CompactTimerMiniCardView: View {
         switch status {
         case .running:
             return "hourglass.bottomhalf.filled"
-        case .stopped:
+        case .paused:
             return "pause.fill"
         case .completed:
             return "checkmark"
@@ -955,7 +955,7 @@ private struct CompactTimerMiniCardView: View {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.72)
-        case .stopped:
+        case .paused:
             return Color.orange.opacity(0.88)
         case .running:
             return Color.red.opacity(0.92)
@@ -966,7 +966,7 @@ private struct CompactTimerMiniCardView: View {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.16)
-        case .stopped:
+        case .paused:
             return Color.orange.opacity(0.16)
         case .running:
             return Color.red.opacity(0.18)
@@ -977,7 +977,7 @@ private struct CompactTimerMiniCardView: View {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.56)
-        case .stopped:
+        case .paused:
             return Color.yellow.opacity(0.72)
         case .running:
             return Color.orange.opacity(0.74)
@@ -988,7 +988,7 @@ private struct CompactTimerMiniCardView: View {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.12)
-        case .stopped:
+        case .paused:
             return Color.yellow.opacity(0.11)
         case .running:
             return Color.orange.opacity(0.12)
@@ -999,7 +999,7 @@ private struct CompactTimerMiniCardView: View {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.38)
-        case .stopped:
+        case .paused:
             return Color.mint.opacity(0.48)
         case .running:
             return Color.teal.opacity(0.46)
@@ -1010,7 +1010,7 @@ private struct CompactTimerMiniCardView: View {
         switch item.status {
         case .completed:
             return statusColor(for: item.status).opacity(0.08)
-        case .stopped:
+        case .paused:
             return Color.mint.opacity(0.08)
         case .running:
             return Color.teal.opacity(0.08)
@@ -1144,7 +1144,7 @@ private struct CompactOverflowMiniCard: View {
 private struct BottomSheetLargeWorkspaceView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let focusedTimerID: UUID?
-    let onStopTimer: (UUID) -> Void
+    let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
@@ -1238,7 +1238,7 @@ private struct BottomSheetLargeWorkspaceView: View {
     private func handle(action: BottomSheetLargeAction, for id: UUID) {
         switch action {
         case .pause:
-            onStopTimer(id)
+            onPauseTimer(id)
         case .resume:
             onResumeTimer(id)
         case .remove:
@@ -1514,7 +1514,7 @@ private func statusColor(for status: TimerStatus) -> Color {
     switch status {
     case .running:
         return .green
-    case .stopped:
+    case .paused:
         return .orange
     case .completed:
         return .gray

@@ -169,7 +169,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             referenceDate: currentDate
         )
 
-        let stopped = RunningTimerItem(
+        let paused = RunningTimerItem(
             id: UUID(),
             order: 2,
             name: "Timer 2",
@@ -179,7 +179,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             endDate: nil,
             pausedRemainingTime: 45,
             pausedAt: pausedDate,
-            status: .stopped,
+            status: .paused,
             referenceDate: currentDate
         )
 
@@ -198,7 +198,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         XCTAssertEqual(viewModel.timerTimeContext(for: running), "Ends \(viewModel.formatDateTime(endDate))")
-        XCTAssertEqual(viewModel.timerTimeContext(for: stopped), "Paused \(viewModel.formatDateTime(pausedDate))")
+        XCTAssertEqual(viewModel.timerTimeContext(for: paused), "Paused \(viewModel.formatDateTime(pausedDate))")
         XCTAssertEqual(viewModel.timerTimeContext(for: completed), "Completed \(viewModel.formatDateTime(pausedDate))")
     }
 
@@ -358,7 +358,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testStopTimerUpdatesViewModelState() throws {
+    func testPauseTimerUpdatesViewModelState() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -374,15 +374,389 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let id = try XCTUnwrap(viewModel.timers.first?.id)
 
         currentDate = startDate.addingTimeInterval(4)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
 
-        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.stopped)
+        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.paused)
         let remainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
         XCTAssertEqual(remainingTime, 6, accuracy: 0.0001)
     }
 
     @MainActor
-    func testStoppedTimerRemainingTimeStaysStableInViewModel() throws {
+    func testRunningTimerExposesLockScreenTargetUsingTimerEndDate() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { startDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 10)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(exposer.exposedTargets, [
+            LockScreenTimerTarget(
+                representativeTimerID: timer.id,
+                representativeTimerName: timer.name,
+                representativeEndDate: try XCTUnwrap(timer.endDate),
+                scheduledTargets: [
+                    LockScreenTimerScheduledTarget(
+                        timerID: timer.id,
+                        timerName: timer.name,
+                        endDate: try XCTUnwrap(timer.endDate)
+                    )
+                ]
+            )
+        ])
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, timer.endDate)
+        XCTAssertEqual(exposer.clearCount, 0)
+    }
+
+    @MainActor
+    func testLockScreenTargetSelectionUsesEarliestRunningTimerEndDate() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 20)
+        let longerRunning = try XCTUnwrap(viewModel.timers.first)
+        viewModel.startTimer(from: 12)
+        let shorterRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 12 }))
+
+        XCTAssertNotEqual(viewModel.timers.first?.id, longerRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, shorterRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, shorterRunning.endDate)
+        XCTAssertEqual(exposer.currentTarget?.scheduledTargets.map(\.timerID), [shorterRunning.id, longerRunning.id])
+    }
+
+    @MainActor
+    func testLockScreenTargetSelectionUsesPresentationOrderWhenEarliestEndDateIsTied() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 30)
+        let olderRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 30 }))
+
+        currentDate = startDate.addingTimeInterval(10)
+        viewModel.startTimer(from: 20)
+        let newerRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
+
+        XCTAssertEqual(olderRunning.endDate, newerRunning.endDate)
+        XCTAssertEqual(viewModel.timers.first?.id, newerRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, newerRunning.id)
+    }
+
+    @MainActor
+    func testLockScreenTargetSelectionUsesStableIDOrderWhenEndDateAndPresentationOrderAreTied() {
+        let earlierID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let laterID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let sharedEndDate = Date(timeIntervalSince1970: 500)
+        let referenceDate = Date(timeIntervalSince1970: 100)
+
+        let laterIDTimer = RunningTimerItem(
+            id: laterID,
+            order: 7,
+            name: "Later ID",
+            basisSummary: "Manual timer",
+            duration: 30,
+            startDate: Date(timeIntervalSince1970: 470),
+            endDate: sharedEndDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: referenceDate
+        )
+
+        let earlierIDTimer = RunningTimerItem(
+            id: earlierID,
+            order: 7,
+            name: "Earlier ID",
+            basisSummary: "Manual timer",
+            duration: 30,
+            startDate: Date(timeIntervalSince1970: 470),
+            endDate: sharedEndDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: referenceDate
+        )
+
+        let target = LockScreenTimerTargetCoordinator.selectRepresentativeTarget(
+            from: [laterIDTimer, earlierIDTimer]
+        )
+
+        XCTAssertEqual(target?.representativeTimerID, earlierID)
+        XCTAssertEqual(target?.representativeEndDate, sharedEndDate)
+    }
+
+    @MainActor
+    func testPausedTimerIsNotRepresentativeAndFallsBackToNextEarliestRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 20)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
+        viewModel.startTimer(from: 12)
+        let selectedRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 12 }))
+
+        currentDate = startDate.addingTimeInterval(5)
+        viewModel.pauseTimer(id: selectedRunning.id)
+
+        XCTAssertEqual(viewModel.timers.first(where: { $0.id == selectedRunning.id })?.status, .paused)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, fallbackRunning.endDate)
+    }
+
+    @MainActor
+    func testPausedAndCompletedTimersAreIgnoredByEarliestEndDateRepresentativeSelection() {
+        let sharedReferenceDate = Date(timeIntervalSince1970: 100)
+        let runningTimer = RunningTimerItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!,
+            order: 3,
+            name: "Running",
+            basisSummary: "Manual timer",
+            duration: 15,
+            startDate: Date(timeIntervalSince1970: 95),
+            endDate: Date(timeIntervalSince1970: 110),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: sharedReferenceDate
+        )
+
+        let pausedTimer = RunningTimerItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+            order: 4,
+            name: "Paused",
+            basisSummary: "Manual timer",
+            duration: 3,
+            startDate: Date(timeIntervalSince1970: 99),
+            endDate: Date(timeIntervalSince1970: 102),
+            pausedRemainingTime: 2,
+            pausedAt: Date(timeIntervalSince1970: 100),
+            status: .paused,
+            referenceDate: sharedReferenceDate
+        )
+
+        let completedTimer = RunningTimerItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000012")!,
+            order: 5,
+            name: "Completed",
+            basisSummary: "Manual timer",
+            duration: 2,
+            startDate: Date(timeIntervalSince1970: 98),
+            endDate: Date(timeIntervalSince1970: 101),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
+            referenceDate: sharedReferenceDate
+        )
+
+        let target = LockScreenTimerTargetCoordinator.selectRepresentativeTarget(
+            from: [pausedTimer, completedTimer, runningTimer]
+        )
+
+        XCTAssertEqual(target?.representativeTimerID, runningTimer.id)
+        XCTAssertEqual(target?.representativeEndDate, runningTimer.endDate)
+    }
+
+    @MainActor
+    func testLockScreenScheduledTargetsCanHandOffToNextTimerWithoutAppStateRefresh() {
+        let state = TimerTargetLiveActivityAttributes.ContentState(
+            representativeTimerName: "30s timer",
+            representativeEndDate: Date(timeIntervalSince1970: 130),
+            scheduledTargets: [
+                LockScreenTimerScheduledTarget(
+                    timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000021")!,
+                    timerName: "30s timer",
+                    endDate: Date(timeIntervalSince1970: 130)
+                ),
+                LockScreenTimerScheduledTarget(
+                    timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000022")!,
+                    timerName: "2m timer",
+                    endDate: Date(timeIntervalSince1970: 220)
+                )
+            ]
+        )
+
+        XCTAssertEqual(state.displayTarget(at: Date(timeIntervalSince1970: 120))?.timerName, "30s timer")
+        XCTAssertEqual(state.displayTarget(at: Date(timeIntervalSince1970: 131))?.timerName, "2m timer")
+    }
+
+    @MainActor
+    func testCompletedTimerIsNotRepresentativeCandidateAndClearsWhenNoRunningTimerRemains() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 2)
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        XCTAssertNil(exposer.currentTarget)
+        XCTAssertEqual(exposer.clearCount, 1)
+    }
+
+    @MainActor
+    func testCompletingRepresentativeTimerHandsOffToNextEarliestRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 10)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 10 }))
+        viewModel.startTimer(from: 2)
+        _ = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 2 }))
+
+        currentDate = startDate.addingTimeInterval(3)
+        timerManager.tick(now: currentDate)
+
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, fallbackRunning.endDate)
+        XCTAssertEqual(exposer.currentTarget?.scheduledTargets.map(\.timerID), [fallbackRunning.id])
+    }
+
+    @MainActor
+    func testRemovingRepresentativeTimerHandsOffToNextEarliestRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 15)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 15 }))
+        viewModel.startTimer(from: 8)
+        let selectedRunningID = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 8 })?.id)
+
+        viewModel.removeTimer(id: selectedRunningID)
+
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, fallbackRunning.endDate)
+    }
+
+    @MainActor
+    func testResumeRecalculatesEndDateAndReselectsEarliestRunningRepresentative() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 20)
+        let longRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
+        viewModel.startTimer(from: 8)
+        let resumableID = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 8 })?.id)
+
+        currentDate = startDate.addingTimeInterval(3)
+        viewModel.pauseTimer(id: resumableID)
+
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, longRunning.id)
+
+        currentDate = startDate.addingTimeInterval(10)
+        viewModel.resumeTimer(id: resumableID)
+
+        let resumed = try XCTUnwrap(viewModel.timers.first(where: { $0.id == resumableID }))
+        XCTAssertEqual(resumed.status, .running)
+        XCTAssertEqual(resumed.endDate, currentDate.addingTimeInterval(5))
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, resumed.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, resumed.endDate)
+        XCTAssertLessThan(try XCTUnwrap(resumed.endDate), try XCTUnwrap(longRunning.endDate))
+    }
+
+    @MainActor
+    func testNoRunningTimerClearsStaleLockScreenTargetExposure() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 6)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+
+        currentDate = startDate.addingTimeInterval(2)
+        viewModel.pauseTimer(id: id)
+
+        XCTAssertNil(exposer.currentTarget)
+        XCTAssertEqual(exposer.clearCount, 1)
+    }
+
+    @MainActor
+    func testPausedTimerRemainingTimeStaysStableInViewModel() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -398,22 +772,22 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let id = try XCTUnwrap(viewModel.timers.first?.id)
 
         currentDate = startDate.addingTimeInterval(3)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
 
-        let stoppedRemainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
-        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.stopped)
-        XCTAssertEqual(stoppedRemainingTime, 5, accuracy: 0.0001)
+        let pausedRemainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
+        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.paused)
+        XCTAssertEqual(pausedRemainingTime, 5, accuracy: 0.0001)
 
         currentDate = startDate.addingTimeInterval(12)
         timerManager.tick(now: currentDate)
 
         let stableRemainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
-        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.stopped)
+        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.paused)
         XCTAssertEqual(stableRemainingTime, 5, accuracy: 0.0001)
     }
 
     @MainActor
-    func testStoppedTimerDisplaySemanticsPreservePauseMetadataAndRemainResumable() throws {
+    func testPausedTimerDisplaySemanticsPreservePauseMetadataAndRemainResumable() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -431,10 +805,10 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let id = try XCTUnwrap(viewModel.timers.first?.id)
 
         currentDate = startDate.addingTimeInterval(3)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.status, .stopped)
+        XCTAssertEqual(timer.status, .paused)
         XCTAssertEqual(timer.remainingTime, 5, accuracy: 0.0001)
         XCTAssertEqual(timer.duration, 8, accuracy: 0.0001)
         XCTAssertEqual(timer.pausedAt, currentDate)
@@ -466,9 +840,9 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let id = try XCTUnwrap(viewModel.timers.first?.id)
 
         currentDate = startDate.addingTimeInterval(3)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
 
-        XCTAssertEqual(viewModel.timers.first?.status, .stopped)
+        XCTAssertEqual(viewModel.timers.first?.status, .paused)
         XCTAssertEqual(try XCTUnwrap(viewModel.timers.first?.remainingTime), 5, accuracy: 0.0001)
 
         currentDate = startDate.addingTimeInterval(6)
@@ -478,6 +852,64 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(viewModel.timers.first?.remainingTime), 5, accuracy: 0.0001)
         XCTAssertEqual(viewModel.timers.count, 1)
         XCTAssertEqual(viewModel.timers.first?.basisSummary, "Manual timer")
+    }
+
+    @MainActor
+    func testReconcileTimersAfterAppBecomesActivePublishesUpdatedTimerStateWithoutUserInteraction() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+        var nonEmptyEmissions: [[RunningTimerItem]] = []
+
+        let cancellable = viewModel.$timers.sink { timers in
+            guard !timers.isEmpty else {
+                return
+            }
+
+            nonEmptyEmissions.append(timers)
+        }
+        defer { cancellable.cancel() }
+
+        viewModel.startTimer(from: 10)
+
+        currentDate = startDate.addingTimeInterval(4)
+        viewModel.reconcileTimersAfterAppBecomesActive()
+
+        XCTAssertEqual(nonEmptyEmissions.count, 2)
+        XCTAssertEqual(nonEmptyEmissions[0].first?.status, .running)
+        XCTAssertEqual(try XCTUnwrap(nonEmptyEmissions[0].first).remainingTime, 10, accuracy: 0.0001)
+        XCTAssertEqual(nonEmptyEmissions[1].first?.status, .running)
+        XCTAssertEqual(try XCTUnwrap(nonEmptyEmissions[1].first).remainingTime, 6, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testReconcileTimersAfterAppBecomesActiveUpdatesCompletedDisplayState() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+
+        viewModel.startTimer(from: 2)
+
+        currentDate = startDate.addingTimeInterval(4)
+        viewModel.reconcileTimersAfterAppBecomesActive()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.status, .completed)
+        XCTAssertEqual(timer.remainingTime, 0, accuracy: 0.0001)
     }
 
     @MainActor
@@ -602,7 +1034,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testStoppedTimerIncludesPausedDateWithFullDateFormat() throws {
+    func testPausedTimerIncludesPausedDateWithFullDateFormat() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -617,7 +1049,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.startTimer(from: 120)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
         currentDate = startDate.addingTimeInterval(10)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
 
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(
@@ -738,7 +1170,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let originalSummary = viewModel.timers.first?.basisSummary
 
         currentDate = startDate.addingTimeInterval(1)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
         XCTAssertEqual(viewModel.timers.first?.basisSummary, originalSummary)
 
         currentDate = startDate.addingTimeInterval(3)
@@ -767,9 +1199,9 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.formatTimeDisplay(timer.remainingTime).primary, "8s")
 
         currentDate = startDate.addingTimeInterval(3)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
         timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.status, .stopped)
+        XCTAssertEqual(timer.status, .paused)
         XCTAssertEqual(viewModel.formatTimeDisplay(timer.remainingTime).primary, "5s")
 
         currentDate = startDate.addingTimeInterval(5)
@@ -1017,7 +1449,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let originalDuration = try XCTUnwrap(viewModel.timers.first?.duration)
 
         currentDate = startDate.addingTimeInterval(3)
-        viewModel.stopTimer(id: id)
+        viewModel.pauseTimer(id: id)
         XCTAssertEqual(viewModel.timers.first?.duration, originalDuration)
 
         currentDate = startDate.addingTimeInterval(6)
@@ -1054,5 +1486,310 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertFalse(allText.contains("/"))
         XCTAssertFalse(allText.contains("("))
         XCTAssertFalse(allText.contains(")"))
+    }
+
+    @MainActor
+    func testRelaunchRestoresTimerCardIdentityMetadataForMultipleTimers() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerStore = InMemoryTimerPersistenceStore()
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+
+        let initialTimerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: timerStore
+        )
+        let initialViewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: initialTimerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        initialViewModel.baseShutter = 1.0 / 30.0
+        initialViewModel.ndStop = 6
+        initialViewModel.startTimer()
+
+        initialViewModel.baseShutter = 1.0
+        initialViewModel.ndStop = 3
+        initialViewModel.startTimer()
+
+        let runningTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "3 stops - 8s" }))
+        let pausedTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "6 stops - 2s" }))
+
+        currentDate = startDate.addingTimeInterval(1)
+        initialViewModel.pauseTimer(id: pausedTimer.id)
+
+        let relaunchedTimerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: timerStore
+        )
+        let relaunchedViewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: relaunchedTimerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.id), [runningTimer.id, pausedTimer.id])
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.name), ["3 stops - 8s", "6 stops - 2s"])
+        XCTAssertEqual(
+            relaunchedViewModel.timers.map(\.basisSummary),
+            ["Base 1s · 3 stops", "Base 1/30s · 6 stops"]
+        )
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.order), [2, 1])
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.status), [.running, .paused])
+    }
+
+    @MainActor
+    func testRelaunchWithCorruptedMetadataSnapshotKeepsTimerRestoreIndependent() throws {
+        let suiteName = "ExposureCalculatorViewModelTests.corrupted.\(UUID().uuidString)"
+        let userDefaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let timerStore = InMemoryTimerPersistenceStore()
+        let timerID = UUID()
+        timerStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(
+                timers: [
+                    TimerState(
+                        id: timerID,
+                        duration: 10,
+                        startDate: Date(timeIntervalSince1970: 100),
+                        endDate: Date(timeIntervalSince1970: 110),
+                        pausedRemainingTime: nil,
+                        pausedAt: nil,
+                        status: .running
+                    )
+                ]
+            )
+        )
+        userDefaults.set(Data("corrupted-metadata".utf8), forKey: "ptimer.timer-metadata.snapshot")
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 104) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: UserDefaultsTimerMetadataPersistenceStore(userDefaults: userDefaults)
+        )
+
+        XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
+        XCTAssertEqual(viewModel.timers.map(\.status), [.running])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Manual timer"])
+    }
+
+    @MainActor
+    func testRelaunchWithoutMetadataSnapshotFallsBackToDefaultCardIdentity() {
+        let timerStore = InMemoryTimerPersistenceStore()
+        let timerID = UUID()
+        timerStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(
+                timers: [
+                    TimerState(
+                        id: timerID,
+                        duration: 10,
+                        startDate: Date(timeIntervalSince1970: 100),
+                        endDate: Date(timeIntervalSince1970: 110),
+                        pausedRemainingTime: nil,
+                        pausedAt: nil,
+                        status: .running
+                    )
+                ]
+            )
+        )
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 104) },
+            persistenceStore: timerStore
+        )
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Manual timer"])
+        XCTAssertEqual(viewModel.timers.map(\.order), [0])
+        XCTAssertNil(metadataStore.snapshot)
+    }
+
+    @MainActor
+    func testOrphanedMetadataIsDroppedWhenNoTimersRestore() {
+        let timerStore = InMemoryTimerPersistenceStore()
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        let orphanID = UUID()
+        metadataStore.saveSnapshot(
+            PersistentTimerMetadataCollectionSnapshot(
+                nextTimerOrder: 7,
+                timers: [
+                    PersistentTimerMetadataSnapshot(
+                        id: orphanID,
+                        order: 6,
+                        name: "Orphan",
+                        basisSummary: "Manual timer"
+                    )
+                ]
+            )
+        )
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertTrue(viewModel.timers.isEmpty)
+        XCTAssertNil(metadataStore.snapshot)
+    }
+
+    @MainActor
+    func testOrphanedMetadataIsFilteredOutWhenSomeTimersRestore() {
+        let timerID = UUID()
+        let orphanID = UUID()
+        let timerStore = InMemoryTimerPersistenceStore()
+        timerStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(
+                timers: [
+                    TimerState(
+                        id: timerID,
+                        duration: 8,
+                        startDate: Date(timeIntervalSince1970: 100),
+                        endDate: Date(timeIntervalSince1970: 108),
+                        pausedRemainingTime: nil,
+                        pausedAt: nil,
+                        status: .running
+                    )
+                ]
+            )
+        )
+
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        metadataStore.saveSnapshot(
+            PersistentTimerMetadataCollectionSnapshot(
+                nextTimerOrder: 9,
+                timers: [
+                    PersistentTimerMetadataSnapshot(
+                        id: timerID,
+                        order: 3,
+                        name: "Matched timer",
+                        basisSummary: "Matched summary"
+                    ),
+                    PersistentTimerMetadataSnapshot(
+                        id: orphanID,
+                        order: 4,
+                        name: "Orphan timer",
+                        basisSummary: "Orphan summary"
+                    )
+                ]
+            )
+        )
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 102) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Matched timer"])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Matched summary"])
+        XCTAssertEqual(metadataStore.snapshot?.timers.map(\.id), [timerID])
+    }
+
+    @MainActor
+    func testRemovingLastTimerClearsPersistedTimerAndMetadataSnapshots() throws {
+        let timerStore = InMemoryTimerPersistenceStore()
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        viewModel.startTimer(from: 10)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+        XCTAssertNotNil(timerStore.snapshot)
+        XCTAssertNotNil(metadataStore.snapshot)
+
+        viewModel.removeTimer(id: id)
+
+        XCTAssertTrue(viewModel.timers.isEmpty)
+        XCTAssertNil(timerStore.snapshot)
+        XCTAssertNil(metadataStore.snapshot)
+    }
+}
+
+@MainActor
+private final class LockScreenTimerTargetExposerSpy: LockScreenTimerTargetExposing {
+    private(set) var exposedTargets: [LockScreenTimerTarget] = []
+    private(set) var clearCount = 0
+    private(set) var currentTarget: LockScreenTimerTarget?
+
+    func expose(_ target: LockScreenTimerTarget) {
+        currentTarget = target
+        exposedTargets.append(target)
+    }
+
+    func clear() {
+        currentTarget = nil
+        clearCount += 1
+    }
+}
+
+private final class InMemoryTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
+    private(set) var snapshot: PersistentTimerMetadataCollectionSnapshot?
+
+    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
+        snapshot
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func clearSnapshot() {
+        snapshot = nil
+    }
+}
+
+private final class InMemoryTimerPersistenceStore: TimerPersistenceStoring {
+    private(set) var snapshot: PersistentTimerCollectionSnapshot?
+
+    func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
+        snapshot
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func clearSnapshot() {
+        snapshot = nil
     }
 }

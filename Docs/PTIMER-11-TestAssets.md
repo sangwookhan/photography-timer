@@ -32,9 +32,9 @@
 | --- | --- | --- |
 | 1 | Valid calculation, tap `Start Timer` | New timer card appears immediately |
 | 2 | Timer running | Remaining time decreases, status stays `Running` |
-| 3 | Tap stop while running | Remaining time freezes, status changes to `Stopped` |
+| 3 | Tap pause while running | Remaining time freezes, status changes to `Paused` |
 | 4 | Timer reaches end date | Remaining time becomes `00:00`, status changes to `Completed` |
-| 5 | Remove stopped/completed timer | Timer card disappears from panel |
+| 5 | Remove paused/completed timer | Timer card disappears from panel |
 
 ## UI Verification Checklist
 
@@ -48,7 +48,7 @@
   - state indicator
   - calculation basis summary
 - Running timers use green status styling.
-- Stopped timers use orange status styling.
+- Paused timers use orange status styling.
 - Completed timers use gray status styling and show `00:00`.
 - Empty timer panel shows `No active timers`.
 
@@ -62,7 +62,7 @@
 - `TimerManagerTests`
   - Date-based remaining-time calculation
   - running to completed transition
-  - stop behavior and remaining-time preservation
+  - pause behavior and remaining-time preservation
   - multi-timer updates and cleanup
 - `ExposureCalculatorViewModelTests`
   - timer start enablement

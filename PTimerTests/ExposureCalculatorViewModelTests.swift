@@ -1540,6 +1540,209 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(relaunchedViewModel.timers.map(\.order), [2, 1])
         XCTAssertEqual(relaunchedViewModel.timers.map(\.status), [.running, .paused])
     }
+
+    @MainActor
+    func testRelaunchWithCorruptedMetadataSnapshotKeepsTimerRestoreIndependent() throws {
+        let suiteName = "ExposureCalculatorViewModelTests.corrupted.\(UUID().uuidString)"
+        let userDefaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let timerStore = InMemoryTimerPersistenceStore()
+        let timerID = UUID()
+        timerStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(
+                timers: [
+                    TimerState(
+                        id: timerID,
+                        duration: 10,
+                        startDate: Date(timeIntervalSince1970: 100),
+                        endDate: Date(timeIntervalSince1970: 110),
+                        pausedRemainingTime: nil,
+                        pausedAt: nil,
+                        status: .running
+                    )
+                ]
+            )
+        )
+        userDefaults.set(Data("corrupted-metadata".utf8), forKey: "ptimer.timer-metadata.snapshot")
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 104) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: UserDefaultsTimerMetadataPersistenceStore(userDefaults: userDefaults)
+        )
+
+        XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
+        XCTAssertEqual(viewModel.timers.map(\.status), [.running])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Manual timer"])
+    }
+
+    @MainActor
+    func testRelaunchWithoutMetadataSnapshotFallsBackToDefaultCardIdentity() {
+        let timerStore = InMemoryTimerPersistenceStore()
+        let timerID = UUID()
+        timerStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(
+                timers: [
+                    TimerState(
+                        id: timerID,
+                        duration: 10,
+                        startDate: Date(timeIntervalSince1970: 100),
+                        endDate: Date(timeIntervalSince1970: 110),
+                        pausedRemainingTime: nil,
+                        pausedAt: nil,
+                        status: .running
+                    )
+                ]
+            )
+        )
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 104) },
+            persistenceStore: timerStore
+        )
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Manual timer"])
+        XCTAssertEqual(viewModel.timers.map(\.order), [0])
+        XCTAssertNil(metadataStore.snapshot)
+    }
+
+    @MainActor
+    func testOrphanedMetadataIsDroppedWhenNoTimersRestore() {
+        let timerStore = InMemoryTimerPersistenceStore()
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        let orphanID = UUID()
+        metadataStore.saveSnapshot(
+            PersistentTimerMetadataCollectionSnapshot(
+                nextTimerOrder: 7,
+                timers: [
+                    PersistentTimerMetadataSnapshot(
+                        id: orphanID,
+                        order: 6,
+                        name: "Orphan",
+                        basisSummary: "Manual timer"
+                    )
+                ]
+            )
+        )
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertTrue(viewModel.timers.isEmpty)
+        XCTAssertNil(metadataStore.snapshot)
+    }
+
+    @MainActor
+    func testOrphanedMetadataIsFilteredOutWhenSomeTimersRestore() {
+        let timerID = UUID()
+        let orphanID = UUID()
+        let timerStore = InMemoryTimerPersistenceStore()
+        timerStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(
+                timers: [
+                    TimerState(
+                        id: timerID,
+                        duration: 8,
+                        startDate: Date(timeIntervalSince1970: 100),
+                        endDate: Date(timeIntervalSince1970: 108),
+                        pausedRemainingTime: nil,
+                        pausedAt: nil,
+                        status: .running
+                    )
+                ]
+            )
+        )
+
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        metadataStore.saveSnapshot(
+            PersistentTimerMetadataCollectionSnapshot(
+                nextTimerOrder: 9,
+                timers: [
+                    PersistentTimerMetadataSnapshot(
+                        id: timerID,
+                        order: 3,
+                        name: "Matched timer",
+                        basisSummary: "Matched summary"
+                    ),
+                    PersistentTimerMetadataSnapshot(
+                        id: orphanID,
+                        order: 4,
+                        name: "Orphan timer",
+                        basisSummary: "Orphan summary"
+                    )
+                ]
+            )
+        )
+
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 102) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Matched timer"])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Matched summary"])
+        XCTAssertEqual(metadataStore.snapshot?.timers.map(\.id), [timerID])
+    }
+
+    @MainActor
+    func testRemovingLastTimerClearsPersistedTimerAndMetadataSnapshots() throws {
+        let timerStore = InMemoryTimerPersistenceStore()
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) },
+            persistenceStore: timerStore
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        viewModel.startTimer(from: 10)
+        let id = try XCTUnwrap(viewModel.timers.first?.id)
+        XCTAssertNotNil(timerStore.snapshot)
+        XCTAssertNotNil(metadataStore.snapshot)
+
+        viewModel.removeTimer(id: id)
+
+        XCTAssertTrue(viewModel.timers.isEmpty)
+        XCTAssertNil(timerStore.snapshot)
+        XCTAssertNil(metadataStore.snapshot)
+    }
 }
 
 @MainActor

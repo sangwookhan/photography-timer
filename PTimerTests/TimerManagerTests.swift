@@ -1461,6 +1461,191 @@ final class TimerManagerTests: XCTestCase {
             )
         ])
     }
+
+    @MainActor
+    func testRestoreRunningTimerAfterTerminationKeepsItRunningWithWallClockRemainingTime() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let store = InMemoryTimerPersistenceStore()
+
+        let initialManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let id = try XCTUnwrap(initialManager.start(duration: 10))
+
+        currentDate = startDate.addingTimeInterval(4)
+        let restoredManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let restored = tryUnwrapTimer(withID: id, from: restoredManager.timers)
+        XCTAssertEqual(restored.status(at: currentDate), .running)
+        XCTAssertEqual(restored.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+        XCTAssertEqual(restored.endDate, startDate.addingTimeInterval(10))
+    }
+
+    @MainActor
+    func testRestoreRunningTimerAfterTerminationCompletesIfExpectedCompletionAlreadyPassed() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let store = InMemoryTimerPersistenceStore()
+
+        let initialManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let id = try XCTUnwrap(initialManager.start(duration: 3))
+
+        currentDate = startDate.addingTimeInterval(5)
+        let restoredManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let restored = tryUnwrapTimer(withID: id, from: restoredManager.timers)
+        XCTAssertEqual(restored.status(at: currentDate), .completed)
+        XCTAssertEqual(restored.remainingTime(at: currentDate), 0, accuracy: 0.0001)
+        XCTAssertEqual(restored.endDate, startDate.addingTimeInterval(3))
+    }
+
+    @MainActor
+    func testRestoreStoppedTimerAfterTerminationPreservesRemainingTime() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let store = InMemoryTimerPersistenceStore()
+
+        let initialManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let id = try XCTUnwrap(initialManager.start(duration: 10))
+        currentDate = startDate.addingTimeInterval(4)
+        initialManager.stop(id: id)
+
+        currentDate = startDate.addingTimeInterval(40)
+        let restoredManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let restored = tryUnwrapTimer(withID: id, from: restoredManager.timers)
+        XCTAssertEqual(restored.status(at: currentDate), .stopped)
+        XCTAssertEqual(restored.remainingTime(at: currentDate), 6, accuracy: 0.0001)
+        XCTAssertEqual(restored.pausedAt, startDate.addingTimeInterval(4))
+    }
+
+    @MainActor
+    func testRestoreCompletedTimerAfterTerminationKeepsCompletedState() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let store = InMemoryTimerPersistenceStore()
+
+        let initialManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let id = try XCTUnwrap(initialManager.start(duration: 2))
+        currentDate = startDate.addingTimeInterval(2)
+        initialManager.tick(now: currentDate)
+
+        currentDate = startDate.addingTimeInterval(20)
+        let restoredManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let restored = tryUnwrapTimer(withID: id, from: restoredManager.timers)
+        XCTAssertEqual(restored.status(at: currentDate), .completed)
+        XCTAssertEqual(restored.remainingTime(at: currentDate), 0, accuracy: 0.0001)
+        XCTAssertEqual(restored.endDate, startDate.addingTimeInterval(2))
+    }
+
+    @MainActor
+    func testRestoreMultipleTimersAfterTerminationPreservesIDsAndStatuses() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let store = InMemoryTimerPersistenceStore()
+
+        let initialManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        let runningID = try XCTUnwrap(initialManager.start(duration: 10))
+        let stoppedID = try XCTUnwrap(initialManager.start(duration: 12))
+        let completedID = try XCTUnwrap(initialManager.start(duration: 3))
+
+        currentDate = startDate.addingTimeInterval(4)
+        initialManager.stop(id: stoppedID)
+        initialManager.tick(now: currentDate)
+
+        currentDate = startDate.addingTimeInterval(5)
+        let restoredManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        XCTAssertEqual(restoredManager.timers.map(\.id), [runningID, stoppedID, completedID])
+        XCTAssertEqual(
+            restoredManager.timers.map { $0.status(at: currentDate) },
+            [.running, .stopped, .completed]
+        )
+        XCTAssertEqual(
+            tryUnwrapTimer(withID: runningID, from: restoredManager.timers).remainingTime(at: currentDate),
+            5,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            tryUnwrapTimer(withID: stoppedID, from: restoredManager.timers).remainingTime(at: currentDate),
+            8,
+            accuracy: 0.0001
+        )
+    }
+
+    @MainActor
+    func testRestoreEntryPointLoadsSnapshotOnlyDuringInitialization() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let store = InMemoryTimerPersistenceStore()
+
+        let initialManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+        _ = try XCTUnwrap(initialManager.start(duration: 5))
+
+        currentDate = startDate.addingTimeInterval(1)
+        let restoredManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: store
+        )
+
+        XCTAssertEqual(store.loadCallCount, 2)
+
+        currentDate = startDate.addingTimeInterval(2)
+        restoredManager.reconcileAfterAppBecomesActive()
+        restoredManager.tick(now: currentDate)
+
+        XCTAssertEqual(store.loadCallCount, 2)
+    }
 }
 
 @MainActor
@@ -1515,5 +1700,23 @@ private final class CompletionNotificationSchedulerSpy: TimerCompletionNotificat
         authorizationRequestCount = 0
         scheduledTimers = []
         canceledTimerIDs = []
+    }
+}
+
+private final class InMemoryTimerPersistenceStore: TimerPersistenceStoring {
+    private(set) var snapshot: PersistentTimerCollectionSnapshot?
+    private(set) var loadCallCount = 0
+
+    func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
+        loadCallCount += 1
+        return snapshot
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func clearSnapshot() {
+        snapshot = nil
     }
 }

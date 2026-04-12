@@ -1487,6 +1487,59 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertFalse(allText.contains("("))
         XCTAssertFalse(allText.contains(")"))
     }
+
+    @MainActor
+    func testRelaunchRestoresTimerCardIdentityMetadataForMultipleTimers() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerStore = InMemoryTimerPersistenceStore()
+        let metadataStore = InMemoryTimerMetadataPersistenceStore()
+
+        let initialTimerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: timerStore
+        )
+        let initialViewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: initialTimerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        initialViewModel.baseShutter = 1.0 / 30.0
+        initialViewModel.ndStop = 6
+        initialViewModel.startTimer()
+
+        initialViewModel.baseShutter = 1.0
+        initialViewModel.ndStop = 3
+        initialViewModel.startTimer()
+
+        let runningTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "3 stops - 8s" }))
+        let stoppingTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "6 stops - 2s" }))
+
+        currentDate = startDate.addingTimeInterval(1)
+        initialViewModel.stopTimer(id: stoppingTimer.id)
+
+        let relaunchedTimerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            persistenceStore: timerStore
+        )
+        let relaunchedViewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: relaunchedTimerManager,
+            metadataPersistenceStore: metadataStore
+        )
+
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.id), [runningTimer.id, stoppingTimer.id])
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.name), ["3 stops - 8s", "6 stops - 2s"])
+        XCTAssertEqual(
+            relaunchedViewModel.timers.map(\.basisSummary),
+            ["Base 1s · 3 stops", "Base 1/30s · 6 stops"]
+        )
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.order), [2, 1])
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.status), [.running, .stopped])
+    }
 }
 
 @MainActor
@@ -1503,5 +1556,37 @@ private final class LockScreenTimerTargetExposerSpy: LockScreenTimerTargetExposi
     func clear() {
         currentTarget = nil
         clearCount += 1
+    }
+}
+
+private final class InMemoryTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
+    private(set) var snapshot: PersistentTimerMetadataCollectionSnapshot?
+
+    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
+        snapshot
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func clearSnapshot() {
+        snapshot = nil
+    }
+}
+
+private final class InMemoryTimerPersistenceStore: TimerPersistenceStoring {
+    private(set) var snapshot: PersistentTimerCollectionSnapshot?
+
+    func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
+        snapshot
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func clearSnapshot() {
+        snapshot = nil
     }
 }

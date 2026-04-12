@@ -186,6 +186,65 @@ private struct EligibleRunningTimer {
     }
 }
 
+struct PersistentTimerMetadataSnapshot: Codable, Equatable {
+    let id: UUID
+    let order: Int
+    let name: String
+    let basisSummary: String
+}
+
+struct PersistentTimerMetadataCollectionSnapshot: Codable, Equatable {
+    let nextTimerOrder: Int
+    let timers: [PersistentTimerMetadataSnapshot]
+}
+
+protocol TimerMetadataPersistenceStoring {
+    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot?
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot)
+    func clearSnapshot()
+}
+
+struct NoOpTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
+    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? { nil }
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {}
+    func clearSnapshot() {}
+}
+
+struct UserDefaultsTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
+    private let userDefaults: UserDefaults
+    private let snapshotKey: String
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+
+    init(
+        userDefaults: UserDefaults = .standard,
+        snapshotKey: String = "ptimer.timer-metadata.snapshot"
+    ) {
+        self.userDefaults = userDefaults
+        self.snapshotKey = snapshotKey
+    }
+
+    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
+        guard let data = userDefaults.data(forKey: snapshotKey) else {
+            return nil
+        }
+
+        return try? decoder.decode(PersistentTimerMetadataCollectionSnapshot.self, from: data)
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+        guard let data = try? encoder.encode(snapshot) else {
+            return
+        }
+
+        userDefaults.set(data, forKey: snapshotKey)
+    }
+
+    func clearSnapshot() {
+        userDefaults.removeObject(forKey: snapshotKey)
+    }
+}
+
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
     @Published var baseShutter = 1.0 / 30.0 {
@@ -210,6 +269,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private let calculator: ExposureCalculator
     private let timerManager: TimerManager
+    private let metadataPersistenceStore: TimerMetadataPersistenceStoring
     private let lockScreenTargetCoordinator: LockScreenTimerTargetCoordinator
     private var timerMetadata: [UUID: TimerMetadata] = [:]
     private var nextTimerOrder = 1
@@ -221,12 +281,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
             completionAlertService: ForegroundTimerCompletionAlertService(
                 feedbackPlayer: SystemTimerCompletionFeedbackPlayer()
             ),
-            completionNotificationScheduler: UserNotificationTimerCompletionScheduler()
+            completionNotificationScheduler: UserNotificationTimerCompletionScheduler(),
+            persistenceStore: UserDefaultsTimerPersistenceStore()
         )
+        self.metadataPersistenceStore = UserDefaultsTimerMetadataPersistenceStore()
         self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
             exposer: ActivityKitLockScreenTimerTargetExposer()
         )
 
+        restorePersistedTimerMetadata()
         timerManager.$timers
             .sink { [weak self] states in
                 self?.syncTimers(with: states)
@@ -237,14 +300,17 @@ final class ExposureCalculatorViewModel: ObservableObject {
     init(
         calculator: ExposureCalculator,
         timerManager: TimerManager,
+        metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
         self.calculator = calculator
         self.timerManager = timerManager
+        self.metadataPersistenceStore = metadataPersistenceStore
         self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
             exposer: lockScreenTargetExposer
         )
 
+        restorePersistedTimerMetadata()
         timerManager.$timers
             .sink { [weak self] states in
                 self?.syncTimers(with: states)
@@ -308,6 +374,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     func removeTimer(id: UUID) {
         timerManager.remove(id: id)
         timerMetadata.removeValue(forKey: id)
+        persistTimerMetadata()
     }
 
     func reconcileTimersAfterAppBecomesActive() {
@@ -340,6 +407,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         nextTimerOrder += 1
+        persistTimerMetadata()
     }
 
     func clearCompletedTimers() {
@@ -352,6 +420,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         completedIDs.forEach { id in
             timerMetadata.removeValue(forKey: id)
         }
+        persistTimerMetadata()
     }
 
     func formatDuration(_ seconds: TimeInterval) -> String {
@@ -437,7 +506,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func syncTimers(with states: [TimerState]) {
         let validIDs = Set(states.map(\.id))
+        let originalCount = timerMetadata.count
         timerMetadata = timerMetadata.filter { validIDs.contains($0.key) }
+        if timerMetadata.count != originalCount {
+            persistTimerMetadata()
+        }
         let referenceDate = timerManager.currentDate
 
         timers = states
@@ -475,6 +548,55 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func ndStopLabel(for stop: Int) -> String {
         stop == 1 ? "1 stop" : "\(stop) stops"
+    }
+
+    private func restorePersistedTimerMetadata() {
+        guard let snapshot = metadataPersistenceStore.loadSnapshot() else {
+            return
+        }
+
+        nextTimerOrder = max(1, snapshot.nextTimerOrder)
+        timerMetadata = Dictionary(
+            uniqueKeysWithValues: snapshot.timers.map {
+                (
+                    $0.id,
+                    TimerMetadata(
+                        order: $0.order,
+                        name: $0.name,
+                        basisSummary: $0.basisSummary
+                    )
+                )
+            }
+        )
+    }
+
+    private func persistTimerMetadata() {
+        guard !timerMetadata.isEmpty else {
+            metadataPersistenceStore.clearSnapshot()
+            return
+        }
+
+        let snapshot = PersistentTimerMetadataCollectionSnapshot(
+            nextTimerOrder: nextTimerOrder,
+            timers: timerMetadata
+                .map { id, metadata in
+                    PersistentTimerMetadataSnapshot(
+                        id: id,
+                        order: metadata.order,
+                        name: metadata.name,
+                        basisSummary: metadata.basisSummary
+                    )
+                }
+                .sorted { lhs, rhs in
+                    if lhs.order != rhs.order {
+                        return lhs.order < rhs.order
+                    }
+
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+        )
+
+        metadataPersistenceStore.saveSnapshot(snapshot)
     }
 
     private func calculationPayload(for resultShutter: TimeInterval) -> ExposureCalculationResult? {

@@ -94,6 +94,9 @@ struct ExposureCalculatorScreen: View {
                 return
             }
 
+            // PTIMER-67: process-alive foreground reactivation only.
+            // PTIMER-70 relaunch restore is init-driven in TimerManager and is
+            // deliberately not re-triggered from lifecycle observers.
             viewModel.reconcileTimersAfterAppBecomesActive()
         }
     }

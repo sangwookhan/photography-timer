@@ -41,6 +41,155 @@ struct NoOpTimerCompletionScheduler: TimerCompletionNotificationScheduling {
     func cancelCompletionNotification(forTimerID timerID: UUID) {}
 }
 
+// Snapshot schema is intentionally minimal:
+// - id keeps timer identity stable across relaunch.
+// - status selects the restore rule for running/stopped/completed.
+// - duration/startDate preserve the original timer semantics and UI context.
+// - expectedCompletionAt lets PTIMER-70 reconcile running timers to wall clock time.
+// - pausedRemainingDuration/pausedAt keep stopped timers frozen without drifting.
+// - completedAt preserves the final timestamp for completed timers.
+struct PersistentTimerSnapshot: Codable, Equatable {
+    let id: UUID
+    let status: SnapshotStatus
+    let duration: TimeInterval
+    let startDate: Date
+    let expectedCompletionAt: Date?
+    let pausedRemainingDuration: TimeInterval?
+    let pausedAt: Date?
+    let completedAt: Date?
+
+    init(timer: TimerState) {
+        self.id = timer.id
+        self.duration = timer.duration
+        self.startDate = timer.startDate
+        self.pausedRemainingDuration = timer.pausedRemainingTime
+        self.pausedAt = timer.pausedAt
+
+        switch timer.status {
+        case .running:
+            self.status = .running
+            self.expectedCompletionAt = timer.endDate
+            self.completedAt = nil
+        case .stopped:
+            self.status = .stopped
+            self.expectedCompletionAt = timer.endDate
+            self.completedAt = nil
+        case .completed:
+            self.status = .completed
+            self.expectedCompletionAt = nil
+            self.completedAt = timer.endDate
+        }
+    }
+
+    func restore(at now: Date) -> TimerState {
+        switch status {
+        case .running:
+            guard let expectedCompletionAt else {
+                return makeCompletedTimer(completionDate: now)
+            }
+
+            if now.addingTimeInterval(timerStabilityEpsilon) >= expectedCompletionAt {
+                return makeCompletedTimer(completionDate: expectedCompletionAt)
+            }
+
+            return TimerState(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                endDate: expectedCompletionAt,
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .running
+            )
+        case .stopped:
+            return TimerState(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                endDate: expectedCompletionAt,
+                pausedRemainingTime: pausedRemainingDuration,
+                pausedAt: pausedAt,
+                status: .stopped
+            )
+        case .completed:
+            return makeCompletedTimer(completionDate: completedAt)
+        }
+    }
+
+    private func makeCompletedTimer(completionDate: Date?) -> TimerState {
+        TimerState(
+            id: id,
+            duration: duration,
+            startDate: startDate,
+            endDate: completionDate ?? expectedCompletionAt ?? pausedAt ?? startDate.addingTimeInterval(duration),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed
+        )
+    }
+
+    enum SnapshotStatus: String, Codable, Equatable {
+        case running
+        case stopped
+        case completed
+    }
+}
+
+struct PersistentTimerCollectionSnapshot: Codable, Equatable {
+    let timers: [PersistentTimerSnapshot]
+
+    init(timers: [TimerState]) {
+        self.timers = timers.map(PersistentTimerSnapshot.init)
+    }
+}
+
+protocol TimerPersistenceStoring {
+    func loadSnapshot() -> PersistentTimerCollectionSnapshot?
+    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot)
+    func clearSnapshot()
+}
+
+struct NoOpTimerPersistenceStore: TimerPersistenceStoring {
+    func loadSnapshot() -> PersistentTimerCollectionSnapshot? { nil }
+    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {}
+    func clearSnapshot() {}
+}
+
+struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
+    private let userDefaults: UserDefaults
+    private let snapshotKey: String
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+
+    init(
+        userDefaults: UserDefaults = .standard,
+        snapshotKey: String = "ptimer.timer-state.snapshot"
+    ) {
+        self.userDefaults = userDefaults
+        self.snapshotKey = snapshotKey
+    }
+
+    func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
+        guard let data = userDefaults.data(forKey: snapshotKey) else {
+            return nil
+        }
+
+        return try? decoder.decode(PersistentTimerCollectionSnapshot.self, from: data)
+    }
+
+    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
+        guard let data = try? encoder.encode(snapshot) else {
+            return
+        }
+
+        userDefaults.set(data, forKey: snapshotKey)
+    }
+
+    func clearSnapshot() {
+        userDefaults.removeObject(forKey: snapshotKey)
+    }
+}
+
 struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
     func playCompletionFeedback() {
         let generator = UINotificationFeedbackGenerator()
@@ -218,18 +367,24 @@ final class TimerManager: ObservableObject {
     private let dateProvider: () -> Date
     private let completionAlertService: TimerCompletionAlerting
     private let completionNotificationScheduler: TimerCompletionNotificationScheduling
+    private let persistenceStore: TimerPersistenceStoring
+    private var hasRestoredPersistedTimers = false
     private var timer: Timer?
 
     init(
         tickInterval: TimeInterval = 0.1,
         dateProvider: @escaping () -> Date = Date.init,
         completionAlertService: TimerCompletionAlerting = NoOpTimerCompletionAlertService(),
-        completionNotificationScheduler: TimerCompletionNotificationScheduling = NoOpTimerCompletionScheduler()
+        completionNotificationScheduler: TimerCompletionNotificationScheduling = NoOpTimerCompletionScheduler(),
+        persistenceStore: TimerPersistenceStoring = NoOpTimerPersistenceStore()
     ) {
         self.tickInterval = tickInterval
         self.dateProvider = dateProvider
         self.completionAlertService = completionAlertService
         self.completionNotificationScheduler = completionNotificationScheduler
+        self.persistenceStore = persistenceStore
+
+        restorePersistedTimersIfNeeded()
     }
 
     @discardableResult
@@ -256,6 +411,7 @@ final class TimerManager: ObservableObject {
             completionNotificationScheduler.scheduleCompletionNotification(for: timer)
         }
         ensureTimerLoop()
+        persistTimers()
         return id
     }
 
@@ -269,6 +425,7 @@ final class TimerManager: ObservableObject {
         timers[index] = timers[index].stopping(at: currentDate)
         completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
         stopLoopIfNeeded(now: currentDate)
+        persistTimers()
     }
 
     func resume(id: UUID) {
@@ -289,6 +446,8 @@ final class TimerManager: ObservableObject {
             completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
             stopLoopIfNeeded(now: currentDate)
         }
+
+        persistTimers()
     }
 
     func tick(now: Date? = nil) {
@@ -313,9 +472,9 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        // Reactivation reconciliation is state-only. It catches timers up to
-        // wall clock time after inactive/background/lock without replaying
-        // completion feedback that belongs to the foreground tick path.
+        // PTIMER-67 covers foreground reactivation while the same process is
+        // still alive. PTIMER-70 restore happens only once in init and must
+        // not be re-entered from lifecycle hooks like this.
         applyRunningStateReconciliation(
             now: currentDate,
             shouldEmitCompletionAlerts: false
@@ -333,12 +492,14 @@ final class TimerManager: ObservableObject {
         timers.removeAll { $0.status(at: currentDate) == .completed }
 
         stopLoopIfNeeded(now: currentDate)
+        persistTimers()
     }
 
     func remove(id: UUID) {
         completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
         timers.removeAll { $0.id == id }
         stopLoopIfNeeded()
+        persistTimers()
     }
 
     deinit {
@@ -422,5 +583,44 @@ final class TimerManager: ObservableObject {
         } else {
             stopLoop()
         }
+
+        persistTimers()
+    }
+
+    private func restorePersistedTimersIfNeeded() {
+        guard !hasRestoredPersistedTimers else {
+            return
+        }
+
+        hasRestoredPersistedTimers = true
+
+        guard let snapshot = persistenceStore.loadSnapshot() else {
+            return
+        }
+
+        let currentDate = dateProvider()
+        timers = snapshot.timers.map { $0.restore(at: currentDate) }
+
+        if timers.contains(where: { $0.status(at: currentDate) == .running }) {
+            ensureTimerLoop()
+        } else {
+            stopLoop()
+        }
+
+        // PTIMER-70 restore is deterministic and init-only: relaunch reads the
+        // saved snapshot once, reconciles running timers against wall clock
+        // time, and writes the normalized result back as the new source.
+        persistTimers()
+    }
+
+    private func persistTimers() {
+        guard !timers.isEmpty else {
+            persistenceStore.clearSnapshot()
+            return
+        }
+
+        persistenceStore.saveSnapshot(
+            PersistentTimerCollectionSnapshot(timers: timers)
+        )
     }
 }

@@ -400,17 +400,50 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(exposer.exposedTargets, [
             LockScreenTimerTarget(
-                timerID: timer.id,
-                timerName: timer.name,
-                endDate: try XCTUnwrap(timer.endDate)
+                representativeTimerID: timer.id,
+                representativeTimerName: timer.name,
+                representativeEndDate: try XCTUnwrap(timer.endDate),
+                scheduledTargets: [
+                    LockScreenTimerScheduledTarget(
+                        timerID: timer.id,
+                        timerName: timer.name,
+                        endDate: try XCTUnwrap(timer.endDate)
+                    )
+                ]
             )
         ])
-        XCTAssertEqual(exposer.currentTarget?.endDate, timer.endDate)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, timer.endDate)
         XCTAssertEqual(exposer.clearCount, 0)
     }
 
     @MainActor
-    func testStoppedTimerIsNotKeptAsActiveLockScreenTargetAndFallsBackToNextRunningTimer() throws {
+    func testLockScreenTargetSelectionUsesEarliestRunningTimerEndDate() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 20)
+        let longerRunning = try XCTUnwrap(viewModel.timers.first)
+        viewModel.startTimer(from: 12)
+        let shorterRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 12 }))
+
+        XCTAssertNotEqual(viewModel.timers.first?.id, longerRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, shorterRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, shorterRunning.endDate)
+        XCTAssertEqual(exposer.currentTarget?.scheduledTargets.map(\.timerID), [shorterRunning.id, longerRunning.id])
+    }
+
+    @MainActor
+    func testLockScreenTargetSelectionUsesPresentationOrderWhenEarliestEndDateIsTied() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -424,21 +457,167 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             lockScreenTargetExposer: exposer
         )
 
-        viewModel.startTimer(from: 12)
-        let olderRunning = try XCTUnwrap(viewModel.timers.first)
+        viewModel.startTimer(from: 30)
+        let olderRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 30 }))
+
+        currentDate = startDate.addingTimeInterval(10)
         viewModel.startTimer(from: 20)
-        let selectedRunning = try XCTUnwrap(viewModel.timers.first)
+        let newerRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
+
+        XCTAssertEqual(olderRunning.endDate, newerRunning.endDate)
+        XCTAssertEqual(viewModel.timers.first?.id, newerRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, newerRunning.id)
+    }
+
+    @MainActor
+    func testLockScreenTargetSelectionUsesStableIDOrderWhenEndDateAndPresentationOrderAreTied() {
+        let earlierID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let laterID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let sharedEndDate = Date(timeIntervalSince1970: 500)
+        let referenceDate = Date(timeIntervalSince1970: 100)
+
+        let laterIDTimer = RunningTimerItem(
+            id: laterID,
+            order: 7,
+            name: "Later ID",
+            basisSummary: "Manual timer",
+            duration: 30,
+            startDate: Date(timeIntervalSince1970: 470),
+            endDate: sharedEndDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: referenceDate
+        )
+
+        let earlierIDTimer = RunningTimerItem(
+            id: earlierID,
+            order: 7,
+            name: "Earlier ID",
+            basisSummary: "Manual timer",
+            duration: 30,
+            startDate: Date(timeIntervalSince1970: 470),
+            endDate: sharedEndDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: referenceDate
+        )
+
+        let target = LockScreenTimerTargetCoordinator.selectRepresentativeTarget(
+            from: [laterIDTimer, earlierIDTimer]
+        )
+
+        XCTAssertEqual(target?.representativeTimerID, earlierID)
+        XCTAssertEqual(target?.representativeEndDate, sharedEndDate)
+    }
+
+    @MainActor
+    func testStoppedTimerIsNotRepresentativeAndFallsBackToNextEarliestRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 20)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
+        viewModel.startTimer(from: 12)
+        let selectedRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 12 }))
 
         currentDate = startDate.addingTimeInterval(5)
         viewModel.stopTimer(id: selectedRunning.id)
 
-        XCTAssertEqual(viewModel.timers.first?.status, .stopped)
-        XCTAssertEqual(exposer.currentTarget?.timerID, olderRunning.id)
-        XCTAssertEqual(exposer.currentTarget?.endDate, olderRunning.endDate)
+        XCTAssertEqual(viewModel.timers.first(where: { $0.id == selectedRunning.id })?.status, .stopped)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, fallbackRunning.endDate)
     }
 
     @MainActor
-    func testCompletedTimerIsRemovedFromActiveLockScreenTarget() {
+    func testStoppedAndCompletedTimersAreIgnoredByEarliestEndDateRepresentativeSelection() {
+        let sharedReferenceDate = Date(timeIntervalSince1970: 100)
+        let runningTimer = RunningTimerItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!,
+            order: 3,
+            name: "Running",
+            basisSummary: "Manual timer",
+            duration: 15,
+            startDate: Date(timeIntervalSince1970: 95),
+            endDate: Date(timeIntervalSince1970: 110),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: sharedReferenceDate
+        )
+
+        let stoppedTimer = RunningTimerItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!,
+            order: 4,
+            name: "Stopped",
+            basisSummary: "Manual timer",
+            duration: 3,
+            startDate: Date(timeIntervalSince1970: 99),
+            endDate: Date(timeIntervalSince1970: 102),
+            pausedRemainingTime: 2,
+            pausedAt: Date(timeIntervalSince1970: 100),
+            status: .stopped,
+            referenceDate: sharedReferenceDate
+        )
+
+        let completedTimer = RunningTimerItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000012")!,
+            order: 5,
+            name: "Completed",
+            basisSummary: "Manual timer",
+            duration: 2,
+            startDate: Date(timeIntervalSince1970: 98),
+            endDate: Date(timeIntervalSince1970: 101),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .completed,
+            referenceDate: sharedReferenceDate
+        )
+
+        let target = LockScreenTimerTargetCoordinator.selectRepresentativeTarget(
+            from: [stoppedTimer, completedTimer, runningTimer]
+        )
+
+        XCTAssertEqual(target?.representativeTimerID, runningTimer.id)
+        XCTAssertEqual(target?.representativeEndDate, runningTimer.endDate)
+    }
+
+    @MainActor
+    func testLockScreenScheduledTargetsCanHandOffToNextTimerWithoutAppStateRefresh() {
+        let state = TimerTargetLiveActivityAttributes.ContentState(
+            representativeTimerName: "30s timer",
+            representativeEndDate: Date(timeIntervalSince1970: 130),
+            scheduledTargets: [
+                LockScreenTimerScheduledTarget(
+                    timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000021")!,
+                    timerName: "30s timer",
+                    endDate: Date(timeIntervalSince1970: 130)
+                ),
+                LockScreenTimerScheduledTarget(
+                    timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000022")!,
+                    timerName: "2m timer",
+                    endDate: Date(timeIntervalSince1970: 220)
+                )
+            ]
+        )
+
+        XCTAssertEqual(state.displayTarget(at: Date(timeIntervalSince1970: 120))?.timerName, "30s timer")
+        XCTAssertEqual(state.displayTarget(at: Date(timeIntervalSince1970: 131))?.timerName, "2m timer")
+    }
+
+    @MainActor
+    func testCompletedTimerIsNotRepresentativeCandidateAndClearsWhenNoRunningTimerRemains() {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -462,7 +641,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCompletedSelectedTimerFallsBackToNextRunningLockScreenTarget() throws {
+    func testCompletingRepresentativeTimerHandsOffToNextEarliestRunningTimer() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -477,19 +656,46 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
 
         viewModel.startTimer(from: 10)
-        let fallbackRunning = try XCTUnwrap(viewModel.timers.first)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 10 }))
         viewModel.startTimer(from: 2)
-        _ = try XCTUnwrap(viewModel.timers.first)
+        _ = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 2 }))
 
         currentDate = startDate.addingTimeInterval(3)
         timerManager.tick(now: currentDate)
 
-        XCTAssertEqual(exposer.currentTarget?.timerID, fallbackRunning.id)
-        XCTAssertEqual(exposer.currentTarget?.endDate, fallbackRunning.endDate)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, fallbackRunning.endDate)
+        XCTAssertEqual(exposer.currentTarget?.scheduledTargets.map(\.timerID), [fallbackRunning.id])
     }
 
     @MainActor
-    func testResumeUpdatesLockScreenTargetToRecalculatedEndDate() throws {
+    func testRemovingRepresentativeTimerHandsOffToNextEarliestRunningTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let currentDate = startDate
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let exposer = LockScreenTimerTargetExposerSpy()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            lockScreenTargetExposer: exposer
+        )
+
+        viewModel.startTimer(from: 15)
+        let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 15 }))
+        viewModel.startTimer(from: 8)
+        let selectedRunningID = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 8 })?.id)
+
+        viewModel.removeTimer(id: selectedRunningID)
+
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, fallbackRunning.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, fallbackRunning.endDate)
+    }
+
+    @MainActor
+    func testResumeRecalculatesEndDateAndReselectsEarliestRunningRepresentative() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let timerManager = TimerManager(
@@ -503,52 +709,25 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             lockScreenTargetExposer: exposer
         )
 
+        viewModel.startTimer(from: 20)
+        let longRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
         viewModel.startTimer(from: 8)
-        let id = try XCTUnwrap(viewModel.timers.first?.id)
+        let resumableID = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 8 })?.id)
 
         currentDate = startDate.addingTimeInterval(3)
-        viewModel.stopTimer(id: id)
+        viewModel.stopTimer(id: resumableID)
+
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, longRunning.id)
 
         currentDate = startDate.addingTimeInterval(10)
-        viewModel.resumeTimer(id: id)
+        viewModel.resumeTimer(id: resumableID)
 
-        let resumed = try XCTUnwrap(viewModel.timers.first)
+        let resumed = try XCTUnwrap(viewModel.timers.first(where: { $0.id == resumableID }))
         XCTAssertEqual(resumed.status, .running)
-        XCTAssertEqual(exposer.currentTarget?.timerID, resumed.id)
-        XCTAssertEqual(exposer.currentTarget?.endDate, resumed.endDate)
         XCTAssertEqual(resumed.endDate, currentDate.addingTimeInterval(5))
-    }
-
-    @MainActor
-    func testLockScreenTargetSelectionUsesFirstRunningTimerInPresentationOrder() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let exposer = LockScreenTimerTargetExposerSpy()
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager,
-            lockScreenTargetExposer: exposer
-        )
-
-        viewModel.startTimer(from: 30)
-        let firstRunningID = try XCTUnwrap(viewModel.timers.first?.id)
-        viewModel.startTimer(from: 40)
-        let secondRunningID = try XCTUnwrap(viewModel.timers.first?.id)
-
-        currentDate = startDate.addingTimeInterval(5)
-        viewModel.stopTimer(id: secondRunningID)
-
-        viewModel.startTimer(from: 50)
-        let newestRunning = try XCTUnwrap(viewModel.timers.first)
-
-        XCTAssertNotEqual(firstRunningID, secondRunningID)
-        XCTAssertEqual(newestRunning.status, .running)
-        XCTAssertEqual(exposer.currentTarget?.timerID, newestRunning.id)
-        XCTAssertNotEqual(exposer.currentTarget?.timerID, firstRunningID)
+        XCTAssertEqual(exposer.currentTarget?.representativeTimerID, resumed.id)
+        XCTAssertEqual(exposer.currentTarget?.representativeEndDate, resumed.endDate)
+        XCTAssertLessThan(try XCTUnwrap(resumed.endDate), try XCTUnwrap(longRunning.endDate))
     }
 
     @MainActor

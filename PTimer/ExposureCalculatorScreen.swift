@@ -48,7 +48,7 @@ struct ExposureCalculatorScreen: View {
         GeometryReader { geometry in
             // Keep the calculator on a stable footprint so sheet detent changes do
             // not cause the core exposure workflow to relayout underneath runtime UI.
-            let compactReservedHeight = Self.calculatorReservedHeight(
+            let compactMainContentReservation = Self.calculatorReservedHeight(
                 screenHeight: geometry.size.height,
                 topSafeArea: geometry.safeAreaInsets.top,
                 bottomSafeArea: geometry.safeAreaInsets.bottom
@@ -59,9 +59,9 @@ struct ExposureCalculatorScreen: View {
                     .ignoresSafeArea()
 
                 ExposureWorkspaceMainContent(
-                    style: layoutStyle(for: compactReservedHeight),
+                    style: layoutStyle(for: compactMainContentReservation),
                     viewModel: viewModel,
-                    availableHeight: compactReservedHeight
+                    availableHeight: compactMainContentReservation
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
@@ -189,7 +189,7 @@ struct ExposureWorkspaceLayoutMetrics {
     ) -> CGFloat {
         screenHeight
             - topSafeArea
-            - BottomSheetLayoutMetrics.height(for: bottomSheetDetent)
+            - BottomSheetLayoutMetrics.mainContentReservation(for: bottomSheetDetent)
             - bottomSafeArea
     }
 

@@ -125,12 +125,24 @@ final class BottomSheetWorkspaceStateStore: ObservableObject {
 }
 
 struct BottomSheetLayoutMetrics {
-    static func height(for detent: BottomSheetDetent) -> CGFloat {
+    static let compactMainContentReservation: CGFloat = 132
+    static let largeFixedHeight: CGFloat = 560
+
+    static func fixedHeight(for detent: BottomSheetDetent) -> CGFloat? {
         switch detent {
         case .compact:
-            return 122
+            return nil
         case .large:
-            return 560
+            return largeFixedHeight
+        }
+    }
+
+    static func mainContentReservation(for detent: BottomSheetDetent) -> CGFloat {
+        switch detent {
+        case .compact:
+            return compactMainContentReservation
+        case .large:
+            return largeFixedHeight
         }
     }
 
@@ -155,6 +167,21 @@ struct BottomSheetWorkspacePresentationAdapter {
             timeContext: timeContext
         )
     }
+}
+
+enum BottomSheetWorkspaceCopy {
+    static let title = "Timers"
+}
+
+enum BottomSheetCompactDockMetrics {
+    static let scrollsHorizontally = true
+    static let contentInsets = EdgeInsets(top: 1, leading: 18, bottom: 1, trailing: 18)
+    static let cardSpacing: CGFloat = 10
+    static let timerCardWidth: CGFloat = 96
+    static let timerCardHeight: CGFloat = 96
+    static let overflowCardWidth: CGFloat = 86
+    static let viewportHeight: CGFloat = timerCardHeight + contentInsets.top + contentInsets.bottom
+    static let viewportCornerRadius: CGFloat = 22
 }
 
 @MainActor
@@ -679,10 +706,12 @@ private struct BottomSheetContainer<Content: View>: View {
             .accessibilityIdentifier("bottom-sheet-handle-area")
 
             content
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, alignment: .top)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: BottomSheetLayoutMetrics.height(for: detent))
+        .ifLet(BottomSheetLayoutMetrics.fixedHeight(for: detent)) { view, height in
+            view.frame(height: height)
+        }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -715,7 +744,7 @@ private struct BottomSheetContentHost: View {
     var body: some View {
         VStack(alignment: .leading, spacing: detent.isExpanded ? 10 : 6) {
             HStack(alignment: .center, spacing: 12) {
-                Text("Timer Workspace")
+                Text(BottomSheetWorkspaceCopy.title)
                     .font(detent == .compact ? .subheadline.weight(.semibold) : .headline)
 
                 Spacer()
@@ -741,11 +770,19 @@ private struct BottomSheetContentHost: View {
                     )
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: detent.isExpanded ? .infinity : nil,
+                alignment: .top
+            )
         }
         .padding(.horizontal, 18)
         .padding(.bottom, detent.isExpanded ? 14 : 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: detent.isExpanded ? .infinity : nil,
+            alignment: .topLeading
+        )
     }
 }
 
@@ -769,26 +806,52 @@ private struct BottomSheetCompactSummaryView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityIdentifier("bottom-sheet-compact-empty")
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(snapshot.compactItems) { item in
-                            CompactTimerMiniCardView(
-                                item: item,
-                                onTap: {
-                                    onItemTap(item.id)
-                                }
-                            )
-                        }
+                ZStack {
+                    RoundedRectangle(
+                        cornerRadius: BottomSheetCompactDockMetrics.viewportCornerRadius,
+                        style: .continuous
+                    )
+                    .fill(Color(.secondarySystemBackground).opacity(0.58))
 
-                        if let overflowText = snapshot.compactOverflowText {
-                            CompactOverflowMiniCard(
-                                text: overflowText,
-                                onTap: onOverflowTap
-                            )
+                    ScrollView(
+                        BottomSheetCompactDockMetrics.scrollsHorizontally ? .horizontal : .vertical,
+                        showsIndicators: false
+                    ) {
+                        LazyHStack(spacing: BottomSheetCompactDockMetrics.cardSpacing) {
+                            Color.clear
+                                .frame(width: BottomSheetCompactDockMetrics.contentInsets.leading, height: 1)
+                                .accessibilityHidden(true)
+
+                            ForEach(snapshot.compactItems) { item in
+                                CompactTimerMiniCardView(
+                                    item: item,
+                                    onTap: {
+                                        onItemTap(item.id)
+                                    }
+                                )
+                            }
+
+                            if let overflowText = snapshot.compactOverflowText {
+                                CompactOverflowMiniCard(
+                                    text: overflowText,
+                                    onTap: onOverflowTap
+                                )
+                            }
+
+                            Color.clear
+                                .frame(width: BottomSheetCompactDockMetrics.contentInsets.trailing, height: 1)
+                                .accessibilityHidden(true)
                         }
+                        .padding(.vertical, BottomSheetCompactDockMetrics.contentInsets.top)
                     }
-                    .padding(.vertical, 1)
                 }
+                .frame(height: BottomSheetCompactDockMetrics.viewportHeight, alignment: .top)
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: BottomSheetCompactDockMetrics.viewportCornerRadius,
+                        style: .continuous
+                    )
+                )
                 .accessibilityIdentifier("bottom-sheet-compact-dock")
             }
         }
@@ -906,7 +969,11 @@ private struct CompactTimerMiniCardView: View {
         .padding(.top, 9)
         .padding(.horizontal, 10)
         .padding(.bottom, 12)
-        .frame(width: 96, height: 96, alignment: .topLeading)
+        .frame(
+            width: BottomSheetCompactDockMetrics.timerCardWidth,
+            height: BottomSheetCompactDockMetrics.timerCardHeight,
+            alignment: .topLeading
+        )
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
@@ -1132,7 +1199,11 @@ private struct CompactOverflowMiniCard: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .frame(width: 86, height: 96, alignment: .topLeading)
+        .frame(
+            width: BottomSheetCompactDockMetrics.overflowCardWidth,
+            height: BottomSheetCompactDockMetrics.timerCardHeight,
+            alignment: .topLeading
+        )
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -1386,6 +1457,32 @@ private struct LargeWorkspaceTimerRowView: View {
             return .blue
         case .remove:
             return .secondary
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func `if`<Content: View>(
+        _ condition: Bool,
+        transform: (Self) -> Content
+    ) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+
+    @ViewBuilder
+    func ifLet<Value, Content: View>(
+        _ value: Value?,
+        transform: (Self, Value) -> Content
+    ) -> some View {
+        if let value {
+            transform(self, value)
+        } else {
+            self
         }
     }
 }

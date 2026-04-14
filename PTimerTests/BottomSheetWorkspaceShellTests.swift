@@ -293,14 +293,61 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(store.detent, .compact)
     }
 
-    func testLayoutMetricsReflectCompactAndLargeHeights() {
-        let compact = BottomSheetLayoutMetrics.height(for: .compact)
-        let large = BottomSheetLayoutMetrics.height(for: .large)
+    func testLayoutMetricsExposeOnlyLargeFixedHeight() {
+        XCTAssertNil(BottomSheetLayoutMetrics.fixedHeight(for: .compact))
+        XCTAssertEqual(BottomSheetLayoutMetrics.fixedHeight(for: .large), 560)
+    }
 
-        XCTAssertLessThan(compact, large)
-        XCTAssertGreaterThanOrEqual(large, 560)
-        XCTAssertLessThanOrEqual(compact, 122)
-        XCTAssertGreaterThanOrEqual(compact, 110)
+    func testLayoutMetricsExposeMainContentReservationPerDetent() {
+        let compactReservation = BottomSheetLayoutMetrics.mainContentReservation(for: .compact)
+        let largeReservation = BottomSheetLayoutMetrics.mainContentReservation(for: .large)
+
+        XCTAssertGreaterThan(compactReservation, 0)
+        XCTAssertLessThan(compactReservation, largeReservation)
+        XCTAssertEqual(compactReservation, BottomSheetLayoutMetrics.compactMainContentReservation)
+        XCTAssertEqual(largeReservation, BottomSheetLayoutMetrics.largeFixedHeight)
+    }
+
+    func testWorkspaceTitleCopyUsesTimersLabel() {
+        XCTAssertEqual(BottomSheetWorkspaceCopy.title, "Timers")
+    }
+
+    func testCompactDockUsesSymmetricEighteenPointViewportInsets() {
+        let insets = BottomSheetCompactDockMetrics.contentInsets
+
+        XCTAssertEqual(insets.leading, 18)
+        XCTAssertEqual(insets.trailing, 18)
+        XCTAssertEqual(insets.leading, insets.trailing)
+        XCTAssertEqual(insets.top, 1)
+        XCTAssertEqual(insets.bottom, 1)
+        XCTAssertGreaterThan(BottomSheetCompactDockMetrics.viewportCornerRadius, 0)
+        XCTAssertEqual(
+            BottomSheetCompactDockMetrics.viewportHeight,
+            BottomSheetCompactDockMetrics.timerCardHeight + insets.top + insets.bottom
+        )
+    }
+
+    func testCompactDockConfigurationUsesHorizontalScrolling() {
+        XCTAssertTrue(BottomSheetCompactDockMetrics.scrollsHorizontally)
+    }
+
+    func testCompactDockOverflowCaseUsesSameSymmetricInsetModel() {
+        let totalHorizontalInset = BottomSheetCompactDockMetrics.contentInsets.leading
+            + BottomSheetCompactDockMetrics.contentInsets.trailing
+        let widthWithoutOverflow = totalHorizontalInset
+            + (BottomSheetCompactDockMetrics.timerCardWidth * 3)
+            + (BottomSheetCompactDockMetrics.cardSpacing * 2)
+        let widthWithOverflow = totalHorizontalInset
+            + (BottomSheetCompactDockMetrics.timerCardWidth * 3)
+            + BottomSheetCompactDockMetrics.overflowCardWidth
+            + (BottomSheetCompactDockMetrics.cardSpacing * 3)
+
+        XCTAssertEqual(totalHorizontalInset, 36)
+        XCTAssertGreaterThan(widthWithOverflow, widthWithoutOverflow)
+        XCTAssertEqual(
+            widthWithOverflow - widthWithoutOverflow,
+            BottomSheetCompactDockMetrics.overflowCardWidth + BottomSheetCompactDockMetrics.cardSpacing
+        )
     }
 
     func testDimOpacityOnlyAppearsForLargeState() {
@@ -766,8 +813,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     func testLargeHeightCreatesLargerManagementViewportBudget() {
-        let compactHeight = BottomSheetLayoutMetrics.height(for: .compact)
-        let largeHeight = BottomSheetLayoutMetrics.height(for: .large)
+        let compactHeight = BottomSheetLayoutMetrics.mainContentReservation(for: .compact)
+        let largeHeight = BottomSheetLayoutMetrics.largeFixedHeight
 
         XCTAssertGreaterThan(largeHeight - compactHeight, 300)
     }
@@ -1017,7 +1064,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     func testIPhone17ViewportLeavesMeaningfulLargeWorkspaceHeight() {
-        let largeHeight = BottomSheetLayoutMetrics.height(for: .large)
+        let largeHeight = BottomSheetLayoutMetrics.largeFixedHeight
 
         XCTAssertGreaterThanOrEqual(largeHeight, 560)
     }
@@ -1513,5 +1560,4 @@ private extension UIView {
 
         return nil
     }
-
 }

@@ -271,9 +271,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private let timerManager: TimerManager
     private let metadataPersistenceStore: TimerMetadataPersistenceStoring
     private let lockScreenTargetCoordinator: LockScreenTimerTargetCoordinator
+    private let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
     private var timerMetadata: [UUID: TimerMetadata] = [:]
     private var nextTimerOrder = 1
     private var cancellables: Set<AnyCancellable> = []
+    private var completedTimeContextRefreshTimer: Timer?
 
     init() {
         self.calculator = ExposureCalculator()
@@ -464,12 +466,43 @@ final class ExposureCalculatorViewModel: ObservableObject {
             let completionText = timer.endDate.map(formatDateTime) ?? "--"
             return "Ends \(completionText)"
         case .completed:
-            let completionText = timer.completedAt.map(formatDateTime) ?? "--"
-            return "Completed \(completionText)"
+            return completedTimeContext(for: timer.completedAt, relativeTo: timer.referenceDate)
         case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
             return "Paused \(pausedText)"
         }
+    }
+
+    func completedTimeContext(for completionDate: Date?, relativeTo referenceDate: Date) -> String {
+        guard let completionDate else {
+            return "Completed --"
+        }
+
+        let absoluteText = formatDateTime(completionDate)
+        let relativeText = completedRelativeTimeFormatter.string(
+            from: completionDate,
+            relativeTo: referenceDate
+        )
+        return "Completed \(absoluteText) · \(relativeText)"
+    }
+
+    func compactCompletedSupplementaryText(for timer: RunningTimerItem) -> String? {
+        guard timer.status == .completed else {
+            return nil
+        }
+
+        return compactCompletedRelativeTimeText(for: timer.completedAt, relativeTo: timer.referenceDate)
+    }
+
+    func compactCompletedRelativeTimeText(for completionDate: Date?, relativeTo referenceDate: Date) -> String {
+        guard let completionDate else {
+            return "--"
+        }
+
+        return completedRelativeTimeFormatter.compactString(
+            from: completionDate,
+            relativeTo: referenceDate
+        )
     }
 
     var runningTimerCount: Int {
@@ -532,6 +565,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
 
         lockScreenTargetCoordinator.sync(with: timers)
+        scheduleCompletedTimeContextRefreshIfNeeded()
     }
 
     private func defaultName(for duration: TimeInterval) -> String {
@@ -619,6 +653,46 @@ final class ExposureCalculatorViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()
+
+    private func scheduleCompletedTimeContextRefreshIfNeeded() {
+        completedTimeContextRefreshTimer?.invalidate()
+        completedTimeContextRefreshTimer = nil
+
+        guard !timers.contains(where: { $0.status == .running }) else {
+            return
+        }
+
+        let referenceDate = timerManager.currentDate
+        let nextRefreshDate = timers
+            .filter { $0.status == .completed }
+            .compactMap(\.completedAt)
+            .compactMap {
+                completedRelativeTimeFormatter.nextRefreshDate(
+                    from: $0,
+                    relativeTo: referenceDate
+                )
+            }
+            .min()
+
+        guard let nextRefreshDate else {
+            return
+        }
+
+        let refreshTimer = Timer(
+            fire: nextRefreshDate,
+            interval: 0,
+            repeats: false
+        ) { [weak self] _ in
+            guard let self else {
+                return
+            }
+
+            self.syncTimers(with: self.timerManager.timers)
+        }
+
+        completedTimeContextRefreshTimer = refreshTimer
+        RunLoop.main.add(refreshTimer, forMode: .common)
+    }
 }
 
 private struct TimerMetadata {

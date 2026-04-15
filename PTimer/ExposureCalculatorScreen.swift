@@ -24,7 +24,8 @@ struct ExposureCalculatorScreen: View {
     ) {
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
-            timeContext: viewModel.timerTimeContext
+            timeContext: viewModel.timerTimeContext,
+            compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
 
         _viewModel = StateObject(wrappedValue: viewModel)

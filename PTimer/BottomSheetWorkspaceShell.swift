@@ -159,12 +159,14 @@ struct BottomSheetLayoutMetrics {
 struct BottomSheetWorkspacePresentationAdapter {
     let formatRemaining: (TimeInterval) -> String
     let timeContext: (RunningTimerItem) -> String?
+    let compactCompletedSupplementaryText: (RunningTimerItem) -> String?
 
     func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {
         BottomSheetWorkspaceSnapshot.make(
             from: timers,
             formatRemaining: formatRemaining,
-            timeContext: timeContext
+            timeContext: timeContext,
+            compactCompletedSupplementaryText: compactCompletedSupplementaryText
         )
     }
 }
@@ -262,6 +264,8 @@ struct BottomSheetCompactItem: Identifiable, Equatable {
     let identityCue: BottomSheetIdentityCue
     let primaryRemainingText: String
     let secondaryTotalText: String?
+    let tertiaryStatusText: String?
+    let showsDecorativeTimeline: Bool
     let sixtySecondLayer: CompactRemainingScaleLayer
     let sixtyMinuteLayer: CompactRemainingScaleLayer?
     let originalScaleLayer: CompactRemainingScaleLayer?
@@ -328,7 +332,8 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
     static func make(
         from timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
-        timeContext: (RunningTimerItem) -> String?
+        timeContext: (RunningTimerItem) -> String?,
+        compactCompletedSupplementaryText: (RunningTimerItem) -> String?
     ) -> BottomSheetWorkspaceSnapshot {
         let orderedTimers = TimerWorkspaceOrdering.sort(timers)
 
@@ -341,8 +346,20 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                     id: timer.id,
                     status: timer.status,
                     identityCue: identityCue,
-                    primaryRemainingText: compactRemainingText(for: timer, formatRemaining: formatRemaining),
-                    secondaryTotalText: compactTotalText(for: timer),
+                    primaryRemainingText: compactRemainingText(
+                        for: timer,
+                        formatRemaining: formatRemaining,
+                        compactCompletedSupplementaryText: compactCompletedSupplementaryText
+                    ),
+                    secondaryTotalText: compactSecondaryText(
+                        for: timer,
+                        compactCompletedSupplementaryText: compactCompletedSupplementaryText
+                    ),
+                    tertiaryStatusText: compactTertiaryText(
+                        for: timer,
+                        compactCompletedSupplementaryText: compactCompletedSupplementaryText
+                    ),
+                    showsDecorativeTimeline: timer.status != .completed,
                     sixtySecondLayer: compactSixtySecondLayer(for: timer),
                     sixtyMinuteLayer: compactSixtyMinuteLayer(for: timer),
                     originalScaleLayer: compactOriginalScaleLayer(for: timer)
@@ -534,22 +551,46 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
 
     private static func compactRemainingText(
         for timer: RunningTimerItem,
-        formatRemaining: (TimeInterval) -> String
+        formatRemaining: (TimeInterval) -> String,
+        compactCompletedSupplementaryText: (RunningTimerItem) -> String?
     ) -> String {
         switch timer.status {
         case .running, .paused:
             return compactDurationText(timer.remainingTime)
         case .completed:
-            return "0s"
+            return "Done"
         }
     }
 
-    private static func compactTotalText(for timer: RunningTimerItem) -> String? {
-        guard timer.duration > 0 else {
+    private static func compactSecondaryText(
+        for timer: RunningTimerItem,
+        compactCompletedSupplementaryText: (RunningTimerItem) -> String?
+    ) -> String? {
+        switch timer.status {
+        case .completed:
+            guard timer.duration > 0 else {
+                return nil
+            }
+
+            return compactDurationText(timer.duration)
+        case .running, .paused:
+            guard timer.duration > 0 else {
+                return nil
+            }
+
+            return compactDurationText(timer.duration)
+        }
+    }
+
+    private static func compactTertiaryText(
+        for timer: RunningTimerItem,
+        compactCompletedSupplementaryText: (RunningTimerItem) -> String?
+    ) -> String? {
+        guard timer.status == .completed else {
             return nil
         }
 
-        return compactDurationText(timer.duration)
+        return compactCompletedSupplementaryText(timer)
     }
 
     private static func largeRemainingText(
@@ -560,7 +601,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         case .running, .paused:
             return formatRemaining(timer.remainingTime)
         case .completed:
-            return "0s"
+            return "Done"
         }
     }
 
@@ -865,6 +906,34 @@ private struct CompactTimerMiniCardView: View {
     let item: BottomSheetCompactItem
     let onTap: () -> Void
 
+    private var compactPrimaryTextFont: Font {
+        item.status == .completed ? .headline.weight(.bold) : .title3.weight(.bold)
+    }
+
+    private var compactPrimaryTextScaleFactor: CGFloat {
+        item.status == .completed ? 0.9 : 0.75
+    }
+
+    private var compactPrimaryTextColor: Color {
+        item.status == .completed ? .primary.opacity(0.92) : .primary
+    }
+
+    private var compactSecondaryTextColor: Color {
+        item.status == .completed ? .secondary.opacity(0.52) : .secondary.opacity(0.86)
+    }
+
+    private var compactTertiaryTextColor: Color {
+        .secondary.opacity(0.72)
+    }
+
+    private var compactStatusSymbolFont: Font {
+        item.status == .completed ? .caption2.weight(.medium) : .caption.weight(.semibold)
+    }
+
+    private var compactStatusSymbolOpacity: Double {
+        item.status == .completed ? 0.46 : 1
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 5) {
@@ -886,10 +955,14 @@ private struct CompactTimerMiniCardView: View {
                     }
 
                     Image(systemName: compactStatusSymbol(for: item.status))
-                        .font(.caption.weight(.semibold))
+                        .font(compactStatusSymbolFont)
                         .foregroundStyle(statusColor(for: item.status))
                         .scaleEffect(shouldAnimateRunningCue ? (isRunningPulseActive ? 1.08 : 0.92) : 1)
-                        .opacity(shouldAnimateRunningCue ? (isRunningPulseActive ? 1 : 0.72) : 1)
+                        .opacity(
+                            shouldAnimateRunningCue
+                                ? (isRunningPulseActive ? 1 : 0.72)
+                                : compactStatusSymbolOpacity
+                        )
                 }
                 .frame(width: 22, height: 22)
                 .animation(
@@ -904,55 +977,74 @@ private struct CompactTimerMiniCardView: View {
                 if let totalText = item.secondaryTotalText {
                     Text(totalText)
                         .font(.caption2)
-                        .foregroundStyle(.secondary.opacity(0.86))
+                        .foregroundStyle(compactSecondaryTextColor)
                         .monospacedDigit()
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .layoutPriority(1)
                 }
             }
             .frame(height: 22, alignment: .top)
 
             VStack(spacing: 0) {
                 Text(item.primaryRemainingText)
-                    .font(.title3.weight(.bold))
+                    .font(compactPrimaryTextFont)
                     .monospacedDigit()
                     .frame(maxWidth: .infinity, minHeight: 30, alignment: .center)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(compactPrimaryTextScaleFactor)
+                    .foregroundStyle(compactPrimaryTextColor)
                     .padding(.top, 5)
 
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: 34, alignment: .top)
 
-            Spacer(minLength: 6)
-
-            VStack(spacing: 3) {
-                if let originalScaleLayer = item.originalScaleLayer {
-                    CompactProgressBar(
-                        progress: originalScaleLayer.fraction,
-                        fillColor: originalScaleFillColor,
-                        trackColor: originalScaleTrackColor,
-                        height: 1
-                    )
-                }
-
-                if let sixtyMinuteLayer = item.sixtyMinuteLayer {
-                    CompactProgressBar(
-                        progress: sixtyMinuteLayer.fraction,
-                        fillColor: sixtyMinuteFillColor,
-                        trackColor: sixtyMinuteTrackColor,
-                        height: 1
-                    )
-                }
-
-                CompactProgressBar(
-                    progress: item.sixtySecondLayer.fraction,
-                    fillColor: sixtySecondFillColor,
-                    trackColor: sixtySecondTrackColor,
-                    height: 1
-                )
+            if let tertiaryText = item.tertiaryStatusText {
+                Text(tertiaryText)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(compactTertiaryTextColor)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
+            } else {
+                Spacer(minLength: 6)
             }
-            .frame(maxWidth: .infinity, minHeight: 9, alignment: .bottom)
+
+            if item.showsDecorativeTimeline {
+                VStack(spacing: 3) {
+                    if let originalScaleLayer = item.originalScaleLayer {
+                        CompactProgressBar(
+                            progress: originalScaleLayer.fraction,
+                            fillColor: originalScaleFillColor,
+                            trackColor: originalScaleTrackColor,
+                            height: 1
+                        )
+                    }
+
+                    if let sixtyMinuteLayer = item.sixtyMinuteLayer {
+                        CompactProgressBar(
+                            progress: sixtyMinuteLayer.fraction,
+                            fillColor: sixtyMinuteFillColor,
+                            trackColor: sixtyMinuteTrackColor,
+                            height: 1
+                        )
+                    }
+
+                    CompactProgressBar(
+                        progress: item.sixtySecondLayer.fraction,
+                        fillColor: sixtySecondFillColor,
+                        trackColor: sixtySecondTrackColor,
+                        height: 1
+                    )
+                }
+                .frame(maxWidth: .infinity, minHeight: 9, alignment: .bottom)
+            } else {
+                Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity, minHeight: 9, alignment: .bottom)
+            }
 
             HStack {
                 Spacer(minLength: 0)
@@ -961,6 +1053,7 @@ private struct CompactTimerMiniCardView: View {
                     cue: item.identityCue,
                     size: .compact
                 )
+                .opacity(item.status == .completed ? 0.64 : 1)
             }
             .padding(.top, 3)
             .padding(.trailing, 1)
@@ -1224,10 +1317,11 @@ private struct BottomSheetLargeWorkspaceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            LargeWorkspaceSummaryStrip(
-                snapshot: snapshot,
-                onClearCompletedTimers: onClearCompletedTimers
-            )
+            if snapshot.completedCount > 0 {
+                LargeWorkspaceSummaryStrip(
+                    onClearCompletedTimers: onClearCompletedTimers
+                )
+            }
 
             if snapshot.sections.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -1319,21 +1413,18 @@ private struct BottomSheetLargeWorkspaceView: View {
 }
 
 private struct LargeWorkspaceSummaryStrip: View {
-    let snapshot: BottomSheetWorkspaceSnapshot
     let onClearCompletedTimers: () -> Void
 
     var body: some View {
         HStack {
             Spacer(minLength: 0)
 
-            if snapshot.completedCount > 0 {
-                Button("Clear") {
-                    onClearCompletedTimers()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .accessibilityIdentifier("bottom-sheet-clear-completed-button")
+            Button("Clear") {
+                onClearCompletedTimers()
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityIdentifier("bottom-sheet-clear-completed-button")
         }
     }
 }

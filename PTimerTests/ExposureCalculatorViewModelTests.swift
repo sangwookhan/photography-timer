@@ -199,7 +199,10 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.timerTimeContext(for: running), "Ends \(viewModel.formatDateTime(endDate))")
         XCTAssertEqual(viewModel.timerTimeContext(for: paused), "Paused \(viewModel.formatDateTime(pausedDate))")
-        XCTAssertEqual(viewModel.timerTimeContext(for: completed), "Completed \(viewModel.formatDateTime(pausedDate))")
+        XCTAssertEqual(
+            viewModel.timerTimeContext(for: completed),
+            "Completed \(viewModel.formatDateTime(pausedDate)) · just now"
+        )
     }
 
     @MainActor
@@ -962,7 +965,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.timerTargetContext(for: timer))
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
+            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt))) · just now"
         )
     }
 
@@ -1078,7 +1081,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt)))"
+            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt))) · just now"
         )
     }
 

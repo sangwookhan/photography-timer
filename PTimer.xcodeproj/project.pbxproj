@@ -27,6 +27,8 @@
 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
 		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
+		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
+		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,6 +80,8 @@
 		A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCompletionNotificationScheduler.swift; sourceTree = "<group>"; };
 		A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatter.swift; sourceTree = "<group>"; };
 		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
+		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
@@ -135,6 +139,7 @@
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
 				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
 				A0000000000000000000001C /* BottomSheetWorkspaceShell.swift */,
+				A000000000000000000000AA /* ReciprocityDomain.swift */,
 			);
 			path = PTimer;
 			sourceTree = "<group>";
@@ -168,6 +173,7 @@
 				A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */,
 				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
 				A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */,
+				A000000000000000000000AC /* ReciprocityDomainTests.swift */,
 			);
 			path = PTimerTests;
 			sourceTree = "<group>";
@@ -323,6 +329,7 @@
 				A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */,
 				A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */,
 				A0000000000000000000000B /* BottomSheetWorkspaceShell.swift in Sources */,
+				A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -336,6 +343,7 @@
 				A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
 				A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */,
+				A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

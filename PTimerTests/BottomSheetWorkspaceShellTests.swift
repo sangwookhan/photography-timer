@@ -1550,7 +1550,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     private func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {
-        BottomSheetWorkspaceSnapshot.make(
+        let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
+
+        return BottomSheetWorkspaceSnapshot.make(
             from: timers,
             formatRemaining: { seconds in
                 let remaining = Int(seconds.rounded(.down))
@@ -1577,7 +1579,14 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             compactCompletedSupplementaryText: { timer in
                 switch timer.status {
                 case .completed:
-                    return "just now"
+                    guard let completionDate = timer.completedAt else {
+                        return "--"
+                    }
+
+                    return completedRelativeTimeFormatter.compactString(
+                        from: completionDate,
+                        relativeTo: timer.referenceDate
+                    )
                 case .running, .paused:
                     return nil
                 }

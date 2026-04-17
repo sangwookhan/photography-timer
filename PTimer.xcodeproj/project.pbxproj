@@ -29,6 +29,7 @@
 		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
 		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
 		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
+		A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +83,7 @@
 		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
 		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicy.swift; sourceTree = "<group>"; };
 		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
@@ -140,6 +142,7 @@
 				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
 				A0000000000000000000001C /* BottomSheetWorkspaceShell.swift */,
 				A000000000000000000000AA /* ReciprocityDomain.swift */,
+				A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */,
 			);
 			path = PTimer;
 			sourceTree = "<group>";
@@ -330,6 +333,7 @@
 				A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */,
 				A0000000000000000000000B /* BottomSheetWorkspaceShell.swift in Sources */,
 				A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */,
+				A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

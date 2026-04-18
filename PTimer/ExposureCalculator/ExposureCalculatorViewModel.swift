@@ -247,6 +247,7 @@ struct UserDefaultsTimerMetadataPersistenceStore: TimerMetadataPersistenceStorin
 
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
+    @Published private(set) var activeCalculatorContext = ActiveExposureCalculatorContext()
     @Published var baseShutter = 1.0 / 30.0 {
         didSet {
             if liveBaseShutter == baseShutter {
@@ -268,9 +269,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
 
     private let calculator: ExposureCalculator
+    private let presetFilms: [FilmIdentity]
     private let timerManager: TimerManager
     private let metadataPersistenceStore: TimerMetadataPersistenceStoring
     private let lockScreenTargetCoordinator: LockScreenTimerTargetCoordinator
+    private let reciprocityEvaluator = ReciprocityCalculationPolicyEvaluator()
     private let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
     private var timerMetadata: [UUID: TimerMetadata] = [:]
     private var nextTimerOrder = 1
@@ -279,6 +282,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     init() {
         self.calculator = ExposureCalculator()
+        self.presetFilms = LaunchPresetFilmCatalog.films
         self.timerManager = TimerManager(
             completionAlertService: ForegroundTimerCompletionAlertService(
                 feedbackPlayer: SystemTimerCompletionFeedbackPlayer()
@@ -302,10 +306,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
     init(
         calculator: ExposureCalculator,
         timerManager: TimerManager,
+        presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
         self.calculator = calculator
+        self.presetFilms = presetFilms
         self.timerManager = timerManager
         self.metadataPersistenceStore = metadataPersistenceStore
         self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
@@ -318,6 +324,79 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 self?.syncTimers(with: states)
             }
             .store(in: &cancellables)
+    }
+
+    var calculatorMode: ExposureCalculatorMode {
+        activeCalculatorContext.mode
+    }
+
+    var availablePresetFilms: [FilmIdentity] {
+        presetFilms
+    }
+
+    var selectedPresetFilm: FilmIdentity? {
+        activeCalculatorContext.selectedPresetFilm
+    }
+
+    var filmRowSelectionState: FilmModeSelectionState {
+        guard calculatorMode == .film else {
+            return .hidden
+        }
+
+        guard let selectedPresetFilm else {
+            return .noFilmSelected
+        }
+
+        return .selectedPreset(selectedPresetFilm)
+    }
+
+    var shouldShowFilmRow: Bool {
+        calculatorMode == .film
+    }
+
+    var selectedPresetFilmDisplayName: String? {
+        selectedPresetFilm?.canonicalStockName
+    }
+
+    var filmReciprocityBindingState: FilmModeReciprocityBindingState? {
+        guard calculatorMode == .film,
+              let selectedPresetFilm,
+              let profile = selectedPresetFilm.profiles.first,
+              case .success(let result) = calculationResult else {
+            return nil
+        }
+
+        let policyResult = reciprocityEvaluator.evaluate(
+            profile: profile,
+            meteredExposureSeconds: result.resultShutterSeconds
+        )
+
+        return FilmModeReciprocityBindingState(
+            film: selectedPresetFilm,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
+    }
+
+    var filmReciprocityBindingSummaryText: String {
+        if filmReciprocityBindingState != nil {
+            return "Preset film bound"
+        }
+
+        return calculatorMode == .film ? "No film selected" : ""
+    }
+
+    func setCalculatorMode(_ mode: ExposureCalculatorMode) {
+        activeCalculatorContext.mode = mode
+    }
+
+    func selectPresetFilm(_ film: FilmIdentity) {
+        activeCalculatorContext.selectedPresetFilm = film
+    }
+
+    func clearSelectedPresetFilm() {
+        activeCalculatorContext.selectedPresetFilm = nil
     }
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {

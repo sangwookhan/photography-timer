@@ -122,6 +122,47 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(referencedRows.map(\.annotationSummary), ["7.5M", "10M"])
     }
 
+    func testMismatchedQuantifiedFamiliesDoNotAssembleEstimatedResult() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityProfile(
+                id: "mixed-estimation-families",
+                name: "Mixed estimation families",
+                source: ReciprocitySourceProvenance(
+                    kind: .manufacturerPublished,
+                    authority: .official,
+                    confidence: .high,
+                    publisher: "Test"
+                ),
+                rules: [
+                    .table(
+                        TableReciprocityRule(
+                            entries: [
+                                ReciprocityTableEntry(
+                                    meteredExposure: .exactSeconds(1),
+                                    adjustments: [
+                                        .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 2)))
+                                    ]
+                                ),
+                                ReciprocityTableEntry(
+                                    meteredExposure: .exactSeconds(10),
+                                    adjustments: [
+                                        .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2)))
+                                    ]
+                                )
+                            ]
+                        )
+                    )
+                ]
+            ),
+            meteredExposureSeconds: 5
+        )
+
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertNil(result.metadata.estimationFamily)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.notes.map(\.token), [.unsupportedByPolicy])
+    }
+
     func testVelviaExplicitStopSignalOverridesAtExactBoundary() {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.velviaProfile(),

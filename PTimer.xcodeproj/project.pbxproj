@@ -96,6 +96,7 @@
 		A000000000000000000000B6 /* PresetFilmCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetFilmCatalog.swift; sourceTree = "<group>"; };
 		A000000000000000000000B8 /* ExposureCalculatorFilmContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorFilmContext.swift; sourceTree = "<group>"; };
 		A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000C5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
@@ -143,23 +144,72 @@
 		A00000000000000000000031 /* PTimer */ = {
 			isa = PBXGroup;
 			children = (
+				A000000000000000000000C6 /* App */,
+				A000000000000000000000BB /* ExposureCalculator */,
+				A000000000000000000000C7 /* Reciprocity */,
+				A000000000000000000000C8 /* Timers */,
+				A000000000000000000000C9 /* Resources */,
+				A000000000000000000000CA /* Support */,
+			);
+			path = PTimer;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C6 /* App */ = {
+			isa = PBXGroup;
+			children = (
 				A00000000000000000000011 /* PTimerApp.swift */,
 				A00000000000000000000012 /* ContentView.swift */,
-				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
-				A00000000000000000000014 /* ExposureCalculator.swift */,
-				A00000000000000000000015 /* TimerManager.swift */,
-				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
-				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
-				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
-				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
 				A0000000000000000000001C /* BottomSheetWorkspaceShell.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000BB /* ExposureCalculator */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000014 /* ExposureCalculator.swift */,
+				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
+				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
+				A000000000000000000000B8 /* ExposureCalculatorFilmContext.swift */,
+				A000000000000000000000B6 /* PresetFilmCatalog.swift */,
+			);
+			path = ExposureCalculator;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C7 /* Reciprocity */ = {
+			isa = PBXGroup;
+			children = (
 				A000000000000000000000AA /* ReciprocityDomain.swift */,
 				A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */,
 				A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */,
-				A000000000000000000000B6 /* PresetFilmCatalog.swift */,
-				A000000000000000000000B8 /* ExposureCalculatorFilmContext.swift */,
 			);
-			path = PTimer;
+			path = Reciprocity;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C8 /* Timers */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000015 /* TimerManager.swift */,
+				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
+				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
+				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
+			);
+			path = Timers;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C9 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A000000000000000000000C5 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000CA /* Support */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Support;
 			sourceTree = "<group>";
 		};
 		A00000000000000000000094 /* PTimerWidgets */ = {
@@ -185,18 +235,50 @@
 		A00000000000000000000033 /* PTimerTests */ = {
 			isa = PBXGroup;
 			children = (
-				A00000000000000000000016 /* ExposureCalculatorTests.swift */,
-				A00000000000000000000017 /* TimerManagerTests.swift */,
-				A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */,
-				A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */,
+				A000000000000000000000CB /* App */,
+				A000000000000000000000BC /* ExposureCalculator */,
+				A000000000000000000000CC /* Reciprocity */,
+				A000000000000000000000CD /* Timers */,
+			);
+			path = PTimerTests;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000CB /* App */ = {
+			isa = PBXGroup;
+			children = (
 				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
-				A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000BC /* ExposureCalculator */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000016 /* ExposureCalculatorTests.swift */,
+				A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */,
+				A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */,
+				A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */,
+			);
+			path = ExposureCalculator;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000CC /* Reciprocity */ = {
+			isa = PBXGroup;
+			children = (
 				A000000000000000000000AC /* ReciprocityDomainTests.swift */,
 				A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */,
 				A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */,
-				A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */,
 			);
-			path = PTimerTests;
+			path = Reciprocity;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000CD /* Timers */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000017 /* TimerManagerTests.swift */,
+				A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */,
+			);
+			path = Timers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

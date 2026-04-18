@@ -122,6 +122,47 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(referencedRows.map(\.annotationSummary), ["7.5M", "10M"])
     }
 
+    func testMismatchedQuantifiedFamiliesDoNotAssembleEstimatedResult() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityProfile(
+                id: "mixed-estimation-families",
+                name: "Mixed estimation families",
+                source: ReciprocitySourceProvenance(
+                    kind: .manufacturerPublished,
+                    authority: .official,
+                    confidence: .high,
+                    publisher: "Test"
+                ),
+                rules: [
+                    .table(
+                        TableReciprocityRule(
+                            entries: [
+                                ReciprocityTableEntry(
+                                    meteredExposure: .exactSeconds(1),
+                                    adjustments: [
+                                        .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 2)))
+                                    ]
+                                ),
+                                ReciprocityTableEntry(
+                                    meteredExposure: .exactSeconds(10),
+                                    adjustments: [
+                                        .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2)))
+                                    ]
+                                )
+                            ]
+                        )
+                    )
+                ]
+            ),
+            meteredExposureSeconds: 5
+        )
+
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertNil(result.metadata.estimationFamily)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.notes.map(\.token), [.unsupportedByPolicy])
+    }
+
     func testVelviaExplicitStopSignalOverridesAtExactBoundary() {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
@@ -280,6 +321,162 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         }
     }
 
+    func testDecodingRejectsExactTablePointWithEstimationFamily() {
+        let json = """
+        {
+          "meteredExposureSeconds": 10,
+          "correctedExposureSeconds": 50,
+          "hasCalculatedExposureTime": true,
+          "metadata": {
+            "basis": "exactTablePoint",
+            "sourceAuthorityImpact": "currentOfficial",
+            "rangeStatus": "withinStatedRange",
+            "warningLevel": "none",
+            "estimationFamily": "logLog",
+            "notes": [],
+            "referencedRows": null
+          }
+        }
+        """
+
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ReciprocityCalculationPolicyResult.self,
+                from: Data(json.utf8)
+            )
+        ) { error in
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                return XCTFail("Expected dataCorrupted error, got \(error)")
+            }
+
+            XCTAssertTrue(context.debugDescription.contains("must not carry an estimation family"))
+        }
+    }
+
+    func testDecodingRejectsInterpolatedResultWithoutEstimationFamily() {
+        let json = """
+        {
+          "meteredExposureSeconds": 5,
+          "correctedExposureSeconds": 15,
+          "hasCalculatedExposureTime": true,
+          "metadata": {
+            "basis": "interpolatedWithinTable",
+            "sourceAuthorityImpact": "currentOfficial",
+            "rangeStatus": "withinInterpretedRange",
+            "warningLevel": "note",
+            "notes": [],
+            "referencedRows": null
+          }
+        }
+        """
+
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ReciprocityCalculationPolicyResult.self,
+                from: Data(json.utf8)
+            )
+        ) { error in
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                return XCTFail("Expected dataCorrupted error, got \(error)")
+            }
+
+            XCTAssertTrue(context.debugDescription.contains("must carry an estimation family"))
+        }
+    }
+
+    func testDecodingRejectsThresholdNoCorrectionWhenCorrectedExposureDiffersFromMetered() {
+        let json = """
+        {
+          "meteredExposureSeconds": 0.5,
+          "correctedExposureSeconds": 0.75,
+          "hasCalculatedExposureTime": true,
+          "metadata": {
+            "basis": "officialThresholdNoCorrection",
+            "sourceAuthorityImpact": "currentOfficial",
+            "rangeStatus": "withinStatedRange",
+            "warningLevel": "none",
+            "notes": [],
+            "referencedRows": null
+          }
+        }
+        """
+
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ReciprocityCalculationPolicyResult.self,
+                from: Data(json.utf8)
+            )
+        ) { error in
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                return XCTFail("Expected dataCorrupted error, got \(error)")
+            }
+
+            XCTAssertTrue(context.debugDescription.contains("corrected exposure equal to metered exposure"))
+        }
+    }
+
+    func testDecodingRejectsAdvisoryOnlyResultThatReturnsCorrectedExposure() {
+        let json = """
+        {
+          "meteredExposureSeconds": 4,
+          "correctedExposureSeconds": 8,
+          "hasCalculatedExposureTime": true,
+          "metadata": {
+            "basis": "advisoryOnlyBeyondOfficialRange",
+            "sourceAuthorityImpact": "currentOfficial",
+            "rangeStatus": "beyondLastRepresentativePoint",
+            "warningLevel": "note",
+            "notes": [],
+            "referencedRows": null
+          }
+        }
+        """
+
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ReciprocityCalculationPolicyResult.self,
+                from: Data(json.utf8)
+            )
+        ) { error in
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                return XCTFail("Expected dataCorrupted error, got \(error)")
+            }
+
+            XCTAssertTrue(context.debugDescription.contains("must not return a corrected exposure time"))
+        }
+    }
+
+    func testDecodingRejectsUnsupportedResultThatReturnsCorrectedExposure() {
+        let json = """
+        {
+          "meteredExposureSeconds": 1000,
+          "correctedExposureSeconds": 1200,
+          "hasCalculatedExposureTime": true,
+          "metadata": {
+            "basis": "unsupportedOutOfPolicyRange",
+            "sourceAuthorityImpact": "currentOfficial",
+            "rangeStatus": "beyondPolicyLimit",
+            "warningLevel": "strongWarning",
+            "notes": [],
+            "referencedRows": null
+          }
+        }
+        """
+
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ReciprocityCalculationPolicyResult.self,
+                from: Data(json.utf8)
+            )
+        ) { error in
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                return XCTFail("Expected dataCorrupted error, got \(error)")
+            }
+
+            XCTAssertTrue(context.debugDescription.contains("must not return a corrected exposure time"))
+        }
+    }
+
     private func exactSeconds(_ row: ReciprocityTableRowReference) throws -> Double {
         guard case let .exactSeconds(value) = row.meteredExposure else {
             throw NSError(domain: "ReciprocityCalculationPolicyTests", code: 1)
@@ -315,7 +512,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
     }
 }
 
-private enum ReciprocityPolicyScenarioFactory {
+enum ReciprocityPolicyScenarioFactory {
     static func triXProfile() -> ReciprocityProfile {
         ReciprocityProfile(
             id: "kodak-tri-x-official-table",

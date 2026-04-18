@@ -114,6 +114,12 @@ struct ReciprocityCalculationPolicyResultMetadata: Codable, Equatable {
         notes: [ReciprocityPolicyNote] = [],
         referencedRows: [ReciprocityTableRowReference]? = nil
     ) {
+        let validationError = Self.validationError(
+            basis: basis,
+            estimationFamily: estimationFamily
+        )
+        precondition(validationError == nil, validationError ?? "Invalid reciprocity calculation policy metadata.")
+
         self.basis = basis
         self.sourceAuthorityImpact = sourceAuthorityImpact
         self.rangeStatus = rangeStatus
@@ -121,6 +127,76 @@ struct ReciprocityCalculationPolicyResultMetadata: Codable, Equatable {
         self.estimationFamily = estimationFamily
         self.notes = notes
         self.referencedRows = referencedRows
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case basis
+        case sourceAuthorityImpact
+        case rangeStatus
+        case warningLevel
+        case estimationFamily
+        case notes
+        case referencedRows
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let basis = try container.decode(ReciprocityCalculationBasis.self, forKey: .basis)
+        let sourceAuthorityImpact = try container.decode(
+            ReciprocitySourceAuthorityImpact.self,
+            forKey: .sourceAuthorityImpact
+        )
+        let rangeStatus = try container.decode(ReciprocityCalculationRangeStatus.self, forKey: .rangeStatus)
+        let warningLevel = try container.decode(ReciprocityCalculationWarningLevel.self, forKey: .warningLevel)
+        let estimationFamily = try container.decodeIfPresent(
+            ReciprocityTableEstimationFamily.self,
+            forKey: .estimationFamily
+        )
+        let notes = try container.decodeIfPresent([ReciprocityPolicyNote].self, forKey: .notes) ?? []
+        let referencedRows = try container.decodeIfPresent(
+            [ReciprocityTableRowReference].self,
+            forKey: .referencedRows
+        )
+
+        if let validationError = Self.validationError(
+            basis: basis,
+            estimationFamily: estimationFamily
+        ) {
+            throw DecodingError.dataCorruptedError(
+                forKey: .estimationFamily,
+                in: container,
+                debugDescription: validationError
+            )
+        }
+
+        self.basis = basis
+        self.sourceAuthorityImpact = sourceAuthorityImpact
+        self.rangeStatus = rangeStatus
+        self.warningLevel = warningLevel
+        self.estimationFamily = estimationFamily
+        self.notes = notes
+        self.referencedRows = referencedRows
+    }
+
+    private static func validationError(
+        basis: ReciprocityCalculationBasis,
+        estimationFamily: ReciprocityTableEstimationFamily?
+    ) -> String? {
+        switch basis {
+        case .exactTablePoint, .officialThresholdNoCorrection,
+             .advisoryOnlyBeyondOfficialRange, .unsupportedOutOfPolicyRange:
+            guard estimationFamily == nil else {
+                return "\(basis.rawValue) must not carry an estimation family."
+            }
+        case .interpolatedWithinTable, .extrapolatedBeyondTable:
+            guard estimationFamily != nil else {
+                return "\(basis.rawValue) must carry an estimation family."
+            }
+        case .formulaDerived:
+            break
+        }
+
+        return nil
     }
 }
 
@@ -145,6 +221,13 @@ struct ReciprocityCalculationPolicyResult: Codable, Equatable {
         correctedExposureSeconds: Double?,
         metadata: ReciprocityCalculationPolicyResultMetadata
     ) {
+        let validationError = Self.validationError(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            metadata: metadata
+        )
+        precondition(validationError == nil, validationError ?? "Invalid reciprocity calculation policy result.")
+
         self.meteredExposureSeconds = meteredExposureSeconds
         self.correctedExposureSeconds = correctedExposureSeconds
         self.metadata = metadata
@@ -166,6 +249,18 @@ struct ReciprocityCalculationPolicyResult: Codable, Equatable {
             )
         }
 
+        if let validationError = Self.validationError(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            metadata: metadata
+        ) {
+            throw DecodingError.dataCorruptedError(
+                forKey: .metadata,
+                in: container,
+                debugDescription: validationError
+            )
+        }
+
         self.init(
             meteredExposureSeconds: meteredExposureSeconds,
             correctedExposureSeconds: correctedExposureSeconds,
@@ -180,80 +275,365 @@ struct ReciprocityCalculationPolicyResult: Codable, Equatable {
         try container.encode(hasCalculatedExposureTime, forKey: .hasCalculatedExposureTime)
         try container.encode(metadata, forKey: .metadata)
     }
+
+    private static func validationError(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double?,
+        metadata: ReciprocityCalculationPolicyResultMetadata
+    ) -> String? {
+        switch metadata.basis {
+        case .officialThresholdNoCorrection:
+            guard let correctedExposureSeconds else {
+                return "officialThresholdNoCorrection must return a corrected exposure time."
+            }
+
+            guard abs(correctedExposureSeconds - meteredExposureSeconds) < 0.000_001 else {
+                return "officialThresholdNoCorrection must return corrected exposure equal to metered exposure."
+            }
+        case .advisoryOnlyBeyondOfficialRange:
+            guard correctedExposureSeconds == nil else {
+                return "advisoryOnlyBeyondOfficialRange must not return a corrected exposure time."
+            }
+        case .unsupportedOutOfPolicyRange:
+            guard correctedExposureSeconds == nil else {
+                return "unsupportedOutOfPolicyRange must not return a corrected exposure time."
+            }
+        case .interpolatedWithinTable, .extrapolatedBeyondTable:
+            guard correctedExposureSeconds != nil else {
+                return "\(metadata.basis.rawValue) must return a corrected exposure time."
+            }
+        case .exactTablePoint, .formulaDerived:
+            break
+        }
+
+        return nil
+    }
+}
+
+private extension ReciprocityCalculationPolicyResultMetadata {
+    static func exact(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]
+    ) -> Self {
+        Self(
+            basis: .exactTablePoint,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .withinStatedRange,
+            warningLevel: warningLevel(for: .exactTablePoint, sourceAuthorityImpact: sourceAuthorityImpact),
+            notes: notes,
+            referencedRows: referencedRows
+        )
+    }
+
+    static func interpolated(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        estimationFamily: ReciprocityTableEstimationFamily,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]
+    ) -> Self {
+        Self(
+            basis: .interpolatedWithinTable,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .withinInterpretedRange,
+            warningLevel: warningLevel(for: .interpolatedWithinTable, sourceAuthorityImpact: sourceAuthorityImpact),
+            estimationFamily: estimationFamily,
+            notes: notes,
+            referencedRows: referencedRows
+        )
+    }
+
+    static func extrapolated(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        estimationFamily: ReciprocityTableEstimationFamily,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]
+    ) -> Self {
+        Self(
+            basis: .extrapolatedBeyondTable,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .beyondLastRepresentativePoint,
+            warningLevel: warningLevel(for: .extrapolatedBeyondTable, sourceAuthorityImpact: sourceAuthorityImpact),
+            estimationFamily: estimationFamily,
+            notes: notes,
+            referencedRows: referencedRows
+        )
+    }
+
+    static func thresholdNoCorrection(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            basis: .officialThresholdNoCorrection,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .withinStatedRange,
+            warningLevel: warningLevel(for: .officialThresholdNoCorrection, sourceAuthorityImpact: sourceAuthorityImpact),
+            notes: notes
+        )
+    }
+
+    static func advisoryOnly(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            basis: .advisoryOnlyBeyondOfficialRange,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .beyondLastRepresentativePoint,
+            warningLevel: warningLevel(for: .advisoryOnlyBeyondOfficialRange, sourceAuthorityImpact: sourceAuthorityImpact),
+            notes: notes
+        )
+    }
+
+    static func unsupported(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]? = nil
+    ) -> Self {
+        Self(
+            basis: .unsupportedOutOfPolicyRange,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .beyondPolicyLimit,
+            warningLevel: .strongWarning,
+            notes: notes,
+            referencedRows: referencedRows
+        )
+    }
+
+    private static func warningLevel(
+        for basis: ReciprocityCalculationBasis,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
+    ) -> ReciprocityCalculationWarningLevel {
+        switch basis {
+        case .exactTablePoint, .officialThresholdNoCorrection:
+            switch sourceAuthorityImpact {
+            case .currentOfficial:
+                return .none
+            case .archivalOfficial:
+                return .note
+            case .unofficialSecondary, .userDefined:
+                return .caution
+            }
+        case .interpolatedWithinTable:
+            switch sourceAuthorityImpact {
+            case .currentOfficial:
+                return .note
+            case .archivalOfficial, .unofficialSecondary, .userDefined:
+                return .caution
+            }
+        case .extrapolatedBeyondTable:
+            switch sourceAuthorityImpact {
+            case .currentOfficial:
+                return .caution
+            case .archivalOfficial, .unofficialSecondary, .userDefined:
+                return .strongWarning
+            }
+        case .advisoryOnlyBeyondOfficialRange:
+            switch sourceAuthorityImpact {
+            case .currentOfficial:
+                return .note
+            case .archivalOfficial, .unofficialSecondary, .userDefined:
+                return .caution
+            }
+        case .unsupportedOutOfPolicyRange:
+            return .strongWarning
+        case .formulaDerived:
+            switch sourceAuthorityImpact {
+            case .currentOfficial:
+                return .none
+            case .archivalOfficial:
+                return .note
+            case .unofficialSecondary, .userDefined:
+                return .caution
+            }
+        }
+    }
+}
+
+private extension ReciprocityCalculationPolicyResult {
+    static func exact(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            metadata: .exact(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        )
+    }
+
+    static func interpolated(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        estimationFamily: ReciprocityTableEstimationFamily,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            metadata: .interpolated(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                estimationFamily: estimationFamily,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        )
+    }
+
+    static func extrapolated(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        estimationFamily: ReciprocityTableEstimationFamily,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            metadata: .extrapolated(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                estimationFamily: estimationFamily,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        )
+    }
+
+    static func thresholdNoCorrection(
+        meteredExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: meteredExposureSeconds,
+            metadata: .thresholdNoCorrection(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes
+            )
+        )
+    }
+
+    static func advisoryOnly(
+        meteredExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: nil,
+            metadata: .advisoryOnly(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes
+            )
+        )
+    }
+
+    static func unsupported(
+        meteredExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote],
+        referencedRows: [ReciprocityTableRowReference]? = nil
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: nil,
+            metadata: .unsupported(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        )
+    }
 }
 
 struct ReciprocityCalculationPolicyEvaluator {
     private let comparisonTolerance = 0.000_001
 
+    /// Evaluation order is part of the policy contract:
+    /// exact table rows first, then threshold-only no-correction guidance,
+    /// then quantified table estimation, then advisory-only continuation,
+    /// and finally unsupported.
     func evaluate(
         profile: ReciprocityProfile,
         meteredExposureSeconds: Double
     ) -> ReciprocityCalculationPolicyResult {
         let sourceAuthorityImpact = mapSourceAuthorityImpact(from: profile.source)
-        let context = ReciprocityPolicyEvaluationContext(
-            sourceAuthorityImpact: sourceAuthorityImpact
+        let assembler = ResultAssembler(sourceAuthorityImpact: sourceAuthorityImpact)
+        let selector = Selection(
+            tableSelectors: profile.rules.compactMap {
+                guard case let .table(tableRule) = $0 else {
+                    return nil
+                }
+
+                return TableSelector(tableRule: tableRule, comparisonTolerance: comparisonTolerance)
+            },
+            thresholdRules: profile.rules.compactMap {
+                guard case let .threshold(thresholdRule) = $0 else {
+                    return nil
+                }
+
+                return thresholdRule
+            },
+            advisoryRules: profile.rules.compactMap {
+                guard case let .advisory(advisoryRule) = $0 else {
+                    return nil
+                }
+
+                return advisoryRule
+            }
         )
+        let estimator = Estimation()
 
-        for rule in profile.rules {
-            guard case let .table(tableRule) = rule else {
-                continue
-            }
-
+        for tableSelector in selector.tableSelectors {
             if let result = evaluateExactTableMatch(
-                tableRule: tableRule,
+                selection: tableSelector,
                 meteredExposureSeconds: meteredExposureSeconds,
-                context: context
+                assembler: assembler,
+                estimator: estimator
             ) {
                 return result
             }
         }
 
-        for rule in profile.rules {
-            guard case let .threshold(thresholdRule) = rule else {
-                continue
-            }
-
-            if thresholdRule.noCorrectionRange.contains(meteredExposureSeconds) {
-                return makeThresholdNoCorrectionResult(
-                    meteredExposureSeconds: meteredExposureSeconds,
-                    thresholdRule: thresholdRule,
-                    context: context
-                )
-            }
+        if let thresholdRule = selector.thresholdRule(for: meteredExposureSeconds) {
+            return assembler.thresholdNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds,
+                thresholdRule: thresholdRule
+            )
         }
 
-        for rule in profile.rules {
-            guard case let .table(tableRule) = rule else {
-                continue
-            }
-
+        for tableSelector in selector.tableSelectors {
             if let result = evaluateEstimatedTableResult(
-                tableRule: tableRule,
+                selection: tableSelector,
                 meteredExposureSeconds: meteredExposureSeconds,
-                context: context
+                assembler: assembler,
+                estimator: estimator
             ) {
                 return result
             }
         }
 
-        for rule in profile.rules {
-            guard case let .advisory(advisoryRule) = rule else {
-                continue
-            }
-
-            let applies = advisoryRule.appliesWhenMetered?.contains(meteredExposureSeconds) ?? true
-            if applies {
-                return makeAdvisoryOnlyResult(
-                    meteredExposureSeconds: meteredExposureSeconds,
-                    advisoryRule: advisoryRule,
-                    context: context
-                )
-            }
+        if let advisoryRule = selector.advisoryRule(for: meteredExposureSeconds) {
+            return assembler.advisoryOnly(
+                meteredExposureSeconds: meteredExposureSeconds,
+                advisoryRule: advisoryRule
+            )
         }
 
-        return makeUnsupportedResult(
+        return assembler.unsupported(
             meteredExposureSeconds: meteredExposureSeconds,
-            sourceAuthorityImpact: sourceAuthorityImpact,
             notes: [
                 ReciprocityPolicyNote(
                     token: .unsupportedByPolicy,
@@ -264,116 +644,67 @@ struct ReciprocityCalculationPolicyEvaluator {
     }
 
     private func evaluateExactTableMatch(
-        tableRule: TableReciprocityRule,
+        selection: TableSelector,
         meteredExposureSeconds: Double,
-        context: ReciprocityPolicyEvaluationContext
+        assembler: ResultAssembler,
+        estimator: Estimation
     ) -> ReciprocityCalculationPolicyResult? {
-        for (index, entry) in tableRule.entries.enumerated() {
-            guard entry.meteredExposure.matches(meteredExposureSeconds, tolerance: comparisonTolerance) else {
-                continue
-            }
+        guard let match = selection.exactMatch(for: meteredExposureSeconds) else {
+            return nil
+        }
 
-            if let stopSignalNote = stopSignalNote(for: entry) {
-                return makeUnsupportedResult(
-                    meteredExposureSeconds: meteredExposureSeconds,
-                    sourceAuthorityImpact: context.sourceAuthorityImpact,
-                    notes: [
-                        stopSignalNote,
-                        ReciprocityPolicyNote(
-                            token: .unsupportedByPolicy,
-                            text: "Explicit manufacturer stop signals override generic extrapolation allowance."
-                        )
-                    ],
-                    referencedRows: [
-                        makeRowReference(
-                            entry: entry,
-                            rowIndex: index,
-                            role: .stopSignal
-                        )
-                    ]
-                )
-            }
-
-            let rowReference = makeRowReference(
-                entry: entry,
-                rowIndex: index,
-                role: .exactMatch
-            )
-
-            guard let correctedExposureSeconds = correctedExposureSeconds(
-                for: entry,
-                meteredExposureSeconds: meteredExposureSeconds
-            ) else {
-                continue
-            }
-
-            return ReciprocityCalculationPolicyResult(
+        if let stopSignalNote = stopSignalNote(for: match.entry) {
+            return assembler.unsupportedStopSignal(
                 meteredExposureSeconds: meteredExposureSeconds,
-                correctedExposureSeconds: correctedExposureSeconds,
-                metadata: ReciprocityCalculationPolicyResultMetadata(
-                    basis: .exactTablePoint,
-                    sourceAuthorityImpact: context.sourceAuthorityImpact,
-                    rangeStatus: .withinStatedRange,
-                    warningLevel: warningLevel(
-                        for: .exactTablePoint,
-                        sourceAuthorityImpact: context.sourceAuthorityImpact
-                    ),
-                    notes: exactMatchNotes(for: context.sourceAuthorityImpact),
-                    referencedRows: [rowReference]
+                stopSignalNote: stopSignalNote,
+                stopSignalBoundary: QuantifiedTableBoundary(
+                    rowIndex: match.rowIndex,
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    meteredExposure: match.entry.meteredExposure,
+                    annotationSummary: annotationSummary(for: match.entry)
                 )
             )
         }
 
-        return nil
+        guard let correctedExposureSeconds = estimator.correctedExposureSeconds(
+            for: match.entry,
+            meteredExposureSeconds: meteredExposureSeconds
+        ) else {
+            return nil
+        }
+
+        return assembler.exact(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            notes: exactMatchNotes(for: assembler.sourceAuthorityImpact),
+            referencedRows: [
+                makeRowReference(
+                    entry: match.entry,
+                    rowIndex: match.rowIndex,
+                    role: .exactMatch
+                )
+            ]
+        )
     }
 
     private func evaluateEstimatedTableResult(
-        tableRule: TableReciprocityRule,
+        selection: TableSelector,
         meteredExposureSeconds: Double,
-        context: ReciprocityPolicyEvaluationContext
+        assembler: ResultAssembler,
+        estimator: Estimation
     ) -> ReciprocityCalculationPolicyResult? {
-        let quantifiedPoints = tableRule.entries.enumerated().compactMap { offset, entry in
-            quantifiedPoint(entry: entry, rowIndex: offset)
-        }
-        .sorted { $0.meteredExposureSeconds < $1.meteredExposureSeconds }
+        let quantifiedPoints = selection.quantifiedPoints
 
         guard quantifiedPoints.count >= 2 else {
             return nil
         }
 
-        if let lowerIndex = quantifiedPoints.lastIndex(where: { $0.meteredExposureSeconds < meteredExposureSeconds }),
-           let upperIndex = quantifiedPoints.firstIndex(where: { $0.meteredExposureSeconds > meteredExposureSeconds }) {
-            let lowerBound = quantifiedPoints[lowerIndex]
-            let upperBound = quantifiedPoints[upperIndex]
-            guard let estimationFamily = estimationFamily(lowerBound: lowerBound, upperBound: upperBound) else {
-                return nil
-            }
-
-            let correctedExposureSeconds = estimatedCorrectedExposureSeconds(
+        if let segment = selection.boundingSegment(for: meteredExposureSeconds) {
+            return assembleEstimatedTableResult(
                 meteredExposureSeconds: meteredExposureSeconds,
-                lowerBound: lowerBound,
-                upperBound: upperBound,
-                estimationFamily: estimationFamily
-            )
-
-            return ReciprocityCalculationPolicyResult(
-                meteredExposureSeconds: meteredExposureSeconds,
-                correctedExposureSeconds: correctedExposureSeconds,
-                metadata: ReciprocityCalculationPolicyResultMetadata(
-                    basis: .interpolatedWithinTable,
-                    sourceAuthorityImpact: context.sourceAuthorityImpact,
-                    rangeStatus: .withinInterpretedRange,
-                    warningLevel: warningLevel(
-                        for: .interpolatedWithinTable,
-                        sourceAuthorityImpact: context.sourceAuthorityImpact
-                    ),
-                    estimationFamily: estimationFamily,
-                    notes: interpolatedNotes(for: context.sourceAuthorityImpact),
-                    referencedRows: [
-                        lowerBound.rowReference(role: .lowerBound),
-                        upperBound.rowReference(role: .upperBound)
-                    ]
-                )
+                segment: segment,
+                assembler: assembler,
+                estimator: estimator
             )
         }
 
@@ -383,36 +714,27 @@ struct ReciprocityCalculationPolicyEvaluator {
             return nil
         }
 
-        if let stopSignalBoundary = firstStopSignalBoundary(
-            in: tableRule,
+        if let stopSignalBoundary = selection.stopSignalBoundary(
             after: lastQuantifiedPoint.meteredExposureSeconds
         ),
            meteredExposureSeconds >= stopSignalBoundary.meteredExposureSeconds {
-            return makeUnsupportedResult(
+            return assembler.unsupportedStopSignal(
                 meteredExposureSeconds: meteredExposureSeconds,
-                sourceAuthorityImpact: context.sourceAuthorityImpact,
-                notes: [
-                    ReciprocityPolicyNote(
-                        token: .explicitManufacturerStopSignal,
-                        text: "An explicit stop-signal row limits extrapolation beyond \(formattedSeconds(stopSignalBoundary.meteredExposureSeconds))."
-                    ),
-                    ReciprocityPolicyNote(
-                        token: .unsupportedByPolicy,
-                        text: "Explicit manufacturer stop signals override generic extrapolation allowance."
-                    )
-                ],
-                referencedRows: [stopSignalBoundary.rowReference(role: .stopSignal)]
+                stopSignalNote: ReciprocityPolicyNote(
+                    token: .explicitManufacturerStopSignal,
+                    text: "An explicit stop-signal row limits extrapolation beyond \(formattedSeconds(stopSignalBoundary.meteredExposureSeconds))."
+                ),
+                stopSignalBoundary: stopSignalBoundary
             )
         }
 
-        let extrapolationLimit = nextOrderOfMagnitudeLimit(
+        let extrapolationLimit = estimator.nextOrderOfMagnitudeLimit(
             from: lastQuantifiedPoint.meteredExposureSeconds
         )
 
         guard meteredExposureSeconds < extrapolationLimit else {
-            return makeUnsupportedResult(
+            return assembler.unsupported(
                 meteredExposureSeconds: meteredExposureSeconds,
-                sourceAuthorityImpact: context.sourceAuthorityImpact,
                 notes: [
                     ReciprocityPolicyNote(
                         token: .beyondRepresentativeTablePoint,
@@ -428,155 +750,49 @@ struct ReciprocityCalculationPolicyEvaluator {
 
         let lowerAnchor = quantifiedPoints[quantifiedPoints.count - 2]
         let upperAnchor = quantifiedPoints[quantifiedPoints.count - 1]
-        guard let estimationFamily = estimationFamily(lowerBound: lowerAnchor, upperBound: upperAnchor) else {
+
+        return assembleEstimatedTableResult(
+            meteredExposureSeconds: meteredExposureSeconds,
+            segment: .extrapolated(
+                lowerAnchor: lowerAnchor,
+                upperAnchor: upperAnchor
+            ),
+            assembler: assembler,
+            estimator: estimator
+        )
+    }
+
+    private func assembleEstimatedTableResult(
+        meteredExposureSeconds: Double,
+        segment: EstimableSegment,
+        assembler: ResultAssembler,
+        estimator: Estimation
+    ) -> ReciprocityCalculationPolicyResult? {
+        guard let estimate = estimator.estimate(
+            meteredExposureSeconds: meteredExposureSeconds,
+            segment: segment
+        ) else {
             return nil
         }
 
-        let correctedExposureSeconds = estimatedCorrectedExposureSeconds(
-            meteredExposureSeconds: meteredExposureSeconds,
-            lowerBound: lowerAnchor,
-            upperBound: upperAnchor,
-            estimationFamily: estimationFamily
-        )
-
-        return ReciprocityCalculationPolicyResult(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: ReciprocityCalculationPolicyResultMetadata(
-                basis: .extrapolatedBeyondTable,
-                sourceAuthorityImpact: context.sourceAuthorityImpact,
-                rangeStatus: .beyondLastRepresentativePoint,
-                warningLevel: warningLevel(
-                    for: .extrapolatedBeyondTable,
-                    sourceAuthorityImpact: context.sourceAuthorityImpact
-                ),
-                estimationFamily: estimationFamily,
-                notes: extrapolatedNotes(for: context.sourceAuthorityImpact),
-                referencedRows: [
-                    lowerAnchor.rowReference(role: .representativeAnchor),
-                    upperAnchor.rowReference(role: .representativeAnchor)
-                ]
-            )
-        )
-    }
-
-    private func makeThresholdNoCorrectionResult(
-        meteredExposureSeconds: Double,
-        thresholdRule: ThresholdReciprocityRule,
-        context: ReciprocityPolicyEvaluationContext
-    ) -> ReciprocityCalculationPolicyResult {
-        let noteText = thresholdRule.notes.first ?? "No correction is required within the stated official threshold range."
-
-        return ReciprocityCalculationPolicyResult(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: meteredExposureSeconds,
-            metadata: ReciprocityCalculationPolicyResultMetadata(
-                basis: .officialThresholdNoCorrection,
-                sourceAuthorityImpact: context.sourceAuthorityImpact,
-                rangeStatus: .withinStatedRange,
-                warningLevel: warningLevel(
-                    for: .officialThresholdNoCorrection,
-                    sourceAuthorityImpact: context.sourceAuthorityImpact
-                ),
-                notes: [
-                    ReciprocityPolicyNote(
-                        token: .thresholdGuidanceOnly,
-                        text: noteText
-                    )
-                ] + sourceAuthorityNotes(for: context.sourceAuthorityImpact)
-            )
-        )
-    }
-
-    private func makeAdvisoryOnlyResult(
-        meteredExposureSeconds: Double,
-        advisoryRule: AdvisoryReciprocityRule,
-        context: ReciprocityPolicyEvaluationContext
-    ) -> ReciprocityCalculationPolicyResult {
-        let noteText = advisoryRule.adjustments.compactMap(advisoryNoteText(from:)).first
-            ?? advisoryRule.notes.first
-            ?? "Only advisory reciprocity guidance is available beyond the official quantified range."
-
-        return ReciprocityCalculationPolicyResult(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: nil,
-            metadata: ReciprocityCalculationPolicyResultMetadata(
-                basis: .advisoryOnlyBeyondOfficialRange,
-                sourceAuthorityImpact: context.sourceAuthorityImpact,
-                rangeStatus: .beyondLastRepresentativePoint,
-                warningLevel: warningLevel(
-                    for: .advisoryOnlyBeyondOfficialRange,
-                    sourceAuthorityImpact: context.sourceAuthorityImpact
-                ),
-                notes: [
-                    ReciprocityPolicyNote(
-                        token: .advisoryContinuationOnly,
-                        text: "Only advisory continuation is available for this metered exposure."
-                    ),
-                    ReciprocityPolicyNote(
-                        token: .beyondOfficialQuantifiedRange,
-                        text: noteText
-                    )
-                ] + sourceAuthorityNotes(for: context.sourceAuthorityImpact)
-            )
-        )
-    }
-
-    private func makeUnsupportedResult(
-        meteredExposureSeconds: Double,
-        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
-        notes: [ReciprocityPolicyNote],
-        referencedRows: [ReciprocityTableRowReference]? = nil
-    ) -> ReciprocityCalculationPolicyResult {
-        ReciprocityCalculationPolicyResult(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: nil,
-            metadata: ReciprocityCalculationPolicyResultMetadata(
-                basis: .unsupportedOutOfPolicyRange,
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                rangeStatus: .beyondPolicyLimit,
-                warningLevel: .strongWarning,
-                notes: notes + sourceAuthorityNotes(for: sourceAuthorityImpact),
-                referencedRows: referencedRows
-            )
-        )
-    }
-
-    private func quantifiedPoint(
-        entry: ReciprocityTableEntry,
-        rowIndex: Int
-    ) -> QuantifiedTablePoint? {
-        guard case let .exactSeconds(meteredExposureSeconds) = entry.meteredExposure else {
-            return nil
-        }
-
-        if stopSignalNote(for: entry) != nil {
-            return nil
-        }
-
-        if let correctedTimeSeconds = directCorrectedTimeSeconds(for: entry) {
-            return QuantifiedTablePoint(
-                rowIndex: rowIndex,
+        switch segment.kind {
+        case .interpolated:
+            return assembler.interpolated(
                 meteredExposureSeconds: meteredExposureSeconds,
-                correctedExposureSeconds: correctedTimeSeconds,
-                estimationFamily: .logLog,
-                stopDelta: stopDelta(for: entry),
-                annotationSummary: annotationSummary(for: entry)
+                correctedExposureSeconds: estimate.correctedExposureSeconds,
+                estimationFamily: estimate.family,
+                referencedRows: segment.referencedRows,
+                notes: interpolatedNotes(for: assembler.sourceAuthorityImpact)
             )
-        }
-
-        if let stopDelta = stopDelta(for: entry) {
-            return QuantifiedTablePoint(
-                rowIndex: rowIndex,
+        case .extrapolated:
+            return assembler.extrapolated(
                 meteredExposureSeconds: meteredExposureSeconds,
-                correctedExposureSeconds: meteredExposureSeconds * pow(2.0, stopDelta),
-                estimationFamily: .stopSpace,
-                stopDelta: stopDelta,
-                annotationSummary: annotationSummary(for: entry)
+                correctedExposureSeconds: estimate.correctedExposureSeconds,
+                estimationFamily: estimate.family,
+                referencedRows: segment.referencedRows,
+                notes: extrapolatedNotes(for: assembler.sourceAuthorityImpact)
             )
         }
-
-        return nil
     }
 
     private func makeRowReference(
@@ -592,21 +808,6 @@ struct ReciprocityCalculationPolicyEvaluator {
             stopDelta: stopDelta(for: entry),
             annotationSummary: annotationSummary(for: entry)
         )
-    }
-
-    private func correctedExposureSeconds(
-        for entry: ReciprocityTableEntry,
-        meteredExposureSeconds: Double
-    ) -> Double? {
-        if let correctedTimeSeconds = directCorrectedTimeSeconds(for: entry) {
-            return correctedTimeSeconds
-        }
-
-        if let stopDelta = stopDelta(for: entry) {
-            return meteredExposureSeconds * pow(2.0, stopDelta)
-        }
-
-        return nil
     }
 
     private func directCorrectedTimeSeconds(for entry: ReciprocityTableEntry) -> Double? {
@@ -702,66 +903,6 @@ struct ReciprocityCalculationPolicyEvaluator {
         return note.text
     }
 
-    private func estimationFamily(
-        lowerBound: QuantifiedTablePoint,
-        upperBound: QuantifiedTablePoint
-    ) -> ReciprocityTableEstimationFamily? {
-        guard lowerBound.estimationFamily == upperBound.estimationFamily else {
-            return nil
-        }
-
-        return lowerBound.estimationFamily
-    }
-
-    private func estimatedCorrectedExposureSeconds(
-        meteredExposureSeconds: Double,
-        lowerBound: QuantifiedTablePoint,
-        upperBound: QuantifiedTablePoint,
-        estimationFamily: ReciprocityTableEstimationFamily
-    ) -> Double {
-        switch estimationFamily {
-        case .logLog:
-            let slope = log(upperBound.correctedExposureSeconds / lowerBound.correctedExposureSeconds)
-                / log(upperBound.meteredExposureSeconds / lowerBound.meteredExposureSeconds)
-            return lowerBound.correctedExposureSeconds
-                * pow(meteredExposureSeconds / lowerBound.meteredExposureSeconds, slope)
-        case .stopSpace:
-            let lowerStopDelta = lowerBound.stopDelta ?? 0
-            let upperStopDelta = upperBound.stopDelta ?? 0
-            let intervalStops = log2(upperBound.meteredExposureSeconds / lowerBound.meteredExposureSeconds)
-            let progressStops = log2(meteredExposureSeconds / lowerBound.meteredExposureSeconds)
-            let interpolatedStopDelta = lowerStopDelta
-                + ((upperStopDelta - lowerStopDelta) * (progressStops / intervalStops))
-            return meteredExposureSeconds * pow(2.0, interpolatedStopDelta)
-        }
-    }
-
-    private func nextOrderOfMagnitudeLimit(from meteredExposureSeconds: Double) -> Double {
-        pow(10.0, floor(log10(meteredExposureSeconds)) + 1)
-    }
-
-    private func firstStopSignalBoundary(
-        in tableRule: TableReciprocityRule,
-        after meteredExposureSeconds: Double
-    ) -> QuantifiedTableBoundary? {
-        for (index, entry) in tableRule.entries.enumerated() {
-            guard stopSignalNote(for: entry) != nil,
-                  case let .exactSeconds(rowSeconds) = entry.meteredExposure,
-                  rowSeconds > meteredExposureSeconds else {
-                continue
-            }
-
-            return QuantifiedTableBoundary(
-                rowIndex: index,
-                meteredExposureSeconds: rowSeconds,
-                meteredExposure: entry.meteredExposure,
-                annotationSummary: annotationSummary(for: entry)
-            )
-        }
-
-        return nil
-    }
-
     private func exactMatchNotes(
         for sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
     ) -> [ReciprocityPolicyNote] {
@@ -829,55 +970,6 @@ struct ReciprocityCalculationPolicyEvaluator {
         }
     }
 
-    private func warningLevel(
-        for basis: ReciprocityCalculationBasis,
-        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
-    ) -> ReciprocityCalculationWarningLevel {
-        switch basis {
-        case .exactTablePoint, .officialThresholdNoCorrection:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .none
-            case .archivalOfficial:
-                return .note
-            case .unofficialSecondary, .userDefined:
-                return .caution
-            }
-        case .interpolatedWithinTable:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .note
-            case .archivalOfficial, .unofficialSecondary, .userDefined:
-                return .caution
-            }
-        case .extrapolatedBeyondTable:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .caution
-            case .archivalOfficial, .unofficialSecondary, .userDefined:
-                return .strongWarning
-            }
-        case .advisoryOnlyBeyondOfficialRange:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .note
-            case .archivalOfficial, .unofficialSecondary, .userDefined:
-                return .caution
-            }
-        case .unsupportedOutOfPolicyRange:
-            return .strongWarning
-        case .formulaDerived:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .none
-            case .archivalOfficial:
-                return .note
-            case .unofficialSecondary, .userDefined:
-                return .caution
-            }
-        }
-    }
-
     private func mapSourceAuthorityImpact(
         from source: ReciprocitySourceProvenance
     ) -> ReciprocitySourceAuthorityImpact {
@@ -913,8 +1005,466 @@ struct ReciprocityCalculationPolicyEvaluator {
     }
 }
 
-private struct ReciprocityPolicyEvaluationContext {
-    let sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
+private extension ReciprocityCalculationPolicyEvaluator {
+    struct Selection {
+        let tableSelectors: [TableSelector]
+        let thresholdRules: [ThresholdReciprocityRule]
+        let advisoryRules: [AdvisoryReciprocityRule]
+
+        func thresholdRule(for meteredExposureSeconds: Double) -> ThresholdReciprocityRule? {
+            thresholdRules.first { $0.noCorrectionRange.contains(meteredExposureSeconds) }
+        }
+
+        func advisoryRule(for meteredExposureSeconds: Double) -> AdvisoryReciprocityRule? {
+            advisoryRules.first {
+                $0.appliesWhenMetered?.contains(meteredExposureSeconds) ?? true
+            }
+        }
+    }
+
+    struct ResultAssembler {
+        let sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
+
+        func exact(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            notes: [ReciprocityPolicyNote],
+            referencedRows: [ReciprocityTableRowReference]
+        ) -> ReciprocityCalculationPolicyResult {
+            .exact(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        }
+
+        func interpolated(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            estimationFamily: ReciprocityTableEstimationFamily,
+            referencedRows: [ReciprocityTableRowReference],
+            notes: [ReciprocityPolicyNote]
+        ) -> ReciprocityCalculationPolicyResult {
+            .interpolated(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                estimationFamily: estimationFamily,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        }
+
+        func extrapolated(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            estimationFamily: ReciprocityTableEstimationFamily,
+            referencedRows: [ReciprocityTableRowReference],
+            notes: [ReciprocityPolicyNote]
+        ) -> ReciprocityCalculationPolicyResult {
+            .extrapolated(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                estimationFamily: estimationFamily,
+                notes: notes,
+                referencedRows: referencedRows
+            )
+        }
+
+        func thresholdNoCorrection(
+            meteredExposureSeconds: Double,
+            thresholdRule: ThresholdReciprocityRule
+        ) -> ReciprocityCalculationPolicyResult {
+            let noteText = thresholdRule.notes.first
+                ?? "No correction is required within the stated official threshold range."
+
+            return .thresholdNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .thresholdGuidanceOnly,
+                        text: noteText
+                    )
+                ] + sourceAuthorityNotes
+            )
+        }
+
+        func advisoryOnly(
+            meteredExposureSeconds: Double,
+            advisoryRule: AdvisoryReciprocityRule
+        ) -> ReciprocityCalculationPolicyResult {
+            let noteText = advisoryRule.adjustments.compactMap(Self.advisoryNoteText(from:)).first
+                ?? advisoryRule.notes.first
+                ?? "Only advisory reciprocity guidance is available beyond the official quantified range."
+
+            return .advisoryOnly(
+                meteredExposureSeconds: meteredExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .advisoryContinuationOnly,
+                        text: "Only advisory continuation is available for this metered exposure."
+                    ),
+                    ReciprocityPolicyNote(
+                        token: .beyondOfficialQuantifiedRange,
+                        text: noteText
+                    )
+                ] + sourceAuthorityNotes
+            )
+        }
+
+        func unsupported(
+            meteredExposureSeconds: Double,
+            notes: [ReciprocityPolicyNote],
+            referencedRows: [ReciprocityTableRowReference]? = nil
+        ) -> ReciprocityCalculationPolicyResult {
+            .unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes + sourceAuthorityNotes,
+                referencedRows: referencedRows
+            )
+        }
+
+        func unsupportedStopSignal(
+            meteredExposureSeconds: Double,
+            stopSignalNote: ReciprocityPolicyNote,
+            stopSignalBoundary: QuantifiedTableBoundary
+        ) -> ReciprocityCalculationPolicyResult {
+            unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    stopSignalNote,
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Explicit manufacturer stop signals override generic extrapolation allowance."
+                    )
+                ],
+                referencedRows: [stopSignalBoundary.rowReference(role: .stopSignal)]
+            )
+        }
+
+        private var sourceAuthorityNotes: [ReciprocityPolicyNote] {
+            switch sourceAuthorityImpact {
+            case .currentOfficial:
+                return []
+            case .archivalOfficial:
+                return [
+                    ReciprocityPolicyNote(
+                        token: .archivalOfficialSource,
+                        text: "Result is based on archival official reciprocity data."
+                    )
+                ]
+            case .unofficialSecondary:
+                return [
+                    ReciprocityPolicyNote(
+                        token: .unofficialSecondarySource,
+                        text: "Result is based on an unofficial secondary reciprocity source."
+                    )
+                ]
+            case .userDefined:
+                return [
+                    ReciprocityPolicyNote(
+                        token: .userDefinedSource,
+                        text: "Result is based on user-defined reciprocity data."
+                    )
+                ]
+            }
+        }
+
+        private static func advisoryNoteText(from adjustment: ReciprocityAdjustment) -> String? {
+            guard case let .note(note) = adjustment else {
+                return nil
+            }
+
+            return note.text
+        }
+    }
+
+    struct TableSelector {
+        let tableRule: TableReciprocityRule
+        let comparisonTolerance: Double
+        let quantifiedPoints: [QuantifiedTablePoint]
+
+        init(tableRule: TableReciprocityRule, comparisonTolerance: Double) {
+            self.tableRule = tableRule
+            self.comparisonTolerance = comparisonTolerance
+            self.quantifiedPoints = tableRule.entries.enumerated().compactMap { offset, entry in
+                Self.quantifiedPoint(entry: entry, rowIndex: offset)
+            }
+            .sorted { $0.meteredExposureSeconds < $1.meteredExposureSeconds }
+        }
+
+        func exactMatch(for meteredExposureSeconds: Double) -> (rowIndex: Int, entry: ReciprocityTableEntry)? {
+            for (index, entry) in tableRule.entries.enumerated() {
+                guard entry.meteredExposure.matches(meteredExposureSeconds, tolerance: comparisonTolerance) else {
+                    continue
+                }
+
+                return (index, entry)
+            }
+
+            return nil
+        }
+
+        func boundingSegment(for meteredExposureSeconds: Double) -> EstimableSegment? {
+            guard let lowerIndex = quantifiedPoints.lastIndex(where: { $0.meteredExposureSeconds < meteredExposureSeconds }),
+                  let upperIndex = quantifiedPoints.firstIndex(where: { $0.meteredExposureSeconds > meteredExposureSeconds }) else {
+                return nil
+            }
+
+            return .interpolated(
+                lowerBound: quantifiedPoints[lowerIndex],
+                upperBound: quantifiedPoints[upperIndex]
+            )
+        }
+
+        func stopSignalBoundary(after meteredExposureSeconds: Double) -> QuantifiedTableBoundary? {
+            for (index, entry) in tableRule.entries.enumerated() {
+                guard Self.stopSignalNote(for: entry) != nil,
+                      case let .exactSeconds(rowSeconds) = entry.meteredExposure,
+                      rowSeconds > meteredExposureSeconds else {
+                    continue
+                }
+
+                return QuantifiedTableBoundary(
+                    rowIndex: index,
+                    meteredExposureSeconds: rowSeconds,
+                    meteredExposure: entry.meteredExposure,
+                    annotationSummary: Self.annotationSummary(for: entry)
+                )
+            }
+
+            return nil
+        }
+
+        private static func quantifiedPoint(
+            entry: ReciprocityTableEntry,
+            rowIndex: Int
+        ) -> QuantifiedTablePoint? {
+            guard case let .exactSeconds(meteredExposureSeconds) = entry.meteredExposure else {
+                return nil
+            }
+
+            if stopSignalNote(for: entry) != nil {
+                return nil
+            }
+
+            if let correctedTimeSeconds = directCorrectedTimeSeconds(for: entry) {
+                return QuantifiedTablePoint(
+                    rowIndex: rowIndex,
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    correctedExposureSeconds: correctedTimeSeconds,
+                    estimationFamily: .logLog,
+                    stopDelta: stopDelta(for: entry),
+                    annotationSummary: annotationSummary(for: entry)
+                )
+            }
+
+            if let stopDelta = stopDelta(for: entry) {
+                return QuantifiedTablePoint(
+                    rowIndex: rowIndex,
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    correctedExposureSeconds: meteredExposureSeconds * pow(2.0, stopDelta),
+                    estimationFamily: .stopSpace,
+                    stopDelta: stopDelta,
+                    annotationSummary: annotationSummary(for: entry)
+                )
+            }
+
+            return nil
+        }
+
+        static func directCorrectedTimeSeconds(for entry: ReciprocityTableEntry) -> Double? {
+            for adjustment in entry.adjustments {
+                guard case let .exposure(exposureAdjustment) = adjustment else {
+                    continue
+                }
+
+                if case let .correctedTime(mapping) = exposureAdjustment {
+                    return mapping.correctedSeconds
+                }
+            }
+
+            return nil
+        }
+
+        static func stopDelta(for entry: ReciprocityTableEntry) -> Double? {
+            for adjustment in entry.adjustments {
+                guard case let .exposure(exposureAdjustment) = adjustment else {
+                    continue
+                }
+
+                switch exposureAdjustment {
+                case let .stopDelta(value):
+                    return value.stopDelta
+                case let .multiplier(value):
+                    guard value.factor > 0 else {
+                        return nil
+                    }
+
+                    return log2(value.factor)
+                case .correctedTime:
+                    continue
+                }
+            }
+
+            return nil
+        }
+
+        private static func annotationSummary(for entry: ReciprocityTableEntry) -> String? {
+            if let warningMessage = warningMessage(for: entry) {
+                return warningMessage
+            }
+
+            for adjustment in entry.adjustments {
+                switch adjustment {
+                case let .colorFilter(recommendation):
+                    return recommendation.filterName
+                case let .note(note):
+                    return note.text
+                default:
+                    continue
+                }
+            }
+
+            return entry.notes.first
+        }
+
+        private static func warningMessage(for entry: ReciprocityTableEntry) -> String? {
+            for adjustment in entry.adjustments {
+                guard case let .warning(warning) = adjustment else {
+                    continue
+                }
+
+                return warning.message
+            }
+
+            return nil
+        }
+
+        private static func stopSignalNote(for entry: ReciprocityTableEntry) -> ReciprocityPolicyNote? {
+            for adjustment in entry.adjustments {
+                guard case let .warning(warning) = adjustment else {
+                    continue
+                }
+
+                if warning.severity == .notRecommended {
+                    return ReciprocityPolicyNote(
+                        token: .explicitManufacturerStopSignal,
+                        text: warning.message
+                    )
+                }
+            }
+
+            return nil
+        }
+    }
+
+    struct Estimation {
+        func correctedExposureSeconds(
+            for entry: ReciprocityTableEntry,
+            meteredExposureSeconds: Double
+        ) -> Double? {
+            if let correctedTimeSeconds = TableSelector.directCorrectedTimeSeconds(for: entry) {
+                return correctedTimeSeconds
+            }
+
+            if let stopDelta = TableSelector.stopDelta(for: entry) {
+                return meteredExposureSeconds * pow(2.0, stopDelta)
+            }
+
+            return nil
+        }
+
+        func estimate(
+            meteredExposureSeconds: Double,
+            segment: EstimableSegment
+        ) -> EstimatedExposure? {
+            guard segment.lowerBound.estimationFamily == segment.upperBound.estimationFamily else {
+                return nil
+            }
+
+            let family = segment.lowerBound.estimationFamily
+            let correctedExposureSeconds: Double
+
+            switch family {
+            case .logLog:
+                let slope = log(segment.upperBound.correctedExposureSeconds / segment.lowerBound.correctedExposureSeconds)
+                    / log(segment.upperBound.meteredExposureSeconds / segment.lowerBound.meteredExposureSeconds)
+                correctedExposureSeconds = segment.lowerBound.correctedExposureSeconds
+                    * pow(meteredExposureSeconds / segment.lowerBound.meteredExposureSeconds, slope)
+            case .stopSpace:
+                let lowerStopDelta = segment.lowerBound.stopDelta ?? 0
+                let upperStopDelta = segment.upperBound.stopDelta ?? 0
+                let intervalStops = log2(segment.upperBound.meteredExposureSeconds / segment.lowerBound.meteredExposureSeconds)
+                let progressStops = log2(meteredExposureSeconds / segment.lowerBound.meteredExposureSeconds)
+                let interpolatedStopDelta = lowerStopDelta
+                    + ((upperStopDelta - lowerStopDelta) * (progressStops / intervalStops))
+                correctedExposureSeconds = meteredExposureSeconds * pow(2.0, interpolatedStopDelta)
+            }
+
+            return EstimatedExposure(
+                correctedExposureSeconds: correctedExposureSeconds,
+                family: family
+            )
+        }
+
+        func nextOrderOfMagnitudeLimit(from meteredExposureSeconds: Double) -> Double {
+            pow(10.0, floor(log10(meteredExposureSeconds)) + 1)
+        }
+    }
+}
+
+private struct EstimatedExposure {
+    let correctedExposureSeconds: Double
+    let family: ReciprocityTableEstimationFamily
+}
+
+private struct EstimableSegment {
+    enum Kind {
+        case interpolated
+        case extrapolated
+    }
+
+    let kind: Kind
+    let lowerBound: QuantifiedTablePoint
+    let upperBound: QuantifiedTablePoint
+    let referencedRows: [ReciprocityTableRowReference]
+
+    static func interpolated(
+        lowerBound: QuantifiedTablePoint,
+        upperBound: QuantifiedTablePoint
+    ) -> Self {
+        Self(
+            kind: .interpolated,
+            lowerBound: lowerBound,
+            upperBound: upperBound,
+            referencedRows: [
+                lowerBound.rowReference(role: .lowerBound),
+                upperBound.rowReference(role: .upperBound)
+            ]
+        )
+    }
+
+    static func extrapolated(
+        lowerAnchor: QuantifiedTablePoint,
+        upperAnchor: QuantifiedTablePoint
+    ) -> Self {
+        Self(
+            kind: .extrapolated,
+            lowerBound: lowerAnchor,
+            upperBound: upperAnchor,
+            referencedRows: [
+                lowerAnchor.rowReference(role: .representativeAnchor),
+                upperAnchor.rowReference(role: .representativeAnchor)
+            ]
+        )
+    }
 }
 
 private struct QuantifiedTablePoint {

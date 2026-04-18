@@ -279,6 +279,123 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
     }
 }
 
+private extension ReciprocityConfidencePresentation {
+    struct Payload {
+        let level: ReciprocityConfidenceLevel
+        let warningEmphasis: ReciprocityConfidenceWarningEmphasis
+        let shortLabel: String
+        let explanationTokens: [ReciprocityConfidenceExplanationToken]
+        let supportingNotes: [String]
+        let defaultExplanation: String
+        let returnsCalculatedExposureTime: Bool
+    }
+
+    static func exact(payload: Payload) -> Self {
+        Self(
+            category: .exact,
+            level: payload.level,
+            badgeStyle: badgeStyle(for: .exact, level: payload.level),
+            warningEmphasis: payload.warningEmphasis,
+            resultKind: .exact,
+            shortLabel: payload.shortLabel,
+            explanationTokens: payload.explanationTokens,
+            supportingNotes: payload.supportingNotes,
+            defaultExplanation: payload.defaultExplanation,
+            returnsCalculatedExposureTime: payload.returnsCalculatedExposureTime
+        )
+    }
+
+    static func estimated(payload: Payload) -> Self {
+        Self(
+            category: .estimated,
+            level: payload.level,
+            badgeStyle: badgeStyle(for: .estimated, level: payload.level),
+            warningEmphasis: payload.warningEmphasis,
+            resultKind: .estimated,
+            shortLabel: payload.shortLabel,
+            explanationTokens: payload.explanationTokens,
+            supportingNotes: payload.supportingNotes,
+            defaultExplanation: payload.defaultExplanation,
+            returnsCalculatedExposureTime: payload.returnsCalculatedExposureTime
+        )
+    }
+
+    static func extrapolated(payload: Payload) -> Self {
+        Self(
+            category: .extrapolated,
+            level: payload.level,
+            badgeStyle: .caution,
+            warningEmphasis: payload.warningEmphasis,
+            resultKind: .extrapolated,
+            shortLabel: payload.shortLabel,
+            explanationTokens: payload.explanationTokens,
+            supportingNotes: payload.supportingNotes,
+            defaultExplanation: payload.defaultExplanation,
+            returnsCalculatedExposureTime: payload.returnsCalculatedExposureTime
+        )
+    }
+
+    static func advisoryOnly(payload: Payload) -> Self {
+        Self(
+            category: .advisoryOnly,
+            level: .none,
+            badgeStyle: .advisory,
+            warningEmphasis: payload.warningEmphasis,
+            resultKind: .advisoryOnly,
+            shortLabel: payload.shortLabel,
+            explanationTokens: payload.explanationTokens,
+            supportingNotes: payload.supportingNotes,
+            defaultExplanation: payload.defaultExplanation,
+            returnsCalculatedExposureTime: false
+        )
+    }
+
+    static func unsupported(payload: Payload) -> Self {
+        Self(
+            category: .unsupported,
+            level: .none,
+            badgeStyle: .unsupported,
+            warningEmphasis: payload.warningEmphasis,
+            resultKind: .unsupported,
+            shortLabel: payload.shortLabel,
+            explanationTokens: payload.explanationTokens,
+            supportingNotes: payload.supportingNotes,
+            defaultExplanation: payload.defaultExplanation,
+            returnsCalculatedExposureTime: false
+        )
+    }
+
+    private static func badgeStyle(
+        for category: ReciprocityConfidencePresentationCategory,
+        level: ReciprocityConfidenceLevel
+    ) -> ReciprocityConfidenceBadgeStyle {
+        switch category {
+        case .unsupported:
+            return .unsupported
+        case .advisoryOnly:
+            return .advisory
+        case .extrapolated:
+            return .caution
+        case .estimated:
+            switch level {
+            case .high, .medium:
+                return .measured
+            case .low, .veryLow, .none:
+                return .caution
+            }
+        case .exact:
+            switch level {
+            case .high:
+                return .trusted
+            case .medium:
+                return .measured
+            case .low, .veryLow, .none:
+                return .caution
+            }
+        }
+    }
+}
+
 /// Maps calculation-layer result metadata into presentation-facing confidence
 /// structure. This type intentionally consumes only policy output and does not
 /// inspect raw domain rules or re-run calculation-policy decisions.
@@ -286,70 +403,46 @@ struct ReciprocityConfidencePresentationMapper {
     func map(
         result: ReciprocityCalculationPolicyResult
     ) -> ReciprocityConfidencePresentation {
-        let category = category(for: result.metadata.basis)
-        let level = defaultLevel(
-            for: result.metadata.basis,
-            sourceAuthorityImpact: result.metadata.sourceAuthorityImpact
-        )
-        let badgeStyle = badgeStyle(for: category, level: level)
-        let warningEmphasis = warningEmphasis(for: result.metadata.warningLevel)
-        let shortLabel = shortLabel(
-            for: result.metadata.basis,
-            sourceAuthorityImpact: result.metadata.sourceAuthorityImpact
-        )
+        let payload = payload(for: result)
+
+        switch result.metadata.basis {
+        case .exactTablePoint, .officialThresholdNoCorrection:
+            return .exact(payload: payload)
+        case .interpolatedWithinTable, .formulaDerived:
+            return .estimated(payload: payload)
+        case .extrapolatedBeyondTable:
+            return .extrapolated(payload: payload)
+        case .advisoryOnlyBeyondOfficialRange:
+            return .advisoryOnly(payload: payload)
+        case .unsupportedOutOfPolicyRange:
+            return .unsupported(payload: payload)
+        }
+    }
+
+    private func payload(
+        for result: ReciprocityCalculationPolicyResult
+    ) -> ReciprocityConfidencePresentation.Payload {
         let explanationTokens = explanationTokens(for: result)
         let supportingNotes = result.metadata.notes.map(\.text)
-        let defaultExplanation = fallbackExplanation(
-            explanationTokens: explanationTokens,
-            supportingNotes: supportingNotes
-        )
 
-        return ReciprocityConfidencePresentation(
-            category: category,
-            level: level,
-            badgeStyle: badgeStyle,
-            warningEmphasis: warningEmphasis,
-            resultKind: canonicalResultKind(for: category),
-            shortLabel: shortLabel,
+        return ReciprocityConfidencePresentation.Payload(
+            level: defaultLevel(
+                for: result.metadata.basis,
+                sourceAuthorityImpact: result.metadata.sourceAuthorityImpact
+            ),
+            warningEmphasis: warningEmphasis(for: result.metadata.warningLevel),
+            shortLabel: shortLabel(
+                for: result.metadata.basis,
+                sourceAuthorityImpact: result.metadata.sourceAuthorityImpact
+            ),
             explanationTokens: explanationTokens,
             supportingNotes: supportingNotes,
-            defaultExplanation: defaultExplanation,
+            defaultExplanation: fallbackExplanation(
+                explanationTokens: explanationTokens,
+                supportingNotes: supportingNotes
+            ),
             returnsCalculatedExposureTime: result.hasCalculatedExposureTime
         )
-    }
-
-    private func category(
-        for basis: ReciprocityCalculationBasis
-    ) -> ReciprocityConfidencePresentationCategory {
-        switch basis {
-        case .exactTablePoint, .officialThresholdNoCorrection:
-            return .exact
-        case .interpolatedWithinTable, .formulaDerived:
-            return .estimated
-        case .extrapolatedBeyondTable:
-            return .extrapolated
-        case .advisoryOnlyBeyondOfficialRange:
-            return .advisoryOnly
-        case .unsupportedOutOfPolicyRange:
-            return .unsupported
-        }
-    }
-
-    private func canonicalResultKind(
-        for category: ReciprocityConfidencePresentationCategory
-    ) -> ReciprocityConfidenceResultKind {
-        switch category {
-        case .exact:
-            return .exact
-        case .estimated:
-            return .estimated
-        case .extrapolated:
-            return .extrapolated
-        case .advisoryOnly:
-            return .advisoryOnly
-        case .unsupported:
-            return .unsupported
-        }
     }
 
     /// Current default mapping only. Confidence tuning may evolve without
@@ -390,36 +483,6 @@ struct ReciprocityConfidencePresentationMapper {
             return .none
         case .unsupportedOutOfPolicyRange:
             return .none
-        }
-    }
-
-    private func badgeStyle(
-        for category: ReciprocityConfidencePresentationCategory,
-        level: ReciprocityConfidenceLevel
-    ) -> ReciprocityConfidenceBadgeStyle {
-        switch category {
-        case .unsupported:
-            return .unsupported
-        case .advisoryOnly:
-            return .advisory
-        case .extrapolated:
-            return .caution
-        case .estimated:
-            switch level {
-            case .high, .medium:
-                return .measured
-            case .low, .veryLow, .none:
-                return .caution
-            }
-        case .exact:
-            switch level {
-            case .high:
-                return .trusted
-            case .medium:
-                return .measured
-            case .low, .veryLow, .none:
-                return .caution
-            }
         }
     }
 

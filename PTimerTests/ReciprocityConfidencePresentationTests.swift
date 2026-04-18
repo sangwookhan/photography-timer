@@ -125,6 +125,40 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
         XCTAssertFalse(presentation.explanationTokens.contains(.unsupportedByPolicy))
     }
 
+    func testFormulaDerivedResultRoutesThroughEstimatedPresentationFamily() {
+        let presentation = mapper.map(
+            result: ReciprocityCalculationPolicyResult(
+                meteredExposureSeconds: 2,
+                correctedExposureSeconds: 3.5,
+                metadata: ReciprocityCalculationPolicyResultMetadata(
+                    basis: .formulaDerived,
+                    sourceAuthorityImpact: .currentOfficial,
+                    rangeStatus: .withinInterpretedRange,
+                    warningLevel: .none,
+                    notes: [
+                        ReciprocityPolicyNote(
+                            token: nil,
+                            text: "Calculated from a formula-backed reciprocity profile."
+                        )
+                    ]
+                )
+            )
+        )
+
+        XCTAssertEqual(presentation.category, .estimated)
+        XCTAssertEqual(presentation.resultKind, .estimated)
+        XCTAssertEqual(presentation.level, .medium)
+        XCTAssertEqual(presentation.badgeStyle, .measured)
+        XCTAssertEqual(presentation.shortLabel, "Calculated")
+        XCTAssertTrue(presentation.returnsCalculatedExposureTime)
+        XCTAssertTrue(presentation.explanationTokens.contains(.formulaDerived))
+        XCTAssertTrue(presentation.explanationTokens.contains(.withinInterpretedRange))
+        XCTAssertEqual(
+            presentation.defaultExplanation,
+            "Calculated from a formula-backed reciprocity profile."
+        )
+    }
+
     func testArchivalOfficialExactRemainsDistinctFromCurrentOfficialExact() {
         let presentation = presentation(
             profile: ReciprocityPolicyScenarioFactory.agfaArchivalProfile(),

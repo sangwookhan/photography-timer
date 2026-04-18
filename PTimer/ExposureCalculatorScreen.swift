@@ -135,7 +135,18 @@ private struct ExposureWorkspaceMainContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HeaderView(style: style)
+            HeaderView(
+                calculatorMode: Binding(
+                    get: { viewModel.calculatorMode },
+                    set: viewModel.setCalculatorMode
+                ),
+                presetFilms: viewModel.availablePresetFilms,
+                selectedPresetFilm: viewModel.selectedPresetFilm,
+                filmReciprocityBindingSummaryText: viewModel.filmReciprocityBindingSummaryText,
+                onSelectPresetFilm: viewModel.selectPresetFilm,
+                onClearPresetFilm: viewModel.clearSelectedPresetFilm,
+                style: style
+            )
             VariableSectionView(
                 baseShutter: $viewModel.baseShutter,
                 ndStop: $viewModel.ndStop,
@@ -572,26 +583,96 @@ private struct PickerColumnLayout {
 }
 
 private struct HeaderView: View {
+    @Binding var calculatorMode: ExposureCalculatorMode
+    let presetFilms: [FilmIdentity]
+    let selectedPresetFilm: FilmIdentity?
+    let filmReciprocityBindingSummaryText: String
+    let onSelectPresetFilm: (FilmIdentity) -> Void
+    let onClearPresetFilm: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
-
-    // The segmented control stays visible to preserve the accepted header shape
-    // while calculator mode remains intentionally fixed to the current variant.
-    private let fixedModeSelection = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.headerContentSpacing) {
             Text("Exposure")
                 .font(style.headerTitleFont)
 
-            Picker("Mode", selection: .constant(fixedModeSelection)) {
-                Text("Digital").tag(0)
-                Text("Film").tag(1)
+            Picker("Mode", selection: $calculatorMode) {
+                Text("Digital").tag(ExposureCalculatorMode.digital)
+                Text("Film").tag(ExposureCalculatorMode.film)
             }
             .pickerStyle(.segmented)
-            .disabled(true)
-            .accessibilityHint("Mode selection is not available in this layout")
+
+            if calculatorMode == .film {
+                FilmSelectionRow(
+                    presetFilms: presetFilms,
+                    selectedPresetFilm: selectedPresetFilm,
+                    reciprocityBindingSummaryText: filmReciprocityBindingSummaryText,
+                    onSelectPresetFilm: onSelectPresetFilm,
+                    onClearPresetFilm: onClearPresetFilm,
+                    style: style
+                )
+            }
         }
         .sectionCardStyle(style: style)
+    }
+}
+
+private struct FilmSelectionRow: View {
+    let presetFilms: [FilmIdentity]
+    let selectedPresetFilm: FilmIdentity?
+    let reciprocityBindingSummaryText: String
+    let onSelectPresetFilm: (FilmIdentity) -> Void
+    let onClearPresetFilm: () -> Void
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
+            Text("Film")
+                .font(.subheadline.weight(.semibold))
+
+            Menu {
+                ForEach(presetFilms, id: \.id) { film in
+                    Button(film.canonicalStockName) {
+                        onSelectPresetFilm(film)
+                    }
+                }
+
+                if selectedPresetFilm != nil {
+                    Divider()
+
+                    Button("Clear Selection", role: .destructive) {
+                        onClearPresetFilm()
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(selectedPresetFilm?.canonicalStockName ?? "Select preset film")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(selectedPresetFilm == nil ? .secondary : .primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityIdentifier("film-row-selection")
+
+                        Text(reciprocityBindingSummaryText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityIdentifier("film-row-reciprocity-state")
+                    }
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(style.sectionCardPadding)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Film row")
+            .accessibilityHint("Opens preset film selection")
+            .accessibilityIdentifier("film-row-button")
+        }
     }
 }
 

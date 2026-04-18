@@ -3,6 +3,98 @@ import XCTest
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
     @MainActor
+    func testFilmRowIsVisibleInFilmModeAndHiddenInDigitalMode() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertFalse(viewModel.shouldShowFilmRow)
+        XCTAssertEqual(viewModel.filmRowSelectionState, .hidden)
+
+        viewModel.setCalculatorMode(.film)
+
+        XCTAssertTrue(viewModel.shouldShowFilmRow)
+        XCTAssertEqual(viewModel.filmRowSelectionState, .noFilmSelected)
+    }
+
+    @MainActor
+    func testSelectingPresetFilmUpdatesActiveCalculatorContextAndDisplayState() throws {
+        let viewModel = makeFilmModeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
+
+        viewModel.selectPresetFilm(film)
+
+        XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, film)
+        XCTAssertEqual(viewModel.selectedPresetFilmDisplayName, film.canonicalStockName)
+        XCTAssertEqual(viewModel.filmRowSelectionState, .selectedPreset(film))
+    }
+
+    @MainActor
+    func testReplacingPresetFilmUpdatesActiveCalculatorContext() throws {
+        let viewModel = makeFilmModeViewModel()
+        let firstFilm = try XCTUnwrap(viewModel.availablePresetFilms.first)
+        let replacementFilm = try XCTUnwrap(viewModel.availablePresetFilms.dropFirst().first)
+
+        viewModel.selectPresetFilm(firstFilm)
+        viewModel.selectPresetFilm(replacementFilm)
+
+        XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, replacementFilm)
+        XCTAssertEqual(viewModel.selectedPresetFilmDisplayName, replacementFilm.canonicalStockName)
+        XCTAssertEqual(viewModel.filmRowSelectionState, .selectedPreset(replacementFilm))
+    }
+
+    @MainActor
+    func testClearingPresetFilmReturnsFilmModeToNoSelectionState() throws {
+        let viewModel = makeFilmModeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
+
+        viewModel.selectPresetFilm(film)
+        viewModel.clearSelectedPresetFilm()
+
+        XCTAssertNil(viewModel.activeCalculatorContext.selectedPresetFilm)
+        XCTAssertNil(viewModel.selectedPresetFilmDisplayName)
+        XCTAssertEqual(viewModel.filmRowSelectionState, .noFilmSelected)
+    }
+
+    @MainActor
+    func testReciprocityBindingStateIsAvailableOnlyAfterPresetFilmSelectionInFilmMode() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        viewModel.baseShutter = 1
+        viewModel.ndStop = 0
+        viewModel.setCalculatorMode(.film)
+
+        XCTAssertNil(viewModel.filmReciprocityBindingState)
+        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "No film selected")
+
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.last)
+        viewModel.selectPresetFilm(film)
+
+        let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+        XCTAssertEqual(bindingState.film.id, film.id)
+        XCTAssertEqual(bindingState.profile.source.kind, .manufacturerPublished)
+        XCTAssertEqual(bindingState.profile.source.authority, .official)
+        XCTAssertTrue(bindingState.policyResult.hasCalculatedExposureTime)
+        XCTAssertTrue(bindingState.presentation.returnsCalculatedExposureTime)
+        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "Preset film bound")
+
+        viewModel.setCalculatorMode(.digital)
+
+        XCTAssertNil(viewModel.filmReciprocityBindingState)
+        XCTAssertFalse(viewModel.shouldShowFilmRow)
+    }
+
+    @MainActor
     func testStartTimerPublishesCapturedMetadataOnFirstRuntimeEmission() {
         let timerManager = TimerManager(
             tickInterval: 60,
@@ -1745,6 +1837,19 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.timers.isEmpty)
         XCTAssertNil(timerStore.snapshot)
         XCTAssertNil(metadataStore.snapshot)
+    }
+
+    @MainActor
+    private func makeFilmModeViewModel() -> ExposureCalculatorViewModel {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+        viewModel.setCalculatorMode(.film)
+        return viewModel
     }
 }
 

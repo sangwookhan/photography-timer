@@ -136,12 +136,8 @@ private struct ExposureWorkspaceMainContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HeaderView(
-                calculatorMode: Binding(
-                    get: { viewModel.calculatorMode },
-                    set: viewModel.setCalculatorMode
-                ),
-                presetFilms: viewModel.availablePresetFilms,
-                selectedPresetFilm: viewModel.selectedPresetFilm,
+                selectorEntries: viewModel.filmSelectorEntries,
+                filmSelectionDisplayName: viewModel.filmSelectionDisplayName,
                 filmReciprocityBindingSummaryText: viewModel.filmReciprocityBindingSummaryText,
                 onSelectPresetFilm: viewModel.selectPresetFilm,
                 onClearPresetFilm: viewModel.clearSelectedPresetFilm,
@@ -159,10 +155,8 @@ private struct ExposureWorkspaceMainContent: View {
                 style: style
             )
 
-            Spacer(minLength: style.resultFlowSpacerMinLength)
-
             ResultSectionView(
-                calculatorMode: viewModel.calculatorMode,
+                isFilmWorkflowActive: viewModel.isFilmWorkflowActive,
                 calculationResult: viewModel.calculationResult,
                 filmModeExposureResultState: viewModel.filmModeExposureResultState,
                 formatTimeDisplay: viewModel.formatTimeDisplay,
@@ -170,6 +164,8 @@ private struct ExposureWorkspaceMainContent: View {
                 onStartTimer: viewModel.startTimer,
                 style: style
             )
+
+            Spacer(minLength: style.resultFlowSpacerMinLength)
 
             Color.clear
                 .frame(height: style.workspaceSeparation)
@@ -427,6 +423,47 @@ private enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
+    var filmResultRowMinHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 52
+        case .compact:
+            return 48
+        case .dense:
+            return 44
+        }
+    }
+
+    var filmResultCardMinHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 152
+        case .compact:
+            return 140
+        case .dense:
+            return 126
+        }
+    }
+
+    var correctedExposurePrimaryFont: Font {
+        resultPrimaryFont
+    }
+
+    var correctedExposureSecondaryFont: Font {
+        .footnote
+    }
+
+    var correctedExposureValueMinHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 56
+        case .compact:
+            return 50
+        case .dense:
+            return 44
+        }
+    }
+
     var timerActionSize: CGFloat {
         switch self {
         case .regular:
@@ -585,9 +622,8 @@ private struct PickerColumnLayout {
 }
 
 private struct HeaderView: View {
-    @Binding var calculatorMode: ExposureCalculatorMode
-    let presetFilms: [FilmIdentity]
-    let selectedPresetFilm: FilmIdentity?
+    let selectorEntries: [FilmSelectorEntry]
+    let filmSelectionDisplayName: String
     let filmReciprocityBindingSummaryText: String
     let onSelectPresetFilm: (FilmIdentity) -> Void
     let onClearPresetFilm: () -> Void
@@ -598,30 +634,22 @@ private struct HeaderView: View {
             Text("Exposure")
                 .font(style.headerTitleFont)
 
-            Picker("Mode", selection: $calculatorMode) {
-                Text("Digital").tag(ExposureCalculatorMode.digital)
-                Text("Film").tag(ExposureCalculatorMode.film)
-            }
-            .pickerStyle(.segmented)
-
-            if calculatorMode == .film {
-                FilmSelectionRow(
-                    presetFilms: presetFilms,
-                    selectedPresetFilm: selectedPresetFilm,
-                    reciprocityBindingSummaryText: filmReciprocityBindingSummaryText,
-                    onSelectPresetFilm: onSelectPresetFilm,
-                    onClearPresetFilm: onClearPresetFilm,
-                    style: style
-                )
-            }
+            FilmSelectionRow(
+                selectorEntries: selectorEntries,
+                filmSelectionDisplayName: filmSelectionDisplayName,
+                reciprocityBindingSummaryText: filmReciprocityBindingSummaryText,
+                onSelectPresetFilm: onSelectPresetFilm,
+                onClearPresetFilm: onClearPresetFilm,
+                style: style
+            )
         }
         .sectionCardStyle(style: style)
     }
 }
 
 private struct FilmSelectionRow: View {
-    let presetFilms: [FilmIdentity]
-    let selectedPresetFilm: FilmIdentity?
+    let selectorEntries: [FilmSelectorEntry]
+    let filmSelectionDisplayName: String
     let reciprocityBindingSummaryText: String
     let onSelectPresetFilm: (FilmIdentity) -> Void
     let onClearPresetFilm: () -> Void
@@ -633,25 +661,21 @@ private struct FilmSelectionRow: View {
                 .font(.subheadline.weight(.semibold))
 
             Menu {
-                ForEach(presetFilms, id: \.id) { film in
-                    Button(film.canonicalStockName) {
-                        onSelectPresetFilm(film)
-                    }
-                }
-
-                if selectedPresetFilm != nil {
-                    Divider()
-
-                    Button("Clear Selection", role: .destructive) {
-                        onClearPresetFilm()
+                ForEach(selectorEntries) { entry in
+                    Button(entry.title) {
+                        if let film = entry.film {
+                            onSelectPresetFilm(film)
+                        } else {
+                            onClearPresetFilm()
+                        }
                     }
                 }
             } label: {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(selectedPresetFilm?.canonicalStockName ?? "Select preset film")
+                        Text(filmSelectionDisplayName)
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(selectedPresetFilm == nil ? .secondary : .primary)
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityIdentifier("film-row-selection")
 
@@ -716,7 +740,7 @@ private struct VariableSectionView: View {
 }
 
 private struct ResultSectionView: View {
-    let calculatorMode: ExposureCalculatorMode
+    let isFilmWorkflowActive: Bool
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let filmModeExposureResultState: FilmModeExposureResultState?
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
@@ -727,7 +751,7 @@ private struct ResultSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
             VStack(alignment: .leading, spacing: style.resultTopSpacerMinLength) {
-                if calculatorMode == .film,
+                if isFilmWorkflowActive,
                    let filmModeExposureResultState {
                     FilmModeResultHierarchyView(
                         resultState: filmModeExposureResultState,
@@ -758,6 +782,11 @@ private struct ResultSectionView: View {
                 }
             }
             .padding(style.resultBlockPadding)
+            .frame(
+                maxWidth: .infinity,
+                minHeight: isFilmWorkflowActive ? style.filmResultCardMinHeight : nil,
+                alignment: .topLeading
+            )
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
@@ -831,7 +860,8 @@ private struct FilmModeResultHierarchyView: View {
                 display: formatTimeDisplay(resultState.adjustedShutterSeconds),
                 primaryFont: .headline.weight(.semibold),
                 secondaryFont: .footnote,
-                primaryColor: .primary.opacity(0.88)
+                primaryColor: .primary.opacity(0.88),
+                style: style
             )
 
             Divider()
@@ -852,6 +882,7 @@ private struct FilmModeResultRow: View {
     let primaryFont: Font
     let secondaryFont: Font
     let primaryColor: Color
+    let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -867,6 +898,7 @@ private struct FilmModeResultRow: View {
                 secondaryFont: secondaryFont
             )
         }
+        .frame(minHeight: style.filmResultRowMinHeight, alignment: .top)
     }
 }
 
@@ -877,33 +909,20 @@ private struct FilmModeCorrectedExposureRow: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        HStack(alignment: .center, spacing: style.resultActionSpacing) {
+        HStack(alignment: .top, spacing: style.resultActionSpacing) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Corrected Exposure")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                if correctedExposure.usesNumericExposure {
-                    DurationDisplayBlock(
-                        primaryText: correctedExposure.primaryText,
-                        secondaryText: correctedExposure.secondaryText,
-                        primaryColor: .primary,
-                        primaryFont: style.resultPrimaryFont,
-                        secondaryFont: .footnote
-                    )
-                } else {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(correctedExposure.primaryText)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-
-                        Text(correctedExposure.secondaryText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                CorrectedExposureDisplayBlock(
+                    primaryText: correctedExposure.primaryText,
+                    secondaryText: correctedExposure.secondaryText,
+                    style: style
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: style.filmResultRowMinHeight, alignment: .topLeading)
 
             TimerActionView(
                 canStartTimer: canStartTimer,
@@ -911,6 +930,30 @@ private struct FilmModeCorrectedExposureRow: View {
                 style: style
             )
         }
+    }
+}
+
+private struct CorrectedExposureDisplayBlock: View {
+    let primaryText: String
+    let secondaryText: String
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(primaryText)
+                .font(style.correctedExposurePrimaryFont)
+                .foregroundStyle(.primary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(secondaryText)
+                .font(style.correctedExposureSecondaryFont)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, minHeight: style.correctedExposureValueMinHeight, alignment: .topLeading)
     }
 }
 

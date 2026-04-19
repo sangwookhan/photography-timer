@@ -3,7 +3,7 @@ import XCTest
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
     @MainActor
-    func testFilmRowIsVisibleInFilmModeAndHiddenInDigitalMode() {
+    func testFilmRowDefaultsToNoFilmSelectorState() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -12,30 +12,27 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             )
         )
 
-        XCTAssertFalse(viewModel.shouldShowFilmRow)
-        XCTAssertEqual(viewModel.filmRowSelectionState, .hidden)
-
-        viewModel.setCalculatorMode(.film)
-
-        XCTAssertTrue(viewModel.shouldShowFilmRow)
-        XCTAssertEqual(viewModel.filmRowSelectionState, .noFilmSelected)
+        XCTAssertNil(viewModel.activeCalculatorContext.selectedPresetFilm)
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
+        XCTAssertEqual(viewModel.filmSelectionDisplayName, "No film")
+        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "No film selected")
     }
 
     @MainActor
     func testSelectingPresetFilmUpdatesActiveCalculatorContextAndDisplayState() throws {
-        let viewModel = makeFilmModeViewModel()
+        let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
 
         viewModel.selectPresetFilm(film)
 
         XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, film)
-        XCTAssertEqual(viewModel.selectedPresetFilmDisplayName, film.canonicalStockName)
-        XCTAssertEqual(viewModel.filmRowSelectionState, .selectedPreset(film))
+        XCTAssertTrue(viewModel.isFilmWorkflowActive)
+        XCTAssertEqual(viewModel.filmSelectionDisplayName, "Tri-X 400 (ISO 400)")
     }
 
     @MainActor
     func testReplacingPresetFilmUpdatesActiveCalculatorContext() throws {
-        let viewModel = makeFilmModeViewModel()
+        let viewModel = makeViewModel()
         let firstFilm = try XCTUnwrap(viewModel.availablePresetFilms.first)
         let replacementFilm = try XCTUnwrap(viewModel.availablePresetFilms.dropFirst().first)
 
@@ -43,25 +40,26 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.selectPresetFilm(replacementFilm)
 
         XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, replacementFilm)
-        XCTAssertEqual(viewModel.selectedPresetFilmDisplayName, replacementFilm.canonicalStockName)
-        XCTAssertEqual(viewModel.filmRowSelectionState, .selectedPreset(replacementFilm))
+        XCTAssertEqual(viewModel.filmSelectionDisplayName, "Portra 400 (ISO 400)")
     }
 
     @MainActor
-    func testClearingPresetFilmReturnsFilmModeToNoSelectionState() throws {
-        let viewModel = makeFilmModeViewModel()
+    func testChangingFromPresetFilmToNoFilmReturnsToDigitalWorkflow() throws {
+        let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
 
         viewModel.selectPresetFilm(film)
         viewModel.clearSelectedPresetFilm()
 
         XCTAssertNil(viewModel.activeCalculatorContext.selectedPresetFilm)
-        XCTAssertNil(viewModel.selectedPresetFilmDisplayName)
-        XCTAssertEqual(viewModel.filmRowSelectionState, .noFilmSelected)
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
+        XCTAssertEqual(viewModel.filmSelectionDisplayName, "No film")
+        XCTAssertNil(viewModel.filmReciprocityBindingState)
+        XCTAssertNil(viewModel.filmModeExposureResultState)
     }
 
     @MainActor
-    func testReciprocityBindingStateIsAvailableOnlyAfterPresetFilmSelectionInFilmMode() throws {
+    func testSelectingPresetFilmActivatesFilmWorkflowAndReciprocityBinding() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -72,10 +70,10 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         viewModel.baseShutter = 1
         viewModel.ndStop = 0
-        viewModel.setCalculatorMode(.film)
 
         XCTAssertNil(viewModel.filmReciprocityBindingState)
         XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "No film selected")
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
 
         let film = try XCTUnwrap(viewModel.availablePresetFilms.last)
         viewModel.selectPresetFilm(film)
@@ -86,33 +84,31 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(bindingState.profile.source.authority, .official)
         XCTAssertTrue(bindingState.policyResult.hasCalculatedExposureTime)
         XCTAssertTrue(bindingState.presentation.returnsCalculatedExposureTime)
-        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "Preset film bound")
-
-        viewModel.setCalculatorMode(.digital)
-
-        XCTAssertNil(viewModel.filmReciprocityBindingState)
-        XCTAssertFalse(viewModel.shouldShowFilmRow)
+        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "Reciprocity enabled")
+        XCTAssertTrue(viewModel.isFilmWorkflowActive)
     }
 
     @MainActor
-    func testFilmModeExposureResultStateShowsAdjustedShutterWithoutCorrectedExposureBeforeFilmSelection() throws {
-        let viewModel = makeFilmModeViewModel()
+    func testNoFilmBehavesAsDigitalWorkflow() throws {
+        let viewModel = makeViewModel()
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
 
-        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
-        XCTAssertEqual(resultState.adjustedShutterSeconds, 2, accuracy: 0.0001)
-        XCTAssertEqual(resultState.correctedExposure.kind, .noFilmSelected)
-        XCTAssertNil(resultState.correctedExposure.correctedExposureSeconds)
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "No film selected")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Select a preset film")
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertNil(viewModel.filmModeExposureResultState)
+        XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
+        XCTAssertEqual(viewModel.calculationResult, .success(
+            ExposureCalculationResult(
+                baseShutterSeconds: 1.0 / 30.0,
+                stop: 6,
+                resultShutterSeconds: 2
+            )
+        ))
     }
 
     @MainActor
     func testFilmModeExposureResultStateShowsCorrectedExposureForQuantifiedPresetResult() throws {
-        let viewModel = makeFilmModeViewModel()
+        let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
         viewModel.baseShutter = 1
@@ -130,8 +126,102 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testTriXBelowOneSecondDoesNotShowUnsupported() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 4
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 0.5, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testTriXAtOneSecondReturnsCorrectedExposureEqualToAdjustedShutter() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 5
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testCorrectedExposureNumericDisplayUsesRestoredTimeFormatting() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 30
+        viewModel.ndStop = 4
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let correctedExposureSeconds = try XCTUnwrap(resultState.correctedExposure.correctedExposureSeconds)
+
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 512, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertEqual(
+            resultState.correctedExposure.primaryText,
+            viewModel.formatTimeDisplay(correctedExposureSeconds).primary
+        )
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "03:10:32.037")
+    }
+
+    @MainActor
+    func testTriXSmallerSupportedExposureDoesNotRegressToUnsupported() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.selectPresetFilm(film)
+
+        viewModel.baseShutter = 30
+        viewModel.ndStop = 4
+        let largerQuantifiedResult = try XCTUnwrap(viewModel.filmModeExposureResultState)
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 4
+        let smallerQuantifiedResult = try XCTUnwrap(viewModel.filmModeExposureResultState)
+
+        XCTAssertEqual(largerQuantifiedResult.correctedExposure.kind, .quantified)
+        XCTAssertEqual(smallerQuantifiedResult.adjustedShutterSeconds, 256, accuracy: 0.0001)
+        XCTAssertEqual(smallerQuantifiedResult.correctedExposure.kind, .quantified)
+        XCTAssertNotNil(smallerQuantifiedResult.correctedExposure.correctedExposureSeconds)
+    }
+
+    @MainActor
+    func testTriXUnsupportedAppearsOnlyBeyondPolicyExtrapolationLimit() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 6
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 1024, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.kind, .unsupported)
+        XCTAssertNil(resultState.correctedExposure.correctedExposureSeconds)
+        XCTAssertEqual(bindingState.policyResult.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertEqual(bindingState.policyResult.metadata.rangeStatus, .beyondPolicyLimit)
+    }
+
+    @MainActor
     func testFilmModeAdvisoryOnlyResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
-        let viewModel = makeFilmModeViewModel()
+        let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
         viewModel.baseShutter = 15
@@ -153,7 +243,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
     @MainActor
     func testFilmModeUnsupportedResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
-        let viewModel = makeFilmModeViewModel()
+        let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
         viewModel.baseShutter = 8
@@ -185,7 +275,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
-        viewModel.setCalculatorMode(.film)
         viewModel.baseShutter = 1
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
@@ -212,7 +301,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
-        viewModel.setCalculatorMode(.film)
         viewModel.baseShutter = 15
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
@@ -243,6 +331,22 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
         XCTAssertEqual(timer.name, "6 stops - 2s")
         XCTAssertEqual(timer.basisSummary, "Base 1/30s · 6 stops")
+    }
+
+    @MainActor
+    func testFilmSelectorEntriesKeepNoFilmFirstAndShowISOWhenAvailable() {
+        let viewModel = makeViewModel()
+
+        XCTAssertEqual(
+            viewModel.filmSelectorEntries.map(\.title),
+            [
+                "No film",
+                "Tri-X 400 (ISO 400)",
+                "Portra 400 (ISO 400)",
+                "Velvia 50 (ISO 50)",
+                "HP5 Plus (ISO 400)"
+            ]
+        )
     }
 
     @MainActor
@@ -1991,16 +2095,14 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    private func makeFilmModeViewModel() -> ExposureCalculatorViewModel {
-        let viewModel = ExposureCalculatorViewModel(
+    private func makeViewModel() -> ExposureCalculatorViewModel {
+        ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
                 tickInterval: 60,
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
-        viewModel.setCalculatorMode(.film)
-        return viewModel
     }
 }
 

@@ -326,10 +326,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    var calculatorMode: ExposureCalculatorMode {
-        activeCalculatorContext.mode
-    }
-
     var availablePresetFilms: [FilmIdentity] {
         presetFilms
     }
@@ -338,29 +334,31 @@ final class ExposureCalculatorViewModel: ObservableObject {
         activeCalculatorContext.selectedPresetFilm
     }
 
-    var filmRowSelectionState: FilmModeSelectionState {
-        guard calculatorMode == .film else {
-            return .hidden
-        }
+    var isFilmWorkflowActive: Bool {
+        selectedPresetFilm != nil
+    }
 
+    var filmSelectorEntries: [FilmSelectorEntry] {
+        [FilmSelectorEntry(id: "no-film", title: "No film", film: nil)]
+            + presetFilms.map { film in
+                FilmSelectorEntry(
+                    id: film.id,
+                    title: filmSelectorTitle(for: film),
+                    film: film
+                )
+            }
+    }
+
+    var filmSelectionDisplayName: String {
         guard let selectedPresetFilm else {
-            return .noFilmSelected
+            return "No film"
         }
 
-        return .selectedPreset(selectedPresetFilm)
-    }
-
-    var shouldShowFilmRow: Bool {
-        calculatorMode == .film
-    }
-
-    var selectedPresetFilmDisplayName: String? {
-        selectedPresetFilm?.canonicalStockName
+        return filmSelectorTitle(for: selectedPresetFilm)
     }
 
     var filmReciprocityBindingState: FilmModeReciprocityBindingState? {
-        guard calculatorMode == .film,
-              let selectedPresetFilm,
+        guard let selectedPresetFilm,
               let profile = selectedPresetFilm.profiles.first,
               case .success(let result) = calculationResult else {
             return nil
@@ -381,14 +379,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var filmReciprocityBindingSummaryText: String {
         if filmReciprocityBindingState != nil {
-            return "Preset film bound"
+            return "Reciprocity enabled"
         }
 
-        return calculatorMode == .film ? "No film selected" : ""
+        return "No film selected"
     }
 
     var filmModeExposureResultState: FilmModeExposureResultState? {
-        guard calculatorMode == .film,
+        guard isFilmWorkflowActive,
               case .success(let result) = calculationResult else {
             return nil
         }
@@ -408,10 +406,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         return filmModeExposureResultState.correctedExposure.correctedExposureSeconds
             ?? filmModeExposureResultState.adjustedShutterSeconds
-    }
-
-    func setCalculatorMode(_ mode: ExposureCalculatorMode) {
-        activeCalculatorContext.mode = mode
     }
 
     func selectPresetFilm(_ film: FilmIdentity) {
@@ -735,6 +729,39 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func ndStopLabel(for stop: Int) -> String {
         stop == 1 ? "1 stop" : "\(stop) stops"
+    }
+
+    private func filmSelectorTitle(for film: FilmIdentity) -> String {
+        guard let isoValue = inferredISOValue(for: film) else {
+            return film.canonicalStockName
+        }
+
+        return "\(film.canonicalStockName) (ISO \(isoValue))"
+    }
+
+    private func inferredISOValue(for film: FilmIdentity) -> String? {
+        let candidateFields = [
+            film.canonicalStockName,
+            film.brandLabel,
+            film.manufacturer
+        ].compactMap { $0 } + film.aliases
+
+        for field in candidateFields {
+            if let isoValue = Self.firstISOValue(in: field) {
+                return isoValue
+            }
+        }
+
+        return nil
+    }
+
+    private static func firstISOValue(in text: String) -> String? {
+        let pattern = #"\b(25|50|100|160|200|400|800|1600|3200)\b"#
+        guard let range = text.range(of: pattern, options: .regularExpression) else {
+            return nil
+        }
+
+        return String(text[range])
     }
 
     private func correctedExposureDisplayState(

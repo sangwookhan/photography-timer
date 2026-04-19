@@ -29,15 +29,20 @@ enum LaunchPresetFilmCatalog {
                     citation: "Data sheet"
                 ),
                 rules: [
+                    .threshold(
+                        ThresholdReciprocityRule(
+                            noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1),
+                            notes: ["No correction required at 1 second or less."]
+                        )
+                    ),
                     .table(
                         TableReciprocityRule(
                             entries: [
                                 ReciprocityTableEntry(
                                     meteredExposure: .exactSeconds(1),
                                     adjustments: [
-                                        .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                        .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 2))),
-                                        .development(DevelopmentAdjustment(instruction: "-10% development", note: nil))
+                                        .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0))),
+                                        .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 1)))
                                     ]
                                 ),
                                 ReciprocityTableEntry(

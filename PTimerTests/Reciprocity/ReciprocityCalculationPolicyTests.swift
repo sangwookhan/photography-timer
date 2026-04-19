@@ -24,6 +24,30 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(try result.metadata.referencedRows?.map(exactSeconds), [10])
     }
 
+    func testTriXBelowOneSecondUsesThresholdNoCorrection() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
+            meteredExposureSeconds: 0.5
+        )
+
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertNil(result.metadata.referencedRows)
+    }
+
+    func testTriXAtOneSecondDoesNotBecomeUnsupported() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
+            meteredExposureSeconds: 1
+        )
+
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertNotEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+    }
+
     func testTriXInterpolationUsesLogLogEvaluatorMathAndOriginalBounds() throws {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.triXProfile(),
@@ -40,7 +64,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
             logLogEstimate(
                 meteredExposureSeconds: 5,
                 lowerMeteredSeconds: 1,
-                lowerCorrectedSeconds: 2,
+                lowerCorrectedSeconds: 1,
                 upperMeteredSeconds: 10,
                 upperCorrectedSeconds: 50
             ),

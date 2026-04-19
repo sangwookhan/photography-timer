@@ -326,10 +326,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    var calculatorMode: ExposureCalculatorMode {
-        activeCalculatorContext.mode
-    }
-
     var availablePresetFilms: [FilmIdentity] {
         presetFilms
     }
@@ -338,29 +334,31 @@ final class ExposureCalculatorViewModel: ObservableObject {
         activeCalculatorContext.selectedPresetFilm
     }
 
-    var filmRowSelectionState: FilmModeSelectionState {
-        guard calculatorMode == .film else {
-            return .hidden
-        }
+    var isFilmWorkflowActive: Bool {
+        selectedPresetFilm != nil
+    }
 
+    var filmSelectorEntries: [FilmSelectorEntry] {
+        [FilmSelectorEntry(id: "no-film", title: "No film", film: nil)]
+            + presetFilms.map { film in
+                FilmSelectorEntry(
+                    id: film.id,
+                    title: filmSelectorTitle(for: film),
+                    film: film
+                )
+            }
+    }
+
+    var filmSelectionDisplayName: String {
         guard let selectedPresetFilm else {
-            return .noFilmSelected
+            return "No film"
         }
 
-        return .selectedPreset(selectedPresetFilm)
-    }
-
-    var shouldShowFilmRow: Bool {
-        calculatorMode == .film
-    }
-
-    var selectedPresetFilmDisplayName: String? {
-        selectedPresetFilm?.canonicalStockName
+        return filmSelectorTitle(for: selectedPresetFilm)
     }
 
     var filmReciprocityBindingState: FilmModeReciprocityBindingState? {
-        guard calculatorMode == .film,
-              let selectedPresetFilm,
+        guard let selectedPresetFilm,
               let profile = selectedPresetFilm.profiles.first,
               case .success(let result) = calculationResult else {
             return nil
@@ -381,14 +379,33 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var filmReciprocityBindingSummaryText: String {
         if filmReciprocityBindingState != nil {
-            return "Preset film bound"
+            return "Reciprocity enabled"
         }
 
-        return calculatorMode == .film ? "No film selected" : ""
+        return "No film selected"
     }
 
-    func setCalculatorMode(_ mode: ExposureCalculatorMode) {
-        activeCalculatorContext.mode = mode
+    var filmModeExposureResultState: FilmModeExposureResultState? {
+        guard isFilmWorkflowActive,
+              case .success(let result) = calculationResult else {
+            return nil
+        }
+
+        return FilmModeExposureResultState(
+            adjustedShutterSeconds: result.resultShutterSeconds,
+            correctedExposure: correctedExposureDisplayState(
+                adjustedShutterSeconds: result.resultShutterSeconds
+            )
+        )
+    }
+
+    var filmModePrimaryResultSeconds: TimeInterval? {
+        guard let filmModeExposureResultState else {
+            return nil
+        }
+
+        return filmModeExposureResultState.correctedExposure.correctedExposureSeconds
+            ?? filmModeExposureResultState.adjustedShutterSeconds
     }
 
     func selectPresetFilm(_ film: FilmIdentity) {
@@ -421,12 +438,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var canStartTimer: Bool {
-        switch calculationResult {
-        case .success(let result):
-            return result.resultShutterSeconds > 0
-        case .failure:
+        if let filmModePrimaryResultSeconds {
+            return filmModePrimaryResultSeconds > 0
+        }
+
+        guard case .success(let result) = calculationResult else {
             return false
         }
+
+        return result.resultShutterSeconds > 0
     }
 
     func startTimer() {
@@ -434,13 +454,19 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return
         }
 
-        startTimer(from: result.resultShutterSeconds, result: result)
+        let targetDuration = filmModePrimaryResultSeconds ?? result.resultShutterSeconds
+        startTimer(
+            from: targetDuration,
+            result: result,
+            filmModeResult: filmModeExposureResultState
+        )
     }
 
     func startTimer(from resultShutter: TimeInterval) {
         startTimer(
             from: resultShutter,
-            result: calculationPayload(for: resultShutter)
+            result: calculationPayload(for: resultShutter),
+            filmModeResult: nil
         )
     }
 
@@ -464,13 +490,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func startTimer(
         from resultShutter: TimeInterval,
-        result: ExposureCalculationResult?
+        result: ExposureCalculationResult?,
+        filmModeResult: FilmModeExposureResultState?
     ) {
         let id = UUID()
 
         let timerName: String
         if let result {
-            timerName = makeTimerName(for: result)
+            timerName = makeTimerName(
+                for: result,
+                targetDuration: resultShutter,
+                filmModeResult: filmModeResult
+            )
         } else {
             timerName = defaultName(for: resultShutter)
         }
@@ -479,7 +510,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
         timerMetadata[id] = TimerMetadata(
             order: order,
             name: timerName,
-            basisSummary: makeBasisSummary(for: result)
+            basisSummary: makeBasisSummary(
+                for: result,
+                filmModeResult: filmModeResult
+            )
         )
 
         guard timerManager.start(id: id, duration: resultShutter) != nil else {
@@ -612,8 +646,19 @@ final class ExposureCalculatorViewModel: ObservableObject {
         liveNDStop ?? ndStop
     }
 
-    private func makeTimerName(for result: ExposureCalculationResult) -> String {
-        "\(ndStopLabel(for: result.stop)) - \(calculator.formatShutter(result.resultShutterSeconds))"
+    private func makeTimerName(
+        for result: ExposureCalculationResult,
+        targetDuration: TimeInterval,
+        filmModeResult: FilmModeExposureResultState?
+    ) -> String {
+        let targetLabel = calculator.formatShutter(targetDuration)
+
+        guard filmModeResult?.hasQuantifiedCorrectedExposure == true,
+              let film = selectedPresetFilm else {
+            return "\(ndStopLabel(for: result.stop)) - \(targetLabel)"
+        }
+
+        return "\(film.canonicalStockName) - \(targetLabel)"
     }
 
     private func syncTimers(with states: [TimerState]) {
@@ -651,16 +696,124 @@ final class ExposureCalculatorViewModel: ObservableObject {
         "Timer - \(calculator.formatShutter(duration))"
     }
 
-    private func makeBasisSummary(for result: ExposureCalculationResult?) -> String {
+    private func makeBasisSummary(
+        for result: ExposureCalculationResult?,
+        filmModeResult: FilmModeExposureResultState?
+    ) -> String {
         guard let result else {
             return "Manual timer"
         }
 
-        return "Base \(calculator.formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.stop))"
+        let adjustedShutter = calculator.formatShutter(result.resultShutterSeconds)
+        let baseSummary = "Base \(calculator.formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.stop))"
+
+        guard let filmModeResult else {
+            return baseSummary
+        }
+
+        var segments = [
+            baseSummary,
+            "Adjusted \(adjustedShutter)"
+        ]
+
+        if let film = selectedPresetFilm {
+            segments.append(film.canonicalStockName)
+        }
+
+        if let correctedExposureSeconds = filmModeResult.correctedExposure.correctedExposureSeconds {
+            segments.append("Corrected \(calculator.formatShutter(correctedExposureSeconds))")
+        }
+
+        return segments.joined(separator: " · ")
     }
 
     private func ndStopLabel(for stop: Int) -> String {
         stop == 1 ? "1 stop" : "\(stop) stops"
+    }
+
+    private func filmSelectorTitle(for film: FilmIdentity) -> String {
+        guard let isoValue = inferredISOValue(for: film) else {
+            return film.canonicalStockName
+        }
+
+        return "\(film.canonicalStockName) (ISO \(isoValue))"
+    }
+
+    private func inferredISOValue(for film: FilmIdentity) -> String? {
+        let candidateFields = [
+            film.canonicalStockName,
+            film.brandLabel,
+            film.manufacturer
+        ].compactMap { $0 } + film.aliases
+
+        for field in candidateFields {
+            if let isoValue = Self.firstISOValue(in: field) {
+                return isoValue
+            }
+        }
+
+        return nil
+    }
+
+    private static func firstISOValue(in text: String) -> String? {
+        let pattern = #"\b(25|50|100|160|200|400|800|1600|3200)\b"#
+        guard let range = text.range(of: pattern, options: .regularExpression) else {
+            return nil
+        }
+
+        return String(text[range])
+    }
+
+    private func correctedExposureDisplayState(
+        adjustedShutterSeconds: TimeInterval
+    ) -> FilmModeCorrectedExposureDisplayState {
+        guard let bindingState = filmReciprocityBindingState else {
+            return FilmModeCorrectedExposureDisplayState(
+                kind: .noFilmSelected,
+                correctedExposureSeconds: nil,
+                primaryText: "No film selected",
+                secondaryText: "Select a preset film",
+                usesNumericExposure: false
+            )
+        }
+
+        if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
+            return FilmModeCorrectedExposureDisplayState(
+                kind: .quantified,
+                correctedExposureSeconds: correctedExposureSeconds,
+                primaryText: formatTimeDisplay(correctedExposureSeconds).primary,
+                secondaryText: "Final shooting value",
+                usesNumericExposure: true
+            )
+        }
+
+        switch bindingState.presentation.category {
+        case .advisoryOnly:
+            return FilmModeCorrectedExposureDisplayState(
+                kind: .advisory,
+                correctedExposureSeconds: nil,
+                primaryText: "Advisory only",
+                secondaryText: "No corrected exposure provided",
+                usesNumericExposure: false
+            )
+        case .unsupported:
+            return FilmModeCorrectedExposureDisplayState(
+                kind: .unsupported,
+                correctedExposureSeconds: nil,
+                primaryText: "Unsupported",
+                secondaryText: "No corrected exposure available",
+                usesNumericExposure: false
+            )
+        case .exact, .estimated, .extrapolated:
+            // A quantified path should have provided a corrected exposure.
+            return FilmModeCorrectedExposureDisplayState(
+                kind: .advisory,
+                correctedExposureSeconds: nil,
+                primaryText: "Advisory only",
+                secondaryText: "No corrected exposure provided",
+                usesNumericExposure: false
+            )
+        }
     }
 
     private func restorePersistedTimerMetadata() {

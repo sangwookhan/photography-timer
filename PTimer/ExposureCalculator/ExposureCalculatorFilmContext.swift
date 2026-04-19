@@ -30,3 +30,27 @@ struct FilmModeReciprocityBindingState: Equatable {
     let policyResult: ReciprocityCalculationPolicyResult
     let presentation: ReciprocityConfidencePresentation
 }
+
+enum FilmModeCorrectedExposureDisplayKind: Equatable {
+    case quantified
+    case advisory
+    case unsupported
+    case noFilmSelected
+}
+
+struct FilmModeCorrectedExposureDisplayState: Equatable {
+    let kind: FilmModeCorrectedExposureDisplayKind
+    let correctedExposureSeconds: TimeInterval?
+    let primaryText: String
+    let secondaryText: String
+    let usesNumericExposure: Bool
+}
+
+struct FilmModeExposureResultState: Equatable {
+    let adjustedShutterSeconds: TimeInterval
+    let correctedExposure: FilmModeCorrectedExposureDisplayState
+
+    var hasQuantifiedCorrectedExposure: Bool {
+        correctedExposure.usesNumericExposure
+    }
+}

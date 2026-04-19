@@ -162,7 +162,9 @@ private struct ExposureWorkspaceMainContent: View {
             Spacer(minLength: style.resultFlowSpacerMinLength)
 
             ResultSectionView(
+                calculatorMode: viewModel.calculatorMode,
                 calculationResult: viewModel.calculationResult,
+                filmModeExposureResultState: viewModel.filmModeExposureResultState,
                 formatTimeDisplay: viewModel.formatTimeDisplay,
                 canStartTimer: viewModel.canStartTimer,
                 onStartTimer: viewModel.startTimer,
@@ -714,7 +716,9 @@ private struct VariableSectionView: View {
 }
 
 private struct ResultSectionView: View {
+    let calculatorMode: ExposureCalculatorMode
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
+    let filmModeExposureResultState: FilmModeExposureResultState?
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let canStartTimer: Bool
     let onStartTimer: () -> Void
@@ -723,28 +727,23 @@ private struct ResultSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
             VStack(alignment: .leading, spacing: style.resultTopSpacerMinLength) {
-                if case .success(let result) = calculationResult {
-                    let display = formatTimeDisplay(result.resultShutterSeconds)
-                    HStack(alignment: .center, spacing: style.resultActionSpacing) {
-                        Color.clear
-                            .frame(width: style.resultActionFootprint, height: 1)
-                            .accessibilityHidden(true)
-
-                        DurationDisplayBlock(
-                            primaryText: display.primary,
-                            secondaryText: display.secondary,
-                            primaryColor: .primary,
-                            primaryFont: style.resultPrimaryFont,
-                            secondaryFont: .footnote
-                        )
-                        .frame(maxWidth: .infinity)
-
-                        TimerActionView(
-                            canStartTimer: canStartTimer,
-                            onStart: onStartTimer,
-                            style: style
-                        )
-                    }
+                if calculatorMode == .film,
+                   let filmModeExposureResultState {
+                    FilmModeResultHierarchyView(
+                        resultState: filmModeExposureResultState,
+                        formatTimeDisplay: formatTimeDisplay,
+                        canStartTimer: canStartTimer,
+                        onStartTimer: onStartTimer,
+                        style: style
+                    )
+                } else if case .success(let result) = calculationResult {
+                    DigitalModeResultView(
+                        resultShutterSeconds: result.resultShutterSeconds,
+                        formatTimeDisplay: formatTimeDisplay,
+                        canStartTimer: canStartTimer,
+                        onStartTimer: onStartTimer,
+                        style: style
+                    )
                 } else {
                     Text(primaryResultText)
                         .font(.title3.weight(.semibold))
@@ -783,6 +782,136 @@ private struct ResultSectionView: View {
         }
     }
 
+}
+
+private struct DigitalModeResultView: View {
+    let resultShutterSeconds: TimeInterval
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let canStartTimer: Bool
+    let onStartTimer: () -> Void
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        let display = formatTimeDisplay(resultShutterSeconds)
+
+        HStack(alignment: .center, spacing: style.resultActionSpacing) {
+            Color.clear
+                .frame(width: style.resultActionFootprint, height: 1)
+                .accessibilityHidden(true)
+
+            DurationDisplayBlock(
+                primaryText: display.primary,
+                secondaryText: display.secondary,
+                primaryColor: .primary,
+                primaryFont: style.resultPrimaryFont,
+                secondaryFont: .footnote
+            )
+            .frame(maxWidth: .infinity)
+
+            TimerActionView(
+                canStartTimer: canStartTimer,
+                onStart: onStartTimer,
+                style: style
+            )
+        }
+    }
+}
+
+private struct FilmModeResultHierarchyView: View {
+    let resultState: FilmModeExposureResultState
+    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let canStartTimer: Bool
+    let onStartTimer: () -> Void
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: style.bodySpacing) {
+            FilmModeResultRow(
+                title: "Adjusted Shutter",
+                display: formatTimeDisplay(resultState.adjustedShutterSeconds),
+                primaryFont: .headline.weight(.semibold),
+                secondaryFont: .footnote,
+                primaryColor: .primary.opacity(0.88)
+            )
+
+            Divider()
+
+            FilmModeCorrectedExposureRow(
+                correctedExposure: resultState.correctedExposure,
+                canStartTimer: canStartTimer,
+                onStartTimer: onStartTimer,
+                style: style
+            )
+        }
+    }
+}
+
+private struct FilmModeResultRow: View {
+    let title: String
+    let display: TimeDisplay
+    let primaryFont: Font
+    let secondaryFont: Font
+    let primaryColor: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            DurationDisplayBlock(
+                primaryText: display.primary,
+                secondaryText: display.secondary,
+                primaryColor: primaryColor,
+                primaryFont: primaryFont,
+                secondaryFont: secondaryFont
+            )
+        }
+    }
+}
+
+private struct FilmModeCorrectedExposureRow: View {
+    let correctedExposure: FilmModeCorrectedExposureDisplayState
+    let canStartTimer: Bool
+    let onStartTimer: () -> Void
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        HStack(alignment: .center, spacing: style.resultActionSpacing) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Corrected Exposure")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                if correctedExposure.usesNumericExposure {
+                    DurationDisplayBlock(
+                        primaryText: correctedExposure.primaryText,
+                        secondaryText: correctedExposure.secondaryText,
+                        primaryColor: .primary,
+                        primaryFont: style.resultPrimaryFont,
+                        secondaryFont: .footnote
+                    )
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(correctedExposure.primaryText)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        Text(correctedExposure.secondaryText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            TimerActionView(
+                canStartTimer: canStartTimer,
+                onStart: onStartTimer,
+                style: style
+            )
+        }
+    }
 }
 
 private struct NDStopSelectionRow: View {

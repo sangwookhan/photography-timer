@@ -162,6 +162,8 @@ private struct ExposureWorkspaceMainContent: View {
                 formatTimeDisplay: viewModel.formatTimeDisplay,
                 canStartTimer: viewModel.canStartTimer,
                 onStartTimer: viewModel.startTimer,
+                onStartFilmAdjustedShutterTimer: viewModel.startFilmAdjustedShutterTimer,
+                onStartFilmCorrectedExposureTimer: viewModel.startFilmCorrectedExposureTimer,
                 style: style
             )
 
@@ -746,6 +748,8 @@ private struct ResultSectionView: View {
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let canStartTimer: Bool
     let onStartTimer: () -> Void
+    let onStartFilmAdjustedShutterTimer: () -> Void
+    let onStartFilmCorrectedExposureTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -756,8 +760,8 @@ private struct ResultSectionView: View {
                     FilmModeResultHierarchyView(
                         resultState: filmModeExposureResultState,
                         formatTimeDisplay: formatTimeDisplay,
-                        canStartTimer: canStartTimer,
-                        onStartTimer: onStartTimer,
+                        onStartAdjustedShutterTimer: onStartFilmAdjustedShutterTimer,
+                        onStartCorrectedExposureTimer: onStartFilmCorrectedExposureTimer,
                         style: style
                     )
                 } else if case .success(let result) = calculationResult {
@@ -840,7 +844,10 @@ private struct DigitalModeResultView: View {
             TimerActionView(
                 canStartTimer: canStartTimer,
                 onStart: onStartTimer,
-                style: style
+                style: style,
+                accessibilityIdentifier: "digital-result-start-timer-button",
+                accessibilityLabel: "Start timer from calculated result",
+                accessibilityHint: "Starts a timer using the calculated result"
             )
         }
     }
@@ -849,8 +856,8 @@ private struct DigitalModeResultView: View {
 private struct FilmModeResultHierarchyView: View {
     let resultState: FilmModeExposureResultState
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
-    let canStartTimer: Bool
-    let onStartTimer: () -> Void
+    let onStartAdjustedShutterTimer: () -> Void
+    let onStartCorrectedExposureTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -861,6 +868,8 @@ private struct FilmModeResultHierarchyView: View {
                 primaryFont: .headline.weight(.semibold),
                 secondaryFont: .footnote,
                 primaryColor: .primary.opacity(0.88),
+                actionState: resultState.adjustedShutterAction,
+                onStartTimer: onStartAdjustedShutterTimer,
                 style: style
             )
 
@@ -875,8 +884,8 @@ private struct FilmModeResultHierarchyView: View {
 
             FilmModeCorrectedExposureRow(
                 correctedExposure: resultState.correctedExposure,
-                canStartTimer: canStartTimer,
-                onStartTimer: onStartTimer,
+                actionState: resultState.correctedExposureAction,
+                onStartTimer: onStartCorrectedExposureTimer,
                 style: style
             )
         }
@@ -889,20 +898,34 @@ private struct FilmModeResultRow: View {
     let primaryFont: Font
     let secondaryFont: Font
     let primaryColor: Color
+    let actionState: FilmModeTimerActionState
+    let onStartTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+        HStack(alignment: .top, spacing: style.resultActionSpacing) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-            DurationDisplayBlock(
-                primaryText: display.primary,
-                secondaryText: display.secondary,
-                primaryColor: primaryColor,
-                primaryFont: primaryFont,
-                secondaryFont: secondaryFont
+                DurationDisplayBlock(
+                    primaryText: display.primary,
+                    secondaryText: display.secondary,
+                    primaryColor: primaryColor,
+                    primaryFont: primaryFont,
+                    secondaryFont: secondaryFont
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            TimerActionView(
+                canStartTimer: actionState.canStartTimer,
+                onStart: onStartTimer,
+                style: style,
+                accessibilityIdentifier: "adjusted-shutter-start-timer-button",
+                accessibilityLabel: actionState.accessibilityLabel,
+                accessibilityHint: actionState.accessibilityHint
             )
         }
         .frame(minHeight: style.filmResultRowMinHeight, alignment: .top)
@@ -981,7 +1004,7 @@ private struct FilmModeReciprocityStateRow: View {
 
 private struct FilmModeCorrectedExposureRow: View {
     let correctedExposure: FilmModeCorrectedExposureDisplayState
-    let canStartTimer: Bool
+    let actionState: FilmModeTimerActionState
     let onStartTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
@@ -1003,9 +1026,12 @@ private struct FilmModeCorrectedExposureRow: View {
             .frame(minHeight: style.filmResultRowMinHeight, alignment: .topLeading)
 
             TimerActionView(
-                canStartTimer: canStartTimer,
+                canStartTimer: actionState.canStartTimer,
                 onStart: onStartTimer,
-                style: style
+                style: style,
+                accessibilityIdentifier: "corrected-exposure-start-timer-button",
+                accessibilityLabel: actionState.accessibilityLabel,
+                accessibilityHint: actionState.accessibilityHint
             )
         }
     }
@@ -1254,6 +1280,9 @@ private struct TimerActionView: View {
     let canStartTimer: Bool
     let onStart: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
+    let accessibilityIdentifier: String
+    let accessibilityLabel: String
+    let accessibilityHint: String
 
     var body: some View {
         Button {
@@ -1274,9 +1303,9 @@ private struct TimerActionView: View {
         }
         .buttonStyle(.plain)
         .disabled(!canStartTimer)
-        .accessibilityLabel("Start Timer")
-        .accessibilityHint("Starts a timer using the calculated result")
-        .accessibilityIdentifier("start-timer-button")
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 

@@ -36,6 +36,8 @@
 		A000000000000000000000B5 /* PresetFilmCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B6 /* PresetFilmCatalog.swift */; };
 		A000000000000000000000B7 /* ExposureCalculatorFilmContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B8 /* ExposureCalculatorFilmContext.swift */; };
 		A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */; };
+		A000000000000000000000E1 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
+		A000000000000000000000E2 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +99,7 @@
 		A000000000000000000000B8 /* ExposureCalculatorFilmContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorFilmContext.swift; sourceTree = "<group>"; };
 		A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000C5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = LaunchPresetFilmCatalog.json; sourceTree = "<group>"; };
 		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
@@ -201,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				A000000000000000000000C5 /* Assets.xcassets */,
+				A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -398,6 +402,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A000000000000000000000E1 /* LaunchPresetFilmCatalog.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -405,6 +410,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A000000000000000000000E2 /* LaunchPresetFilmCatalog.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

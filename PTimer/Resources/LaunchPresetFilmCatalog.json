@@ -1,0 +1,466 @@
+[
+  {
+    "aliases" : [
+      "TRI-X",
+      "TX 400"
+    ],
+    "brandLabel" : "KODAK PROFESSIONAL TRI-X 400",
+    "canonicalStockName" : "Tri-X 400",
+    "id" : "kodak-tri-x-400",
+    "kind" : "preset",
+    "manufacturer" : "Kodak",
+    "productionStatus" : "current",
+    "profiles" : [
+      {
+        "id" : "kodak-tri-x-official-table",
+        "name" : "Official table",
+        "notes" : [
+
+        ],
+        "rules" : [
+          {
+            "kind" : "threshold",
+            "threshold" : {
+              "adjustments" : [
+
+              ],
+              "noCorrectionRange" : {
+                "maximumSeconds" : 1,
+                "minimumSeconds" : 0
+              },
+              "notes" : [
+                "No correction required at 1 second or less."
+              ]
+            }
+          },
+          {
+            "kind" : "table",
+            "table" : {
+              "entries" : [
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 0
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "exposure" : {
+                        "correctedTime" : {
+                          "correctedSeconds" : 1,
+                          "meteredSeconds" : 1
+                        },
+                        "kind" : "correctedTime"
+                      },
+                      "kind" : "exposure"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 1,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                },
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 2
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "exposure" : {
+                        "correctedTime" : {
+                          "correctedSeconds" : 50,
+                          "meteredSeconds" : 10
+                        },
+                        "kind" : "correctedTime"
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "development" : {
+                        "instruction" : "-20% development"
+                      },
+                      "kind" : "development"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 10,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                },
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 3
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "exposure" : {
+                        "correctedTime" : {
+                          "correctedSeconds" : 1200,
+                          "meteredSeconds" : 100
+                        },
+                        "kind" : "correctedTime"
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "development" : {
+                        "instruction" : "-30% development"
+                      },
+                      "kind" : "development"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 100,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                }
+              ],
+              "notes" : [
+                "Table data stays table-shaped rather than converted to a formula."
+              ]
+            }
+          }
+        ],
+        "source" : {
+          "authority" : "official",
+          "citation" : "Data sheet",
+          "confidence" : "high",
+          "kind" : "manufacturerPublished",
+          "publisher" : "Kodak",
+          "title" : "Reciprocity data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases" : [
+      "PORTRA 400"
+    ],
+    "brandLabel" : "KODAK PROFESSIONAL PORTRA 400",
+    "canonicalStockName" : "Portra 400",
+    "id" : "kodak-portra-400",
+    "kind" : "preset",
+    "manufacturer" : "Kodak",
+    "productionStatus" : "current",
+    "profiles" : [
+      {
+        "id" : "kodak-portra-official-threshold",
+        "name" : "Official threshold guidance",
+        "notes" : [
+
+        ],
+        "rules" : [
+          {
+            "kind" : "threshold",
+            "threshold" : {
+              "adjustments" : [
+
+              ],
+              "noCorrectionRange" : {
+                "maximumSeconds" : 1,
+                "minimumSeconds" : 0.0001
+              },
+              "notes" : [
+                "No correction required in the official range."
+              ]
+            }
+          },
+          {
+            "advisory" : {
+              "adjustments" : [
+                {
+                  "kind" : "note",
+                  "note" : {
+                    "text" : "Longer exposures: test under your conditions."
+                  }
+                }
+              ],
+              "appliesWhenMetered" : {
+                "minimumSeconds" : 1
+              },
+              "notes" : [
+
+              ]
+            },
+            "kind" : "advisory"
+          }
+        ],
+        "source" : {
+          "authority" : "official",
+          "confidence" : "high",
+          "kind" : "manufacturerPublished",
+          "publisher" : "Kodak",
+          "title" : "Reciprocity statement"
+        }
+      }
+    ]
+  },
+  {
+    "aliases" : [
+      "RVP 50",
+      "Velvia"
+    ],
+    "brandLabel" : "FUJICHROME Velvia 50",
+    "canonicalStockName" : "Velvia 50",
+    "id" : "fujifilm-velvia-50",
+    "kind" : "preset",
+    "manufacturer" : "Fujifilm",
+    "productionStatus" : "current",
+    "profiles" : [
+      {
+        "id" : "fujifilm-velvia-official-table",
+        "name" : "Official table and color guidance",
+        "notes" : [
+
+        ],
+        "rules" : [
+          {
+            "kind" : "threshold",
+            "threshold" : {
+              "adjustments" : [
+
+              ],
+              "noCorrectionRange" : {
+                "maximumSeconds" : 1,
+                "minimumSeconds" : 0.00025
+              },
+              "notes" : [
+
+              ]
+            }
+          },
+          {
+            "kind" : "table",
+            "table" : {
+              "entries" : [
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 0.3333333333333333
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "colorFilter" : {
+                        "filterName" : "5M"
+                      },
+                      "kind" : "colorFilter"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 4,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                },
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 0.5
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "colorFilter" : {
+                        "filterName" : "7.5M"
+                      },
+                      "kind" : "colorFilter"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 8,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                },
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 0.6666666666666666
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "colorFilter" : {
+                        "filterName" : "10M"
+                      },
+                      "kind" : "colorFilter"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 16,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                },
+                {
+                  "adjustments" : [
+                    {
+                      "exposure" : {
+                        "kind" : "stopDelta",
+                        "stopDelta" : {
+                          "stopDelta" : 1
+                        }
+                      },
+                      "kind" : "exposure"
+                    },
+                    {
+                      "colorFilter" : {
+                        "filterName" : "12.5M"
+                      },
+                      "kind" : "colorFilter"
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 32,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                },
+                {
+                  "adjustments" : [
+                    {
+                      "kind" : "warning",
+                      "warning" : {
+                        "message" : "64 sec is not recommended.",
+                        "severity" : "notRecommended"
+                      }
+                    }
+                  ],
+                  "meteredExposure" : {
+                    "exactSeconds" : 64,
+                    "kind" : "exactSeconds"
+                  },
+                  "notes" : [
+
+                  ]
+                }
+              ],
+              "notes" : [
+
+              ]
+            }
+          }
+        ],
+        "source" : {
+          "authority" : "official",
+          "confidence" : "high",
+          "kind" : "manufacturerPublished",
+          "publisher" : "Fujifilm",
+          "title" : "Long exposure guide"
+        }
+      }
+    ]
+  },
+  {
+    "aliases" : [
+      "HP5+",
+      "HP5 Plus 400"
+    ],
+    "brandLabel" : "ILFORD HP5 PLUS",
+    "canonicalStockName" : "HP5 Plus",
+    "id" : "ilford-hp5-plus-400",
+    "kind" : "preset",
+    "manufacturer" : "ILFORD / HARMAN",
+    "productionStatus" : "current",
+    "profiles" : [
+      {
+        "id" : "ilford-hp5-plus-official-formula",
+        "name" : "Official formula",
+        "notes" : [
+
+        ],
+        "rules" : [
+          {
+            "kind" : "threshold",
+            "threshold" : {
+              "adjustments" : [
+
+              ],
+              "noCorrectionRange" : {
+                "maximumSeconds" : 1,
+                "minimumSeconds" : 0
+              },
+              "notes" : [
+                "No compensation required at 1 second or less."
+              ]
+            }
+          },
+          {
+            "formula" : {
+              "additionalAdjustments" : [
+
+              ],
+              "formula" : {
+                "equation" : "Tc = Tm^P",
+                "exponent" : 1.31,
+                "kind" : "exponentPower"
+              },
+              "meteredRange" : {
+                "minimumSeconds" : 1.000001
+              },
+              "notes" : [
+                "Exponent P = 1.31."
+              ]
+            },
+            "kind" : "formula"
+          }
+        ],
+        "source" : {
+          "authority" : "official",
+          "citation" : "Technical information sheet",
+          "confidence" : "high",
+          "kind" : "manufacturerPublished",
+          "publisher" : "Ilford Photo",
+          "sourceVersion" : "2026",
+          "title" : "Reciprocity characteristics"
+        }
+      }
+    ]
+  }
+]

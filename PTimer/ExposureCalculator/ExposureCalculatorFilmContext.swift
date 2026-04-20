@@ -23,6 +23,21 @@ struct FilmModeReciprocityBindingState: Equatable {
     let presentation: ReciprocityConfidencePresentation
 }
 
+enum FilmModeReciprocityStateTone: Equatable {
+    case trusted
+    case measured
+    case caution
+    case advisory
+    case unsupported
+}
+
+struct FilmModeReciprocityStateDisplayState: Equatable {
+    let badgeText: String
+    let tone: FilmModeReciprocityStateTone
+    let infoText: String
+    let showsInfoAffordance: Bool
+}
+
 enum FilmModeCorrectedExposureDisplayKind: Equatable {
     case quantified
     case advisory
@@ -40,6 +55,7 @@ struct FilmModeCorrectedExposureDisplayState: Equatable {
 
 struct FilmModeExposureResultState: Equatable {
     let adjustedShutterSeconds: TimeInterval
+    let reciprocityState: FilmModeReciprocityStateDisplayState
     let correctedExposure: FilmModeCorrectedExposureDisplayState
 
     var hasQuantifiedCorrectedExposure: Bool {

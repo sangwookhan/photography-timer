@@ -393,6 +393,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         return FilmModeExposureResultState(
             adjustedShutterSeconds: result.resultShutterSeconds,
+            reciprocityState: reciprocityStateDisplayState(),
             correctedExposure: correctedExposureDisplayState(
                 adjustedShutterSeconds: result.resultShutterSeconds
             )
@@ -405,7 +406,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         return filmModeExposureResultState.correctedExposure.correctedExposureSeconds
-            ?? filmModeExposureResultState.adjustedShutterSeconds
     }
 
     func selectPresetFilm(_ film: FilmIdentity) {
@@ -438,7 +438,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var canStartTimer: Bool {
-        if let filmModePrimaryResultSeconds {
+        if isFilmWorkflowActive {
+            guard let filmModePrimaryResultSeconds else {
+                return false
+            }
+
             return filmModePrimaryResultSeconds > 0
         }
 
@@ -454,7 +458,17 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return
         }
 
-        let targetDuration = filmModePrimaryResultSeconds ?? result.resultShutterSeconds
+        let targetDuration: TimeInterval
+        if isFilmWorkflowActive {
+            guard let filmModePrimaryResultSeconds else {
+                return
+            }
+
+            targetDuration = filmModePrimaryResultSeconds
+        } else {
+            targetDuration = result.resultShutterSeconds
+        }
+
         startTimer(
             from: targetDuration,
             result: result,
@@ -792,8 +806,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return FilmModeCorrectedExposureDisplayState(
                 kind: .advisory,
                 correctedExposureSeconds: nil,
-                primaryText: "Advisory only",
-                secondaryText: "No corrected exposure provided",
+                primaryText: "No quantified correction",
+                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
                 usesNumericExposure: false
             )
         case .unsupported:
@@ -801,7 +815,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 kind: .unsupported,
                 correctedExposureSeconds: nil,
                 primaryText: "Unsupported",
-                secondaryText: "No corrected exposure available",
+                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
                 usesNumericExposure: false
             )
         case .exact, .estimated, .extrapolated:
@@ -809,11 +823,67 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return FilmModeCorrectedExposureDisplayState(
                 kind: .advisory,
                 correctedExposureSeconds: nil,
-                primaryText: "Advisory only",
-                secondaryText: "No corrected exposure provided",
+                primaryText: "No quantified correction",
+                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
                 usesNumericExposure: false
             )
         }
+    }
+
+    private func reciprocityStateDisplayState() -> FilmModeReciprocityStateDisplayState {
+        guard let bindingState = filmReciprocityBindingState else {
+            preconditionFailure("Reciprocity state display requires an active film binding.")
+        }
+
+        return FilmModeReciprocityStateDisplayState(
+            badgeText: reciprocityStateBadgeText(for: bindingState.presentation),
+            tone: reciprocityStateTone(for: bindingState.presentation.badgeStyle),
+            infoText: reciprocityGuidanceExplanation(for: bindingState.presentation),
+            showsInfoAffordance: true
+        )
+    }
+
+    private func reciprocityStateBadgeText(
+        for presentation: ReciprocityConfidencePresentation
+    ) -> String {
+        switch presentation.category {
+        case .advisoryOnly:
+            return "Advisory only"
+        case .unsupported:
+            return "Unsupported"
+        case .exact, .estimated, .extrapolated:
+            return presentation.shortLabel
+        }
+    }
+
+    private func reciprocityStateTone(
+        for badgeStyle: ReciprocityConfidenceBadgeStyle
+    ) -> FilmModeReciprocityStateTone {
+        switch badgeStyle {
+        case .trusted:
+            return .trusted
+        case .measured:
+            return .measured
+        case .caution:
+            return .caution
+        case .advisory:
+            return .advisory
+        case .unsupported:
+            return .unsupported
+        }
+    }
+
+    private func reciprocityGuidanceExplanation(
+        for presentation: ReciprocityConfidencePresentation
+    ) -> String {
+        let explanation = presentation.supportingNotes.first ?? presentation.defaultExplanation
+        let trimmedExplanation = explanation.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedExplanation.isEmpty else {
+            return "See reciprocity guidance"
+        }
+
+        return trimmedExplanation
     }
 
     private func restorePersistedTimerMetadata() {

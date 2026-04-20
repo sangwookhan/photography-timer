@@ -866,6 +866,13 @@ private struct FilmModeResultHierarchyView: View {
 
             Divider()
 
+            FilmModeReciprocityStateRow(
+                reciprocityState: resultState.reciprocityState,
+                style: style
+            )
+
+            Divider()
+
             FilmModeCorrectedExposureRow(
                 correctedExposure: resultState.correctedExposure,
                 canStartTimer: canStartTimer,
@@ -902,6 +909,76 @@ private struct FilmModeResultRow: View {
     }
 }
 
+private struct FilmModeReciprocityStateRow: View {
+    let reciprocityState: FilmModeReciprocityStateDisplayState
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text("Reciprocity")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 8) {
+                Text(reciprocityState.badgeText)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(badgeForegroundColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(badgeBackgroundColor)
+                    .clipShape(Capsule())
+                    .accessibilityIdentifier("film-mode-reciprocity-badge")
+
+                if reciprocityState.showsInfoAffordance {
+                    Image(systemName: "info.circle")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Reciprocity information")
+                        .accessibilityHint(reciprocityState.infoText)
+                        .accessibilityIdentifier("film-mode-reciprocity-info")
+                }
+            }
+        }
+        .frame(minHeight: style.filmResultRowMinHeight, alignment: .center)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Reciprocity")
+        .accessibilityValue(reciprocityState.badgeText)
+        .accessibilityHint(reciprocityState.infoText)
+    }
+
+    private var badgeForegroundColor: Color {
+        switch reciprocityState.tone {
+        case .trusted:
+            return Color(.systemGreen)
+        case .measured:
+            return Color(.systemBlue)
+        case .caution:
+            return Color(.systemOrange)
+        case .advisory:
+            return Color(.systemBrown)
+        case .unsupported:
+            return Color(.systemRed)
+        }
+    }
+
+    private var badgeBackgroundColor: Color {
+        switch reciprocityState.tone {
+        case .trusted:
+            return Color(.systemGreen).opacity(0.14)
+        case .measured:
+            return Color(.systemBlue).opacity(0.14)
+        case .caution:
+            return Color(.systemOrange).opacity(0.16)
+        case .advisory:
+            return Color(.systemBrown).opacity(0.14)
+        case .unsupported:
+            return Color(.systemRed).opacity(0.14)
+        }
+    }
+}
+
 private struct FilmModeCorrectedExposureRow: View {
     let correctedExposure: FilmModeCorrectedExposureDisplayState
     let canStartTimer: Bool
@@ -916,6 +993,7 @@ private struct FilmModeCorrectedExposureRow: View {
                     .foregroundStyle(.secondary)
 
                 CorrectedExposureDisplayBlock(
+                    kind: correctedExposure.kind,
                     primaryText: correctedExposure.primaryText,
                     secondaryText: correctedExposure.secondaryText,
                     style: style
@@ -934,6 +1012,7 @@ private struct FilmModeCorrectedExposureRow: View {
 }
 
 private struct CorrectedExposureDisplayBlock: View {
+    let kind: FilmModeCorrectedExposureDisplayKind
     let primaryText: String
     let secondaryText: String
     let style: ExposureWorkspaceMainLayoutStyle
@@ -941,19 +1020,43 @@ private struct CorrectedExposureDisplayBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(primaryText)
-                .font(style.correctedExposurePrimaryFont)
-                .foregroundStyle(.primary)
+                .font(primaryFont)
+                .foregroundStyle(primaryColor)
                 .monospacedDigit()
-                .lineLimit(1)
+                .lineLimit(kind == .quantified ? 1 : 2)
                 .minimumScaleFactor(0.7)
+                .accessibilityIdentifier("film-mode-corrected-exposure-primary")
 
             Text(secondaryText)
                 .font(style.correctedExposureSecondaryFont)
                 .foregroundStyle(.tertiary)
-                .lineLimit(1)
+                .lineLimit(2)
                 .minimumScaleFactor(0.75)
+                .accessibilityIdentifier("film-mode-corrected-exposure-secondary")
         }
         .frame(maxWidth: .infinity, minHeight: style.correctedExposureValueMinHeight, alignment: .topLeading)
+    }
+
+    private var primaryFont: Font {
+        switch kind {
+        case .quantified:
+            return style.correctedExposurePrimaryFont
+        case .advisory, .unsupported, .noFilmSelected:
+            return .headline.weight(.semibold)
+        }
+    }
+
+    private var primaryColor: Color {
+        switch kind {
+        case .quantified:
+            return .primary
+        case .advisory:
+            return Color(.systemOrange)
+        case .unsupported:
+            return Color(.systemRed)
+        case .noFilmSelected:
+            return .secondary
+        }
     }
 }
 

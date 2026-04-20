@@ -38,6 +38,13 @@ struct FilmModeReciprocityStateDisplayState: Equatable {
     let showsInfoAffordance: Bool
 }
 
+struct FilmModeTimerActionState: Equatable {
+    let targetSeconds: TimeInterval?
+    let canStartTimer: Bool
+    let accessibilityLabel: String
+    let accessibilityHint: String
+}
+
 enum FilmModeCorrectedExposureDisplayKind: Equatable {
     case quantified
     case advisory
@@ -56,7 +63,9 @@ struct FilmModeCorrectedExposureDisplayState: Equatable {
 struct FilmModeExposureResultState: Equatable {
     let adjustedShutterSeconds: TimeInterval
     let reciprocityState: FilmModeReciprocityStateDisplayState
+    let adjustedShutterAction: FilmModeTimerActionState
     let correctedExposure: FilmModeCorrectedExposureDisplayState
+    let correctedExposureAction: FilmModeTimerActionState
 
     var hasQuantifiedCorrectedExposure: Bool {
         correctedExposure.usesNumericExposure

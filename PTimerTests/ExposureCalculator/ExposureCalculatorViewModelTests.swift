@@ -263,6 +263,28 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testHP5PlusLongAdjustedExposureRemainsFormulaDerivedInsteadOfUnsupported() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
+
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 18
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 8_192, accuracy: 0.0001)
+        XCTAssertEqual(bindingState.policyResult.metadata.basis, .formulaDerived)
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Calculated")
+        XCTAssertEqual(resultState.reciprocityState.tone, .measured)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
+        XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
+        XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
+    }
+
+    @MainActor
     func testFilmModeAdvisoryOnlyResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })

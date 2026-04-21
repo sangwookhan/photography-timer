@@ -185,6 +185,26 @@ Review should be done against the task spec, not personal preference alone.
 
 ---
 
+## Commit Message Expectations
+
+When creating or amending commits for this repository:
+
+- follow standard Git subject/body formatting with a short imperative summary
+- keep body paragraphs wrapped consistently
+- when recording ticket context at the bottom, use `TICKET-ID Title` format
+- ticket context lines must use a hanging indent on wrapped lines
+
+Example:
+
+```text
+PTIMER-102 Extend quantified extrapolation policy for table-profile
+           films beyond the current limit
+```
+
+Do not use a flush-left continuation line for wrapped ticket context.
+
+---
+
 ## Escalation Triggers
 
 Escalate instead of guessing when:

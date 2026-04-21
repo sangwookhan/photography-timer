@@ -112,6 +112,283 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectingPresetFilmPersistsWorkingContextValues() throws {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 1.0 / 15.0
+        viewModel.ndStop = 4
+        viewModel.selectPresetFilm(film)
+
+        XCTAssertEqual(
+            contextStore.snapshot,
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: film.id,
+                baseShutterSeconds: 1.0 / 15.0,
+                ndStop: 4
+            )
+        )
+    }
+
+    @MainActor
+    func testRelaunchRestoresValidFilmModeWorkingContextAndReciprocityBinding() throws {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let initialViewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+        let film = try XCTUnwrap(initialViewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        initialViewModel.baseShutter = 1.0 / 15.0
+        initialViewModel.ndStop = 4
+        initialViewModel.selectPresetFilm(film)
+
+        let relaunchedViewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        XCTAssertEqual(relaunchedViewModel.selectedPresetFilm?.id, film.id)
+        XCTAssertEqual(relaunchedViewModel.filmSelectionDisplayState.primaryText, "Tri-X 400")
+        XCTAssertTrue(relaunchedViewModel.isFilmWorkflowActive)
+        XCTAssertEqual(relaunchedViewModel.baseShutter, 1.0 / 15.0, accuracy: 0.000_001)
+        XCTAssertEqual(relaunchedViewModel.ndStop, 4)
+        let bindingState = try XCTUnwrap(relaunchedViewModel.filmReciprocityBindingState)
+        XCTAssertEqual(bindingState.film.id, film.id)
+        XCTAssertEqual(bindingState.profile.id, film.profiles.first?.id)
+        XCTAssertTrue(bindingState.policyResult.hasCalculatedExposureTime)
+        XCTAssertTrue(bindingState.presentation.returnsCalculatedExposureTime)
+        XCTAssertEqual(relaunchedViewModel.filmModeExposureResultState?.reciprocityState.badgeText, "Exact")
+    }
+
+    @MainActor
+    func testRelaunchWithoutStoredPresetFallsBackToNoFilmState() {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        XCTAssertNil(viewModel.selectedPresetFilm)
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
+        XCTAssertNil(viewModel.filmReciprocityBindingState)
+        XCTAssertNil(viewModel.filmModeExposureResultState)
+        XCTAssertNil(contextStore.snapshot)
+    }
+
+    @MainActor
+    func testRelaunchWithInvalidStoredPresetIdentifierFallsBackSafely() {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        contextStore.saveSnapshot(
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: "missing-preset-id",
+                baseShutterSeconds: 1,
+                ndStop: 4
+            )
+        )
+
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        XCTAssertNil(viewModel.selectedPresetFilm)
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
+        XCTAssertNil(viewModel.filmReciprocityBindingState)
+        XCTAssertNil(viewModel.filmModeExposureResultState)
+        XCTAssertNil(contextStore.snapshot)
+    }
+
+    @MainActor
+    func testInvalidStoredPresetFallbackLeavesDigitalWorkflowUnaffected() throws {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        contextStore.saveSnapshot(
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: "missing-preset-id",
+                baseShutterSeconds: 1,
+                ndStop: 4
+            )
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+
+        XCTAssertNil(viewModel.selectedPresetFilm)
+        XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
+        XCTAssertNil(viewModel.filmModeExposureResultState)
+        XCTAssertEqual(
+            viewModel.calculationResult,
+            .success(
+                ExposureCalculationResult(
+                    baseShutterSeconds: 1.0 / 30.0,
+                    stop: 6,
+                    resultShutterSeconds: 2
+                )
+            )
+        )
+    }
+
+    @MainActor
+    func testDigitalWorkingContextPersistsWithoutSelectedFilm() {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        viewModel.baseShutter = 1
+        viewModel.ndStop = 3
+
+        XCTAssertEqual(
+            contextStore.snapshot,
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: nil,
+                baseShutterSeconds: 1,
+                ndStop: 3
+            )
+        )
+    }
+
+    @MainActor
+    func testRelaunchRestoresDigitalWorkingContextWithoutSelectedFilm() {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        contextStore.saveSnapshot(
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: nil,
+                baseShutterSeconds: 1,
+                ndStop: 3
+            )
+        )
+
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        XCTAssertNil(viewModel.selectedPresetFilm)
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
+        XCTAssertEqual(viewModel.baseShutter, 1, accuracy: 0.000_001)
+        XCTAssertEqual(viewModel.ndStop, 3)
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
+        XCTAssertEqual(
+            viewModel.calculationResult,
+            .success(
+                ExposureCalculationResult(
+                    baseShutterSeconds: 1,
+                    stop: 3,
+                    resultShutterSeconds: 8
+                )
+            )
+        )
+    }
+
+    @MainActor
+    func testRelaunchWithInvalidStoredNumericValuesFallsBackToDefaultCalculatorInputs() throws {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let film = try XCTUnwrap(makeViewModel().availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+        contextStore.saveSnapshot(
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: film.id,
+                baseShutterSeconds: 0.3,
+                ndStop: 99
+            )
+        )
+
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+
+        XCTAssertEqual(viewModel.selectedPresetFilm?.id, film.id)
+        XCTAssertEqual(viewModel.baseShutter, 1.0 / 30.0, accuracy: 0.000_001)
+        XCTAssertEqual(viewModel.ndStop, 0)
+        XCTAssertEqual(
+            contextStore.snapshot,
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: film.id,
+                baseShutterSeconds: 1.0 / 30.0,
+                ndStop: 0
+            )
+        )
+    }
+
+    @MainActor
+    func testResetFilmModeWorkingContextClearsSelectionInputsAndPersistedSnapshot() throws {
+        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            contextPersistenceStore: contextStore
+        )
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 1.0 / 15.0
+        viewModel.ndStop = 4
+        viewModel.selectPresetFilm(film)
+
+        XCTAssertTrue(viewModel.canResetFilmModeWorkingContext)
+
+        viewModel.resetFilmModeWorkingContext()
+
+        XCTAssertNil(viewModel.selectedPresetFilm)
+        XCTAssertFalse(viewModel.isFilmWorkflowActive)
+        XCTAssertFalse(viewModel.canResetFilmModeWorkingContext)
+        XCTAssertEqual(viewModel.baseShutter, 1.0 / 30.0, accuracy: 0.000_001)
+        XCTAssertEqual(viewModel.ndStop, 0)
+        XCTAssertNil(viewModel.filmModeExposureResultState)
+        XCTAssertNil(contextStore.snapshot)
+    }
+
+    @MainActor
     func testNoFilmBehavesAsDigitalWorkflow() throws {
         let viewModel = makeViewModel()
 
@@ -2690,6 +2967,22 @@ private final class InMemoryTimerMetadataPersistenceStore: TimerMetadataPersiste
     }
 
     func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func clearSnapshot() {
+        snapshot = nil
+    }
+}
+
+private final class InMemoryExposureCalculatorContextPersistenceStore: ExposureCalculatorContextPersistenceStoring {
+    private(set) var snapshot: PersistentExposureCalculatorContextSnapshot?
+
+    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+        snapshot
+    }
+
+    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
         self.snapshot = snapshot
     }
 

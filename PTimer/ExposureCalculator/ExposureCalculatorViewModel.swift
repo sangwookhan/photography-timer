@@ -1,6 +1,9 @@
 import Combine
 import Foundation
 
+private let defaultFilmModeBaseShutter = 1.0 / 30.0
+private let defaultFilmModeNDStop = 0
+
 struct RunningTimerItem: Identifiable, Equatable {
     private static let stabilityEpsilon = ExposureCalculator.stabilityEpsilon
 
@@ -248,18 +251,22 @@ struct UserDefaultsTimerMetadataPersistenceStore: TimerMetadataPersistenceStorin
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
     @Published private(set) var activeCalculatorContext = ActiveExposureCalculatorContext()
-    @Published var baseShutter = 1.0 / 30.0 {
+    @Published var baseShutter = defaultFilmModeBaseShutter {
         didSet {
             if liveBaseShutter == baseShutter {
                 liveBaseShutter = nil
             }
+
+            persistCalculatorContextIfNeeded()
         }
     }
-    @Published var ndStop = 0 {
+    @Published var ndStop = defaultFilmModeNDStop {
         didSet {
             if liveNDStop == ndStop {
                 liveNDStop = nil
             }
+
+            persistCalculatorContextIfNeeded()
         }
     }
     @Published private(set) var timers: [RunningTimerItem] = []
@@ -271,6 +278,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private let calculator: ExposureCalculator
     private let presetFilms: [FilmIdentity]
     private let timerManager: TimerManager
+    private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
     private let metadataPersistenceStore: TimerMetadataPersistenceStoring
     private let lockScreenTargetCoordinator: LockScreenTimerTargetCoordinator
     private let reciprocityEvaluator = ReciprocityCalculationPolicyEvaluator()
@@ -296,11 +304,13 @@ final class ExposureCalculatorViewModel: ObservableObject {
             completionNotificationScheduler: UserNotificationTimerCompletionScheduler(),
             persistenceStore: UserDefaultsTimerPersistenceStore()
         )
+        self.contextPersistenceStore = UserDefaultsExposureCalculatorContextPersistenceStore()
         self.metadataPersistenceStore = UserDefaultsTimerMetadataPersistenceStore()
         self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
             exposer: ActivityKitLockScreenTimerTargetExposer()
         )
 
+        restorePersistedCalculatorContext()
         restorePersistedTimerMetadata()
         timerManager.$timers
             .sink { [weak self] states in
@@ -313,17 +323,20 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculator: ExposureCalculator,
         timerManager: TimerManager,
         presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
+        contextPersistenceStore: ExposureCalculatorContextPersistenceStoring = NoOpExposureCalculatorContextPersistenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
         self.calculator = calculator
         self.presetFilms = presetFilms
         self.timerManager = timerManager
+        self.contextPersistenceStore = contextPersistenceStore
         self.metadataPersistenceStore = metadataPersistenceStore
         self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
             exposer: lockScreenTargetExposer
         )
 
+        restorePersistedCalculatorContext()
         restorePersistedTimerMetadata()
         timerManager.$timers
             .sink { [weak self] states in
@@ -342,6 +355,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var isFilmWorkflowActive: Bool {
         selectedPresetFilm != nil
+    }
+
+    var canResetFilmModeWorkingContext: Bool {
+        selectedPresetFilm != nil
+            || abs(baseShutter - defaultFilmModeBaseShutter) > ExposureCalculator.stabilityEpsilon
+            || ndStop != defaultFilmModeNDStop
     }
 
     var filmSelectorEntries: [FilmSelectorEntry] {
@@ -438,10 +457,21 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func selectPresetFilm(_ film: FilmIdentity) {
         activeCalculatorContext.selectedPresetFilm = film
+        persistCalculatorContext()
     }
 
     func clearSelectedPresetFilm() {
         activeCalculatorContext.selectedPresetFilm = nil
+        persistCalculatorContext()
+    }
+
+    func resetFilmModeWorkingContext() {
+        activeCalculatorContext.selectedPresetFilm = nil
+        liveBaseShutter = nil
+        liveNDStop = nil
+        baseShutter = defaultFilmModeBaseShutter
+        ndStop = defaultFilmModeNDStop
+        contextPersistenceStore.clearSnapshot()
     }
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
@@ -1596,6 +1626,63 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 )
             }
         )
+    }
+
+    private func restorePersistedCalculatorContext() {
+        guard let snapshot = contextPersistenceStore.loadSnapshot() else {
+            return
+        }
+
+        if let selectedPresetFilmID = snapshot.selectedPresetFilmID {
+            guard let restoredFilm = presetFilms.first(where: { $0.id == selectedPresetFilmID }) else {
+                activeCalculatorContext.selectedPresetFilm = nil
+                contextPersistenceStore.clearSnapshot()
+                return
+            }
+
+            activeCalculatorContext.selectedPresetFilm = restoredFilm
+        } else {
+            activeCalculatorContext.selectedPresetFilm = nil
+        }
+        baseShutter = restoredBaseShutter(from: snapshot) ?? defaultFilmModeBaseShutter
+        ndStop = restoredNDStop(from: snapshot) ?? defaultFilmModeNDStop
+        persistCalculatorContext()
+    }
+
+    private func persistCalculatorContext() {
+        contextPersistenceStore.saveSnapshot(
+            PersistentExposureCalculatorContextSnapshot(
+                selectedPresetFilmID: activeCalculatorContext.selectedPresetFilm?.id,
+                baseShutterSeconds: baseShutter,
+                ndStop: ndStop
+            )
+        )
+    }
+
+    private func persistCalculatorContextIfNeeded() {
+        persistCalculatorContext()
+    }
+
+    private func restoredBaseShutter(
+        from snapshot: PersistentExposureCalculatorContextSnapshot
+    ) -> Double? {
+        guard let storedValue = snapshot.baseShutterSeconds else {
+            return nil
+        }
+
+        return Self.shutterSpeeds.first {
+            abs($0 - storedValue) <= ExposureCalculator.stabilityEpsilon
+        }
+    }
+
+    private func restoredNDStop(
+        from snapshot: PersistentExposureCalculatorContextSnapshot
+    ) -> Int? {
+        guard let storedValue = snapshot.ndStop, (0...30).contains(storedValue) else {
+            return nil
+        }
+
+        return storedValue
     }
 
     private func persistTimerMetadata() {

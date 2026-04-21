@@ -143,6 +143,8 @@ private struct ExposureWorkspaceMainContent: View {
                     selectedFilmID: viewModel.selectedPresetFilm?.id,
                     filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
                     onToggleSelector: { isFilmSelectorPresented.toggle() },
+                    showsResetAction: viewModel.canResetFilmModeWorkingContext,
+                    onResetFilmModeContext: viewModel.resetFilmModeWorkingContext,
                     style: style
                 )
                 VariableSectionView(
@@ -150,10 +152,26 @@ private struct ExposureWorkspaceMainContent: View {
                     ndStop: $viewModel.ndStop,
                     shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
                     formatShutter: viewModel.formatShutter,
-                    onContinuousBaseShutterChange: viewModel.updateLiveBaseShutter,
-                    onContinuousNDStopChange: viewModel.updateLiveNDStop,
-                    onBaseShutterInteractionEnd: viewModel.clearLiveBaseShutterPreview,
-                    onNDStopInteractionEnd: viewModel.clearLiveNDStopPreview,
+                    onContinuousBaseShutterChange: { value in
+                        Task { @MainActor in
+                            viewModel.updateLiveBaseShutter(value)
+                        }
+                    },
+                    onContinuousNDStopChange: { value in
+                        Task { @MainActor in
+                            viewModel.updateLiveNDStop(value)
+                        }
+                    },
+                    onBaseShutterInteractionEnd: {
+                        Task { @MainActor in
+                            viewModel.clearLiveBaseShutterPreview()
+                        }
+                    },
+                    onNDStopInteractionEnd: {
+                        Task { @MainActor in
+                            viewModel.clearLiveNDStopPreview()
+                        }
+                    },
                     style: style
                 )
 
@@ -679,6 +697,8 @@ private struct HeaderView: View {
     let selectedFilmID: String?
     let filmSelectionDisplayState: FilmSelectionDisplayState
     let onToggleSelector: () -> Void
+    let showsResetAction: Bool
+    let onResetFilmModeContext: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -693,6 +713,22 @@ private struct HeaderView: View {
                 onToggleSelector: onToggleSelector,
                 style: style
             )
+
+            HStack {
+                Spacer()
+
+                Button("Reset") {
+                    onResetFilmModeContext()
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .opacity(showsResetAction ? 1 : 0)
+                .allowsHitTesting(showsResetAction)
+                .accessibilityHidden(!showsResetAction)
+                .accessibilityHint("Clears the restored Film mode setup")
+                .accessibilityIdentifier("film-mode-reset-button")
+            }
+            .frame(maxWidth: .infinity, minHeight: 18, alignment: .trailing)
         }
         .sectionCardStyle(style: style)
     }

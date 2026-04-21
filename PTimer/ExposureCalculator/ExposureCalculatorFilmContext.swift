@@ -12,8 +12,14 @@ struct ActiveExposureCalculatorContext: Equatable {
 
 struct FilmSelectorEntry: Equatable, Identifiable {
     let id: String
-    let title: String
+    let primaryText: String
+    let secondaryText: String?
     let film: FilmIdentity?
+}
+
+struct FilmSelectionDisplayState: Equatable {
+    let primaryText: String
+    let secondaryText: String?
 }
 
 struct FilmModeReciprocityBindingState: Equatable {
@@ -58,6 +64,54 @@ struct FilmModeCorrectedExposureDisplayState: Equatable {
     let primaryText: String
     let secondaryText: String
     let usesNumericExposure: Bool
+}
+
+enum FilmModeDetailsRowStyle: Equatable {
+    case standard
+    case referenceBlock
+    case formulaExpression
+}
+
+struct FilmModeDetailsRowState: Equatable, Identifiable {
+    let title: String
+    let value: String
+    let destinationURL: URL?
+    let style: FilmModeDetailsRowStyle
+
+    init(
+        title: String,
+        value: String,
+        destinationURL: URL? = nil,
+        style: FilmModeDetailsRowStyle = .standard
+    ) {
+        self.title = title
+        self.value = value
+        self.destinationURL = destinationURL
+        self.style = style
+    }
+
+    var id: String {
+        [title, value, destinationURL?.absoluteString ?? "", String(describing: style)].joined(separator: "|")
+    }
+}
+
+struct FilmModeDetailsSectionState: Equatable, Identifiable {
+    let title: String
+    let rows: [FilmModeDetailsRowState]
+
+    var id: String {
+        ([title] + rows.map(\.id)).joined(separator: "|")
+    }
+}
+
+struct FilmModeDetailsDisplayState: Equatable, Identifiable {
+    let title: String
+    let sections: [FilmModeDetailsSectionState]
+    let showsGraphPlaceholder: Bool
+
+    var id: String {
+        ([title, showsGraphPlaceholder ? "graph" : "no-graph"] + sections.map(\.id)).joined(separator: "|")
+    }
 }
 
 struct FilmModeExposureResultState: Equatable {

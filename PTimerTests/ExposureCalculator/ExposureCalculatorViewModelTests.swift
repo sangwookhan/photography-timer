@@ -117,22 +117,22 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "No correction")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
         XCTAssertEqual(resultState.reciprocityState.tone, .trusted)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
         XCTAssertEqual(resultState.adjustedShutterAction.accessibilityLabel, "Start timer from adjusted shutter")
         XCTAssertEqual(resultState.adjustedShutterAction.accessibilityHint, "Starts a timer using the ND-adjusted shutter value")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
-        XCTAssertEqual(resultState.correctedExposureAction.targetSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposureAction.targetSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityLabel, "Start timer from corrected exposure")
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityHint, "Starts a timer using the film-specific corrected exposure value")
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "Final shooting value")
         XCTAssertTrue(resultState.hasQuantifiedCorrectedExposure)
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
         XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
     }
@@ -143,7 +143,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
         viewModel.selectPresetFilm(film)
 
-        viewModel.baseShutter = 10
+        viewModel.baseShutter = 1
         viewModel.ndStop = 0
         let exactState = try XCTUnwrap(viewModel.filmModeExposureResultState)
 
@@ -192,7 +192,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "No correction")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
@@ -309,7 +309,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             "Timer unavailable because this corrected result is non-quantified"
         )
         XCTAssertEqual(resultState.correctedExposure.primaryText, "No quantified correction")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Longer exposures: test under your conditions.")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Only advisory continuation is available for this metered exposure.")
         XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
@@ -372,11 +372,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "Tri-X 400 - 2s")
+        XCTAssertEqual(timer.duration, 1, accuracy: 0.0001)
+        XCTAssertEqual(timer.name, "Tri-X 400 - 1s")
         XCTAssertEqual(
             timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2s"
+            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 1s"
         )
     }
 

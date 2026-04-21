@@ -24,16 +24,16 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(try result.metadata.referencedRows?.map(exactSeconds), [10])
     }
 
-    func testTriXBelowOneSecondUsesThresholdNoCorrection() {
+    func testTriXBelowOneSecondRemainsUnsupportedWithoutThresholdGuidance() {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.triXProfile(),
             meteredExposureSeconds: 0.5
         )
 
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertEqual(result.metadata.rangeStatus, .beyondPolicyLimit)
         XCTAssertNil(result.metadata.referencedRows)
     }
 
@@ -43,9 +43,9 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
             meteredExposureSeconds: 1
         )
 
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
         XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertNotEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
     }
 
     func testTriXInterpolationUsesLogLogEvaluatorMathAndOriginalBounds() throws {
@@ -64,7 +64,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
             logLogEstimate(
                 meteredExposureSeconds: 5,
                 lowerMeteredSeconds: 1,
-                lowerCorrectedSeconds: 1,
+                lowerCorrectedSeconds: 2,
                 upperMeteredSeconds: 10,
                 upperCorrectedSeconds: 50
             ),

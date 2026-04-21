@@ -40,8 +40,10 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         let duplicatedData = try encodeCatalog([originalFilm, duplicatedFilm])
 
         let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(try LaunchPresetFilmCatalogLoader().loadCatalog(from: duplicatedData))
-        ) as? LaunchPresetFilmCatalogLoaderError
+            XCTAssertThrowsErrorAndReturn(
+                try LaunchPresetFilmCatalogLoader().loadCatalog(from: duplicatedData)
+            ) as? LaunchPresetFilmCatalogLoaderError
+        )
 
         XCTAssertEqual(error, .duplicateFilmIdentifier(originalFilm.id))
         XCTAssertEqual(
@@ -56,8 +58,10 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         let invalidData = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData))
-        ) as? LaunchPresetFilmCatalogLoaderError
+            XCTAssertThrowsErrorAndReturn(
+                try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData)
+            ) as? LaunchPresetFilmCatalogLoaderError
+        )
 
         XCTAssertEqual(error, .invalidCanonicalStockName(originalFilm.id))
     }
@@ -112,21 +116,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
                 "manufacturer": "Kodak",
                 "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
                 "aliases": ["TRI-X", "TX 400"],
-                "productionStatus": "current",
-                "profiles": [
-                  {
-                    "id": "kodak-tri-x-official-table",
-                    "name": "Official table",
-                    "source": {
-                      "kind": "manufacturerPublished",
-                      "authority": "official",
-                      "confidence": "high",
-                      "publisher": "Kodak"
-                    },
-                    "rules": [],
-                    "notes": []
-                  }
-                ]
+                "productionStatus": "current"
               }
             ]
             """.utf8
@@ -140,7 +130,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             return XCTFail("Expected malformed resource error, got \(String(describing: error)).")
         }
 
-        XCTAssertTrue(reason.contains("Missing key 'userMetadata'"))
+        XCTAssertTrue(reason.contains("Missing key 'profiles'"))
         XCTAssertTrue(reason.contains("[0]"))
     }
 
@@ -150,8 +140,10 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         let invalidData = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData))
-        ) as? LaunchPresetFilmCatalogLoaderError
+            XCTAssertThrowsErrorAndReturn(
+                try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData)
+            ) as? LaunchPresetFilmCatalogLoaderError
+        )
 
         XCTAssertEqual(error, .invalidPrimaryProfileCount(filmID: firstFilm.id, count: 0))
         XCTAssertEqual(

@@ -868,11 +868,21 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
+            let secondaryText: String
+            switch bindingState.presentation.category {
+            case .extrapolated:
+                secondaryText = "Low-confidence shooting value"
+            case .exact, .estimated:
+                secondaryText = "Final shooting value"
+            case .advisoryOnly, .unsupported:
+                secondaryText = "Final shooting value"
+            }
+
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
                 primaryText: formatTimeDisplay(correctedExposureSeconds).primary,
-                secondaryText: "Final shooting value",
+                secondaryText: secondaryText,
                 usesNumericExposure: true
             )
         }

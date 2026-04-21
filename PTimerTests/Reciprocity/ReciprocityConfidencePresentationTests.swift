@@ -73,6 +73,31 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
         XCTAssertTrue(presentation.explanationTokens.contains(.logLogEstimation))
     }
 
+    func testTriXExtendedExtrapolationStillMapsToExtrapolatedPresentation() {
+        let presentation = presentation(
+            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
+            meteredExposureSeconds: 1_000
+        )
+
+        XCTAssertEqual(presentation.category, .extrapolated)
+        XCTAssertEqual(presentation.resultKind, .extrapolated)
+        XCTAssertEqual(presentation.level, .low)
+        XCTAssertEqual(presentation.badgeStyle, .caution)
+        XCTAssertEqual(presentation.warningEmphasis, .caution)
+        XCTAssertEqual(presentation.shortLabel, "Extrapolated")
+        XCTAssertTrue(presentation.returnsCalculatedExposureTime)
+        XCTAssertTrue(presentation.explanationTokens.contains(.extrapolatedEstimate))
+        XCTAssertTrue(presentation.explanationTokens.contains(.beyondRepresentativePoint))
+        XCTAssertFalse(presentation.explanationTokens.contains(.beyondPolicyLimit))
+        XCTAssertEqual(
+            presentation.supportingNotes,
+            [
+                "Low-confidence result extrapolated from the original representative table rows.",
+                "Result extends beyond the last quantified representative point and should be verified with testing."
+            ]
+        )
+    }
+
     func testVelviaStopSignalMapsToUnsupportedPresentation() {
         let presentation = presentation(
             profile: ReciprocityPolicyScenarioFactory.velviaProfile(),

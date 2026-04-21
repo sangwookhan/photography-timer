@@ -102,21 +102,57 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertFalse(try referencedRows.map(exactSeconds).contains(300))
     }
 
-    func testTriXBeyondNextOrderOfMagnitudeBecomesUnsupported() {
+    func testTriXLongerExtrapolationRemainsQuantifiedWithinExtendedPolicyLimit() throws {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.triXProfile(),
             meteredExposureSeconds: 1_000
         )
+        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
 
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondPolicyLimit)
-        XCTAssertEqual(result.metadata.warningLevel, .strongWarning)
+        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
+        XCTAssertEqual(result.metadata.estimationFamily, .logLog)
+        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
+        XCTAssertEqual(result.metadata.warningLevel, .caution)
         XCTAssertEqual(
-            result.metadata.notes.map(\.token),
-            [.beyondRepresentativeTablePoint, .unsupportedByPolicy]
+            result.correctedExposureSeconds ?? 0,
+            logLogEstimate(
+                meteredExposureSeconds: 1_000,
+                lowerMeteredSeconds: 10,
+                lowerCorrectedSeconds: 50,
+                upperMeteredSeconds: 100,
+                upperCorrectedSeconds: 1_200
+            ),
+            accuracy: 0.0001
         )
+        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
+        XCTAssertEqual(try referencedRows.map(exactSeconds), [10, 100])
+        XCTAssertFalse(try referencedRows.map(exactSeconds).contains(1_000))
+    }
+
+    func testTriXVeryLongExtrapolationRemainsQuantifiedWithoutGenericUpperBoundary() throws {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
+            meteredExposureSeconds: 10_000
+        )
+        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
+
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
+        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
+        XCTAssertEqual(result.metadata.warningLevel, .caution)
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            logLogEstimate(
+                meteredExposureSeconds: 10_000,
+                lowerMeteredSeconds: 10,
+                lowerCorrectedSeconds: 50,
+                upperMeteredSeconds: 100,
+                upperCorrectedSeconds: 1_200
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
+        XCTAssertEqual(result.metadata.notes.map(\.token), [.estimatedFromRepresentativeRows, .beyondRepresentativeTablePoint])
     }
 
     func testVelviaInterpolationUsesStopSpaceEvaluatorMath() throws {

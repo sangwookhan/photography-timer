@@ -772,26 +772,6 @@ struct ReciprocityCalculationPolicyEvaluator {
             )
         }
 
-        let extrapolationLimit = estimator.nextOrderOfMagnitudeLimit(
-            from: lastQuantifiedPoint.meteredExposureSeconds
-        )
-
-        guard meteredExposureSeconds < extrapolationLimit else {
-            return assembler.unsupported(
-                meteredExposureSeconds: meteredExposureSeconds,
-                notes: [
-                    ReciprocityPolicyNote(
-                        token: .beyondRepresentativeTablePoint,
-                        text: "Quantified extrapolation is limited to less than \(formattedSeconds(extrapolationLimit))."
-                    ),
-                    ReciprocityPolicyNote(
-                        token: .unsupportedByPolicy,
-                        text: "This metered exposure is beyond the current extrapolation policy limit."
-                    )
-                ]
-            )
-        }
-
         let lowerAnchor = quantifiedPoints[quantifiedPoints.count - 2]
         let upperAnchor = quantifiedPoints[quantifiedPoints.count - 1]
 
@@ -1021,11 +1001,11 @@ struct ReciprocityCalculationPolicyEvaluator {
         [
             ReciprocityPolicyNote(
                 token: .estimatedFromRepresentativeRows,
-                text: "Extrapolated from the original representative table rows."
+                text: "Low-confidence result extrapolated from the original representative table rows."
             ),
             ReciprocityPolicyNote(
                 token: .beyondRepresentativeTablePoint,
-                text: "Result extends beyond the last quantified representative point within the current policy limit."
+                text: "Result extends beyond the last quantified representative point and should be verified with testing."
             )
         ] + sourceAuthorityNotes(for: sourceAuthorityImpact)
     }
@@ -1572,10 +1552,6 @@ private extension ReciprocityCalculationPolicyEvaluator {
                 correctedExposureSeconds: correctedExposureSeconds,
                 family: family
             )
-        }
-
-        func nextOrderOfMagnitudeLimit(from meteredExposureSeconds: Double) -> Double {
-            pow(10.0, floor(log10(meteredExposureSeconds)) + 1)
         }
     }
 }

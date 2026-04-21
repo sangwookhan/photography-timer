@@ -1,0 +1,78 @@
+# Draft project-scoped Codex configuration proposal for PTimer.
+# This file is intended as repository guidance first. Adjust section names
+# to the exact Codex runtime schema your environment supports before relying
+# on it as executable configuration.
+
+[project]
+name = "PTimer"
+primary_platform = "ios"
+stack = ["swift", "swiftui", "xcode"]
+task_spec_path = "Docs/tasks"
+review_guide_path = "code_review.md"
+agents_guide_path = "AGENTS.md"
+
+[workflow]
+source_of_truth = [
+  "current_user_instruction",
+  "prepared_task_spec",
+  "existing_architecture_and_tests",
+  "jira",
+  "confluence"
+]
+respect_prepared_spec_over_raw_ticket_text = true
+avoid_out_of_scope_changes = true
+require_scope_restatement_before_editing = true
+require_risk_summary_in_final_report = true
+
+[testing]
+default_scheme = "PTimer"
+default_test_plan = "PTimer"
+preferred_destination = "platform=iOS Simulator,name=iPhone 17"
+full_test_command = "xcodebuild -project PTimer.xcodeproj -scheme PTimer -testPlan PTimer -destination 'platform=iOS Simulator,name=iPhone 17' test"
+destination_discovery_command = "xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer"
+notes = [
+  "Choose a currently available iPhone simulator if the preferred destination is unavailable.",
+  "Documentation-only changes normally do not require app test execution."
+]
+
+[guardrails]
+protected_areas = [
+  "exposure calculation behavior",
+  "reciprocity policy and domain rules",
+  "confidence presentation mapping",
+  "timer runtime semantics",
+  "persistence and restore semantics"
+]
+forbid_unrelated_refactors = true
+forbid_guessing_missing_requirements = true
+prefer_small_reviewable_diffs = true
+
+[reporting]
+final_sections = [
+  "summary",
+  "files_changed",
+  "tests_run",
+  "remaining_risks",
+  "review_points"
+]
+
+[skills]
+project_skills_root = ".codex/skills"
+recommended_skills = [
+  "ios-xcode-build",
+  "swift-testing",
+  "ticket-delivery",
+  "code-review"
+]
+
+[skills.ios_xcode_build]
+purpose = "Xcode project, simulator, scheme, and build/test conventions"
+
+[skills.swift_testing]
+purpose = "PTimerTests targeting, regression coverage expectations, and xcodebuild test flows"
+
+[skills.ticket_delivery]
+purpose = "Task-spec execution, scope control, and final implementation reporting"
+
+[skills.code_review]
+purpose = "Spec-based review checklist aligned with code_review.md"

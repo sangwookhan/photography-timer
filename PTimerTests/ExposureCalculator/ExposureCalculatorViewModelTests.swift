@@ -465,7 +465,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXUnsupportedAppearsOnlyBeyondPolicyExtrapolationLimit() throws {
+    func testTriXExtendedPolicyRangeStillShowsExtrapolatedQuantifiedResult() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -477,12 +477,40 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
 
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1024, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Unsupported")
-        XCTAssertEqual(resultState.reciprocityState.tone, .unsupported)
-        XCTAssertEqual(resultState.correctedExposure.kind, .unsupported)
-        XCTAssertNil(resultState.correctedExposure.correctedExposureSeconds)
-        XCTAssertEqual(bindingState.policyResult.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertEqual(bindingState.policyResult.metadata.rangeStatus, .beyondPolicyLimit)
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Extrapolated")
+        XCTAssertEqual(resultState.reciprocityState.tone, .caution)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Low-confidence shooting value")
+        XCTAssertEqual(
+            resultState.reciprocityState.infoText,
+            "Low-confidence result extrapolated from the original representative table rows."
+        )
+        XCTAssertEqual(bindingState.policyResult.metadata.basis, .extrapolatedBeyondTable)
+        XCTAssertEqual(bindingState.policyResult.metadata.rangeStatus, .beyondLastRepresentativePoint)
+        XCTAssertEqual(bindingState.presentation.category, .extrapolated)
+    }
+
+    @MainActor
+    func testTriXVeryLongExposureRemainsExtrapolatedWithoutGenericUpperBoundary() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 10
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 16384, accuracy: 0.0001)
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Extrapolated")
+        XCTAssertEqual(resultState.reciprocityState.tone, .caution)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Low-confidence shooting value")
+        XCTAssertEqual(bindingState.policyResult.metadata.basis, .extrapolatedBeyondTable)
+        XCTAssertEqual(bindingState.policyResult.metadata.rangeStatus, .beyondLastRepresentativePoint)
     }
 
     @MainActor

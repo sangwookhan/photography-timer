@@ -345,22 +345,29 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var filmSelectorEntries: [FilmSelectorEntry] {
-        [FilmSelectorEntry(id: "no-film", title: "No film", film: nil)]
+        [FilmSelectorEntry(id: "no-film", primaryText: "No film", secondaryText: nil, film: nil)]
             + presetFilms.map { film in
                 FilmSelectorEntry(
                     id: film.id,
-                    title: filmSelectorTitle(for: film),
+                    primaryText: film.canonicalStockName,
+                    secondaryText: inferredISOValue(for: film).map { "ISO \($0)" },
                     film: film
                 )
             }
     }
 
-    var filmSelectionDisplayName: String {
+    var filmSelectionDisplayState: FilmSelectionDisplayState {
         guard let selectedPresetFilm else {
-            return "No film"
+            return FilmSelectionDisplayState(
+                primaryText: "No film",
+                secondaryText: nil
+            )
         }
 
-        return filmSelectorTitle(for: selectedPresetFilm)
+        return FilmSelectionDisplayState(
+            primaryText: selectedPresetFilm.canonicalStockName,
+            secondaryText: nil
+        )
     }
 
     var filmReciprocityBindingState: FilmModeReciprocityBindingState? {
@@ -383,14 +390,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    var filmReciprocityBindingSummaryText: String {
-        if filmReciprocityBindingState != nil {
-            return "Reciprocity enabled"
-        }
-
-        return "No film selected"
-    }
-
     var filmModeExposureResultState: FilmModeExposureResultState? {
         guard isFilmWorkflowActive,
               case .success(let result) = calculationResult else {
@@ -411,6 +410,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
             ),
             correctedExposureAction: correctedExposureActionState()
         )
+    }
+
+    var filmModeDetailsDisplayState: FilmModeDetailsDisplayState? {
+        makeFilmModeDetailsDisplayState()
+    }
+
+    var canShowFilmDetails: Bool {
+        filmModeDetailsDisplayState != nil
     }
 
     var filmModePrimaryResultSeconds: TimeInterval? {
@@ -938,6 +945,105 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
+    private func makeFilmModeDetailsDisplayState() -> FilmModeDetailsDisplayState? {
+        guard let bindingState = filmReciprocityBindingState else {
+            return nil
+        }
+
+        let sections = compactMapDetailsSections(for: bindingState)
+        guard !sections.isEmpty else {
+            return nil
+        }
+
+        return FilmModeDetailsDisplayState(
+            title: "Reciprocity Details",
+            sections: sections,
+            showsGraphPlaceholder: true
+        )
+    }
+
+    private func compactMapDetailsSections(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsSectionState] {
+        let profileRows = profileDetailsRows(for: bindingState)
+        let referenceRows = referenceDetailsRows(for: bindingState)
+        let currentStatusRows = currentStatusDetailsRows(for: bindingState)
+        let sourceRows = sourceDetailsRows(for: bindingState.profile)
+
+        return [
+            !profileRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Profile", rows: profileRows)
+                : nil,
+            !referenceRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Reference", rows: referenceRows)
+                : nil,
+            !currentStatusRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Current Status", rows: currentStatusRows)
+                : nil,
+            !sourceRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Sources", rows: sourceRows)
+                : nil
+        ]
+        .compactMap { $0 }
+    }
+
+    private func profileDetailsRows(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsRowState] {
+        let profileText = profileSummaryText(for: bindingState)
+        return profileText.map { [FilmModeDetailsRowState(title: "Profile", value: $0)] } ?? []
+    }
+
+    private func referenceDetailsRows(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsRowState] {
+        if let formulaReference = formulaReferenceRows(for: bindingState), !formulaReference.isEmpty {
+            return formulaReference
+        }
+
+        let tableReference = tableReferenceRows(for: bindingState)
+        if !tableReference.isEmpty {
+            return tableReference
+        }
+
+        return manufacturerNoDataReferenceRows(for: bindingState)
+    }
+
+    private func currentStatusDetailsRows(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsRowState] {
+        [
+            FilmModeDetailsRowState(
+                title: "Current status",
+                value: compactCurrentStatusText(for: bindingState)
+            )
+        ]
+    }
+
+    private func profileSummaryText(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String? {
+        if bindingState.profile.rules.contains(where: {
+            if case .table = $0 { return true }
+            return false
+        }) {
+            return "Reference table"
+        }
+
+        if bindingState.profile.rules.contains(where: {
+            if case .formula = $0 { return true }
+            return false
+        }) {
+            return "Formula profile"
+        }
+
+        if bindingState.presentation.category == .advisoryOnly || bindingState.presentation.category == .unsupported {
+            return "No quantified manufacturer data"
+        }
+
+        return nil
+    }
+
     private func reciprocityStateDisplayState() -> FilmModeReciprocityStateDisplayState {
         guard let bindingState = filmReciprocityBindingState else {
             preconditionFailure("Reciprocity state display requires an active film binding.")
@@ -992,6 +1098,474 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         return trimmedExplanation
+    }
+
+    private func limitationNoteText(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String? {
+        let metadata = bindingState.policyResult.metadata
+
+        switch bindingState.presentation.category {
+        case .advisoryOnly, .unsupported:
+            return normalizedDetailText(reciprocityGuidanceExplanation(for: bindingState.presentation))
+        case .extrapolated:
+            return normalizedDetailText(
+                metadata.notes.first(where: shouldPreferLimitationNote(_:))?.text
+                    ?? bindingState.presentation.defaultExplanation
+            )
+        case .exact, .estimated:
+            if metadata.rangeStatus == .beyondLastRepresentativePoint
+                || metadata.warningLevel == .caution
+                || metadata.warningLevel == .strongWarning {
+                return normalizedDetailText(
+                    metadata.notes.first(where: shouldPreferLimitationNote(_:))?.text
+                        ?? bindingState.presentation.defaultExplanation
+                )
+            }
+
+            return nil
+        }
+    }
+
+    private func profileNoteText(for profile: ReciprocityProfile) -> String? {
+        if let note = normalizedDetailText(profile.notes.first) {
+            return note
+        }
+
+        for rule in profile.rules {
+            if let note = normalizedDetailText(firstNote(in: rule)) {
+                return note
+            }
+        }
+
+        return nil
+    }
+
+    private func shouldPreferLimitationNote(_ note: ReciprocityPolicyNote) -> Bool {
+        switch note.token {
+        case .advisoryContinuationOnly,
+             .explicitManufacturerStopSignal,
+             .beyondOfficialQuantifiedRange,
+             .beyondRepresentativeTablePoint,
+             .unsupportedByPolicy:
+            return true
+        case .none,
+             .estimatedFromRepresentativeRows,
+             .exactManufacturerTablePoint,
+             .thresholdGuidanceOnly,
+             .archivalOfficialSource,
+             .unofficialSecondarySource,
+             .userDefinedSource:
+            return false
+        }
+    }
+
+    private func meteredExposureReferenceText(
+        for row: ReciprocityTableRowReference
+    ) -> String {
+        switch row.meteredExposure {
+        case .exactSeconds(let seconds):
+            return formatDuration(seconds)
+        case .range(let range):
+            let minimum = formatDuration(range.minimumSeconds)
+
+            if let maximumSeconds = range.maximumSeconds {
+                return "\(minimum)-\(formatDuration(maximumSeconds))"
+            }
+
+            return "\(minimum)+"
+        }
+    }
+
+    private func normalizedDetailText(_ text: String?) -> String? {
+        guard let text else {
+            return nil
+        }
+
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func compactCurrentStatusText(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String {
+        let metadata = bindingState.policyResult.metadata
+        let references = metadata.referencedRows ?? []
+
+        switch metadata.basis {
+        case .exactTablePoint:
+            return "Exact reference point"
+        case .interpolatedWithinTable:
+            let bounds = references
+                .filter { $0.role == .lowerBound || $0.role == .upperBound }
+                .map { meteredExposureReferenceText(for: $0) }
+            if bounds.count == 2 {
+                return "Estimated between \(bounds[0]) and \(bounds[1])"
+            }
+            return "Estimated within reference table"
+        case .extrapolatedBeyondTable:
+            if let anchor = references.first(where: { $0.role == .representativeAnchor }) {
+                return "Extrapolated beyond \(meteredExposureReferenceText(for: anchor))"
+            }
+            return "Extrapolated beyond reference table"
+        case .officialThresholdNoCorrection:
+            return "Within no-correction range"
+        case .formulaDerived:
+            return "Derived from formula profile"
+        case .advisoryOnlyBeyondOfficialRange:
+            return "No quantified reciprocity value available"
+        case .unsupportedOutOfPolicyRange:
+            return "Unsupported beyond quantified policy range"
+        }
+    }
+
+    private func tableReferenceRows(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsRowState] {
+        var lines: [[String]] = []
+
+        for rule in bindingState.profile.rules {
+            switch rule {
+            case .threshold(let thresholdRule):
+                lines.append(compactThresholdReferenceColumns(for: thresholdRule))
+            case .table(let tableRule):
+                lines.append(contentsOf: tableRule.entries.compactMap(compactTableEntryReferenceColumns(for:)))
+            case .formula, .advisory:
+                continue
+            }
+        }
+
+        guard !lines.isEmpty else {
+            return []
+        }
+
+        return [
+            FilmModeDetailsRowState(
+                title: "",
+                value: formattedReferenceBlock(from: lines),
+                style: .referenceBlock
+            )
+        ]
+    }
+
+    private func formulaReferenceRows(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsRowState]? {
+        guard let formulaRule = bindingState.profile.rules.first(where: {
+            if case .formula = $0 { return true }
+            return false
+        }),
+        case let .formula(rule) = formulaRule else {
+            return nil
+        }
+
+        return [
+            FilmModeDetailsRowState(
+                title: "",
+                value: userFacingFormulaReferenceText(for: rule.formula),
+                style: .formulaExpression
+            )
+        ]
+    }
+
+    private func userFacingFormulaReferenceText(for formula: ReciprocityFormula) -> String {
+        let formattedExponent = formatCompactNumber(formula.exponent)
+
+        switch formula.kind {
+        case .exponentPower:
+            if let equation = normalizedDetailText(formula.equation),
+               let substitutedEquation = substituteFormulaPlaceholder(
+                in: equation,
+                placeholder: "P",
+                replacement: formattedExponent
+               ) {
+                return substitutedEquation
+            }
+
+            return "Tc = Tm^\(formattedExponent)"
+        }
+    }
+
+    private func substituteFormulaPlaceholder(
+        in equation: String,
+        placeholder: String,
+        replacement: String
+    ) -> String? {
+        let pattern = "\\b" + NSRegularExpression.escapedPattern(for: placeholder) + "\\b"
+
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let range = NSRange(equation.startIndex..., in: equation)
+        guard regex.firstMatch(in: equation, range: range) != nil else {
+            return nil
+        }
+
+        return regex.stringByReplacingMatches(
+            in: equation,
+            range: range,
+            withTemplate: replacement
+        )
+    }
+
+    private func compactThresholdReferenceColumns(
+        for rule: ThresholdReciprocityRule
+    ) -> [String] {
+        let upperBound = rule.noCorrectionRange.maximumSeconds
+        let lowerBound = rule.noCorrectionRange.minimumSeconds
+
+        if lowerBound <= 0, let upperBound {
+            return ["<= \(formatDuration(upperBound))", "No correction"]
+        }
+
+        if let upperBound {
+            return ["\(formatDuration(lowerBound))-\(formatDuration(upperBound))", "No correction"]
+        }
+
+        return [">= \(formatDuration(lowerBound))", "No correction"]
+    }
+
+    private func compactTableEntryReferenceColumns(
+        for entry: ReciprocityTableEntry
+    ) -> [String]? {
+        let meteredText = meteredExposureSelectorText(entry.meteredExposure)
+
+        let exposureText = entry.adjustments.compactMap { adjustment -> String? in
+            guard case let .exposure(exposureAdjustment) = adjustment else {
+                return nil
+            }
+
+            switch exposureAdjustment {
+            case .correctedTime(let mapping):
+                return formatDuration(mapping.correctedSeconds)
+            case .stopDelta(let adjustment):
+                return formattedStopDelta(adjustment.stopDelta)
+            case .multiplier(let adjustment):
+                return "\(formatCompactNumber(adjustment.factor))x"
+            }
+        }.first
+
+        let developmentText = entry.adjustments.compactMap { adjustment -> String? in
+            guard case let .development(development) = adjustment else {
+                return nil
+            }
+
+            return compactDevelopmentReferenceText(from: development.instruction)
+        }.first
+
+        let detailColumns = [exposureText, developmentText].compactMap { $0 }
+        guard !detailColumns.isEmpty else {
+            return nil
+        }
+
+        return [meteredText] + detailColumns
+    }
+
+    private func compactDevelopmentReferenceText(from instruction: String) -> String {
+        let trimmedInstruction = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern = #"^([+-]?\d+%)\s+development$"#
+
+        if let range = trimmedInstruction.range(of: pattern, options: .regularExpression) {
+            let matched = String(trimmedInstruction[range])
+            let percentage = matched.replacingOccurrences(
+                of: pattern,
+                with: "$1",
+                options: .regularExpression
+            )
+            return "Dev \(percentage)"
+        }
+
+        return trimmedInstruction
+    }
+
+    private func formattedReferenceBlock(from lines: [[String]]) -> String {
+        let columnCount = lines.map(\.count).max() ?? 0
+        let spacing = "    "
+        let widths = (0..<max(columnCount - 1, 0)).map { columnIndex in
+            lines
+                .compactMap { $0.indices.contains(columnIndex) ? $0[columnIndex] : nil }
+                .map(\.count)
+                .max() ?? 0
+        }
+
+        return lines.map { columns in
+            columns.enumerated().map { index, column in
+                guard index < widths.count else {
+                    return column
+                }
+
+                let paddingWidth = max(widths[index] - column.count, 0)
+                return column + String(repeating: " ", count: paddingWidth) + spacing
+            }
+            .joined()
+            .trimmingCharacters(in: .whitespaces)
+        }
+        .joined(separator: "\n")
+    }
+
+    private func manufacturerNoDataReferenceRows(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsRowState] {
+        if bindingState.presentation.category == .advisoryOnly || bindingState.presentation.category == .unsupported {
+            return [
+                FilmModeDetailsRowState(
+                    title: "",
+                    value: "Manufacturer does not publish quantified reciprocity data",
+                    style: .referenceBlock
+                )
+            ]
+        }
+
+        return []
+    }
+
+    private func sourceDetailsRows(for profile: ReciprocityProfile) -> [FilmModeDetailsRowState] {
+        let source = profile.source
+
+        let referenceComponents = [
+            normalizedDetailText(source.publisher),
+            normalizedDetailText(source.title),
+            normalizedDetailText(source.sourceVersion).map { "Version \($0)" }
+        ]
+            .compactMap { $0 }
+
+        let referenceRow = referenceComponents.isEmpty
+            ? nil
+            : FilmModeDetailsRowState(
+                title: "Reference",
+                value: referenceComponents.joined(separator: " · ")
+            )
+
+        let citationText = normalizedDetailText(source.citation)
+        let citationURL = citationText.flatMap(parseUsableURL(_:))
+        let citationRow: FilmModeDetailsRowState? = {
+            guard let citationText else {
+                return nil
+            }
+
+            return FilmModeDetailsRowState(
+                title: "Citation",
+                value: citationText,
+                destinationURL: citationURL
+            )
+        }()
+
+        return [referenceRow, citationRow].compactMap { $0 }
+    }
+
+    private func parseUsableURL(_ value: String) -> URL? {
+        guard let url = URL(string: value),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              url.host != nil else {
+            return nil
+        }
+
+        return url
+    }
+
+    private func formatMultiplier(_ value: Double) -> String {
+        formatCompactNumber(value)
+    }
+
+    private func thresholdReferenceText(for rule: ThresholdReciprocityRule) -> String {
+        let upperBound = rule.noCorrectionRange.maximumSeconds
+        let lowerBound = rule.noCorrectionRange.minimumSeconds
+
+        if lowerBound <= 0, let upperBound {
+            return "No correction at \(formatDuration(upperBound)) or less"
+        }
+
+        if let upperBound {
+            return "No correction from \(formatDuration(lowerBound)) to \(formatDuration(upperBound))"
+        }
+
+        return "No correction at \(formatDuration(lowerBound)) or more"
+    }
+
+    private func tableEntryReferenceText(for entry: ReciprocityTableEntry) -> String? {
+        let meteredText = meteredExposureSelectorText(entry.meteredExposure)
+
+        let exposureText = entry.adjustments.compactMap { adjustment -> String? in
+            guard case let .exposure(exposureAdjustment) = adjustment else {
+                return nil
+            }
+
+            switch exposureAdjustment {
+            case .correctedTime(let mapping):
+                return formatDuration(mapping.correctedSeconds)
+            case .stopDelta(let adjustment):
+                return formattedStopDelta(adjustment.stopDelta)
+            case .multiplier(let adjustment):
+                return "\(formatCompactNumber(adjustment.factor))x"
+            }
+        }.first
+
+        let developmentText = entry.adjustments.compactMap { adjustment -> String? in
+            guard case let .development(development) = adjustment else {
+                return nil
+            }
+
+            return development.instruction
+        }.first
+
+        if let exposureText {
+            return developmentText.map { "\(meteredText) -> \(exposureText) (\($0))" }
+                ?? "\(meteredText) -> \(exposureText)"
+        }
+
+        if let developmentText {
+            return "\(meteredText) -> \(developmentText)"
+        }
+
+        return nil
+    }
+
+    private func meteredExposureSelectorText(_ selector: MeteredExposureSelector) -> String {
+        switch selector {
+        case .exactSeconds(let seconds):
+            return formatDuration(seconds)
+        case .range(let range):
+            let lower = formatDuration(range.minimumSeconds)
+            if let maximumSeconds = range.maximumSeconds {
+                return "\(lower)-\(formatDuration(maximumSeconds))"
+            }
+            return "\(lower)+"
+        }
+    }
+
+    private func formattedStopDelta(_ value: Double) -> String {
+        let absolute = abs(value)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 0
+        let magnitude = formatter.string(from: NSNumber(value: absolute)) ?? String(absolute)
+        let sign = value >= 0 ? "+" : "-"
+        return "\(sign)\(magnitude) stop" + (abs(absolute - 1) < ExposureCalculator.stabilityEpsilon ? "" : "s")
+    }
+
+    private func formatCompactNumber(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = value >= 10 ? 1 : 2
+        formatter.minimumFractionDigits = 0
+        formatter.decimalSeparator = "."
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)
+    }
+
+    private func firstNote(in rule: ReciprocityRule) -> String? {
+        switch rule {
+        case .threshold(let threshold):
+            return threshold.notes.first
+        case .formula(let formula):
+            return formula.notes.first
+        case .table(let table):
+            return table.notes.first ?? table.entries.lazy.compactMap(\.notes.first).first
+        case .advisory(let advisory):
+            return advisory.notes.first
+        }
     }
 
     private func restorePersistedTimerMetadata() {

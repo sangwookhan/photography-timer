@@ -14,8 +14,9 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertNil(viewModel.activeCalculatorContext.selectedPresetFilm)
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
-        XCTAssertEqual(viewModel.filmSelectionDisplayName, "No film")
-        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "No film selected")
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
+        XCTAssertNil(viewModel.filmSelectionDisplayState.secondaryText)
+        XCTAssertFalse(viewModel.canShowFilmDetails)
     }
 
     @MainActor
@@ -27,7 +28,9 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, film)
         XCTAssertTrue(viewModel.isFilmWorkflowActive)
-        XCTAssertEqual(viewModel.filmSelectionDisplayName, "Tri-X 400 (ISO 400)")
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Tri-X 400")
+        XCTAssertFalse(viewModel.filmSelectionDisplayState.primaryText.contains("ISO"))
+        XCTAssertNil(viewModel.filmSelectionDisplayState.secondaryText)
     }
 
     @MainActor
@@ -40,7 +43,28 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.selectPresetFilm(replacementFilm)
 
         XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, replacementFilm)
-        XCTAssertEqual(viewModel.filmSelectionDisplayName, "Portra 400 (ISO 400)")
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
+        XCTAssertNil(viewModel.filmSelectionDisplayState.secondaryText)
+    }
+
+    @MainActor
+    func testFilmSelectorEntriesKeepISOAsSecondaryMetadata() {
+        let viewModel = makeViewModel()
+
+        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
+        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
+        XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.primaryText), [
+            "Tri-X 400",
+            "Portra 400",
+            "Velvia 50",
+            "HP5 Plus"
+        ])
+        XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText), [
+            "ISO 400",
+            "ISO 400",
+            "ISO 50",
+            "ISO 400"
+        ])
     }
 
     @MainActor
@@ -53,7 +77,8 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertNil(viewModel.activeCalculatorContext.selectedPresetFilm)
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
-        XCTAssertEqual(viewModel.filmSelectionDisplayName, "No film")
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
+        XCTAssertNil(viewModel.filmSelectionDisplayState.secondaryText)
         XCTAssertNil(viewModel.filmReciprocityBindingState)
         XCTAssertNil(viewModel.filmModeExposureResultState)
     }
@@ -72,7 +97,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.ndStop = 0
 
         XCTAssertNil(viewModel.filmReciprocityBindingState)
-        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "No film selected")
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
 
         let film = try XCTUnwrap(viewModel.availablePresetFilms.last)
@@ -84,7 +108,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(bindingState.profile.source.authority, .official)
         XCTAssertTrue(bindingState.policyResult.hasCalculatedExposureTime)
         XCTAssertTrue(bindingState.presentation.returnsCalculatedExposureTime)
-        XCTAssertEqual(viewModel.filmReciprocityBindingSummaryText, "Reciprocity enabled")
         XCTAssertTrue(viewModel.isFilmWorkflowActive)
     }
 
@@ -117,24 +140,224 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "No correction")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
         XCTAssertEqual(resultState.reciprocityState.tone, .trusted)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
         XCTAssertEqual(resultState.adjustedShutterAction.accessibilityLabel, "Start timer from adjusted shutter")
         XCTAssertEqual(resultState.adjustedShutterAction.accessibilityHint, "Starts a timer using the ND-adjusted shutter value")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
-        XCTAssertEqual(resultState.correctedExposureAction.targetSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposureAction.targetSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityLabel, "Start timer from corrected exposure")
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityHint, "Starts a timer using the film-specific corrected exposure value")
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "Final shooting value")
         XCTAssertTrue(resultState.hasQuantifiedCorrectedExposure)
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
         XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
+    }
+
+    @MainActor
+    func testFilmModeDetailsEntryExistsViaReciprocityRowState() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 10
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        XCTAssertTrue(viewModel.canShowFilmDetails)
+        XCTAssertTrue(viewModel.filmModeExposureResultState?.reciprocityState.showsInfoAffordance == true)
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        XCTAssertEqual(details.title, "Reciprocity Details")
+        XCTAssertEqual(details.sections.map(\.title), [
+            "Profile",
+            "Reference",
+            "Current Status",
+            "Sources"
+        ])
+        XCTAssertTrue(details.showsGraphPlaceholder)
+        XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Profile"])
+    }
+
+    @MainActor
+    func testFilmModeDetailsPrioritizeProfileAndReferenceBeforeSources() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 10
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let statusSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Current Status" }))
+        let sourcesSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Sources" }))
+
+        XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table"])
+        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
+        XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
+        XCTAssertEqual(referenceSection.rows.map(\.value), [
+            """
+            <= 1s    No correction
+            1s       +0 stops
+            10s      +2 stops         Dev -20%
+            100s     +3 stops         Dev -30%
+            """
+        ])
+        XCTAssertEqual(statusSection.rows.map(\.value), ["Estimated between 1s and 10s"])
+        XCTAssertEqual(sourcesSection.rows.map(\.title), ["Reference", "Citation"])
+        XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Basis"))
+        XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Entry"))
+        XCTAssertEqual(sourcesSection.rows.last?.destinationURL, nil)
+    }
+
+    @MainActor
+    func testFilmModeDetailsShowManufacturerNoDataForAdvisoryOnlyResult() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let statusSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Current Status" }))
+        XCTAssertEqual(details.sections.last?.title, "Sources")
+        XCTAssertEqual(profileSection.rows.map(\.value), ["No quantified manufacturer data"])
+        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
+        XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
+        XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-1s    No correction"])
+        XCTAssertEqual(statusSection.rows.map(\.value), ["No quantified reciprocity value available"])
+    }
+
+    @MainActor
+    func testFilmModeDetailsIncludeThresholdInsideReferenceWhenOptionalValuesAreMissing() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            presetFilms: [minimalDetailsFilm()]
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 5
+        viewModel.selectPresetFilm(try XCTUnwrap(viewModel.availablePresetFilms.first))
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let flattenedRows = details.sections.flatMap(\.rows)
+        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
+        XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
+        XCTAssertEqual(referenceSection.rows.map(\.value), ["<= 1s    No correction"])
+        XCTAssertFalse(flattenedRows.contains { $0.value.contains("See reciprocity guidance") })
+        XCTAssertFalse(flattenedRows.map(\.title).contains("Basis"))
+    }
+
+    @MainActor
+    func testFilmModeDetailsStateDoesNotRegressFilmModeTimerActions() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 1
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
+        XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
+        XCTAssertEqual(resultState.reciprocityState.tone, .trusted)
+        XCTAssertEqual(details.sections.first?.title, "Profile")
+        XCTAssertEqual(
+            resultState.adjustedShutterAction.targetSeconds ?? 0,
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            resultState.correctedExposureAction.targetSeconds ?? 0,
+            1,
+            accuracy: 0.0001
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsSourceRowsExposeLinkWhenUsableURLExists() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            presetFilms: [urlBackedDetailsFilm()]
+        )
+
+        viewModel.baseShutter = 2
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(try XCTUnwrap(viewModel.availablePresetFilms.first))
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let sourcesSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Sources" }))
+
+        XCTAssertEqual(
+            sourcesSection.rows.first(where: { $0.title == "Citation" })?.destinationURL,
+            URL(string: "https://example.com/reciprocity")
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsShowFormulaInReferenceForFormulaProfile() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
+
+        viewModel.baseShutter = 8
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let statusSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Current Status" }))
+
+        XCTAssertEqual(profileSection.rows.map(\.value), ["Formula profile"])
+        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
+        XCTAssertEqual(referenceSection.rows.map(\.style), [.formulaExpression])
+        XCTAssertEqual(referenceSection.rows.map(\.value), ["Tc = Tm^1.31"])
+        XCTAssertFalse(referenceSection.rows.contains { $0.value == "Tc = Tm^P" })
+        XCTAssertEqual(statusSection.rows.map(\.value), ["Derived from formula profile"])
+    }
+
+    @MainActor
+    func testFilmModeDetailsShowExponentFallbackWhenFormulaEquationIsUnavailable() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            presetFilms: [fallbackFormulaDetailsFilm()]
+        )
+
+        viewModel.baseShutter = 8
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(try XCTUnwrap(viewModel.availablePresetFilms.first))
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+
+        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
+        XCTAssertEqual(referenceSection.rows.map(\.style), [.formulaExpression])
+        XCTAssertEqual(referenceSection.rows.map(\.value), ["Tc = Tm^1.31"])
     }
 
     @MainActor
@@ -143,7 +366,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
         viewModel.selectPresetFilm(film)
 
-        viewModel.baseShutter = 10
+        viewModel.baseShutter = 1
         viewModel.ndStop = 0
         let exactState = try XCTUnwrap(viewModel.filmModeExposureResultState)
 
@@ -192,7 +415,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "No correction")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
@@ -263,6 +486,28 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testHP5PlusLongAdjustedExposureRemainsFormulaDerivedInsteadOfUnsupported() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
+
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 18
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 8_192, accuracy: 0.0001)
+        XCTAssertEqual(bindingState.policyResult.metadata.basis, .formulaDerived)
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Calculated")
+        XCTAssertEqual(resultState.reciprocityState.tone, .measured)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
+        XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
+        XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
+    }
+
+    @MainActor
     func testFilmModeAdvisoryOnlyResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
@@ -287,7 +532,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             "Timer unavailable because this corrected result is non-quantified"
         )
         XCTAssertEqual(resultState.correctedExposure.primaryText, "No quantified correction")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Longer exposures: test under your conditions.")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Only advisory continuation is available for this metered exposure.")
         XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
@@ -350,11 +595,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "Tri-X 400 - 2s")
+        XCTAssertEqual(timer.duration, 1, accuracy: 0.0001)
+        XCTAssertEqual(timer.name, "Tri-X 400 - 1s")
         XCTAssertEqual(
             timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2s"
+            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 1s"
         )
     }
 
@@ -514,15 +759,17 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     func testFilmSelectorEntriesKeepNoFilmFirstAndShowISOWhenAvailable() {
         let viewModel = makeViewModel()
 
+        XCTAssertEqual(viewModel.filmSelectorEntries.first?.id, "no-film")
+        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
+        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
+
         XCTAssertEqual(
-            viewModel.filmSelectorEntries.map(\.title),
-            [
-                "No film",
-                "Tri-X 400 (ISO 400)",
-                "Portra 400 (ISO 400)",
-                "Velvia 50 (ISO 50)",
-                "HP5 Plus (ISO 400)"
-            ]
+            viewModel.filmSelectorEntries.dropFirst().map(\.primaryText),
+            ["Tri-X 400", "Portra 400", "Velvia 50", "HP5 Plus"]
+        )
+        XCTAssertEqual(
+            viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText),
+            ["ISO 400", "ISO 400", "ISO 50", "ISO 400"]
         )
     }
 
@@ -2279,6 +2526,113 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 tickInterval: 60,
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
+        )
+    }
+
+    private func minimalDetailsFilm() -> FilmIdentity {
+        FilmIdentity(
+            id: "minimal-details-film",
+            kind: .preset,
+            canonicalStockName: "Minimal 100",
+            manufacturer: "Minimal",
+            brandLabel: nil,
+            aliases: [],
+            productionStatus: .current,
+            profiles: [
+                ReciprocityProfile(
+                    id: "minimal-threshold-profile",
+                    name: "Threshold only",
+                    source: ReciprocitySourceProvenance(
+                        kind: .manufacturerPublished,
+                        authority: .official,
+                        confidence: .high,
+                        publisher: "Minimal"
+                    ),
+                    rules: [
+                        .threshold(
+                            ThresholdReciprocityRule(
+                                noCorrectionRange: ReciprocityTimeRange(
+                                    minimumSeconds: 0,
+                                    maximumSeconds: 1
+                                )
+                            )
+                        )
+                    ]
+                )
+            ],
+            userMetadata: nil
+        )
+    }
+
+    private func urlBackedDetailsFilm() -> FilmIdentity {
+        FilmIdentity(
+            id: "url-details-film",
+            kind: .preset,
+            canonicalStockName: "Linked 100",
+            manufacturer: "Linked",
+            brandLabel: nil,
+            aliases: [],
+            productionStatus: .current,
+            profiles: [
+                ReciprocityProfile(
+                    id: "url-threshold-profile",
+                    name: "Linked threshold",
+                    source: ReciprocitySourceProvenance(
+                        kind: .manufacturerPublished,
+                        authority: .official,
+                        confidence: .high,
+                        publisher: "Linked",
+                        title: "Official reciprocity sheet",
+                        citation: "https://example.com/reciprocity"
+                    ),
+                    rules: [
+                        .threshold(
+                            ThresholdReciprocityRule(
+                                noCorrectionRange: ReciprocityTimeRange(
+                                    minimumSeconds: 0,
+                                    maximumSeconds: 4
+                                )
+                            )
+                        )
+                    ]
+                )
+            ],
+            userMetadata: nil
+        )
+    }
+
+    private func fallbackFormulaDetailsFilm() -> FilmIdentity {
+        FilmIdentity(
+            id: "fallback-formula-film",
+            kind: .preset,
+            canonicalStockName: "Fallback Formula 400",
+            manufacturer: "Fallback",
+            brandLabel: nil,
+            aliases: [],
+            productionStatus: .current,
+            profiles: [
+                ReciprocityProfile(
+                    id: "fallback-formula-profile",
+                    name: "Fallback formula",
+                    source: ReciprocitySourceProvenance(
+                        kind: .manufacturerPublished,
+                        authority: .official,
+                        confidence: .high,
+                        publisher: "Fallback"
+                    ),
+                    rules: [
+                        .formula(
+                            FormulaReciprocityRule(
+                                formula: ReciprocityFormula(
+                                    exponent: 1.31,
+                                    equation: nil
+                                )
+                            )
+                        )
+                    ]
+                )
+            ],
+            userMetadata: nil
         )
     }
 }

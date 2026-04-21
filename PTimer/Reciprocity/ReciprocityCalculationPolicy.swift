@@ -401,6 +401,19 @@ private extension ReciprocityCalculationPolicyResultMetadata {
         )
     }
 
+    static func formula(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            basis: .formulaDerived,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .withinStatedRange,
+            warningLevel: warningLevel(for: .formulaDerived, sourceAuthorityImpact: sourceAuthorityImpact),
+            notes: notes
+        )
+    }
+
     private static func warningLevel(
         for basis: ReciprocityCalculationBasis,
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
@@ -556,6 +569,22 @@ private extension ReciprocityCalculationPolicyResult {
             )
         )
     }
+
+    static func formula(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            metadata: .formula(
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: notes
+            )
+        )
+    }
 }
 
 struct ReciprocityCalculationPolicyEvaluator {
@@ -585,6 +614,13 @@ struct ReciprocityCalculationPolicyEvaluator {
                 }
 
                 return thresholdRule
+            },
+            formulaRules: profile.rules.compactMap {
+                guard case let .formula(formulaRule) = $0 else {
+                    return nil
+                }
+
+                return formulaRule
             },
             advisoryRules: profile.rules.compactMap {
                 guard case let .advisory(advisoryRule) = $0 else {
@@ -623,6 +659,14 @@ struct ReciprocityCalculationPolicyEvaluator {
             ) {
                 return result
             }
+        }
+
+        if let result = evaluateFormulaResult(
+            selection: selector,
+            meteredExposureSeconds: meteredExposureSeconds,
+            assembler: assembler
+        ) {
+            return result
         }
 
         if let advisoryRule = selector.advisoryRule(for: meteredExposureSeconds) {
@@ -759,6 +803,36 @@ struct ReciprocityCalculationPolicyEvaluator {
             ),
             assembler: assembler,
             estimator: estimator
+        )
+    }
+
+    private func evaluateFormulaResult(
+        selection: Selection,
+        meteredExposureSeconds: Double,
+        assembler: ResultAssembler
+    ) -> ReciprocityCalculationPolicyResult? {
+        guard let formulaRule = selection.formulaRule(for: meteredExposureSeconds) else {
+            if let boundedFormulaRule = selection.firstFormulaRuleExceeded(by: meteredExposureSeconds) {
+                return assembler.unsupportedFormulaBoundary(
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    formulaRule: boundedFormulaRule
+                )
+            }
+
+            return nil
+        }
+
+        guard let correctedExposureSeconds = formulaCorrectedExposureSeconds(
+            for: formulaRule.formula,
+            meteredExposureSeconds: meteredExposureSeconds
+        ) else {
+            return nil
+        }
+
+        return assembler.formula(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds,
+            formulaRule: formulaRule
         )
     }
 
@@ -903,6 +977,22 @@ struct ReciprocityCalculationPolicyEvaluator {
         return note.text
     }
 
+    private func formulaCorrectedExposureSeconds(
+        for formula: ReciprocityFormula,
+        meteredExposureSeconds: Double
+    ) -> Double? {
+        guard meteredExposureSeconds >= 0 else {
+            return nil
+        }
+
+        switch formula.kind {
+        case .exponentPower:
+            let coefficient = formula.coefficient ?? 1
+            let offsetSeconds = formula.offsetSeconds ?? 0
+            return (coefficient * pow(meteredExposureSeconds, formula.exponent)) + offsetSeconds
+        }
+    }
+
     private func exactMatchNotes(
         for sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
     ) -> [ReciprocityPolicyNote] {
@@ -1009,6 +1099,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
     struct Selection {
         let tableSelectors: [TableSelector]
         let thresholdRules: [ThresholdReciprocityRule]
+        let formulaRules: [FormulaReciprocityRule]
         let advisoryRules: [AdvisoryReciprocityRule]
 
         func thresholdRule(for meteredExposureSeconds: Double) -> ThresholdReciprocityRule? {
@@ -1018,6 +1109,23 @@ private extension ReciprocityCalculationPolicyEvaluator {
         func advisoryRule(for meteredExposureSeconds: Double) -> AdvisoryReciprocityRule? {
             advisoryRules.first {
                 $0.appliesWhenMetered?.contains(meteredExposureSeconds) ?? true
+            }
+        }
+
+        func formulaRule(for meteredExposureSeconds: Double) -> FormulaReciprocityRule? {
+            formulaRules.first {
+                $0.meteredRange?.contains(meteredExposureSeconds) ?? true
+            }
+        }
+
+        func firstFormulaRuleExceeded(by meteredExposureSeconds: Double) -> FormulaReciprocityRule? {
+            formulaRules.first {
+                guard let range = $0.meteredRange,
+                      let maximumSeconds = range.maximumSeconds else {
+                    return false
+                }
+
+                return meteredExposureSeconds > maximumSeconds
             }
         }
     }
@@ -1146,6 +1254,58 @@ private extension ReciprocityCalculationPolicyEvaluator {
                 ],
                 referencedRows: [stopSignalBoundary.rowReference(role: .stopSignal)]
             )
+        }
+
+        func formula(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            formulaRule: FormulaReciprocityRule
+        ) -> ReciprocityCalculationPolicyResult {
+            let noteText = formulaRule.notes.first
+                ?? "Calculated from a reciprocity formula profile."
+
+            return .formula(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: [
+                    ReciprocityPolicyNote(text: noteText)
+                ] + sourceAuthorityNotes
+            )
+        }
+
+        func unsupportedFormulaBoundary(
+            meteredExposureSeconds: Double,
+            formulaRule: FormulaReciprocityRule
+        ) -> ReciprocityCalculationPolicyResult {
+            let boundaryText: String
+            if let maximumSeconds = formulaRule.meteredRange?.maximumSeconds {
+                boundaryText = "Formula guidance is defined only through \(formatBoundarySeconds(maximumSeconds))."
+            } else {
+                boundaryText = "Formula guidance does not cover this metered exposure."
+            }
+
+            return unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .beyondOfficialQuantifiedRange,
+                        text: boundaryText
+                    ),
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "This metered exposure is beyond the explicit formula policy boundary."
+                    )
+                ]
+            )
+        }
+
+        private func formatBoundarySeconds(_ value: Double) -> String {
+            if abs(value.rounded() - value) < 0.000_001 {
+                return "\(Int(value.rounded())) sec"
+            }
+
+            return String(format: "%.3f sec", value)
         }
 
         private var sourceAuthorityNotes: [ReciprocityPolicyNote] {

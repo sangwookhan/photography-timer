@@ -24,16 +24,16 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(try result.metadata.referencedRows?.map(exactSeconds), [10])
     }
 
-    func testTriXBelowOneSecondUsesThresholdNoCorrection() {
+    func testTriXBelowOneSecondRemainsUnsupportedWithoutThresholdGuidance() {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.triXProfile(),
             meteredExposureSeconds: 0.5
         )
 
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertEqual(result.metadata.rangeStatus, .beyondPolicyLimit)
         XCTAssertNil(result.metadata.referencedRows)
     }
 
@@ -43,9 +43,9 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
             meteredExposureSeconds: 1
         )
 
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
         XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertNotEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
     }
 
     func testTriXInterpolationUsesLogLogEvaluatorMathAndOriginalBounds() throws {
@@ -64,7 +64,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
             logLogEstimate(
                 meteredExposureSeconds: 5,
                 lowerMeteredSeconds: 1,
-                lowerCorrectedSeconds: 1,
+                lowerCorrectedSeconds: 2,
                 upperMeteredSeconds: 10,
                 upperCorrectedSeconds: 50
             ),
@@ -247,6 +247,51 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(
             result.metadata.notes.map(\.token),
             [.advisoryContinuationOnly, .beyondOfficialQuantifiedRange]
+        )
+    }
+
+    func testHP5FormulaProfileRemainsQuantifiedAtLongMeteredExposureWithoutExplicitUpperBoundary() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            meteredExposureSeconds: 8_192
+        )
+
+        XCTAssertEqual(result.metadata.basis, .formulaDerived)
+        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(8_192, 1.31), accuracy: 0.0001)
+        XCTAssertNotEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+    }
+
+    func testFormulaProfileBecomesUnsupportedOnlyWhenExplicitUpperBoundaryExists() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityProfile(
+                id: "bounded-formula-profile",
+                name: "Bounded formula",
+                source: ReciprocitySourceProvenance(
+                    kind: .manufacturerPublished,
+                    authority: .official,
+                    confidence: .high,
+                    publisher: "Test Publisher"
+                ),
+                rules: [
+                    .formula(
+                        FormulaReciprocityRule(
+                            meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 600),
+                            formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P"),
+                            notes: ["Exponent P = 1.31."]
+                        )
+                    )
+                ]
+            ),
+            meteredExposureSeconds: 601
+        )
+
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(
+            result.metadata.notes.map(\.token),
+            [.beyondOfficialQuantifiedRange, .unsupportedByPolicy]
         )
     }
 
@@ -750,6 +795,40 @@ enum ReciprocityPolicyScenarioFactory {
                                 ]
                             )
                         ]
+                    )
+                )
+            ]
+        )
+    }
+
+    static func hp5FormulaProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "ilford-hp5-plus-official-formula",
+            name: "Official formula",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerPublished,
+                authority: .official,
+                confidence: .high,
+                publisher: "Ilford Photo",
+                title: "Reciprocity characteristics",
+                citation: "Technical information sheet",
+                sourceVersion: "2026"
+            ),
+            rules: [
+                .threshold(
+                    ThresholdReciprocityRule(
+                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1),
+                        notes: ["No compensation required at 1 second or less."]
+                    )
+                ),
+                .formula(
+                    FormulaReciprocityRule(
+                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001),
+                        formula: ReciprocityFormula(
+                            exponent: 1.31,
+                            equation: "Tc = Tm^P"
+                        ),
+                        notes: ["Exponent P = 1.31."]
                     )
                 )
             ]

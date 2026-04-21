@@ -132,46 +132,80 @@ private struct ExposureWorkspaceMainContent: View {
     let style: ExposureWorkspaceMainLayoutStyle
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let availableHeight: CGFloat
+    @State private var presentedFilmDetails: FilmModeDetailsDisplayState?
+    @State private var isFilmSelectorPresented = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HeaderView(
-                selectorEntries: viewModel.filmSelectorEntries,
-                filmSelectionDisplayName: viewModel.filmSelectionDisplayName,
-                filmReciprocityBindingSummaryText: viewModel.filmReciprocityBindingSummaryText,
-                onSelectPresetFilm: viewModel.selectPresetFilm,
-                onClearPresetFilm: viewModel.clearSelectedPresetFilm,
-                style: style
-            )
-            VariableSectionView(
-                baseShutter: $viewModel.baseShutter,
-                ndStop: $viewModel.ndStop,
-                shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
-                formatShutter: viewModel.formatShutter,
-                onContinuousBaseShutterChange: viewModel.updateLiveBaseShutter,
-                onContinuousNDStopChange: viewModel.updateLiveNDStop,
-                onBaseShutterInteractionEnd: viewModel.clearLiveBaseShutterPreview,
-                onNDStopInteractionEnd: viewModel.clearLiveNDStopPreview,
-                style: style
-            )
+        ZStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 0) {
+                HeaderView(
+                    selectorEntries: viewModel.filmSelectorEntries,
+                    selectedFilmID: viewModel.selectedPresetFilm?.id,
+                    filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
+                    onToggleSelector: { isFilmSelectorPresented.toggle() },
+                    style: style
+                )
+                VariableSectionView(
+                    baseShutter: $viewModel.baseShutter,
+                    ndStop: $viewModel.ndStop,
+                    shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
+                    formatShutter: viewModel.formatShutter,
+                    onContinuousBaseShutterChange: viewModel.updateLiveBaseShutter,
+                    onContinuousNDStopChange: viewModel.updateLiveNDStop,
+                    onBaseShutterInteractionEnd: viewModel.clearLiveBaseShutterPreview,
+                    onNDStopInteractionEnd: viewModel.clearLiveNDStopPreview,
+                    style: style
+                )
 
-            ResultSectionView(
-                isFilmWorkflowActive: viewModel.isFilmWorkflowActive,
-                calculationResult: viewModel.calculationResult,
-                filmModeExposureResultState: viewModel.filmModeExposureResultState,
-                formatTimeDisplay: viewModel.formatTimeDisplay,
-                canStartTimer: viewModel.canStartTimer,
-                onStartTimer: viewModel.startTimer,
-                onStartFilmAdjustedShutterTimer: viewModel.startFilmAdjustedShutterTimer,
-                onStartFilmCorrectedExposureTimer: viewModel.startFilmCorrectedExposureTimer,
-                style: style
-            )
+                ResultSectionView(
+                    isFilmWorkflowActive: viewModel.isFilmWorkflowActive,
+                    calculationResult: viewModel.calculationResult,
+                    filmModeExposureResultState: viewModel.filmModeExposureResultState,
+                    canShowFilmDetails: viewModel.canShowFilmDetails,
+                    formatTimeDisplay: viewModel.formatTimeDisplay,
+                    canStartTimer: viewModel.canStartTimer,
+                    onStartTimer: viewModel.startTimer,
+                    onStartFilmAdjustedShutterTimer: viewModel.startFilmAdjustedShutterTimer,
+                    onStartFilmCorrectedExposureTimer: viewModel.startFilmCorrectedExposureTimer,
+                    onShowFilmDetails: { presentedFilmDetails = viewModel.filmModeDetailsDisplayState },
+                    style: style
+                )
 
-            Spacer(minLength: style.resultFlowSpacerMinLength)
+                Spacer(minLength: style.resultFlowSpacerMinLength)
 
-            Color.clear
-                .frame(height: style.workspaceSeparation)
-                .accessibilityHidden(true)
+                Color.clear
+                    .frame(height: style.workspaceSeparation)
+                    .accessibilityHidden(true)
+            }
+
+            if isFilmSelectorPresented {
+                Button {
+                    isFilmSelectorPresented = false
+                } label: {
+                    Color.black.opacity(0.06)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityIdentifier("film-selector-overlay-dismiss")
+
+                FilmSelectorOverlay(
+                    entries: viewModel.filmSelectorEntries,
+                    selectedFilmID: viewModel.selectedPresetFilm?.id,
+                    onSelectEntry: { entry in
+                        if let film = entry.film {
+                            viewModel.selectPresetFilm(film)
+                        } else {
+                            viewModel.clearSelectedPresetFilm()
+                        }
+
+                        isFilmSelectorPresented = false
+                    },
+                    style: style
+                )
+                .padding(.top, selectorOverlayTopPadding)
+                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                .zIndex(1)
+            }
         }
         .padding(.horizontal, style.horizontalPadding)
         .padding(.top, style.topPadding)
@@ -183,6 +217,23 @@ private struct ExposureWorkspaceMainContent: View {
             alignment: .top
         )
         .accessibilityIdentifier("exposure-main-content")
+        .sheet(item: $presentedFilmDetails) { details in
+            FilmModeDetailsSheet(details: details)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
+    }
+
+    private var selectorOverlayTopPadding: CGFloat {
+        switch style {
+        case .regular:
+            return 112
+        case .compact:
+            return 98
+        case .dense:
+            return 86
+        }
     }
 }
 
@@ -625,10 +676,9 @@ private struct PickerColumnLayout {
 
 private struct HeaderView: View {
     let selectorEntries: [FilmSelectorEntry]
-    let filmSelectionDisplayName: String
-    let filmReciprocityBindingSummaryText: String
-    let onSelectPresetFilm: (FilmIdentity) -> Void
-    let onClearPresetFilm: () -> Void
+    let selectedFilmID: String?
+    let filmSelectionDisplayState: FilmSelectionDisplayState
+    let onToggleSelector: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -638,10 +688,9 @@ private struct HeaderView: View {
 
             FilmSelectionRow(
                 selectorEntries: selectorEntries,
-                filmSelectionDisplayName: filmSelectionDisplayName,
-                reciprocityBindingSummaryText: filmReciprocityBindingSummaryText,
-                onSelectPresetFilm: onSelectPresetFilm,
-                onClearPresetFilm: onClearPresetFilm,
+                selectedFilmID: selectedFilmID,
+                displayState: filmSelectionDisplayState,
+                onToggleSelector: onToggleSelector,
                 style: style
             )
         }
@@ -651,10 +700,9 @@ private struct HeaderView: View {
 
 private struct FilmSelectionRow: View {
     let selectorEntries: [FilmSelectorEntry]
-    let filmSelectionDisplayName: String
-    let reciprocityBindingSummaryText: String
-    let onSelectPresetFilm: (FilmIdentity) -> Void
-    let onClearPresetFilm: () -> Void
+    let selectedFilmID: String?
+    let displayState: FilmSelectionDisplayState
+    let onToggleSelector: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -662,31 +710,15 @@ private struct FilmSelectionRow: View {
             Text("Film")
                 .font(.subheadline.weight(.semibold))
 
-            Menu {
-                ForEach(selectorEntries) { entry in
-                    Button(entry.title) {
-                        if let film = entry.film {
-                            onSelectPresetFilm(film)
-                        } else {
-                            onClearPresetFilm()
-                        }
-                    }
-                }
-            } label: {
+            Button(action: onToggleSelector) {
                 HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(filmSelectionDisplayName)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .accessibilityIdentifier("film-row-selection")
-
-                        Text(reciprocityBindingSummaryText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .accessibilityIdentifier("film-row-reciprocity-state")
-                    }
+                    Text(displayState.primaryText)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("film-row-selection")
 
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.footnote.weight(.semibold))
@@ -698,8 +730,106 @@ private struct FilmSelectionRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Film row")
+            .accessibilityValue(selectedFilmAccessibilityValue)
             .accessibilityHint("Opens preset film selection")
             .accessibilityIdentifier("film-row-button")
+        }
+    }
+
+    private var selectedFilmAccessibilityValue: String {
+        selectorEntries.first(where: { $0.id == selectedFilmID })?.primaryText
+            ?? displayState.primaryText
+    }
+}
+
+private struct FilmSelectorOverlay: View {
+    let entries: [FilmSelectorEntry]
+    let selectedFilmID: String?
+    let onSelectEntry: (FilmSelectorEntry) -> Void
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                Button {
+                    onSelectEntry(entry)
+                } label: {
+                    HStack(spacing: 12) {
+                        Text(entry.primaryText)
+                            .font(.body.weight(isSelected(entry) ? .semibold : .regular))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .layoutPriority(0)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if let secondaryText = entry.secondaryText {
+                            Text(secondaryText)
+                                .font(.caption)
+                                .foregroundStyle(Color.primary.opacity(0.68))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .layoutPriority(1)
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(height: rowHeight)
+                    .background(rowBackground(for: entry))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("film-selector-entry-\(entry.id)")
+
+                if index < entries.count - 1 {
+                    Color.clear.frame(height: 6)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: overlayWidth)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 18, y: 10)
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .accessibilityIdentifier("film-selector-overlay")
+    }
+
+    private var overlayWidth: CGFloat {
+        switch style {
+        case .regular:
+            return 440
+        case .compact:
+            return 404
+        case .dense:
+            return 372
+        }
+    }
+
+    private var rowHeight: CGFloat {
+        switch style {
+        case .regular:
+            return 56
+        case .compact:
+            return 52
+        case .dense:
+            return 48
+        }
+    }
+
+    private func isSelected(_ entry: FilmSelectorEntry) -> Bool {
+        entry.id == selectedFilmID
+    }
+
+    @ViewBuilder
+    private func rowBackground(for entry: FilmSelectorEntry) -> some View {
+        if isSelected(entry) {
+            Color.primary.opacity(0.06)
+        } else {
+            Color.clear
         }
     }
 }
@@ -745,11 +875,13 @@ private struct ResultSectionView: View {
     let isFilmWorkflowActive: Bool
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let filmModeExposureResultState: FilmModeExposureResultState?
+    let canShowFilmDetails: Bool
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let canStartTimer: Bool
     let onStartTimer: () -> Void
     let onStartFilmAdjustedShutterTimer: () -> Void
     let onStartFilmCorrectedExposureTimer: () -> Void
+    let onShowFilmDetails: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -759,9 +891,11 @@ private struct ResultSectionView: View {
                    let filmModeExposureResultState {
                     FilmModeResultHierarchyView(
                         resultState: filmModeExposureResultState,
+                        canShowDetails: canShowFilmDetails,
                         formatTimeDisplay: formatTimeDisplay,
                         onStartAdjustedShutterTimer: onStartFilmAdjustedShutterTimer,
                         onStartCorrectedExposureTimer: onStartFilmCorrectedExposureTimer,
+                        onShowDetails: onShowFilmDetails,
                         style: style
                     )
                 } else if case .success(let result) = calculationResult {
@@ -855,9 +989,11 @@ private struct DigitalModeResultView: View {
 
 private struct FilmModeResultHierarchyView: View {
     let resultState: FilmModeExposureResultState
+    let canShowDetails: Bool
     let formatTimeDisplay: (TimeInterval) -> TimeDisplay
     let onStartAdjustedShutterTimer: () -> Void
     let onStartCorrectedExposureTimer: () -> Void
+    let onShowDetails: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -877,6 +1013,8 @@ private struct FilmModeResultHierarchyView: View {
 
             FilmModeReciprocityStateRow(
                 reciprocityState: resultState.reciprocityState,
+                showsDetailsEntry: canShowDetails,
+                onShowDetails: onShowDetails,
                 style: style
             )
 
@@ -888,6 +1026,7 @@ private struct FilmModeResultHierarchyView: View {
                 onStartTimer: onStartCorrectedExposureTimer,
                 style: style
             )
+
         }
     }
 }
@@ -934,6 +1073,8 @@ private struct FilmModeResultRow: View {
 
 private struct FilmModeReciprocityStateRow: View {
     let reciprocityState: FilmModeReciprocityStateDisplayState
+    let showsDetailsEntry: Bool
+    let onShowDetails: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -944,23 +1085,52 @@ private struct FilmModeReciprocityStateRow: View {
 
             Spacer(minLength: 12)
 
-            HStack(spacing: 8) {
-                Text(reciprocityState.badgeText)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(badgeForegroundColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(badgeBackgroundColor)
-                    .clipShape(Capsule())
-                    .accessibilityIdentifier("film-mode-reciprocity-badge")
+            if showsDetailsEntry {
+                Button(action: onShowDetails) {
+                    HStack(spacing: 8) {
+                        Text(reciprocityState.badgeText)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(badgeForegroundColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(badgeBackgroundColor)
+                            .clipShape(Capsule())
+                            .accessibilityIdentifier("film-mode-reciprocity-badge")
 
-                if reciprocityState.showsInfoAffordance {
-                    Image(systemName: "info.circle")
+                        if reciprocityState.showsInfoAffordance {
+                            Image(systemName: "info.circle")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("film-mode-reciprocity-info")
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("film-mode-reciprocity-details-button")
+                .accessibilityLabel("Open reciprocity details")
+                .accessibilityValue(reciprocityState.badgeText)
+                .accessibilityHint(reciprocityState.infoText)
+            } else {
+                HStack(spacing: 8) {
+                    Text(reciprocityState.badgeText)
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Reciprocity information")
-                        .accessibilityHint(reciprocityState.infoText)
-                        .accessibilityIdentifier("film-mode-reciprocity-info")
+                        .foregroundStyle(badgeForegroundColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(badgeBackgroundColor)
+                        .clipShape(Capsule())
+                        .accessibilityIdentifier("film-mode-reciprocity-badge")
+
+                    if reciprocityState.showsInfoAffordance {
+                        Image(systemName: "info.circle")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("film-mode-reciprocity-info")
+                    }
                 }
             }
         }
@@ -1033,6 +1203,143 @@ private struct FilmModeCorrectedExposureRow: View {
                 accessibilityLabel: actionState.accessibilityLabel,
                 accessibilityHint: actionState.accessibilityHint
             )
+        }
+    }
+}
+
+private struct FilmModeDetailsSheet: View {
+    let details: FilmModeDetailsDisplayState
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(details.sections) { section in
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(section.title)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(section.rows) { row in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        if !row.title.isEmpty {
+                                            Text(row.title)
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                        }
+
+                                        if let destinationURL = row.destinationURL {
+                                            Link(destination: destinationURL) {
+                                                detailRowText(for: row)
+                                                    .foregroundStyle(.tint)
+                                                    .fixedSize(horizontal: false, vertical: true)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                            }
+                                        } else {
+                                            detailRowText(for: row)
+                                                .foregroundStyle(.primary.opacity(0.9))
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 2)
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityLabel(row.title.isEmpty ? section.title : row.title)
+                                    .accessibilityValue(row.value)
+
+                                    if row.id != section.rows.last?.id {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
+
+                        if details.showsGraphPlaceholder && section.title == "Reference" {
+                            FilmModeDetailsGraphPlaceholder()
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("film-mode-details-sheet-content")
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(details.title)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func detailRowFont(for row: FilmModeDetailsRowState) -> Font {
+        switch row.style {
+        case .standard:
+            return .callout
+        case .referenceBlock:
+            return .system(.callout, design: .monospaced)
+        case .formulaExpression:
+            return .callout.weight(.medium)
+        }
+    }
+
+    @ViewBuilder
+    private func detailRowText(for row: FilmModeDetailsRowState) -> some View {
+        switch row.style {
+        case .formulaExpression:
+            formulaExpressionText(row.value)
+        case .standard, .referenceBlock:
+            Text(row.value)
+                .font(detailRowFont(for: row))
+        }
+    }
+
+    private func formulaExpressionText(_ value: String) -> Text {
+        guard
+            let caretIndex = value.firstIndex(of: "^"),
+            value.index(after: caretIndex) < value.endIndex
+        else {
+            return Text(value)
+                .font(.callout.weight(.medium))
+        }
+
+        let base = String(value[..<caretIndex])
+        let exponent = String(value[value.index(after: caretIndex)...])
+
+        return Text(base)
+            .font(.callout.weight(.medium))
+        + Text(exponent)
+            .font(.caption.weight(.semibold))
+            .baselineOffset(7)
+    }
+}
+
+private struct FilmModeDetailsGraphPlaceholder: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Graph")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+                .overlay {
+                    VStack(spacing: 6) {
+                        Image(systemName: "chart.xyaxis.line")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text("Graph area reserved for PTIMER-100")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(16)
+                }
+                .frame(height: 132)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Graph placeholder")
+                .accessibilityValue("Reserved for PTIMER-100")
         }
     }
 }

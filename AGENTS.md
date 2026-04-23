@@ -2,15 +2,48 @@
 
 ## Purpose
 
-This repository uses a three-step execution workflow:
+This repository uses a three-role execution workflow:
 
-1. ChatGPT prepares the execution-ready task spec
-2. Codex app coordinates implementation and review flow
-3. Codex CLI implements, verifies, and reports results
+1. ChatGPT acts as product manager, app designer, and senior architect
+2. Claude Code acts as working architect and development manager, and may
+   implement when appropriate
+3. Codex CLI acts as the primary developer and implements, verifies, and
+   reports results
 
-For ticket work, the prepared task spec is the primary source of truth.
-Raw Jira and Confluence pages are supporting references unless the user
-explicitly says otherwise.
+For ticket work, the execution-ready task spec approved by Claude Code is the
+primary implementation source of truth. That task spec should reflect the
+product intent, UX direction, and higher-level architectural guidance prepared
+by ChatGPT. Raw Jira and Confluence pages are supporting references unless the
+user explicitly says otherwise.
+
+---
+
+## Role Responsibilities
+
+### ChatGPT
+
+- Defines product intent, UX direction, and senior architectural constraints
+- Clarifies goals, non-goals, and acceptance expectations
+- Provides high-level tradeoff decisions when product or design intent matters
+
+### Claude Code
+
+- Converts ChatGPT guidance into execution-ready implementation tasks
+- Defines implementation scope, sequencing, review checkpoints, and protected
+  areas for the current task
+- Acts as the escalation point for implementation ambiguity, delivery planning,
+  and task management
+- May implement directly when appropriate, but remains responsible for
+  architectural coordination
+
+### Codex CLI
+
+- Treats Claude Code's execution-ready task spec as the immediate
+  implementation guide
+- Restates the goal, scope, and protected areas before changing code
+- Implements with minimal scope, adds focused verification, and reports
+  concrete outcomes
+- Does not expand scope without escalation
 
 ---
 
@@ -34,14 +67,15 @@ and `.codex/`.
 Use this order when deciding what to implement:
 
 1. Explicit user instruction in the current conversation
-2. Prepared task spec for the ticket
-3. Existing architecture, tests, and code contracts
-4. Jira ticket
-5. Confluence page
-6. Existing implementation details not covered above
+2. ChatGPT product intent, UX direction, and senior architectural guidance
+3. Claude Code execution-ready task spec and delivery instructions
+4. Existing architecture, tests, and code contracts
+5. Jira ticket
+6. Confluence page
+7. Existing implementation details not covered above
 
-If Jira or Confluence wording conflicts with the task spec, follow the
-prepared spec unless the user explicitly overrides it.
+If Jira or Confluence wording conflicts with ChatGPT or Claude Code guidance,
+follow the higher-priority source unless the user explicitly overrides it.
 
 ---
 
@@ -49,13 +83,16 @@ prepared spec unless the user explicitly overrides it.
 
 For each ticket:
 
-1. Read the task spec first
+1. Read the Claude Code task spec first
 2. Restate the goal, scope, and protected areas
 3. Limit changes to the declared scope
 4. Do not broaden the task through interpretation
 5. Add or update focused tests where behavior changes
 6. Run relevant verification before finishing
 7. Report summary, tests, and remaining risks
+
+Implementation should follow the product intent defined by ChatGPT and the
+execution scope defined by Claude Code.
 
 When something is unclear, say what is ambiguous instead of guessing.
 
@@ -181,7 +218,8 @@ Implementation output should always include:
 4. Remaining risks or follow-up items
 5. Notes for human review
 
-Review should be done against the task spec, not personal preference alone.
+Review should be done against ChatGPT product intent and the Claude Code task
+spec, not personal preference alone.
 
 ---
 
@@ -214,6 +252,13 @@ Escalate instead of guessing when:
 - protected calculation behavior may be affected
 - architecture boundaries would need to expand
 - the correct test target is unclear
+
+Escalation path:
+
+- Escalate to ChatGPT when product intent, UX direction, or senior
+  architecture guidance is unclear or conflicting
+- Escalate to Claude Code when execution scope, task sequencing, ownership, or
+  verification strategy is unclear
 
 When escalating, state:
 

@@ -430,7 +430,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityLabel, "Start timer from corrected exposure")
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityHint, "Starts a timer using the film-specific corrected exposure value")
         XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Final shooting value")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertTrue(resultState.hasQuantifiedCorrectedExposure)
         XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
@@ -450,13 +450,22 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.filmModeExposureResultState?.reciprocityState.showsInfoAffordance == true)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         XCTAssertEqual(details.title, "Reciprocity Details")
+        XCTAssertEqual(details.summary.badgeText, "Estimated")
+        XCTAssertEqual(details.summary.summaryText, "Estimated between 1s and 10s")
+        XCTAssertEqual(details.currentResult.layout, .comparison)
+        XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "8s")
+        XCTAssertNil(details.currentResult.adjustedShutter.detailText)
+        XCTAssertEqual(details.currentResult.correctedExposure.title, "Corrected Exposure")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "34s")
+        XCTAssertNil(details.currentResult.correctedExposure.detailText)
+        XCTAssertTrue(details.currentResult.correctedExposure.emphasizesValue)
         XCTAssertEqual(details.sections.map(\.title), [
             "Profile",
             "Reference",
-            "Current Status",
             "Sources"
         ])
-        XCTAssertTrue(details.showsGraphPlaceholder)
+        XCTAssertEqual(details.graph?.kind, .table)
         XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Profile"])
     }
 
@@ -472,7 +481,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
         let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
-        let statusSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Current Status" }))
         let sourcesSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Sources" }))
 
         XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table"])
@@ -486,11 +494,14 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             100s     +3 stops         Dev -30%
             """
         ])
-        XCTAssertEqual(statusSection.rows.map(\.value), ["Estimated between 1s and 10s"])
+        XCTAssertEqual(details.summary.summaryText, "Estimated between 1s and 10s")
         XCTAssertEqual(sourcesSection.rows.map(\.title), ["Reference", "Citation"])
         XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Basis"))
         XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Entry"))
         XCTAssertEqual(sourcesSection.rows.last?.destinationURL, nil)
+        XCTAssertEqual(details.graph?.currentPoint?.style, .estimated)
+        XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure from reference anchors")
+        XCTAssertEqual(details.graph?.title, "Reference Graph")
     }
 
     @MainActor
@@ -502,16 +513,22 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
 
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
         let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
-        let statusSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Current Status" }))
         XCTAssertEqual(details.sections.last?.title, "Sources")
         XCTAssertEqual(profileSection.rows.map(\.value), ["No quantified manufacturer data"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
         XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-1s    No correction"])
-        XCTAssertEqual(statusSection.rows.map(\.value), ["No quantified reciprocity value available"])
+        XCTAssertEqual(details.summary.badgeText, "No quantified correction")
+        XCTAssertEqual(details.summary.summaryText, "Beyond published no-correction range")
+        XCTAssertEqual(details.currentResult.layout, .compactPair)
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "15s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, resultState.correctedExposure.primaryText)
+        XCTAssertEqual(details.currentResult.correctedExposure.detailText, resultState.correctedExposure.secondaryText)
+        XCTAssertFalse(details.currentResult.correctedExposure.emphasizesValue)
     }
 
     @MainActor
@@ -602,16 +619,18 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
-        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
-        let statusSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Current Status" }))
+        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
 
-        XCTAssertEqual(profileSection.rows.map(\.value), ["Formula profile"])
-        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
-        XCTAssertEqual(referenceSection.rows.map(\.style), [.formulaExpression])
-        XCTAssertEqual(referenceSection.rows.map(\.value), ["Tc = Tm^1.31"])
-        XCTAssertFalse(referenceSection.rows.contains { $0.value == "Tc = Tm^P" })
-        XCTAssertEqual(statusSection.rows.map(\.value), ["Derived from formula profile"])
+        XCTAssertEqual(details.sections.map(\.title), ["Formula", "Sources"])
+        XCTAssertEqual(formulaSection.rows.map(\.title), [""])
+        XCTAssertEqual(formulaSection.rows.map(\.style), [.formulaExpression])
+        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.31"])
+        XCTAssertFalse(formulaSection.rows.contains { $0.value == "Tc = Tm^P" })
+        XCTAssertEqual(details.summary.badgeText, "Formula-based")
+        XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
+        XCTAssertEqual(details.graph?.kind, .formula)
+        XCTAssertEqual(details.graph?.currentPoint?.style, .formulaDerived)
+        XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure on the active formula curve")
     }
 
     @MainActor
@@ -630,11 +649,159 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         viewModel.selectPresetFilm(try XCTUnwrap(viewModel.availablePresetFilms.first))
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
 
-        XCTAssertEqual(referenceSection.rows.map(\.title), [""])
-        XCTAssertEqual(referenceSection.rows.map(\.style), [.formulaExpression])
-        XCTAssertEqual(referenceSection.rows.map(\.value), ["Tc = Tm^1.31"])
+        XCTAssertEqual(formulaSection.rows.map(\.title), [""])
+        XCTAssertEqual(formulaSection.rows.map(\.style), [.formulaExpression])
+        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.31"])
+        XCTAssertEqual(details.graph?.kind, .formula)
+        XCTAssertEqual(details.graph?.currentPoint?.style, .formulaDerived)
+    }
+
+    @MainActor
+    func testFilmModeDetailsGraphShowsTableAnchorsAndCurrentPointForQuantifiedTableResult() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 5
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let graph = try XCTUnwrap(details.graph)
+
+        XCTAssertEqual(graph.kind, .table)
+        XCTAssertEqual(graph.sourcePoints.count, 3)
+        XCTAssertEqual(graph.sourcePoints[0].meteredExposureSeconds, 1, accuracy: 0.0001)
+        XCTAssertEqual(graph.sourcePoints[1].meteredExposureSeconds, 10, accuracy: 0.0001)
+        XCTAssertEqual(graph.sourcePoints[2].meteredExposureSeconds, 100, accuracy: 0.0001)
+        XCTAssertEqual(graph.currentPoint?.style, .estimated)
+        XCTAssertEqual(graph.currentPoint?.point.meteredExposureSeconds ?? 0, 4, accuracy: 0.0001)
+        XCTAssertEqual(graph.currentPoint?.point.correctedExposureSeconds ?? 0, 10.5410012802, accuracy: 0.0001)
+        XCTAssertEqual(graph.caption, "Adjusted shutter vs corrected exposure from reference anchors")
+        XCTAssertFalse(graph.usesCurrentInputGuideOnly)
+        XCTAssertNil(graph.unsupportedRegionStartSeconds)
+        XCTAssertEqual(graph.xAxisTicks.map(\.label), ["1s", "10s", "100s"])
+    }
+
+    @MainActor
+    func testFilmModeDetailsGraphShowsExtrapolatedCurrentPointForExtendedTableResult() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 6
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let graph = try XCTUnwrap(details.graph)
+
+        XCTAssertEqual(graph.kind, .table)
+        XCTAssertEqual(graph.currentPoint?.style, .extrapolated)
+        XCTAssertEqual(graph.currentPoint?.point.meteredExposureSeconds ?? 0, 1_024, accuracy: 0.0001)
+        XCTAssertNotNil(graph.currentPoint?.point.correctedExposureSeconds)
+        XCTAssertEqual(graph.supportedRangeUpperBoundSeconds ?? 0, 100, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testFilmModeDetailsFormulaGraphUsesFormulaSpecificCurrentPointSemantics() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
+
+        viewModel.baseShutter = 8
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let graph = try XCTUnwrap(details.graph)
+
+        XCTAssertEqual(graph.kind, .formula)
+        XCTAssertEqual(graph.currentPoint?.style, .formulaDerived)
+        XCTAssertEqual(graph.caption, "Adjusted shutter vs corrected exposure on the active formula curve")
+        XCTAssertFalse(graph.usesCurrentInputGuideOnly)
+    }
+
+    @MainActor
+    func testFilmModeDetailsGraphOmitsCurrentPlotForAdvisoryOnlyResult() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        XCTAssertNil(details.graph)
+        XCTAssertEqual(details.sections.first(where: { $0.title == "Reference" })?.rows.first?.value, "1/10000s-1s    No correction")
+    }
+
+    @MainActor
+    func testFilmModeDetailsGraphShowsReferenceRangeAndXOnlyMarkerForUnsupportedResult() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
+
+        viewModel.baseShutter = 8
+        viewModel.ndStop = 3
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let graph = try XCTUnwrap(details.graph)
+
+        XCTAssertEqual(details.summary.badgeText, "Unsupported")
+        XCTAssertEqual(details.summary.summaryText, "Outside supported reciprocity range")
+        XCTAssertEqual(details.summary.detailText, "Current input is outside the supported range and no quantified corrected point is available.")
+        XCTAssertEqual(details.currentResult.layout, .comparison)
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "01:04")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, resultState.correctedExposure.primaryText)
+        XCTAssertEqual(details.currentResult.correctedExposure.detailText, resultState.correctedExposure.secondaryText)
+        XCTAssertFalse(details.currentResult.correctedExposure.emphasizesValue)
+        XCTAssertTrue(graph.usesCurrentInputGuideOnly)
+        XCTAssertNil(graph.currentPoint)
+        XCTAssertEqual(graph.currentMeteredExposureSeconds ?? 0, 64, accuracy: 0.0001)
+        XCTAssertNotNil(graph.supportedRangeUpperBoundSeconds)
+        XCTAssertNotNil(graph.unsupportedRegionStartSeconds)
+        XCTAssertEqual(graph.unsupportedExplanation, "Current input is outside the supported range. No quantified corrected point is available.")
+    }
+
+    @MainActor
+    func testFilmModeDetailsSummaryPromotesCurrentStateAboveSections() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 6
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        XCTAssertEqual(details.summary.badgeText, "Extrapolated")
+        XCTAssertEqual(details.summary.summaryText, "Extrapolated beyond 10s reference data")
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "17:04")
+        XCTAssertNotEqual(details.currentResult.correctedExposure.valueText, "No quantified correction")
+        XCTAssertEqual(details.sections.map(\.title), ["Profile", "Reference", "Sources"])
+    }
+
+    @MainActor
+    func testFilmModeDetailsGraphOmitsGraphWhenNoGraphableReferenceDataExists() throws {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            ),
+            presetFilms: [minimalDetailsFilm()]
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 5
+        viewModel.selectPresetFilm(try XCTUnwrap(viewModel.availablePresetFilms.first))
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        XCTAssertNil(details.graph)
+        XCTAssertEqual(details.sections.first(where: { $0.title == "Reference" })?.rows.first?.value, "<= 1s    No correction")
     }
 
     @MainActor
@@ -678,6 +845,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertNotEqual(resultState.reciprocityState.badgeText, "Unsupported")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 0.5, accuracy: 0.0001)
     }
 
@@ -696,6 +864,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
     }
 
@@ -715,9 +884,72 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertEqual(
             resultState.correctedExposure.primaryText,
-            viewModel.formatTimeDisplay(correctedExposureSeconds).primary
+            viewModel.formatReciprocityDuration(correctedExposureSeconds)
         )
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "03:10:32.037")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "03:10:32")
+    }
+
+    @MainActor
+    func testReciprocityDisplayFormattingUsesReadableUserFacingPrecision() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        XCTAssertEqual(viewModel.formatReciprocityDuration(0.033), "0.033s")
+        XCTAssertEqual(viewModel.formatReciprocityDuration(0.25), "0.25s")
+        XCTAssertEqual(viewModel.formatReciprocityDuration(5.41), "5.4s")
+        XCTAssertEqual(viewModel.formatReciprocityDuration(10.541), "11s")
+        XCTAssertEqual(viewModel.formatReciprocityDuration(64), "01:04")
+        XCTAssertEqual(viewModel.formatReciprocityDuration(3_600), "01:00:00")
+        XCTAssertEqual(viewModel.formatReciprocityDuration(522_484.861), "6d 01:08:05")
+        XCTAssertEqual(viewModel.formatReciprocityAxisDuration(0.125), "0.1s")
+        XCTAssertEqual(viewModel.formatReciprocityAxisDuration(32), "32s")
+        XCTAssertEqual(viewModel.formatReciprocityAxisDuration(600), "10m")
+        XCTAssertEqual(viewModel.formatReciprocityAxisDuration(21_600), "6h")
+        XCTAssertEqual(viewModel.formatReciprocityAxisDuration(950_400), "11d")
+    }
+
+    @MainActor
+    func testReciprocityDisplayStateUsesReadableAdjustedAndCorrectedValues() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 5
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "11s")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
+        XCTAssertEqual(details.currentResult.layout, .comparison)
+        XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "4s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "11s")
+    }
+
+    @MainActor
+    func testNoCorrectionDetailsUseCompactSummaryAndDoNotPlotCurrentPoint() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 4
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        XCTAssertEqual(details.summary.badgeText, "No correction")
+        XCTAssertEqual(details.summary.summaryText, "No correction at 0.5s")
+        XCTAssertEqual(details.currentResult.layout, .compactValue)
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "0.5s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "0.5s")
+        XCTAssertNil(details.graph?.currentPoint)
     }
 
     @MainActor
@@ -758,7 +990,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(resultState.reciprocityState.tone, .caution)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Low-confidence shooting value")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(
             resultState.reciprocityState.infoText,
             "Low-confidence result extrapolated from the original representative table rows."
@@ -785,7 +1017,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(resultState.reciprocityState.tone, .caution)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Low-confidence shooting value")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .extrapolatedBeyondTable)
         XCTAssertEqual(bindingState.policyResult.metadata.rangeStatus, .beyondLastRepresentativePoint)
     }
@@ -804,7 +1036,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(resultState.adjustedShutterSeconds, 8_192, accuracy: 0.0001)
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .formulaDerived)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Calculated")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-based")
         XCTAssertEqual(resultState.reciprocityState.tone, .measured)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
@@ -823,7 +1055,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 15, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Advisory only")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "No quantified correction")
         XCTAssertEqual(resultState.reciprocityState.tone, .advisory)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 15, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
@@ -836,8 +1068,8 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             resultState.correctedExposureAction.accessibilityHint,
             "Timer unavailable because this corrected result is non-quantified"
         )
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "No quantified correction")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "Only advisory continuation is available for this metered exposure.")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "No corrected value")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "No published quantified correction is available for this metered exposure.")
         XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
@@ -871,7 +1103,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             resultState.correctedExposureAction.accessibilityHint,
             "Timer unavailable because this corrected result is unsupported"
         )
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "Unsupported")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "Unavailable")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "64 sec is not recommended.")
         XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
 

@@ -982,21 +982,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
-            let secondaryText: String
-            switch bindingState.presentation.category {
-            case .extrapolated:
-                secondaryText = "Low-confidence shooting value"
-            case .exact, .estimated:
-                secondaryText = "Final shooting value"
-            case .advisoryOnly, .unsupported:
-                secondaryText = "Final shooting value"
-            }
-
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
                 primaryText: formatReciprocityDuration(correctedExposureSeconds),
-                secondaryText: secondaryText,
+                secondaryText: "",
                 usesNumericExposure: true
             )
         }
@@ -1006,15 +996,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return FilmModeCorrectedExposureDisplayState(
                 kind: .advisory,
                 correctedExposureSeconds: nil,
-                primaryText: "No quantified correction",
-                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
+                primaryText: "No corrected value",
+                secondaryText: "No published quantified correction is available for this metered exposure.",
                 usesNumericExposure: false
             )
         case .unsupported:
             return FilmModeCorrectedExposureDisplayState(
                 kind: .unsupported,
                 correctedExposureSeconds: nil,
-                primaryText: "Unsupported",
+                primaryText: "Unavailable",
                 secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
                 usesNumericExposure: false
             )
@@ -1119,8 +1109,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
             )
         }
 
+        let layout = detailsCurrentResultLayout()
+        let correctedExposureNoteText: String?
+        if layout == .compactValue {
+            correctedExposureNoteText = "Adjusted shutter equals corrected exposure."
+        } else {
+            correctedExposureNoteText = correctedExposureDetailText(
+                for: filmModeExposureResultState.correctedExposure
+            )
+        }
+
         return FilmModeDetailsCurrentResultState(
-            layout: .comparison,
+            layout: layout,
             adjustedShutter: FilmModeDetailsCurrentResultValueState(
                 title: "Adjusted Shutter",
                 valueText: formatReciprocityDurationCoarse(
@@ -1134,16 +1134,29 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 valueText: filmModeExposureResultState.correctedExposure.correctedExposureSeconds
                     .map { formatReciprocityDurationCoarse($0) }
                     ?? filmModeExposureResultState.correctedExposure.primaryText,
-                detailText: correctedExposureDetailText(
-                    for: filmModeExposureResultState.correctedExposure
-                ),
+                detailText: correctedExposureNoteText,
                 emphasizesValue: filmModeExposureResultState.correctedExposure.usesNumericExposure
             )
         )
     }
 
     private func detailsCurrentResultLayout() -> FilmModeDetailsCurrentResultLayout {
-        .comparison
+        guard let bindingState = filmReciprocityBindingState else {
+            return .comparison
+        }
+
+        switch bindingState.policyResult.metadata.basis {
+        case .officialThresholdNoCorrection:
+            return .compactValue
+        case .advisoryOnlyBeyondOfficialRange:
+            return .compactPair
+        case .exactTablePoint,
+             .interpolatedWithinTable,
+             .extrapolatedBeyondTable,
+             .formulaDerived,
+             .unsupportedOutOfPolicyRange:
+            return .comparison
+        }
     }
 
     private func makeFilmModeDetailsGraphDisplayState(
@@ -1555,7 +1568,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
             return "No correction in the supported range"
         case .formulaDerived:
-            return "Derived from formula profile"
+            return "Formula-based correction on the active curve"
         case .advisoryOnlyBeyondOfficialRange:
             return "Beyond published no-correction range"
         case .unsupportedOutOfPolicyRange:
@@ -1589,7 +1602,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case .quantified:
             return correctedExposure.secondaryText
         case .advisory:
-            return correctedExposure.secondaryText
+            return nil
         case .unsupported:
             return correctedExposure.secondaryText
         }
@@ -1701,7 +1714,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             if case .formula = $0 { return true }
             return false
         }) {
-            return "Formula profile"
+            return "Formula-based guidance"
         }
 
         if bindingState.presentation.category == .advisoryOnly || bindingState.presentation.category == .unsupported {
@@ -1735,12 +1748,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         if metadata.basis == .formulaDerived {
-            return "Calculated"
+            return "Formula-based"
         }
 
         switch presentation.category {
         case .advisoryOnly:
-            return "Advisory only"
+            return "No quantified correction"
         case .unsupported:
             return "Unsupported"
         case .exact, .estimated, .extrapolated:

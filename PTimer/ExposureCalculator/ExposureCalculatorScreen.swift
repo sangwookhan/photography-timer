@@ -1272,7 +1272,7 @@ private struct FilmModeDetailsSheet: View {
 
                     if let graph = details.graph {
                         FilmModeDetailsGraph(graph: graph)
-                    } else {
+                    } else if details.summary.tone != .advisory && details.currentResult.layout != .compactValue {
                         FilmModeDetailsGraphUnavailableNote()
                     }
 

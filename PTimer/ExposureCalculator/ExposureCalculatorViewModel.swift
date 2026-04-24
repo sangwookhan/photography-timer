@@ -658,6 +658,90 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculator.formatTimeDisplay(seconds)
     }
 
+    func formatReciprocityTimeDisplay(_ seconds: TimeInterval) -> TimeDisplay {
+        let safeSeconds = max(seconds, 0)
+        let primary = formatReciprocityDuration(safeSeconds)
+        return TimeDisplay(primary: primary, secondary: "")
+    }
+
+    func formatReciprocityDuration(_ seconds: TimeInterval) -> String {
+        let safeSeconds = max(seconds, 0)
+
+        if safeSeconds < 1 {
+            return "\(trimmedReciprocitySubsecondText(safeSeconds))s"
+        }
+
+        if safeSeconds < 10 {
+            return "\(formatReciprocityNumber(safeSeconds, maximumFractionDigits: 1))s"
+        }
+
+        let roundedSeconds = Int(safeSeconds.rounded())
+
+        if roundedSeconds < 60 {
+            return "\(roundedSeconds)s"
+        }
+
+        let secondsPerMinute = 60
+        let secondsPerHour = 60 * secondsPerMinute
+        let secondsPerDay = 24 * secondsPerHour
+
+        let days = roundedSeconds / secondsPerDay
+        let hours = (roundedSeconds % secondsPerDay) / secondsPerHour
+        let minutes = (roundedSeconds % secondsPerHour) / secondsPerMinute
+        let seconds = roundedSeconds % secondsPerMinute
+
+        if days > 0 {
+            return "\(days)d \(String(format: "%02d:%02d:%02d", hours, minutes, seconds))"
+        }
+
+        if roundedSeconds >= secondsPerHour {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func formatReciprocityDurationCoarse(_ seconds: TimeInterval) -> String {
+        let safeSeconds = max(seconds, 0)
+        let roundedSeconds = Int(safeSeconds.rounded())
+        let secondsPerDay = 86_400
+
+        guard roundedSeconds >= secondsPerDay else {
+            return formatReciprocityDuration(safeSeconds)
+        }
+
+        let days = roundedSeconds / secondsPerDay
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return (formatter.string(from: NSNumber(value: days)) ?? "\(days)") + "d"
+    }
+
+    func formatReciprocityAxisDuration(_ seconds: TimeInterval) -> String {
+        let safeSeconds = max(seconds, 0)
+
+        if safeSeconds < 1 {
+            return "\(formatReciprocityNumber(safeSeconds, maximumFractionDigits: 1))s"
+        }
+
+        if safeSeconds < 60 {
+            return "\(Int(safeSeconds.rounded()))s"
+        }
+
+        let roundedSeconds = Int(safeSeconds.rounded())
+        let minutes = roundedSeconds / 60
+        if roundedSeconds < 3600 {
+            return "\(minutes)m"
+        }
+
+        let hours = roundedSeconds / 3600
+        if roundedSeconds < 86_400 {
+            return "\(hours)h"
+        }
+
+        let days = roundedSeconds / 86_400
+        return "\(days)d"
+    }
+
     func formatShutter(_ seconds: TimeInterval) -> String {
         calculator.formatShutter(seconds)
     }
@@ -898,21 +982,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
-            let secondaryText: String
-            switch bindingState.presentation.category {
-            case .extrapolated:
-                secondaryText = "Low-confidence shooting value"
-            case .exact, .estimated:
-                secondaryText = "Final shooting value"
-            case .advisoryOnly, .unsupported:
-                secondaryText = "Final shooting value"
-            }
-
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
-                primaryText: formatTimeDisplay(correctedExposureSeconds).primary,
-                secondaryText: secondaryText,
+                primaryText: formatReciprocityDuration(correctedExposureSeconds),
+                secondaryText: "",
                 usesNumericExposure: true
             )
         }
@@ -922,15 +996,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return FilmModeCorrectedExposureDisplayState(
                 kind: .advisory,
                 correctedExposureSeconds: nil,
-                primaryText: "No quantified correction",
-                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
+                primaryText: "No corrected value",
+                secondaryText: "No published quantified correction is available for this metered exposure.",
                 usesNumericExposure: false
             )
         case .unsupported:
             return FilmModeCorrectedExposureDisplayState(
                 kind: .unsupported,
                 correctedExposureSeconds: nil,
-                primaryText: "Unsupported",
+                primaryText: "Unavailable",
                 secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
                 usesNumericExposure: false
             )
@@ -997,17 +1071,580 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         return FilmModeDetailsDisplayState(
             title: "Reciprocity Details",
+            summary: makeFilmModeDetailsSummaryState(for: bindingState),
+            currentResult: makeFilmModeDetailsCurrentResultState(),
             sections: sections,
-            showsGraphPlaceholder: true
+            graph: makeFilmModeDetailsGraphDisplayState(for: bindingState)
         )
+    }
+
+    private func makeFilmModeDetailsSummaryState(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> FilmModeDetailsSummaryState {
+        let displayState = reciprocityStateDisplayState()
+        return FilmModeDetailsSummaryState(
+            badgeText: displayState.badgeText,
+            tone: displayState.tone,
+            summaryText: filmModeDetailsSummaryText(for: bindingState),
+            detailText: filmModeDetailsSummaryDetailText(for: bindingState)
+        )
+    }
+
+    private func makeFilmModeDetailsCurrentResultState() -> FilmModeDetailsCurrentResultState {
+        guard let filmModeExposureResultState else {
+            return FilmModeDetailsCurrentResultState(
+                layout: .comparison,
+                adjustedShutter: FilmModeDetailsCurrentResultValueState(
+                    title: "Adjusted Shutter",
+                    valueText: "Unavailable",
+                    detailText: nil,
+                    emphasizesValue: false
+                ),
+                correctedExposure: FilmModeDetailsCurrentResultValueState(
+                    title: "Corrected Exposure",
+                    valueText: "Unavailable",
+                    detailText: nil,
+                    emphasizesValue: false
+                )
+            )
+        }
+
+        let layout = detailsCurrentResultLayout()
+        let correctedExposureNoteText: String?
+        if layout == .compactValue {
+            correctedExposureNoteText = "Adjusted shutter equals corrected exposure."
+        } else {
+            correctedExposureNoteText = correctedExposureDetailText(
+                for: filmModeExposureResultState.correctedExposure
+            )
+        }
+
+        return FilmModeDetailsCurrentResultState(
+            layout: layout,
+            adjustedShutter: FilmModeDetailsCurrentResultValueState(
+                title: "Adjusted Shutter",
+                valueText: formatReciprocityDurationCoarse(
+                    filmModeExposureResultState.adjustedShutterSeconds
+                ),
+                detailText: nil,
+                emphasizesValue: false
+            ),
+            correctedExposure: FilmModeDetailsCurrentResultValueState(
+                title: "Corrected Exposure",
+                valueText: filmModeExposureResultState.correctedExposure.correctedExposureSeconds
+                    .map { formatReciprocityDurationCoarse($0) }
+                    ?? filmModeExposureResultState.correctedExposure.primaryText,
+                detailText: correctedExposureNoteText,
+                emphasizesValue: filmModeExposureResultState.correctedExposure.usesNumericExposure
+            )
+        )
+    }
+
+    private func detailsCurrentResultLayout() -> FilmModeDetailsCurrentResultLayout {
+        guard let bindingState = filmReciprocityBindingState else {
+            return .comparison
+        }
+
+        switch bindingState.policyResult.metadata.basis {
+        case .officialThresholdNoCorrection:
+            return .compactValue
+        case .advisoryOnlyBeyondOfficialRange:
+            return .compactPair
+        case .exactTablePoint,
+             .interpolatedWithinTable,
+             .extrapolatedBeyondTable,
+             .formulaDerived,
+             .unsupportedOutOfPolicyRange:
+            return .comparison
+        }
+    }
+
+    private func makeFilmModeDetailsGraphDisplayState(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> FilmModeDetailsGraphDisplayState? {
+        guard case .success(let result) = calculationResult,
+              result.resultShutterSeconds > 0 else {
+            return nil
+        }
+
+        let currentMeteredExposureSeconds = result.resultShutterSeconds
+        let currentPoint = graphCurrentPoint(for: bindingState)
+
+        if let formulaGraph = formulaDetailsGraphDisplayState(
+            for: bindingState,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint
+        ) {
+            return formulaGraph
+        }
+
+        return tableDetailsGraphDisplayState(
+            for: bindingState,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint
+        )
+    }
+
+    private func formulaDetailsGraphDisplayState(
+        for bindingState: FilmModeReciprocityBindingState,
+        currentMeteredExposureSeconds: Double,
+        currentPoint: FilmModeDetailsGraphCurrentPoint?
+    ) -> FilmModeDetailsGraphDisplayState? {
+        guard bindingState.policyResult.metadata.basis != .officialThresholdNoCorrection else {
+            return nil
+        }
+
+        guard let formulaRule = bindingState.profile.rules.compactMap({ rule -> FormulaReciprocityRule? in
+            guard case let .formula(formulaRule) = rule else {
+                return nil
+            }
+            return formulaRule
+        }).first else {
+            return nil
+        }
+
+        let sourcePoints = formulaGraphSourcePoints(
+            for: formulaRule,
+            profile: bindingState.profile,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds
+        )
+        guard sourcePoints.count >= 2 else {
+            return nil
+        }
+
+        let ranges = graphRanges(
+            sourcePoints: sourcePoints,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint?.point
+        )
+        guard let ranges else {
+            return nil
+        }
+
+        let supportedUpperBoundSeconds = formulaRule.meteredRange?.maximumSeconds
+
+        return FilmModeDetailsGraphDisplayState(
+            kind: .formula,
+            title: "Reference Graph",
+            sourcePoints: sourcePoints,
+            currentPoint: currentPoint.map {
+                FilmModeDetailsGraphCurrentPoint(
+                    point: $0.point,
+                    style: .formulaDerived
+                )
+            },
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            usesCurrentInputGuideOnly: bindingState.presentation.category == .unsupported,
+            caption: "Active formula curve",
+            unsupportedExplanation: nil,
+            xAxisLabel: "Adjusted shutter",
+            yAxisLabel: "Corrected exposure",
+            xAxisTicks: graphAxisTicks(for: ranges.xRange),
+            yAxisTicks: graphAxisTicks(for: ranges.yRange),
+            supportedRangeUpperBoundSeconds: supportedUpperBoundSeconds,
+            unsupportedRegionStartSeconds: unsupportedRegionStartSeconds(
+                supportedUpperBoundSeconds: supportedUpperBoundSeconds,
+                currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+                isUnsupported: bindingState.presentation.category == .unsupported
+            ),
+            xRange: ranges.xRange,
+            yRange: ranges.yRange
+        )
+    }
+
+    private func tableDetailsGraphDisplayState(
+        for bindingState: FilmModeReciprocityBindingState,
+        currentMeteredExposureSeconds: Double,
+        currentPoint: FilmModeDetailsGraphCurrentPoint?
+    ) -> FilmModeDetailsGraphDisplayState? {
+        let sourcePoints = bindingState.profile.rules.flatMap { rule -> [FilmModeDetailsGraphPoint] in
+            guard case let .table(tableRule) = rule else {
+                return []
+            }
+
+            return tableRule.entries.compactMap(tableGraphSourcePoint(for:))
+        }
+        .sorted { $0.meteredExposureSeconds < $1.meteredExposureSeconds }
+
+        guard sourcePoints.count >= 2 else {
+            return nil
+        }
+
+        guard let ranges = graphRanges(
+            sourcePoints: sourcePoints,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint?.point
+        ) else {
+            return nil
+        }
+
+        let supportedUpperBoundSeconds = sourcePoints.map(\.meteredExposureSeconds).max()
+
+        return FilmModeDetailsGraphDisplayState(
+            kind: .table,
+            title: "Reference Graph",
+            sourcePoints: sourcePoints,
+            currentPoint: currentPoint,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            usesCurrentInputGuideOnly: bindingState.presentation.category == .unsupported,
+            caption: "From reference anchors",
+            unsupportedExplanation: nil,
+            xAxisLabel: "Adjusted shutter",
+            yAxisLabel: "Corrected exposure",
+            xAxisTicks: graphAxisTicks(for: ranges.xRange),
+            yAxisTicks: graphAxisTicks(for: ranges.yRange),
+            supportedRangeUpperBoundSeconds: supportedUpperBoundSeconds,
+            unsupportedRegionStartSeconds: unsupportedRegionStartSeconds(
+                supportedUpperBoundSeconds: supportedUpperBoundSeconds,
+                currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+                isUnsupported: bindingState.presentation.category == .unsupported
+            ),
+            xRange: ranges.xRange,
+            yRange: ranges.yRange
+        )
+    }
+
+    private func graphCurrentPoint(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> FilmModeDetailsGraphCurrentPoint? {
+        guard case .success(let result) = calculationResult,
+              let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds,
+              result.resultShutterSeconds > 0,
+              correctedExposureSeconds > 0 else {
+            return nil
+        }
+
+        if bindingState.policyResult.metadata.basis == .officialThresholdNoCorrection {
+            return nil
+        }
+
+        guard bindingState.presentation.returnsCalculatedExposureTime else {
+            return nil
+        }
+
+        let style: FilmModeDetailsGraphCurrentPointStyle
+        switch bindingState.presentation.category {
+        case .exact:
+            style = .exact
+        case .estimated:
+            style = .estimated
+        case .extrapolated:
+            style = .extrapolated
+        case .advisoryOnly, .unsupported:
+            return nil
+        }
+
+        return FilmModeDetailsGraphCurrentPoint(
+            point: FilmModeDetailsGraphPoint(
+                meteredExposureSeconds: result.resultShutterSeconds,
+                correctedExposureSeconds: correctedExposureSeconds
+            ),
+            style: style
+        )
+    }
+
+    private func formulaGraphSourcePoints(
+        for rule: FormulaReciprocityRule,
+        profile: ReciprocityProfile,
+        currentMeteredExposureSeconds: Double
+    ) -> [FilmModeDetailsGraphPoint] {
+        let thresholdCandidates = profileThresholdUpperBounds(in: profile)
+        let lowerBoundCandidates = [
+            rule.meteredRange?.minimumSeconds,
+            thresholdCandidates.min(),
+            currentMeteredExposureSeconds / 4,
+            1
+        ]
+        let upperBoundCandidates = [
+            rule.meteredRange?.maximumSeconds,
+            currentMeteredExposureSeconds
+        ]
+
+        let positiveLowerBound = lowerBoundCandidates
+            .compactMap { $0 }
+            .filter { $0 > 0 }
+            .min()
+        let positiveUpperBound = upperBoundCandidates
+            .compactMap { $0 }
+            .filter { $0 > 0 }
+            .max()
+
+        guard let lowerBound = positiveLowerBound,
+              let upperBound = positiveUpperBound else {
+            return []
+        }
+
+        let clampedLowerBound = min(lowerBound, upperBound)
+        let clampedUpperBound = max(lowerBound, upperBound)
+        let domain = expandedGraphDomain(
+            minimum: clampedLowerBound,
+            maximum: clampedUpperBound
+        )
+        let sampleCount = 24
+
+        return (0..<sampleCount).compactMap { index in
+            let progress = Double(index) / Double(sampleCount - 1)
+            let meteredExposureSeconds = logInterpolatedValue(
+                minimum: domain.lowerBound,
+                maximum: domain.upperBound,
+                progress: progress
+            )
+
+            guard let correctedExposureSeconds = formulaCorrectedExposureSeconds(
+                for: rule.formula,
+                meteredExposureSeconds: meteredExposureSeconds
+            ),
+            correctedExposureSeconds.isFinite,
+            correctedExposureSeconds > 0 else {
+                return nil
+            }
+
+            return FilmModeDetailsGraphPoint(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds
+            )
+        }
+    }
+
+    private func tableGraphSourcePoint(
+        for entry: ReciprocityTableEntry
+    ) -> FilmModeDetailsGraphPoint? {
+        guard case let .exactSeconds(meteredExposureSeconds) = entry.meteredExposure,
+              meteredExposureSeconds > 0,
+              let correctedExposureSeconds = correctedExposureSeconds(for: entry),
+              correctedExposureSeconds > 0 else {
+            return nil
+        }
+
+        return FilmModeDetailsGraphPoint(
+            meteredExposureSeconds: meteredExposureSeconds,
+            correctedExposureSeconds: correctedExposureSeconds
+        )
+    }
+
+    private func correctedExposureSeconds(for entry: ReciprocityTableEntry) -> Double? {
+        for adjustment in entry.adjustments {
+            guard case let .exposure(exposureAdjustment) = adjustment else {
+                continue
+            }
+
+            switch exposureAdjustment {
+            case .correctedTime(let mapping):
+                return mapping.correctedSeconds
+            case .stopDelta(let adjustment):
+                guard case let .exactSeconds(meteredExposureSeconds) = entry.meteredExposure else {
+                    continue
+                }
+                return meteredExposureSeconds * pow(2, adjustment.stopDelta)
+            case .multiplier(let adjustment):
+                guard case let .exactSeconds(meteredExposureSeconds) = entry.meteredExposure else {
+                    continue
+                }
+                return meteredExposureSeconds * adjustment.factor
+            }
+        }
+
+        return nil
+    }
+
+    private func profileThresholdUpperBounds(in profile: ReciprocityProfile) -> [Double] {
+        profile.rules.compactMap { rule -> Double? in
+            guard case let .threshold(thresholdRule) = rule else {
+                return nil
+            }
+            return thresholdRule.noCorrectionRange.maximumSeconds
+        }
+    }
+
+    private func formulaCorrectedExposureSeconds(
+        for formula: ReciprocityFormula,
+        meteredExposureSeconds: Double
+    ) -> Double? {
+        guard meteredExposureSeconds.isFinite,
+              meteredExposureSeconds > 0 else {
+            return nil
+        }
+
+        switch formula.kind {
+        case .exponentPower:
+            let coefficient = formula.coefficient ?? 1
+            let offsetSeconds = formula.offsetSeconds ?? 0
+            return (coefficient * pow(meteredExposureSeconds, formula.exponent)) + offsetSeconds
+        }
+    }
+
+    private func graphRanges(
+        sourcePoints: [FilmModeDetailsGraphPoint],
+        currentMeteredExposureSeconds: Double,
+        currentPoint: FilmModeDetailsGraphPoint?
+    ) -> (xRange: ClosedRange<Double>, yRange: ClosedRange<Double>)? {
+        let allPlottedPoints = currentPoint.map { sourcePoints + [$0] } ?? sourcePoints
+        let xValues = (allPlottedPoints.map(\.meteredExposureSeconds) + [currentMeteredExposureSeconds])
+            .filter { $0 > 0 && $0.isFinite }
+        let yValues = allPlottedPoints.map(\.correctedExposureSeconds).filter { $0 > 0 && $0.isFinite }
+
+        guard let minimumX = xValues.min(),
+              let maximumX = xValues.max(),
+              let minimumY = yValues.min(),
+              let maximumY = yValues.max() else {
+            return nil
+        }
+
+        return (
+            xRange: expandedGraphDomain(minimum: minimumX, maximum: maximumX),
+            yRange: expandedGraphDomain(minimum: minimumY, maximum: maximumY)
+        )
+    }
+
+    private func graphAxisTicks(
+        for range: ClosedRange<Double>
+    ) -> [FilmModeDetailsGraphAxisTick] {
+        let lowerExponent = Int(floor(log10(range.lowerBound)))
+        let upperExponent = Int(ceil(log10(range.upperBound)))
+
+        let candidates = (lowerExponent...upperExponent).map { exponent in
+            pow(10, Double(exponent))
+        }
+        .filter { range.contains($0) }
+
+        let tickValues: [Double]
+        if candidates.count <= 4 {
+            tickValues = candidates
+        } else {
+            tickValues = [candidates.first, candidates[candidates.count / 2], candidates.last]
+                .compactMap { $0 }
+        }
+
+        return tickValues.map {
+            FilmModeDetailsGraphAxisTick(
+                value: $0,
+                label: formatReciprocityAxisDuration($0)
+            )
+        }
+    }
+
+    private func unsupportedRegionStartSeconds(
+        supportedUpperBoundSeconds: Double?,
+        currentMeteredExposureSeconds: Double,
+        isUnsupported: Bool
+    ) -> Double? {
+        guard isUnsupported,
+              let supportedUpperBoundSeconds,
+              currentMeteredExposureSeconds > supportedUpperBoundSeconds else {
+            return nil
+        }
+
+        return supportedUpperBoundSeconds
+    }
+
+    private func filmModeDetailsSummaryText(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String {
+        let metadata = bindingState.policyResult.metadata
+        let references = metadata.referencedRows ?? []
+
+        switch metadata.basis {
+        case .exactTablePoint:
+            if case .success(let result) = calculationResult {
+                return "Exact at \(formatReciprocityDurationCoarse(result.resultShutterSeconds))"
+            }
+            return "Exact reference point"
+        case .interpolatedWithinTable:
+            let bounds = references
+                .filter { $0.role == .lowerBound || $0.role == .upperBound }
+                .map { meteredExposureReferenceText(for: $0) }
+            if bounds.count == 2 {
+                return "Estimated between \(bounds[0]) and \(bounds[1])"
+            }
+            return "Estimated within reference data"
+        case .extrapolatedBeyondTable:
+            if let anchor = references.first(where: { $0.role == .representativeAnchor }) {
+                return "Extrapolated beyond \(meteredExposureReferenceText(for: anchor)) reference data"
+            }
+            return "Extrapolated beyond reference data"
+        case .officialThresholdNoCorrection:
+            if case .success(let result) = calculationResult {
+                return "No correction at \(formatReciprocityDurationCoarse(result.resultShutterSeconds))"
+            }
+            return "No correction in the supported range"
+        case .formulaDerived:
+            return "Formula-based correction on the active curve"
+        case .advisoryOnlyBeyondOfficialRange:
+            return "Beyond published no-correction range"
+        case .unsupportedOutOfPolicyRange:
+            return "Outside supported reciprocity range"
+        }
+    }
+
+    private func filmModeDetailsSummaryDetailText(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String? {
+        switch bindingState.presentation.category {
+        case .unsupported:
+            return "Current input is outside the supported range and no quantified corrected point is available."
+        case .advisoryOnly:
+            return "No published quantified correction is available beyond this range."
+        case .exact, .estimated, .extrapolated:
+            return nil
+        }
+    }
+
+    private func correctedExposureDetailText(
+        for correctedExposure: FilmModeCorrectedExposureDisplayState
+    ) -> String? {
+        guard !correctedExposure.usesNumericExposure else {
+            return nil
+        }
+
+        switch correctedExposure.kind {
+        case .noFilmSelected:
+            return correctedExposure.secondaryText
+        case .quantified:
+            return correctedExposure.secondaryText
+        case .advisory:
+            return nil
+        case .unsupported:
+            return correctedExposure.secondaryText
+        }
+    }
+
+    private func expandedGraphDomain(
+        minimum: Double,
+        maximum: Double
+    ) -> ClosedRange<Double> {
+        let safeMinimum = max(minimum, 0.000_001)
+        let safeMaximum = max(maximum, safeMinimum)
+
+        if safeMinimum == safeMaximum {
+            return (safeMinimum / 2)...(safeMaximum * 2)
+        }
+
+        let minimumLog = log10(safeMinimum)
+        let maximumLog = log10(safeMaximum)
+        let padding = max((maximumLog - minimumLog) * 0.08, 0.12)
+
+        return pow(10, minimumLog - padding)...pow(10, maximumLog + padding)
+    }
+
+    private func logInterpolatedValue(
+        minimum: Double,
+        maximum: Double,
+        progress: Double
+    ) -> Double {
+        let minimumLog = log10(minimum)
+        let maximumLog = log10(maximum)
+        return pow(10, minimumLog + ((maximumLog - minimumLog) * progress))
     }
 
     private func compactMapDetailsSections(
         for bindingState: FilmModeReciprocityBindingState
     ) -> [FilmModeDetailsSectionState] {
+        if profileUsesFormula(bindingState.profile) {
+            return formulaDetailsSections(for: bindingState)
+        }
+
         let profileRows = profileDetailsRows(for: bindingState)
         let referenceRows = referenceDetailsRows(for: bindingState)
-        let currentStatusRows = currentStatusDetailsRows(for: bindingState)
         let sourceRows = sourceDetailsRows(for: bindingState.profile)
 
         return [
@@ -1017,8 +1654,22 @@ final class ExposureCalculatorViewModel: ObservableObject {
             !referenceRows.isEmpty
                 ? FilmModeDetailsSectionState(title: "Reference", rows: referenceRows)
                 : nil,
-            !currentStatusRows.isEmpty
-                ? FilmModeDetailsSectionState(title: "Current Status", rows: currentStatusRows)
+            !sourceRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Sources", rows: sourceRows)
+                : nil
+        ]
+        .compactMap { $0 }
+    }
+
+    private func formulaDetailsSections(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> [FilmModeDetailsSectionState] {
+        let formulaRows = formulaReferenceRows(for: bindingState) ?? []
+        let sourceRows = sourceDetailsRows(for: bindingState.profile)
+
+        return [
+            !formulaRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Formula", rows: formulaRows)
                 : nil,
             !sourceRows.isEmpty
                 ? FilmModeDetailsSectionState(title: "Sources", rows: sourceRows)
@@ -1049,17 +1700,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return manufacturerNoDataReferenceRows(for: bindingState)
     }
 
-    private func currentStatusDetailsRows(
-        for bindingState: FilmModeReciprocityBindingState
-    ) -> [FilmModeDetailsRowState] {
-        [
-            FilmModeDetailsRowState(
-                title: "Current status",
-                value: compactCurrentStatusText(for: bindingState)
-            )
-        ]
-    }
-
     private func profileSummaryText(
         for bindingState: FilmModeReciprocityBindingState
     ) -> String? {
@@ -1074,7 +1714,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             if case .formula = $0 { return true }
             return false
         }) {
-            return "Formula profile"
+            return "Formula-based guidance"
         }
 
         if bindingState.presentation.category == .advisoryOnly || bindingState.presentation.category == .unsupported {
@@ -1090,7 +1730,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         return FilmModeReciprocityStateDisplayState(
-            badgeText: reciprocityStateBadgeText(for: bindingState.presentation),
+            badgeText: reciprocityStateBadgeText(for: bindingState),
             tone: reciprocityStateTone(for: bindingState.presentation.badgeStyle),
             infoText: reciprocityGuidanceExplanation(for: bindingState.presentation),
             showsInfoAffordance: true
@@ -1098,11 +1738,22 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func reciprocityStateBadgeText(
-        for presentation: ReciprocityConfidencePresentation
+        for bindingState: FilmModeReciprocityBindingState
     ) -> String {
+        let metadata = bindingState.policyResult.metadata
+        let presentation = bindingState.presentation
+
+        if metadata.basis == .officialThresholdNoCorrection {
+            return "No correction"
+        }
+
+        if metadata.basis == .formulaDerived {
+            return "Formula-based"
+        }
+
         switch presentation.category {
         case .advisoryOnly:
-            return "Advisory only"
+            return "No quantified correction"
         case .unsupported:
             return "Unsupported"
         case .exact, .estimated, .extrapolated:
@@ -1226,37 +1877,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private func compactCurrentStatusText(
-        for bindingState: FilmModeReciprocityBindingState
-    ) -> String {
-        let metadata = bindingState.policyResult.metadata
-        let references = metadata.referencedRows ?? []
-
-        switch metadata.basis {
-        case .exactTablePoint:
-            return "Exact reference point"
-        case .interpolatedWithinTable:
-            let bounds = references
-                .filter { $0.role == .lowerBound || $0.role == .upperBound }
-                .map { meteredExposureReferenceText(for: $0) }
-            if bounds.count == 2 {
-                return "Estimated between \(bounds[0]) and \(bounds[1])"
-            }
-            return "Estimated within reference table"
-        case .extrapolatedBeyondTable:
-            if let anchor = references.first(where: { $0.role == .representativeAnchor }) {
-                return "Extrapolated beyond \(meteredExposureReferenceText(for: anchor))"
-            }
-            return "Extrapolated beyond reference table"
-        case .officialThresholdNoCorrection:
-            return "Within no-correction range"
-        case .formulaDerived:
-            return "Derived from formula profile"
-        case .advisoryOnlyBeyondOfficialRange:
-            return "No quantified reciprocity value available"
-        case .unsupportedOutOfPolicyRange:
-            return "Unsupported beyond quantified policy range"
-        }
+    private func profileUsesFormula(_ profile: ReciprocityProfile) -> Bool {
+        profile.rules.contains(where: {
+            if case .formula = $0 { return true }
+            return false
+        })
     }
 
     private func tableReferenceRows(
@@ -1590,6 +2215,27 @@ final class ExposureCalculatorViewModel: ObservableObject {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = value >= 10 ? 1 : 2
+        formatter.minimumFractionDigits = 0
+        formatter.decimalSeparator = "."
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)
+    }
+
+    private func trimmedReciprocitySubsecondText(_ seconds: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 3
+        formatter.minimumFractionDigits = seconds == 0 ? 0 : 1
+        formatter.decimalSeparator = "."
+        return formatter.string(from: NSNumber(value: seconds)) ?? "0"
+    }
+
+    private func formatReciprocityNumber(
+        _ value: Double,
+        maximumFractionDigits: Int
+    ) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = maximumFractionDigits
         formatter.minimumFractionDigits = 0
         formatter.decimalSeparator = "."
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)

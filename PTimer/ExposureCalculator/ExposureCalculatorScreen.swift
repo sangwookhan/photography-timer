@@ -133,20 +133,18 @@ private struct ExposureWorkspaceMainContent: View {
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let availableHeight: CGFloat
     @State private var presentedFilmDetails: FilmModeDetailsDisplayState?
-    @State private var isFilmSelectorPresented = false
+    @State private var isFilmPickerPresented = false
 
     var body: some View {
-        ZStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 0) {
-                HeaderView(
-                    selectorEntries: viewModel.filmSelectorEntries,
-                    selectedFilmID: viewModel.selectedPresetFilm?.id,
-                    filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
-                    onToggleSelector: { isFilmSelectorPresented.toggle() },
-                    showsResetAction: viewModel.canResetFilmModeWorkingContext,
-                    onResetFilmModeContext: viewModel.resetFilmModeWorkingContext,
-                    style: style
-                )
+        VStack(alignment: .leading, spacing: 0) {
+            HeaderView(
+                selectedFilmID: viewModel.selectedPresetFilm?.id,
+                filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
+                onOpenPicker: { isFilmPickerPresented = true },
+                showsClearFilmAction: viewModel.selectedPresetFilm != nil,
+                onClearFilm: viewModel.clearSelectedPresetFilm,
+                style: style
+            )
                 VariableSectionView(
                     baseShutter: $viewModel.baseShutter,
                     ndStop: $viewModel.ndStop,
@@ -195,36 +193,6 @@ private struct ExposureWorkspaceMainContent: View {
                 Color.clear
                     .frame(height: style.workspaceSeparation)
                     .accessibilityHidden(true)
-            }
-
-            if isFilmSelectorPresented {
-                Button {
-                    isFilmSelectorPresented = false
-                } label: {
-                    Color.black.opacity(0.06)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityIdentifier("film-selector-overlay-dismiss")
-
-                FilmSelectorOverlay(
-                    entries: viewModel.filmSelectorEntries,
-                    selectedFilmID: viewModel.selectedPresetFilm?.id,
-                    onSelectEntry: { entry in
-                        if let film = entry.film {
-                            viewModel.selectPresetFilm(film)
-                        } else {
-                            viewModel.clearSelectedPresetFilm()
-                        }
-
-                        isFilmSelectorPresented = false
-                    },
-                    style: style
-                )
-                .padding(.top, selectorOverlayTopPadding)
-                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                .zIndex(1)
-            }
         }
         .padding(.horizontal, style.horizontalPadding)
         .padding(.top, style.topPadding)
@@ -236,22 +204,19 @@ private struct ExposureWorkspaceMainContent: View {
             alignment: .top
         )
         .accessibilityIdentifier("exposure-main-content")
+        .sheet(isPresented: $isFilmPickerPresented) {
+            FilmPickerSheet(
+                entries: viewModel.filmSelectorEntries.filter { $0.film != nil },
+                currentSelectionID: viewModel.selectedPresetFilm?.id,
+                onSelect: { entry in
+                    viewModel.selectPresetFilm(entry.film!)
+                }
+            )
+        }
         .sheet(item: $presentedFilmDetails) { details in
             FilmModeDetailsSheet(details: details)
                 .presentationDetents([.fraction(0.82), .large])
                 .presentationDragIndicator(.visible)
-        }
-        .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
-    }
-
-    private var selectorOverlayTopPadding: CGFloat {
-        switch style {
-        case .regular:
-            return 112
-        case .compact:
-            return 98
-        case .dense:
-            return 86
         }
     }
 }
@@ -694,12 +659,11 @@ private struct PickerColumnLayout {
 }
 
 private struct HeaderView: View {
-    let selectorEntries: [FilmSelectorEntry]
     let selectedFilmID: String?
     let filmSelectionDisplayState: FilmSelectionDisplayState
-    let onToggleSelector: () -> Void
-    let showsResetAction: Bool
-    let onResetFilmModeContext: () -> Void
+    let onOpenPicker: () -> Void
+    let showsClearFilmAction: Bool
+    let onClearFilm: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -708,26 +672,25 @@ private struct HeaderView: View {
                 .font(style.headerTitleFont)
 
             FilmSelectionRow(
-                selectorEntries: selectorEntries,
                 selectedFilmID: selectedFilmID,
                 displayState: filmSelectionDisplayState,
-                onToggleSelector: onToggleSelector,
+                onOpenPicker: onOpenPicker,
                 style: style
             )
 
             HStack {
                 Spacer()
 
-                Button("Reset") {
-                    onResetFilmModeContext()
+                Button("Clear") {
+                    onClearFilm()
                 }
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .opacity(showsResetAction ? 1 : 0)
-                .allowsHitTesting(showsResetAction)
-                .accessibilityHidden(!showsResetAction)
-                .accessibilityHint("Clears the restored Film mode setup")
-                .accessibilityIdentifier("film-mode-reset-button")
+                .opacity(showsClearFilmAction ? 1 : 0)
+                .allowsHitTesting(showsClearFilmAction)
+                .accessibilityHidden(!showsClearFilmAction)
+                .accessibilityHint("Clears the selected film")
+                .accessibilityIdentifier("film-mode-clear-button")
             }
             .frame(maxWidth: .infinity, minHeight: 18, alignment: .trailing)
         }
@@ -736,10 +699,9 @@ private struct HeaderView: View {
 }
 
 private struct FilmSelectionRow: View {
-    let selectorEntries: [FilmSelectorEntry]
     let selectedFilmID: String?
     let displayState: FilmSelectionDisplayState
-    let onToggleSelector: () -> Void
+    let onOpenPicker: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -747,19 +709,19 @@ private struct FilmSelectionRow: View {
             Text("Film")
                 .font(.subheadline.weight(.semibold))
 
-            Button(action: onToggleSelector) {
+            Button(action: onOpenPicker) {
                 HStack(spacing: 12) {
-                    Text(displayState.primaryText)
+                    Text(selectedFilmID == nil ? "No film selected" : displayState.primaryText)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(selectedFilmID == nil ? .secondary : .primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("film-row-selection")
 
-                    Image(systemName: "chevron.up.chevron.down")
+                    Text(selectedFilmID == nil ? "Choose Film" : "Change")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tint)
                 }
                 .padding(style.sectionCardPadding)
                 .background(Color(.secondarySystemBackground))
@@ -767,107 +729,96 @@ private struct FilmSelectionRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Film row")
-            .accessibilityValue(selectedFilmAccessibilityValue)
-            .accessibilityHint("Opens preset film selection")
+            .accessibilityValue(displayState.primaryText)
+            .accessibilityHint("Opens film picker")
             .accessibilityIdentifier("film-row-button")
         }
     }
+}
 
-    private var selectedFilmAccessibilityValue: String {
-        selectorEntries.first(where: { $0.id == selectedFilmID })?.primaryText
-            ?? displayState.primaryText
+// Renders the ISO speed number (e.g. "400", "50") stripped of the "ISO " prefix,
+// inside a subtle capsule chip. Uses a fixed outer frame so all rows share the same
+// column width regardless of how many digits the speed value contains.
+private struct ISOChip: View {
+    let isoText: String?
+
+    private var speedNumber: String {
+        guard let text = isoText else { return "" }
+        return text.hasPrefix("ISO ") ? String(text.dropFirst(4)) : text
+    }
+
+    var body: some View {
+        Text(speedNumber)
+            .font(.caption.weight(.medium).monospacedDigit())
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                isoText != nil ? Color(.secondarySystemFill) : Color.clear,
+                in: Capsule()
+            )
+            // Fixed column, trailing-aligned so numeric digits share a right edge.
+            .frame(width: 44, alignment: .trailing)
     }
 }
 
-private struct FilmSelectorOverlay: View {
+private struct FilmPickerSheet: View {
     let entries: [FilmSelectorEntry]
-    let selectedFilmID: String?
-    let onSelectEntry: (FilmSelectorEntry) -> Void
-    let style: ExposureWorkspaceMainLayoutStyle
+    let currentSelectionID: String?
+    let onSelect: (FilmSelectorEntry) -> Void
+
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                Button {
-                    onSelectEntry(entry)
-                } label: {
-                    HStack(spacing: 12) {
-                        Text(entry.primaryText)
-                            .font(.body.weight(isSelected(entry) ? .semibold : .regular))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .layoutPriority(0)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+        NavigationStack {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(entries) { entry in
+                        Button {
+                            onSelect(entry)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 0) {
+                                Text(entry.primaryText)
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                        if let secondaryText = entry.secondaryText {
-                            Text(secondaryText)
-                                .font(.caption)
-                                .foregroundStyle(Color.primary.opacity(0.68))
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                                .layoutPriority(1)
+                                ISOChip(isoText: entry.secondaryText)
+                                    .padding(.leading, 8)
+
+                                Image(systemName: "checkmark")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tint)
+                                    .opacity(currentSelectionID == entry.id ? 1 : 0)
+                                    .frame(width: 28, alignment: .trailing)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .contentShape(Rectangle())
                         }
-                    }
-                    .padding(.horizontal, 18)
-                    .frame(height: rowHeight)
-                    .background(rowBackground(for: entry))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("film-selector-entry-\(entry.id)")
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("film-picker-row-\(entry.id)")
 
-                if index < entries.count - 1 {
-                    Color.clear.frame(height: 6)
+                        Divider()
+                            .padding(.leading, 20)
+                    }
+                }
+                .padding(.top, 8)
+            }
+            .navigationTitle("Choose Film")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: overlayWidth)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 18, y: 10)
-        .padding(.horizontal, 28)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .accessibilityIdentifier("film-selector-overlay")
-    }
-
-    private var overlayWidth: CGFloat {
-        switch style {
-        case .regular:
-            return 440
-        case .compact:
-            return 404
-        case .dense:
-            return 372
-        }
-    }
-
-    private var rowHeight: CGFloat {
-        switch style {
-        case .regular:
-            return 56
-        case .compact:
-            return 52
-        case .dense:
-            return 48
-        }
-    }
-
-    private func isSelected(_ entry: FilmSelectorEntry) -> Bool {
-        entry.id == selectedFilmID
-    }
-
-    @ViewBuilder
-    private func rowBackground(for entry: FilmSelectorEntry) -> some View {
-        if isSelected(entry) {
-            Color.primary.opacity(0.06)
-        } else {
-            Color.clear
-        }
+        .accessibilityIdentifier("film-picker-sheet")
     }
 }
 

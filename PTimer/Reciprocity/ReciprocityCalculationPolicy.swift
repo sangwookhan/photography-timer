@@ -653,6 +653,7 @@ struct ReciprocityCalculationPolicyEvaluator {
         for tableSelector in selector.tableSelectors {
             if let result = evaluateEstimatedTableResult(
                 selection: tableSelector,
+                thresholdRules: selector.thresholdRules,
                 meteredExposureSeconds: meteredExposureSeconds,
                 assembler: assembler,
                 estimator: estimator
@@ -733,6 +734,7 @@ struct ReciprocityCalculationPolicyEvaluator {
 
     private func evaluateEstimatedTableResult(
         selection: TableSelector,
+        thresholdRules: [ThresholdReciprocityRule],
         meteredExposureSeconds: Double,
         assembler: ResultAssembler,
         estimator: Estimation
@@ -747,6 +749,24 @@ struct ReciprocityCalculationPolicyEvaluator {
             return assembleEstimatedTableResult(
                 meteredExposureSeconds: meteredExposureSeconds,
                 segment: segment,
+                assembler: assembler,
+                estimator: estimator
+            )
+        }
+
+        // Handles the gap between a no-correction threshold and the first quantified table point.
+        // Reuses the first two quantified table points as downward extrapolation anchors.
+        // No synthetic table rows or fake referencedRows are created.
+        if let firstPoint = quantifiedPoints.first,
+           quantifiedPoints.count >= 2,
+           meteredExposureSeconds < firstPoint.meteredExposureSeconds,
+           thresholdRules.contains(where: { rule in
+               guard let thresholdMax = rule.noCorrectionRange.maximumSeconds else { return false }
+               return meteredExposureSeconds > thresholdMax && thresholdMax < firstPoint.meteredExposureSeconds
+           }) {
+            return assembleEstimatedTableResult(
+                meteredExposureSeconds: meteredExposureSeconds,
+                segment: .extrapolated(lowerAnchor: quantifiedPoints[0], upperAnchor: quantifiedPoints[1]),
                 assembler: assembler,
                 estimator: estimator
             )

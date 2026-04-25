@@ -253,6 +253,128 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(result.metadata.referencedRows?.map(\.role), [.stopSignal])
     }
 
+    // MARK: - Velvia 50 threshold-to-table transition range (PTIMER-109)
+
+    func testVelviaAtOneSecondReturnsThresholdNoCorrection() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            meteredExposureSeconds: 1
+        )
+
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertNil(result.metadata.referencedRows)
+    }
+
+    func testVelviaAtTwoSecondsReturnsExtrapolatedNotUnsupported() throws {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            meteredExposureSeconds: 2
+        )
+        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
+
+        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
+        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
+        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            stopSpaceEstimate(
+                meteredExposureSeconds: 2,
+                lowerMeteredSeconds: 4,
+                lowerStopDelta: 1.0 / 3.0,
+                upperMeteredSeconds: 8,
+                upperStopDelta: 0.5
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(try referencedRows.map(exactSeconds), [4, 8])
+        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
+    }
+
+    func testVelviaAtFourSecondsRemainsExactTablePoint() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            meteredExposureSeconds: 4
+        )
+
+        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 4 * pow(2.0, 1.0 / 3.0), accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+    }
+
+    func testVelviaAtEightSecondsRemainsExactTablePoint() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            meteredExposureSeconds: 8
+        )
+
+        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 8 * pow(2.0, 0.5), accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+    }
+
+    func testVelviaAtFifteenSecondsRemainsInterpolatedWithinTable() throws {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            meteredExposureSeconds: 15
+        )
+        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
+
+        XCTAssertEqual(result.metadata.basis, .interpolatedWithinTable)
+        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            stopSpaceEstimate(
+                meteredExposureSeconds: 15,
+                lowerMeteredSeconds: 8,
+                lowerStopDelta: 0.5,
+                upperMeteredSeconds: 16,
+                upperStopDelta: 2.0 / 3.0
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(try referencedRows.map(exactSeconds), [8, 16])
+    }
+
+    func testVelviaAtSixtySecondsRemainsExtrapolatedBelowStopSignal() throws {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            meteredExposureSeconds: 60
+        )
+        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
+
+        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
+        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            stopSpaceEstimate(
+                meteredExposureSeconds: 60,
+                lowerMeteredSeconds: 16,
+                lowerStopDelta: 2.0 / 3.0,
+                upperMeteredSeconds: 32,
+                upperStopDelta: 1.0
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(try referencedRows.map(exactSeconds), [16, 32])
+    }
+
+    func testTableOnlyProfileBelowFirstEntryWithoutThresholdRemainsUnsupported() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
+            meteredExposureSeconds: 0.5
+        )
+
+        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+    }
+
     func testPortraThresholdNoCorrectionRemainsNonQuantifiedContinuationBoundary() {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),

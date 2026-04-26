@@ -723,7 +723,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return "\(formatReciprocityNumber(safeSeconds, maximumFractionDigits: 1))s"
         }
 
-        if safeSeconds < 60 {
+        if safeSeconds < 120 {
             return "\(Int(safeSeconds.rounded()))s"
         }
 
@@ -1235,8 +1235,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             },
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             usesCurrentInputGuideOnly: bindingState.presentation.category == .unsupported,
-            caption: "Active formula curve",
-            unsupportedExplanation: nil,
+            caption: "Adjusted shutter vs corrected exposure on the active formula curve",
+            unsupportedExplanation: graphUnsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
             xAxisTicks: graphAxisTicks(for: ranges.xRange),
@@ -1287,8 +1287,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             usesCurrentInputGuideOnly: bindingState.presentation.category == .unsupported,
-            caption: "From reference anchors",
-            unsupportedExplanation: nil,
+            caption: "Adjusted shutter vs corrected exposure from reference anchors",
+            unsupportedExplanation: graphUnsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
             xAxisTicks: graphAxisTicks(for: ranges.xRange),
@@ -1537,6 +1537,16 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return supportedUpperBoundSeconds
     }
 
+    private func graphUnsupportedExplanation(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String? {
+        guard bindingState.presentation.category == .unsupported else {
+            return nil
+        }
+
+        return "Current input is outside the supported range. No quantified corrected point is available."
+    }
+
     private func filmModeDetailsSummaryText(
         for bindingState: FilmModeReciprocityBindingState
     ) -> String {
@@ -1602,7 +1612,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case .quantified:
             return correctedExposure.secondaryText
         case .advisory:
-            return nil
+            return correctedExposure.secondaryText
         case .unsupported:
             return correctedExposure.secondaryText
         }

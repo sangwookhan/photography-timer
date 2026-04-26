@@ -914,6 +914,59 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCoarseLongDurationFormatterSuppressesSubdayNoiseForDayScaleValues() {
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+        )
+
+        // Threshold: exactly 1 day gets coarse treatment
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(86_400), "1d")
+
+        // Below 1 day — delegates to exact formatter (no regression)
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(86_399), "23:59:59")
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(3_600), "01:00:00")
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(64), "01:04")
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(5.41), "5.4s")
+
+        // 6d 01:08:05 (522,484.861s) → coarse "6d"
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(522_484.861), "6d")
+
+        // Ticket examples: hour/min/sec noise stripped for day-scale values
+        // 388d 08:40:32 → "388d"
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(33_554_432), "388d")
+        // 278d 22:14:08 → "278d"
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(24_099_248), "278d")
+        // 83602d 09:00:06 → "83,602d" (thousands separator)
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(7_223_245_206), "83,602d")
+        // 587989d 13:41:34 → "587,989d" (thousands separator)
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(50_802_298_894), "587,989d")
+    }
+
+    @MainActor
+    func testTopLevelCorrectedExposureUsesCoarseDayDisplayForVeryLongDurations() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
+
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 28
+        viewModel.selectPresetFilm(film)
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let corrected = resultState.correctedExposure
+
+        XCTAssertEqual(corrected.kind, .quantified)
+        XCTAssertNotNil(corrected.correctedExposureSeconds)
+        // primaryText must be coarse day-only (no hour/min/sec noise)
+        XCTAssertEqual(corrected.primaryText, "13,599d")
+        // exact seconds remain available for timer use
+        XCTAssertEqual(corrected.usesNumericExposure, true)
+    }
+
+    @MainActor
     func testReciprocityDisplayStateUsesReadableAdjustedAndCorrectedValues() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })

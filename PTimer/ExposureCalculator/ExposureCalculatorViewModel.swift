@@ -701,7 +701,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    private func formatReciprocityDurationCoarse(_ seconds: TimeInterval) -> String {
+    func formatReciprocityDurationCoarse(_ seconds: TimeInterval) -> String {
         let safeSeconds = max(seconds, 0)
         let roundedSeconds = Int(safeSeconds.rounded())
         let secondsPerDay = 86_400
@@ -713,6 +713,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
         let days = roundedSeconds / secondsPerDay
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        formatter.groupingSeparator = ","
+        formatter.groupingSize = 3
         return (formatter.string(from: NSNumber(value: days)) ?? "\(days)") + "d"
     }
 
@@ -985,7 +988,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
-                primaryText: formatReciprocityDuration(correctedExposureSeconds),
+                primaryText: formatReciprocityDurationCoarse(correctedExposureSeconds),
                 secondaryText: "",
                 usesNumericExposure: true
             )

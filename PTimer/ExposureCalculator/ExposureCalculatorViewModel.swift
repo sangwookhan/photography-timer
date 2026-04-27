@@ -364,34 +364,53 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var filmSelectorEntries: [FilmSelectorEntry] {
-        [FilmSelectorEntry(id: "no-film", primaryText: "No film", secondaryText: nil, film: nil)]
-            + presetFilms.map { film in
-                FilmSelectorEntry(
-                    id: film.id,
+        var entries: [FilmSelectorEntry] = [
+            FilmSelectorEntry(id: "no-film", primaryText: "No film")
+        ]
+
+        for film in presetFilms {
+            entries.append(FilmSelectorEntry(
+                id: film.id,
+                primaryText: film.canonicalStockName,
+                secondaryText: inferredISOValue(for: film).map { "ISO \($0)" },
+                film: film
+            ))
+
+            if let unofficialProfile = UnofficialPracticalProfiles.profile(forFilmID: film.id) {
+                entries.append(FilmSelectorEntry(
+                    id: unofficialProfile.id,
                     primaryText: film.canonicalStockName,
-                    secondaryText: inferredISOValue(for: film).map { "ISO \($0)" },
-                    film: film
-                )
+                    secondaryText: "Unofficial",
+                    film: film,
+                    profileOverride: unofficialProfile
+                ))
             }
+        }
+
+        return entries
+    }
+
+    var selectedSelectorEntryID: String? {
+        guard let film = selectedPresetFilm else { return nil }
+        return activeCalculatorContext.selectedProfileOverride?.id ?? film.id
     }
 
     var filmSelectionDisplayState: FilmSelectionDisplayState {
         guard let selectedPresetFilm else {
-            return FilmSelectionDisplayState(
-                primaryText: "No film",
-                secondaryText: nil
-            )
+            return FilmSelectionDisplayState(primaryText: "No film", secondaryText: nil)
         }
 
+        let activeProfile = activeCalculatorContext.selectedProfileOverride
+            ?? selectedPresetFilm.profiles.first
         return FilmSelectionDisplayState(
             primaryText: selectedPresetFilm.canonicalStockName,
-            secondaryText: nil
+            secondaryText: filmRowAuthorityLabel(for: activeProfile)
         )
     }
 
     var filmReciprocityBindingState: FilmModeReciprocityBindingState? {
         guard let selectedPresetFilm,
-              let profile = selectedPresetFilm.profiles.first,
+              let profile = activeCalculatorContext.selectedProfileOverride ?? selectedPresetFilm.profiles.first,
               case .success(let result) = calculationResult else {
             return nil
         }
@@ -455,18 +474,27 @@ final class ExposureCalculatorViewModel: ObservableObject {
         filmModeExposureResultState?.correctedExposureAction.canStartTimer == true
     }
 
+    func selectEntry(_ entry: FilmSelectorEntry) {
+        activeCalculatorContext.selectedPresetFilm = entry.film
+        activeCalculatorContext.selectedProfileOverride = entry.profileOverride
+        persistCalculatorContext()
+    }
+
     func selectPresetFilm(_ film: FilmIdentity) {
         activeCalculatorContext.selectedPresetFilm = film
+        activeCalculatorContext.selectedProfileOverride = nil
         persistCalculatorContext()
     }
 
     func clearSelectedPresetFilm() {
         activeCalculatorContext.selectedPresetFilm = nil
+        activeCalculatorContext.selectedProfileOverride = nil
         persistCalculatorContext()
     }
 
     func resetFilmModeWorkingContext() {
         activeCalculatorContext.selectedPresetFilm = nil
+        activeCalculatorContext.selectedProfileOverride = nil
         liveBaseShutter = nil
         liveNDStop = nil
         baseShutter = defaultFilmModeBaseShutter
@@ -1358,8 +1386,13 @@ final class ExposureCalculatorViewModel: ObservableObject {
             currentMeteredExposureSeconds / 4,
             1
         ]
+        // When no explicit meteredRange is defined, use a canonical practical range
+        // so the graph shows a stable reference viewport rather than auto-scaling
+        // tightly around the current input.
+        let canonicalUpperBoundSeconds: Double = 120
         let upperBoundCandidates = [
             rule.meteredRange?.maximumSeconds,
+            canonicalUpperBoundSeconds,
             currentMeteredExposureSeconds
         ]
 
@@ -1677,10 +1710,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private func formulaDetailsSections(
         for bindingState: FilmModeReciprocityBindingState
     ) -> [FilmModeDetailsSectionState] {
+        let profileRows = profileDetailsRows(for: bindingState)
         let formulaRows = formulaReferenceRows(for: bindingState) ?? []
         let sourceRows = sourceDetailsRows(for: bindingState.profile)
 
         return [
+            !profileRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Profile", rows: profileRows)
+                : nil,
             !formulaRows.isEmpty
                 ? FilmModeDetailsSectionState(title: "Formula", rows: formulaRows)
                 : nil,
@@ -1694,8 +1731,35 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private func profileDetailsRows(
         for bindingState: FilmModeReciprocityBindingState
     ) -> [FilmModeDetailsRowState] {
-        let profileText = profileSummaryText(for: bindingState)
-        return profileText.map { [FilmModeDetailsRowState(title: "Profile", value: $0)] } ?? []
+        var rows: [FilmModeDetailsRowState] = []
+        if let profileText = profileSummaryText(for: bindingState) {
+            rows.append(FilmModeDetailsRowState(title: "Profile", value: profileText))
+        }
+        if let authorityText = profileAuthorityText(for: bindingState.profile) {
+            rows.append(FilmModeDetailsRowState(title: "Authority", value: authorityText))
+        }
+        return rows
+    }
+
+    /// Short authority label for the main Film row subtitle.
+    /// Returns nil for userDefined/unknown so only official/unofficial films carry a visible qualifier.
+    private func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
+        switch profile?.source.authority {
+        case .official: return "Official guidance"
+        case .unofficial: return "Unofficial practical"
+        case .userDefined, .unknown, nil: return nil
+        }
+    }
+
+    private func profileAuthorityText(for profile: ReciprocityProfile) -> String? {
+        switch profile.source.authority {
+        case .official:
+            return "Official manufacturer guidance"
+        case .unofficial:
+            return "Unofficial practical approximation"
+        case .userDefined, .unknown:
+            return nil
+        }
     }
 
     private func referenceDetailsRows(

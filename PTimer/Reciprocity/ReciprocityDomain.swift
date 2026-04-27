@@ -493,3 +493,49 @@ enum ReciprocityWarningSeverity: String, Codable, Equatable {
 struct ReciprocityNote: Codable, Equatable {
     let text: String
 }
+
+// PTIMER-113: Unofficial practical profiles defined separately from the launch preset catalog.
+// The launch catalog enforces exactly one official manufacturer profile per film identity.
+// Profiles in this registry are lower-authority supplementary data for future UI exposure.
+enum UnofficialPracticalProfiles {
+
+    // Unofficial practical approximation profile for Kodak Portra 400.
+    //
+    // This profile is separate from the official primary profile
+    // "kodak-portra-official-threshold" in the launch preset catalog and must never
+    // replace or shadow it.
+    //
+    static func profile(forFilmID filmID: String) -> ReciprocityProfile? {
+        switch filmID {
+        case "kodak-portra-400": return kodakPortra400UnofficialPractical
+        default: return nil
+        }
+    }
+
+    static let kodakPortra400UnofficialPractical = ReciprocityProfile(
+        id: "kodak-portra-400-unofficial-practical",
+        name: "Unofficial practical approximation",
+        source: ReciprocitySourceProvenance(
+            kind: .thirdPartyPublication,
+            authority: .unofficial,
+            confidence: .low,
+            publisher: "",
+            title: nil,
+            citation: nil,
+            sourceVersion: nil
+        ),
+        rules: [
+            .formula(FormulaReciprocityRule(
+                formula: ReciprocityFormula(
+                    kind: .exponentPower,
+                    exponent: 1.34,
+                    equation: "Tc = Tm^P"
+                )
+            ))
+        ],
+        notes: [
+            "Unofficial practical approximation. Not a Kodak-published profile.",
+            "Formula: Tc = Tm^1.34. Source pending verification (PTIMER-113)."
+        ]
+    )
+}

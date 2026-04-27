@@ -721,3 +721,123 @@ final class ReciprocityDomainTests: XCTestCase {
         )
     }
 }
+
+// PTIMER-113: Tests for the unofficial practical secondary profile for Portra 400.
+final class Portra400SecondaryProfileTests: XCTestCase {
+    private let evaluator = ReciprocityCalculationPolicyEvaluator()
+    private let filmID = "kodak-portra-400"
+    private let officialProfileID = "kodak-portra-official-threshold"
+    private let unofficialProfileID = "kodak-portra-400-unofficial-practical"
+
+    func testPortra400LaunchCatalogHasExactlyOneOfficialPrimaryProfile() {
+        let portra = LaunchPresetFilmCatalog.films.first(where: { $0.id == filmID })
+
+        XCTAssertNotNil(portra, "Portra 400 must exist in the launch catalog.")
+        XCTAssertEqual(portra?.profiles.count, 1, "Launch catalog must have exactly one profile per film.")
+        XCTAssertEqual(portra?.profiles.first?.id, officialProfileID)
+        XCTAssertEqual(portra?.profiles.first?.source.authority, .official)
+        XCTAssertEqual(portra?.profiles.first?.source.kind, .manufacturerPublished)
+    }
+
+    func testPortra400UnofficialPracticalProfileHasUnofficialProvenance() {
+        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
+
+        XCTAssertEqual(profile.source.authority, .unofficial)
+        XCTAssertEqual(profile.source.kind, .thirdPartyPublication)
+        XCTAssertEqual(profile.source.confidence, .low)
+    }
+
+    func testPortra400UnofficialProfileIsNotLabeledOfficial() {
+        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
+
+        XCTAssertNotEqual(profile.source.authority, .official)
+        XCTAssertNotEqual(profile.source.confidence, .high)
+        XCTAssertNotEqual(profile.source.kind, .manufacturerPublished)
+    }
+
+    func testPortra400OfficialAndUnofficialProfilesHaveDistinctIdentifiers() {
+        let officialProfile = LaunchPresetFilmCatalog.films
+            .first(where: { $0.id == filmID })?
+            .profiles.first
+        let unofficialProfile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
+
+        XCTAssertNotNil(officialProfile)
+        XCTAssertNotEqual(officialProfile?.id, unofficialProfile.id)
+        XCTAssertEqual(officialProfile?.id, officialProfileID)
+        XCTAssertEqual(unofficialProfile.id, unofficialProfileID)
+    }
+
+    func testPortra400OfficialBehaviorUnchanged_ThresholdNoCorrectionBelowOneSecond() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
+            meteredExposureSeconds: 0.5
+        )
+
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
+    }
+
+    func testPortra400OfficialBehaviorUnchanged_AdvisoryOnlyBeyondOfficialRange() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
+            meteredExposureSeconds: 4
+        )
+
+        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .advisoryOnlyBeyondOfficialRange)
+        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
+    }
+
+    func testPortra400FilmIdentityCanRepresentBothProfilesAtDomainLevel() throws {
+        let officialProfile = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first(where: { $0.id == filmID })?.profiles.first,
+            "Official Portra 400 profile must exist in the launch catalog."
+        )
+
+        let withBothProfiles = FilmIdentity(
+            id: filmID,
+            kind: .preset,
+            canonicalStockName: "Portra 400",
+            manufacturer: "Kodak",
+            brandLabel: "KODAK PROFESSIONAL PORTRA 400",
+            aliases: ["PORTRA 400"],
+            productionStatus: .current,
+            profiles: [officialProfile, UnofficialPracticalProfiles.kodakPortra400UnofficialPractical],
+            userMetadata: nil
+        )
+
+        XCTAssertEqual(withBothProfiles.profiles.count, 2)
+        XCTAssertEqual(withBothProfiles.profiles[0].id, officialProfileID)
+        XCTAssertEqual(withBothProfiles.profiles[0].source.authority, .official)
+        XCTAssertEqual(withBothProfiles.profiles[1].id, unofficialProfileID)
+        XCTAssertEqual(withBothProfiles.profiles[1].source.authority, .unofficial)
+    }
+
+    func testPortra400UnofficialProfileHasFormulaRuleWithExponent1_34() {
+        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
+
+        let formulaRule = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+            guard case let .formula(r) = rule else { return nil }
+            return r
+        }.first
+
+        XCTAssertNotNil(formulaRule, "Unofficial profile must contain a formula rule.")
+        XCTAssertEqual(formulaRule?.formula.kind, .exponentPower)
+        XCTAssertEqual(formulaRule?.formula.exponent ?? 0, 1.34, accuracy: 0.0001)
+    }
+
+    func testPortra400UnofficialProfileEvaluatesQuantifiedResultBeyondOfficialRange() {
+        let result = evaluator.evaluate(
+            profile: UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
+            meteredExposureSeconds: 10
+        )
+
+        XCTAssertTrue(result.hasCalculatedExposureTime, "Unofficial formula profile must produce a quantified result.")
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(10, 1.34), accuracy: 0.001)
+        XCTAssertEqual(result.metadata.basis, .formulaDerived)
+        XCTAssertNotEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
+    }
+}

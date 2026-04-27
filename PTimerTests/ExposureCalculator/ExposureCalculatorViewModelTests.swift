@@ -30,7 +30,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isFilmWorkflowActive)
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Tri-X 400")
         XCTAssertFalse(viewModel.filmSelectionDisplayState.primaryText.contains("ISO"))
-        XCTAssertNil(viewModel.filmSelectionDisplayState.secondaryText)
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.secondaryText, "Official guidance")
     }
 
     @MainActor
@@ -44,7 +44,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, replacementFilm)
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
-        XCTAssertNil(viewModel.filmSelectionDisplayState.secondaryText)
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.secondaryText, "Official guidance")
     }
 
     @MainActor
@@ -56,12 +56,14 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.primaryText), [
             "Tri-X 400",
             "Portra 400",
+            "Portra 400",
             "Velvia 50",
             "HP5 Plus"
         ])
         XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText), [
             "ISO 400",
             "ISO 400",
+            "Unofficial",
             "ISO 50",
             "ISO 400"
         ])
@@ -466,7 +468,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
             "Sources"
         ])
         XCTAssertEqual(details.graph?.kind, .table)
-        XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Profile"])
+        XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Profile", "Authority"])
     }
 
     @MainActor
@@ -483,7 +485,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
         let sourcesSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Sources" }))
 
-        XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table"])
+        XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table", "Official manufacturer guidance"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
         XCTAssertEqual(referenceSection.rows.map(\.value), [
@@ -518,7 +520,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
         let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
         XCTAssertEqual(details.sections.last?.title, "Sources")
-        XCTAssertEqual(profileSection.rows.map(\.value), ["No quantified manufacturer data"])
+        XCTAssertEqual(profileSection.rows.map(\.value), ["No quantified manufacturer data", "Official manufacturer guidance"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
         XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-1s    No correction"])
@@ -621,11 +623,13 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
 
-        XCTAssertEqual(details.sections.map(\.title), ["Formula", "Sources"])
+        XCTAssertEqual(details.sections.map(\.title), ["Profile", "Formula", "Sources"])
         XCTAssertEqual(formulaSection.rows.map(\.title), [""])
         XCTAssertEqual(formulaSection.rows.map(\.style), [.formulaExpression])
         XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.31"])
         XCTAssertFalse(formulaSection.rows.contains { $0.value == "Tc = Tm^P" })
+        let formulaProfileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        XCTAssertEqual(formulaProfileSection.rows.map(\.value), ["Formula-based guidance", "Official manufacturer guidance"])
         XCTAssertEqual(details.summary.badgeText, "Formula-based")
         XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
         XCTAssertEqual(details.graph?.kind, .formula)
@@ -802,6 +806,249 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertNil(details.graph)
         XCTAssertEqual(details.sections.first(where: { $0.title == "Reference" })?.rows.first?.value, "<= 1s    No correction")
+    }
+
+    @MainActor
+    func testFilmModeDetailsUnofficialPortra400ShowsUnofficialAuthorityAndFormula() throws {
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
+            "Unofficial Portra 400 selector entry must exist."
+        )
+
+        viewModel.baseShutter = 10
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
+
+        XCTAssertEqual(profileSection.rows.map(\.title), ["Profile", "Authority"])
+        XCTAssertEqual(profileSection.rows.map(\.value), ["Formula-based guidance", "Unofficial practical approximation"])
+        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.34"])
+        XCTAssertEqual(details.summary.badgeText, "Formula-based")
+        XCTAssertNil(details.sections.first(where: { $0.title == "Sources" }),
+                     "Unofficial profile with no verified source metadata must not show Sources section.")
+    }
+
+    @MainActor
+    func testFilmModeDetailsOfficialPortra400ShowsOfficialAuthorityInProfileSection() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        let authorityRow = try XCTUnwrap(profileSection.rows.first(where: { $0.title == "Authority" }))
+
+        XCTAssertEqual(authorityRow.value, "Official manufacturer guidance")
+        XCTAssertFalse(profileSection.rows.map(\.value).contains("Unofficial practical approximation"))
+    }
+
+    // MARK: - PTIMER-113 follow-up: main film row profile distinction
+
+    @MainActor
+    func testFilmSelectionDisplayStateOfficialPortra400ShowsOfficialGuidanceLabel() {
+        let viewModel = makeViewModel()
+        let film = viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }!
+        viewModel.selectPresetFilm(film)
+
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
+        XCTAssertEqual(
+            viewModel.filmSelectionDisplayState.secondaryText,
+            "Official guidance",
+            "Official Portra 400 must show an explicit 'Official guidance' label on the main row."
+        )
+    }
+
+    @MainActor
+    func testFilmSelectionDisplayStateUnofficialPortra400ShowsUnofficialPracticalLabel() throws {
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+        viewModel.selectEntry(unofficialEntry)
+
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
+        XCTAssertEqual(
+            viewModel.filmSelectionDisplayState.secondaryText,
+            "Unofficial practical",
+            "Unofficial Portra 400 must show a clear profile qualifier on the main film row."
+        )
+    }
+
+    @MainActor
+    func testFilmSelectionDisplayStateOfficialAndUnofficialPortra400AreDistinguishable() throws {
+        let viewModel = makeViewModel()
+        let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.selectPresetFilm(officialFilm)
+        let officialDisplay = viewModel.filmSelectionDisplayState
+
+        viewModel.selectEntry(unofficialEntry)
+        let unofficialDisplay = viewModel.filmSelectionDisplayState
+
+        XCTAssertEqual(officialDisplay.primaryText, unofficialDisplay.primaryText,
+                       "Primary film name should be identical for official and unofficial Portra 400.")
+        XCTAssertNotEqual(
+            officialDisplay.secondaryText,
+            unofficialDisplay.secondaryText,
+            "Official and unofficial Portra 400 must produce different secondary labels so the user can distinguish them."
+        )
+        XCTAssertEqual(officialDisplay.secondaryText, "Official guidance")
+        XCTAssertEqual(unofficialDisplay.secondaryText, "Unofficial practical")
+    }
+
+    // MARK: - PTIMER-113 follow-up: film details section order
+
+    @MainActor
+    func testFilmModeDetailsUnofficialPortra400HasFormulaAndProfileSectionsPresent() throws {
+        // Verifies that both Profile and Formula sections exist in the sections array —
+        // the view renders non-Sources sections before the graph, so this guarantees
+        // Formula appears before Graph in the rendered UI.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
+        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
+        XCTAssertNotNil(details.graph, "Formula profile must produce a graph.")
+        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.34"])
+        XCTAssertEqual(
+            profileSection.rows.first(where: { $0.title == "Authority" })?.value,
+            "Unofficial practical approximation"
+        )
+        XCTAssertNil(details.sections.first(where: { $0.title == "Sources" }),
+                     "Unofficial profile with no verified source must not show Sources section.")
+    }
+
+    // MARK: - PTIMER-113 follow-up: formula graph stable range
+
+    @MainActor
+    func testFormulaGraphSourcePointsCoverCanonicalRangeRegardlessOfCurrentInput() throws {
+        // With a short current input, the graph should still plot source points up to
+        // the canonical 120s upper bound so the graph feels stable, not auto-scaled.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 2      // short input — well below canonical 120s
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let graph = try XCTUnwrap(details.graph)
+
+        // Source points must span beyond the current input toward the canonical bound
+        let maxSourceMetered = graph.sourcePoints.map(\.meteredExposureSeconds).max() ?? 0
+        XCTAssertGreaterThan(
+            maxSourceMetered,
+            30,
+            "Formula graph source points must extend well beyond the current input to provide a stable reference range."
+        )
+    }
+
+    // MARK: - PTIMER-113 UI stabilization: Film row symmetric labels
+
+    @MainActor
+    func testFilmRowOfficialGuidanceLabelAppliesToAllOfficialPresetFilms() {
+        // Every preset film with authority=official must show "Official guidance" on the main row.
+        // This ensures the label is consistent across all catalog films, not only Portra 400.
+        let viewModel = makeViewModel()
+        for film in viewModel.availablePresetFilms {
+            viewModel.selectPresetFilm(film)
+            XCTAssertEqual(
+                viewModel.filmSelectionDisplayState.secondaryText,
+                "Official guidance",
+                "\(film.canonicalStockName) has authority=official and must show 'Official guidance'."
+            )
+        }
+    }
+
+    @MainActor
+    func testFilmRowLabelClearedWhenNoFilmSelected() {
+        let viewModel = makeViewModel()
+        XCTAssertNil(
+            viewModel.filmSelectionDisplayState.secondaryText,
+            "No-film state must not show a profile qualifier."
+        )
+    }
+
+    // MARK: - PTIMER-113 UI stabilization: Details display state present for both profiles
+
+    @MainActor
+    func testFilmModeDetailsDisplayStateIsNonNilForOfficialAndUnofficialPortra400() throws {
+        // Both official and unofficial Portra 400 must produce a non-nil details display state
+        // so the sheet can open for either profile.
+        let viewModel = makeViewModel()
+        let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 0
+
+        viewModel.selectPresetFilm(officialFilm)
+        XCTAssertNotNil(
+            viewModel.filmModeDetailsDisplayState,
+            "Official Portra 400 must produce a film details display state."
+        )
+
+        viewModel.selectEntry(unofficialEntry)
+        XCTAssertNotNil(
+            viewModel.filmModeDetailsDisplayState,
+            "Unofficial Portra 400 must produce a film details display state."
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsSectionOrderIsConsistentAcrossOfficialAndUnofficialPortra400() throws {
+        // For both profiles, all non-Sources sections must precede any Sources section.
+        // The view renders: non-Sources → graph → Sources. This test ensures no section
+        // ordering regression in the underlying display state.
+        let viewModel = makeViewModel()
+        let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 0
+
+        for label in ["official", "unofficial"] {
+            if label == "official" {
+                viewModel.selectPresetFilm(officialFilm)
+            } else {
+                viewModel.selectEntry(unofficialEntry)
+            }
+
+            let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+            let sourcesIndex = details.sections.firstIndex(where: { $0.title == "Sources" })
+            let profileIndex = details.sections.firstIndex(where: { $0.title == "Profile" })
+
+            // If a Sources section exists it must come after Profile
+            if let si = sourcesIndex, let pi = profileIndex {
+                XCTAssertGreaterThan(si, pi, "[\(label)] Sources must appear after Profile in sections array.")
+            }
+            // Profile must exist
+            XCTAssertNotNil(profileIndex, "[\(label)] Profile section must be present in details sections.")
+        }
     }
 
     @MainActor
@@ -1355,11 +1602,11 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             viewModel.filmSelectorEntries.dropFirst().map(\.primaryText),
-            ["Tri-X 400", "Portra 400", "Velvia 50", "HP5 Plus"]
+            ["Tri-X 400", "Portra 400", "Portra 400", "Velvia 50", "HP5 Plus"]
         )
         XCTAssertEqual(
             viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText),
-            ["ISO 400", "ISO 400", "ISO 50", "ISO 400"]
+            ["ISO 400", "ISO 400", "Unofficial", "ISO 50", "ISO 400"]
         )
     }
 

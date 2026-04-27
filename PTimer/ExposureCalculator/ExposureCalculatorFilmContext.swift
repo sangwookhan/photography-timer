@@ -2,11 +2,14 @@ import Foundation
 
 struct ActiveExposureCalculatorContext: Equatable {
     var selectedPresetFilm: FilmIdentity?
+    var selectedProfileOverride: ReciprocityProfile?
 
     init(
-        selectedPresetFilm: FilmIdentity? = nil
+        selectedPresetFilm: FilmIdentity? = nil,
+        selectedProfileOverride: ReciprocityProfile? = nil
     ) {
         self.selectedPresetFilm = selectedPresetFilm
+        self.selectedProfileOverride = selectedProfileOverride
     }
 }
 
@@ -68,6 +71,21 @@ struct FilmSelectorEntry: Equatable, Identifiable {
     let primaryText: String
     let secondaryText: String?
     let film: FilmIdentity?
+    let profileOverride: ReciprocityProfile?
+
+    init(
+        id: String,
+        primaryText: String,
+        secondaryText: String? = nil,
+        film: FilmIdentity? = nil,
+        profileOverride: ReciprocityProfile? = nil
+    ) {
+        self.id = id
+        self.primaryText = primaryText
+        self.secondaryText = secondaryText
+        self.film = film
+        self.profileOverride = profileOverride
+    }
 }
 
 struct FilmSelectionDisplayState: Equatable {

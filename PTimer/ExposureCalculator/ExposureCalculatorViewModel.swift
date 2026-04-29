@@ -194,16 +194,17 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private let calculatorModel: CalculatorModel
     private var calculator: ExposureCalculator { calculatorModel.calculator }
     private let reciprocityModel: ReciprocityModel
+    /// PR3 of B1 — owns timer collection, metadata persistence, and
+    /// lifecycle ops. The ViewModel republishes `timerWorkspaceModel.$timers`
+    /// into its own `@Published var timers` so existing view bindings,
+    /// the lock-screen Combine subscription, and the record-replay smoke
+    /// test all continue to work without changes.
+    private let timerWorkspaceModel: TimerWorkspaceModel
+    private var timerManager: TimerManager { timerWorkspaceModel.timerManager }
     private let presetFilms: [FilmIdentity]
-    private let timerManager: TimerManager
     private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
-    private let metadataPersistenceStore: TimerMetadataPersistenceStoring
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
-    private let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
-    private var timerMetadata: [UUID: TimerMetadata] = [:]
-    private var nextTimerOrder = 1
     private var cancellables: Set<AnyCancellable> = []
-    private var completedTimeContextRefreshTimer: Timer?
 
     private enum TimerStartSource {
         case digitalResult
@@ -234,33 +235,52 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// PR2 of B1 — designated init for the
-    /// `WorkspaceCoordinator` path: coordinator constructs the
-    /// `CalculatorModel` and `ReciprocityModel` first and injects them
-    /// so both surfaces share the same calc state and reciprocity
-    /// collaborators.
-    init(
+    /// PR2 of B1 — back-compat convenience that auto-builds the
+    /// `TimerWorkspaceModel` from the dependency bundle. Forwards to
+    /// the PR3 designated init.
+    convenience init(
         dependencies: ViewModelDependencies,
         calculatorModel: CalculatorModel,
         reciprocityModel: ReciprocityModel
     ) {
+        let timerWorkspaceModel = TimerWorkspaceModel(
+            timerManager: dependencies.timerManager,
+            metadataPersistenceStore: dependencies.metadataPersistenceStore,
+            defaultName: { duration in
+                "Timer - \(calculatorModel.calculator.formatShutter(duration))"
+            }
+        )
+        self.init(
+            dependencies: dependencies,
+            calculatorModel: calculatorModel,
+            reciprocityModel: reciprocityModel,
+            timerWorkspaceModel: timerWorkspaceModel
+        )
+    }
+
+    /// PR3 of B1 — designated init for the `WorkspaceCoordinator`
+    /// path: coordinator constructs the `CalculatorModel`,
+    /// `ReciprocityModel`, and `TimerWorkspaceModel` first and injects
+    /// them so all surfaces share the same calc state, reciprocity
+    /// collaborators, and timer state.
+    init(
+        dependencies: ViewModelDependencies,
+        calculatorModel: CalculatorModel,
+        reciprocityModel: ReciprocityModel,
+        timerWorkspaceModel: TimerWorkspaceModel
+    ) {
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
+        self.timerWorkspaceModel = timerWorkspaceModel
         self.presetFilms = dependencies.presetFilms
-        self.timerManager = dependencies.timerManager
         self.contextPersistenceStore = dependencies.contextPersistenceStore
-        self.metadataPersistenceStore = dependencies.metadataPersistenceStore
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: dependencies.lockScreenTargetExposer
         )
 
         restorePersistedCalculatorContext()
-        restorePersistedTimerMetadata()
-        timerManager.$timers
-            .sink { [weak self] states in
-                self?.syncTimers(with: states)
-            }
-            .store(in: &cancellables)
+        timerWorkspaceModel.$timers
+            .assign(to: &$timers)
         bindLockScreenCoordinatorToTimerPublisher()
     }
 
@@ -272,23 +292,25 @@ final class ExposureCalculatorViewModel: ObservableObject {
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
-        self.calculatorModel = CalculatorModel(calculator: calculator)
+        let calculatorModel = CalculatorModel(calculator: calculator)
+        self.calculatorModel = calculatorModel
         self.reciprocityModel = ReciprocityModel()
+        self.timerWorkspaceModel = TimerWorkspaceModel(
+            timerManager: timerManager,
+            metadataPersistenceStore: metadataPersistenceStore,
+            defaultName: { duration in
+                "Timer - \(calculator.formatShutter(duration))"
+            }
+        )
         self.presetFilms = presetFilms
-        self.timerManager = timerManager
         self.contextPersistenceStore = contextPersistenceStore
-        self.metadataPersistenceStore = metadataPersistenceStore
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: lockScreenTargetExposer
         )
 
         restorePersistedCalculatorContext()
-        restorePersistedTimerMetadata()
-        timerManager.$timers
-            .sink { [weak self] states in
-                self?.syncTimers(with: states)
-            }
-            .store(in: &cancellables)
+        timerWorkspaceModel.$timers
+            .assign(to: &$timers)
         bindLockScreenCoordinatorToTimerPublisher()
     }
 
@@ -574,21 +596,19 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func pauseTimer(id: UUID) {
-        timerManager.pause(id: id)
+        timerWorkspaceModel.pauseTimer(id: id)
     }
 
     func resumeTimer(id: UUID) {
-        timerManager.resume(id: id)
+        timerWorkspaceModel.resumeTimer(id: id)
     }
 
     func removeTimer(id: UUID) {
-        timerManager.remove(id: id)
-        timerMetadata.removeValue(forKey: id)
-        persistTimerMetadata()
+        timerWorkspaceModel.removeTimer(id: id)
     }
 
     func reconcileTimersAfterAppBecomesActive() {
-        timerManager.reconcileAfterAppBecomesActive()
+        timerWorkspaceModel.reconcileTimersAfterAppBecomesActive()
     }
 
     private func startTimer(
@@ -597,8 +617,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         filmModeResult: FilmModeExposureResultState?,
         startSource: TimerStartSource
     ) {
-        let id = UUID()
-
         let timerName: String
         if let result {
             timerName = makeTimerName(
@@ -611,37 +629,21 @@ final class ExposureCalculatorViewModel: ObservableObject {
             timerName = defaultName(for: resultShutter)
         }
 
-        let order = nextTimerOrder
-        timerMetadata[id] = TimerMetadata(
-            order: order,
-            name: timerName,
-            basisSummary: makeBasisSummary(
-                for: result,
-                filmModeResult: filmModeResult,
-                startSource: startSource
-            )
+        let basisSummary = makeBasisSummary(
+            for: result,
+            filmModeResult: filmModeResult,
+            startSource: startSource
         )
 
-        guard timerManager.start(id: id, duration: resultShutter) != nil else {
-            timerMetadata.removeValue(forKey: id)
-            return
-        }
-
-        nextTimerOrder += 1
-        persistTimerMetadata()
+        timerWorkspaceModel.startTimer(
+            duration: resultShutter,
+            name: timerName,
+            basisSummary: basisSummary
+        )
     }
 
     func clearCompletedTimers() {
-        let completedIDs = Set(
-            timers
-                .filter { $0.status == .completed }
-                .map(\.id)
-        )
-        timerManager.removeCompletedTimers()
-        completedIDs.forEach { id in
-            timerMetadata.removeValue(forKey: id)
-        }
-        persistTimerMetadata()
+        timerWorkspaceModel.clearCompletedTimers()
     }
 
     func formatDuration(_ seconds: TimeInterval) -> String {
@@ -785,7 +787,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         let absoluteText = formatDateTime(completionDate)
-        let relativeText = completedRelativeTimeFormatter.string(
+        let relativeText = timerWorkspaceModel.relativeCompletedText(
             from: completionDate,
             relativeTo: referenceDate
         )
@@ -801,18 +803,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func compactCompletedRelativeTimeText(for completionDate: Date?, relativeTo referenceDate: Date) -> String {
-        guard let completionDate else {
-            return "--"
-        }
-
-        return completedRelativeTimeFormatter.compactString(
-            from: completionDate,
+        timerWorkspaceModel.compactCompletedRelativeTimeText(
+            for: completionDate,
             relativeTo: referenceDate
         )
     }
 
     var runningTimerCount: Int {
-        timers.filter { $0.status == .running }.count
+        timerWorkspaceModel.runningTimerCount
     }
 
     func updateLiveBaseShutter(_ value: Double) {
@@ -858,36 +856,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case .digitalResult, .filmAdjustedShutter:
             return "\(ndStopLabel(for: result.stop)) - \(targetLabel)"
         }
-    }
-
-    private func syncTimers(with states: [TimerState]) {
-        let validIDs = Set(states.map(\.id))
-        let originalCount = timerMetadata.count
-        timerMetadata = timerMetadata.filter { validIDs.contains($0.key) }
-        if timerMetadata.count != originalCount {
-            persistTimerMetadata()
-        }
-        let referenceDate = timerManager.currentDate
-
-        timers = states
-            .map { state in
-                RunningTimerItem(
-                    id: state.id,
-                    order: timerMetadata[state.id]?.order ?? 0,
-                    name: timerMetadata[state.id]?.name ?? defaultName(for: state.duration),
-                    basisSummary: timerMetadata[state.id]?.basisSummary ?? "Manual timer",
-                    duration: state.duration,
-                    startDate: state.startDate,
-                    endDate: state.endDate,
-                    pausedRemainingTime: state.pausedRemainingTime,
-                    pausedAt: state.pausedAt,
-                    status: state.status,
-                    referenceDate: referenceDate
-                )
-            }
-            .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
-
-        scheduleCompletedTimeContextRefreshIfNeeded()
     }
 
     private func defaultName(for duration: TimeInterval) -> String {
@@ -1099,26 +1067,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)
     }
 
-    private func restorePersistedTimerMetadata() {
-        guard let snapshot = metadataPersistenceStore.loadSnapshot() else {
-            return
-        }
-
-        nextTimerOrder = max(1, snapshot.nextTimerOrder)
-        timerMetadata = Dictionary(
-            uniqueKeysWithValues: snapshot.timers.map {
-                (
-                    $0.id,
-                    TimerMetadata(
-                        order: $0.order,
-                        name: $0.name,
-                        basisSummary: $0.basisSummary
-                    )
-                )
-            }
-        )
-    }
-
     private func restorePersistedCalculatorContext() {
         guard let snapshot = contextPersistenceStore.loadSnapshot() else {
             return
@@ -1176,35 +1124,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return storedValue
     }
 
-    private func persistTimerMetadata() {
-        guard !timerMetadata.isEmpty else {
-            metadataPersistenceStore.clearSnapshot()
-            return
-        }
-
-        let snapshot = PersistentTimerMetadataCollectionSnapshot(
-            nextTimerOrder: nextTimerOrder,
-            timers: timerMetadata
-                .map { id, metadata in
-                    PersistentTimerMetadataSnapshot(
-                        id: id,
-                        order: metadata.order,
-                        name: metadata.name,
-                        basisSummary: metadata.basisSummary
-                    )
-                }
-                .sorted { lhs, rhs in
-                    if lhs.order != rhs.order {
-                        return lhs.order < rhs.order
-                    }
-
-                    return lhs.id.uuidString < rhs.id.uuidString
-                }
-        )
-
-        metadataPersistenceStore.saveSnapshot(snapshot)
-    }
-
     private func calculationPayload(for resultShutter: TimeInterval) -> ExposureCalculationResult? {
         guard case .success(let result) = calculationResult else {
             return nil
@@ -1226,49 +1145,4 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return formatter
     }()
 
-    private func scheduleCompletedTimeContextRefreshIfNeeded() {
-        completedTimeContextRefreshTimer?.invalidate()
-        completedTimeContextRefreshTimer = nil
-
-        guard !timers.contains(where: { $0.status == .running }) else {
-            return
-        }
-
-        let referenceDate = timerManager.currentDate
-        let nextRefreshDate = timers
-            .filter { $0.status == .completed }
-            .compactMap(\.completedAt)
-            .compactMap {
-                completedRelativeTimeFormatter.nextRefreshDate(
-                    from: $0,
-                    relativeTo: referenceDate
-                )
-            }
-            .min()
-
-        guard let nextRefreshDate else {
-            return
-        }
-
-        let refreshTimer = Timer(
-            fire: nextRefreshDate,
-            interval: 0,
-            repeats: false
-        ) { [weak self] _ in
-            guard let self else {
-                return
-            }
-
-            self.syncTimers(with: self.timerManager.timers)
-        }
-
-        completedTimeContextRefreshTimer = refreshTimer
-        RunLoop.main.add(refreshTimer, forMode: .common)
-    }
-}
-
-private struct TimerMetadata {
-    let order: Int
-    let name: String
-    let basisSummary: String
 }

@@ -193,13 +193,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// `didSet` observers above. PR5 will flip the direction.
     private let calculatorModel: CalculatorModel
     private var calculator: ExposureCalculator { calculatorModel.calculator }
+    private let reciprocityModel: ReciprocityModel
     private let presetFilms: [FilmIdentity]
     private let timerManager: TimerManager
     private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
     private let metadataPersistenceStore: TimerMetadataPersistenceStoring
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
-    private let reciprocityEvaluator = ReciprocityCalculationPolicyEvaluator()
-    private let detailsPresenter = FilmModeDetailsPresenter()
     private let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
     private var timerMetadata: [UUID: TimerMetadata] = [:]
     private var nextTimerOrder = 1
@@ -215,19 +214,38 @@ final class ExposureCalculatorViewModel: ObservableObject {
     convenience init(dependencies: ViewModelDependencies) {
         self.init(
             dependencies: dependencies,
-            calculatorModel: CalculatorModel(calculator: dependencies.calculator)
+            calculatorModel: CalculatorModel(calculator: dependencies.calculator),
+            reciprocityModel: ReciprocityModel()
         )
     }
 
-    /// PR1 of B1 — designated init for the
-    /// `WorkspaceCoordinator` path: coordinator constructs the
-    /// `CalculatorModel` first and injects it so both surfaces share
-    /// the same `ExposureCalculator` instance and the same calc state.
-    init(
+    /// PR1 of B1 — back-compat convenience for callers that pre-built a
+    /// `CalculatorModel` but not yet a `ReciprocityModel`. Forwards to
+    /// the PR2 designated init with a freshly-constructed
+    /// `ReciprocityModel`.
+    convenience init(
         dependencies: ViewModelDependencies,
         calculatorModel: CalculatorModel
     ) {
+        self.init(
+            dependencies: dependencies,
+            calculatorModel: calculatorModel,
+            reciprocityModel: ReciprocityModel()
+        )
+    }
+
+    /// PR2 of B1 — designated init for the
+    /// `WorkspaceCoordinator` path: coordinator constructs the
+    /// `CalculatorModel` and `ReciprocityModel` first and injects them
+    /// so both surfaces share the same calc state and reciprocity
+    /// collaborators.
+    init(
+        dependencies: ViewModelDependencies,
+        calculatorModel: CalculatorModel,
+        reciprocityModel: ReciprocityModel
+    ) {
         self.calculatorModel = calculatorModel
+        self.reciprocityModel = reciprocityModel
         self.presetFilms = dependencies.presetFilms
         self.timerManager = dependencies.timerManager
         self.contextPersistenceStore = dependencies.contextPersistenceStore
@@ -255,6 +273,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
         self.calculatorModel = CalculatorModel(calculator: calculator)
+        self.reciprocityModel = ReciprocityModel()
         self.presetFilms = presetFilms
         self.timerManager = timerManager
         self.contextPersistenceStore = contextPersistenceStore
@@ -357,7 +376,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return nil
         }
 
-        let policyResult = reciprocityEvaluator.evaluate(
+        let policyResult = reciprocityModel.evaluate(
             profile: profile,
             meteredExposureSeconds: result.resultShutterSeconds
         )
@@ -379,7 +398,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         return FilmModeExposureResultState(
             adjustedShutterSeconds: result.resultShutterSeconds,
-            reciprocityState: detailsPresenter.reciprocityStateDisplayState(for: bindingState),
+            reciprocityState: reciprocityModel.reciprocityStateDisplayState(for: bindingState),
             adjustedShutterAction: FilmModeTimerActionState(
                 targetSeconds: result.resultShutterSeconds,
                 canStartTimer: result.resultShutterSeconds > 0,
@@ -398,7 +417,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return nil
         }
 
-        return detailsPresenter.makeDetailsDisplayState(
+        return reciprocityModel.makeDetailsDisplayState(
             input: FilmModeDetailsPresenterInput(
                 bindingState: bindingState,
                 calculationResult: calculationResult,

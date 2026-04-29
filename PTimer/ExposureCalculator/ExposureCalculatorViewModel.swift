@@ -201,8 +201,16 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// test all continue to work without changes.
     private let timerWorkspaceModel: TimerWorkspaceModel
     private var timerManager: TimerManager { timerWorkspaceModel.timerManager }
-    private let presetFilms: [FilmIdentity]
-    private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
+    /// PR4 of B1 — owns the preset film catalog, the active film
+    /// identity slice (`activeCalculatorContext.selectedPresetFilm` /
+    /// `selectedProfileOverride`), and the calculator-context
+    /// persistence store. The ViewModel republishes
+    /// `filmSelectionModel.$activeContext` into its own
+    /// `@Published var activeCalculatorContext` so view bindings and
+    /// existing tests that observe `activeCalculatorContext` continue
+    /// to work unchanged.
+    private let filmSelectionModel: FilmSelectionModel
+    private var presetFilms: [FilmIdentity] { filmSelectionModel.presetFilms }
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
 
@@ -258,29 +266,61 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// PR3 of B1 — designated init for the `WorkspaceCoordinator`
-    /// path: coordinator constructs the `CalculatorModel`,
-    /// `ReciprocityModel`, and `TimerWorkspaceModel` first and injects
-    /// them so all surfaces share the same calc state, reciprocity
-    /// collaborators, and timer state.
-    init(
+    /// PR3 of B1 — back-compat convenience for callers that pre-built
+    /// the calc/reciprocity/timer models but not yet a
+    /// `FilmSelectionModel`. Forwards to the PR4 designated init.
+    convenience init(
         dependencies: ViewModelDependencies,
         calculatorModel: CalculatorModel,
         reciprocityModel: ReciprocityModel,
         timerWorkspaceModel: TimerWorkspaceModel
     ) {
+        let filmSelectionModel = FilmSelectionModel(
+            presetFilms: dependencies.presetFilms,
+            contextPersistenceStore: dependencies.contextPersistenceStore,
+            currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
+            currentNDStop: { calculatorModel.ndStop }
+        )
+        self.init(
+            dependencies: dependencies,
+            calculatorModel: calculatorModel,
+            reciprocityModel: reciprocityModel,
+            timerWorkspaceModel: timerWorkspaceModel,
+            filmSelectionModel: filmSelectionModel
+        )
+    }
+
+    /// PR4 of B1 — designated init for the `WorkspaceCoordinator`
+    /// path: coordinator constructs the four `@Observable` models
+    /// first and injects them so all surfaces share the same calc
+    /// state, reciprocity collaborators, timer state, and film
+    /// selection.
+    init(
+        dependencies: ViewModelDependencies,
+        calculatorModel: CalculatorModel,
+        reciprocityModel: ReciprocityModel,
+        timerWorkspaceModel: TimerWorkspaceModel,
+        filmSelectionModel: FilmSelectionModel
+    ) {
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
-        self.presetFilms = dependencies.presetFilms
-        self.contextPersistenceStore = dependencies.contextPersistenceStore
+        self.filmSelectionModel = filmSelectionModel
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: dependencies.lockScreenTargetExposer
         )
 
-        restorePersistedCalculatorContext()
+        // Bind republish before calling `restorePersistedCalculatorContext`
+        // so the initial restore-time mutation of
+        // `filmSelectionModel.activeContext` propagates into the
+        // ViewModel's `@Published var activeCalculatorContext` —
+        // mirrors the pre-decomposition behavior where the ViewModel
+        // mutated its own published context inside the restore path.
         timerWorkspaceModel.$timers
             .assign(to: &$timers)
+        filmSelectionModel.$activeContext
+            .assign(to: &$activeCalculatorContext)
+        restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
 
@@ -302,15 +342,21 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 "Timer - \(calculator.formatShutter(duration))"
             }
         )
-        self.presetFilms = presetFilms
-        self.contextPersistenceStore = contextPersistenceStore
+        self.filmSelectionModel = FilmSelectionModel(
+            presetFilms: presetFilms,
+            contextPersistenceStore: contextPersistenceStore,
+            currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
+            currentNDStop: { calculatorModel.ndStop }
+        )
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: lockScreenTargetExposer
         )
 
-        restorePersistedCalculatorContext()
         timerWorkspaceModel.$timers
             .assign(to: &$timers)
+        filmSelectionModel.$activeContext
+            .assign(to: &$activeCalculatorContext)
+        restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
 
@@ -329,11 +375,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var availablePresetFilms: [FilmIdentity] {
-        presetFilms
+        filmSelectionModel.availablePresetFilms
     }
 
     var selectedPresetFilm: FilmIdentity? {
-        activeCalculatorContext.selectedPresetFilm
+        filmSelectionModel.selectedPresetFilm
     }
 
     var isFilmWorkflowActive: Bool {
@@ -375,7 +421,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var selectedSelectorEntryID: String? {
         guard let film = selectedPresetFilm else { return nil }
-        return activeCalculatorContext.selectedProfileOverride?.id ?? film.id
+        return filmSelectionModel.selectedProfileOverride?.id ?? film.id
     }
 
     var filmSelectionDisplayState: FilmSelectionDisplayState {
@@ -383,17 +429,17 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return FilmSelectionDisplayState(primaryText: "No film", secondaryText: nil)
         }
 
-        let activeProfile = activeCalculatorContext.selectedProfileOverride
+        let activeProfile = filmSelectionModel.selectedProfileOverride
             ?? selectedPresetFilm.profiles.first
         return FilmSelectionDisplayState(
             primaryText: selectedPresetFilm.canonicalStockName,
-            secondaryText: filmRowAuthorityLabel(for: activeProfile)
+            secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile)
         )
     }
 
     var filmReciprocityBindingState: FilmModeReciprocityBindingState? {
         guard let selectedPresetFilm,
-              let profile = activeCalculatorContext.selectedProfileOverride ?? selectedPresetFilm.profiles.first,
+              let profile = filmSelectionModel.selectedProfileOverride ?? selectedPresetFilm.profiles.first,
               case .success(let result) = calculationResult else {
             return nil
         }
@@ -472,31 +518,24 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func selectEntry(_ entry: FilmSelectorEntry) {
-        activeCalculatorContext.selectedPresetFilm = entry.film
-        activeCalculatorContext.selectedProfileOverride = entry.profileOverride
-        persistCalculatorContext()
+        filmSelectionModel.selectEntry(entry)
     }
 
     func selectPresetFilm(_ film: FilmIdentity) {
-        activeCalculatorContext.selectedPresetFilm = film
-        activeCalculatorContext.selectedProfileOverride = nil
-        persistCalculatorContext()
+        filmSelectionModel.selectPresetFilm(film)
     }
 
     func clearSelectedPresetFilm() {
-        activeCalculatorContext.selectedPresetFilm = nil
-        activeCalculatorContext.selectedProfileOverride = nil
-        persistCalculatorContext()
+        filmSelectionModel.clearSelectedPresetFilm()
     }
 
     func resetFilmModeWorkingContext() {
-        activeCalculatorContext.selectedPresetFilm = nil
-        activeCalculatorContext.selectedProfileOverride = nil
+        filmSelectionModel.dropActiveSelectionWithoutPersisting()
         liveBaseShutter = nil
         liveNDStop = nil
         baseShutter = defaultFilmModeBaseShutter
         ndStop = defaultFilmModeNDStop
-        contextPersistenceStore.clearSnapshot()
+        filmSelectionModel.clearPersistedContext()
     }
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
@@ -1023,16 +1062,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// Short authority label for the main Film row subtitle.
-    /// Returns nil for userDefined/unknown so only official/unofficial films carry a visible qualifier.
-    private func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
-        switch profile?.source.authority {
-        case .official: return "Official guidance"
-        case .unofficial: return "Unofficial practical"
-        case .userDefined, .unknown, nil: return nil
-        }
-    }
-
     private func reciprocityGuidanceExplanation(
         for presentation: ReciprocityConfidencePresentation
     ) -> String {
@@ -1068,44 +1097,37 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func restorePersistedCalculatorContext() {
-        guard let snapshot = contextPersistenceStore.loadSnapshot() else {
+        // PR4 of B1 — `FilmSelectionModel` owns the persistence store
+        // and the film identity slice; it returns the resolved film
+        // selection plus the raw `baseShutterSeconds` / `ndStop`
+        // values from the snapshot. The ViewModel applies those calc
+        // inputs (which live on `CalculatorModel`) and writes back
+        // a clean snapshot via `persistCalculatorContext()` —
+        // preserving the legacy ordering byte-for-byte.
+        guard let restored = filmSelectionModel.restoreContext() else {
             return
         }
 
-        if let selectedPresetFilmID = snapshot.selectedPresetFilmID {
-            guard let restoredFilm = presetFilms.first(where: { $0.id == selectedPresetFilmID }) else {
-                activeCalculatorContext.selectedPresetFilm = nil
-                contextPersistenceStore.clearSnapshot()
-                return
-            }
-
-            activeCalculatorContext.selectedPresetFilm = restoredFilm
-        } else {
-            activeCalculatorContext.selectedPresetFilm = nil
+        if restored.hadInvalidFilmReference {
+            return
         }
-        baseShutter = restoredBaseShutter(from: snapshot) ?? defaultFilmModeBaseShutter
-        ndStop = restoredNDStop(from: snapshot) ?? defaultFilmModeNDStop
+
+        baseShutter = sanitizedRestoredBaseShutter(from: restored.baseShutterSeconds)
+            ?? defaultFilmModeBaseShutter
+        ndStop = sanitizedRestoredNDStop(from: restored.ndStop) ?? defaultFilmModeNDStop
         persistCalculatorContext()
     }
 
     private func persistCalculatorContext() {
-        contextPersistenceStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
-                selectedPresetFilmID: activeCalculatorContext.selectedPresetFilm?.id,
-                baseShutterSeconds: baseShutter,
-                ndStop: ndStop
-            )
-        )
+        filmSelectionModel.persistContext()
     }
 
     private func persistCalculatorContextIfNeeded() {
         persistCalculatorContext()
     }
 
-    private func restoredBaseShutter(
-        from snapshot: PersistentExposureCalculatorContextSnapshot
-    ) -> Double? {
-        guard let storedValue = snapshot.baseShutterSeconds else {
+    private func sanitizedRestoredBaseShutter(from storedValue: Double?) -> Double? {
+        guard let storedValue else {
             return nil
         }
 
@@ -1114,10 +1136,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
     }
 
-    private func restoredNDStop(
-        from snapshot: PersistentExposureCalculatorContextSnapshot
-    ) -> Int? {
-        guard let storedValue = snapshot.ndStop, (0...30).contains(storedValue) else {
+    private func sanitizedRestoredNDStop(from storedValue: Int?) -> Int? {
+        guard let storedValue, (0...30).contains(storedValue) else {
             return nil
         }
 

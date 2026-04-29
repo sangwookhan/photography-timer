@@ -78,6 +78,8 @@
 		A00000000000000000000132 /* ReciprocityModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000133 /* ReciprocityModelTests.swift */; };
 		A00000000000000000000134 /* TimerWorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000135 /* TimerWorkspaceModel.swift */; };
 		A00000000000000000000136 /* TimerWorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000137 /* TimerWorkspaceModelTests.swift */; };
+		A00000000000000000000138 /* FilmSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000139 /* FilmSelectionModel.swift */; };
+		A00000000000000000000140 /* FilmSelectionModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000141 /* FilmSelectionModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -186,6 +188,8 @@
 		A00000000000000000000133 /* ReciprocityModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000135 /* TimerWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerWorkspaceModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000137 /* TimerWorkspaceModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerWorkspaceModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000139 /* FilmSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000141 /* FilmSelectionModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -285,6 +289,7 @@
 				A00000000000000000000126 /* CalculatorModel.swift */,
 				A00000000000000000000131 /* ReciprocityModel.swift */,
 				A00000000000000000000135 /* TimerWorkspaceModel.swift */,
+				A00000000000000000000139 /* FilmSelectionModel.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -418,6 +423,7 @@
 				A00000000000000000000129 /* CalculatorModelTests.swift */,
 				A00000000000000000000133 /* ReciprocityModelTests.swift */,
 				A00000000000000000000137 /* TimerWorkspaceModelTests.swift */,
+				A00000000000000000000141 /* FilmSelectionModelTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -622,6 +628,7 @@
 				A00000000000000000000125 /* CalculatorModel.swift in Sources */,
 				A00000000000000000000130 /* ReciprocityModel.swift in Sources */,
 				A00000000000000000000134 /* TimerWorkspaceModel.swift in Sources */,
+				A00000000000000000000138 /* FilmSelectionModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -660,6 +667,7 @@
 				A00000000000000000000128 /* CalculatorModelTests.swift in Sources */,
 				A00000000000000000000132 /* ReciprocityModelTests.swift in Sources */,
 				A00000000000000000000136 /* TimerWorkspaceModelTests.swift in Sources */,
+				A00000000000000000000140 /* FilmSelectionModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

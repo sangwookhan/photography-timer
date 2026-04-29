@@ -11,10 +11,15 @@ struct ExposureCalculatorScreen: View {
 
     @MainActor
     init() {
+        // B1 PR1 — `WorkspaceCoordinator` owns the lifetime of the new
+        // `@Observable` models (currently `CalculatorModel`) and the
+        // legacy ViewModel. Views still bind to the ViewModel; PR5
+        // will migrate bindings off it.
+        let coordinator = WorkspaceCoordinator(
+            dependencies: ViewModelDependencyFactory.production()
+        )
         self.init(
-            viewModel: ExposureCalculatorViewModel(
-                dependencies: ViewModelDependencyFactory.production()
-            ),
+            viewModel: coordinator.viewModel,
             bottomSheetStateStore: BottomSheetWorkspaceStateStore()
         )
     }

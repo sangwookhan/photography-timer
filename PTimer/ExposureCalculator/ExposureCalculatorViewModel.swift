@@ -165,6 +165,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 liveBaseShutter = nil
             }
 
+            calculatorModel.baseShutterSeconds = baseShutter
             persistCalculatorContextIfNeeded()
         }
     }
@@ -174,6 +175,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 liveNDStop = nil
             }
 
+            calculatorModel.ndStop = ndStop
             persistCalculatorContextIfNeeded()
         }
     }
@@ -183,7 +185,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
 
-    private let calculator: ExposureCalculator
+    /// Owned during PR1 of the B1 ViewModel decomposition. The model
+    /// carries the calculation responsibility (calculator instance,
+    /// inputs, result). The ViewModel still mirrors `baseShutter` and
+    /// `ndStop` as `@Published` properties so views and tests bind to
+    /// the same surface; mutations are pushed into the model via the
+    /// `didSet` observers above. PR5 will flip the direction.
+    private let calculatorModel: CalculatorModel
+    private var calculator: ExposureCalculator { calculatorModel.calculator }
     private let presetFilms: [FilmIdentity]
     private let timerManager: TimerManager
     private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
@@ -203,8 +212,22 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case filmCorrectedExposure
     }
 
-    init(dependencies: ViewModelDependencies) {
-        self.calculator = dependencies.calculator
+    convenience init(dependencies: ViewModelDependencies) {
+        self.init(
+            dependencies: dependencies,
+            calculatorModel: CalculatorModel(calculator: dependencies.calculator)
+        )
+    }
+
+    /// PR1 of B1 — designated init for the
+    /// `WorkspaceCoordinator` path: coordinator constructs the
+    /// `CalculatorModel` first and injects it so both surfaces share
+    /// the same `ExposureCalculator` instance and the same calc state.
+    init(
+        dependencies: ViewModelDependencies,
+        calculatorModel: CalculatorModel
+    ) {
+        self.calculatorModel = calculatorModel
         self.presetFilms = dependencies.presetFilms
         self.timerManager = dependencies.timerManager
         self.contextPersistenceStore = dependencies.contextPersistenceStore
@@ -231,7 +254,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
     ) {
-        self.calculator = calculator
+        self.calculatorModel = CalculatorModel(calculator: calculator)
         self.presetFilms = presetFilms
         self.timerManager = timerManager
         self.contextPersistenceStore = contextPersistenceStore
@@ -436,24 +459,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
-        do {
-            let resultShutter = try calculator.calculate(
-                baseShutterSeconds: effectiveBaseShutter,
-                stop: effectiveNDStop
-            )
-
-            return .success(
-                ExposureCalculationResult(
-                    baseShutterSeconds: effectiveBaseShutter,
-                    stop: effectiveNDStop,
-                    resultShutterSeconds: resultShutter
-                )
-            )
-        } catch let error as ExposureCalculatorError {
-            return .failure(error)
-        } catch {
-            return .failure(.overflow)
-        }
+        // Delegated to `CalculatorModel` (B1 PR1). The model owns the
+        // pure calc engine and result mapping; the ViewModel still
+        // surfaces the `effectiveBaseShutter`/`effectiveNDStop` overlay
+        // (live-preview values that override the persisted inputs) so
+        // the pre-decomposition behavior is byte-identical.
+        calculatorModel.calculate(
+            baseShutterSeconds: effectiveBaseShutter,
+            ndStop: effectiveNDStop
+        )
     }
 
     var canStartTimer: Bool {

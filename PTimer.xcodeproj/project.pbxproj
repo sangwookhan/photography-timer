@@ -71,6 +71,9 @@
 		A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */; };
 		A000000000000000000000E1 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
 		A000000000000000000000E2 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
+		A00000000000000000000123 /* WorkspaceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000124 /* WorkspaceCoordinator.swift */; };
+		A00000000000000000000125 /* CalculatorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000126 /* CalculatorModel.swift */; };
+		A00000000000000000000128 /* CalculatorModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000129 /* CalculatorModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -172,6 +175,9 @@
 		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
 		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
+		A00000000000000000000124 /* WorkspaceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceCoordinator.swift; sourceTree = "<group>"; };
+		A00000000000000000000126 /* CalculatorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000129 /* CalculatorModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -256,11 +262,21 @@
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
 				A00000000000000000000107 /* FilmModeDetailsPresenter.swift */,
 				A000000000000000000000F0 /* FilmContext */,
+				A00000000000000000000127 /* Models */,
 				A000000000000000000000B6 /* PresetFilmCatalog.swift */,
 				A00000000000000000000103 /* RunningTimerPanelView.swift */,
 				A00000000000000000000106 /* ViewModelDependencyFactory.swift */,
+				A00000000000000000000124 /* WorkspaceCoordinator.swift */,
 			);
 			path = ExposureCalculator;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000127 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000126 /* CalculatorModel.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		A000000000000000000000F0 /* FilmContext */ = {
@@ -389,6 +405,7 @@
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */,
 				A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */,
+				A00000000000000000000129 /* CalculatorModelTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -589,6 +606,8 @@
 				A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */,
 				A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */,
 				A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */,
+				A00000000000000000000123 /* WorkspaceCoordinator.swift in Sources */,
+				A00000000000000000000125 /* CalculatorModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -624,6 +643,7 @@
 				A00000000000000000000122 /* ReciprocityResultCodableTests.swift in Sources */,
 				A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */,
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
+				A00000000000000000000128 /* CalculatorModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

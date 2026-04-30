@@ -1,0 +1,176 @@
+# SwiftLint baseline configuration
+#
+# Phase 0 (PTIMER-118 / A5): establish a baseline that does not break
+# the existing codebase but starts enforcing common style hygiene.
+# B2 will tighten this with cyclomatic_complexity / function_body_length
+# / file_length thresholds in a follow-up commit.
+#
+# Install:
+#   brew install swiftlint
+# Run:
+#   swiftlint lint --strict   # from repo root
+
+# Paths SwiftLint shall not scan
+excluded:
+  - DerivedData
+  - build
+  - .build
+  - .swiftpm
+  - PTimer.xcodeproj
+  - Docs
+  - PTimerWidgets/_PreviewAssets   # if exists; harmless if absent
+
+# Disabled rules — relaxed to avoid churn on existing code.
+disabled_rules:
+  - identifier_name             # short names (id, x, y) are common in this codebase
+  - line_length                 # opt in via opt_in_rules with explicit limit later
+  - todo                        # TODO/FIXME comments are tracked elsewhere
+  - trailing_whitespace         # editor-specific
+
+# Size and complexity thresholds (B2).
+# Calibrated against the post-split codebase (2026-04-29):
+#   - largest function body: ~150L (SwiftUI body in ExposureCalculatorScreen)
+#   - largest non-view function: ~92L (ReciprocityCalculationPolicy.evaluate)
+#   - largest file: 2894L (ExposureCalculatorScreen.swift)
+#   - largest type: ExposureCalculatorViewModel (~1100L of body)
+# Warnings flag the top ~5–10% to guide future refactoring (B1, view extraction).
+# Errors are reserved for monolith-level outliers; current codebase passes errors.
+# See Docs/StructureImprovement/HotFunctions.md for the prioritized list.
+function_body_length:
+  warning: 80
+  error: 200
+file_length:
+  warning: 1500
+  error: 3500          # Screen.swift currently at 2894 — error catches future regression
+type_body_length:
+  warning: 500
+  error: 2000
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+nesting:
+  type_level: 2
+  function_level: 3
+
+# Opt-in rules — small, low-risk additions that improve clarity.
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - explicit_init
+  - first_where
+  - sorted_first_last
+  - closure_spacing
+  - operator_usage_whitespace
+  - redundant_nil_coalescing
+  - unused_import
+
+# Customizable rule parameters
+trailing_comma:
+  mandatory_comma: true   # consistent with multi-line literal style
+
+custom_rules:
+  no_xctest_runtime_in_production:
+    regex: 'XCTestRuntime|isRunningTests'
+    match_kinds:
+      - identifier
+      - typeidentifier
+      - string
+      - comment
+    message: "Production code must not reference test runtime detection"
+    severity: error
+    included: "PTimer/"
+  no_activitykit_in_viewmodel:
+    name: "No ActivityKit in ViewModel"
+    regex: 'import ActivityKit'
+    message: "ViewModel must not import ActivityKit; lock-screen concerns belong in LockScreenTimerCoordinator"
+    severity: error
+    included: ".*ExposureCalculatorViewModel\\.swift"
+  no_legacy_reciprocity_result_struct:
+    name: "No legacy ReciprocityResult struct shape (F11)"
+    # Single `:` after the legacy-name token. Catches struct field
+    # declarations and named-parameter initializers / function args:
+    #   var didReturnCalculatedTime: Bool         <-  match
+    #   ReciprocityResult(didReturnCalculatedTime: true)  <-  match
+    # Excludes equality / comparison so `result.hasCalculatedExposureTime == true`
+    # does not produce a false positive (the older `[:=]` regex did).
+    regex: '\b(didReturnCalculatedTime|hasCalculatedExposureTime)\s*:'
+    message: "ReciprocityResult is now an enum (B3). The didReturnCalculatedTime / hasCalculatedExposureTime + correctedExposureSeconds? pairing is forbidden as a stored field, struct constructor argument, or function parameter. Use case .quantified / .advisoryOnly / .unsupported."
+    severity: error
+    included: "PTimer/"
+    excluded:
+      # Home of the ReciprocityResult enum + backward-compat decoder +
+      # read-only convenience accessor. New code anywhere else must
+      # not reintroduce the legacy struct-shape pairing.
+      - "PTimer/Reciprocity/ReciprocityCalculationPolicy.swift"
+  view_observes_single_observable_root:
+    name: "View observes single observable root (F5)"
+    # Catches a SwiftUI view that declares two B1 model bindings via any
+    # of the recognized property wrappers. `@State` / `@Bindable` matter
+    # for the @Observable-macro models (CalculatorModel, ReciprocityModel),
+    # while `@StateObject` / `@ObservedObject` / `@EnvironmentObject`
+    # cover the ObservableObject-flavored models (TimerWorkspaceModel,
+    # FilmSelectionModel). Two property-wrapper declarations whose
+    # type tokens are any pair of B1 models trip the rule.
+    regex: '(?:@StateObject|@ObservedObject|@EnvironmentObject|@Bindable|@State)[^\n]*\b(?:CalculatorModel|ReciprocityModel|TimerWorkspaceModel|FilmSelectionModel)\b[\s\S]*?(?:@StateObject|@ObservedObject|@EnvironmentObject|@Bindable|@State)[^\n]*\b(?:CalculatorModel|ReciprocityModel|TimerWorkspaceModel|FilmSelectionModel)\b'
+    message: "B1 invariant: a SwiftUI view may observe at most one of the four @Observable models (CalculatorModel / ReciprocityModel / TimerWorkspaceModel / FilmSelectionModel). Cross-cutting state belongs on WorkspaceCoordinator (or, transitionally, on the legacy ExposureCalculatorViewModel facade). See Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md §3.2."
+    severity: error
+    included: "PTimer/"
+    excluded:
+      # Coordinator is allowed (and required) to hold strong references
+      # to all four models — it's the wiring surface. The rule targets
+      # SwiftUI views that *observe* multiple models simultaneously.
+      - "PTimer/ExposureCalculator/WorkspaceCoordinator.swift"
+  models_do_not_import_other_models_calc:
+    name: "CalculatorModel does not import other B1 models (F8)"
+    regex: '\b(ReciprocityModel|TimerWorkspaceModel|FilmSelectionModel)\b'
+    match_kinds:
+      - identifier
+      - typeidentifier
+    message: "B1 invariant: the four @Observable models do not directly reference each other by type name. Cross-model wiring lives on WorkspaceCoordinator. Note: a model that takes another model's state through an opaque closure parameter (e.g. `currentBaseShutterSeconds: () -> Double`) is *not* caught by this rule — that pattern is permitted but should be wired by WorkspaceCoordinator only. See Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md §3.2."
+    severity: error
+    included: "PTimer/ExposureCalculator/Models/CalculatorModel\\.swift"
+  models_do_not_import_other_models_reciprocity:
+    name: "ReciprocityModel does not import other B1 models (F8)"
+    regex: '\b(CalculatorModel|TimerWorkspaceModel|FilmSelectionModel)\b'
+    match_kinds:
+      - identifier
+      - typeidentifier
+    message: "B1 invariant: the four @Observable models do not directly reference each other by type name. Cross-model wiring lives on WorkspaceCoordinator. Note: a model that takes another model's state through an opaque closure parameter (e.g. `currentBaseShutterSeconds: () -> Double`) is *not* caught by this rule — that pattern is permitted but should be wired by WorkspaceCoordinator only. See Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md §3.2."
+    severity: error
+    included: "PTimer/ExposureCalculator/Models/ReciprocityModel\\.swift"
+  models_do_not_import_other_models_timer:
+    name: "TimerWorkspaceModel does not import other B1 models (F8)"
+    regex: '\b(CalculatorModel|ReciprocityModel|FilmSelectionModel)\b'
+    match_kinds:
+      - identifier
+      - typeidentifier
+    message: "B1 invariant: the four @Observable models do not directly reference each other by type name. Cross-model wiring lives on WorkspaceCoordinator. Note: a model that takes another model's state through an opaque closure parameter (e.g. `currentBaseShutterSeconds: () -> Double`) is *not* caught by this rule — that pattern is permitted but should be wired by WorkspaceCoordinator only. See Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md §3.2."
+    severity: error
+    included: "PTimer/ExposureCalculator/Models/TimerWorkspaceModel\\.swift"
+  models_do_not_import_other_models_film:
+    name: "FilmSelectionModel does not import other B1 models (F8)"
+    regex: '\b(CalculatorModel|ReciprocityModel|TimerWorkspaceModel)\b'
+    match_kinds:
+      - identifier
+      - typeidentifier
+    message: "B1 invariant: the four @Observable models do not directly reference each other by type name. Cross-model wiring lives on WorkspaceCoordinator. Note: a model that takes another model's state through an opaque closure parameter (e.g. `currentBaseShutterSeconds: () -> Double`) is *not* caught by this rule — that pattern is permitted but should be wired by WorkspaceCoordinator only. See Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md §3.2."
+    severity: error
+    included: "PTimer/ExposureCalculator/Models/FilmSelectionModel\\.swift"
+  no_legacy_timer_state_struct_init:
+    name: "No legacy TimerState struct constructor (F12)"
+    # Match `TimerState(...status:...)` and `TimerState.init(...status:...)`.
+    # `[^)]*?` keeps the pattern within a single argument list rather
+    # than spanning unrelated code, so an unrelated `TimerState(` followed
+    # later by an unrelated `status:` line does not cross-fire.
+    regex: '\bTimerState(?:\s*\.\s*init)?\([^)]*?\bstatus\s*:'
+    message: "TimerState is now a sum type (B4). Re-introducing the legacy struct constructor (status: TimerStatus paired with optional endDate / pausedRemainingTime / pausedAt siblings) is forbidden. Construct .running(RunningTimer(...)) / .paused(PausedTimer(...)) / .completed(CompletedTimer(...)) instead. See Docs/StructureImprovement/specs/B4-TimerStateTypes.md."
+    severity: error
+    included: "PTimer/"
+    excluded:
+      # Home of the TimerState sum type, its backward-compat init that
+      # mirrors the historical struct signature (used by the persisted
+      # snapshot's restore() path), and the doc comment that cites that
+      # signature. New code anywhere else must use the sum-type cases.
+      - "PTimer/Timers/TimerManager.swift"
+
+reporter: "xcode"          # IDE-friendly default; change to "json" in CI

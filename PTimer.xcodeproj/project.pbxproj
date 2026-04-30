@@ -64,7 +64,7 @@
 		A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */; };
 		A000000000000000000000B5 /* PresetFilmCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B6 /* PresetFilmCatalog.swift */; };
 		A000000000000000000000F2 /* ExposureCalculatorWorkingContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */; };
-		A000000000000000000000F4 /* PersistedCalculatorContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F3 /* PersistedCalculatorContext.swift */; };
+		A000000000000000000000F4 /* PersistentCalculatorContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F3 /* PersistentCalculatorContext.swift */; };
 		A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F5 /* FilmSelectionDisplayState.swift */; };
 		A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */; };
 		A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */; };
@@ -169,7 +169,7 @@
 		A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentationTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000B6 /* PresetFilmCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetFilmCatalog.swift; sourceTree = "<group>"; };
 		A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorWorkingContext.swift; sourceTree = "<group>"; };
-		A000000000000000000000F3 /* PersistedCalculatorContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedCalculatorContext.swift; sourceTree = "<group>"; };
+		A000000000000000000000F3 /* PersistentCalculatorContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCalculatorContext.swift; sourceTree = "<group>"; };
 		A000000000000000000000F5 /* FilmSelectionDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionDisplayState.swift; sourceTree = "<group>"; };
 		A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeResultDisplayStates.swift; sourceTree = "<group>"; };
 		A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsDisplayStates.swift; sourceTree = "<group>"; };
@@ -300,7 +300,7 @@
 			isa = PBXGroup;
 			children = (
 				A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */,
-				A000000000000000000000F3 /* PersistedCalculatorContext.swift */,
+				A000000000000000000000F3 /* PersistentCalculatorContext.swift */,
 				A000000000000000000000F5 /* FilmSelectionDisplayState.swift */,
 				A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */,
 				A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */,
@@ -623,7 +623,7 @@
 				A000000000000000000000B1 /* ReciprocityConfidencePresentation.swift in Sources */,
 				A000000000000000000000B5 /* PresetFilmCatalog.swift in Sources */,
 				A000000000000000000000F2 /* ExposureCalculatorWorkingContext.swift in Sources */,
-				A000000000000000000000F4 /* PersistedCalculatorContext.swift in Sources */,
+				A000000000000000000000F4 /* PersistentCalculatorContext.swift in Sources */,
 				A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */,
 				A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */,
 				A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */,

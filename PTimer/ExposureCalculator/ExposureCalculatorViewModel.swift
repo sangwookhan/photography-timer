@@ -166,7 +166,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
 
             calculatorModel.baseShutterSeconds = baseShutter
-            persistCalculatorContextIfNeeded()
+            persistCalculatorContext()
         }
     }
     @Published var ndStop = defaultFilmModeNDStop {
@@ -176,37 +176,33 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
 
             calculatorModel.ndStop = ndStop
-            persistCalculatorContextIfNeeded()
+            persistCalculatorContext()
         }
     }
     @Published private(set) var timers: [RunningTimerItem] = []
     @Published private var liveBaseShutter: Double?
     @Published private var liveNDStop: Int?
 
-    /// Owned during PR1 of the B1 ViewModel decomposition. The model
-    /// carries the calculation responsibility (calculator instance,
-    /// inputs, result). The ViewModel still mirrors `baseShutter` and
-    /// `ndStop` as `@Published` properties so views and tests bind to
-    /// the same surface; mutations are pushed into the model via the
-    /// `didSet` observers above. PR5 will flip the direction.
+    /// Calculation responsibility (calculator instance, inputs, result).
+    /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
+    /// `didSet` observers above so views and tests can bind to either
+    /// surface. The eventual ownership flip (model becomes the source
+    /// of truth) is tracked by the B1 facade-trim follow-up.
     private let calculatorModel: CalculatorModel
     private var calculator: ExposureCalculator { calculatorModel.calculator }
     private let reciprocityModel: ReciprocityModel
-    /// PR3 of B1 — owns timer collection, metadata persistence, and
-    /// lifecycle ops. The ViewModel republishes `timerWorkspaceModel.$timers`
-    /// into its own `@Published var timers` so existing view bindings,
-    /// the lock-screen Combine subscription, and the record-replay smoke
-    /// test all continue to work without changes.
+    /// Timer collection, metadata persistence, and lifecycle ops. The
+    /// ViewModel republishes `timerWorkspaceModel.$timers` into its own
+    /// `@Published var timers` so existing view bindings, the lock-
+    /// screen Combine subscription, and the record-replay smoke test
+    /// continue to read the legacy surface unchanged.
     private let timerWorkspaceModel: TimerWorkspaceModel
     private var timerManager: TimerManager { timerWorkspaceModel.timerManager }
-    /// PR4 of B1 — owns the preset film catalog, the active film
-    /// identity slice (`activeCalculatorContext.selectedPresetFilm` /
-    /// `selectedProfileOverride`), and the calculator-context
-    /// persistence store. The ViewModel republishes
+    /// Preset film catalog, active film identity slice, and the
+    /// calculator-context persistence store. The ViewModel republishes
     /// `filmSelectionModel.$activeContext` into its own
-    /// `@Published var activeCalculatorContext` so view bindings and
-    /// existing tests that observe `activeCalculatorContext` continue
-    /// to work unchanged.
+    /// `@Published var activeCalculatorContext` so existing observers
+    /// of the legacy surface continue to work unchanged.
     private let filmSelectionModel: FilmSelectionModel
     private var presetFilms: [FilmIdentity] { filmSelectionModel.presetFilms }
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
@@ -246,14 +242,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// Designated init used by `WorkspaceCoordinator` (PR4 of B1). The
-    /// coordinator constructs the four `@Observable` models from the
-    /// dependency bundle first and injects them so all surfaces share
-    /// the same calc state, reciprocity collaborators, timer state, and
-    /// film selection. The intermediate two- and three-arg back-compat
-    /// convenience inits that staged the PR1–PR3 migration paths were
-    /// retired in PR6 once `WorkspaceCoordinator` became the only
-    /// production caller of the multi-model surface.
+    /// Designated init used by `WorkspaceCoordinator`. The coordinator
+    /// builds the four `@Observable` models from the dependency bundle
+    /// and injects them so all surfaces share the same calc state,
+    /// reciprocity collaborators, timer state, and film selection.
     init(
         dependencies: ViewModelDependencies,
         calculatorModel: CalculatorModel,
@@ -747,10 +739,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculator.formatExtendedClock(seconds)
     }
 
-    func formatClockTime(_ date: Date) -> String {
-        Self.dateTimeFormatter.string(from: date)
-    }
-
     func formatDateTime(_ date: Date) -> String {
         Self.dateTimeFormatter.string(from: date)
     }
@@ -895,14 +883,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func ndStopLabel(for stop: Int) -> String {
         stop == 1 ? "1 stop" : "\(stop) stops"
-    }
-
-    private func filmSelectorTitle(for film: FilmIdentity) -> String {
-        guard let isoValue = inferredISOValue(for: film) else {
-            return film.canonicalStockName
-        }
-
-        return "\(film.canonicalStockName) (ISO \(isoValue))"
     }
 
     private func inferredISOValue(for film: FilmIdentity) -> String? {
@@ -1079,10 +1059,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func persistCalculatorContext() {
         filmSelectionModel.persistContext()
-    }
-
-    private func persistCalculatorContextIfNeeded() {
-        persistCalculatorContext()
     }
 
     private func sanitizedRestoredBaseShutter(from storedValue: Double?) -> Double? {

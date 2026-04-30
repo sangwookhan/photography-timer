@@ -28,13 +28,36 @@ final class CalculatorModel {
     /// continues to work unchanged during the migration.
     let calculator: ExposureCalculator
 
-    /// Working base shutter in seconds. Mirrors the legacy ViewModel's
-    /// `baseShutter` (or `liveBaseShutter` preview when active).
+    /// Working base shutter in seconds. Persisted committed value;
+    /// the live preview overlay (`liveBaseShutter`) takes precedence
+    /// for `effectiveBaseShutter` while the user is dragging the wheel.
     var baseShutterSeconds: Double
 
-    /// Working ND stop. Mirrors the legacy ViewModel's `ndStop` (or
-    /// `liveNDStop` preview when active).
+    /// Working ND stop. Persisted committed value; the live preview
+    /// overlay (`liveNDStop`) takes precedence for `effectiveNDStop`.
     var ndStop: Int
+
+    /// Transient base shutter shown while the user drags the wheel,
+    /// before the gesture commits to `baseShutterSeconds`. Cleared by
+    /// `clearLiveBaseShutterPreview()` or implicitly when the preview
+    /// equals the committed value.
+    var liveBaseShutter: Double?
+
+    /// Transient ND stop shown while the user drags the ND wheel,
+    /// before the gesture commits to `ndStop`.
+    var liveNDStop: Int?
+
+    /// Effective base shutter — the value the calculator actually uses.
+    /// Returns the live preview when set, otherwise the committed value.
+    var effectiveBaseShutter: Double {
+        liveBaseShutter ?? baseShutterSeconds
+    }
+
+    /// Effective ND stop — the value the calculator actually uses.
+    /// Returns the live preview when set, otherwise the committed value.
+    var effectiveNDStop: Int {
+        liveNDStop ?? ndStop
+    }
 
     init(
         calculator: ExposureCalculator,
@@ -44,6 +67,28 @@ final class CalculatorModel {
         self.calculator = calculator
         self.baseShutterSeconds = baseShutterSeconds
         self.ndStop = ndStop
+    }
+
+    /// Sets the live preview value. If the preview equals the committed
+    /// value the overlay is cleared instead — matches the legacy
+    /// ViewModel behavior where the wheel gesture's idle state has
+    /// the preview equal to the committed value.
+    func updateLiveBaseShutter(_ value: Double) {
+        liveBaseShutter = value == baseShutterSeconds ? nil : value
+    }
+
+    /// Sets the live ND-stop preview, with the same equal-clears-preview
+    /// rule as `updateLiveBaseShutter`.
+    func updateLiveNDStop(_ value: Int) {
+        liveNDStop = value == ndStop ? nil : value
+    }
+
+    func clearLiveBaseShutterPreview() {
+        liveBaseShutter = nil
+    }
+
+    func clearLiveNDStopPreview() {
+        liveNDStop = nil
     }
 
     /// Computes the calculation result from the current inputs. Mirrors

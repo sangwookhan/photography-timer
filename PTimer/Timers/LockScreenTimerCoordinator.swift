@@ -1,12 +1,29 @@
+import Combine
 import Foundation
 
 @MainActor
-final class LockScreenTimerTargetCoordinator {
+final class LockScreenTimerCoordinator {
     private let exposer: LockScreenTimerTargetExposing
     private var activeTarget: LockScreenTimerTarget?
+    private var cancellable: AnyCancellable?
 
     init(exposer: LockScreenTimerTargetExposing) {
         self.exposer = exposer
+    }
+
+    /// Subscribes to a publisher of `RunningTimerItem` updates and drives
+    /// the lock-screen surface automatically. The coordinator owns the
+    /// subscription for its lifetime; callers retain the coordinator so
+    /// the subscription stays alive.
+    convenience init(
+        exposer: LockScreenTimerTargetExposing,
+        timersPublisher: AnyPublisher<[RunningTimerItem], Never>
+    ) {
+        self.init(exposer: exposer)
+        self.cancellable = timersPublisher
+            .sink { [weak self] timers in
+                self?.sync(with: timers)
+            }
     }
 
     func sync(with timers: [RunningTimerItem]) {

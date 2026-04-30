@@ -1,4 +1,8 @@
-# PTIMER-68 Verification
+# Background Notification Delivery — Manual Verification
+
+알림 코드 변경 시 본 절차를 재실행해 background/lock-screen completion notification 동작을 검증한다.
+
+행동 계약: [Timer Spec](../specs/Timer.md) §4 (Completion notification).
 
 ## 기능 시험 절차
 

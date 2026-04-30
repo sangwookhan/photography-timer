@@ -56,8 +56,8 @@ user explicitly says otherwise.
 - Test target: `PTimerTests`
 - Current automated tests use `XCTest`
 
-Existing product documents live under `Docs/`.
-Operational workflow documents may live at repository root, `Docs/tasks/`,
+Existing product documents live under `docs/`.
+Operational workflow documents may live at repository root, `docs/tasks/`,
 and `.codex/`.
 
 ---
@@ -172,11 +172,11 @@ If a simulator name differs locally, choose an available iPhone simulator from
 
 Preferred path for prepared task specs:
 
-- `Docs/tasks/<TICKET_ID>.md`
+- `docs/tasks/<TICKET_ID>.md`
 
-Use `Docs/tasks/TASK_TEMPLATE.md` as the starting point for new tickets.
+Use `docs/tasks/TASK_TEMPLATE.md` as the starting point for new tickets.
 
-Feature or verification reference material may remain in `Docs/`.
+Feature or verification reference material may remain in `docs/`.
 
 ---
 

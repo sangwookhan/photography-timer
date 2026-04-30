@@ -12,7 +12,9 @@ struct ExposureCalculatorScreen: View {
     @MainActor
     init() {
         self.init(
-            viewModel: ExposureCalculatorViewModel(),
+            viewModel: ExposureCalculatorViewModel(
+                dependencies: ViewModelDependencyFactory.production()
+            ),
             bottomSheetStateStore: BottomSheetWorkspaceStateStore()
         )
     }

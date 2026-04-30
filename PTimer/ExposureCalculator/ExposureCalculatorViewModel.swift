@@ -294,20 +294,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case filmCorrectedExposure
     }
 
-    init() {
-        self.calculator = ExposureCalculator()
-        self.presetFilms = LaunchPresetFilmCatalog.films
-        self.timerManager = TimerManager(
-            completionAlertService: ForegroundTimerCompletionAlertService(
-                feedbackPlayer: SystemTimerCompletionFeedbackPlayer()
-            ),
-            completionNotificationScheduler: UserNotificationTimerCompletionScheduler(),
-            persistenceStore: UserDefaultsTimerPersistenceStore()
-        )
-        self.contextPersistenceStore = UserDefaultsExposureCalculatorContextPersistenceStore()
-        self.metadataPersistenceStore = UserDefaultsTimerMetadataPersistenceStore()
+    init(dependencies: ViewModelDependencies) {
+        self.calculator = dependencies.calculator
+        self.presetFilms = dependencies.presetFilms
+        self.timerManager = dependencies.timerManager
+        self.contextPersistenceStore = dependencies.contextPersistenceStore
+        self.metadataPersistenceStore = dependencies.metadataPersistenceStore
         self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
-            exposer: ActivityKitLockScreenTimerTargetExposer()
+            exposer: dependencies.lockScreenTargetExposer
         )
 
         restorePersistedCalculatorContext()

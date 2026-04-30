@@ -1,0 +1,320 @@
+{
+  "_meta": {
+    "generatedFrom": [
+      "PTimerTests/ExposureCalculator/ExposureCalculatorTests.swift",
+      "PTimerTests/ExposureCalculator/ExposureCalculationAccuracyTests.swift",
+      "PTimer/ExposureCalculator/ExposureCalculator.swift"
+    ],
+    "version": "1.0.0",
+    "description": "Golden input/output pairs for ND exposure calculations. The calculator uses snap-to-full-stop logic: results at or below 30s snap to the nearest camera full-stop value; results between 30s and 64s snap to the nearest of {30, 64}; results above 64s snap to the nearest power of two."
+  },
+  "fullStopShutterSpeeds": [
+    0.000125, 0.00025, 0.0005, 0.001,
+    0.002, 0.004, 0.008, 0.016667,
+    0.033333, 0.066667, 0.125, 0.25,
+    0.5, 1, 2, 4, 8, 15, 30
+  ],
+  "cases": [
+    {
+      "description": "1/30 + 6 stops snaps to 2s (camera full-stop scale)",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 6,
+      "expectedCalculatedSeconds": 2.0,
+      "expectedFormattedResult": "2s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1/125 + 3 stops snaps to 1/15 (camera full-stop scale)",
+      "baseShutterSpeed": "1/125",
+      "baseShutterSeconds": 0.008,
+      "ndStops": 3,
+      "expectedCalculatedSeconds": 0.066667,
+      "expectedFormattedResult": "1/15s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "0.5 + 10 stops yields 512s (exact power of two)",
+      "baseShutterSpeed": "0.5",
+      "baseShutterSeconds": 0.5,
+      "ndStops": 10,
+      "expectedCalculatedSeconds": 512.0,
+      "expectedFormattedResult": "512s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1/8 + 10 stops yields 128s",
+      "baseShutterSpeed": "1/8",
+      "baseShutterSeconds": 0.125,
+      "ndStops": 10,
+      "expectedCalculatedSeconds": 128.0,
+      "expectedFormattedResult": "128s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 0 stops yields 1s (identity)",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 0,
+      "expectedCalculatedSeconds": 1.0,
+      "expectedFormattedResult": "1s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1/30 + 10 stops snaps to 30s (camera scale boundary)",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 10,
+      "expectedCalculatedSeconds": 30.0,
+      "expectedFormattedResult": "30s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1/30 + 11 stops snaps to 64s (transition from camera scale to power-of-two doubling)",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 11,
+      "expectedCalculatedSeconds": 64.0,
+      "expectedFormattedResult": "64s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 3 stops yields 8s (camera full-stop scale)",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 3,
+      "expectedCalculatedSeconds": 8.0,
+      "expectedFormattedResult": "8s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 4 stops snaps to 15s (camera full-stop scale with 15s)",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 4,
+      "expectedCalculatedSeconds": 15.0,
+      "expectedFormattedResult": "15s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 5 stops snaps to 30s (top of camera scale)",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 5,
+      "expectedCalculatedSeconds": 30.0,
+      "expectedFormattedResult": "30s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 6 stops yields 64s (power-of-two beyond 30s)",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 6,
+      "expectedCalculatedSeconds": 64.0,
+      "expectedFormattedResult": "64s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 7 stops yields 128s",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 7,
+      "expectedCalculatedSeconds": 128.0,
+      "expectedFormattedResult": "128s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 8 stops yields 256s",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 8,
+      "expectedCalculatedSeconds": 256.0,
+      "expectedFormattedResult": "256s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 20 stops yields 1048576s",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 20,
+      "expectedCalculatedSeconds": 1048576.0,
+      "expectedFormattedResult": "1048576s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1s + 24 stops yields 2^24",
+      "baseShutterSpeed": "1",
+      "baseShutterSeconds": 1.0,
+      "ndStops": 24,
+      "expectedCalculatedSeconds": 16777216.0,
+      "expectedFormattedResult": "16777216s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1/30 + 24 stops yields 524288 (snap to nearest power of two)",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 24,
+      "expectedCalculatedSeconds": 524288.0,
+      "expectedFormattedResult": "524288s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "1/10000 + 0 stops clamps to 1/8000 (canonical lower bound)",
+      "baseShutterSpeed": "1/10000",
+      "baseShutterSeconds": 0.0001,
+      "ndStops": 0,
+      "expectedCalculatedSeconds": 0.000125,
+      "expectedFormattedResult": "1/8000s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Full-stop matrix from 1/30: +1 stop snaps to 1/15",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 1,
+      "expectedCalculatedSeconds": 0.066667,
+      "expectedFormattedResult": "1/15s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Full-stop matrix from 1/30: +2 stops snaps to 1/8",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 2,
+      "expectedCalculatedSeconds": 0.125,
+      "expectedFormattedResult": "1/8s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Full-stop matrix from 1/30: +3 stops snaps to 1/4",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 3,
+      "expectedCalculatedSeconds": 0.25,
+      "expectedFormattedResult": "1/4s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Full-stop matrix from 1/30: +4 stops snaps to 1/2",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 4,
+      "expectedCalculatedSeconds": 0.5,
+      "expectedFormattedResult": "1/2s",
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Full-stop matrix from 1/30: +5 stops snaps to 1s",
+      "baseShutterSpeed": "1/30",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": 5,
+      "expectedCalculatedSeconds": 1.0,
+      "expectedFormattedResult": "1s",
+      "tolerance": 0.0001
+    }
+  ],
+  "timeDisplayCases": [
+    {
+      "description": "Zero seconds",
+      "inputSeconds": 0,
+      "expectedPrimary": "0s",
+      "expectedSecondary": "0s"
+    },
+    {
+      "description": "Sub-second value",
+      "inputSeconds": 0.125,
+      "expectedPrimary": "0.125s",
+      "expectedSecondary": "0.125s"
+    },
+    {
+      "description": "Decimal seconds under 60",
+      "inputSeconds": 12.345,
+      "expectedPrimary": "12.345s",
+      "expectedSecondary": "12.345s"
+    },
+    {
+      "description": "Minutes and seconds",
+      "inputSeconds": 128,
+      "expectedPrimary": "02:08",
+      "expectedSecondary": "128s"
+    },
+    {
+      "description": "Hours, minutes, and seconds",
+      "inputSeconds": 3728,
+      "expectedPrimary": "01:02:08",
+      "expectedSecondary": "3728s"
+    },
+    {
+      "description": "Day-scale duration",
+      "inputSeconds": 90000,
+      "expectedPrimary": "1d 01:00:00",
+      "expectedSecondary": "90000s"
+    },
+    {
+      "description": "Month-scale duration",
+      "inputSeconds": 2592000,
+      "expectedPrimary": "1mo 00:00:00",
+      "expectedSecondary": "2592000s"
+    },
+    {
+      "description": "Month plus days duration",
+      "inputSeconds": 2766245,
+      "expectedPrimary": "1mo 2d 00:24:05",
+      "expectedSecondary": "2766245s"
+    },
+    {
+      "description": "Year-scale duration",
+      "inputSeconds": 31536000,
+      "expectedPrimary": "1y 00:00:00",
+      "expectedSecondary": "31536000s"
+    },
+    {
+      "description": "Minutes with fractional seconds",
+      "inputSeconds": 128.25,
+      "expectedPrimary": "02:08.250",
+      "expectedSecondary": "128.25s"
+    }
+  ],
+  "shutterFormatCases": [
+    {
+      "inputSeconds": 2,
+      "expectedFormatted": "2s"
+    },
+    {
+      "inputSeconds": 2.1,
+      "expectedFormatted": "2.1s"
+    },
+    {
+      "inputSeconds": 0.033333,
+      "expectedFormatted": "1/30s"
+    },
+    {
+      "inputSeconds": 0.008,
+      "expectedFormatted": "1/125s"
+    }
+  ],
+  "errorCases": [
+    {
+      "description": "Empty base shutter input",
+      "baseShutterInput": "",
+      "expectedError": "emptyBaseShutter"
+    },
+    {
+      "description": "Non-numeric base shutter input",
+      "baseShutterInput": "abc",
+      "expectedError": "invalidBaseShutter"
+    },
+    {
+      "description": "Zero base shutter input",
+      "baseShutterInput": "0",
+      "expectedError": "nonPositiveBaseShutter"
+    },
+    {
+      "description": "Negative ND stop",
+      "baseShutterSeconds": 0.033333,
+      "ndStops": -1,
+      "expectedError": "nonPositiveND"
+    }
+  ]
+}

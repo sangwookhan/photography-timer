@@ -1,0 +1,203 @@
+{
+  "_meta": {
+    "generatedFrom": [
+      "Docs/Specs/DomainSchema.md",
+      "PTimerTests/ExposureCalculator/LaunchPresetFilmCatalogTests.swift",
+      "PTimer/Resources/LaunchPresetFilmCatalog.json"
+    ],
+    "version": "1.0.0",
+    "description": "Validation cases for the bundled launch preset film catalog, derived from DomainSchema.md section 11 catalog validation rules and existing test assertions."
+  },
+  "catalogExpectations": {
+    "description": "Expected properties of the current bundled launch catalog",
+    "expectedFilmCount": 4,
+    "expectedFilmOrder": [
+      "Tri-X 400",
+      "Portra 400",
+      "Velvia 50",
+      "HP5 Plus"
+    ],
+    "expectedFilmIds": [
+      "kodak-tri-x-400",
+      "kodak-portra-400",
+      "fujifilm-velvia-50",
+      "ilford-hp5-plus-400"
+    ]
+  },
+  "launchCatalogValidationRules": {
+    "description": "Rules from DomainSchema.md section 11 that every launch catalog entry must pass",
+    "rules": [
+      {
+        "id": "rule-1",
+        "description": "The film identity array is non-empty",
+        "field": null,
+        "constraint": "array.count > 0"
+      },
+      {
+        "id": "rule-2",
+        "description": "Every identity has a non-empty id, unique across the catalog",
+        "field": "id",
+        "constraint": "nonEmpty && unique"
+      },
+      {
+        "id": "rule-3",
+        "description": "Every identity has a non-empty canonicalStockName, unique across the catalog",
+        "field": "canonicalStockName",
+        "constraint": "nonEmpty && unique"
+      },
+      {
+        "id": "rule-4",
+        "description": "Every identity has kind = preset",
+        "field": "kind",
+        "constraint": "equals",
+        "expectedValue": "preset"
+      },
+      {
+        "id": "rule-5",
+        "description": "Every identity has productionStatus = current",
+        "field": "productionStatus",
+        "constraint": "equals",
+        "expectedValue": "current"
+      },
+      {
+        "id": "rule-6",
+        "description": "Every identity has exactly one profile",
+        "field": "profiles",
+        "constraint": "array.count == 1"
+      },
+      {
+        "id": "rule-7",
+        "description": "Every profile source has kind = manufacturerPublished",
+        "field": "profiles[0].source.kind",
+        "constraint": "equals",
+        "expectedValue": "manufacturerPublished"
+      },
+      {
+        "id": "rule-8",
+        "description": "Every profile source has authority = official",
+        "field": "profiles[0].source.authority",
+        "constraint": "equals",
+        "expectedValue": "official"
+      },
+      {
+        "id": "rule-9",
+        "description": "Every profile has at least one rule, and every rule decodes to a known variant",
+        "field": "profiles[0].rules",
+        "constraint": "array.count >= 1 && allKnownVariants"
+      }
+    ]
+  },
+  "perFilmExpectations": [
+    {
+      "filmId": "kodak-tri-x-400",
+      "canonicalStockName": "Tri-X 400",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
+      "aliases": ["TRI-X", "TX 400"],
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-tri-x-official-table",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": ["threshold", "table"],
+      "tableEntryCount": 3,
+      "tableMeteredSecondsPoints": [1, 10, 100]
+    },
+    {
+      "filmId": "kodak-portra-400",
+      "canonicalStockName": "Portra 400",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL PORTRA 400",
+      "aliases": ["PORTRA 400"],
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-portra-official-threshold",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": ["threshold", "advisory"],
+      "thresholdNoCorrectionMinSeconds": 0.0001,
+      "thresholdNoCorrectionMaxSeconds": 1
+    },
+    {
+      "filmId": "fujifilm-velvia-50",
+      "canonicalStockName": "Velvia 50",
+      "manufacturer": "Fujifilm",
+      "brandLabel": "FUJICHROME Velvia 50",
+      "aliases": ["RVP 50", "Velvia"],
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "fujifilm-velvia-official-table",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Fujifilm",
+      "ruleKinds": ["threshold", "table"],
+      "tableEntryCount": 5,
+      "tableMeteredSecondsPoints": [4, 8, 16, 32, 64],
+      "thresholdNoCorrectionMinSeconds": 0.00025,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "hasStopSignalEntry": true,
+      "stopSignalMeteredSeconds": 64
+    },
+    {
+      "filmId": "ilford-hp5-plus-400",
+      "canonicalStockName": "HP5 Plus",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD HP5 PLUS",
+      "aliases": ["HP5+", "HP5 Plus 400"],
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-hp5-plus-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": ["threshold", "formula"],
+      "formulaExponent": 1.31,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001,
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1
+    }
+  ],
+  "rejectionCases": [
+    {
+      "description": "Duplicate film identifier",
+      "violation": "Two entries with the same id",
+      "expectedError": "duplicateFilmIdentifier"
+    },
+    {
+      "description": "Empty or whitespace canonicalStockName",
+      "violation": "canonicalStockName is whitespace-only",
+      "expectedError": "invalidCanonicalStockName"
+    },
+    {
+      "description": "Duplicate canonicalStockName",
+      "violation": "Two entries with the same canonicalStockName",
+      "expectedError": "duplicateCanonicalStockName"
+    },
+    {
+      "description": "Zero profiles on an entry",
+      "violation": "profiles array is empty",
+      "expectedError": "invalidPrimaryProfileCount"
+    },
+    {
+      "description": "Missing bundled resource file",
+      "violation": "Resource file does not exist in bundle",
+      "expectedError": "missingBundledResource"
+    },
+    {
+      "description": "Malformed JSON resource",
+      "violation": "Resource data is not valid JSON",
+      "expectedError": "malformedResource"
+    }
+  ]
+}

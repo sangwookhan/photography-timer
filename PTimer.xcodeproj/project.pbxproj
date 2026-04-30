@@ -24,6 +24,8 @@
 		A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */; };
 		A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000103 /* RunningTimerPanelView.swift */; };
 		A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000106 /* ViewModelDependencyFactory.swift */; };
+		A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000107 /* FilmModeDetailsPresenter.swift */; };
+		A0000000000000000000010A /* LockScreenTimerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000109 /* LockScreenTimerCoordinator.swift */; };
 		A000000000000000000000B7 /* ExposureCalculatorViewModelFilmModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B8 /* ExposureCalculatorViewModelFilmModeTests.swift */; };
 		A000000000000000000000BD /* ExposureCalculatorViewModelTimerIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BE /* ExposureCalculatorViewModelTimerIntegrationTests.swift */; };
 		A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */; };
@@ -111,6 +113,8 @@
 		A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorLayoutMetrics.swift; sourceTree = "<group>"; };
 		A00000000000000000000103 /* RunningTimerPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerPanelView.swift; sourceTree = "<group>"; };
 		A00000000000000000000106 /* ViewModelDependencyFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDependencyFactory.swift; sourceTree = "<group>"; };
+		A00000000000000000000107 /* FilmModeDetailsPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000109 /* LockScreenTimerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerCoordinator.swift; sourceTree = "<group>"; };
 		A000000000000000000000B8 /* ExposureCalculatorViewModelFilmModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000BE /* ExposureCalculatorViewModelTimerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTimerIntegrationTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelContextPersistenceTests.swift; sourceTree = "<group>"; };
@@ -228,6 +232,7 @@
 				A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */,
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
+				A00000000000000000000107 /* FilmModeDetailsPresenter.swift */,
 				A000000000000000000000F0 /* FilmContext */,
 				A000000000000000000000B6 /* PresetFilmCatalog.swift */,
 				A00000000000000000000103 /* RunningTimerPanelView.swift */,
@@ -264,6 +269,7 @@
 				A00000000000000000000015 /* TimerManager.swift */,
 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
 				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
+				A00000000000000000000109 /* LockScreenTimerCoordinator.swift */,
 				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
 			);
 			path = Timers;
@@ -513,7 +519,9 @@
 				A00000000000000000000005 /* TimerManager.swift in Sources */,
 				A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */,
 				A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */,
+				A0000000000000000000010A /* LockScreenTimerCoordinator.swift in Sources */,
 				A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */,
+				A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */,
 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,
 				A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */,
 				A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */,

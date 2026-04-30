@@ -15,6 +15,13 @@
 		A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* ExposureCalculatorTests.swift */; };
 		A00000000000000000000007 /* TimerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TimerManagerTests.swift */; };
 		A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */; };
+		A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000110 /* DisplayStateSnapshot.swift */; };
+		A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000112 /* DisplayStateSnapshotTests.swift */; };
+		A00000000000000000000116 /* RecordReplayTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000115 /* RecordReplayTrace.swift */; };
+		A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* RecordReplayBaseline.swift */; };
+		A0000000000000000000011A /* RecordReplaySpies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RecordReplaySpies.swift */; };
+		A0000000000000000000011C /* RecordReplayHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011B /* RecordReplayHarness.swift */; };
+		A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */; };
 		A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ExposureCalculatorViewModel.swift */; };
 		A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */; };
 		A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */; };
@@ -105,6 +112,13 @@
 		A00000000000000000000016 /* ExposureCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000017 /* TimerManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerCoordinatorTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000110 /* DisplayStateSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStateSnapshot.swift; sourceTree = "<group>"; };
+		A00000000000000000000112 /* DisplayStateSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStateSnapshotTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000115 /* RecordReplayTrace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayTrace.swift; sourceTree = "<group>"; };
+		A00000000000000000000117 /* RecordReplayBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayBaseline.swift; sourceTree = "<group>"; };
+		A00000000000000000000119 /* RecordReplaySpies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplaySpies.swift; sourceTree = "<group>"; };
+		A0000000000000000000011B /* RecordReplayHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayHarness.swift; sourceTree = "<group>"; };
+		A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayBaselineSmokeTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000019 /* ExposureCalculatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTests.swift; sourceTree = "<group>"; };
@@ -322,8 +336,31 @@
 				A000000000000000000000BC /* ExposureCalculator */,
 				A000000000000000000000CC /* Reciprocity */,
 				A000000000000000000000CD /* Timers */,
+				A00000000000000000000113 /* Snapshots */,
+				A00000000000000000000114 /* RecordReplay */,
 			);
 			path = PTimerTests;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000113 /* Snapshots */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000110 /* DisplayStateSnapshot.swift */,
+				A00000000000000000000112 /* DisplayStateSnapshotTests.swift */,
+			);
+			path = Snapshots;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000114 /* RecordReplay */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000115 /* RecordReplayTrace.swift */,
+				A00000000000000000000117 /* RecordReplayBaseline.swift */,
+				A00000000000000000000119 /* RecordReplaySpies.swift */,
+				A0000000000000000000011B /* RecordReplayHarness.swift */,
+				A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */,
+			);
+			path = RecordReplay;
 			sourceTree = "<group>";
 		};
 		A000000000000000000000CB /* App */ = {
@@ -556,6 +593,13 @@
 				A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */,
 				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 				A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */,
+				A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */,
+				A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */,
+				A00000000000000000000116 /* RecordReplayTrace.swift in Sources */,
+				A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */,
+				A0000000000000000000011A /* RecordReplaySpies.swift in Sources */,
+				A0000000000000000000011C /* RecordReplayHarness.swift in Sources */,
+				A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */,
 				A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */,
 				A000000000000000000000B7 /* ExposureCalculatorViewModelFilmModeTests.swift in Sources */,
 				A000000000000000000000BD /* ExposureCalculatorViewModelTimerIntegrationTests.swift in Sources */,

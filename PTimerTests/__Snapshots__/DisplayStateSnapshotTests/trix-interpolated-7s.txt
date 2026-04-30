@@ -1,0 +1,38 @@
+  ▿ PTimer.ReciprocityCalculationPolicyResult
+    - meteredExposureSeconds: 7.0
+    ▿ correctedExposureSeconds: Optional(30.368710886085243)
+      - some: 30.368710886085243
+    ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
+      - basis: PTimer.ReciprocityCalculationBasis.interpolatedWithinTable
+      - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
+      - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.withinInterpretedRange
+      - warningLevel: PTimer.ReciprocityCalculationWarningLevel.note
+      ▿ estimationFamily: Optional(PTimer.ReciprocityTableEstimationFamily.logLog)
+        - some: PTimer.ReciprocityTableEstimationFamily.logLog
+      ▿ notes: 1 element
+        ▿ PTimer.ReciprocityPolicyNote
+          ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.estimatedFromRepresentativeRows)
+            - some: PTimer.ReciprocityPolicyNoteToken.estimatedFromRepresentativeRows
+          - text: "Interpolated between original representative table rows."
+      ▿ referencedRows: Optional([PTimer.ReciprocityTableRowReference(rowIndex: 0, role: PTimer.ReciprocityTableRowRole.lowerBound, meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), correctedTimeSeconds: Optional(2.0), stopDelta: Optional(1.0), annotationSummary: nil), PTimer.ReciprocityTableRowReference(rowIndex: 1, role: PTimer.ReciprocityTableRowRole.upperBound, meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), correctedTimeSeconds: Optional(50.0), stopDelta: Optional(2.0), annotationSummary: nil)])
+        ▿ some: 2 elements
+          ▿ PTimer.ReciprocityTableRowReference
+            - rowIndex: 0
+            - role: PTimer.ReciprocityTableRowRole.lowerBound
+            ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+              - exactSeconds: 1.0
+            ▿ correctedTimeSeconds: Optional(2.0)
+              - some: 2.0
+            ▿ stopDelta: Optional(1.0)
+              - some: 1.0
+            - annotationSummary: nil
+          ▿ PTimer.ReciprocityTableRowReference
+            - rowIndex: 1
+            - role: PTimer.ReciprocityTableRowRole.upperBound
+            ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+              - exactSeconds: 10.0
+            ▿ correctedTimeSeconds: Optional(50.0)
+              - some: 50.0
+            ▿ stopDelta: Optional(2.0)
+              - some: 2.0
+            - annotationSummary: nil

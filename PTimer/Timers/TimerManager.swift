@@ -255,25 +255,174 @@ enum TimerStatus: String, Equatable {
     case completed
 }
 
-struct TimerState: Identifiable, Equatable {
+/// Payload of a `running` timer. Holds only the fields valid in the
+/// `running` state: identity, duration, creation time, and the
+/// expected end date.
+struct RunningTimer: Equatable {
     let id: UUID
     let duration: TimeInterval
     let startDate: Date
-    let endDate: Date?
-    let pausedRemainingTime: TimeInterval?
-    let pausedAt: Date?
-    let status: TimerStatus
+    let endDate: Date
+}
+
+/// Payload of a `paused` timer. Holds the original `endDate` because
+/// the historical schema preserves it across pause/resume cycles
+/// (used by `resolvedCompletionDate()` when resume math underflows
+/// to zero), plus the freeze metadata `pausedRemainingTime` and
+/// `pausedAt`.
+struct PausedTimer: Equatable {
+    let id: UUID
+    let duration: TimeInterval
+    let startDate: Date
+    let endDate: Date
+    let pausedRemainingTime: TimeInterval
+    let pausedAt: Date
+}
+
+/// Payload of a `completed` timer. Holds the recorded completion
+/// timestamp; surfaced via `endDate` for backward-compatible callers
+/// that read the legacy field.
+struct CompletedTimer: Equatable {
+    let id: UUID
+    let duration: TimeInterval
+    let startDate: Date
+    let completedAt: Date
+}
+
+/// Sum-type representation of a timer's lifecycle state. Each case
+/// carries only the fields valid for that state, so invalid
+/// combinations (e.g. running with a `pausedAt`) cannot be
+/// constructed.
+///
+/// Backward-compatible computed properties (`endDate`,
+/// `pausedRemainingTime`, `pausedAt`, `status`) preserve the legacy
+/// struct surface so existing call sites and the persisted snapshot
+/// schema stay byte-identical.
+enum TimerState: Identifiable, Equatable {
+    case running(RunningTimer)
+    case paused(PausedTimer)
+    case completed(CompletedTimer)
+
+    /// Compatibility initializer that mirrors the historical struct
+    /// `TimerState(id:duration:startDate:endDate:pausedRemainingTime:pausedAt:status:)`
+    /// constructor used by tests and persistence-restore code. The
+    /// initializer dispatches on `status` and constructs the
+    /// appropriate sum case from the supplied legacy fields. When a
+    /// field required by the chosen status is missing (e.g. `status =
+    /// .running` with `endDate = nil`), the constructor falls back to
+    /// the same defaults the legacy struct exhibited at the use sites
+    /// in this codebase.
+    init(
+        id: UUID,
+        duration: TimeInterval,
+        startDate: Date,
+        endDate: Date?,
+        pausedRemainingTime: TimeInterval?,
+        pausedAt: Date?,
+        status: TimerStatus
+    ) {
+        switch status {
+        case .running:
+            self = .running(
+                RunningTimer(
+                    id: id,
+                    duration: duration,
+                    startDate: startDate,
+                    endDate: endDate ?? startDate.addingTimeInterval(duration)
+                )
+            )
+        case .paused:
+            self = .paused(
+                PausedTimer(
+                    id: id,
+                    duration: duration,
+                    startDate: startDate,
+                    endDate: endDate ?? startDate.addingTimeInterval(duration),
+                    pausedRemainingTime: pausedRemainingTime ?? 0,
+                    pausedAt: pausedAt ?? startDate
+                )
+            )
+        case .completed:
+            self = .completed(
+                CompletedTimer(
+                    id: id,
+                    duration: duration,
+                    startDate: startDate,
+                    completedAt: endDate ?? startDate.addingTimeInterval(duration)
+                )
+            )
+        }
+    }
+
+    var id: UUID {
+        switch self {
+        case .running(let payload): return payload.id
+        case .paused(let payload): return payload.id
+        case .completed(let payload): return payload.id
+        }
+    }
+
+    var duration: TimeInterval {
+        switch self {
+        case .running(let payload): return payload.duration
+        case .paused(let payload): return payload.duration
+        case .completed(let payload): return payload.duration
+        }
+    }
+
+    var startDate: Date {
+        switch self {
+        case .running(let payload): return payload.startDate
+        case .paused(let payload): return payload.startDate
+        case .completed(let payload): return payload.startDate
+        }
+    }
+
+    /// Backward-compatible field surface. `endDate` is non-nil for
+    /// every case in the sum-type representation; the optional return
+    /// type is preserved so callers reading the legacy field continue
+    /// to compile and behave identically.
+    var endDate: Date? {
+        switch self {
+        case .running(let payload): return payload.endDate
+        case .paused(let payload): return payload.endDate
+        case .completed(let payload): return payload.completedAt
+        }
+    }
+
+    var pausedRemainingTime: TimeInterval? {
+        if case .paused(let payload) = self {
+            return payload.pausedRemainingTime
+        }
+        return nil
+    }
+
+    var pausedAt: Date? {
+        if case .paused(let payload) = self {
+            return payload.pausedAt
+        }
+        return nil
+    }
+
+    /// Derived status accessor preserving the legacy `status`
+    /// property. External callers (display state mappers, lock-
+    /// screen coordinator, view models) keep reading this without
+    /// switching on case.
+    var status: TimerStatus {
+        switch self {
+        case .running: return .running
+        case .paused: return .paused
+        case .completed: return .completed
+        }
+    }
 
     var remainingTime: TimeInterval {
         assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
-        switch status {
-        case .running:
-            guard let endDate else {
-                return 0
-            }
-            return sanitizeRemainingTime(endDate.timeIntervalSinceNow)
-        case .paused:
-            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
+        switch self {
+        case .running(let payload):
+            return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSinceNow)
+        case .paused(let payload):
+            return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
         case .completed:
             return 0
         }
@@ -281,23 +430,19 @@ struct TimerState: Identifiable, Equatable {
 
     func remainingTime(at now: Date) -> TimeInterval {
         assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
-        switch status {
-        case .running:
-            guard let endDate else {
-                return 0
-            }
-            return sanitizeRemainingTime(endDate.timeIntervalSince(now))
-        case .paused:
-            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
+        switch self {
+        case .running(let payload):
+            return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSince(now))
+        case .paused(let payload):
+            return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
         case .completed:
             return 0
         }
     }
 
     func status(at now: Date) -> TimerStatus {
-        guard status == .running,
-              let endDate,
-              now.addingTimeInterval(timerStabilityEpsilon) >= endDate else {
+        guard case .running(let payload) = self,
+              now.addingTimeInterval(timerStabilityEpsilon) >= payload.endDate else {
             return status
         }
 
@@ -305,79 +450,89 @@ struct TimerState: Identifiable, Equatable {
     }
 
     func updatingStatus(at now: Date) -> TimerState {
-        guard status == .running,
-              let endDate,
-              now.addingTimeInterval(timerStabilityEpsilon) >= endDate else {
+        guard case .running(let payload) = self,
+              now.addingTimeInterval(timerStabilityEpsilon) >= payload.endDate else {
             return self
         }
 
-        return completed(at: endDate)
+        return completed(at: payload.endDate)
     }
 
     func pausing(at now: Date) -> TimerState {
         let remaining = remainingTime(at: now)
 
         guard remaining > 0 else {
+            // Preserve the legacy short-circuit: pausing while remaining
+            // time has reached zero immediately completes using the
+            // existing endDate (or `now` as the fallback only if endDate
+            // is somehow absent — unreachable in the sum-type
+            // representation but kept for shape parity).
             return completed(at: endDate ?? now)
         }
 
         // Freeze the timer with its remaining duration intact so it can be
-        // resumed later from the same logical point.
-        return TimerState(
-            id: id,
-            duration: duration,
-            startDate: startDate,
-            endDate: endDate,
-            pausedRemainingTime: remaining,
-            pausedAt: now,
-            status: .paused
+        // resumed later from the same logical point. The original
+        // endDate is preserved across the pause for resume math
+        // continuity (matches the legacy schema exactly).
+        return .paused(
+            PausedTimer(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                endDate: endDate ?? now.addingTimeInterval(remaining),
+                pausedRemainingTime: remaining,
+                pausedAt: now
+            )
         )
     }
 
     func resume(at now: Date) -> TimerState {
-        let remaining = sanitizeRemainingTime(pausedRemainingTime ?? 0)
+        let remaining = Self.sanitizeRemainingTime(pausedRemainingTime ?? 0)
         guard remaining > 0 else {
             return completed(at: resolvedCompletionDate())
         }
 
         // Resume recalculates the end date from "now" because `paused`
         // preserves remaining time as a frozen resumable state.
-        return TimerState(
-            id: id,
-            duration: duration,
-            startDate: startDate,
-            endDate: now.addingTimeInterval(remaining),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running
+        return .running(
+            RunningTimer(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                endDate: now.addingTimeInterval(remaining)
+            )
         )
     }
 
     func completed(at completionDate: Date? = nil) -> TimerState {
-        TimerState(
-            id: id,
-            duration: duration,
-            startDate: startDate,
-            endDate: completionDate ?? resolvedCompletionDate(),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed
+        .completed(
+            CompletedTimer(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                completedAt: completionDate ?? resolvedCompletionDate()
+            )
         )
     }
 
     private func resolvedCompletionDate() -> Date {
-        if let endDate {
-            return endDate
+        // Mirrors the legacy `endDate ?? pausedAt + remaining ??
+        // startDate + duration` resolution exactly. In the sum-type
+        // representation `endDate` is non-nil for running and paused
+        // and `completedAt` is the recorded completion timestamp,
+        // so the legacy fallback chain collapses to a direct case
+        // dispatch without changing observable behavior.
+        switch self {
+        case .running(let payload):
+            return payload.endDate
+        case .paused(let payload):
+            return payload.endDate
+        case .completed(let payload):
+            return payload.completedAt
         }
-
-        if let pausedAt {
-            return pausedAt.addingTimeInterval(sanitizeRemainingTime(pausedRemainingTime ?? 0))
-        }
-
-        return startDate.addingTimeInterval(duration)
     }
 
-    private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
+    private static func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
         let clamped = max(0, value)
         return clamped < timerStabilityEpsilon ? 0 : clamped
     }

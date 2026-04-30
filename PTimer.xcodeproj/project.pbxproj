@@ -49,6 +49,7 @@
 		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
 		A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */; };
 		A000000000000000000000AF /* ReciprocityCalculationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */; };
+		A0000000000000000000010B /* ReciprocityCalculationPolicyPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */; };
 		A000000000000000000000B1 /* ReciprocityConfidencePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */; };
 		A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */; };
 		A000000000000000000000B5 /* PresetFilmCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B6 /* PresetFilmCatalog.swift */; };
@@ -133,6 +134,7 @@
 		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicy.swift; sourceTree = "<group>"; };
 		A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicyTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicyPerformanceTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentation.swift; sourceTree = "<group>"; };
 		A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentationTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000B6 /* PresetFilmCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetFilmCatalog.swift; sourceTree = "<group>"; };
@@ -353,6 +355,7 @@
 			children = (
 				A000000000000000000000AC /* ReciprocityDomainTests.swift */,
 				A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */,
+				A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */,
 				A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */,
 			);
 			path = Reciprocity;
@@ -562,6 +565,7 @@
 				A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */,
 				A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */,
 				A000000000000000000000AF /* ReciprocityCalculationPolicyTests.swift in Sources */,
+				A0000000000000000000010B /* ReciprocityCalculationPolicyPerformanceTests.swift in Sources */,
 				A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */,
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
 			);

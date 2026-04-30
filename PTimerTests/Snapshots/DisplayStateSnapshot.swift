@@ -52,7 +52,32 @@ enum DisplayStateSnapshot {
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        let serialized = serialize(value)
+        assertSerialized(serialize(value), named: name, file: file, line: line)
+    }
+
+    /// Asserts that the verbatim `text` matches the stored baseline.
+    ///
+    /// Distinct from `assert(_:named:)` (which dumps reflective output of
+    /// arbitrary values via `Swift.dump`) because some baselines — for
+    /// example a concatenated JSON trace — are already stable text and
+    /// should be committed as-is. Wrapping pre-formatted text with
+    /// `dump` would escape newlines onto a single line, defeating diff
+    /// review.
+    static func assertText(
+        _ text: String,
+        named name: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        assertSerialized(text, named: name, file: file, line: line)
+    }
+
+    private static func assertSerialized(
+        _ serialized: String,
+        named name: String,
+        file: StaticString,
+        line: UInt
+    ) {
         let url = baselineURL(testFile: file, name: name)
         let isRecording = ProcessInfo.processInfo.environment["SNAPSHOT_RECORD"] == "1"
 

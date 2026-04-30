@@ -16,7 +16,7 @@ final class DisplayStateSnapshotTests: XCTestCase {
     // MARK: - Reciprocity policy results
 
     /// Tri-X 400 exact table point at metered=10s. Locks the full
-    /// `ReciprocityCalculationResult` shape including metadata.
+    /// `ReciprocityResult` shape including metadata.
     func testTriXExactTablePointSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(

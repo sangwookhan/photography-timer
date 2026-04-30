@@ -152,20 +152,22 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testFormulaDerivedResultRoutesThroughEstimatedPresentationFamily() {
         let presentation = mapper.map(
-            result: ReciprocityCalculationPolicyResult(
-                meteredExposureSeconds: 2,
-                correctedExposureSeconds: 3.5,
-                metadata: ReciprocityCalculationPolicyResultMetadata(
-                    basis: .formulaDerived,
-                    sourceAuthorityImpact: .currentOfficial,
-                    rangeStatus: .withinInterpretedRange,
-                    warningLevel: .none,
-                    notes: [
-                        ReciprocityPolicyNote(
-                            token: nil,
-                            text: "Calculated from a formula-backed reciprocity profile."
-                        )
-                    ]
+            result: .quantified(
+                ReciprocityResult.QuantifiedPayload(
+                    meteredExposureSeconds: 2,
+                    correctedExposureSeconds: 3.5,
+                    metadata: ReciprocityCalculationPolicyResultMetadata(
+                        basis: .formulaDerived,
+                        sourceAuthorityImpact: .currentOfficial,
+                        rangeStatus: .withinInterpretedRange,
+                        warningLevel: .none,
+                        notes: [
+                            ReciprocityPolicyNote(
+                                token: nil,
+                                text: "Calculated from a formula-backed reciprocity profile."
+                            )
+                        ]
+                    )
                 )
             )
         )

@@ -103,4 +103,75 @@ final class CalculatorModelTests: XCTestCase {
         XCTAssertEqual(previewResult.baseShutterSeconds, 1.0 / 60.0, accuracy: 1e-9)
         XCTAssertEqual(previewResult.stop, 6)
     }
+
+    // MARK: - Live preview overlay (B1 PR4c-2)
+
+    @MainActor
+    func testEffectiveBaseShutterFallsBackToCommittedValueWhenPreviewIsNil() {
+        let model = CalculatorModel(
+            calculator: ExposureCalculator(),
+            baseShutterSeconds: 1.0 / 30.0,
+            ndStop: 0
+        )
+
+        XCTAssertNil(model.liveBaseShutter)
+        XCTAssertEqual(model.effectiveBaseShutter, 1.0 / 30.0, accuracy: 1e-9)
+
+        XCTAssertNil(model.liveNDStop)
+        XCTAssertEqual(model.effectiveNDStop, 0)
+    }
+
+    @MainActor
+    func testUpdateLivePreviewSetsOverlayWhenDifferentFromCommitted() {
+        let model = CalculatorModel(
+            calculator: ExposureCalculator(),
+            baseShutterSeconds: 1.0 / 30.0,
+            ndStop: 0
+        )
+
+        model.updateLiveBaseShutter(1.0 / 60.0)
+        model.updateLiveNDStop(6)
+
+        XCTAssertEqual(model.liveBaseShutter, 1.0 / 60.0)
+        XCTAssertEqual(model.liveNDStop, 6)
+        XCTAssertEqual(model.effectiveBaseShutter, 1.0 / 60.0, accuracy: 1e-9)
+        XCTAssertEqual(model.effectiveNDStop, 6)
+    }
+
+    @MainActor
+    func testUpdateLivePreviewClearsOverlayWhenEqualToCommitted() {
+        let model = CalculatorModel(
+            calculator: ExposureCalculator(),
+            baseShutterSeconds: 1.0 / 30.0,
+            ndStop: 0
+        )
+
+        // Preview equal to committed clears the overlay (matches the
+        // legacy ViewModel behavior where the wheel gesture's idle
+        // state has the preview equal to the committed value).
+        model.updateLiveBaseShutter(1.0 / 30.0)
+        model.updateLiveNDStop(0)
+
+        XCTAssertNil(model.liveBaseShutter)
+        XCTAssertNil(model.liveNDStop)
+    }
+
+    @MainActor
+    func testClearLivePreviewExplicitlyDropsOverlay() {
+        let model = CalculatorModel(
+            calculator: ExposureCalculator(),
+            baseShutterSeconds: 1.0 / 30.0,
+            ndStop: 0
+        )
+
+        model.updateLiveBaseShutter(1.0 / 60.0)
+        model.updateLiveNDStop(6)
+        model.clearLiveBaseShutterPreview()
+        model.clearLiveNDStopPreview()
+
+        XCTAssertNil(model.liveBaseShutter)
+        XCTAssertNil(model.liveNDStop)
+        XCTAssertEqual(model.effectiveBaseShutter, 1.0 / 30.0, accuracy: 1e-9)
+        XCTAssertEqual(model.effectiveNDStop, 0)
+    }
 }

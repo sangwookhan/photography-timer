@@ -4,165 +4,13 @@ import Foundation
 private let defaultFilmModeBaseShutter = 1.0 / 30.0
 private let defaultFilmModeNDStop = 0
 
-struct RunningTimerItem: Identifiable, Equatable {
-    private static let stabilityEpsilon = ExposureCalculator.stabilityEpsilon
-
-    let id: UUID
-    let order: Int
-    let name: String
-    let basisSummary: String
-    let duration: TimeInterval
-    let startDate: Date
-    let endDate: Date?
-    let pausedRemainingTime: TimeInterval?
-    let pausedAt: Date?
-    let status: TimerStatus
-    let referenceDate: Date
-
-    var remainingTime: TimeInterval {
-        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
-        switch status {
-        case .running:
-            guard let endDate else {
-                return 0
-            }
-            return sanitizeRemainingTime(endDate.timeIntervalSince(referenceDate))
-        case .paused:
-            return sanitizeRemainingTime(pausedRemainingTime ?? 0)
-        case .completed:
-            return 0
-        }
-    }
-
-    var elapsedTime: TimeInterval {
-        assert(!remainingTime.isNaN, "Remaining time must not be NaN.")
-        return max(0, duration - remainingTime)
-    }
-
-    var completedAt: Date? {
-        guard status == .completed, let endDate else {
-            return nil
-        }
-
-        return endDate
-    }
-
-    private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
-        assert(!value.isNaN, "Remaining time input must not be NaN.")
-        let clamped = max(0, value)
-        return clamped < Self.stabilityEpsilon ? 0 : clamped
-    }
-}
-
-enum TimerWorkspaceOrdering {
-    static func sort(_ timers: [RunningTimerItem]) -> [RunningTimerItem] {
-        timers.sorted(by: areInPresentationOrder(lhs:rhs:))
-    }
-
-    static func areInPresentationOrder(lhs: RunningTimerItem, rhs: RunningTimerItem) -> Bool {
-        let lhsGroup = presentationGroup(lhs.status)
-        let rhsGroup = presentationGroup(rhs.status)
-
-        if lhsGroup != rhsGroup {
-            return lhsGroup < rhsGroup
-        }
-
-        switch lhsGroup {
-        case 0:
-            if lhs.order != rhs.order {
-                return lhs.order > rhs.order
-            }
-        case 1:
-            if lhs.completedAt != rhs.completedAt {
-                return (lhs.completedAt ?? .distantPast) > (rhs.completedAt ?? .distantPast)
-            }
-
-            if lhs.order != rhs.order {
-                return lhs.order > rhs.order
-            }
-        default:
-            break
-        }
-
-        return lhs.id.uuidString < rhs.id.uuidString
-    }
-
-    private static func presentationGroup(_ status: TimerStatus) -> Int {
-        switch status {
-        case .running, .paused:
-            return 0
-        case .completed:
-            return 1
-        }
-    }
-}
-
-struct PersistentTimerMetadataSnapshot: Codable, Equatable {
-    let id: UUID
-    let order: Int
-    let name: String
-    let basisSummary: String
-}
-
-struct PersistentTimerMetadataCollectionSnapshot: Codable, Equatable {
-    let nextTimerOrder: Int
-    let timers: [PersistentTimerMetadataSnapshot]
-}
-
-protocol TimerMetadataPersistenceStoring {
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot?
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot)
-    func clearSnapshot()
-}
-
-struct NoOpTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? { nil }
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {}
-    func clearSnapshot() {}
-}
-
-struct UserDefaultsTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
-    private let userDefaults: UserDefaults
-    private let snapshotKey: String
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-
-    init(
-        userDefaults: UserDefaults = .standard,
-        snapshotKey: String = "ptimer.timer-metadata.snapshot"
-    ) {
-        self.userDefaults = userDefaults
-        self.snapshotKey = snapshotKey
-    }
-
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
-        guard let data = userDefaults.data(forKey: snapshotKey) else {
-            return nil
-        }
-
-        return try? decoder.decode(PersistentTimerMetadataCollectionSnapshot.self, from: data)
-    }
-
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
-        guard let data = try? encoder.encode(snapshot) else {
-            return
-        }
-
-        userDefaults.set(data, forKey: snapshotKey)
-    }
-
-    func clearSnapshot() {
-        userDefaults.removeObject(forKey: snapshotKey)
-    }
-}
-
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
     @Published private(set) var activeCalculatorContext = ActiveExposureCalculatorContext()
     @Published var baseShutter = defaultFilmModeBaseShutter {
         didSet {
-            if liveBaseShutter == baseShutter {
-                liveBaseShutter = nil
+            if calculatorModel.liveBaseShutter == baseShutter {
+                calculatorModel.clearLiveBaseShutterPreview()
             }
 
             calculatorModel.baseShutterSeconds = baseShutter
@@ -171,8 +19,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
     @Published var ndStop = defaultFilmModeNDStop {
         didSet {
-            if liveNDStop == ndStop {
-                liveNDStop = nil
+            if calculatorModel.liveNDStop == ndStop {
+                calculatorModel.clearLiveNDStopPreview()
             }
 
             calculatorModel.ndStop = ndStop
@@ -180,8 +28,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
     }
     @Published private(set) var timers: [RunningTimerItem] = []
-    @Published private var liveBaseShutter: Double?
-    @Published private var liveNDStop: Int?
 
     /// Calculation responsibility (calculator instance, inputs, result).
     /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
@@ -352,7 +198,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             entries.append(FilmSelectorEntry(
                 id: film.id,
                 primaryText: film.canonicalStockName,
-                secondaryText: inferredISOValue(for: film).map { "ISO \($0)" },
+                secondaryText: FilmSelectionModel.inferredISOValue(for: film).map { "ISO \($0)" },
                 film: film
             ))
 
@@ -424,10 +270,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 accessibilityLabel: "Start timer from adjusted shutter",
                 accessibilityHint: "Starts a timer using the ND-adjusted shutter value"
             ),
-            correctedExposure: correctedExposureDisplayState(
-                adjustedShutterSeconds: result.resultShutterSeconds
+            correctedExposure: reciprocityModel.correctedExposureDisplayState(
+                for: bindingState
             ),
-            correctedExposureAction: correctedExposureActionState()
+            correctedExposureAction: reciprocityModel.correctedExposureActionState(
+                for: bindingState
+            )
         )
     }
 
@@ -482,22 +330,23 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func resetFilmModeWorkingContext() {
         filmSelectionModel.dropActiveSelectionWithoutPersisting()
-        liveBaseShutter = nil
-        liveNDStop = nil
+        calculatorModel.clearLiveBaseShutterPreview()
+        calculatorModel.clearLiveNDStopPreview()
         baseShutter = defaultFilmModeBaseShutter
         ndStop = defaultFilmModeNDStop
         filmSelectionModel.clearPersistedContext()
     }
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
-        // Delegated to `CalculatorModel` (B1 PR1). The model owns the
-        // pure calc engine and result mapping; the ViewModel still
-        // surfaces the `effectiveBaseShutter`/`effectiveNDStop` overlay
-        // (live-preview values that override the persisted inputs) so
-        // the pre-decomposition behavior is byte-identical.
+        // Delegated to `CalculatorModel`. The model owns the live preview
+        // overlay (`liveBaseShutter` / `liveNDStop`) and exposes
+        // `effectiveBaseShutter` / `effectiveNDStop` so the calc engine
+        // sees the value the user is currently dragging; once the gesture
+        // commits, the `didSet` clear-preview path on `baseShutter` /
+        // `ndStop` keeps the model's state consistent.
         calculatorModel.calculate(
-            baseShutterSeconds: effectiveBaseShutter,
-            ndStop: effectiveNDStop
+            baseShutterSeconds: calculatorModel.effectiveBaseShutter,
+            ndStop: calculatorModel.effectiveNDStop
         )
     }
 
@@ -651,84 +500,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func formatReciprocityDuration(_ seconds: TimeInterval) -> String {
-        let safeSeconds = max(seconds, 0)
-
-        if safeSeconds < 1 {
-            return "\(trimmedReciprocitySubsecondText(safeSeconds))s"
-        }
-
-        if safeSeconds < 10 {
-            return "\(formatReciprocityNumber(safeSeconds, maximumFractionDigits: 1))s"
-        }
-
-        let roundedSeconds = Int(safeSeconds.rounded())
-
-        if roundedSeconds < 60 {
-            return "\(roundedSeconds)s"
-        }
-
-        let secondsPerMinute = 60
-        let secondsPerHour = 60 * secondsPerMinute
-        let secondsPerDay = 24 * secondsPerHour
-
-        let days = roundedSeconds / secondsPerDay
-        let hours = (roundedSeconds % secondsPerDay) / secondsPerHour
-        let minutes = (roundedSeconds % secondsPerHour) / secondsPerMinute
-        let seconds = roundedSeconds % secondsPerMinute
-
-        if days > 0 {
-            return "\(days)d \(String(format: "%02d:%02d:%02d", hours, minutes, seconds))"
-        }
-
-        if roundedSeconds >= secondsPerHour {
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-        }
-
-        return String(format: "%02d:%02d", minutes, seconds)
+        reciprocityModel.formatReciprocityDuration(seconds)
     }
 
     func formatReciprocityDurationCoarse(_ seconds: TimeInterval) -> String {
-        let safeSeconds = max(seconds, 0)
-        let roundedSeconds = Int(safeSeconds.rounded())
-        let secondsPerDay = 86_400
-
-        guard roundedSeconds >= secondsPerDay else {
-            return formatReciprocityDuration(safeSeconds)
-        }
-
-        let days = roundedSeconds / secondsPerDay
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.usesGroupingSeparator = true
-        formatter.groupingSeparator = ","
-        formatter.groupingSize = 3
-        return (formatter.string(from: NSNumber(value: days)) ?? "\(days)") + "d"
+        reciprocityModel.formatReciprocityDurationCoarse(seconds)
     }
 
     func formatReciprocityAxisDuration(_ seconds: TimeInterval) -> String {
-        let safeSeconds = max(seconds, 0)
-
-        if safeSeconds < 1 {
-            return "\(formatReciprocityNumber(safeSeconds, maximumFractionDigits: 1))s"
-        }
-
-        if safeSeconds < 120 {
-            return "\(Int(safeSeconds.rounded()))s"
-        }
-
-        let roundedSeconds = Int(safeSeconds.rounded())
-        let minutes = roundedSeconds / 60
-        if roundedSeconds < 3600 {
-            return "\(minutes)m"
-        }
-
-        let hours = roundedSeconds / 3600
-        if roundedSeconds < 86_400 {
-            return "\(hours)h"
-        }
-
-        let days = roundedSeconds / 86_400
-        return "\(days)d"
+        reciprocityModel.formatReciprocityAxisDuration(seconds)
     }
 
     func formatShutter(_ seconds: TimeInterval) -> String {
@@ -800,27 +580,19 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func updateLiveBaseShutter(_ value: Double) {
-        liveBaseShutter = value == baseShutter ? nil : value
+        calculatorModel.updateLiveBaseShutter(value)
     }
 
     func updateLiveNDStop(_ value: Int) {
-        liveNDStop = value == ndStop ? nil : value
+        calculatorModel.updateLiveNDStop(value)
     }
 
     func clearLiveBaseShutterPreview() {
-        liveBaseShutter = nil
+        calculatorModel.clearLiveBaseShutterPreview()
     }
 
     func clearLiveNDStopPreview() {
-        liveNDStop = nil
-    }
-
-    private var effectiveBaseShutter: Double {
-        liveBaseShutter ?? baseShutter
-    }
-
-    private var effectiveNDStop: Int {
-        liveNDStop ?? ndStop
+        calculatorModel.clearLiveNDStopPreview()
     }
 
     private func makeTimerName(
@@ -883,156 +655,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     private func ndStopLabel(for stop: Int) -> String {
         stop == 1 ? "1 stop" : "\(stop) stops"
-    }
-
-    private func inferredISOValue(for film: FilmIdentity) -> String? {
-        let candidateFields = [
-            film.canonicalStockName,
-            film.brandLabel,
-            film.manufacturer
-        ].compactMap { $0 } + film.aliases
-
-        for field in candidateFields {
-            if let isoValue = Self.firstISOValue(in: field) {
-                return isoValue
-            }
-        }
-
-        return nil
-    }
-
-    private static func firstISOValue(in text: String) -> String? {
-        let pattern = #"\b(25|50|100|160|200|400|800|1600|3200)\b"#
-        guard let range = text.range(of: pattern, options: .regularExpression) else {
-            return nil
-        }
-
-        return String(text[range])
-    }
-
-    private func correctedExposureDisplayState(
-        adjustedShutterSeconds: TimeInterval
-    ) -> FilmModeCorrectedExposureDisplayState {
-        guard let bindingState = filmReciprocityBindingState else {
-            return FilmModeCorrectedExposureDisplayState(
-                kind: .noFilmSelected,
-                correctedExposureSeconds: nil,
-                primaryText: "No film selected",
-                secondaryText: "Select a preset film",
-                usesNumericExposure: false
-            )
-        }
-
-        if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
-            return FilmModeCorrectedExposureDisplayState(
-                kind: .quantified,
-                correctedExposureSeconds: correctedExposureSeconds,
-                primaryText: formatReciprocityDurationCoarse(correctedExposureSeconds),
-                secondaryText: "",
-                usesNumericExposure: true
-            )
-        }
-
-        switch bindingState.presentation.category {
-        case .advisoryOnly:
-            return FilmModeCorrectedExposureDisplayState(
-                kind: .advisory,
-                correctedExposureSeconds: nil,
-                primaryText: "No corrected value",
-                secondaryText: "No published quantified correction is available for this metered exposure.",
-                usesNumericExposure: false
-            )
-        case .unsupported:
-            return FilmModeCorrectedExposureDisplayState(
-                kind: .unsupported,
-                correctedExposureSeconds: nil,
-                primaryText: "Unavailable",
-                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
-                usesNumericExposure: false
-            )
-        case .exact, .estimated, .extrapolated:
-            // A quantified path should have provided a corrected exposure.
-            return FilmModeCorrectedExposureDisplayState(
-                kind: .advisory,
-                correctedExposureSeconds: nil,
-                primaryText: "No quantified correction",
-                secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
-                usesNumericExposure: false
-            )
-        }
-    }
-
-    private func correctedExposureActionState() -> FilmModeTimerActionState {
-        guard let bindingState = filmReciprocityBindingState else {
-            return FilmModeTimerActionState(
-                targetSeconds: nil,
-                canStartTimer: false,
-                accessibilityLabel: "Start timer from corrected exposure",
-                accessibilityHint: "Timer unavailable because no film-specific corrected exposure is available"
-            )
-        }
-
-        let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds
-
-        if let correctedExposureSeconds, correctedExposureSeconds > 0 {
-            return FilmModeTimerActionState(
-                targetSeconds: correctedExposureSeconds,
-                canStartTimer: true,
-                accessibilityLabel: "Start timer from corrected exposure",
-                accessibilityHint: "Starts a timer using the film-specific corrected exposure value"
-            )
-        }
-
-        let disabledHint: String
-        switch bindingState.presentation.category {
-        case .advisoryOnly:
-            disabledHint = "Timer unavailable because this corrected result is non-quantified"
-        case .unsupported:
-            disabledHint = "Timer unavailable because this corrected result is unsupported"
-        default:
-            disabledHint = "Timer unavailable because no quantified corrected exposure is available"
-        }
-
-        return FilmModeTimerActionState(
-            targetSeconds: nil,
-            canStartTimer: false,
-            accessibilityLabel: "Start timer from corrected exposure",
-            accessibilityHint: disabledHint
-        )
-    }
-
-    private func reciprocityGuidanceExplanation(
-        for presentation: ReciprocityConfidencePresentation
-    ) -> String {
-        let explanation = presentation.supportingNotes.first ?? presentation.defaultExplanation
-        let trimmedExplanation = explanation.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedExplanation.isEmpty else {
-            return "See reciprocity guidance"
-        }
-
-        return trimmedExplanation
-    }
-
-    private func trimmedReciprocitySubsecondText(_ seconds: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 3
-        formatter.minimumFractionDigits = seconds == 0 ? 0 : 1
-        formatter.decimalSeparator = "."
-        return formatter.string(from: NSNumber(value: seconds)) ?? "0"
-    }
-
-    private func formatReciprocityNumber(
-        _ value: Double,
-        maximumFractionDigits: Int
-    ) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = maximumFractionDigits
-        formatter.minimumFractionDigits = 0
-        formatter.decimalSeparator = "."
-        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)
     }
 
     private func restorePersistedCalculatorContext() {

@@ -1084,7 +1084,14 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(resumed.remainingTime(at: pausedAt.addingTimeInterval(1)), 0, accuracy: 0.0001)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
-        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+        // P0-4 (PTIMER-118): PausedTimer.endDate is now computed as
+        // `pausedAt + pausedRemainingTime`, so this synthetic
+        // zero-remaining paused → resume → completed corner produces
+        // completedAt = pausedAt. The corner is unreachable from the
+        // normal pause path because `pausing(at:)` short-circuits to
+        // completed when remaining == 0; only the back-compat init or
+        // a corrupted snapshot can construct it.
+        XCTAssertEqual(resumed.endDate, pausedAt)
     }
 
     @MainActor
@@ -1288,7 +1295,9 @@ final class TimerManagerTests: XCTestCase {
         let resumed = timer.resume(at: pausedAt.addingTimeInterval(1))
 
         XCTAssertEqual(resumed.status, .completed)
-        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+        // See testTimerStateResumeReturnsCompletedWhenNoRemainingTime
+        // for the P0-4 (PTIMER-118) corner-semantics note.
+        XCTAssertEqual(resumed.endDate, pausedAt)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
     }

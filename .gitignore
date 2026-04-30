@@ -1,6 +1,28 @@
+# macOS / OS artifacts
 .DS_Store
+
+# Xcode build / personal state
 DerivedData/
 build/
 *.xcuserstate
 xcuserdata/
-.claude/settings.local.json
+*.moved-aside
+
+# Swift Package Manager local state
+.build/
+.swiftpm/
+
+# Editor / IDE
+*.swp
+*.swo
+*~
+.idea/
+
+# Local Claude Code state (machine-specific)
+.claude/
+
+# Archive / export artifacts (transient handoff packs etc.)
+*.zip
+*.tmp
+ptimer_claude_*_pack_*/
+ptimer_claude_handoff_*/

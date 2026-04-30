@@ -1,0 +1,25 @@
+[0] timer.persistence.load
+---
+[1] exposer.expose
+  representativeTimerID: AAAAAAAA-1111-2222-3333-444444444444
+  representativeTimerName: Timer - 60s
+  representativeEndDate: +60.000s
+  scheduledTargets: AAAAAAAA-1111-2222-3333-444444444444|Timer - 60s|+60.000s
+---
+[2] timer.notification.requestAuthorization
+---
+[3] timer.notification.schedule
+  id: AAAAAAAA-1111-2222-3333-444444444444
+  duration: 60.0
+  endDate: +60.000s
+---
+[4] timer.persistence.save
+  timers: [AAAAAAAA-1111-2222-3333-444444444444|status=running|duration=60.0|endDate=+60.000s]
+---
+[5] exposer.clear
+---
+[6] timer.notification.cancel
+  id: AAAAAAAA-1111-2222-3333-444444444444
+---
+[7] timer.persistence.save
+  timers: [AAAAAAAA-1111-2222-3333-444444444444|status=completed|duration=60.0|endDate=nil]

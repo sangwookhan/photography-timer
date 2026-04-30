@@ -1,0 +1,49 @@
+[0] timer.persistence.load
+---
+[1] exposer.expose
+  representativeTimerID: AAAAAAAA-1111-2222-3333-444444444444
+  representativeTimerName: Timer - 30s
+  representativeEndDate: +30.000s
+  scheduledTargets: AAAAAAAA-1111-2222-3333-444444444444|Timer - 30s|+30.000s
+---
+[2] timer.notification.requestAuthorization
+---
+[3] timer.notification.schedule
+  id: AAAAAAAA-1111-2222-3333-444444444444
+  duration: 30.0
+  endDate: +30.000s
+---
+[4] timer.persistence.save
+  timers: [AAAAAAAA-1111-2222-3333-444444444444|status=running|duration=30.0|endDate=+30.000s]
+---
+[5] exposer.clear
+---
+[6] timer.notification.cancel
+  id: AAAAAAAA-1111-2222-3333-444444444444
+---
+[7] timer.persistence.save
+  timers: [AAAAAAAA-1111-2222-3333-444444444444|status=completed|duration=30.0|endDate=nil]
+---
+[8] timer.notification.cancel
+  id: AAAAAAAA-1111-2222-3333-444444444444
+---
+[9] timer.persistence.clear
+---
+[10] exposer.expose
+  representativeTimerID: BBBBBBBB-1111-2222-3333-444444444444
+  representativeTimerName: Timer - 20s
+  representativeEndDate: +50.000s
+  scheduledTargets: BBBBBBBB-1111-2222-3333-444444444444|Timer - 20s|+50.000s
+---
+[11] timer.notification.requestAuthorization
+---
+[12] timer.notification.schedule
+  id: BBBBBBBB-1111-2222-3333-444444444444
+  duration: 20.0
+  endDate: +50.000s
+---
+[13] timer.persistence.save
+  timers: [BBBBBBBB-1111-2222-3333-444444444444|status=running|duration=20.0|endDate=+50.000s]
+---
+[14] timer.persistence.save
+  timers: [BBBBBBBB-1111-2222-3333-444444444444|status=running|duration=20.0|endDate=+50.000s]

@@ -80,6 +80,7 @@
 		A00000000000000000000136 /* TimerWorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000137 /* TimerWorkspaceModelTests.swift */; };
 		A00000000000000000000138 /* FilmSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000139 /* FilmSelectionModel.swift */; };
 		A00000000000000000000140 /* FilmSelectionModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000141 /* FilmSelectionModelTests.swift */; };
+		A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,6 +191,7 @@
 		A00000000000000000000137 /* TimerWorkspaceModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerWorkspaceModelTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000139 /* FilmSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000141 /* FilmSelectionModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = B4TimerLifecycleBaselineTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -447,6 +449,7 @@
 				A00000000000000000000017 /* TimerManagerTests.swift */,
 				A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */,
 				A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */,
+				A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */,
 			);
 			path = Timers;
 			sourceTree = "<group>";
@@ -668,6 +671,7 @@
 				A00000000000000000000132 /* ReciprocityModelTests.swift in Sources */,
 				A00000000000000000000136 /* TimerWorkspaceModelTests.swift in Sources */,
 				A00000000000000000000140 /* FilmSelectionModelTests.swift in Sources */,
+				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

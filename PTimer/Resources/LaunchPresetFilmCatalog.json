@@ -43,7 +43,7 @@
                       "exposure" : {
                         "kind" : "stopDelta",
                         "stopDelta" : {
-                          "stopDelta" : 0
+                          "stopDelta" : 1
                         }
                       },
                       "kind" : "exposure"
@@ -51,12 +51,18 @@
                     {
                       "exposure" : {
                         "correctedTime" : {
-                          "correctedSeconds" : 1,
+                          "correctedSeconds" : 2,
                           "meteredSeconds" : 1
                         },
                         "kind" : "correctedTime"
                       },
                       "kind" : "exposure"
+                    },
+                    {
+                      "development" : {
+                        "instruction" : "-10% development"
+                      },
+                      "kind" : "development"
                     }
                   ],
                   "meteredExposure" : {

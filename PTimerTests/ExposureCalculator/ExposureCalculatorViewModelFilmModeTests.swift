@@ -149,15 +149,15 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(resultState.adjustedShutterAction.accessibilityLabel, "Start timer from adjusted shutter")
         XCTAssertEqual(resultState.adjustedShutterAction.accessibilityHint, "Starts a timer using the ND-adjusted shutter value")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.correctedExposureAction.targetSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposureAction.targetSeconds ?? 0, 2, accuracy: 0.0001)
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityLabel, "Start timer from corrected exposure")
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityHint, "Starts a timer using the film-specific corrected exposure value")
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertTrue(resultState.hasQuantifiedCorrectedExposure)
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.0001)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
         XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
     }
@@ -182,7 +182,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "8s")
         XCTAssertNil(details.currentResult.adjustedShutter.detailText)
         XCTAssertEqual(details.currentResult.correctedExposure.title, "Corrected Exposure")
-        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "34s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "37s")
         XCTAssertNil(details.currentResult.correctedExposure.detailText)
         XCTAssertTrue(details.currentResult.correctedExposure.emphasizesValue)
         XCTAssertEqual(details.sections.map(\.title), [
@@ -214,7 +214,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(referenceSection.rows.map(\.value), [
             """
             <= 1s    No correction
-            1s       +0 stops
+            1s       +1 stop          Dev -10%
             10s      +2 stops         Dev -20%
             100s     +3 stops         Dev -30%
             """
@@ -305,7 +305,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         )
         XCTAssertEqual(
             resultState.correctedExposureAction.targetSeconds ?? 0,
-            1,
+            2,
             accuracy: 0.0001
         )
     }
@@ -404,7 +404,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(graph.sourcePoints[2].meteredExposureSeconds, 100, accuracy: 0.0001)
         XCTAssertEqual(graph.currentPoint?.style, .estimated)
         XCTAssertEqual(graph.currentPoint?.point.meteredExposureSeconds ?? 0, 4, accuracy: 0.0001)
-        XCTAssertEqual(graph.currentPoint?.point.correctedExposureSeconds ?? 0, 10.5410012802, accuracy: 0.0001)
+        XCTAssertEqual(graph.currentPoint?.point.correctedExposureSeconds ?? 0, 13.8890884987, accuracy: 0.0001)
         XCTAssertEqual(graph.caption, "Adjusted shutter vs corrected exposure from reference anchors")
         XCTAssertFalse(graph.usesCurrentInputGuideOnly)
         XCTAssertNil(graph.unsupportedRegionStartSeconds)
@@ -810,7 +810,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXAtOneSecondReturnsCorrectedExposureEqualToAdjustedShutter() throws {
+    func testTriXAtOneSecondReturnsCorrectedExposureFromWikiAuthority() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -822,10 +822,10 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
         XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "1s")
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 1, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.0001)
     }
 
     @MainActor
@@ -905,12 +905,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
 
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "11s")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "14s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "4s")
-        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "11s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "14s")
     }
 
     @MainActor

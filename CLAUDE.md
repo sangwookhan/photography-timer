@@ -87,7 +87,7 @@ If a task is policy-only, do not reshape unrelated UI.
 ## Scope and Working Style
 
 - Read `AGENTS.md` before starting any ticket work — it governs source-of-truth order, scope discipline, and delivery expectations.
-- Task specs live at `Docs/tasks/<TICKET_ID>.md`. Use `Docs/tasks/TASK_TEMPLATE.md` for new tickets.
+- Task specs live at `docs/tasks/<TICKET_ID>.md`. Use `docs/tasks/TASK_TEMPLATE.md` for new tickets.
 - Prefer the smallest change that satisfies the spec. Do not mix cleanup with focused ticket work.
 - Domain or policy changes require unit/regression tests. View-model changes require state-oriented tests.
 - Documentation-only changes do not require app test execution.
@@ -104,3 +104,102 @@ PTIMER-102 Extend quantified extrapolation policy for table-profile
 ```
 
 Ticket context lines use `PTIMER-ID Title` format. Wrapped continuation lines use a hanging indent aligned after the ticket ID prefix — not flush-left.
+
+## Companion Docs and Conventions
+
+### Documentation map
+
+- **`docs/requirements/Requirements.md`** — user-scenario-driven
+  requirements layer between the user-need wiki and the behavior
+  contracts. Personas, core scenarios with goals + steps + boundary
+  conditions, functional requirements ("system shall …" with
+  scenario back-references), non-functional requirements
+  (determinism, type safety, architectural fitness, verification,
+  performance, persistence stability), and explicit out-of-scope /
+  reserved decisions. Read this first when answering "what does the
+  app need to do, and why".
+- **`docs/specs/{Calculator,Timer,UI,DomainSchema}.md`** — behavior
+  contracts. Authoritative description of *what* the system does,
+  written so the documents survive refactoring. Wiki and PTIMER-tagged
+  commits are cited as `[wiki <page_id>]` and `(PTIMER-XX)`. Specs
+  deliberately contain no code identifiers, file paths, or line
+  numbers. Specs realize the requirements above at contract level.
+- **`docs/verification/`** — five-layer verification strategy and
+  rerunnable manual procedures.
+- **`docs/conventions/ErrorModel.md`** — when to use `Optional`,
+  `throws`, `Result`, and `precondition` in each layer.
+
+### Korean translations
+
+A Korean translation of Requirements and Specs lives under
+`docs/translations/ko/` (same filenames). It is for human reference
+only — CLAUDE.md and agent tooling reference the canonical English
+paths above. Cross-references in any document shall point at the
+English path (`docs/specs/Calculator.md`) so the citation graph stays
+single-rooted.
+
+### Spec precedence
+
+When code under `PTimer/` disagrees with a spec under `docs/specs/`,
+treat it as either a bug or a spec drift, not as a license to ignore
+the spec.
+
+1. If wiki, JIRA, or commit history confirms a deliberate change,
+   update the spec.
+2. Otherwise, change the code to match the spec.
+
+The Protected Areas above carry a stronger form of this rule: a spec
+change requires an explicit ticket; do not silently re-derive behavior
+from code.
+
+### Naming conventions
+
+- **`*Storing` / `NoOp*` pair** — every persistence target exposes a
+  `*Storing` protocol with a real implementation plus a `NoOp*`
+  implementation that unit tests use.
+- **`*Scheduling`** — same pair pattern for notification or live-
+  activity adapters.
+- **`Persistent*` prefix** — types that represent a serialized
+  snapshot on disk; distinct from runtime state.
+- **`*DisplayState` suffix** — transient view-model state struct that
+  views consume read-only. Display state is computed, not stored.
+  Files holding a single display-state type use the singular
+  (`FilmSelectionDisplayState.swift`); files grouping several
+  related display-state types use the plural
+  (`FilmModeResultDisplayStates.swift`).
+- **`*Coordinator` suffix** — types whose responsibility is to own
+  the lifecycle of an external surface (Live Activity, dock,
+  workspace) and reconcile its state. Coordinators are wiring; they
+  do not hold business state. Example:
+  `LockScreenTimerTargetCoordinator`.
+- **`*Presenter` suffix** — pure-value transforms from domain state
+  into display state. Presenters take inputs as parameters (or an
+  input struct), produce display-state output, and have no
+  lifecycle or async dependency. Example:
+  `FilmModeDetailsPresenter`.
+- **`*Factory` suffix** — dependency-creation surface for the DI
+  boundary. Provides `production()` / `test()` static factories
+  that return a `*Dependencies` struct of collaborators. Example:
+  `ViewModelDependencyFactory`.
+- **Module-prefixed file groups** — when a directory contains
+  several files for one structural area, share a common prefix
+  (`BottomSheetWorkspace*` for the workspace shell breakdown,
+  `ExposureCalculator*` for calculator-scoped types). Files outside
+  that directory do not need the prefix.
+- **`PTIMER-<n>-` filename prefix** — used only for ticket-scoped
+  artifacts that are expected to disappear with the ticket.
+  Permanent reference docs drop the prefix on rename.
+
+### Linting
+
+A baseline `.swiftlint.yml` lives at the repo root. The Phase 0 baseline
+is intentionally relaxed to avoid churn; size and complexity thresholds
+are scheduled for a later commit (B2 in the action plan). Run locally:
+
+```bash
+swiftlint lint
+```
+
+CI integration is deferred until the platform decision (Bitbucket
+Pipelines with self-hosted macOS runner, GitHub Actions, Xcode Cloud,
+or local hooks only) is resolved.

@@ -183,8 +183,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
     @Published private var liveBaseShutter: Double?
     @Published private var liveNDStop: Int?
 
-    nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
-
     /// Owned during PR1 of the B1 ViewModel decomposition. The model
     /// carries the calculation responsibility (calculator instance,
     /// inputs, result). The ViewModel still mirrors `baseShutter` and
@@ -220,37 +218,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case filmCorrectedExposure
     }
 
+    /// Convenience init that builds the four child models from the
+    /// dependency bundle. Used by `RecordReplayBaselineSmokeTests` and
+    /// any future caller that already has a `ViewModelDependencies`
+    /// but does not need to share child models with a coordinator.
     convenience init(dependencies: ViewModelDependencies) {
-        self.init(
-            dependencies: dependencies,
-            calculatorModel: CalculatorModel(calculator: dependencies.calculator),
-            reciprocityModel: ReciprocityModel()
-        )
-    }
-
-    /// PR1 of B1 — back-compat convenience for callers that pre-built a
-    /// `CalculatorModel` but not yet a `ReciprocityModel`. Forwards to
-    /// the PR2 designated init with a freshly-constructed
-    /// `ReciprocityModel`.
-    convenience init(
-        dependencies: ViewModelDependencies,
-        calculatorModel: CalculatorModel
-    ) {
-        self.init(
-            dependencies: dependencies,
-            calculatorModel: calculatorModel,
-            reciprocityModel: ReciprocityModel()
-        )
-    }
-
-    /// PR2 of B1 — back-compat convenience that auto-builds the
-    /// `TimerWorkspaceModel` from the dependency bundle. Forwards to
-    /// the PR3 designated init.
-    convenience init(
-        dependencies: ViewModelDependencies,
-        calculatorModel: CalculatorModel,
-        reciprocityModel: ReciprocityModel
-    ) {
+        let calculatorModel = CalculatorModel(calculator: dependencies.calculator)
         let timerWorkspaceModel = TimerWorkspaceModel(
             timerManager: dependencies.timerManager,
             metadataPersistenceStore: dependencies.metadataPersistenceStore,
@@ -258,23 +231,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 "Timer - \(calculatorModel.calculator.formatShutter(duration))"
             }
         )
-        self.init(
-            dependencies: dependencies,
-            calculatorModel: calculatorModel,
-            reciprocityModel: reciprocityModel,
-            timerWorkspaceModel: timerWorkspaceModel
-        )
-    }
-
-    /// PR3 of B1 — back-compat convenience for callers that pre-built
-    /// the calc/reciprocity/timer models but not yet a
-    /// `FilmSelectionModel`. Forwards to the PR4 designated init.
-    convenience init(
-        dependencies: ViewModelDependencies,
-        calculatorModel: CalculatorModel,
-        reciprocityModel: ReciprocityModel,
-        timerWorkspaceModel: TimerWorkspaceModel
-    ) {
         let filmSelectionModel = FilmSelectionModel(
             presetFilms: dependencies.presetFilms,
             contextPersistenceStore: dependencies.contextPersistenceStore,
@@ -284,17 +240,20 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.init(
             dependencies: dependencies,
             calculatorModel: calculatorModel,
-            reciprocityModel: reciprocityModel,
+            reciprocityModel: ReciprocityModel(),
             timerWorkspaceModel: timerWorkspaceModel,
             filmSelectionModel: filmSelectionModel
         )
     }
 
-    /// PR4 of B1 — designated init for the `WorkspaceCoordinator`
-    /// path: coordinator constructs the four `@Observable` models
-    /// first and injects them so all surfaces share the same calc
-    /// state, reciprocity collaborators, timer state, and film
-    /// selection.
+    /// Designated init used by `WorkspaceCoordinator` (PR4 of B1). The
+    /// coordinator constructs the four `@Observable` models from the
+    /// dependency bundle first and injects them so all surfaces share
+    /// the same calc state, reciprocity collaborators, timer state, and
+    /// film selection. The intermediate two- and three-arg back-compat
+    /// convenience inits that staged the PR1–PR3 migration paths were
+    /// retired in PR6 once `WorkspaceCoordinator` became the only
+    /// production caller of the multi-model surface.
     init(
         dependencies: ViewModelDependencies,
         calculatorModel: CalculatorModel,
@@ -1131,7 +1090,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             return nil
         }
 
-        return Self.shutterSpeeds.first {
+        return CalculatorModel.shutterSpeeds.first {
             abs($0 - storedValue) <= ExposureCalculator.stabilityEpsilon
         }
     }

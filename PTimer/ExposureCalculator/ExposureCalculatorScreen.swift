@@ -3,6 +3,13 @@ import UIKit
 
 struct ExposureCalculatorScreen: View {
     @Environment(\.scenePhase) private var scenePhase
+    /// B1 PR5 — the screen now owns the `WorkspaceCoordinator` directly.
+    /// The coordinator carries no `@Published` state of its own (its
+    /// child models are independently observable), so this `@StateObject`
+    /// only pins the coordinator's lifetime to the view; redraws are
+    /// driven by the legacy `viewModel` `@StateObject` and (in PR6) by
+    /// child views that observe the appropriate model directly.
+    @StateObject private var coordinator: WorkspaceCoordinator
     @StateObject private var viewModel: ExposureCalculatorViewModel
     @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
     @StateObject private var bottomSheetSnapshotStore: BottomSheetWorkspaceSnapshotStore
@@ -11,30 +18,35 @@ struct ExposureCalculatorScreen: View {
 
     @MainActor
     init() {
-        // B1 PR1 — `WorkspaceCoordinator` owns the lifetime of the new
-        // `@Observable` models (currently `CalculatorModel`) and the
-        // legacy ViewModel. Views still bind to the ViewModel; PR5
-        // will migrate bindings off it.
-        let coordinator = WorkspaceCoordinator(
-            dependencies: ViewModelDependencyFactory.production()
-        )
+        // B1 PR5 — `WorkspaceCoordinator` is the screen's owned
+        // reference. The coordinator builds and owns the four
+        // `@Observable` models plus the legacy `ExposureCalculatorViewModel`
+        // facade. Views still bind to the ViewModel today; PR6 will
+        // flip leaf views to observe the appropriate child model
+        // directly through `coordinator.timerWorkspaceModel` /
+        // `.filmSelectionModel` / `.calculatorModel` / `.reciprocityModel`
+        // and remove the ViewModel monolith.
         self.init(
-            viewModel: coordinator.viewModel,
+            coordinator: WorkspaceCoordinator(
+                dependencies: ViewModelDependencyFactory.production()
+            ),
             bottomSheetStateStore: BottomSheetWorkspaceStateStore()
         )
     }
 
     @MainActor
     init(
-        viewModel: ExposureCalculatorViewModel,
+        coordinator: WorkspaceCoordinator,
         bottomSheetStateStore: BottomSheetWorkspaceStateStore
     ) {
+        let viewModel = coordinator.viewModel
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
             timeContext: viewModel.timerTimeContext,
             compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
 
+        _coordinator = StateObject(wrappedValue: coordinator)
         _viewModel = StateObject(wrappedValue: viewModel)
         _bottomSheetStateStore = StateObject(wrappedValue: bottomSheetStateStore)
         self.bottomSheetAdapter = adapter
@@ -157,7 +169,7 @@ private struct ExposureWorkspaceMainContent: View {
                 VariableSectionView(
                     baseShutter: $viewModel.baseShutter,
                     ndStop: $viewModel.ndStop,
-                    shutterSpeeds: ExposureCalculatorViewModel.shutterSpeeds,
+                    shutterSpeeds: CalculatorModel.shutterSpeeds,
                     formatShutter: viewModel.formatShutter,
                     onContinuousBaseShutterChange: { value in
                         Task { @MainActor in

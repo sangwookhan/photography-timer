@@ -17,6 +17,12 @@ import Observation
 @MainActor
 @Observable
 final class CalculatorModel {
+    /// Full-stop shutter ladder used by the digital shutter wheel and
+    /// the snap-to-full-stop logic. Hoisted from
+    /// `ExposureCalculatorViewModel` in B1 PR6 so the calc surface no
+    /// longer depends on the legacy facade.
+    nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
+
     /// The pure calculation engine. Shared with the legacy ViewModel so
     /// that any direct call site (`calculator.formatShutter`, etc.)
     /// continues to work unchanged during the migration.

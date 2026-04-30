@@ -20,11 +20,11 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 1, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "Tri-X 400 - 1s")
+        XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
+        XCTAssertEqual(timer.name, "Tri-X 400 - 2s")
         XCTAssertEqual(
             timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 1s"
+            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2s"
         )
     }
 

@@ -188,7 +188,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private let timerManager: TimerManager
     private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
     private let metadataPersistenceStore: TimerMetadataPersistenceStoring
-    private let lockScreenTargetCoordinator: LockScreenTimerTargetCoordinator
+    private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private let reciprocityEvaluator = ReciprocityCalculationPolicyEvaluator()
     private let detailsPresenter = FilmModeDetailsPresenter()
     private let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
@@ -209,7 +209,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.timerManager = dependencies.timerManager
         self.contextPersistenceStore = dependencies.contextPersistenceStore
         self.metadataPersistenceStore = dependencies.metadataPersistenceStore
-        self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
+        self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: dependencies.lockScreenTargetExposer
         )
 
@@ -220,6 +220,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 self?.syncTimers(with: states)
             }
             .store(in: &cancellables)
+        bindLockScreenCoordinatorToTimerPublisher()
     }
 
     init(
@@ -235,7 +236,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.timerManager = timerManager
         self.contextPersistenceStore = contextPersistenceStore
         self.metadataPersistenceStore = metadataPersistenceStore
-        self.lockScreenTargetCoordinator = LockScreenTimerTargetCoordinator(
+        self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: lockScreenTargetExposer
         )
 
@@ -244,6 +245,21 @@ final class ExposureCalculatorViewModel: ObservableObject {
         timerManager.$timers
             .sink { [weak self] states in
                 self?.syncTimers(with: states)
+            }
+            .store(in: &cancellables)
+        bindLockScreenCoordinatorToTimerPublisher()
+    }
+
+    /// Wires the lock-screen coordinator to the ViewModel's `$timers`
+    /// publisher so the coordinator drives the lock-screen surface
+    /// directly off `RunningTimerItem` updates. The coordinator's
+    /// subscription is owned by the ViewModel's `cancellables` and the
+    /// ViewModel retains the coordinator for its lifetime, so the
+    /// coordinator stays alive as long as the ViewModel does.
+    private func bindLockScreenCoordinatorToTimerPublisher() {
+        $timers
+            .sink { [weak self] timers in
+                self?.lockScreenTargetCoordinator.sync(with: timers)
             }
             .store(in: &cancellables)
     }
@@ -838,7 +854,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
 
-        lockScreenTargetCoordinator.sync(with: timers)
         scheduleCompletedTimeContextRefreshIfNeeded()
     }
 

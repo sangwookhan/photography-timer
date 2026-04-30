@@ -512,7 +512,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             referenceDate: referenceDate
         )
 
-        let target = LockScreenTimerTargetCoordinator.selectRepresentativeTarget(
+        let target = LockScreenTimerCoordinator.selectRepresentativeTarget(
             from: [laterIDTimer, earlierIDTimer]
         )
 
@@ -593,7 +593,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             referenceDate: sharedReferenceDate
         )
 
-        let target = LockScreenTimerTargetCoordinator.selectRepresentativeTarget(
+        let target = LockScreenTimerCoordinator.selectRepresentativeTarget(
             from: [pausedTimer, completedTimer, runningTimer]
         )
 

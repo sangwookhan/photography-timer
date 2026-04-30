@@ -30,6 +30,6 @@ struct FilmSelectionDisplayState: Equatable {
 struct FilmModeReciprocityBindingState: Equatable {
     let film: FilmIdentity
     let profile: ReciprocityProfile
-    let policyResult: ReciprocityCalculationPolicyResult
+    let policyResult: ReciprocityResult
     let presentation: ReciprocityConfidencePresentation
 }

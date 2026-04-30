@@ -1,42 +1,42 @@
-  ▿ PTimer.ReciprocityCalculationPolicyResult
-    - meteredExposureSeconds: 1500.0
-    ▿ correctedExposureSeconds: Optional(50400.590308279716)
-      - some: 50400.590308279716
-    ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
-      - basis: PTimer.ReciprocityCalculationBasis.extrapolatedBeyondTable
-      - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
-      - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.beyondLastRepresentativePoint
-      - warningLevel: PTimer.ReciprocityCalculationWarningLevel.caution
-      ▿ estimationFamily: Optional(PTimer.ReciprocityTableEstimationFamily.logLog)
-        - some: PTimer.ReciprocityTableEstimationFamily.logLog
-      ▿ notes: 2 elements
-        ▿ PTimer.ReciprocityPolicyNote
-          ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.estimatedFromRepresentativeRows)
-            - some: PTimer.ReciprocityPolicyNoteToken.estimatedFromRepresentativeRows
-          - text: "Low-confidence result extrapolated from the original representative table rows."
-        ▿ PTimer.ReciprocityPolicyNote
-          ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondRepresentativeTablePoint)
-            - some: PTimer.ReciprocityPolicyNoteToken.beyondRepresentativeTablePoint
-          - text: "Result extends beyond the last quantified representative point and should be verified with testing."
-      ▿ referencedRows: Optional([PTimer.ReciprocityTableRowReference(rowIndex: 1, role: PTimer.ReciprocityTableRowRole.representativeAnchor, meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), correctedTimeSeconds: Optional(50.0), stopDelta: Optional(2.0), annotationSummary: nil), PTimer.ReciprocityTableRowReference(rowIndex: 2, role: PTimer.ReciprocityTableRowRole.representativeAnchor, meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), correctedTimeSeconds: Optional(1200.0), stopDelta: Optional(3.0), annotationSummary: nil)])
-        ▿ some: 2 elements
-          ▿ PTimer.ReciprocityTableRowReference
-            - rowIndex: 1
-            - role: PTimer.ReciprocityTableRowRole.representativeAnchor
-            ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-              - exactSeconds: 10.0
-            ▿ correctedTimeSeconds: Optional(50.0)
-              - some: 50.0
-            ▿ stopDelta: Optional(2.0)
-              - some: 2.0
-            - annotationSummary: nil
-          ▿ PTimer.ReciprocityTableRowReference
-            - rowIndex: 2
-            - role: PTimer.ReciprocityTableRowRole.representativeAnchor
-            ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-              - exactSeconds: 100.0
-            ▿ correctedTimeSeconds: Optional(1200.0)
-              - some: 1200.0
-            ▿ stopDelta: Optional(3.0)
-              - some: 3.0
-            - annotationSummary: nil
+  ▿ PTimer.ReciprocityResult.quantified
+    ▿ quantified: PTimer.ReciprocityResult.QuantifiedPayload
+      - meteredExposureSeconds: 1500.0
+      - correctedExposureSeconds: 50400.590308279716
+      ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
+        - basis: PTimer.ReciprocityCalculationBasis.extrapolatedBeyondTable
+        - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
+        - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.beyondLastRepresentativePoint
+        - warningLevel: PTimer.ReciprocityCalculationWarningLevel.caution
+        ▿ estimationFamily: Optional(PTimer.ReciprocityTableEstimationFamily.logLog)
+          - some: PTimer.ReciprocityTableEstimationFamily.logLog
+        ▿ notes: 2 elements
+          ▿ PTimer.ReciprocityPolicyNote
+            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.estimatedFromRepresentativeRows)
+              - some: PTimer.ReciprocityPolicyNoteToken.estimatedFromRepresentativeRows
+            - text: "Low-confidence result extrapolated from the original representative table rows."
+          ▿ PTimer.ReciprocityPolicyNote
+            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondRepresentativeTablePoint)
+              - some: PTimer.ReciprocityPolicyNoteToken.beyondRepresentativeTablePoint
+            - text: "Result extends beyond the last quantified representative point and should be verified with testing."
+        ▿ referencedRows: Optional([PTimer.ReciprocityTableRowReference(rowIndex: 1, role: PTimer.ReciprocityTableRowRole.representativeAnchor, meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), correctedTimeSeconds: Optional(50.0), stopDelta: Optional(2.0), annotationSummary: nil), PTimer.ReciprocityTableRowReference(rowIndex: 2, role: PTimer.ReciprocityTableRowRole.representativeAnchor, meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), correctedTimeSeconds: Optional(1200.0), stopDelta: Optional(3.0), annotationSummary: nil)])
+          ▿ some: 2 elements
+            ▿ PTimer.ReciprocityTableRowReference
+              - rowIndex: 1
+              - role: PTimer.ReciprocityTableRowRole.representativeAnchor
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 10.0
+              ▿ correctedTimeSeconds: Optional(50.0)
+                - some: 50.0
+              ▿ stopDelta: Optional(2.0)
+                - some: 2.0
+              - annotationSummary: nil
+            ▿ PTimer.ReciprocityTableRowReference
+              - rowIndex: 2
+              - role: PTimer.ReciprocityTableRowRole.representativeAnchor
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 100.0
+              ▿ correctedTimeSeconds: Optional(1200.0)
+                - some: 1200.0
+              ▿ stopDelta: Optional(3.0)
+                - some: 3.0
+              - annotationSummary: nil

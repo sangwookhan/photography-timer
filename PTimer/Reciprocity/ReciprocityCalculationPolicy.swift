@@ -200,113 +200,395 @@ struct ReciprocityCalculationPolicyResultMetadata: Codable, Equatable {
     }
 }
 
-struct ReciprocityCalculationPolicyResult: Codable, Equatable {
-    let meteredExposureSeconds: Double
-    let correctedExposureSeconds: Double?
-    let metadata: ReciprocityCalculationPolicyResultMetadata
+/// Tagged-union representation of a reciprocity calculation outcome.
+///
+/// The three cases encode the (basis, corrected_present) invariant in the
+/// type system:
+/// - `quantified` always carries a non-Optional `correctedExposureSeconds`.
+/// - `advisoryOnly` and `unsupported` lack the field entirely.
+///
+/// This eliminates the runtime `didReturnCalculatedTime` ↔ corrected-Optional
+/// pairing check (PTIMER-90) that the previous struct-shaped representation
+/// enforced in its decoder.
+enum ReciprocityResult: Equatable {
+    case quantified(QuantifiedPayload)
+    case advisoryOnly(AdvisoryOnlyPayload)
+    case unsupported(UnsupportedPayload)
 
-    var hasCalculatedExposureTime: Bool {
-        correctedExposureSeconds != nil
+    struct QuantifiedPayload: Equatable {
+        let meteredExposureSeconds: Double
+        let correctedExposureSeconds: Double
+        let metadata: ReciprocityCalculationPolicyResultMetadata
+
+        init(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            metadata: ReciprocityCalculationPolicyResultMetadata
+        ) {
+            let validationError = ReciprocityResult.quantifiedValidationError(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: metadata
+            )
+            precondition(validationError == nil, validationError ?? "Invalid quantified reciprocity result.")
+
+            self.meteredExposureSeconds = meteredExposureSeconds
+            self.correctedExposureSeconds = correctedExposureSeconds
+            self.metadata = metadata
+        }
     }
 
-    private enum CodingKeys: String, CodingKey {
+    struct AdvisoryOnlyPayload: Equatable {
+        let meteredExposureSeconds: Double
+        let metadata: ReciprocityCalculationPolicyResultMetadata
+
+        init(
+            meteredExposureSeconds: Double,
+            metadata: ReciprocityCalculationPolicyResultMetadata
+        ) {
+            precondition(
+                metadata.basis == .advisoryOnlyBeyondOfficialRange,
+                "advisoryOnly payload must carry advisoryOnlyBeyondOfficialRange basis."
+            )
+
+            self.meteredExposureSeconds = meteredExposureSeconds
+            self.metadata = metadata
+        }
+    }
+
+    struct UnsupportedPayload: Equatable {
+        let meteredExposureSeconds: Double
+        let metadata: ReciprocityCalculationPolicyResultMetadata
+
+        init(
+            meteredExposureSeconds: Double,
+            metadata: ReciprocityCalculationPolicyResultMetadata
+        ) {
+            precondition(
+                metadata.basis == .unsupportedOutOfPolicyRange,
+                "unsupported payload must carry unsupportedOutOfPolicyRange basis."
+            )
+
+            self.meteredExposureSeconds = meteredExposureSeconds
+            self.metadata = metadata
+        }
+    }
+
+    fileprivate static func quantifiedValidationError(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double,
+        metadata: ReciprocityCalculationPolicyResultMetadata
+    ) -> String? {
+        switch metadata.basis {
+        case .officialThresholdNoCorrection:
+            guard abs(correctedExposureSeconds - meteredExposureSeconds) < 0.000_001 else {
+                return "officialThresholdNoCorrection must return corrected exposure equal to metered exposure."
+            }
+        case .advisoryOnlyBeyondOfficialRange:
+            return "advisoryOnlyBeyondOfficialRange must not be carried by a quantified payload."
+        case .unsupportedOutOfPolicyRange:
+            return "unsupportedOutOfPolicyRange must not be carried by a quantified payload."
+        case .exactTablePoint,
+             .interpolatedWithinTable,
+             .extrapolatedBeyondTable,
+             .formulaDerived:
+            break
+        }
+
+        return nil
+    }
+}
+
+extension ReciprocityResult {
+    /// Metered exposure seconds — present in every case.
+    var meteredExposureSeconds: Double {
+        switch self {
+        case let .quantified(payload):
+            return payload.meteredExposureSeconds
+        case let .advisoryOnly(payload):
+            return payload.meteredExposureSeconds
+        case let .unsupported(payload):
+            return payload.meteredExposureSeconds
+        }
+    }
+
+    /// Convenience accessor matching the legacy struct field. Returns the
+    /// quantified case's corrected exposure or `nil` for advisory/unsupported.
+    var correctedExposureSeconds: Double? {
+        switch self {
+        case let .quantified(payload):
+            return payload.correctedExposureSeconds
+        case .advisoryOnly, .unsupported:
+            return nil
+        }
+    }
+
+    /// Metadata block — present in every case.
+    var metadata: ReciprocityCalculationPolicyResultMetadata {
+        switch self {
+        case let .quantified(payload):
+            return payload.metadata
+        case let .advisoryOnly(payload):
+            return payload.metadata
+        case let .unsupported(payload):
+            return payload.metadata
+        }
+    }
+
+    /// Convenience flag matching the legacy struct field. Equivalent to
+    /// `case .quantified` — kept so existing read sites that only care
+    /// whether a corrected value was returned do not need a switch.
+    var hasCalculatedExposureTime: Bool {
+        if case .quantified = self {
+            return true
+        }
+        return false
+    }
+}
+
+// MARK: - Codable
+
+extension ReciprocityResult: Codable {
+    private enum DiscriminatorKeys: String, CodingKey {
+        case kind
+        case payload
+    }
+
+    private enum LegacyKeys: String, CodingKey {
         case meteredExposureSeconds
         case correctedExposureSeconds
         case hasCalculatedExposureTime
         case metadata
     }
 
-    init(
-        meteredExposureSeconds: Double,
-        correctedExposureSeconds: Double?,
-        metadata: ReciprocityCalculationPolicyResultMetadata
-    ) {
-        let validationError = Self.validationError(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: metadata
-        )
-        precondition(validationError == nil, validationError ?? "Invalid reciprocity calculation policy result.")
+    private enum Kind: String, Codable {
+        case quantified
+        case advisoryOnly
+        case unsupported
+    }
 
-        self.meteredExposureSeconds = meteredExposureSeconds
-        self.correctedExposureSeconds = correctedExposureSeconds
-        self.metadata = metadata
+    private struct QuantifiedPayloadDTO: Codable {
+        let meteredExposureSeconds: Double
+        let correctedExposureSeconds: Double
+        let metadata: ReciprocityCalculationPolicyResultMetadata
+    }
+
+    private struct AdvisoryOnlyPayloadDTO: Codable {
+        let meteredExposureSeconds: Double
+        let metadata: ReciprocityCalculationPolicyResultMetadata
+    }
+
+    private struct UnsupportedPayloadDTO: Codable {
+        let meteredExposureSeconds: Double
+        let metadata: ReciprocityCalculationPolicyResultMetadata
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let meteredExposureSeconds = try container.decode(Double.self, forKey: .meteredExposureSeconds)
-        let correctedExposureSeconds = try container.decodeIfPresent(Double.self, forKey: .correctedExposureSeconds)
-        let hasCalculatedExposureTime = try container.decode(Bool.self, forKey: .hasCalculatedExposureTime)
-        let metadata = try container.decode(ReciprocityCalculationPolicyResultMetadata.self, forKey: .metadata)
-        let derivedHasCalculatedExposureTime = correctedExposureSeconds != nil
+        let discriminatorContainer = try decoder.container(keyedBy: DiscriminatorKeys.self)
 
-        guard hasCalculatedExposureTime == derivedHasCalculatedExposureTime else {
+        if let kind = try discriminatorContainer.decodeIfPresent(Kind.self, forKey: .kind) {
+            // New tagged format.
+            switch kind {
+            case .quantified:
+                let payload = try discriminatorContainer.decode(QuantifiedPayloadDTO.self, forKey: .payload)
+                if let validationError = ReciprocityResult.quantifiedValidationError(
+                    meteredExposureSeconds: payload.meteredExposureSeconds,
+                    correctedExposureSeconds: payload.correctedExposureSeconds,
+                    metadata: payload.metadata
+                ) {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: .payload,
+                        in: discriminatorContainer,
+                        debugDescription: validationError
+                    )
+                }
+                self = .quantified(
+                    QuantifiedPayload(
+                        meteredExposureSeconds: payload.meteredExposureSeconds,
+                        correctedExposureSeconds: payload.correctedExposureSeconds,
+                        metadata: payload.metadata
+                    )
+                )
+            case .advisoryOnly:
+                let payload = try discriminatorContainer.decode(AdvisoryOnlyPayloadDTO.self, forKey: .payload)
+                guard payload.metadata.basis == .advisoryOnlyBeyondOfficialRange else {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: .payload,
+                        in: discriminatorContainer,
+                        debugDescription: "advisoryOnly payload must carry advisoryOnlyBeyondOfficialRange basis."
+                    )
+                }
+                self = .advisoryOnly(
+                    AdvisoryOnlyPayload(
+                        meteredExposureSeconds: payload.meteredExposureSeconds,
+                        metadata: payload.metadata
+                    )
+                )
+            case .unsupported:
+                let payload = try discriminatorContainer.decode(UnsupportedPayloadDTO.self, forKey: .payload)
+                guard payload.metadata.basis == .unsupportedOutOfPolicyRange else {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: .payload,
+                        in: discriminatorContainer,
+                        debugDescription: "unsupported payload must carry unsupportedOutOfPolicyRange basis."
+                    )
+                }
+                self = .unsupported(
+                    UnsupportedPayload(
+                        meteredExposureSeconds: payload.meteredExposureSeconds,
+                        metadata: payload.metadata
+                    )
+                )
+            }
+            return
+        }
+
+        // Legacy 7-field format. Reconstruct enum case from
+        // (metadata.basis, correctedExposureSeconds presence).
+        let legacyContainer = try decoder.container(keyedBy: LegacyKeys.self)
+        let meteredExposureSeconds = try legacyContainer.decode(Double.self, forKey: .meteredExposureSeconds)
+        let correctedExposureSeconds = try legacyContainer.decodeIfPresent(Double.self, forKey: .correctedExposureSeconds)
+        let hasCalculatedExposureTime = try legacyContainer.decode(Bool.self, forKey: .hasCalculatedExposureTime)
+        let metadata = try legacyContainer.decode(ReciprocityCalculationPolicyResultMetadata.self, forKey: .metadata)
+
+        guard hasCalculatedExposureTime == (correctedExposureSeconds != nil) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .hasCalculatedExposureTime,
-                in: container,
+                in: legacyContainer,
                 debugDescription: "hasCalculatedExposureTime must match the presence of correctedExposureSeconds."
             )
         }
 
-        if let validationError = Self.validationError(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: metadata
-        ) {
-            throw DecodingError.dataCorruptedError(
-                forKey: .metadata,
-                in: container,
-                debugDescription: validationError
+        switch metadata.basis {
+        case .advisoryOnlyBeyondOfficialRange:
+            guard correctedExposureSeconds == nil else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .correctedExposureSeconds,
+                    in: legacyContainer,
+                    debugDescription: "advisoryOnlyBeyondOfficialRange must not return a corrected exposure time."
+                )
+            }
+            self = .advisoryOnly(
+                AdvisoryOnlyPayload(
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    metadata: metadata
+                )
+            )
+        case .unsupportedOutOfPolicyRange:
+            guard correctedExposureSeconds == nil else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .correctedExposureSeconds,
+                    in: legacyContainer,
+                    debugDescription: "unsupportedOutOfPolicyRange must not return a corrected exposure time."
+                )
+            }
+            self = .unsupported(
+                UnsupportedPayload(
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    metadata: metadata
+                )
+            )
+        case .exactTablePoint,
+             .interpolatedWithinTable,
+             .extrapolatedBeyondTable,
+             .officialThresholdNoCorrection,
+             .formulaDerived:
+            guard let correctedExposureSeconds else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .correctedExposureSeconds,
+                    in: legacyContainer,
+                    debugDescription: "\(metadata.basis.rawValue) must return a corrected exposure time."
+                )
+            }
+            if let validationError = ReciprocityResult.quantifiedValidationError(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: metadata
+            ) {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .metadata,
+                    in: legacyContainer,
+                    debugDescription: validationError
+                )
+            }
+            self = .quantified(
+                QuantifiedPayload(
+                    meteredExposureSeconds: meteredExposureSeconds,
+                    correctedExposureSeconds: correctedExposureSeconds,
+                    metadata: metadata
+                )
             )
         }
-
-        self.init(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: metadata
-        )
     }
 
     func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(meteredExposureSeconds, forKey: .meteredExposureSeconds)
-        try container.encodeIfPresent(correctedExposureSeconds, forKey: .correctedExposureSeconds)
-        try container.encode(hasCalculatedExposureTime, forKey: .hasCalculatedExposureTime)
-        try container.encode(metadata, forKey: .metadata)
+        var container = encoder.container(keyedBy: DiscriminatorKeys.self)
+
+        switch self {
+        case let .quantified(payload):
+            try container.encode(Kind.quantified, forKey: .kind)
+            try container.encode(
+                QuantifiedPayloadDTO(
+                    meteredExposureSeconds: payload.meteredExposureSeconds,
+                    correctedExposureSeconds: payload.correctedExposureSeconds,
+                    metadata: payload.metadata
+                ),
+                forKey: .payload
+            )
+        case let .advisoryOnly(payload):
+            try container.encode(Kind.advisoryOnly, forKey: .kind)
+            try container.encode(
+                AdvisoryOnlyPayloadDTO(
+                    meteredExposureSeconds: payload.meteredExposureSeconds,
+                    metadata: payload.metadata
+                ),
+                forKey: .payload
+            )
+        case let .unsupported(payload):
+            try container.encode(Kind.unsupported, forKey: .kind)
+            try container.encode(
+                UnsupportedPayloadDTO(
+                    meteredExposureSeconds: payload.meteredExposureSeconds,
+                    metadata: payload.metadata
+                ),
+                forKey: .payload
+            )
+        }
+    }
+}
+
+// MARK: - Legacy-shape serialization adapter
+
+extension ReciprocityResult {
+    /// Encodes this result using the pre-migration 7-field layout
+    /// (`meteredExposureSeconds`, `correctedExposureSeconds` (omitted when
+    /// nil), `hasCalculatedExposureTime`, `metadata`).
+    ///
+    /// Used by the B3 PR1 baseline harness to confirm the migration is
+    /// byte-identical against the frozen baseline. Production code paths
+    /// should use the standard `Encodable` conformance, which writes the
+    /// new tagged-union format.
+    func legacyShapeEncoded(using encoder: JSONEncoder) throws -> Data {
+        try encoder.encode(LegacyShapeAdapter(result: self))
     }
 
-    private static func validationError(
-        meteredExposureSeconds: Double,
-        correctedExposureSeconds: Double?,
-        metadata: ReciprocityCalculationPolicyResultMetadata
-    ) -> String? {
-        switch metadata.basis {
-        case .officialThresholdNoCorrection:
-            guard let correctedExposureSeconds else {
-                return "officialThresholdNoCorrection must return a corrected exposure time."
-            }
+    private struct LegacyShapeAdapter: Encodable {
+        let result: ReciprocityResult
 
-            guard abs(correctedExposureSeconds - meteredExposureSeconds) < 0.000_001 else {
-                return "officialThresholdNoCorrection must return corrected exposure equal to metered exposure."
-            }
-        case .advisoryOnlyBeyondOfficialRange:
-            guard correctedExposureSeconds == nil else {
-                return "advisoryOnlyBeyondOfficialRange must not return a corrected exposure time."
-            }
-        case .unsupportedOutOfPolicyRange:
-            guard correctedExposureSeconds == nil else {
-                return "unsupportedOutOfPolicyRange must not return a corrected exposure time."
-            }
-        case .interpolatedWithinTable, .extrapolatedBeyondTable:
-            guard correctedExposureSeconds != nil else {
-                return "\(metadata.basis.rawValue) must return a corrected exposure time."
-            }
-        case .exactTablePoint, .formulaDerived:
-            break
+        private enum CodingKeys: String, CodingKey {
+            case meteredExposureSeconds
+            case correctedExposureSeconds
+            case hasCalculatedExposureTime
+            case metadata
         }
 
-        return nil
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(result.meteredExposureSeconds, forKey: .meteredExposureSeconds)
+            try container.encodeIfPresent(result.correctedExposureSeconds, forKey: .correctedExposureSeconds)
+            try container.encode(result.hasCalculatedExposureTime, forKey: .hasCalculatedExposureTime)
+            try container.encode(result.metadata, forKey: .metadata)
+        }
     }
 }
 
@@ -464,7 +746,7 @@ private extension ReciprocityCalculationPolicyResultMetadata {
     }
 }
 
-private extension ReciprocityCalculationPolicyResult {
+private extension ReciprocityResult {
     static func exact(
         meteredExposureSeconds: Double,
         correctedExposureSeconds: Double,
@@ -472,13 +754,15 @@ private extension ReciprocityCalculationPolicyResult {
         notes: [ReciprocityPolicyNote],
         referencedRows: [ReciprocityTableRowReference]
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: .exact(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                notes: notes,
-                referencedRows: referencedRows
+        .quantified(
+            QuantifiedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: .exact(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    notes: notes,
+                    referencedRows: referencedRows
+                )
             )
         )
     }
@@ -491,14 +775,16 @@ private extension ReciprocityCalculationPolicyResult {
         notes: [ReciprocityPolicyNote],
         referencedRows: [ReciprocityTableRowReference]
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: .interpolated(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                estimationFamily: estimationFamily,
-                notes: notes,
-                referencedRows: referencedRows
+        .quantified(
+            QuantifiedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: .interpolated(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    estimationFamily: estimationFamily,
+                    notes: notes,
+                    referencedRows: referencedRows
+                )
             )
         )
     }
@@ -511,14 +797,16 @@ private extension ReciprocityCalculationPolicyResult {
         notes: [ReciprocityPolicyNote],
         referencedRows: [ReciprocityTableRowReference]
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: .extrapolated(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                estimationFamily: estimationFamily,
-                notes: notes,
-                referencedRows: referencedRows
+        .quantified(
+            QuantifiedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: .extrapolated(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    estimationFamily: estimationFamily,
+                    notes: notes,
+                    referencedRows: referencedRows
+                )
             )
         )
     }
@@ -528,12 +816,14 @@ private extension ReciprocityCalculationPolicyResult {
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
         notes: [ReciprocityPolicyNote]
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: meteredExposureSeconds,
-            metadata: .thresholdNoCorrection(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                notes: notes
+        .quantified(
+            QuantifiedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: meteredExposureSeconds,
+                metadata: .thresholdNoCorrection(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    notes: notes
+                )
             )
         )
     }
@@ -543,12 +833,13 @@ private extension ReciprocityCalculationPolicyResult {
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
         notes: [ReciprocityPolicyNote]
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: nil,
-            metadata: .advisoryOnly(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                notes: notes
+        .advisoryOnly(
+            AdvisoryOnlyPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                metadata: .advisoryOnly(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    notes: notes
+                )
             )
         )
     }
@@ -559,13 +850,14 @@ private extension ReciprocityCalculationPolicyResult {
         notes: [ReciprocityPolicyNote],
         referencedRows: [ReciprocityTableRowReference]? = nil
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: nil,
-            metadata: .unsupported(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                notes: notes,
-                referencedRows: referencedRows
+        .unsupported(
+            UnsupportedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                metadata: .unsupported(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    notes: notes,
+                    referencedRows: referencedRows
+                )
             )
         )
     }
@@ -576,12 +868,14 @@ private extension ReciprocityCalculationPolicyResult {
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
         notes: [ReciprocityPolicyNote]
     ) -> Self {
-        Self(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            metadata: .formula(
-                sourceAuthorityImpact: sourceAuthorityImpact,
-                notes: notes
+        .quantified(
+            QuantifiedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: .formula(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    notes: notes
+                )
             )
         )
     }
@@ -597,7 +891,7 @@ struct ReciprocityCalculationPolicyEvaluator {
     func evaluate(
         profile: ReciprocityProfile,
         meteredExposureSeconds: Double
-    ) -> ReciprocityCalculationPolicyResult {
+    ) -> ReciprocityResult {
         let sourceAuthorityImpact = mapSourceAuthorityImpact(from: profile.source)
         let assembler = ResultAssembler(sourceAuthorityImpact: sourceAuthorityImpact)
         let selector = Selection(
@@ -693,7 +987,7 @@ struct ReciprocityCalculationPolicyEvaluator {
         meteredExposureSeconds: Double,
         assembler: ResultAssembler,
         estimator: Estimation
-    ) -> ReciprocityCalculationPolicyResult? {
+    ) -> ReciprocityResult? {
         guard let match = selection.exactMatch(for: meteredExposureSeconds) else {
             return nil
         }
@@ -738,7 +1032,7 @@ struct ReciprocityCalculationPolicyEvaluator {
         meteredExposureSeconds: Double,
         assembler: ResultAssembler,
         estimator: Estimation
-    ) -> ReciprocityCalculationPolicyResult? {
+    ) -> ReciprocityResult? {
         let quantifiedPoints = selection.quantifiedPoints
 
         guard quantifiedPoints.count >= 2 else {
@@ -810,7 +1104,7 @@ struct ReciprocityCalculationPolicyEvaluator {
         selection: Selection,
         meteredExposureSeconds: Double,
         assembler: ResultAssembler
-    ) -> ReciprocityCalculationPolicyResult? {
+    ) -> ReciprocityResult? {
         guard let formulaRule = selection.formulaRule(for: meteredExposureSeconds) else {
             if let boundedFormulaRule = selection.firstFormulaRuleExceeded(by: meteredExposureSeconds) {
                 return assembler.unsupportedFormulaBoundary(
@@ -841,7 +1135,7 @@ struct ReciprocityCalculationPolicyEvaluator {
         segment: EstimableSegment,
         assembler: ResultAssembler,
         estimator: Estimation
-    ) -> ReciprocityCalculationPolicyResult? {
+    ) -> ReciprocityResult? {
         guard let estimate = estimator.estimate(
             meteredExposureSeconds: meteredExposureSeconds,
             segment: segment
@@ -1138,7 +1432,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             correctedExposureSeconds: Double,
             notes: [ReciprocityPolicyNote],
             referencedRows: [ReciprocityTableRowReference]
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             .exact(
                 meteredExposureSeconds: meteredExposureSeconds,
                 correctedExposureSeconds: correctedExposureSeconds,
@@ -1154,7 +1448,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             estimationFamily: ReciprocityTableEstimationFamily,
             referencedRows: [ReciprocityTableRowReference],
             notes: [ReciprocityPolicyNote]
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             .interpolated(
                 meteredExposureSeconds: meteredExposureSeconds,
                 correctedExposureSeconds: correctedExposureSeconds,
@@ -1171,7 +1465,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             estimationFamily: ReciprocityTableEstimationFamily,
             referencedRows: [ReciprocityTableRowReference],
             notes: [ReciprocityPolicyNote]
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             .extrapolated(
                 meteredExposureSeconds: meteredExposureSeconds,
                 correctedExposureSeconds: correctedExposureSeconds,
@@ -1185,7 +1479,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
         func thresholdNoCorrection(
             meteredExposureSeconds: Double,
             thresholdRule: ThresholdReciprocityRule
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             let noteText = thresholdRule.notes.first
                 ?? "No correction is required within the stated official threshold range."
 
@@ -1204,7 +1498,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
         func advisoryOnly(
             meteredExposureSeconds: Double,
             advisoryRule: AdvisoryReciprocityRule
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             let noteText = advisoryRule.adjustments.compactMap(Self.advisoryNoteText(from:)).first
                 ?? advisoryRule.notes.first
                 ?? "Only advisory reciprocity guidance is available beyond the official quantified range."
@@ -1229,7 +1523,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             meteredExposureSeconds: Double,
             notes: [ReciprocityPolicyNote],
             referencedRows: [ReciprocityTableRowReference]? = nil
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             .unsupported(
                 meteredExposureSeconds: meteredExposureSeconds,
                 sourceAuthorityImpact: sourceAuthorityImpact,
@@ -1242,7 +1536,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             meteredExposureSeconds: Double,
             stopSignalNote: ReciprocityPolicyNote,
             stopSignalBoundary: QuantifiedTableBoundary
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             unsupported(
                 meteredExposureSeconds: meteredExposureSeconds,
                 notes: [
@@ -1260,7 +1554,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             meteredExposureSeconds: Double,
             correctedExposureSeconds: Double,
             formulaRule: FormulaReciprocityRule
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             let noteText = formulaRule.notes.first
                 ?? "Calculated from a reciprocity formula profile."
 
@@ -1277,7 +1571,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
         func unsupportedFormulaBoundary(
             meteredExposureSeconds: Double,
             formulaRule: FormulaReciprocityRule
-        ) -> ReciprocityCalculationPolicyResult {
+        ) -> ReciprocityResult {
             let boundaryText: String
             if let maximumSeconds = formulaRule.meteredRange?.maximumSeconds {
                 boundaryText = "Formula guidance is defined only through \(formatBoundarySeconds(maximumSeconds))."

@@ -1,16 +1,16 @@
-  ▿ PTimer.ReciprocityCalculationPolicyResult
-    - meteredExposureSeconds: 0.5
-    ▿ correctedExposureSeconds: Optional(0.5)
-      - some: 0.5
-    ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
-      - basis: PTimer.ReciprocityCalculationBasis.officialThresholdNoCorrection
-      - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
-      - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.withinStatedRange
-      - warningLevel: PTimer.ReciprocityCalculationWarningLevel.none
-      - estimationFamily: nil
-      ▿ notes: 1 element
-        ▿ PTimer.ReciprocityPolicyNote
-          ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.thresholdGuidanceOnly)
-            - some: PTimer.ReciprocityPolicyNoteToken.thresholdGuidanceOnly
-          - text: "No correction is required within the stated official threshold range."
-      - referencedRows: nil
+  ▿ PTimer.ReciprocityResult.quantified
+    ▿ quantified: PTimer.ReciprocityResult.QuantifiedPayload
+      - meteredExposureSeconds: 0.5
+      - correctedExposureSeconds: 0.5
+      ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
+        - basis: PTimer.ReciprocityCalculationBasis.officialThresholdNoCorrection
+        - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
+        - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.withinStatedRange
+        - warningLevel: PTimer.ReciprocityCalculationWarningLevel.none
+        - estimationFamily: nil
+        ▿ notes: 1 element
+          ▿ PTimer.ReciprocityPolicyNote
+            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.thresholdGuidanceOnly)
+              - some: PTimer.ReciprocityPolicyNoteToken.thresholdGuidanceOnly
+            - text: "No correction is required within the stated official threshold range."
+        - referencedRows: nil

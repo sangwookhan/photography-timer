@@ -139,11 +139,35 @@ enum DisplayStateSnapshot {
     // MARK: - Internal helpers
 
     /// Deterministic text representation. `Swift.dump` writes
-    /// reflective output stable per Swift version.
+    /// reflective output stable per Swift version, but it surfaces
+    /// hex memory addresses for anonymous (file-private) nested
+    /// types in the form `(unknown context at $1234abcd)`. Those
+    /// vary across runs, so canonicalize them to `$XX` before the
+    /// baseline comparison.
     private static func serialize<T>(_ value: T) -> String {
         var output = ""
         dump(value, to: &output, indent: 2)
-        return output
+        return canonicalize(output)
+    }
+
+    private static let hexAddressPattern = try? NSRegularExpression(
+        pattern: #"\$[0-9a-fA-F]{6,16}"#
+    )
+
+    private static func canonicalize(_ output: String) -> String {
+        guard let regex = hexAddressPattern else {
+            return output
+        }
+        let range = NSRange(output.startIndex..., in: output)
+        // NSRegularExpression treats `$` in templates as a back-
+        // reference prefix, so literal `$` must be escaped with a
+        // single backslash — `\$` in the template, `"\\$"` in the
+        // Swift string literal.
+        return regex.stringByReplacingMatches(
+            in: output,
+            range: range,
+            withTemplate: "\\$XX"
+        )
     }
 
     /// `__Snapshots__/<TestClassDir>/<name>.txt` next to the test

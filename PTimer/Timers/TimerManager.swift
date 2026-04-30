@@ -73,8 +73,14 @@ struct PersistentTimerSnapshot: Codable, Equatable {
             self.expectedCompletionAt = timer.endDate
             self.completedAt = nil
         case .paused:
+            // Per Timer Spec §3.1, `expectedCompletionAt` is meaningful for
+            // `running` status only. A paused snapshot carries the freeze
+            // metadata (`pausedRemainingDuration` + `pausedAt`); the
+            // hypothetical completion date is reconstructed on read by the
+            // computed `PausedTimer.endDate` so it never needs to be
+            // stored on disk.
             self.status = .paused
-            self.expectedCompletionAt = timer.endDate
+            self.expectedCompletionAt = nil
             self.completedAt = nil
         case .completed:
             self.status = .completed
@@ -104,13 +110,31 @@ struct PersistentTimerSnapshot: Codable, Equatable {
                 status: .running
             )
         case .paused:
-            // `paused` restores as the same frozen, resumable state. It must
-            // not consume wall-clock time or auto-complete while the app was dead.
+            // `paused` restores as the same frozen, resumable state. It
+            // must not consume wall-clock time or auto-complete while
+            // the app was dead. `expectedCompletionAt` is ignored on
+            // this path: legacy snapshots may carry a non-nil value
+            // (pre-PTIMER-118 epic) while new snapshots write `nil`;
+            // either way the sum-type init for `.paused` discards the
+            // parameter and the computed `PausedTimer.endDate`
+            // reconstructs the hypothetical completion date from
+            // `pausedAt + pausedRemainingDuration`.
+            //
+            // A paused snapshot whose freeze metadata is missing is
+            // structurally invalid (the back-compat init would otherwise
+            // fabricate `pausedAt = startDate`, `pausedRemainingTime = 0`,
+            // producing a fictitious "paused at startDate" timestamp).
+            // Treat the corrupt input as completed instead, mirroring
+            // the `.running` branch's missing-`expectedCompletionAt`
+            // fallback above.
+            guard let pausedAt, let pausedRemainingDuration else {
+                return makeCompletedTimer(completionDate: completedAt)
+            }
             return TimerState(
                 id: id,
                 duration: duration,
                 startDate: startDate,
-                endDate: expectedCompletionAt,
+                endDate: nil,
                 pausedRemainingTime: pausedRemainingDuration,
                 pausedAt: pausedAt,
                 status: .paused
@@ -265,18 +289,26 @@ struct RunningTimer: Equatable {
     let endDate: Date
 }
 
-/// Payload of a `paused` timer. Holds the original `endDate` because
-/// the historical schema preserves it across pause/resume cycles
-/// (used by `resolvedCompletionDate()` when resume math underflows
-/// to zero), plus the freeze metadata `pausedRemainingTime` and
-/// `pausedAt`.
+/// Payload of a `paused` timer. Holds only the freeze metadata
+/// (`pausedRemainingTime` + `pausedAt`); the hypothetical completion
+/// date is derived from `pausedAt + pausedRemainingTime` rather than
+/// stored, matching Timer Spec §3.1 ("expectedCompletionAt — running
+/// status only"). Mathematically equivalent to the previous stored
+/// `endDate` because `pausing(at:)` always set `pausedRemainingTime
+/// = endDate - pausedAt`.
 struct PausedTimer: Equatable {
     let id: UUID
     let duration: TimeInterval
     let startDate: Date
-    let endDate: Date
     let pausedRemainingTime: TimeInterval
     let pausedAt: Date
+
+    /// Hypothetical completion date for display purposes. Derived from
+    /// the freeze metadata so the field disappears from the persisted
+    /// schema (Timer Spec §3.1) while UI consumers can still read it.
+    var endDate: Date {
+        pausedAt.addingTimeInterval(pausedRemainingTime)
+    }
 }
 
 /// Payload of a `completed` timer. Holds the recorded completion
@@ -305,13 +337,25 @@ enum TimerState: Identifiable, Equatable {
 
     /// Compatibility initializer that mirrors the historical struct
     /// `TimerState(id:duration:startDate:endDate:pausedRemainingTime:pausedAt:status:)`
-    /// constructor used by tests and persistence-restore code. The
-    /// initializer dispatches on `status` and constructs the
-    /// appropriate sum case from the supplied legacy fields. When a
-    /// field required by the chosen status is missing (e.g. `status =
-    /// .running` with `endDate = nil`), the constructor falls back to
-    /// the same defaults the legacy struct exhibited at the use sites
-    /// in this codebase.
+    /// constructor used by tests and the `PersistentTimerSnapshot`
+    /// restore path. The initializer dispatches on `status` and
+    /// constructs the appropriate sum case from the supplied legacy
+    /// fields.
+    ///
+    /// Trusted-callsite contract: callers shall supply the fields
+    /// required by the chosen status:
+    /// - `.running` ⇒ `endDate` non-nil
+    /// - `.paused` ⇒ `pausedRemainingTime` and `pausedAt` non-nil
+    /// - `.completed` ⇒ `endDate` non-nil (= completion timestamp)
+    /// `endDate` is intentionally ignored for `.paused`; the sum-type
+    /// representation derives it from `pausedAt + pausedRemainingTime`
+    /// (Timer Spec §3.1 "expectedCompletionAt — running status only").
+    /// Other missing fields debug-trap so corrupt inputs from a
+    /// persisted snapshot are caught early; the production fallback
+    /// constructs a degenerate but type-valid case so a debug crash
+    /// does not become a release crash. `PersistentTimerSnapshot.restore`
+    /// guards the `.paused` corrupt-input case at its caller boundary
+    /// instead, surfacing such snapshots as completed.
     init(
         id: UUID,
         duration: TimeInterval,
@@ -323,6 +367,7 @@ enum TimerState: Identifiable, Equatable {
     ) {
         switch status {
         case .running:
+            assert(endDate != nil, "TimerState(.running) requires a non-nil endDate")
             self = .running(
                 RunningTimer(
                     id: id,
@@ -332,17 +377,21 @@ enum TimerState: Identifiable, Equatable {
                 )
             )
         case .paused:
+            assert(
+                pausedRemainingTime != nil && pausedAt != nil,
+                "TimerState(.paused) requires non-nil pausedRemainingTime and pausedAt"
+            )
             self = .paused(
                 PausedTimer(
                     id: id,
                     duration: duration,
                     startDate: startDate,
-                    endDate: endDate ?? startDate.addingTimeInterval(duration),
                     pausedRemainingTime: pausedRemainingTime ?? 0,
                     pausedAt: pausedAt ?? startDate
                 )
             )
         case .completed:
+            assert(endDate != nil, "TimerState(.completed) requires a non-nil endDate (completion timestamp)")
             self = .completed(
                 CompletedTimer(
                     id: id,
@@ -471,15 +520,15 @@ enum TimerState: Identifiable, Equatable {
         }
 
         // Freeze the timer with its remaining duration intact so it can be
-        // resumed later from the same logical point. The original
-        // endDate is preserved across the pause for resume math
-        // continuity (matches the legacy schema exactly).
+        // resumed later from the same logical point. The hypothetical
+        // completion date stays accessible via the computed
+        // `PausedTimer.endDate` (= `pausedAt + pausedRemainingTime`),
+        // matching the legacy stored value exactly.
         return .paused(
             PausedTimer(
                 id: id,
                 duration: duration,
                 startDate: startDate,
-                endDate: endDate ?? now.addingTimeInterval(remaining),
                 pausedRemainingTime: remaining,
                 pausedAt: now
             )
@@ -572,7 +621,12 @@ final class TimerManager: ObservableObject {
 
     @discardableResult
     func start(id: UUID = UUID(), duration: TimeInterval) -> UUID? {
-        guard duration > 0 else {
+        // Per Timer Spec §1.2, the system rejects creation with non-positive,
+        // non-finite, or NaN duration values. `> 0` admits `+Infinity`
+        // (`.infinity > 0` is true) so `isFinite` must be checked explicitly.
+        // NaN comparisons return false in both directions, so the `> 0` guard
+        // already rejects NaN.
+        guard duration.isFinite, duration > 0 else {
             return nil
         }
 

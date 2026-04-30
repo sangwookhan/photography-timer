@@ -101,7 +101,7 @@ final class LockScreenTimerCoordinatorTests: XCTestCase {
     func testSelectRepresentativeUsesIDOrderWhenEndDateAndPresentationTie() {
         // Two running timers at the exact same endDate AND same order ->
         // tie-break must fall through to stable id ordering.
-        let now = Date()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
         let endDate = now.addingTimeInterval(60)
         let idA = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let idB = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
@@ -146,7 +146,7 @@ final class LockScreenTimerCoordinatorTests: XCTestCase {
         name: String,
         endIn seconds: TimeInterval
     ) -> RunningTimerItem {
-        let now = Date()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
         return RunningTimerItem(
             id: UUID(),
             order: order,
@@ -167,7 +167,7 @@ final class LockScreenTimerCoordinatorTests: XCTestCase {
         name: String,
         remaining: TimeInterval
     ) -> RunningTimerItem {
-        let now = Date()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
         return RunningTimerItem(
             id: UUID(),
             order: order,
@@ -184,7 +184,7 @@ final class LockScreenTimerCoordinatorTests: XCTestCase {
     }
 
     private func makeCompletedTimer(order: Int, name: String) -> RunningTimerItem {
-        let now = Date()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
         return RunningTimerItem(
             id: UUID(),
             order: order,

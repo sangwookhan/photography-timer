@@ -220,11 +220,16 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     func testCompactVisibleLayerCountPolicyBoundaries() {
+        // Use a single captured reference instant so startDate / endDate /
+        // referenceDate are derived deterministically; the layered-progress
+        // policy depends on `duration`, not absolute clock time.
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
         // Boundary: 59s duration -> 1 layer
         let timer59 = RunningTimerItem(
             id: UUID(), order: 1, name: "59s", basisSummary: "", duration: 59,
-            startDate: Date(), endDate: Date().addingTimeInterval(59),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(59),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item59 = BottomSheetWorkspaceSnapshot.make(
             from: [timer59],
@@ -240,8 +245,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // Boundary: 60s duration -> 2 layers
         let timer60 = RunningTimerItem(
             id: UUID(), order: 1, name: "60s", basisSummary: "", duration: 60,
-            startDate: Date(), endDate: Date().addingTimeInterval(60),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(60),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item60 = BottomSheetWorkspaceSnapshot.make(
             from: [timer60],
@@ -257,8 +262,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // Boundary: 3599s duration -> 2 layers
         let timer3599 = RunningTimerItem(
             id: UUID(), order: 1, name: "3599s", basisSummary: "", duration: 3599,
-            startDate: Date(), endDate: Date().addingTimeInterval(3599),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(3599),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item3599 = BottomSheetWorkspaceSnapshot.make(
             from: [timer3599],
@@ -271,8 +276,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // Boundary: 3600s duration -> 3 layers
         let timer3600 = RunningTimerItem(
             id: UUID(), order: 1, name: "3600s", basisSummary: "", duration: 3600,
-            startDate: Date(), endDate: Date().addingTimeInterval(3600),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(3600),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item3600 = BottomSheetWorkspaceSnapshot.make(
             from: [timer3600],

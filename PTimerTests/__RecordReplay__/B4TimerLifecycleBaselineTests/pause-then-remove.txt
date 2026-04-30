@@ -25,7 +25,7 @@
   id: AAAAAAAA-1111-2222-3333-444444444444
 ---
 [8] timer.persistence.save
-  timers: [AAAAAAAA-1111-2222-3333-444444444444|status=paused|duration=60.0|endDate=+60.000s]
+  timers: [AAAAAAAA-1111-2222-3333-444444444444|status=paused|duration=60.0|endDate=nil]
 ---
 [9] timer.notification.cancel
   id: AAAAAAAA-1111-2222-3333-444444444444

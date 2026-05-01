@@ -16,7 +16,7 @@ A timer is in exactly one of three states at any time:
 - **paused** — frozen; remaining time does not change.
 - **completed** — terminal; remaining time is zero. Cannot transition out.
 
-The in-memory representation of a timer is a tagged union over these three states. Each state's payload carries only the fields that are meaningful in that state — running carries the expected end time, paused carries the frozen remaining duration and the paused-at instant, completed carries the recorded completion timestamp. There are no nullable siblings sharing a record across states; an *invalid* combination (e.g. a running timer with a paused-at instant) is therefore not representable. (PTIMER-118)
+A timer's representation shall carry exactly the fields meaningful for its current state: running carries the expected end time, paused carries the frozen remaining duration and the paused-at instant, completed carries the recorded completion timestamp. There are no nullable siblings sharing a record across states; an *invalid* combination (e.g. a running timer with a paused-at instant) is therefore not representable.
 
 ### 1.2 Transitions
 
@@ -39,7 +39,7 @@ A timer's `duration` is set at creation and is positive and finite. The system s
 
 ### 1.3 Snapshot at creation
 
-When a timer is created, the calculator's current result is snapshotted into the timer's metadata: shutter value, ND stops, film identity (if any), reciprocity result. Subsequent calculator changes shall not alter the snapshot. Each timer carries its own creation-time snapshot. (PTIMER-9)
+When a timer is created, the calculator's current result is snapshotted into the timer's metadata: shutter value, ND stops, film identity (if any), reciprocity result. Subsequent calculator changes shall not alter the snapshot. Each timer carries its own creation-time snapshot.
 
 ---
 
@@ -53,7 +53,7 @@ Remaining time is computed, not stored, and depends on state:
 - **paused** — frozen at the value captured at the moment of pause.
 - **completed** — exactly zero.
 
-Reads of remaining time and status shall come from a single source. UI layers shall not snapshot or re-derive these independently; they read from the runtime model. (PTIMER-37)
+Reads of remaining time and status shall come from a single source. UI layers shall not snapshot or re-derive these independently; they read from the runtime model.
 
 ### 2.2 Tick
 
@@ -67,7 +67,7 @@ The tick shall not rebuild the calculator workspace, the calculator's variable s
 
 ### 2.3 Resume preserves remaining time
 
-When a paused timer is resumed, its frozen remaining time becomes the basis for a new `endDate = now + remaining`. The original `duration` is unchanged; only the `endDate` shifts forward. Pausing immediately re-pauses freezes the new remaining time. (PTIMER-26)
+When a paused timer is resumed, its frozen remaining time becomes the basis for a new `endDate = now + remaining`. The original `duration` is unchanged; only the `endDate` shifts forward. Pausing immediately re-pauses freezes the new remaining time.
 
 ---
 
@@ -95,11 +95,11 @@ The runtime shall persist the full timer collection across app termination. The 
 
 The persisted form must round-trip: encoding then decoding shall yield an equivalent collection. An empty collection shall remove the persisted blob entirely (rather than write an empty payload).
 
-The on-disk schema is independent of the in-memory representation: the persisted record retains the historical flat shape (a status discriminator alongside the per-state fields above), and the encoder writes that shape regardless of how the runtime represents the state in memory. The decoder reconstructs the appropriate tagged-union case from the persisted fields. This separation lets the in-memory form evolve without migrating saved data. (PTIMER-118)
+The on-disk schema is independent of runtime representation. The persisted record uses a flat shape — a status discriminator alongside the per-state fields above — and the encoder writes that shape regardless of how the runtime represents the state. The decoder reconstructs the appropriate runtime case from the persisted fields.
 
 ### 3.2 Backward-compatible status decoding
 
-The persisted status field has historical values. The decoder shall accept both the legacy token `"stopped"` and the current token `"paused"` and treat them as the same state. The encoder shall write only `"paused"`. (PTIMER-70)
+The decoder shall accept both `"stopped"` and `"paused"` as equivalent paused-state tokens. The encoder shall write only `"paused"`.
 
 ### 3.3 Restoration logic
 
@@ -109,11 +109,11 @@ Restoration occurs once at app start, not on subsequent reactivation. For each p
 - **paused** — restored as `paused` with its frozen remaining time intact. Wall clock during termination is irrelevant.
 - **completed** — restored as `completed` with `endDate` set to the recorded completion time. If a recorded completion time is missing, fall back to the timer's `startDate + duration`.
 
-Restoration shall not fire completion alerts, push notifications, or any user-facing feedback. It is a state recovery only. (PTIMER-67, PTIMER-70)
+Restoration shall not fire completion alerts, push notifications, or any user-facing feedback. It is a state recovery only.
 
 ### 3.4 Reactivation reconciliation
 
-When the app returns to the foreground, the runtime shall reconcile any running timer against wall clock and update its state if it has reached completion during the inactive period. Completion alerts (sound, haptic) shall not be triggered by reactivation; they fire only via the foreground tick when the user can perceive them. (PTIMER-67)
+When the app returns to the foreground, the runtime shall reconcile any running timer against wall clock and update its state if it has reached completion during the inactive period. Completion alerts (sound, haptic) shall not be triggered by reactivation; they fire only via the foreground tick when the user can perceive them.
 
 ---
 
@@ -121,7 +121,7 @@ When the app returns to the foreground, the runtime shall reconcile any running 
 
 ### 4.1 Foreground feedback
 
-When a timer transitions to `completed` while the application is active and in the foreground, the system shall play a short audio cue and a haptic. Each transition shall produce exactly one cue and exactly one haptic; reactivation-triggered completion shall not produce a cue. (PTIMER-66)
+When a timer transitions to `completed` while the application is active and in the foreground, the system shall play a short audio cue and a haptic. Each transition shall produce exactly one cue and exactly one haptic; reactivation-triggered completion shall not produce a cue.
 
 ### 4.2 Background and lock-screen delivery
 
@@ -132,13 +132,13 @@ For timers running while the app is in the background or the device is locked, t
 - resuming a timer reschedules at the new completion time,
 - a timer transitioning to `completed` cancels any still-pending request.
 
-Duplicate scheduling for the same timer identity shall not occur. (PTIMER-68)
+Duplicate scheduling for the same timer identity shall not occur.
 
 ---
 
 ## 5. Lock-screen surface
 
-The system exposes a single representative running timer to the lock screen at any time, via the platform's Live Activity facility. (PTIMER-69)
+The system exposes a single representative running timer to the lock screen at any time, via the platform's Live Activity facility.
 
 ### 5.1 Representative selection
 
@@ -158,7 +158,7 @@ The lock-screen surface refreshes its visible time at approximately 1 s cadence.
 
 The runtime makes one ordering decision; UI layers shall consume it without re-sorting.
 
-- **Active group** — running and paused timers in one stable ordering domain. The ordering policy is **LIFO by creation**: the most recently created timer is first. Running and paused are not separated within this group; both belong to "active". (PTIMER-50)
+- **Active group** — running and paused timers in one stable ordering domain. The ordering policy is **LIFO by creation**: the most recently created timer is first. Running and paused are not separated within this group; both belong to "active".
 - **Completed group** — completed timers, sorted by completion time descending (most recent first). The completed group is presented behind the active group.
 
 Compact and expanded surfaces shall use the same ordering. The selected/focused timer (when one is selected) does not reorder; it is highlighted only.
@@ -184,11 +184,11 @@ The system shall **not**:
 ## 8. Drift and open questions
 
 - **Completed timer retention.** Wiki 8847362 says completed may be limited to "recent items only"; no concrete retention threshold is decided.
-- **Selection model for multi-timer operations.** Wiki 9601025 deliberately defers a strong selection model. There is currently no spec for multi-select, batch actions, or cross-timer linking.
-- **Detent thresholds for the bottom sheet** (compact 98 pt + ND reserve 132 pt; large 560 pt; 92 pt up-drag and 64 pt down-drag) are documented in [UI Spec](UI.md) §4. The numeric thresholds were chosen empirically; no formal rationale is recorded.
+- **Selection model for multi-timer operations.** Wiki 9601025 deliberately defers a strong selection model. There is no spec for multi-select, batch actions, or cross-timer linking.
+- **Detent thresholds for the bottom sheet** (compact 98 pt + ND reserve 132 pt; large 560 pt; 92 pt up-drag and 64 pt down-drag) are documented in [UI Spec](UI.md) §4.
 - **Notification grouping and audio policy.** No spec defines whether multiple background completions within a short window should group, or whether the audio cue varies by timer kind.
 - **Live Activity test coverage.** Wiki 19103745 notes that ActivityKit and notification integration tests are missing. The lock-screen behavior is governed by the contract in §5 but not yet verified against system-level integration paths.
-- **Pause-during-completion race.** No explicit spec for "user pauses while the runtime is mid-completion-evaluation"; current behavior emerges from the tick ordering. Worth clarifying.
+- **Pause-during-completion race.** No explicit spec for "user pauses while the runtime is mid-completion-evaluation"; behavior emerges from the tick ordering. Worth clarifying.
 - **Notification copy.** No spec for the body text of the local notification beyond "this timer completed".
 
 ---
@@ -203,14 +203,3 @@ These are *reference material*, not normative.
 - 9568257 — Bottom Sheet UI 기획 초안 (compact / expanded UX, deferred selection model)
 - 9601025 — Bottom Sheet UI Architecture 설계 초안 (layer split: domain / presentation / view)
 
-**Commits (decisions of record)**
-- PTIMER-9 — Snapshot-based timer manager wired to calculator CTA; multi-timer with date-based accuracy
-- PTIMER-10 — Timer panel UX, deterministic clock formatting and remaining-time clamping
-- PTIMER-26 — Resume from paused (preserve remaining time); time-display consistency model
-- PTIMER-29 — Read-only status checks, stable display near zero
-- PTIMER-37 — Single source of truth for remaining time and status; published current-date stream so running timers redraw
-- PTIMER-66 — Foreground-only completion sound/haptic; deduplication of completion alerts
-- PTIMER-67 — Reactivation reconciliation (state-only, no double-fire of completion alert)
-- PTIMER-68 — Local notification scheduler for completion (background / lock-screen delivery)
-- PTIMER-69 — Lock-screen Live Activity exposing the representative running timer's expected completion time
-- PTIMER-70 — Persisted timer snapshots and relaunch restoration; rename `stopped` → `paused` with backward-compatible decode

@@ -4,8 +4,10 @@
 
 **문서 종류**: 사용자 시나리오 기반 요구사항 문서.
 **대상 독자**: 앱이 *무엇을* 해야 하는지 알아야 하는 제품 / 엔지니어링 / 향후 기여자.
-**영향 방향**: 요구사항 → 행동 계약 → 코드, **단방향**. 본 문서는 자기 하류(downstream)에 있는 어떤 문서에도 의존하지 않으며, 인용·참조하지 않는다. 요구사항이 *"시스템은 X를 한다"* 라고 말할 때, *무엇을* 하고 *왜* 하는지는 여기에서 결정되며, *어떻게* 하는지는 하류에서 결정된다.
+**영향 방향**: 요구사항 → 행동 계약 → 코드, **단방향**. 요구사항 문서는 제품 의도에 대해 normative 하다. 하류 문서들은 각 요구사항이 어떻게 명세되고, 구조화되고, 검증되는지를 구체화한다. 하류 문서에 대한 참조는 탐색(navigational) 목적이며 요구사항이 그 문서들에 의존하게 만들지 않는다. 요구사항이 *"시스템은 X를 한다"* 라고 말할 때, *무엇을* 하고 *왜* 하는지는 여기에서 결정되며, *어떻게* 하는지는 하류에서 결정된다.
 **문구 규칙**: 모든 요구사항은 *사용자에게 보이는 필요점* 또는 *무결성 불변식(integrity invariant)* 을 기술한다. 구현 specifics(픽셀 사이즈, 갱신 주기, 영속화 키, lint 규칙 ID, baseline 파일명, property wrapper 선택 등)는 하류 문서에 속하며 본 문서에 등장하지 않는다.
+
+**문서 경계**: 본 문서는 앱이 *무엇을* 해야 하는지 정의한다. 시스템이 *어떻게* 구조화되는지(layering, ownership, 모듈 boundary)는 `docs/architecture/Architecture.md`. 각 요구사항을 어떤 *행동 계약* 이 realize 하는지는 `docs/specs/`. 변경이 *어떻게* 검증되는지는 `docs/verification/Strategy.md`.
 
 ---
 
@@ -72,7 +74,7 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 **단계.**
 1. 결과 섹션의 row 중 측정하려는 값에 해당하는 Start Timer affordance 를 활성화. film workflow 에서는 두 가지 시작 affordance — Adjusted Shutter 행과 Corrected Exposure 행 — 가 있고, 사용자가 의도에 따라 선택.
-2. timer 가 *workspace 표면* 으로 진입. 이 표면은 calculator 와 *함께* 보이도록 유지된다. 사용자는 timer 를 닫거나 시야에서 잃지 않으면서 다음 컷을 위해 ND 를 조정하거나 필름을 바꿀 수 있다. (현 구현은 표면을 하단 시트로 배치하지만, 좌/우/상단 배치는 열린 디자인 결정이며 요구사항이 아니다.)
+2. timer 가 *workspace 표면* 으로 진입. 이 표면은 calculator 와 *함께* 보이도록 유지된다. 사용자는 timer 를 닫거나 시야에서 잃지 않으면서 다음 컷을 위해 ND 를 조정하거나 필름을 바꿀 수 있다. workspace 표면의 정확한 배치 위치는 디자인 결정이며 요구사항이 아니다.
 3. workspace 표면은 각 실행 중인 timer 에 대해 다음을 전달: 남은 시간, 여러 시간 스케일에 걸친 *진행감* (30 s timer 와 30 min timer 모두 반응적으로 느껴지도록), 이름과 시간 텍스트와 무관한 식별 단서.
 4. 사용자는 workspace 표면을 *훑어보기 좋은(glanceable) 요약 모드* 와 *모든 실행/일시정지/완료 timer 를 함께 보는 확장 모드* 사이에서 전환 가능.
 5. timer 의 duration 이 만료되면, 시스템은 사용자가 폰을 보고 있지 않더라도 (카메라 들고 있거나 폰이 주머니에 있거나) 도달하는 완료 신호를 표시하고, 앱 안 timer 카드는 "Done" 상태로 전환.
@@ -210,7 +212,7 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 - **FR-6.1** 계산과 timer 실행은 단일 primary 표면에 산다. 사용자는 실행 중 노출을 모니터링하기 위해 별도 "timer 화면" 으로 navigate 하지 않는다. (시나리오 3, 5)
 - **FR-6.2** Primary 표면은 기기의 수직 공간에 적응하되 개념 구조를 재배치하지 않는다 — 모든 density 에서 같은 요소가 존재, spacing 만 변한다. (시나리오 1)
 - **FR-6.3** Workspace 표면은 사용자에게 두 가지 distinct 한 표시 — calculator 위쪽을 우선하는 *훑어보기 좋은 요약* 과 timer 목록을 우선하는 *확장 보기* — 를 제공. 중간 상태는 out of scope. (시나리오 3, 5)
-- **FR-6.4** Workspace 표면은 calculator 를 가리지 않으면서 calculator 와 공존. 사용자는 timer 가 실행 중에도 timer 표면을 dismiss 하거나 옮기지 않으면서 calculator 입력을 조정할 수 있다. (시나리오 3, 5; 현 구현은 표면을 화면 하단에 배치 — 배치는 디자인 선택, 요구사항 아님.)
+- **FR-6.4** Workspace 표면은 calculator 를 가리지 않으면서 calculator 와 공존. 사용자는 timer 가 실행 중에도 timer 표면을 dismiss 하거나 옮기지 않으면서 calculator 입력을 조정할 수 있다. (시나리오 3, 5; 배치는 디자인 선택, 요구사항 아님.)
 - **FR-6.5** Reciprocity 상세 표면은 섹션을 고정 순서로 제시 — *Profile / source authority* 먼저, 다음 *Formula 또는 Reference data*, 다음 *Graph*, 다음 *Sources*. 이 순서는 *신뢰할 수 있는 안내는 시각 보조가 아닌 데이터에서 온다* 는 점을 전달. (시나리오 2)
 
 ### 3.7 Orientation + 입력
@@ -236,19 +238,19 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 - **NFR-A.1** 프로덕션 코드는 자신이 테스트 환경에서 실행 중인지 감지하지 않는다. 프로덕션과 테스트 협력자 사이의 이음새(seam)는 의존성 주입(DI) 이지, 런타임 분기가 아니다.
 - **NFR-A.2** 특정 외부 표면 (잠금 화면 위젯, 알림) 에 속하는 관심사는 view model 로 누설되지 않는다. 각 외부 표면은 전용 owner 를 가진다.
-- **NFR-A.3** 네 개 feature 모델 (calculator / reciprocity / timer / film selection) 은 서로 직접 참조하지 않는다. cross-model wiring 은 composition 이음새의 책임.
-- **NFR-A.4** view 는 최대 한 개 feature 모델만 직접 관찰한다. cross-cutting 표시 상태는 더 상위 이음새에서 합성.
+- **NFR-A.3** Feature-scoped 상태는 서로 직접 참조하지 않는다. 한 feature 가 다른 feature 의 상태를 필요로 할 때, cross-feature wiring 은 composition 이음새(seam) 의 책임이지 feature 내부의 책임이 아니다. (어떻게 layering 되는지는 `docs/architecture/Architecture.md` 참조.)
+- **NFR-A.4** view 는 최대 한 feature 의 상태만 직접 관찰한다. cross-cutting 표시 상태는 더 상위 이음새에서 합성. (어떻게 layering 되는지는 `docs/architecture/Architecture.md` 참조.)
 
 ### 4.4 검증
 
-- **NFR-V.1** 도메인과 정책 로직은 사용자가 보는 값에 대한 회귀를 실질적으로 감지하는 단위 테스트 coverage 를 가진다. 현 baseline (도메인 계층 ≥ 80%) 은 별도로 문서화되어 있으며, *floor* 이지 ceiling 이 아니다.
-- **NFR-V.2** 타입 주도 변경 (reciprocity 결과 form, timer state 표현) 은 외부 관찰 가능 동작이 변경되지 않았음을 증명하는 record-replay baseline 으로 보호.
-- **NFR-V.3** Cross-cutting 표시 상태 — 각 사용자 시나리오에서 calculator 화면이 보여주는 것 — 는 commit 된 baseline 으로 lock 되어, 내부 재구조화가 사용자가 보는 것을 silently 바꾸지 못하게 한다.
-- **NFR-V.4** Cross-platform parity fixture 는 iOS test suite 가 소비해 fixture 변경이 포팅 시점이 아닌 런타임에 즉시 surface 되도록 한다.
+- **NFR-V.1** 도메인과 정책 로직은 사용자가 보는 값에 대한 회귀를 실질적으로 감지하는 단위 테스트 coverage 를 가진다. 수치 목표는 `docs/verification/Strategy.md` 에 기록되어 있으며, *floor* 이지 ceiling 이 아니다.
+- **NFR-V.2** 타입 주도 변경 (reciprocity 결과 form, timer state 표현) 은 외부 관찰 가능 동작이 변경되지 않았음을 증명할 수단을 가진다. 메커니즘은 `docs/verification/Strategy.md` 에 기록.
+- **NFR-V.3** Cross-cutting 표시 상태 — 각 사용자 시나리오에서 calculator 화면이 보여주는 것 — 는 lock 되어 내부 재구조화가 사용자가 보는 것을 silently 바꾸지 못하게 한다. 메커니즘은 `docs/verification/Strategy.md` 에 기록.
+- **NFR-V.4** Cross-platform parity 자료는 iOS test suite 가 소비해 자료 변경이 포팅 시점이 아닌 런타임에 즉시 surface 되도록 한다. 메커니즘은 `docs/verification/Strategy.md` 에 기록.
 
 ### 4.5 성능
 
-- **NFR-P.1** 단일 reciprocity 평가는 지원 기기에서 한 frame 의 budget 안에 넓은 margin 으로 들어맞아야 한다 (현 측정은 60 fps 한 frame 의 < 1% 사용). 데이터셋이 한 자릿수 이상 커지거나 새 estimation family 가 도입될 때 재측정 필요.
+- **NFR-P.1** 단일 reciprocity 평가는 지원 기기에서 인터랙티브 frame budget 내에 충분한 여유를 두고 들어맞아야 한다. 데이터셋이 한 자릿수 이상 커지거나 새 estimation family 가 도입될 때 재측정 필요.
 - **NFR-P.2** 사용자 입력 live preview 는 launch 카탈로그 또는 동급 카탈로그에서 stutter 하지 않는다.
 
 ### 4.6 영속화 안정성
@@ -287,20 +289,21 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 ## 7. Living document
 
-본 파일은 *요구사항* 계층이다. 사용자 필요점 ground truth (wiki problem statement) 와 요구사항의 모든 하류 사이에 위치. 본 문서는 어떤 하류 문서도 참조하지 않는다. 갱신 트리거:
+본 파일은 *요구사항* 계층이다. 사용자 필요점 ground truth (wiki problem statement) 와 요구사항의 모든 하류 사이에 위치. 하류 문서(아키텍처, 스펙, 검증)에 대한 참조는 탐색(navigational) 목적이며 규범적 의존을 형성하지 않는다. 갱신 트리거:
 
 - 새 사용자 시나리오 추가, 또는 기존 시나리오 closed (예: 다중 profile 선택 ship).
 - 새 기능 요구사항 신설 또는 기존 retire.
 - 비기능 요구사항 임계값 변화 (예: coverage target 상향, perf budget 강화).
 - 미해결 질문 (§6) 해결.
 
-각 갱신은 driver 가 된 wiki / JIRA ticket / PR 을 인용한다.
+각 갱신은 driver 가 된 wiki 페이지 또는 PR 을 인용한다.
 
 ---
 
 ## 8. Sources of intent (참고)
 
-제품 의도는 wiki 와 ship 된 commit 결정에 anchor. Source-of-truth 순서는 `wiki > JIRA > commit messages > code` (`CLAUDE.md` Companion Docs 참조).
+제품 의도는 wiki 에 anchor. 구현과 충돌 해결의 source-of-truth 순서는 `AGENTS.md`를 따른다. 아래 wiki
+항목은 제품 의도를 뒷받침하는 참고 출처다.
 
 - Wiki 3244033 — 사진가용 타이머 앱 — 문제 정의 (앱이 다루는 일곱 가지 문제)
 - Wiki 3375105 — 제품 방향 초안
@@ -308,7 +311,5 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 - Wiki 16482307 — Film Selection and Reciprocity Calculator UI (workflow 방향, 용어)
 - Wiki 9601025 — Bottom Sheet UI Architecture (현 workspace shell 구현)
 - Wiki 8847362 — Floating Timer Dock UI Design (현 다중 timer 표면 구현)
-- PTIMER-92, 95, 100, 112 — film mode reciprocity 표면 + 상세 시트 결정 기록
-- PTIMER-110 — 필름 picker 를 inline 드롭다운이 아닌 시트로 제시 (결정 기록)
 
-이들은 *참고 자료* 이며 normative 가 아니다. wiki 3244033 의 일곱 가지 문제는 모든 요구사항이 거슬러 올라가는 사용자 필요점 ground truth. 나머지 entries 는 사용자에게 보이는 결과가 위 §2, §3 에 normative 로 captured 된 특정 결정들을 기록 — wiki/PTIMER 인용은 reader 가 *왜* 특정 표현이 선택됐는지 trace 할 수 있게 한다.
+이들은 *참고 자료* 이며 normative 가 아니다. wiki 3244033 의 일곱 가지 문제는 모든 요구사항이 거슬러 올라가는 사용자 필요점 ground truth. 나머지 entries 는 사용자에게 보이는 결과가 위 §2, §3 에 normative 로 captured 된 특정 결정들을 기록 — wiki 인용은 reader 가 *왜* 특정 표현이 선택됐는지 trace 할 수 있게 한다.

@@ -1,20 +1,14 @@
 import XCTest
 @testable import PTimer
 
-/// B3 PR1/PR2 baseline harness.
-///
 /// Locks the pre-enum JSON shape of every reciprocity policy result
-/// produced by the evaluator across the expanded golden fixture. PR1
-/// recorded the baseline; PR2 introduced `ReciprocityResult` as a
-/// tagged union (whose own `Encodable` conformance now writes the new
-/// `kind`/`payload` shape) plus a `legacyShapeEncoded(using:)` adapter
-/// that reproduces the original 7-field JSON byte-for-byte. This
-/// harness exercises the adapter so the baseline keeps proving the
-/// migration is byte-equivalent.
+/// produced by the evaluator across the expanded golden fixture.
+/// `ReciprocityResult` writes a tagged-union format by default; this
+/// harness exercises `legacyShapeEncoded(using:)` to keep proving
+/// compatibility with the original 7-field JSON layout.
 ///
 /// Why a single concatenated trace?
-/// - One snapshot file = one diff. PR2 reviewers see the entire
-///   surface in a single hunk.
+/// - One snapshot file = one diff.
 /// - Cases are stable in fixture order; the harness emits explicit
 ///   `=== case N ===` separators so a regression localizes cleanly.
 ///
@@ -38,7 +32,7 @@ final class ReciprocityResultLegacyShapeBaselineTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(
             cases.count,
             70,
-            "Expected at least 70 fixture cases per B3 §10. Found \(cases.count)."
+            "Expected at least 70 fixture cases. Found \(cases.count)."
         )
 
         let encoder = Self.makeBaselineEncoder()

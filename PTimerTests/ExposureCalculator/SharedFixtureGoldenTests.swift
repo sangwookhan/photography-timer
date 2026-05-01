@@ -1,7 +1,7 @@
 import XCTest
 @testable import PTimer
 
-/// Cross-platform parity gate (B6) on the iOS side. Drives the
+/// Cross-platform parity gate on the iOS side. Drives the
 /// shipped `ExposureCalculator` and `LaunchPresetFilmCatalog` against
 /// the golden fixtures under `shared/test-fixtures/`. The same files
 /// are intended to be consumed by the future Android port; on iOS they

@@ -1,17 +1,15 @@
 import XCTest
 @testable import PTimer
 
-/// Record-replay baselines for the timer lifecycle scenarios that B4
-/// PR2 (sum-type migration) must keep byte-identical. Each scenario
-/// drives `RecordReplayHarness.underlyingTimerManager` directly with a
-/// fixed UUID so the captured trace is deterministic.
+/// Record-replay baselines for timer lifecycle scenarios. Each
+/// scenario drives `RecordReplayHarness.underlyingTimerManager`
+/// directly with a fixed UUID so the captured trace is deterministic.
 ///
 /// These tests deliberately *only* observe externally-visible side
 /// effects (lock-screen exposer, completion notification scheduler,
 /// persistence store). The trace format is locked by
-/// `RecordReplayBaseline.assert` so PR2 (which switches `TimerState`
-/// to a sum type) can prove the externally observable behavior is
-/// unchanged.
+/// `RecordReplayBaseline.assert` so internal refactors can prove
+/// externally observable behavior remains unchanged.
 ///
 /// Notes on the public surface used:
 /// - There is no dedicated `clearCompletedTimers(_:)` API. The closest
@@ -20,7 +18,7 @@ import XCTest
 ///   Scenario `completed-clear-then-restart` uses that.
 /// - The reactivation reconciliation hook is
 ///   `reconcileAfterAppBecomesActive(now:)`. Per its contract, it does
-///   *not* emit foreground completion alerts (PTIMER-67), so scenario
+///   *not* emit foreground completion alerts, so scenario
 ///   `reactivation-reconciliation` exercises that branch directly.
 final class B4TimerLifecycleBaselineTests: XCTestCase {
 
@@ -158,9 +156,9 @@ final class B4TimerLifecycleBaselineTests: XCTestCase {
         // §1.2 (running ⇄ paused is the only pause edge) and the
         // current `TimerState.pausing(at:)` implementation, this is a
         // no-op transition that nonetheless still triggers the
-        // `cancelCompletionNotification` + persistence save events
-        // — capture exactly that observable behavior here so PR2 can
-        // prove the no-op shape is preserved byte-for-byte.
+        // `cancelCompletionNotification` + persistence save events.
+        // Capture exactly that observable behavior here so the no-op
+        // shape is preserved byte-for-byte.
         harness.underlyingTimerManager.pause(id: Self.timerA)
 
         RecordReplayBaseline.assert(harness.recorder, named: "pause-while-not-running-noop")
@@ -183,7 +181,7 @@ final class B4TimerLifecycleBaselineTests: XCTestCase {
         // clock jumps to t=120 without any intervening tick.
         harness.advance(by: 120)
         // Reactivation hook reconciles running timers → completed
-        // without firing foreground alerts (PTIMER-67 contract).
+        // without firing foreground alerts.
         harness.underlyingTimerManager.reconcileAfterAppBecomesActive(
             now: harness.virtualNow
         )

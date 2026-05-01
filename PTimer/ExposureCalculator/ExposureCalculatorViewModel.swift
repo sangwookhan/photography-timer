@@ -32,23 +32,22 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// Calculation responsibility (calculator instance, inputs, result).
     /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
     /// `didSet` observers above so views and tests can bind to either
-    /// surface. The eventual ownership flip (model becomes the source
-    /// of truth) is tracked by the B1 facade-trim follow-up.
+    /// surface.
     private let calculatorModel: CalculatorModel
     private var calculator: ExposureCalculator { calculatorModel.calculator }
     private let reciprocityModel: ReciprocityModel
     /// Timer collection, metadata persistence, and lifecycle ops. The
-    /// ViewModel republishes `timerWorkspaceModel.$timers` into its own
-    /// `@Published var timers` so existing view bindings, the lock-
-    /// screen Combine subscription, and the record-replay smoke test
-    /// continue to read the legacy surface unchanged.
+    /// facade republishes `timerWorkspaceModel.$timers` into its own
+    /// `@Published var timers` so view bindings, the lock-screen
+    /// Combine subscription, and the record-replay smoke test all
+    /// observe the same published collection.
     private let timerWorkspaceModel: TimerWorkspaceModel
     private var timerManager: TimerManager { timerWorkspaceModel.timerManager }
     /// Preset film catalog, active film identity slice, and the
-    /// calculator-context persistence store. The ViewModel republishes
+    /// calculator-context persistence store. The facade republishes
     /// `filmSelectionModel.$activeContext` into its own
-    /// `@Published var activeCalculatorContext` so existing observers
-    /// of the legacy surface continue to work unchanged.
+    /// `@Published var activeCalculatorContext` so observers see a
+    /// single source of truth.
     private let filmSelectionModel: FilmSelectionModel
     private var presetFilms: [FilmIdentity] { filmSelectionModel.presetFilms }
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
@@ -110,9 +109,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
         // Bind republish before calling `restorePersistedCalculatorContext`
         // so the initial restore-time mutation of
         // `filmSelectionModel.activeContext` propagates into the
-        // ViewModel's `@Published var activeCalculatorContext` —
-        // mirrors the pre-decomposition behavior where the ViewModel
-        // mutated its own published context inside the restore path.
+        // ViewModel's `@Published var activeCalculatorContext` so
+        // restore-time context mutations are reflected on the published
+        // surface used by views.
         timerWorkspaceModel.$timers
             .assign(to: &$timers)
         filmSelectionModel.$activeContext
@@ -658,13 +657,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func restorePersistedCalculatorContext() {
-        // PR4 of B1 — `FilmSelectionModel` owns the persistence store
-        // and the film identity slice; it returns the resolved film
-        // selection plus the raw `baseShutterSeconds` / `ndStop`
-        // values from the snapshot. The ViewModel applies those calc
-        // inputs (which live on `CalculatorModel`) and writes back
-        // a clean snapshot via `persistCalculatorContext()` —
-        // preserving the legacy ordering byte-for-byte.
+        // `FilmSelectionModel` restores the persisted film selection
+        // and returns the stored base-shutter/ND values. The ViewModel
+        // sanitizes and applies those calculation inputs, then writes a
+        // normalized snapshot.
         guard let restored = filmSelectionModel.restoreContext() else {
             return
         }

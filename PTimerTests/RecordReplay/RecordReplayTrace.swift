@@ -8,8 +8,8 @@ import Foundation
 /// `"exposer.expose"`). `payload` is a canonical multi-line text
 /// rendering of the event's input — `Swift.dump` for v1. The same
 /// rationale that justified `Swift.dump` for `DisplayStateSnapshot`
-/// (B8) applies here: stable per Swift version, diff-friendly,
-/// no extra dependency.
+/// applies here: stable per Swift version, diff-friendly, no extra
+/// dependency.
 struct RecordReplayEvent: Equatable {
     let step: Int
     let kind: String

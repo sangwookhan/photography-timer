@@ -24,52 +24,16 @@ To run a single test class, add `-only-testing PTimerTests/<ClassName>` to the c
 
 ## Architecture Overview
 
-PTimer is a portrait-only iPhone app for film photography exposure calculation and countdown timers. The architecture has strict layer boundaries — see the section below on what must not cross them.
+PTimer is a portrait-only iPhone app for film photography exposure
+calculation and countdown timers. The architecture has strict layer
+boundaries (one-way reads, single-owner state, dedicated coordinators
+for external surfaces) and a small set of fitness rules enforced via
+SwiftLint.
 
-### Layer Stack (top to bottom)
-
-**SwiftUI Views** (`*Screen.swift`, `BottomSheetWorkspaceShell.swift`)
-- Render only. No business logic. Consume state structs emitted by the view model.
-
-**View Model** (`ExposureCalculatorViewModel.swift`)
-- Single `@MainActor ObservableObject` that orchestrates all app state.
-- Owns `ExposureCalculator`, `TimerManager`, `ReciprocityCalculationPolicyEvaluator`, persistence stores, and `LockScreenTimerTargetCoordinator`.
-- Produces display-state structs consumed by views (e.g. `FilmModeExposureResultState`, `FilmModeDetailsDisplayState`). These are computed properties, not stored state.
-- Detects XCTest runtime (`XCTestRuntime.isRunningTests`) and injects NoOp persistence/live-activity implementations so unit tests never hit UserDefaults or ActivityKit.
-
-**Domain / Policy**
-- `ExposureCalculator.swift` — pure ND exposure math, shutter formatting, snap-to-full-stop logic.
-- `ReciprocityCalculationPolicy.swift` — `ReciprocityCalculationPolicyEvaluator` evaluates a `ReciprocityProfile` against a metered exposure. Evaluation order is a contract: exact table → threshold no-correction → interpolated/extrapolated table → formula → advisory → unsupported.
-- `ReciprocityConfidencePresentation.swift` — maps a policy result to a `ReciprocityConfidencePresentation` used for badge styling and text display.
-- `ReciprocityDomain.swift` — all domain value types: `FilmIdentity`, `ReciprocityProfile`, rule variants (`threshold`, `formula`, `table`, `advisory`), and adjustment types. Fully `Codable`.
-
-**Timer Runtime** (`Timers/`)
-- `TimerManager.swift` — manages running/paused/completed `TimerState` objects, persistence via `UserDefaultsTimerPersistenceStore`, and notification scheduling.
-- `LockScreenTimerLiveActivity.swift` — ActivityKit Live Activity for the lock screen widget.
-- `TimerCompletionNotificationScheduler.swift`, `CompletedRelativeTimeFormatter.swift` — supporting timer concerns.
-
-**Film Context / Persistence** (`ExposureCalculatorFilmContext.swift`)
-- `ActiveExposureCalculatorContext` — transient view-model state (selected film, base shutter, ND stop).
-- `PersistentExposureCalculatorContextSnapshot` / `UserDefaultsExposureCalculatorContextPersistenceStore` — persists calculator context across relaunches.
-- All persistence stores follow a NoOp/real protocol pair pattern for testability.
-
-**Film Catalog** (`PresetFilmCatalog.swift`, `Resources/LaunchPresetFilmCatalog.json`)
-- Preset films load from the bundled JSON at launch via `LaunchPresetFilmCatalog`.
-
-**Widgets** (`PTimerWidgets/`)
-- Separate target. `LockScreenTimerTargetWidget.swift` renders the lock screen timer widget.
-
-**App entry** (`PTimerApp.swift`)
-- `@UIApplicationDelegateAdaptor` enforces portrait orientation at the UIKit boundary.
-- `ActivityKitLockScreenTimerTargetExposer` / `LockScreenTimerTargetCoordinator` manage the Live Activity lifecycle.
-
-### Tests (`PTimerTests/`)
-
-Test files mirror source structure:
-- `ExposureCalculator/` — calculation accuracy, ViewModel state, film catalog loading
-- `Reciprocity/` — policy evaluation, confidence mapping
-- `Timers/` — TimerManager lifecycle, time formatting
-- `App/` — workspace shell behavior
+The current structure — layer-by-layer file ownership, dependency
+direction, naming conventions, and source-of-truth ownership table —
+lives in [`docs/architecture/Architecture.md`](docs/architecture/Architecture.md). Read that document
+when you need to know which file owns which responsibility.
 
 ## Protected Areas
 
@@ -109,6 +73,9 @@ Ticket context lines use `PTIMER-ID Title` format. Wrapped continuation lines us
 
 ### Documentation map
 
+Each document has a single role; cross-document references stay
+single-rooted on the English paths.
+
 - **`docs/requirements/Requirements.md`** — user-scenario-driven
   requirements layer between the user-need wiki and the behavior
   contracts. Personas, core scenarios with goals + steps + boundary
@@ -120,12 +87,17 @@ Ticket context lines use `PTIMER-ID Title` format. Wrapped continuation lines us
   app need to do, and why".
 - **`docs/specs/{Calculator,Timer,UI,DomainSchema}.md`** — behavior
   contracts. Authoritative description of *what* the system does,
-  written so the documents survive refactoring. Wiki and PTIMER-tagged
-  commits are cited as `[wiki <page_id>]` and `(PTIMER-XX)`. Specs
-  deliberately contain no code identifiers, file paths, or line
-  numbers. Specs realize the requirements above at contract level.
-- **`docs/verification/`** — five-layer verification strategy and
-  rerunnable manual procedures.
+  written so the documents survive refactoring. Specs deliberately
+  contain no code identifiers, file paths, or line numbers. Specs
+  realize the requirements above at contract level.
+- **`docs/architecture/Architecture.md`** — current code structure:
+  layer stack, file-level responsibilities, dependency direction,
+  source-of-truth ownership, naming conventions, and architectural
+  fitness rules. Read this when you need to know which file owns
+  which responsibility.
+- **`docs/verification/Strategy.md`** — five-layer verification
+  strategy. `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md`
+  are rerunnable manual procedures.
 - **`docs/conventions/ErrorModel.md`** — when to use `Optional`,
   `throws`, `Result`, and `precondition` in each layer.
 
@@ -144,9 +116,10 @@ When code under `PTimer/` disagrees with a spec under `docs/specs/`,
 treat it as either a bug or a spec drift, not as a license to ignore
 the spec.
 
-1. If wiki, JIRA, or commit history confirms a deliberate change,
+1. Follow the source-of-truth order in `AGENTS.md`.
+2. If higher-priority guidance confirms a deliberate behavior change,
    update the spec.
-2. Otherwise, change the code to match the spec.
+3. Otherwise, change the code to match the spec.
 
 The Protected Areas above carry a stronger form of this rule: a spec
 change requires an explicit ticket; do not silently re-derive behavior
@@ -171,7 +144,7 @@ from code.
   the lifecycle of an external surface (Live Activity, dock,
   workspace) and reconcile its state. Coordinators are wiring; they
   do not hold business state. Example:
-  `LockScreenTimerTargetCoordinator`.
+  `LockScreenTimerCoordinator`.
 - **`*Presenter` suffix** — pure-value transforms from domain state
   into display state. Presenters take inputs as parameters (or an
   input struct), produce display-state output, and have no
@@ -194,7 +167,7 @@ from code.
 
 A baseline `.swiftlint.yml` lives at the repo root. The Phase 0 baseline
 is intentionally relaxed to avoid churn; size and complexity thresholds
-are scheduled for a later commit (B2 in the action plan). Run locally:
+may be tightened as the codebase evolves. Run locally:
 
 ```bash
 swiftlint lint

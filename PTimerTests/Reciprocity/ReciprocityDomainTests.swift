@@ -722,7 +722,7 @@ final class ReciprocityDomainTests: XCTestCase {
     }
 }
 
-// PTIMER-113: Tests for the unofficial practical secondary profile for Portra 400.
+// Tests for the unofficial practical secondary profile for Portra 400.
 final class Portra400SecondaryProfileTests: XCTestCase {
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
     private let filmID = "kodak-portra-400"

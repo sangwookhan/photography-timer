@@ -2,8 +2,16 @@
 
 **Type**: User-scenario-driven requirements document.
 **Audience**: Product / engineering / future contributors who need to know what the app shall do.
-**Direction of influence**: requirements → behavior contracts → code, one-way. This document does not depend on, cite, or defer to any other document downstream of it. Where a requirement says "the system shall X," the *what* and *why* live here; the *how* is decided downstream.
+**Direction of influence**: requirements → behavior contracts → code, one-way. Requirements is normative for product intent; downstream documents may refine how each requirement is specified, structured, or verified. References to downstream documents are navigational only and do not make Requirements depend on those documents. Where a requirement says "the system shall X," the *what* and *why* live here; the *how* is decided downstream.
 **Phrasing rule**: every requirement shall describe a *user-visible need* or an *integrity invariant*. Implementation specifics (concrete pixel sizes, refresh intervals, persistence keys, lint rule ids, baseline file names, prop wrapper choices) belong downstream and shall not appear here.
+
+**Document boundary**. This document defines *what the app shall do*. It does not define:
+
+- *how* the system is structured — see `docs/architecture/Architecture.md`;
+- *what behavior contracts* realize each requirement — see `docs/specs/`;
+- *how* changes are verified — see `docs/verification/Strategy.md`.
+
+When a requirement states a non-functional obligation (e.g. determinism, persistence stability), the obligation lives here; the mechanism that achieves it lives in the relevant downstream document.
 
 ---
 
@@ -50,7 +58,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Goal.** Photographer with a film camera meters the scene, then wants to know the *corrected* exposure that compensates for the film's reciprocity characteristic.
 
 **Steps.**
-1. Open the film picker sheet (the picker is a dedicated sheet, not an in-screen dropdown — PTIMER-110).
+1. Open the film picker sheet (the picker is a dedicated sheet, not an in-screen dropdown).
 2. Select a preset film stock from the launch catalog.
 3. Read the film row's authority subtitle to confirm whether the active reciprocity profile is **Official guidance** (manufacturer-published) or **Unofficial practical** (community-derived). The label is always present for the authorities shipped in the launch dataset.
 4. Set base shutter and ND as in Scenario 1.
@@ -70,7 +78,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Steps.**
 1. From the result section, the user activates a Start Timer affordance on the row whose value they want to time. In film workflow there are two start affordances — one on the Adjusted Shutter row, one on the Corrected Exposure row — and the user picks based on intent.
-2. The timer enters a *workspace surface* that remains visible alongside the calculator. The user can adjust ND or swap films for the next shot without dismissing the timer or losing sight of it. (The current implementation places the surface as a bottom sheet; left/right/top placements are an open design decision, not a requirement.)
+2. The timer enters a *workspace surface* that remains visible alongside the calculator. The user can adjust ND or swap films for the next shot without dismissing the timer or losing sight of it. The workspace surface's exact placement is a design decision, not a requirement.
 3. The workspace surface communicates, for each running timer: remaining time, *some sense of progress* over multiple time scales (so a 30 s timer and a 30 min timer both feel responsive), and a distinguishing identity cue independent of name and time text.
 4. The user can switch the workspace surface between a glanceable summary mode and an expanded mode that shows every running, paused, and completed timer together.
 5. When the timer's duration elapses, the system surfaces a completion signal that reaches the user even if they are not looking at the phone (camera in hand, phone in pocket), and the timer's card transitions to a "Done" state in-app.
@@ -208,7 +216,7 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-6.1** Calculation and timer execution shall live on a single primary surface. The user shall not navigate to a separate "timer screen" to monitor a running exposure. (Scenario 3, 5)
 - **FR-6.2** The primary surface shall adapt to the device's vertical room without rearranging its conceptual structure: the same elements are present at every density, only the spacing changes. (Scenario 1)
 - **FR-6.3** The workspace surface shall offer the user two distinct presentations — a glanceable summary that prioritizes the calculator above, and an expanded view that prioritizes the timer list. Intermediate states are out of scope. (Scenario 3, 5)
-- **FR-6.4** The workspace surface shall coexist with the calculator without obscuring it; the user can adjust calculator inputs while a timer runs without dismissing or moving the timer surface. (Scenario 3, 5; current implementation places the surface at screen bottom — placement is a design choice, not a requirement.)
+- **FR-6.4** The workspace surface shall coexist with the calculator without obscuring it; the user can adjust calculator inputs while a timer runs without dismissing or moving the timer surface. (Scenario 3, 5; placement is a design choice, not a requirement.)
 - **FR-6.5** The reciprocity details surface shall present its sections in a fixed order — *Profile / source authority* first, then *Formula or Reference data*, then *Graph*, then *Sources*. The order communicates that the trustworthy guidance comes from the data, not from the visual aid. (Scenario 2)
 
 ### 3.7 Orientation and inputs
@@ -234,19 +242,21 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 - **NFR-A.1** Production code shall not detect whether it is running under tests. The seam between production and test collaborators is dependency injection, not runtime branching.
 - **NFR-A.2** Concerns that belong to a specific external surface (lock-screen widget, notifications) shall not leak into the view model. Each external surface has a dedicated owner.
-- **NFR-A.3** The four feature models (calculator / reciprocity / timer / film selection) shall not reference each other directly. Cross-model wiring is the responsibility of a composition seam.
-- **NFR-A.4** A view shall observe at most one feature model directly. Cross-cutting display state is composed at a higher seam.
+- **NFR-A.3** Feature-scoped state shall be partitioned so no two features depend on each other directly. Cross-feature wiring is the responsibility of a composition seam. (The current decomposition is described in `docs/architecture/Architecture.md`.)
+- **NFR-A.4** A view shall observe at most one feature's state directly. Cross-cutting display state is composed at a higher seam.
 
 ### 4.4 Verification
 
-- **NFR-V.1** Domain and policy logic shall have unit-test coverage that materially detects regressions on the values the user sees. The current baseline (≥ 80% on domain layers) is documented separately and is the floor, not the ceiling.
-- **NFR-V.2** Type-driven changes (reciprocity result form, timer state representation) shall be guarded by record-replay baselines that prove the externally observable behavior is unchanged.
-- **NFR-V.3** Cross-cutting display state — what the calculator screen shows in each user scenario — shall be locked by committed baselines so an internal restructure cannot silently alter what the user sees.
+- **NFR-V.1** Domain and policy logic shall have unit-test coverage that materially detects regressions on the values the user sees. The numeric target is recorded in `docs/verification/Strategy.md`.
+- **NFR-V.2** Type-driven changes (reciprocity result form, timer state representation) shall be guarded by mechanisms that prove the externally observable behavior is unchanged across the change.
+- **NFR-V.3** Cross-cutting display state — what the calculator screen shows in each user scenario — shall be locked so an internal restructure cannot silently alter what the user sees.
 - **NFR-V.4** Cross-platform parity fixtures shall be consumed by the iOS test suite so a fixture mutation surfaces against the runtime immediately, not at port time.
+
+(Verification mechanisms are described in `docs/verification/Strategy.md`.)
 
 ### 4.5 Performance
 
-- **NFR-P.1** A single reciprocity evaluation shall fit comfortably within one frame's budget on supported devices, with a wide margin (current measurement uses < 1% of one frame at 60 fps). Re-measurement is required when the dataset grows by an order of magnitude or a new estimation family is introduced.
+- **NFR-P.1** A single reciprocity evaluation shall fit comfortably within the interactive frame budget on supported devices. Re-measurement is required when the dataset grows by an order of magnitude or a new estimation family is introduced.
 - **NFR-P.2** The user-input live preview shall not stutter on the launch catalog or any catalog of comparable size.
 
 ### 4.6 Persistence stability
@@ -285,20 +295,22 @@ These are not requirements — they are points where the wiki / tickets reserve 
 
 ## 7. Living document
 
-This file is the *requirements* layer. It sits between the user-need ground truth (the wiki problem statement) and everything downstream of requirements. It does not reference any downstream document. Update triggers:
+This file is the *requirements* layer. It sits between the user-need ground truth (the wiki problem statement) and everything downstream of requirements. References to downstream documents (architecture, specs, verification) are navigational only. Update triggers:
 
 - A new user scenario is added, or a scenario is closed (e.g. multi-profile selection ships).
 - A new functional requirement is introduced or an existing one is retired.
 - A non-functional requirement threshold changes (e.g. coverage target raised, perf budget tightened).
 - An open question (§6) is resolved.
 
-Each update shall cite the wiki / JIRA ticket / PR that drove it.
+Each update shall cite the wiki page or PR that drove it.
 
 ---
 
 ## 8. Sources of intent (reference)
 
-The product intent is anchored in the wiki and in shipped commit decisions. Source-of-truth order is `wiki > JIRA > commit messages > code` (per `CLAUDE.md` Companion Docs).
+The product intent is anchored in the wiki. For implementation and
+conflict resolution, follow the source-of-truth order in `AGENTS.md`;
+the wiki references below are supporting product-intent sources.
 
 - Wiki 3244033 — 사진가용 타이머 앱 — 문제 정의 (the seven problems this app addresses)
 - Wiki 3375105 — 제품 방향 초안 (product direction)
@@ -306,7 +318,5 @@ The product intent is anchored in the wiki and in shipped commit decisions. Sour
 - Wiki 16482307 — Film Selection and Reciprocity Calculator UI (workflow direction, terminology)
 - Wiki 9601025 — Bottom Sheet UI Architecture (current workspace shell implementation)
 - Wiki 8847362 — Floating Timer Dock UI Design (current multi-timer surface implementation)
-- PTIMER-92, 95, 100, 112 — film mode reciprocity surfaces and details sheet decisions of record
-- PTIMER-110 — film picker presented as a sheet rather than an in-screen dropdown (decision of record)
 
-These are *reference material*, not normative. The seven problems from wiki 3244033 are the user-need ground truth that every requirement traces back to. The other entries record specific decisions whose user-visible outcome is captured normatively in §2 and §3 above; the wiki/PTIMER citations let a reader trace *why* a particular wording was chosen.
+These are *reference material*, not normative. The seven problems from wiki 3244033 are the user-need ground truth that every requirement traces back to.

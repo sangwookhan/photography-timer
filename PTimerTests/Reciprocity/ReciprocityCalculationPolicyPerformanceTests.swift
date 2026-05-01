@@ -11,10 +11,8 @@ import XCTest
 /// Test Navigator to inspect baselines and set thresholds. They
 /// are intentionally separate from the correctness tests so
 /// `xcodebuild test` continues to pass-fast on CI.
-///
-/// See `Docs/StructureImprovement/HotPathConcurrency.md` for the
-/// procedure to expand this with Instruments-based picker-scroll
-/// measurements.
+/// Picker-scroll Instruments measurements are tracked separately from
+/// this test suite.
 final class ReciprocityCalculationPolicyPerformanceTests: XCTestCase {
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 

@@ -10,8 +10,7 @@ import XCTest
 /// directly (rather than `viewModel.startTimer(from:)` which would
 /// allocate a fresh UUID via `UUID()`) so the trace is reproducible
 /// across runs. Higher-level scenarios that exercise the ViewModel
-/// metadata path will need to inject UUIDs another way; that is left
-/// to whichever B1/B4 task introduces the requirement.
+/// metadata path will need to inject UUIDs another way.
 final class RecordReplayBaselineSmokeTests: XCTestCase {
 
     @MainActor

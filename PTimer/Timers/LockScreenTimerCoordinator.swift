@@ -42,7 +42,7 @@ final class LockScreenTimerCoordinator {
         }
     }
 
-    // PTIMER-69 selection rule:
+    // Selection rule:
     // 1. Choose the running timer with the earliest endDate.
     // 2. If endDate is tied, prefer the existing workspace presentation order.
     // 3. If that is still tied, prefer the stable id order.

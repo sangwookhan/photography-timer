@@ -2,7 +2,7 @@
 
 **Domain**: The data model behind film identities, reciprocity profiles, manufacturer rules, and the launch preset catalog.
 
-This document specifies the **shape and meaning** of the domain — what fields exist, what they mean, what invariants hold. The encoding format (currently JSON, with a `kind` discriminator on union types) is a serialization detail recorded in §10; the spec body is platform- and serializer-neutral.
+This document specifies the **shape and meaning** of the domain — what fields exist, what they mean, what invariants hold. The encoding format (JSON, with a `kind` discriminator on union types) is a serialization detail recorded in §10; the spec body is platform- and serializer-neutral.
 
 ---
 
@@ -29,12 +29,12 @@ Calculation results (the output of evaluating a profile against a metered exposu
   - `unknown` — present for forward-compatible decoding only; never written.
 - **canonicalStockName** — non-empty, unique within the catalog. The display-default name for the film. Examples: `"Kodak TRI-X 400"`, `"ILFORD HP5 Plus"`.
 - **manufacturer** — original manufacturer string when known. Repackaged brand labels (a film sold under different labels) shall not appear here; they go in `brandLabel`.
-- **productionStatus** — one of `current`, `discontinued`, `unknown`. Launch dataset entries shall have `current`. (PTIMER-86)
+- **productionStatus** — one of `current`, `discontinued`, `unknown`. Launch dataset entries shall have `current`.
 - **profiles** — array of [reciprocity profiles](#3-reciprocity-profile). The launch dataset shall contain exactly one entry per identity.
 
 ### 2.2 Optional fields
 
-- **brandLabel** — string for the secondary brand under which the film is currently sold (e.g. a manufacturer-rebranded variant).
+- **brandLabel** — string for the secondary brand under which the film is sold (e.g. a manufacturer-rebranded variant).
 - **aliases** — array of strings; alternate names known to refer to the same film.
 - **userMetadata** — user-editable metadata (see §2.3); absent for preset entries.
 
@@ -46,7 +46,7 @@ For non-preset (or user-augmented) identities:
 - **tags** — array of strings.
 - **notes** — array of free-form note strings.
 
-Preset launch entries shall not carry user metadata. (PTIMER-86)
+Preset launch entries shall not carry user metadata.
 
 ---
 
@@ -72,9 +72,9 @@ A profile describes how a film stock responds to long-exposure metered values.
 
 Every reciprocity profile carries provenance:
 
-- **kind** — one of `manufacturer_published`, `manufacturer_secondary` (e.g. data sheets reissued through licensees), `vendor_published`, `community_field_tested`, `historical_archive`. The launch dataset shall use only `manufacturer_published`. (PTIMER-86)
+- **kind** — one of `manufacturer_published`, `manufacturer_secondary` (e.g. data sheets reissued through licensees), `vendor_published`, `community_field_tested`, `historical_archive`. The launch dataset shall use only `manufacturer_published`.
 - **authority** — one of `official`, `field_tested`, `anecdotal`. The launch dataset shall use only `official`.
-- **confidence** — one of `unknown`, `high`, `medium`, `low`. The default for omitted is `unknown`. The launch dataset typically uses `high`.
+- **confidence** — one of `unknown`, `high`, `medium`, `low`. The default for omitted is `unknown`. The launch dataset uses `high`.
 - **publisher** — required non-empty string (the entity that published the data, e.g. `"Kodak"`, `"ILFORD HARMAN"`).
 - **title** — optional string referring to a specific document or page.
 - **citation** — optional string with a more precise reference (URL, page number).
@@ -103,7 +103,7 @@ Example: `Kodak PORTRA 400` reports no correction below ~1 s; beyond, manufactur
 Indicates a closed-form correction.
 
 - **meteredRange** — optional [time range](#7-reciprocity-time-range) constraining the formula's domain. Open-ended `meteredRange` shall mean "applies wherever the calculation policy reaches the formula step".
-- **formula** — currently only the **exponent power** form is defined: `T_c = T_m^P` with optional coefficient and offset (`T_c = coefficient × T_m^exponent + offsetSeconds`). The structure shall include the source's published equation string for transparency.
+- **formula** — the only defined formula form is the **exponent power** form: `T_c = T_m^P` with optional coefficient and offset (`T_c = coefficient × T_m^exponent + offsetSeconds`). The structure shall include the source's published equation string for transparency.
 - **additionalAdjustments** — array of supplementary adjustments (e.g. development-time hints) that the calculation does not consume.
 - **notes** — array of free-form notes.
 
@@ -153,7 +153,7 @@ The metadata block carried by every form contains:
 - **supportingNotes** — array of human-readable strings.
 - **usedReferencePoints** — array of references to the rows or formula coefficients that informed the result.
 
-The presence of `correctedExposure` is determined structurally by the form (Quantified vs Advisory-only/Unsupported); a result whose form claims a corrected exposure but lacks the payload (or vice versa) is by construction unrepresentable. (PTIMER-90, PTIMER-118)
+The presence of `correctedExposure` is determined structurally by the form (Quantified vs Advisory-only/Unsupported); a result whose form claims a corrected exposure but lacks the payload (or vice versa) is by construction unrepresentable.
 
 ---
 
@@ -209,7 +209,7 @@ Field omission and explicit `null` shall be treated as equivalent on decode. The
 
 ## 11. Catalog validation rules
 
-A bundled launch catalog shall pass these checks before the runtime accepts it. (PTIMER-86, PTIMER-96)
+A bundled launch catalog shall pass these checks before the runtime accepts it.
 
 1. The film identity array is non-empty.
 2. Every identity has a non-empty `id`, unique across the catalog.
@@ -240,7 +240,7 @@ The system may bundle additional **non-launch profiles** *outside* the launch ca
 - be selectable by the user as a *secondary alternative* on a film identity that already has a launch (official) primary profile;
 - not pass through the §11 launch-catalog validator (validation rules in §11 apply only to the launch catalog file).
 
-Example: an unofficial practical formula `T_c = T_m^1.34` for Kodak PORTRA 400 is bundled outside the launch catalog as a secondary alternative to PORTRA 400's official threshold-only profile. (PTIMER-112)
+Example: an unofficial practical formula `T_c = T_m^1.34` for Kodak PORTRA 400 is bundled outside the launch catalog as a secondary alternative to PORTRA 400's official threshold-only profile.
 
 The presentation contract for these profiles lives in [UI Spec](UI.md) §2.1 (explicit "Official guidance" / "Unofficial practical" subtitles) and §2.6 (Authority row visible in details sheet for all profiles).
 
@@ -253,7 +253,7 @@ The domain shall **not**:
 1. Encode interpolation or extrapolation policy in any rule's data shape. Domain stores manufacturer points verbatim; calculation policy decides interpretation.
 2. Synthesize provenance fields to fill gaps. Missing optional fields stay absent.
 3. Mix repackaged-brand identities with original-manufacturer identities under one entry. Repackaging is a `brandLabel` annotation on the original identity, not a parallel record.
-4. Allow a calculation result that claims a corrected exposure without carrying the value, or carries a corrected-exposure value without claiming one. The contradictory pairing is unrepresentable by the result's form. (PTIMER-90, PTIMER-118)
+4. Allow a calculation result that claims a corrected exposure without carrying the value, or carries a corrected-exposure value without claiming one. The contradictory pairing is unrepresentable by the result's form.
 5. Allow a single table row to mix estimation families *for the purpose of interpolation*. Interpolation reads exactly one estimation family per row: when both `correctedTime` and `stopDelta`/`multiplier` are recorded, calculation policy selects `correctedTime` and treats the others as supplementary annotations (development advisories, color-filter notes) rather than alternative estimation paths. A row that records only secondary annotations (e.g. `stopDelta` plus a development adjustment) keeps the stop-delta family. The forbidden case is *ambiguous interpolation* — two competing primary estimation families on the same row with no precedence rule. (Calculator Spec §3.3)
 6. Allow a launch preset profile to carry user metadata.
 7. Ignore catalog validation. A failing catalog is a load-time error, not a soft-warn.
@@ -266,7 +266,7 @@ The domain shall **not**:
 - **User-defined film schema.** Wiki 15138817 lists user-defined films as a validation requirement; the entry/edit UX, validation rules, and persistence boundary are not specified.
 - **Multi-profile support.** Reserved by domain (an identity may carry multiple profiles) but the selection mechanism (which profile is "active" at a given metered exposure, push/pull semantics, developer-time variants) is not specified.
 - **Color correction metadata.** Velvia-style "M color correction" is mentioned in wiki 15138817 but has no schema entry. Currently captured (if at all) as free-form `notes`.
-- **Development-time adjustments.** Tri-X-style "dev −10%" is part of wiki guidance and embedded in commit-locked sample data, but has no first-class schema field.
+- **Development-time adjustments.** Development-time adjustment metadata (e.g. Tri-X-style "dev −10%" from wiki guidance) is not represented as a first-class schema field.
 - **Launch dataset growth.** The bundled catalog is below the 34-film wiki target. There is no prioritized work plan in spec form for closing the gap.
 - **Repackaging links.** The schema accepts `brandLabel` and `aliases` but does not formalize a "this brand X is the same film as identity Y" link suitable for runtime equivalence checks.
 - **Encoding versioning.** The encoding (JSON with `kind` discriminator) is informative-only in this spec, but no version field exists in the catalog. A future format change has no defined migration story.
@@ -283,10 +283,3 @@ These are *reference material*, not normative.
 - 15237121 — Reciprocity Table Calculation Policy Notes (responsibility split, deferred items)
 - 15761409 — Reciprocity Table Interpolation and Calculation Policy Draft (responsibility split, metadata, policy direction)
 
-**Commits (decisions of record)**
-- PTIMER-17 — Validation samples aligned to the domain model; round-trip-safe profiles for Velvia 50 and Tri-X table boundaries
-- PTIMER-86 — Launch preset policy: ship one primary preset profile per film identity; archival / unofficial alternatives stay outside the launch bundle
-- PTIMER-90 — Calculation result contract: domain shape locked; impossible result combinations rejected at decode
-- PTIMER-92 — Film-mode binding to the bundled launch preset catalog
-- PTIMER-96 — Catalog externalized to a bundled JSON resource with explicit decode diagnostics
-- PTIMER-112 — Non-launch unofficial profile bundled outside the launch catalog (PORTRA 400 unofficial practical formula, `T_c = T_m^1.34`); same domain shape, honest provenance (`unofficial` authority), selectable as secondary alternative

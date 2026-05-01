@@ -1,12 +1,7 @@
 import Combine
 import Foundation
 
-/// `FilmSelectionModel` carries the *film picker / catalog / active
-/// film identity* responsibility extracted from the legacy
-/// `ExposureCalculatorViewModel` monolith as the fourth step of B1
-/// (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`).
-///
-/// PR4 of 6 — owns the film selection slice. The model owns:
+/// `FilmSelectionModel` owns the film-selection slice. The model owns:
 /// - the preset film catalog (`presetFilms: [FilmIdentity]`)
 /// - the calculator-context persistence store
 /// - the active film identity slice (`selectedPresetFilm` +
@@ -14,21 +9,15 @@ import Foundation
 /// - the film selection / clearing operations (`selectEntry`,
 ///   `selectPresetFilm`, `clearSelectedPresetFilm`)
 /// - the calculator-context persistence side effects
-///   (`restoreSelection`, `persistContext`, `clearPersistedContext`)
-///
-/// PR4 ships the model as `ObservableObject` + `@Published` so the
-/// ViewModel's existing `@Published var activeCalculatorContext`
-/// surface republishes through `assign(to:)` without a Combine ↔
-/// `@Observable` bridge — same approach as PR3's
-/// `TimerWorkspaceModel`.
+///   (`restoreContext`, `persistContext`, `clearPersistedContext`)
 ///
 /// `ActiveExposureCalculatorContext` carries only the film slice; the
 /// base shutter and ND stop persisted alongside the selection are
 /// owned by `CalculatorModel`. The model takes closures so it can
 /// pull the current calc inputs at persistence time without holding
 /// a direct reference to the calculator model. This preserves the
-/// pre-decomposition persistence schema (`selectedPresetFilmID +
-/// baseShutterSeconds + ndStop` saved as one snapshot) byte-for-byte.
+/// persistence schema (`selectedPresetFilmID + baseShutterSeconds +
+/// ndStop` saved as one snapshot) is preserved byte-for-byte.
 @MainActor
 final class FilmSelectionModel: ObservableObject {
     let presetFilms: [FilmIdentity]
@@ -39,12 +28,10 @@ final class FilmSelectionModel: ObservableObject {
     private let currentBaseShutterSeconds: () -> Double
     private let currentNDStop: () -> Int
 
-    /// Result of restoring the persisted context. Mirrors the legacy
-    /// ViewModel's `restorePersistedCalculatorContext` decision tree:
-    /// either we have a valid restored snapshot (potentially with a
-    /// missing film id, in which case the selection is dropped to
-    /// nil and the caller writes back a clean snapshot), or there is
-    /// nothing to restore.
+    /// Result of restoring the persisted context. Either we have a
+    /// valid restored snapshot (potentially with a missing film id, in
+    /// which case the selection is dropped to nil and the caller writes
+    /// back a clean snapshot), or there is nothing to restore.
     struct RestoredContext {
         let selectedPresetFilm: FilmIdentity?
         let baseShutterSeconds: Double?
@@ -78,9 +65,8 @@ final class FilmSelectionModel: ObservableObject {
 
     // MARK: - Selection mutations
 
-    /// Selects an entry from the film picker. Mirrors the legacy
-    /// ViewModel's `selectEntry(_:)` exactly: assigns both the film
-    /// and profile override, then persists the combined snapshot.
+    /// Selects an entry from the film picker: assigns both the film and
+    /// profile override, then persists the combined snapshot.
     func selectEntry(_ entry: FilmSelectorEntry) {
         activeContext.selectedPresetFilm = entry.film
         activeContext.selectedProfileOverride = entry.profileOverride
@@ -88,15 +74,13 @@ final class FilmSelectionModel: ObservableObject {
     }
 
     /// Selects a preset film without overriding the profile choice.
-    /// Mirrors the legacy ViewModel's `selectPresetFilm(_:)`.
     func selectPresetFilm(_ film: FilmIdentity) {
         activeContext.selectedPresetFilm = film
         activeContext.selectedProfileOverride = nil
         persistContext()
     }
 
-    /// Clears the active film selection. Mirrors the legacy
-    /// ViewModel's `clearSelectedPresetFilm()`.
+    /// Clears the active film selection.
     func clearSelectedPresetFilm() {
         activeContext.selectedPresetFilm = nil
         activeContext.selectedProfileOverride = nil
@@ -106,8 +90,8 @@ final class FilmSelectionModel: ObservableObject {
     /// Drops the active selection without persisting. The caller (the
     /// ViewModel's `resetFilmModeWorkingContext`) follows up with a
     /// `clearPersistedContext()` call once it has also reset the calc
-    /// inputs to defaults — preserving the legacy "reset → clear
-    /// snapshot" ordering.
+    /// inputs to defaults — preserving the "reset → clear snapshot"
+    /// ordering.
     func dropActiveSelectionWithoutPersisting() {
         activeContext.selectedPresetFilm = nil
         activeContext.selectedProfileOverride = nil
@@ -151,8 +135,7 @@ final class FilmSelectionModel: ObservableObject {
 
     /// Writes the combined `(selectedPresetFilmID + baseShutterSeconds
     /// + ndStop)` snapshot to the persistence store, pulling the calc
-    /// inputs from the closures supplied at init time. Schema is
-    /// byte-identical to the pre-decomposition behavior.
+    /// inputs from the closures supplied at init time.
     func persistContext() {
         contextPersistenceStore.saveSnapshot(
             PersistentExposureCalculatorContextSnapshot(
@@ -173,8 +156,7 @@ final class FilmSelectionModel: ObservableObject {
 
     /// Short authority label for the main Film row subtitle.
     /// Returns nil for userDefined/unknown so only official/unofficial
-    /// films carry a visible qualifier. Mirrors the legacy ViewModel's
-    /// private `filmRowAuthorityLabel(for:)` exactly.
+    /// films carry a visible qualifier.
     static func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
         switch profile?.source.authority {
         case .official: return "Official guidance"

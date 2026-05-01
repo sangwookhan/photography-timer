@@ -261,7 +261,7 @@ struct ReciprocityTimeRange: Codable, Equatable {
 struct ReciprocityFormula: Codable, Equatable {
     let kind: ReciprocityFormulaKind
     let exponent: Double
-    // Reserved for future formula variants. The current PTIMER-17 exponent-power
+    // Reserved for future formula variants. The current exponent-power
     // validation sample does not require these fields.
     let coefficient: Double?
     let offsetSeconds: Double?
@@ -494,7 +494,7 @@ struct ReciprocityNote: Codable, Equatable {
     let text: String
 }
 
-// PTIMER-113: Unofficial practical profiles defined separately from the launch preset catalog.
+// Unofficial practical profiles defined separately from the launch preset catalog.
 // The launch catalog enforces exactly one official manufacturer profile per film identity.
 // Profiles in this registry are lower-authority supplementary data for future UI exposure.
 enum UnofficialPracticalProfiles {
@@ -535,7 +535,7 @@ enum UnofficialPracticalProfiles {
         ],
         notes: [
             "Unofficial practical approximation. Not a Kodak-published profile.",
-            "Formula: Tc = Tm^1.34. Source pending verification (PTIMER-113)."
+            "Formula: Tc = Tm^1.34. Source pending verification."
         ]
     )
 }

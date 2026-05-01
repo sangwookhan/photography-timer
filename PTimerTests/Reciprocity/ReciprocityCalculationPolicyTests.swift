@@ -253,7 +253,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(result.metadata.referencedRows?.map(\.role), [.stopSignal])
     }
 
-    // MARK: - Velvia 50 threshold-to-table transition range (PTIMER-109)
+    // MARK: - Velvia 50 threshold-to-table transition range
 
     func testVelviaAtOneSecondReturnsThresholdNoCorrection() {
         let result = evaluator.evaluate(

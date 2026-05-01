@@ -2,14 +2,14 @@
 
 **작성일**: 2026-04-27
 **유형**: 검증 절차 가이드
-**상위 문서**: `docs/StructureImprovement/Plan.md` §11
-**기존 패턴**: `docs/Verification/PTIMER-XX-Verification.md` 매뉴얼 절차서 옆의 **전략** 문서
+**현재 위치**: `docs/verification/Strategy.md`
+**관련 절차**: `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md`
 
 ---
 
 ## 1. 목적
 
-PTIMER 구조 개선 24개 액션이 다음을 만족하도록 보장:
+PTIMER 구조 개선 작업이 다음을 만족하도록 보장:
 
 - (a) 의도된 변경만 일어나고 시맨틱이 동등하게 보존
 - (b) 보호 영역의 invariant가 유지
@@ -31,9 +31,9 @@ PTIMER 구조 개선 24개 액션이 다음을 만족하도록 보장:
 - Xcode build (`xcodebuild test`) 통과
 - 모든 단위 테스트 통과 (`PTimer.xctestplan`)
 - SwiftLint warning/error 0
-- Coverage 비-회귀 (B13 후 마지노선: 이전 대비 −1% 이내)
+- Coverage 비-회귀 (after coverage gating is introduced: 이전 대비 −1% 이내)
 
-**도구**: A5의 CI workflow
+**도구**: local `xcodebuild` / `swiftlint`, and CI when configured
 
 **언제**: 모든 PR
 
@@ -43,7 +43,7 @@ PTIMER 구조 개선 24개 액션이 다음을 만족하도록 보장:
 
 ### L2. Semantic equivalence 검증
 
-**목적**: 시그니처/표현이 변경된 작업(B3/B4/A4/A8/A9/B1)이 시맨틱 동등을 유지하는지
+**목적**: 시그니처/표현이 변경된 작업이 시맨틱 동등을 유지하는지
 
 **3중 안전망**:
 
@@ -51,21 +51,24 @@ PTIMER 구조 개선 24개 액션이 다음을 만족하도록 보장:
 
 spec의 각 invariant를 직접 property test로 변환. 예: Calculator Spec §3.2의 평가 순서 6단계를 `(metered, profile)` 조합 1만 케이스에 대해 변경 전/후 동일 결과 반환을 검증.
 
-도구: 표준 XCTest. 외부 라이브러리 불필요 (선택지: `pointfreeco/swift-snapshot-testing`의 inline assertion 또는 `typelift/SwiftCheck` property test).
+도구: 표준 XCTest. 외부 라이브러리 불필요. 필요 시
+fixture-driven 테스트 또는 deterministic snapshot helper를 추가한다.
 
 #### (b) Record-replay
 
-변경 *전* 코드로 입출력 N개 케이스를 baseline JSON에 저장 → 변경 *후* 코드로 동일 입력 실행 → diff 0 확인. 절차는 §6에서 자세히.
+변경 *전* 코드로 event sequence나 display state를 baseline text로
+저장 → 변경 *후* 코드로 동일 시나리오 실행 → diff 0 확인.
+절차는 §6에서 자세히.
 
 대상: 정책 평가기 입출력, ViewModel 디스플레이 상태 합성, TimerManager 라이프사이클 결과.
 
-#### (c) Golden fixture (B6)
+#### (c) Golden fixture
 
-spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장. 양 플랫폼(iOS·Android)이 공유. PTIMER-17 reciprocity validation samples이 부분적 시작점.
+spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장. 양 플랫폼(iOS·Android)이 공유.
 
 (b)와의 차이: (c)는 spec-curated, 영구. (b)는 작업 시점의 현재 동작 snapshot.
 
-**언제**: B1/B3/B4/A4/A8/A9 PR (시맨틱 변경 가능성 있는 모든 작업).
+**언제**: 시맨틱 변경 가능성이 있는 모든 구조 변경 PR.
 
 ---
 
@@ -77,16 +80,16 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 
 | # | 규칙 | 트리거 | 도구 |
 |---|---|---|---|
-| F1 | Production code shall not import `XCTestRuntime` | A4 후 영구 | SwiftLint regex rule |
-| F2 | Production code shall not reference `isRunningTests` | A4 후 영구 | SwiftLint regex rule |
+| F1 | Production code shall not import `XCTestRuntime` | after the test-runtime coupling is removed | SwiftLint regex rule |
+| F2 | Production code shall not reference `isRunningTests` | after the test-runtime coupling is removed | SwiftLint regex rule |
 | F3 | `PTimer/Reciprocity/*` shall not import UIKit/SwiftUI | 도메인 순수성 | SwiftLint imports rule |
 | F4 | `PTimer/Reciprocity/*` and `PTimer/ExposureCalculator/ExposureCalculator.swift` shall import only `Foundation` | 보호 영역 | SwiftSyntax 검사 |
-| F5 | ViewModel/Models shall not directly instantiate concrete domain evaluators (use protocol) | B1 후 | SwiftSyntax 검사 |
-| F6 | Any source file shall not exceed 1,000 lines | A1/A2/B1 후 영구 | SwiftLint `file_length` |
-| F7 | Any function shall not exceed 50 lines / CC 10 | B2 후 영구 | SwiftLint `function_body_length`/`cyclomatic_complexity` |
+| F5 | ViewModel/Models shall not directly instantiate concrete domain evaluators (use protocol) | after model-boundary enforcement is introduced | SwiftSyntax 검사 |
+| F6 | Any source file shall not exceed 1,000 lines | after layer-size and decomposition enforcement is introduced | SwiftLint `file_length` |
+| F7 | Any function shall not exceed 50 lines / CC 10 | after function/file-size enforcement is introduced | SwiftLint `function_body_length`/`cyclomatic_complexity` |
 | F8 | View files shall not import policy/domain types directly | 레이어 단방향 | SwiftSyntax 검사 |
-| F9 | `docs/en/specs/*` 인용한 코드 주석은 실재 § 참조해야 | 신규 권장 | 자체 검사 (grep + spec 파일 anchor 확인) |
-| F10 | Persistence keys shall not be inlined; must use `*Storing` 페어 | A4/B10 후 | SwiftSyntax 검사 |
+| F9 | `docs/specs/*` 인용한 코드 주석은 실재 § 참조해야 | 신규 권장 | 자체 검사 (grep + spec 파일 anchor 확인) |
+| F10 | Persistence keys shall not be inlined; must use `*Storing` 페어 | after the persistence-key surface is enforced | SwiftSyntax 검사 |
 
 **도구 선택지**:
 - **SwiftLint custom regex rule**: 빠르고 가능한 것 (F1/F2/F3/F6/F7)
@@ -105,9 +108,16 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 
 **2중 방어**:
 
-#### (a) Snapshot 자동 (B8)
+#### (a) Snapshot 자동
 
-`pointfreeco/swift-snapshot-testing` 도입 — `ExposureCalculatorScreen`, `BottomSheetWorkspaceShell`, 필름 모드 결과 카드. PR마다 자동 비교.
+현재 자동 snapshot은 in-house display-state snapshot이다. 위치:
+`PTimerTests/Snapshots/`, baseline:
+`PTimerTests/__Snapshots__/<TestClass>/<name>.txt`.
+
+이 helper는 SwiftUI 픽셀 비교가 아니라 ViewModel/Presenter/Mapper가
+emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
+픽셀 수준 View 회귀는 아직 자동화하지 않고, View가 닿는 PR에서
+매뉴얼 스모크나 스크린샷 리뷰로 보강한다.
 
 #### (b) 매뉴얼 스모크 매트릭스
 
@@ -120,7 +130,7 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 × 필름 모드 on/off (Tri-X 1s, Velvia 4s, PORTRA 2s 케이스 포함)
 × 잠금화면 widget on/off (단일·다중 타이머)
 
-**소요**: 분할 PR (A1/A2/A10/B1) 마다 5분. PR 본문에 스크린샷 1장 첨부.
+**소요**: 분할 PR 마다 5분. PR 본문에 스크린샷 1장 첨부.
 
 **언제**: View가 닿는 모든 PR
 
@@ -133,9 +143,9 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 **주기**: **분기별** 또는 마일스톤 종료 시점
 
 **검증 항목**:
-- coverage % 추세 (B13 시계열) — 어느 레이어가 떨어지는지
+- coverage % 추세 (시계열) — 어느 레이어가 떨어지는지
 - 파일 크기 top-10 추세 — 분할 결정이 보존되는지 (다시 부풀지 않는지)
-- CC 분포 히스토그램 (B2 시계열) — 함수 복잡도가 다시 늘어나는지
+- CC 분포 히스토그램 (시계열) — 함수 복잡도가 다시 늘어나는지
 - **spec-code audit**: 각 spec §의 1줄 단언을 코드에서 직접 확인
 
 #### Spec-code audit 체크리스트 (분기별)
@@ -168,51 +178,41 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 | 도구 | 무엇 |
 |---|---|
 | Xcode test, `PTimer.xctestplan` | L1 |
-| 단위 테스트 9,724L | L1 (테스트 데이터) |
-| `docs/Verification/PTIMER-XX-Verification.md` 매뉴얼 절차서 패턴 | L4 매뉴얼 스모크 발판 |
+| `PTimerTests/` XCTest suite | L1 (테스트 데이터) |
+| `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md` | L4 매뉴얼 스모크 발판 |
 | `Storing` 페어 | DI 발판, L3 fitness 일부 |
+| `PTimerTests/Snapshots/` | L2/L4 display-state snapshot |
+| `PTimerTests/RecordReplay/` | L2 event-sequence record-replay |
 
 ### 추가 필요
 
-| 도구 | 무엇 | 어느 액션 | 비용 |
+| 도구 | 무엇 | 도입 시점 | 비용 |
 |---|---|---|---|
-| GitHub Actions / Bitbucket Pipelines | CI workflow | A5 | S |
-| SwiftLint config | L1 + L3 (F1/F2/F3/F6/F7) | A5 + B2 | S |
-| SwiftSyntax 검사 (자체) | L3 정밀 fitness (F4/F5/F8/F10) | B1 후속 | M (1주) |
-| `pointfreeco/swift-snapshot-testing` | L4 자동 | B8 | S |
-| Record-replay 인프라 | L2 (a/b) | B3 spike | M (1주) |
-| `xcrun llvm-cov` 보고 자동화 | L1/L5 | B13 | S |
+| GitHub Actions / Bitbucket Pipelines | CI workflow | after CI is configured | S |
+| SwiftLint config | L1 + L3 (F1/F2/F3/F6/F7) | after CI is configured + after function/file-size enforcement is introduced | S |
+| SwiftSyntax 검사 (자체) | L3 정밀 fitness (F4/F5/F8/F10) | after model-boundary enforcement is introduced | M (1주) |
+| SwiftUI/image snapshot 자동화 | L4 픽셀 회귀 | 후속 필요 시 | M |
+| `xcrun llvm-cov` 보고 자동화 | L1/L5 | after coverage gating is introduced | S |
 | Mutation testing (`muter`) | 메타 — 검증의 검증 | 1년 후 검토 | L (선택) |
 
 ---
 
-## 4. 액션별 검증 매핑
+## 4. 변경 유형별 검증 매핑
 
 ★★ = 결정적 (의무) · ★ = 적용 · – = 무관
 
-| 액션 | L1 | L2 | L3 | L4 | L5 | 비고 |
+| 변경 유형 | L1 | L2 | L3 | L4 | L5 | 비고 |
 |---|---|---|---|---|---|---|
-| A1/A2/A11 | ★★ | – | – | ★(A1) | – | 단순 split. 기존 테스트 + UI 스모크 |
-| A3 | ★★ | – | – | – | – | 신규 통합 테스트가 자체 검증 |
-| A4 (DI factory) | ★ | ★★ | ★(F1/F2 영구) | – | – | XCTestRuntime 잠금 fitness 즉시 |
-| A5 | ★★ | – | ★(F6/F7 인프라) | – | – | 인프라 |
-| A6/A7 | – | – | – | – | – | doc only |
-| A8 (Presenter) | ★ | ★★ | – | ★ | – | record-replay 권장 |
-| A9 (Coordinator) | ★ | ★★ | – | – | – | 잠금화면 매뉴얼 추가 |
-| A10 (Screen 추출) | ★ | – | – | ★★ | – | snapshot 결정적 |
-| A12 (Tri-X 데이터) | ★ | ★★ | – | – | – | golden fixture 신규 케이스 + 사용자 메뉴얼 |
-| **B1 (VM 4분할)** | ★ | ★★ | ★ | ★★ | – | **다층, 가장 위험** |
-| B2 (CC 한도) | ★ | – | ★★ | – | ★(시계열) | L3·L5 인프라 |
-| **B3 (Result enum)** | ★ | ★★ | – | – | – | record-replay **필수** (§6) |
-| **B4 (Timer types)** | ★ | ★★ | ★(컴파일) | – | – | 옵션에 따라 컴파일 차단 우선 |
-| B5 (명명) | ★★ | – | – | – | – | |
-| B6 (fixture) | – | ★★ (인프라) | – | – | ★ | L2의 인프라 자체 |
-| B7 (KMP spike) | – | – | – | – | – | 보고서 |
-| B8 (snapshot) | – | – | – | ★★ (인프라) | – | L4의 인프라 자체 |
-| B9 (concurrency) | ★ | – | – | – | ★ | frame budget 보고서 |
-| B10 (error 모델) | ★ | – | ★ | – | – | 가이드 + lint |
-| B11/B12 | – | – | – | – | – | 옵션 |
-| B13 (coverage) | – | – | – | – | ★★ (인프라) | L1/L5 데이터 소스 |
+| ViewModel/레이어 분할 | ★★ | ★★ | ★ | ★★ | – | **다층, 가장 위험** |
+| Result enum / Timer state type 변경 | ★ | ★★ | ★(컴파일) | – | – | record-replay **필수** (§6) |
+| DI factory 및 테스트 런타임 결합 제거 | ★ | ★★ | ★(F1/F2 영구) | – | – | 테스트 런타임 참조 잠금 |
+| 파일/함수 복잡도 상한 도입 | ★ | – | ★★ | – | ★(시계열) | L3·L5 인프라 |
+| Golden fixture 인프라 | – | ★★ (인프라) | – | – | ★ | L2의 인프라 자체 |
+| Display-state snapshot 인프라 | – | – | – | ★★ (인프라) | – | L4의 인프라 자체 |
+| CI/리포팅 인프라 | ★★ | – | ★ | – | ★★ (인프라) | L1/L5 데이터 소스 |
+| Presenter/Coordinator/UI 구성 변경 | ★ | ★★ | – | ★ | – | 매뉴얼 스모크 + snapshot 권장 |
+| 데이터/정책 보정 및 에러 모델 가이드 | ★ | ★★ | ★ | – | – | fixture 케이스 + 가이드 검증 |
+| 문서 전용 변경 / 스파이크 | – | – | – | – | – | 보고서 또는 문서 검토 |
 
 ---
 
@@ -235,67 +235,78 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 
 ---
 
-## 6. Record-replay 절차 (B3 예시)
+## 6. Record-replay 절차 (Reciprocity Result enum 예시)
 
-B3 (Reciprocity Result enum) 적용 시:
+Reciprocity Result enum 도입 시:
 
 ### Step 1. main에서 baseline 기록
 
-새 fixture 디렉토리: `PTimerTests/Fixtures/RecordReplay/<feature>/`
+현재 record-replay 인프라 위치:
+`PTimerTests/RecordReplay/`, baseline 위치:
+`PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`.
 
 ```bash
-git checkout main
-swift test --filter ReciprocityCalculationPolicyTests \
-  -- --record-baseline \
-  > PTimerTests/Fixtures/RecordReplay/B3-reciprocity-result/baseline-2026-04-27.json
+RECORD_REPLAY=1 xcodebuild test \
+  -project PTimer.xcodeproj -scheme PTimer \
+  -testPlan PTimer \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:PTimerTests/<RecordReplayTestClass>
 ```
 
-각 테스트 케이스의 입력 + 결과를 JSON으로 저장:
-- 입력: `(metered exposure, profile JSON 직렬화)`
-- 결과: `(corrected, basis, rangeStatus, warningLevel, supportingNotes, usedReferencePoints, didReturnCalculatedTime)`
+첫 실행 또는 재기록 실행은 baseline을 쓰고 의도적으로 fail한다.
+baseline은 deterministic text trace이며 PR diff로 검토한다.
 
 baseline은 git에 커밋 (재현성·리뷰 가능성).
 
-### Step 2. branch에서 enum으로 변경
+### Step 2. branch에서 대상 변경 구현
 
-- 도메인: `ReciprocityResult`를 `enum { quantified(T) / advisoryOnly / unsupported }`로
-- JSON 디코더: backward-compat — 기존 `didReturnCalculatedTime + correctedExposure?` 페이로드를 enum 케이스로 변환
-- 정책 평가기: 새 enum 반환
-- 직렬화 어댑터: 새 enum → 옛 페이로드 형식으로 직렬화하는 헬퍼 (replay 비교용)
+- 보호 영역과 scope를 확인한 뒤 대상 변경을 구현한다.
+- trace 대상 협력자 호출 순서와 payload가 의도치 않게 바뀌지
+  않아야 한다.
+- 의도된 변경이라면 baseline diff를 리뷰 가능한 증거로 남긴다.
 
 ### Step 3. branch에서 baseline 재생
 
 ```bash
-swift test --filter ReciprocityCalculationPolicyTests \
-  -- --replay-baseline PTimerTests/Fixtures/RecordReplay/B3-reciprocity-result/baseline-2026-04-27.json
+xcodebuild test \
+  -project PTimer.xcodeproj -scheme PTimer \
+  -testPlan PTimer \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:PTimerTests/<RecordReplayTestClass>
 ```
 
-각 baseline 입력 → 새 코드 실행 → enum 결과를 옛 표현으로 직렬화 → baseline JSON과 diff 0이어야 통과.
+각 시나리오 실행 결과가 committed baseline text trace와 diff 0이어야
+통과한다.
 
 ### Step 4. PR
 
 PR 본문 §5 양식에:
 - `L2 — Semantic equivalence: record-replay`
-- `evidence: PTimerTests/Fixtures/RecordReplay/B3-reciprocity-result/baseline-2026-04-27.json` + diff 결과 캡처
+- `evidence: PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
+  + diff 결과 캡처
 
 ### Record-replay 인프라 비용
 
-- 인프라 1주 (XCTest extension + JSON decode/encode 헬퍼). 재사용 가능
-- 본 ticket(B3)에서 1일
+- 인프라는 XCTest + on-disk text baseline 방식으로 도입 완료.
+- 신규 시나리오는 `RecordReplayHarness`와 spy를 추가하고 baseline을
+  commit한다.
 
-다음 record-replay 활용 액션: B4 (Timer types), A8 (Presenter), A9 (Coordinator), B1 (VM 분할 — 단계마다).
+Record-replay 인프라는 timer types, presenter, coordinator, ViewModel 분할 등 후속 구조 변경에서도 동일하게 활용한다.
 
-### 구현 노트 (2026-04 도입)
+### 구현 노트
 
-위 §6의 절차는 CLI flavor(`swift test --filter ... -- --record-baseline`)로 작성되었지만, 실제 인프라는 XCTest + B8 snapshot 패턴을 재사용한다. CLI 플래그 대신 환경변수로 재기록 모드를 토글한다.
+실제 인프라는 XCTest + display-state snapshot 패턴을 재사용한다. CLI 플래그
+대신 환경변수로 재기록 모드를 토글한다.
 
 - 위치: `PTimerTests/RecordReplay/` (Trace/Baseline/Spies/Harness + smoke test)
 - baseline: `PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
 - 재기록: `RECORD_REPLAY=1 xcodebuild test ... -only-testing:PTimerTests/<TestClass>` → fail (의도 commit 강제) → env 없이 재실행으로 verify
-- B6 fixture(`shared/test-fixtures/reciprocity-golden.json`)는 B3 입출력 페어를 이미 커버하므로 B3는 record-replay에 추가 baseline 없이도 진입 가능. record-replay는 **이벤트 시퀀스**(LockScreen exposer 호출 순서, persistence save/clear, notification schedule/cancel)를 lock하는 데 집중.
+- fixture(`shared/test-fixtures/reciprocity-golden.json`)는 Reciprocity Result enum 입출력 페어를 이미 커버하므로 record-replay는 추가 baseline 없이도 시작 가능하다. record-replay는 **이벤트 시퀀스**(LockScreen exposer 호출 순서, persistence save/clear, notification schedule/cancel)를 lock하는 데 집중한다.
 - 자세한 사용법은 `PTimerTests/RecordReplay/README.md`.
 
-원래 §6의 JSON-flavor 절차는 *개념*적으로 유효하다 (입력/출력 페어 직렬화 후 diff). 본 인프라는 동일 결과를 텍스트 trace + on-disk diff로 달성하며, B8과 라이프사이클을 통일해 학습 비용을 최소화했다.
+본 인프라는 텍스트 trace + on-disk diff로 semantic equivalence
+evidence를 남기며, display-state snapshot과 라이프사이클을 통일해 학습 비용을
+최소화했다.
 
 ---
 
@@ -313,11 +324,11 @@ PR 본문 §5 양식에:
 ## 8. 단계 도입 (검증 인프라 자체 로드맵)
 
 ```
-Phase 0  L1(CI · A5), L4 매뉴얼 스모크
-Phase 1  B13(coverage) → L1 강화, B2(CC) → L3 부분 + L5 시계열, A4 후 L3 F1/F2 영구
-Phase 2  B8(snapshot) → L4 자동, B6 → L2(c) 인프라
-B3 진입  Record-replay 인프라 도입 (§6)
-Phase 3  L3 SwiftSyntax 검사 (F4/F5/F8/F10) — B1 후
+Phase 0  L1(local/CI), L4 매뉴얼 스모크
+Phase 1  Coverage gating → L1 강화; complexity caps → L3 부분 + L5 시계열; F1/F2는 test-runtime coupling 제거 후 영구
+Phase 2  Display-state snapshot helper → L4 자동; cross-platform fixture gate → L2(c) 인프라
+Record-replay 인프라 도입 (§6 참조)
+Phase 3  L3 SwiftSyntax 검사 (F4/F5/F8/F10) — after model-boundary enforcement is introduced
 분기 1회 L5 audit (§2.5 체크리스트)
 1년 후   Mutation testing 검토
 ```
@@ -328,9 +339,9 @@ Phase 3  L3 SwiftSyntax 검사 (F4/F5/F8/F10) — B1 후
 
 | 결정 | 검증 의무 | 레이어 |
 |---|---|---|
-| A4 DI factory | production code의 `XCTestRuntime` 참조 0건 영구 보존 | L3 (F1/F2) |
-| B1 ViewModel 4분할 | 모든 ViewModelTests + 모델별 단위 테스트 + UI snapshot + record-replay (각 분할 단계) | L1 + L2 + L3 + L4 |
-| B3 Reciprocity Result enum | record-replay baseline diff 0 | L2 결정적 — spec ticket의 *전제 조건*으로 명문화 |
+| DI factory + test-runtime coupling 제거 | production code의 `XCTestRuntime` 참조 0건 영구 보존 | L3 (F1/F2) |
+| ViewModel 분할 | 모든 ViewModelTests + 모델별 단위 테스트 + UI snapshot + record-replay (각 분할 단계) | L1 + L2 + L3 + L4 |
+| Reciprocity Result enum | record-replay baseline diff 0 | L2 결정적 — spec ticket의 *전제 조건*으로 명문화 |
 
 ---
 
@@ -346,7 +357,7 @@ Phase 3  L3 SwiftSyntax 검사 (F4/F5/F8/F10) — B1 후
 
 ## 11. 참고
 
-- 액션 카탈로그: `docs/StructureImprovement/Plan.md` §3
-- 스펙 출처: `docs/en/specs/{Calculator,Timer,UI,DomainSchema}.md`
-- 매뉴얼 절차서 패턴: `docs/Verification/PTIMER-{11,68,70}-Verification.md`
+- 스펙 출처: `docs/specs/{Calculator,Timer,UI,DomainSchema}.md`
+- 요구사항 출처: `docs/requirements/Requirements.md`
+- 매뉴얼 절차서: `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md`
 - 보호 영역: 각 spec §6 (Forbidden patterns)

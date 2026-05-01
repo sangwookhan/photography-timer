@@ -2,18 +2,17 @@ import XCTest
 @testable import PTimer
 
 /// Display-state baseline tests for the cross-cutting orchestration
-/// surface that the legacy `ExposureCalculatorViewModel` facade
-/// exposes (per B1 PR6 carry-forward). Each scenario drives the
-/// ViewModel through user-flow inputs that pull simultaneously from
-/// `CalculatorModel`, `ReciprocityModel`, `FilmSelectionModel`, and
-/// `TimerWorkspaceModel`, then dumps the published surface as a
-/// committed text baseline.
+/// surface that the `ExposureCalculatorViewModel` facade exposes. Each
+/// scenario drives the view-model facade through user-flow inputs that
+/// pull simultaneously from `CalculatorModel`, `ReciprocityModel`,
+/// `FilmSelectionModel`, and `TimerWorkspaceModel`, then dumps the
+/// published surface as a committed text baseline.
 ///
 /// These complement `RecordReplayBaselineSmokeTests` (which captures
 /// the persistence + lock-screen + notification side-effect trace)
 /// and the policy-level `DisplayStateSnapshotTests` (which lock pure
 /// reciprocity results and confidence presentation). Together they
-/// fence-post the B1 invariant that the four-model decomposition
+/// fence-post the invariant that the four-model decomposition
 /// must produce byte-identical user-visible state for the same input.
 @MainActor
 final class ViewModelDisplayStateBaselineTests: XCTestCase {

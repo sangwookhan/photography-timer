@@ -1,11 +1,9 @@
 import XCTest
 @testable import PTimer
 
-/// PR1 of B1 (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`)
-/// — direct unit tests for the newly extracted `CalculatorModel`.
-/// These cover the calc slice in isolation; the legacy
-/// `ExposureCalculatorViewModelTests` continue to cover the same
-/// behavior end-to-end via the ViewModel surface.
+/// Direct unit tests for `CalculatorModel`.
+/// These cover the calculation slice in isolation; integration tests
+/// continue to cover end-to-end behavior through the view-model facade.
 final class CalculatorModelTests: XCTestCase {
     @MainActor
     func testDefaultInputsProduceFullStopSnappedResult() {
@@ -87,9 +85,9 @@ final class CalculatorModelTests: XCTestCase {
             ndStop: 0
         )
 
-        // The overload is the path used by the legacy ViewModel for
-        // the live-preview overlay (effectiveBaseShutter /
-        // effectiveNDStop). It must NOT mutate stored inputs.
+        // This overload serves the live-preview overlay
+        // (effectiveBaseShutter / effectiveNDStop) and must NOT mutate
+        // stored inputs.
         let preview = model.calculate(baseShutterSeconds: 1.0 / 60.0, ndStop: 6)
 
         XCTAssertEqual(model.baseShutterSeconds, 1.0 / 30.0, accuracy: 1e-9)
@@ -104,7 +102,7 @@ final class CalculatorModelTests: XCTestCase {
         XCTAssertEqual(previewResult.stop, 6)
     }
 
-    // MARK: - Live preview overlay (B1 PR4c-2)
+    // MARK: - Live preview overlay
 
     @MainActor
     func testEffectiveBaseShutterFallsBackToCommittedValueWhenPreviewIsNil() {
@@ -146,9 +144,8 @@ final class CalculatorModelTests: XCTestCase {
             ndStop: 0
         )
 
-        // Preview equal to committed clears the overlay (matches the
-        // legacy ViewModel behavior where the wheel gesture's idle
-        // state has the preview equal to the committed value).
+        // Preview equal to committed clears the overlay so wheel-gesture
+        // idle state does not keep transient preview values.
         model.updateLiveBaseShutter(1.0 / 30.0)
         model.updateLiveNDStop(0)
 

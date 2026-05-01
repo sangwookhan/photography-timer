@@ -78,8 +78,8 @@ final class RecordReplayHarness {
 
     /// Builds a fully-spied dependency set. The persistence stores
     /// for ExposureCalculator context and timer metadata are NoOp
-    /// (those surfaces are out of scope for B1/B4 record-replay
-    /// initial coverage; spies can be added when needed).
+    /// (those surfaces are out of scope for this record-replay
+    /// coverage; spies can be added when needed).
     func makeDependencies() -> ViewModelDependencies {
         ViewModelDependencies(
             calculator: calculator,

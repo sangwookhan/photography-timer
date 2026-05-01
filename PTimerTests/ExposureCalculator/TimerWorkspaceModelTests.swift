@@ -1,11 +1,9 @@
 import XCTest
 @testable import PTimer
 
-/// PR3 of B1 (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`)
-/// — direct unit tests for the newly extracted `TimerWorkspaceModel`.
-/// These cover the timer slice in isolation; the legacy
-/// `ExposureCalculatorViewModelTimerIntegrationTests` continue to
-/// cover the same behavior end-to-end via the ViewModel surface.
+/// Direct unit tests for `TimerWorkspaceModel`. These cover the timer
+/// slice in isolation; `ExposureCalculatorViewModelTimerIntegrationTests`
+/// covers the same behavior end-to-end through the view-model facade.
 final class TimerWorkspaceModelTests: XCTestCase {
 
     // MARK: - Lifecycle
@@ -116,8 +114,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
         // The clear may fire more than once because the
         // `TimerManager.$timers` sync path and the explicit
         // `persistTimerMetadata` after `removeValue` both observe an
-        // empty metadata dict — both call paths existed pre-extraction
-        // (mirrors legacy ViewModel behavior).
+        // empty metadata dict — both call paths may clear persistence.
         XCTAssertGreaterThanOrEqual(store.clearCount, 1)
     }
 

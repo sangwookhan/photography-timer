@@ -208,7 +208,7 @@ struct ReciprocityCalculationPolicyResultMetadata: Codable, Equatable {
 /// - `advisoryOnly` and `unsupported` lack the field entirely.
 ///
 /// This eliminates the runtime `didReturnCalculatedTime` ↔ corrected-Optional
-/// pairing check (PTIMER-90) that the previous struct-shaped representation
+/// pairing check that the previous struct-shaped representation
 /// enforced in its decoder.
 enum ReciprocityResult: Equatable {
     case quantified(QuantifiedPayload)
@@ -564,8 +564,8 @@ extension ReciprocityResult {
     /// (`meteredExposureSeconds`, `correctedExposureSeconds` (omitted when
     /// nil), `hasCalculatedExposureTime`, `metadata`).
     ///
-    /// Used by the B3 PR1 baseline harness to confirm the migration is
-    /// byte-identical against the frozen baseline. Production code paths
+    /// Used by baseline tests to confirm compatibility with the legacy
+    /// serialized shape. Production code paths
     /// should use the standard `Encodable` conformance, which writes the
     /// new tagged-union format.
     func legacyShapeEncoded(using encoder: JSONEncoder) throws -> Data {

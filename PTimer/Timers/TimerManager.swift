@@ -47,7 +47,7 @@ struct NoOpTimerCompletionScheduler: TimerCompletionNotificationScheduling {
 //   In this model, `paused` means a frozen, later-resumable timer rather
 //   than a terminal "done" state.
 // - duration/startDate preserve the original timer semantics and UI context.
-// - expectedCompletionAt lets PTIMER-70 reconcile running timers to wall clock time.
+// - expectedCompletionAt lets relaunch restore reconcile running timers to wall-clock time.
 // - pausedRemainingDuration/pausedAt keep paused timers frozen without drifting.
 // - completedAt preserves the final timestamp for completed timers.
 struct PersistentTimerSnapshot: Codable, Equatable {
@@ -114,7 +114,7 @@ struct PersistentTimerSnapshot: Codable, Equatable {
             // must not consume wall-clock time or auto-complete while
             // the app was dead. `expectedCompletionAt` is ignored on
             // this path: legacy snapshots may carry a non-nil value
-            // (pre-PTIMER-118 epic) while new snapshots write `nil`;
+            // while current snapshots write `nil`;
             // either way the sum-type init for `.paused` discards the
             // parameter and the computed `PausedTimer.endDate`
             // reconstructs the hypothetical completion date from
@@ -709,8 +709,8 @@ final class TimerManager: ObservableObject {
         }
 
         let currentDate = now ?? dateProvider()
-        // PTIMER-67 covers foreground reactivation while the same process is
-        // still alive. PTIMER-70 restore happens only once in init and must
+        // Foreground reactivation runs while the same process is still alive.
+        // Relaunch restore happens only once in init and must
         // not be re-entered from lifecycle hooks like this.
         applyRunningStateReconciliation(
             now: currentDate,
@@ -845,7 +845,7 @@ final class TimerManager: ObservableObject {
             stopLoop()
         }
 
-        // PTIMER-70 restore is deterministic and init-only: relaunch reads the
+        // Relaunch restore is deterministic and init-only: it reads the
         // saved snapshot once, reconciles only running timers against wall
         // clock time, preserves paused timers as frozen resumable state, and
         // writes the normalized result back as the new source.

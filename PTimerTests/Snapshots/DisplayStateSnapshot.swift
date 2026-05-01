@@ -1,13 +1,13 @@
 import Foundation
 import XCTest
 
-/// Lightweight in-house display-state snapshot helper (B8).
+/// Lightweight in-house display-state snapshot helper.
 ///
 /// Why not pointfreeco/swift-snapshot-testing?
 /// The action plan originally pointed at that library, but adding a
 /// SPM dependency to a personal-project Xcode workspace is heavy
-/// relative to what we actually need. The L2 verification gate
-/// described in B1's spec is "same input → same display-state
+/// relative to what we actually need. The verification gate here is
+/// "same input → same display-state
 /// serialized result". Display states are `Equatable` (already)
 /// and `Swift.dump` produces a deterministic indented text
 /// representation per Swift version. That covers L2 fully and
@@ -16,9 +16,8 @@ import XCTest
 /// Pixel-level SwiftUI rendering snapshots (covering L4 — text vs
 /// view layout regressions invisible to display-state diff) can be
 /// added later by extending this helper with a UIView render path.
-/// Until then, B1 PR 5 (view migration) should manually compare
-/// rendered screens during review; the display-state baseline
-/// already locks the model output.
+/// Until then, reviews should compare rendered screens manually; the
+/// display-state baseline already locks model output.
 ///
 /// ## Baseline files
 ///

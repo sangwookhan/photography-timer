@@ -1,12 +1,11 @@
 import XCTest
 @testable import PTimer
 
-/// PR4 of B1 (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`)
-/// — direct unit tests for the newly extracted `FilmSelectionModel`.
-/// These cover the film selection slice in isolation; the legacy
+/// Direct unit tests for `FilmSelectionModel`. These cover the
+/// film-selection slice in isolation;
 /// `ExposureCalculatorViewModelFilmModeTests` and
-/// `ExposureCalculatorViewModelContextPersistenceTests` continue to
-/// cover the same behavior end-to-end via the ViewModel surface.
+/// `ExposureCalculatorViewModelContextPersistenceTests` cover the same
+/// behavior end-to-end through the view-model facade.
 final class FilmSelectionModelTests: XCTestCase {
 
     // MARK: - Default state
@@ -58,8 +57,8 @@ final class FilmSelectionModelTests: XCTestCase {
         XCTAssertNil(model.selectedPresetFilm)
         XCTAssertNil(model.selectedProfileOverride)
         // Last snapshot retains the calc inputs but drops the film id —
-        // mirrors the legacy ViewModel's behavior of always writing a
-        // full snapshot rather than calling `clearSnapshot`.
+        // the model writes a normalized full snapshot rather than
+        // calling `clearSnapshot`.
         XCTAssertEqual(store.savedSnapshots.last?.selectedPresetFilmID, nil)
     }
 

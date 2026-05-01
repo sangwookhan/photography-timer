@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 
 /// Baseline read/write/diff for record-replay traces. Mirrors
-/// `DisplayStateSnapshot` (B8) but stores under
+/// `DisplayStateSnapshot` but stores under
 /// `PTimerTests/__RecordReplay__/<TestClass>/<name>.txt` and is
 /// driven by the `RECORD_REPLAY=1` environment variable.
 ///

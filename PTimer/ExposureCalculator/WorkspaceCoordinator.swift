@@ -8,15 +8,10 @@ import Foundation
 ///
 /// The coordinator holds no business state of its own — wiring only.
 /// SwiftUI re-renders are driven by whichever child observable surface
-/// the consuming view binds to (the four models or the legacy
+/// the consuming view binds to (the four child models or the
 /// `ExposureCalculatorViewModel` facade). The `ObservableObject`
 /// conformance carries no `@Published` properties; it exists solely
 /// so the screen can use `@StateObject` for lifetime ownership.
-///
-/// Decomposition spec: `Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`.
-/// Final view-migration step (leaf views observing models directly)
-/// is documented as a deliberate carry-forward; the F5/F8 SwiftLint
-/// rules guard against regressing the model-boundary invariant.
 @MainActor
 final class WorkspaceCoordinator: ObservableObject {
     let calculatorModel: CalculatorModel

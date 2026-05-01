@@ -1,32 +1,21 @@
 import Combine
 import Foundation
 
-/// `TimerWorkspaceModel` carries the *timer collection / dock /
-/// workspace* responsibility extracted from the legacy
-/// `ExposureCalculatorViewModel` monolith as the third step of B1
-/// (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`).
-///
-/// PR3 of 6 — owns the timer state slice. The model owns:
+/// `TimerWorkspaceModel` owns the timer-workspace slice. The model owns:
 /// - the `TimerManager` instance (the live timer state machine)
 /// - timer metadata persistence (the `*Storing` store + the
 ///   `timerMetadata` dict + `nextTimerOrder`)
 /// - the published `timers: [RunningTimerItem]` collection that views
-///   bind to (still surfaced through the legacy ViewModel for now)
+///   bind to
 /// - the timer lifecycle operations the ViewModel previously hosted
 ///   (`pause` / `resume` / `remove` / `clearCompletedTimers` /
-///   `start(id:duration:metadata:)`)
+///   `start(id:duration:name:basisSummary:)`)
 /// - the `completedRelativeTimeFormatter` used to drive the
 ///   "Completed N minutes ago" refresh schedule.
 ///
-/// PR3 ships the model as `ObservableObject` + `@Published` so the
-/// existing legacy ViewModel `@Published var timers` surface can
-/// republish via `assign(to:)` without a Combine ↔ `@Observable`
-/// bridge. PR5/PR6 may flip the model to `@Observable` once views
-/// migrate.
-///
-/// Per spec §11 risk mitigation: this model carries only timer
-/// state. Cross-cutting "Start Timer from a calc result" workflow
-/// stays at the ViewModel/coordinator level until PR5/PR6.
+/// This model carries timer state only. Cross-cutting "start timer
+/// from calculation result" wiring belongs to `WorkspaceCoordinator`
+/// and the view-model facade.
 @MainActor
 final class TimerWorkspaceModel: ObservableObject {
     @Published private(set) var timers: [RunningTimerItem] = []
@@ -48,9 +37,8 @@ final class TimerWorkspaceModel: ObservableObject {
     /// Closure used to derive the human-readable fallback name for a
     /// timer whose metadata entry was not registered (e.g., a timer
     /// that survived a relaunch where the metadata snapshot was
-    /// cleared). Mirrors the legacy ViewModel's `defaultName(for:)`
-    /// helper which formats via the calculator. Provided as a closure
-    /// so the model does not need to hold a reference to the
+    /// cleared). Provided as a closure so the model can format a
+    /// fallback timer label without holding a direct reference to
     /// `ExposureCalculator`.
     private let defaultName: (TimeInterval) -> String
 
@@ -75,9 +63,8 @@ final class TimerWorkspaceModel: ObservableObject {
 
     /// Starts a timer with the given metadata. Returns the timer's id
     /// on success; nil if `TimerManager` rejected the duration.
-    /// Mirrors the legacy ViewModel's `startTimer(from:result:filmModeResult:startSource:)`
-    /// internal path: assign metadata before calling `TimerManager`,
-    /// roll back on failure, bump `nextTimerOrder` on success.
+    /// The model writes metadata before calling `TimerManager`, rolls
+    /// metadata back on failure, and bumps `nextTimerOrder` on success.
     @discardableResult
     func startTimer(
         id: UUID = UUID(),

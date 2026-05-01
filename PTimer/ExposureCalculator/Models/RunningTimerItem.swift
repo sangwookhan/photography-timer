@@ -8,8 +8,8 @@ import Foundation
 /// stays deterministic across renders.
 ///
 /// `TimerWorkspaceModel` builds and publishes these as the source of
-/// truth; the legacy ViewModel republishes the same array so existing
-/// view bindings continue to read the prior surface.
+/// truth; the view-model facade republishes the same array so existing
+/// view bindings continue to read the same surface.
 struct RunningTimerItem: Identifiable, Equatable {
     private static let stabilityEpsilon = ExposureCalculator.stabilityEpsilon
 

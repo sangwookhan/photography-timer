@@ -861,7 +861,7 @@ final class TimerManagerTests: XCTestCase {
 
     @MainActor
     func testRestoreLegacyPausedSnapshotIgnoresExpectedCompletionAt() throws {
-        // Legacy snapshots (pre-PTIMER-118 epic) wrote
+        // Legacy snapshots wrote
         // `expectedCompletionAt` for paused timers. Restore must
         // ignore that field and reconstruct the hypothetical end
         // date from the freeze metadata so the resumable state is
@@ -1084,7 +1084,7 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(resumed.remainingTime(at: pausedAt.addingTimeInterval(1)), 0, accuracy: 0.0001)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
-        // P0-4 (PTIMER-118): PausedTimer.endDate is now computed as
+        // PausedTimer.endDate is computed as
         // `pausedAt + pausedRemainingTime`, so this synthetic
         // zero-remaining paused → resume → completed corner produces
         // completedAt = pausedAt. The corner is unreachable from the
@@ -1296,7 +1296,7 @@ final class TimerManagerTests: XCTestCase {
 
         XCTAssertEqual(resumed.status, .completed)
         // See testTimerStateResumeReturnsCompletedWhenNoRemainingTime
-        // for the P0-4 (PTIMER-118) corner-semantics note.
+        // for the corner-semantics note.
         XCTAssertEqual(resumed.endDate, pausedAt)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)

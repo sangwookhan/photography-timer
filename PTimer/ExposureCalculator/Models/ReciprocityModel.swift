@@ -1,20 +1,11 @@
 import Foundation
 import Observation
 
-/// `ReciprocityModel` carries the *reciprocity policy* responsibility
-/// extracted from the legacy `ExposureCalculatorViewModel` monolith as
-/// the second step of B1 (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`).
-///
-/// PR2 of 6 — pure facade. The model owns the two collaborators that
-/// previously lived directly on the ViewModel:
-/// - `ReciprocityCalculationPolicyEvaluator` (policy evaluation entry)
-/// - `FilmModeDetailsPresenter` (A8 details display-state transform)
-///
-/// Per spec §3.1 row "ReciprocityModel" the model carries **no stored
-/// business state**: it exposes evaluation entry points only. Cached
-/// binding state stays on the ViewModel for now and migrates with PR4
-/// (`FilmSelectionModel`), which owns the active film identity that
-/// feeds the binding.
+/// `ReciprocityModel` is a pure facade over the reciprocity policy
+/// evaluator and the film-mode details presenter. It owns no stored
+/// business state and exposes evaluation entry points plus reciprocity
+/// presentation transforms (badge state, corrected-exposure display
+/// state, timer-action state, and reciprocity-duration formatting).
 @MainActor
 @Observable
 final class ReciprocityModel {
@@ -44,8 +35,8 @@ final class ReciprocityModel {
 
     /// Pure transform: given the full presenter input bundle, produce
     /// the details display state. Returns nil when the presenter
-    /// declines to surface any sections (matches the pre-decomposition
-    /// behavior).
+    /// declines to surface any sections (the helper returns nil in that
+    /// case).
     func makeDetailsDisplayState(
         input: FilmModeDetailsPresenterInput
     ) -> FilmModeDetailsDisplayState? {

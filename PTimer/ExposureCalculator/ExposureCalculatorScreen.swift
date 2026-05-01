@@ -3,12 +3,9 @@ import UIKit
 
 struct ExposureCalculatorScreen: View {
     @Environment(\.scenePhase) private var scenePhase
-    /// B1 PR5 — the screen now owns the `WorkspaceCoordinator` directly.
-    /// The coordinator carries no `@Published` state of its own (its
-    /// child models are independently observable), so this `@StateObject`
-    /// only pins the coordinator's lifetime to the view; redraws are
-    /// driven by the legacy `viewModel` `@StateObject` and (in PR6) by
-    /// child views that observe the appropriate model directly.
+    /// The screen owns `WorkspaceCoordinator` for workspace-lifetime
+    /// state. The coordinator itself is wiring-only; redraws are driven
+    /// by observed child models and the view-model facade.
     @StateObject private var coordinator: WorkspaceCoordinator
     @StateObject private var viewModel: ExposureCalculatorViewModel
     @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
@@ -18,14 +15,8 @@ struct ExposureCalculatorScreen: View {
 
     @MainActor
     init() {
-        // B1 PR5 — `WorkspaceCoordinator` is the screen's owned
-        // reference. The coordinator builds and owns the four
-        // `@Observable` models plus the legacy `ExposureCalculatorViewModel`
-        // facade. Views still bind to the ViewModel today; PR6 will
-        // flip leaf views to observe the appropriate child model
-        // directly through `coordinator.timerWorkspaceModel` /
-        // `.filmSelectionModel` / `.calculatorModel` / `.reciprocityModel`
-        // and remove the ViewModel monolith.
+        // The coordinator owns the four child models and the
+        // view-model facade used by current views.
         self.init(
             coordinator: WorkspaceCoordinator(
                 dependencies: ViewModelDependencyFactory.production()
@@ -114,9 +105,9 @@ struct ExposureCalculatorScreen: View {
                 return
             }
 
-            // PTIMER-67: process-alive foreground reactivation only.
-            // PTIMER-70 relaunch restore is init-driven in TimerManager and is
-            // deliberately not re-triggered from lifecycle observers.
+            // Foreground reactivation reconciles process-alive timers.
+            // Relaunch restore is initialization-driven in TimerManager
+            // and is not re-triggered from lifecycle observers.
             viewModel.reconcileTimersAfterAppBecomesActive()
         }
     }

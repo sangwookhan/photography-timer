@@ -1,11 +1,9 @@
 import XCTest
 @testable import PTimer
 
-/// PR2 of B1 (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`)
-/// — direct unit tests for the newly extracted `ReciprocityModel`.
-/// These cover the reciprocity facade in isolation; the legacy
-/// `ExposureCalculatorViewModelTests` continue to cover the same
-/// behavior end-to-end via the ViewModel surface.
+/// Direct unit tests for `ReciprocityModel`. These cover the
+/// reciprocity facade in isolation; `ExposureCalculatorViewModelTests`
+/// covers the same behavior end-to-end through the view-model facade.
 final class ReciprocityModelTests: XCTestCase {
 
     // MARK: - evaluate

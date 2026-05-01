@@ -1,31 +1,20 @@
 import Foundation
 import Observation
 
-/// `CalculatorModel` carries the *calculation* responsibility extracted
-/// from the legacy `ExposureCalculatorViewModel` monolith as the first
-/// step of B1 (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`).
-///
-/// PR1 of 6 — skeleton extraction. The model owns:
-/// - the `ExposureCalculator` instance (pure ND exposure math)
-/// - the calculation inputs (`baseShutterSeconds`, `ndStop`)
-/// - the computed `calculationResult` derived from those inputs
-///
-/// The legacy `ExposureCalculatorViewModel` retains its public
-/// `ObservableObject` surface for views and tests; internally it
-/// delegates calc work here. PR5/PR6 will flip the direction so views
-/// observe `CalculatorModel` directly.
+/// `CalculatorModel` owns the calculator slice: the pure ND exposure
+/// math engine, the user's calculation inputs (`baseShutterSeconds`,
+/// `ndStop`), the live preview overlays for in-flight wheel gestures,
+/// and the `calculationResult` derived from those inputs.
 @MainActor
 @Observable
 final class CalculatorModel {
     /// Full-stop shutter ladder used by the digital shutter wheel and
-    /// the snap-to-full-stop logic. Hoisted from
-    /// `ExposureCalculatorViewModel` in B1 PR6 so the calc surface no
-    /// longer depends on the legacy facade.
+    /// the snap-to-full-stop logic.
     nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
 
-    /// The pure calculation engine. Shared with the legacy ViewModel so
-    /// that any direct call site (`calculator.formatShutter`, etc.)
-    /// continues to work unchanged during the migration.
+    /// The pure calculation engine, shared with the view-model facade
+    /// so direct call sites (`calculator.formatShutter`, etc.) reach
+    /// the same instance.
     let calculator: ExposureCalculator
 
     /// Working base shutter in seconds. Persisted committed value;
@@ -70,9 +59,8 @@ final class CalculatorModel {
     }
 
     /// Sets the live preview value. If the preview equals the committed
-    /// value the overlay is cleared instead — matches the legacy
-    /// ViewModel behavior where the wheel gesture's idle state has
-    /// the preview equal to the committed value.
+    /// value the overlay is cleared instead, so a wheel gesture that
+    /// settles on the committed value leaves no transient state.
     func updateLiveBaseShutter(_ value: Double) {
         liveBaseShutter = value == baseShutterSeconds ? nil : value
     }
@@ -91,16 +79,16 @@ final class CalculatorModel {
         liveNDStop = nil
     }
 
-    /// Computes the calculation result from the current inputs. Mirrors
-    /// the legacy ViewModel's `calculationResult` computed property
-    /// exactly: same `Result` shape, same error mapping, same payload.
+    /// Computes the calculation result from the current inputs with the
+    /// stable contract: same `Result` shape, same error mapping, same
+    /// payload.
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
         calculate(baseShutterSeconds: baseShutterSeconds, ndStop: ndStop)
     }
 
     /// Computes a calculation result for an arbitrary input pair. Used
-    /// when the legacy ViewModel needs to evaluate `effectiveBaseShutter`
-    /// / `effectiveNDStop` (the live preview overlay) without mutating
+    /// when callers need to evaluate `effectiveBaseShutter` /
+    /// `effectiveNDStop` (the live preview overlay) without mutating
     /// the model's stored inputs.
     func calculate(
         baseShutterSeconds: Double,

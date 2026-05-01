@@ -1,8 +1,8 @@
 import XCTest
 @testable import PTimer
 
-/// B3 PR2 — covers the `ReciprocityResult` Codable surface introduced
-/// alongside the tagged-union migration.
+/// Covers the `ReciprocityResult` Codable surface for the tagged-union
+/// representation.
 ///
 /// Two responsibilities:
 /// 1. **Round-trip the new tagged format.** `JSONEncoder().encode(...)`

@@ -1,0 +1,19 @@
+  ▿ PTimer.ReciprocityResult.advisoryOnly
+    ▿ advisoryOnly: PTimer.ReciprocityResult.AdvisoryOnlyPayload
+      - meteredExposureSeconds: 4.0
+      ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
+        - basis: PTimer.ReciprocityCalculationBasis.advisoryOnlyBeyondOfficialRange
+        - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
+        - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.beyondLastRepresentativePoint
+        - warningLevel: PTimer.ReciprocityCalculationWarningLevel.note
+        - estimationFamily: nil
+        ▿ notes: 2 elements
+          ▿ PTimer.ReciprocityPolicyNote
+            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.advisoryContinuationOnly)
+              - some: PTimer.ReciprocityPolicyNoteToken.advisoryContinuationOnly
+            - text: "Only advisory continuation is available for this metered exposure."
+          ▿ PTimer.ReciprocityPolicyNote
+            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
+              - some: PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
+            - text: "Longer exposures: test under your conditions."
+        - referencedRows: nil

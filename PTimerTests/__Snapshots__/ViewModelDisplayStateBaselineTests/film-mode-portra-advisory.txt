@@ -1,0 +1,75 @@
+  ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
+    ▿ activeCalculatorContext: PTimer.ActiveExposureCalculatorContext
+      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-portra-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Portra 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL PORTRA 400"), aliases: ["PORTRA 400"], productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-portra-official-threshold", name: "Official threshold guidance", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("Reciprocity statement"), citation: nil, sourceVersion: nil), rules: [PTimer.ReciprocityRule.threshold(PTimer.ThresholdReciprocityRule(noCorrectionRange: PTimer.ReciprocityTimeRange(minimumSeconds: 0.0001, maximumSeconds: Optional(1.0)), adjustments: [], notes: ["No correction required in the official range."])), PTimer.ReciprocityRule.advisory(PTimer.AdvisoryReciprocityRule(appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil)), adjustments: [PTimer.ReciprocityAdjustment.note(PTimer.ReciprocityNote(text: "Longer exposures: test under your conditions."))], notes: []))], notes: [], userMetadata: nil)], userMetadata: nil))
+        ▿ some: PTimer.FilmIdentity
+          - id: "kodak-portra-400"
+          - kind: PTimer.FilmIdentityKind.preset
+          - canonicalStockName: "Portra 400"
+          ▿ manufacturer: Optional("Kodak")
+            - some: "Kodak"
+          ▿ brandLabel: Optional("KODAK PROFESSIONAL PORTRA 400")
+            - some: "KODAK PROFESSIONAL PORTRA 400"
+          ▿ aliases: 1 element
+            - "PORTRA 400"
+          - productionStatus: PTimer.FilmProductionStatus.current
+          ▿ profiles: 1 element
+            ▿ PTimer.ReciprocityProfile
+              - id: "kodak-portra-official-threshold"
+              - name: "Official threshold guidance"
+              ▿ source: PTimer.ReciprocitySourceProvenance
+                - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
+                - authority: PTimer.ReciprocityAuthority.official
+                - confidence: PTimer.ReciprocityConfidence.high
+                - publisher: "Kodak"
+                ▿ title: Optional("Reciprocity statement")
+                  - some: "Reciprocity statement"
+                - citation: nil
+                - sourceVersion: nil
+              ▿ rules: 2 elements
+                ▿ PTimer.ReciprocityRule.threshold
+                  ▿ threshold: PTimer.ThresholdReciprocityRule
+                    ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+                      - minimumSeconds: 0.0001
+                      ▿ maximumSeconds: Optional(1.0)
+                        - some: 1.0
+                    - adjustments: 0 elements
+                    ▿ notes: 1 element
+                      - "No correction required in the official range."
+                ▿ PTimer.ReciprocityRule.advisory
+                  ▿ advisory: PTimer.AdvisoryReciprocityRule
+                    ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
+                      ▿ some: PTimer.ReciprocityTimeRange
+                        - minimumSeconds: 1.0
+                        - maximumSeconds: nil
+                    ▿ adjustments: 1 element
+                      ▿ PTimer.ReciprocityAdjustment.note
+                        ▿ note: PTimer.ReciprocityNote
+                          - text: "Longer exposures: test under your conditions."
+                    - notes: 0 elements
+              - notes: 0 elements
+              - userMetadata: nil
+          - userMetadata: nil
+      - selectedProfileOverride: nil
+    - isFilmWorkflowActive: true
+    - canResetFilmModeWorkingContext: true
+    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Portra 400", profileAuthority: "official", policyResultBasis: "advisoryOnlyBeyondOfficialRange", correctedExposureSeconds: nil, presentationCategory: "advisoryOnly", presentationBadgeStyle: "advisory"))
+      ▿ some: PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump
+        - filmStockName: "Portra 400"
+        - profileAuthority: "official"
+        - policyResultBasis: "advisoryOnlyBeyondOfficialRange"
+        - correctedExposureSeconds: nil
+        - presentationCategory: "advisoryOnly"
+        - presentationBadgeStyle: "advisory"
+    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 4.0, reciprocityStateTone: "advisory", adjustedShutterCanStart: true, correctedKind: "advisory", correctedSeconds: nil, correctedPrimary: "No corrected value", correctedSecondary: "No published quantified correction is available for this metered exposure.", correctedExposureCanStart: false))
+      ▿ some: PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump
+        - adjustedShutterSeconds: 4.0
+        - reciprocityStateTone: "advisory"
+        - adjustedShutterCanStart: true
+        - correctedKind: "advisory"
+        - correctedSeconds: nil
+        - correctedPrimary: "No corrected value"
+        - correctedSecondary: "No published quantified correction is available for this metered exposure."
+        - correctedExposureCanStart: false
+    - canShowFilmDetails: true
+    - canStartTimer: false
+    - timersCount: 0

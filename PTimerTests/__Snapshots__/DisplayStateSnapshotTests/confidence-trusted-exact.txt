@@ -1,0 +1,16 @@
+  ▿ PTimer.ReciprocityConfidencePresentation
+    - category: PTimer.ReciprocityConfidencePresentationCategory.exact
+    - level: PTimer.ReciprocityConfidenceLevel.high
+    - badgeStyle: PTimer.ReciprocityConfidenceBadgeStyle.trusted
+    - warningEmphasis: PTimer.ReciprocityConfidenceWarningEmphasis.none
+    - resultKind: PTimer.ReciprocityConfidenceResultKind.exact
+    - shortLabel: "Exact"
+    ▿ explanationTokens: 4 elements
+      - PTimer.ReciprocityConfidenceExplanationToken.exactTablePoint
+      - PTimer.ReciprocityConfidenceExplanationToken.currentOfficialSource
+      - PTimer.ReciprocityConfidenceExplanationToken.withinStatedRange
+      - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
+    ▿ supportingNotes: 1 element
+      - "Returned from an explicit representative table point."
+    - defaultExplanation: "Returned from an explicit representative table point."
+    - returnsCalculatedExposureTime: true

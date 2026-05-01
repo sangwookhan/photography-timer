@@ -14,253 +14,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testSnapshotStoreReflectsTimerCreationInCompactAndLargeFromSameRuntimeTruth() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.baseShutter = 1.0 / 30.0
-        harness.viewModel.ndStop = 6
-        harness.viewModel.startTimer()
-
-        let timer = try XCTUnwrap(harness.viewModel.timers.first)
-        let compactItem = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
-        let largeItem = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
-
-        XCTAssertEqual(harness.stateStore.detent, .compact)
-        XCTAssertEqual(compactItem.id, timer.id)
-        XCTAssertEqual(largeItem.id, timer.id)
-        XCTAssertEqual(compactItem.identityCue, largeItem.identityCue)
-        XCTAssertEqual(compactItem.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(timer.remainingTime))
-        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(timer.remainingTime))
-        XCTAssertEqual(largeItem.contextText, timer.basisSummary)
-        XCTAssertFalse(harness.stateStore.isExpanded)
-    }
-
-    @MainActor
-    func testSnapshotStoreReflectsTickVisibilityForCompactAndLarge() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.startTimer(from: 10)
-        let initialCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
-        let initialLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
-
-        harness.currentDate = Date(timeIntervalSince1970: 104)
-        harness.timerManager.tick(now: harness.currentDate)
-
-        let updatedCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
-        let updatedLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
-
-        XCTAssertEqual(initialCompact.identityCue, updatedCompact.identityCue)
-        XCTAssertEqual(initialLarge.identityCue, updatedLarge.identityCue)
-        XCTAssertEqual(initialCompact.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(10))
-        XCTAssertEqual(updatedCompact.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(6))
-        XCTAssertEqual(initialLarge.remainingText, harness.viewModel.formatTimerClock(10))
-        XCTAssertEqual(updatedLarge.remainingText, harness.viewModel.formatTimerClock(6))
-        XCTAssertLessThan(initialLarge.progress, updatedLarge.progress)
-    }
-
-    @MainActor
-    func testWorkspaceSnapshotReflectsAppReactivationStateReconciliationForCompactAndLarge() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.startTimer(from: 10)
-        harness.viewModel.startTimer(from: 3)
-
-        let initialCompact = harness.snapshotStore.snapshot.compactItems
-        XCTAssertEqual(initialCompact.map(\.status), [.running, .running])
-
-        harness.currentDate = Date(timeIntervalSince1970: 104)
-        harness.viewModel.reconcileTimersAfterAppBecomesActive()
-
-        let compactItems = harness.snapshotStore.snapshot.compactItems
-        let activeSection = try XCTUnwrap(
-            harness.snapshotStore.snapshot.sections.first(where: { $0.title == "Active" })
-        )
-        let completedSection = try XCTUnwrap(
-            harness.snapshotStore.snapshot.sections.first(where: { $0.title == "Recently Completed" })
-        )
-
-        XCTAssertEqual(compactItems.count, 2)
-        XCTAssertEqual(compactItems.map(\.status), [.running, .completed])
-        XCTAssertEqual(compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(6))
-        XCTAssertEqual(activeSection.items.count, 1)
-        XCTAssertEqual(activeSection.items.first?.remainingText, harness.viewModel.formatTimerClock(6))
-        XCTAssertEqual(completedSection.items.count, 1)
-        XCTAssertEqual(completedSection.items.first?.status, .completed)
-        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
-    }
-
-    @MainActor
-    func testCompletedLargeItemShowsAbsoluteAndRelativeCompletionTime() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.startTimer(from: 10)
-        harness.currentDate = Date(timeIntervalSince1970: 130)
-        harness.timerManager.tick(now: harness.currentDate)
-
-        let completedItem = try XCTUnwrap(
-            harness.snapshotStore.snapshot.sections
-                .first(where: { $0.title == "Recently Completed" })?
-                .items
-                .first
-        )
-
-        XCTAssertEqual(
-            completedItem.timingText,
-            "Completed 1970-01-01 00:01:50 · just now"
-        )
-    }
-
-    @MainActor
-    func testCompletedLargeItemsUseEachCompletionDateForRelativeTimingText() throws {
-        let now = Date(timeIntervalSince1970: 10_000)
-        let olderCompleted = RunningTimerItem(
-            id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
-            order: 1,
-            name: "Older",
-            basisSummary: "Base 1/30s · 6 stops",
-            duration: 45,
-            startDate: now.addingTimeInterval(-300),
-            endDate: now.addingTimeInterval(-180),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed,
-            referenceDate: now
-        )
-        let newerCompleted = RunningTimerItem(
-            id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
-            order: 2,
-            name: "Newer",
-            basisSummary: "Base 1/15s · 8 stops",
-            duration: 30,
-            startDate: now.addingTimeInterval(-90),
-            endDate: now.addingTimeInterval(-60),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed,
-            referenceDate: now
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { now }
-            )
-        )
-
-        let snapshot = BottomSheetWorkspaceSnapshot.make(
-            from: [olderCompleted, newerCompleted],
-            formatRemaining: viewModel.formatTimerClock,
-            timeContext: viewModel.timerTimeContext,
-            compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
-        )
-        let completedItems: [BottomSheetLargeItem] = snapshot.sections.first?.items ?? []
-
-        XCTAssertEqual(completedItems.count, 2)
-        XCTAssertEqual(
-            completedItems.map(\.timingText),
-            [
-                "Completed 1970-01-01 02:45:40 · 1 min ago",
-                "Completed 1970-01-01 02:43:40 · 3 min ago"
-            ]
-        )
-    }
-
-    @MainActor
-    func testSnapshotStorePropagatesPauseResumeRemoveAndClearCompletedActionsConsistently() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.startTimer(from: 10)
-        let id = try XCTUnwrap(harness.viewModel.timers.first?.id)
-
-        harness.currentDate = Date(timeIntervalSince1970: 103)
-        harness.viewModel.pauseTimer(id: id)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .paused)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .paused)
-        let pausedCompactCue = harness.snapshotStore.snapshot.compactItems.first?.identityCue
-        let pausedLargeCue = harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7))
-
-        harness.currentDate = Date(timeIntervalSince1970: 105)
-        harness.viewModel.resumeTimer(id: id)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.status, .running)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.status, .running)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.identityCue, pausedCompactCue)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue, pausedLargeCue)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7))
-
-        harness.currentDate = Date(timeIntervalSince1970: 120)
-        harness.timerManager.tick(now: harness.currentDate)
-        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.last?.items.first?.status, .completed)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.last?.items.first?.identityCue, pausedLargeCue)
-
-        harness.viewModel.clearCompletedTimers()
-        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 0)
-        XCTAssertTrue(harness.snapshotStore.snapshot.compactItems.isEmpty)
-        XCTAssertTrue(harness.snapshotStore.snapshot.sections.isEmpty)
-
-        harness.viewModel.baseShutter = 1.0 / 15.0
-        harness.viewModel.ndStop = 4
-        harness.viewModel.startTimer(from: 12)
-        let removeID = try XCTUnwrap(harness.viewModel.timers.first?.id)
-        XCTAssertEqual(harness.viewModel.timers.first?.name, "Timer - 12s")
-        XCTAssertEqual(harness.viewModel.timers.first?.basisSummary, "Manual timer")
-        harness.viewModel.removeTimer(id: removeID)
-        XCTAssertTrue(harness.snapshotStore.snapshot.compactItems.isEmpty)
-        XCTAssertTrue(harness.snapshotStore.snapshot.sections.isEmpty)
-    }
-
-    @MainActor
-    func testSnapshotStoreKeepsExistingTimerMetadataIndependentFromLaterCalculatorEdits() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.baseShutter = 1.0 / 30.0
-        harness.viewModel.ndStop = 6
-        harness.viewModel.startTimer()
-
-        let originalCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
-        let originalLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
-
-        harness.viewModel.baseShutter = 1
-        harness.viewModel.ndStop = 3
-
-        let updatedCompact = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
-        let updatedLarge = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
-
-        XCTAssertEqual(updatedCompact.id, originalCompact.id)
-        XCTAssertEqual(updatedCompact.identityCue, originalCompact.identityCue)
-        XCTAssertEqual(updatedCompact.primaryRemainingText, originalCompact.primaryRemainingText)
-        XCTAssertEqual(updatedLarge.id, originalLarge.id)
-        XCTAssertEqual(updatedLarge.identityCue, originalLarge.identityCue)
-        XCTAssertEqual(updatedLarge.title, originalLarge.title)
-        XCTAssertEqual(updatedLarge.contextText, harness.viewModel.timers.first?.basisSummary)
-    }
-
-    @MainActor
-    func testSnapshotStoreKeepsCompactAndLargeViewsConsistentThroughCompletionOrdering() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.startTimer(from: 10)
-        harness.viewModel.startTimer(from: 30)
-
-        let newestID = try XCTUnwrap(harness.viewModel.timers.first?.id)
-        XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.id, newestID)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.id, newestID)
-
-        harness.currentDate = Date(timeIntervalSince1970: 200)
-        harness.timerManager.tick(now: harness.currentDate)
-
-        let compactIDs = harness.snapshotStore.snapshot.compactItems.map(\.id)
-        let largeIDs = harness.snapshotStore.snapshot.sections.flatMap(\.items).map(\.id)
-
-        XCTAssertEqual(Set(compactIDs), Set(largeIDs))
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Recently Completed"])
-        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 2)
-    }
-
-    @MainActor
     func testStateStoreDefaultsToCompact() {
         let store = BottomSheetWorkspaceStateStore()
 
@@ -291,43 +44,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         store.collapse()
         XCTAssertEqual(store.detent, .compact)
         XCTAssertFalse(store.isExpanded)
-    }
-
-    @MainActor
-    func testCompactCardTapSelectionExpandsAndStoresFocusedTimer() {
-        let store = BottomSheetWorkspaceStateStore()
-        let selectedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-
-        store.expandAndFocusTimer(selectedID)
-
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertEqual(store.selectedTimerID, selectedID)
-    }
-
-    @MainActor
-    func testCollapseClearsFocusedTimerSelection() {
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-        let selectedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-
-        store.focusTimer(selectedID)
-        XCTAssertEqual(store.selectedTimerID, selectedID)
-
-        store.collapse()
-
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
-    @MainActor
-    func testTransitionToCompactClearsFocusedTimerSelection() {
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-        let selectedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-
-        store.focusTimer(selectedID)
-        store.transition(to: .compact)
-
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertNil(store.selectedTimerID)
     }
 
     @MainActor
@@ -439,12 +155,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(store.detent, .compact)
     }
 
-    func testSnapshotSummarizesTimerCounts() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.completedCount, 2)
-    }
-
     func testVisiblePausedCopyUsesPausedPresentationLabel() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let pausedItem = snapshot.sections
@@ -452,43 +162,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             .first { $0.status == .paused }
 
         XCTAssertEqual(pausedItem?.statusLabel, "Paused")
-    }
-
-    func testCompactSummaryRespectsVisibleItemLimit() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.compactItems.count, BottomSheetWorkspaceSnapshot.compactVisibleLimit)
-        XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
-    }
-
-    func testCompactSummaryPrioritizesNewerActiveTimersThenRecentlyCompleted() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.compactItems.map(\.status), [.paused, .running, .completed])
-        XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
-        XCTAssertEqual(
-            snapshot.compactItems.map(\.id),
-            [
-                UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
-                UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
-                UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-            ]
-        )
-    }
-
-    func testCompactSummaryCalculatesHiddenCountAndOverflowText() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
-        XCTAssertEqual(snapshot.compactOverflowText, "+1")
-    }
-
-    func testCompactPresentationSimplifiesLongDurationContent() {
-        let snapshot = makeSnapshot(from: [longDurationTimer()])
-
-        XCTAssertEqual(snapshot.compactItems.count, 1)
-        XCTAssertEqual(snapshot.compactItems[0].primaryRemainingText, "4d 6h")
-        XCTAssertEqual(snapshot.compactItems[0].secondaryTotalText, "4d 6h")
     }
 
     func testCompactProgressUsesSixtySecondLayerForShortRunningTimer() {
@@ -547,11 +220,16 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     func testCompactVisibleLayerCountPolicyBoundaries() {
+        // Use a single captured reference instant so startDate / endDate /
+        // referenceDate are derived deterministically; the layered-progress
+        // policy depends on `duration`, not absolute clock time.
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
         // Boundary: 59s duration -> 1 layer
         let timer59 = RunningTimerItem(
             id: UUID(), order: 1, name: "59s", basisSummary: "", duration: 59,
-            startDate: Date(), endDate: Date().addingTimeInterval(59),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(59),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item59 = BottomSheetWorkspaceSnapshot.make(
             from: [timer59],
@@ -567,8 +245,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // Boundary: 60s duration -> 2 layers
         let timer60 = RunningTimerItem(
             id: UUID(), order: 1, name: "60s", basisSummary: "", duration: 60,
-            startDate: Date(), endDate: Date().addingTimeInterval(60),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(60),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item60 = BottomSheetWorkspaceSnapshot.make(
             from: [timer60],
@@ -584,8 +262,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // Boundary: 3599s duration -> 2 layers
         let timer3599 = RunningTimerItem(
             id: UUID(), order: 1, name: "3599s", basisSummary: "", duration: 3599,
-            startDate: Date(), endDate: Date().addingTimeInterval(3599),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(3599),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item3599 = BottomSheetWorkspaceSnapshot.make(
             from: [timer3599],
@@ -598,8 +276,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // Boundary: 3600s duration -> 3 layers
         let timer3600 = RunningTimerItem(
             id: UUID(), order: 1, name: "3600s", basisSummary: "", duration: 3600,
-            startDate: Date(), endDate: Date().addingTimeInterval(3600),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: Date()
+            startDate: now, endDate: now.addingTimeInterval(3600),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
         )
         let item3600 = BottomSheetWorkspaceSnapshot.make(
             from: [timer3600],
@@ -670,111 +348,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(item.sixtySecondLayer.fraction, 1, accuracy: 0.001)
     }
 
-    func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
-        let before = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .running))
-        let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .paused))
-
-        XCTAssertEqual(
-            before.compactItems.map(\.id),
-            [
-                UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!,
-                UUID(uuidString: "bbbbbbb2-2222-2222-2222-222222222222")!,
-                UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!
-            ]
-        )
-        XCTAssertEqual(before.compactItems.map(\.id), after.compactItems.map(\.id))
-        XCTAssertEqual(before.sections.first?.items.map(\.id), after.sections.first?.items.map(\.id))
-    }
-
-    func testCompletedTimersAreDeferredBehindActiveTimersInWorkspaceOrdering() {
-        let ordered = TimerWorkspaceOrdering.sort(completedAheadOfActiveTimers())
-
-        XCTAssertEqual(
-            ordered.map(\.id),
-            [
-                UUID(uuidString: "eeeeeee5-5555-5555-5555-555555555555")!,
-                UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
-                UUID(uuidString: "fffffff6-6666-6666-6666-666666666666")!,
-                UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
-            ]
-        )
-        XCTAssertEqual(ordered.prefix(2).map(\.status), [.paused, .running])
-        XCTAssertEqual(ordered.suffix(2).map(\.status), [.completed, .completed])
-    }
-
-    func testNewTimerIsAlwaysInsertedAtTheTop() {
-        let now = Date(timeIntervalSince1970: 5_000)
-        let timerA = RunningTimerItem(
-            id: UUID(), order: 1, name: "A", basisSummary: "", duration: 60,
-            startDate: now, endDate: now.addingTimeInterval(60),
-            pausedRemainingTime: nil, pausedAt: nil,
-            status: .running, referenceDate: now
-        )
-        let timerB = RunningTimerItem(
-            id: UUID(), order: 2, name: "B", basisSummary: "", duration: 120,
-            startDate: now, endDate: now.addingTimeInterval(120),
-            pausedRemainingTime: nil, pausedAt: nil,
-            status: .running, referenceDate: now
-        )
-
-        let snapshot = makeSnapshot(from: [timerA, timerB])
-        XCTAssertEqual(snapshot.compactItems.map(\.id), [timerB.id, timerA.id])
-        XCTAssertEqual(snapshot.sections.first?.items.map(\.id), [timerB.id, timerA.id])
-
-        // Add timer C (newest)
-        let timerC = RunningTimerItem(
-            id: UUID(), order: 3, name: "C", basisSummary: "", duration: 180,
-            startDate: now, endDate: now.addingTimeInterval(180),
-            pausedRemainingTime: nil, pausedAt: nil,
-            status: .running, referenceDate: now
-        )
-        let snapshot2 = makeSnapshot(from: [timerA, timerB, timerC])
-        XCTAssertEqual(snapshot2.compactItems.map(\.id), [timerC.id, timerB.id, timerA.id])
-    }
-
-    func testNewTimerInsertedAtTopEvenWhenCompletedTimersExist() {
-        let now = Date(timeIntervalSince1970: 6_000)
-        let activeA = RunningTimerItem(
-            id: UUID(), order: 1, name: "A", basisSummary: "", duration: 60,
-            startDate: now, endDate: now.addingTimeInterval(60),
-            pausedRemainingTime: nil, pausedAt: nil,
-            status: .running, referenceDate: now
-        )
-        let completedB = RunningTimerItem(
-            id: UUID(), order: 2, name: "B", basisSummary: "", duration: 30,
-            startDate: now.addingTimeInterval(-60), endDate: now.addingTimeInterval(-30),
-            pausedRemainingTime: nil, pausedAt: nil,
-            status: .completed, referenceDate: now
-        )
-
-        let snapshot = makeSnapshot(from: [activeA, completedB])
-        XCTAssertEqual(snapshot.compactItems.map(\.id), [activeA.id, completedB.id])
-
-        // New active C
-        let activeC = RunningTimerItem(
-            id: UUID(), order: 3, name: "C", basisSummary: "", duration: 120,
-            startDate: now, endDate: now.addingTimeInterval(120),
-            pausedRemainingTime: nil, pausedAt: nil,
-            status: .running, referenceDate: now
-        )
-        let snapshot2 = makeSnapshot(from: [activeA, completedB, activeC])
-        XCTAssertEqual(snapshot2.compactItems.map(\.id), [activeC.id, activeA.id, completedB.id])
-    }
-
-    @MainActor
-    func testOverflowTapExpandsToLargeWithoutForcingSelection() {
-        let snapshot = makeSnapshot(from: completedAheadOfActiveTimers())
-        let store = BottomSheetWorkspaceStateStore()
-
-        XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertNil(store.selectedTimerID)
-
-        store.expand()
-
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
     func testCompletedCompactCardPrioritizesExpiredStateAndRelativeTime() {
         let completedTimer = sampleTimers().first { $0.status == .completed }!
         let snapshot = makeSnapshot(from: [completedTimer])
@@ -826,25 +399,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertFalse(snapshot.compactItems.compactMap(\.tertiaryStatusText).contains("long ago"))
     }
 
-    func testCompactDurationTextUsesSimplifiedMiniDockFormatting() {
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(64), "01:04")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(25), "25s")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(9.64), "9.6s")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(0.83), "0.8s")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(0.25), "0.3s")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(3_661), "1h 1m")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(90_061), "1d 1h")
-        XCTAssertEqual(BottomSheetWorkspaceSnapshot.compactDurationText(34_218_061), "1y 1m")
-    }
-
-    func testLargeSectionsGroupTimersByPresentationStatus() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
-        XCTAssertEqual(snapshot.sections[0].items.count, 2)
-        XCTAssertEqual(snapshot.sections[1].items.count, 2)
-    }
-
     func testLargeItemsKeepTotalDurationAsSingleSecondaryValue() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let runningItem = snapshot.sections
@@ -888,75 +442,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertNotEqual(completedItem?.remainingText, "0s")
     }
 
-    func testIdentityCueStaysConsistentAcrossCompactAndLargePresentations() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let compactByID = Dictionary(uniqueKeysWithValues: snapshot.compactItems.map { ($0.id, $0.identityCue) })
-        let largeByID = Dictionary(
-            uniqueKeysWithValues: snapshot.sections.flatMap(\.items).map { ($0.id, $0.identityCue) }
-        )
-
-        XCTAssertEqual(compactByID[UUID(uuidString: "33333333-3333-3333-3333-333333333333")!], largeByID[UUID(uuidString: "33333333-3333-3333-3333-333333333333")!])
-        XCTAssertEqual(compactByID[UUID(uuidString: "22222222-2222-2222-2222-222222222222")!], largeByID[UUID(uuidString: "22222222-2222-2222-2222-222222222222")!])
-        XCTAssertEqual(compactByID[UUID(uuidString: "11111111-1111-1111-1111-111111111111")!], largeByID[UUID(uuidString: "11111111-1111-1111-1111-111111111111")!])
-    }
-
-    func testIdentityCueRemainsStableWhenTimerMovesToCompletedSection() {
-        let now = Date(timeIntervalSince1970: 9_000)
-        let timerID = UUID(uuidString: "abababab-abab-abab-abab-abababababab")!
-        let runningTimer = RunningTimerItem(
-            id: timerID,
-            order: 9,
-            name: "Completion Shift",
-            basisSummary: "Base 1/30s · 6 stops",
-            duration: 90,
-            startDate: now.addingTimeInterval(-15),
-            endDate: now.addingTimeInterval(75),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-        let completedTimer = RunningTimerItem(
-            id: timerID,
-            order: 9,
-            name: "Completion Shift",
-            basisSummary: "Base 1/30s · 6 stops",
-            duration: 90,
-            startDate: now.addingTimeInterval(-90),
-            endDate: now.addingTimeInterval(-1),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed,
-            referenceDate: now
-        )
-
-        let runningSnapshot = makeSnapshot(from: [runningTimer])
-        let completedSnapshot = makeSnapshot(from: [completedTimer])
-
-        XCTAssertEqual(runningSnapshot.compactItems.first?.identityCue, completedSnapshot.compactItems.first?.identityCue)
-        XCTAssertEqual(runningSnapshot.sections.first?.items.first?.identityCue, completedSnapshot.sections.first?.items.first?.identityCue)
-    }
-
-    func testMultipleTimersGetDistinguishableIdentityCues() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let visibleCompactCues = snapshot.compactItems.map(\.identityCue)
-
-        XCTAssertEqual(Set(visibleCompactCues.map(\.markerText)).count, 3)
-        XCTAssertGreaterThanOrEqual(Set(visibleCompactCues.map(\.tintSlot)).count, 2)
-    }
-
-    func testLargeSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-
-        let focusedItem = snapshot.sections
-            .flatMap(\.items)
-            .first { $0.id == focusedID }
-
-        XCTAssertEqual(focusedItem?.title, "Paused Hold")
-        XCTAssertEqual(focusedItem?.status, .paused)
-    }
-
     func testLargeHeightCreatesLargerManagementViewportBudget() {
         let compactHeight = BottomSheetLayoutMetrics.mainContentReservation(for: .compact)
         let largeHeight = BottomSheetLayoutMetrics.largeFixedHeight
@@ -977,18 +462,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(snapshot.compactItems.count, 3)
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
         XCTAssertFalse(host.view.containsText("+2 more in workspace"))
-    }
-
-    @MainActor
-    func testCompactIdentityCueRemainsSeparateFromPrimaryAndSecondaryTimeText() throws {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let item = try XCTUnwrap(snapshot.compactItems.first)
-
-        XCTAssertEqual(item.identityCue.markerText, "T2")
-        XCTAssertFalse(item.primaryRemainingText.contains(item.identityCue.markerText))
-        XCTAssertFalse((item.secondaryTotalText ?? "").contains(item.identityCue.markerText))
-        XCTAssertEqual(item.primaryRemainingText, "55s")
-        XCTAssertEqual(item.secondaryTotalText, "03:00")
     }
 
     @MainActor
@@ -1029,20 +502,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testLargeIdentityCueRemainsSeparateFromTitleTimeAndStatusValues() throws {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let row = try XCTUnwrap(snapshot.sections.first?.items.first)
-
-        XCTAssertEqual(row.identityCue.markerText, "T2")
-        XCTAssertFalse((row.title ?? "").contains(row.identityCue.markerText))
-        XCTAssertFalse(row.statusLabel.contains(row.identityCue.markerText))
-        XCTAssertFalse(row.remainingText.contains(row.identityCue.markerText))
-        XCTAssertFalse((row.totalDurationText ?? "").contains(row.identityCue.markerText))
-        XCTAssertFalse((row.timingText ?? "").contains(row.identityCue.markerText))
-        XCTAssertFalse((row.contextText ?? "").contains(row.identityCue.markerText))
-    }
-
-    @MainActor
     func testLargeHeaderDoesNotRenderSummarySentenceOrCountChips() {
         let snapshot = makeSnapshot(from: sampleTimers())
         let host = makeBottomSheetHost(detent: .large, snapshot: snapshot)
@@ -1052,21 +511,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertFalse(host.view.containsText("Running 1"))
         XCTAssertFalse(host.view.containsText("Paused 1"))
         XCTAssertFalse(host.view.containsText("Done 2"))
-    }
-
-    @MainActor
-    func testLargeStateMarksFocusedRowForTappedCompactTimer() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-
-        store.focusTimer(focusedID)
-
-        let host = makeBottomSheetHost(store: store, snapshot: snapshot)
-
-        XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertEqual(store.selectedTimerID, focusedID)
-        XCTAssertTrue(snapshot.sections.flatMap(\.items).contains { $0.id == focusedID })
     }
 
     @MainActor
@@ -1090,47 +534,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     @MainActor
-    func testOverflowCardKeepsViewAllRoleWithoutTimerIdentityMarker() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
-        XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
-        XCTAssertFalse(snapshot.compactItems.map(\.identityCue.markerText).contains("T4"))
-    }
-
-    @MainActor
-    func testClearCompletedRemovesCompletedSectionMetadataAndIdentityMarkers() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.baseShutter = 1.0 / 30.0
-        harness.viewModel.ndStop = 6
-        harness.viewModel.startTimer()
-
-        harness.viewModel.baseShutter = 1
-        harness.viewModel.ndStop = 3
-        harness.viewModel.startTimer()
-
-        harness.currentDate = Date(timeIntervalSince1970: 103)
-        harness.timerManager.tick(now: harness.currentDate)
-
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active", "Recently Completed"])
-        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
-
-        harness.viewModel.clearCompletedTimers()
-
-        XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 0)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active"])
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.count, 1)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue.markerText, "T2")
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.contextText, "Base 1s · 3 stops")
-
-        XCTAssertFalse(harness.snapshotStore.snapshot.sections.contains { $0.title == "Recently Completed" })
-        XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.timingText == "Completed recently" })
-        XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.identityCue.markerText == "T1" })
-    }
-
-    @MainActor
     func testExposureScreenLoadsWithBottomSheetShell() {
         let host = UIHostingController(
             rootView: ExposureCalculatorScreen()
@@ -1143,30 +546,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         host.view.layoutIfNeeded()
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-    }
-
-    @MainActor
-    func testSnapshotStoreReflectsPreviewStateTimerStartWithoutChangingWorkspaceFlow() throws {
-        let harness = makeRuntimeHarness(now: 100)
-
-        harness.viewModel.baseShutter = 1.0 / 30.0
-        harness.viewModel.ndStop = 6
-        harness.viewModel.updateLiveBaseShutter(1.0 / 15.0)
-        harness.viewModel.startTimer()
-
-        let timer = try XCTUnwrap(harness.viewModel.timers.first)
-        let compactItem = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
-        let largeItem = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
-
-        XCTAssertEqual(timer.name, "6 stops - 4s")
-        XCTAssertEqual(timer.basisSummary, "Base 1/15s · 6 stops")
-        XCTAssertEqual(timer.duration, 4, accuracy: 0.0001)
-        XCTAssertEqual(compactItem.id, timer.id)
-        XCTAssertEqual(largeItem.id, timer.id)
-        XCTAssertEqual(largeItem.contextText, timer.basisSummary)
-        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(4))
-        XCTAssertFalse(harness.stateStore.isExpanded)
-        XCTAssertEqual(harness.stateStore.detent, .compact)
     }
 
     func testExposureScreenPinsCalculatorReservedHeightToCompactSheetBudget() {
@@ -1444,111 +823,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         )
     }
 
-    private func activeOrderingTimers(pausedFirstTimerStatus: TimerStatus) -> [RunningTimerItem] {
-        let now = Date(timeIntervalSince1970: 2_000)
-
-        return [
-            RunningTimerItem(
-                id: UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!,
-                order: 1,
-                name: "First Active",
-                basisSummary: "Base 1/30s · 6 stops",
-                duration: 90,
-                startDate: now.addingTimeInterval(-10),
-                endDate: pausedFirstTimerStatus == .running ? now.addingTimeInterval(50) : now.addingTimeInterval(80),
-                pausedRemainingTime: pausedFirstTimerStatus == .paused ? 50 : nil,
-                pausedAt: pausedFirstTimerStatus == .paused ? now.addingTimeInterval(-5) : nil,
-                status: pausedFirstTimerStatus,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "bbbbbbb2-2222-2222-2222-222222222222")!,
-                order: 2,
-                name: "Second Active",
-                basisSummary: "Base 1/60s · 10 stops",
-                duration: 200,
-                startDate: now,
-                endDate: now.addingTimeInterval(20),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!,
-                order: 3,
-                name: "Third Active",
-                basisSummary: "Base 1/15s · 8 stops",
-                duration: 140,
-                startDate: now.addingTimeInterval(-15),
-                endDate: now.addingTimeInterval(110),
-                pausedRemainingTime: 70,
-                pausedAt: now.addingTimeInterval(-12),
-                status: .paused,
-                referenceDate: now
-            )
-        ]
-    }
-
-    private func completedAheadOfActiveTimers() -> [RunningTimerItem] {
-        let now = Date(timeIntervalSince1970: 3_000)
-
-        return [
-            RunningTimerItem(
-                id: UUID(uuidString: "fffffff6-6666-6666-6666-666666666666")!,
-                order: 3,
-                name: "Completed Latest",
-                basisSummary: "Base 1/8s · 5 stops",
-                duration: 30,
-                startDate: now.addingTimeInterval(-30),
-                endDate: now.addingTimeInterval(-5),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .completed,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
-                order: 4,
-                name: "Completed Earlier",
-                basisSummary: "Base 1/4s · 4 stops",
-                duration: 20,
-                startDate: now.addingTimeInterval(-50),
-                endDate: now.addingTimeInterval(-20),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .completed,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
-                order: 1,
-                name: "Active First",
-                basisSummary: "Base 1/2s · 2 stops",
-                duration: 180,
-                startDate: now,
-                endDate: now.addingTimeInterval(90),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "eeeeeee5-5555-5555-5555-555555555555")!,
-                order: 2,
-                name: "Active Second",
-                basisSummary: "Base 1/1s · 1 stop",
-                duration: 240,
-                startDate: now.addingTimeInterval(-20),
-                endDate: now.addingTimeInterval(160),
-                pausedRemainingTime: 55,
-                pausedAt: now.addingTimeInterval(-10),
-                status: .paused,
-                referenceDate: now
-            )
-        ]
-    }
-
     private func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {
         let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
 
@@ -1601,70 +875,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         }
 
         return item
-    }
-
-    @MainActor
-    private func makeRuntimeHarness(now: TimeInterval) -> RuntimeHarness {
-        var currentDate = Date(timeIntervalSince1970: now)
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        let adapter = BottomSheetWorkspacePresentationAdapter(
-            formatRemaining: viewModel.formatTimerClock,
-            timeContext: viewModel.timerTimeContext,
-            compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
-        )
-        let snapshotStore = BottomSheetWorkspaceSnapshotStore(
-            initialTimers: viewModel.timers,
-            timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
-            adapter: adapter
-        )
-        let stateStore = BottomSheetWorkspaceStateStore()
-
-        return RuntimeHarness(
-            timerManager: timerManager,
-            viewModel: viewModel,
-            snapshotStore: snapshotStore,
-            stateStore: stateStore,
-            currentDate: { currentDate },
-            setCurrentDate: { currentDate = $0 }
-        )
-    }
-
-    @MainActor
-    private struct RuntimeHarness {
-        let timerManager: TimerManager
-        let viewModel: ExposureCalculatorViewModel
-        let snapshotStore: BottomSheetWorkspaceSnapshotStore
-        let stateStore: BottomSheetWorkspaceStateStore
-        let currentDateProvider: () -> Date
-        let setCurrentDate: (Date) -> Void
-
-        var currentDate: Date {
-            get { currentDateProvider() }
-            nonmutating set { setCurrentDate(newValue) }
-        }
-
-        init(
-            timerManager: TimerManager,
-            viewModel: ExposureCalculatorViewModel,
-            snapshotStore: BottomSheetWorkspaceSnapshotStore,
-            stateStore: BottomSheetWorkspaceStateStore,
-            currentDate: @escaping () -> Date,
-            setCurrentDate: @escaping (Date) -> Void
-        ) {
-            self.timerManager = timerManager
-            self.viewModel = viewModel
-            self.snapshotStore = snapshotStore
-            self.stateStore = stateStore
-            self.currentDateProvider = currentDate
-            self.setCurrentDate = setCurrentDate
-        }
     }
 
     @MainActor

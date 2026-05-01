@@ -9,6 +9,20 @@
     }
   ],
   "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:PTimer.xcodeproj",
+          "identifier" : "A00000000000000000000040",
+          "name" : "PTimer"
+        },
+        {
+          "containerPath" : "container:PTimer.xcodeproj",
+          "identifier" : "A0000000000000000000009C",
+          "name" : "PTimerWidgets"
+        }
+      ]
+    },
     "performanceAntipatternCheckerEnabled" : true,
     "targetForVariableExpansion" : {
       "containerPath" : "container:PTimer.xcodeproj",

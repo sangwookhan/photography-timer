@@ -511,7 +511,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         )
 
         let data = try JSONEncoder().encode(result)
-        let decoded = try JSONDecoder().decode(ReciprocityCalculationPolicyResult.self, from: data)
+        let decoded = try JSONDecoder().decode(ReciprocityResult.self, from: data)
 
         XCTAssertEqual(decoded, result)
         XCTAssertEqual(decoded.hasCalculatedExposureTime, true)
@@ -536,7 +536,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
         XCTAssertThrowsError(
             try JSONDecoder().decode(
-                ReciprocityCalculationPolicyResult.self,
+                ReciprocityResult.self,
                 from: Data(json.utf8)
             )
         ) { error in
@@ -568,7 +568,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
         XCTAssertThrowsError(
             try JSONDecoder().decode(
-                ReciprocityCalculationPolicyResult.self,
+                ReciprocityResult.self,
                 from: Data(json.utf8)
             )
         ) { error in
@@ -599,7 +599,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
         XCTAssertThrowsError(
             try JSONDecoder().decode(
-                ReciprocityCalculationPolicyResult.self,
+                ReciprocityResult.self,
                 from: Data(json.utf8)
             )
         ) { error in
@@ -630,7 +630,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
         XCTAssertThrowsError(
             try JSONDecoder().decode(
-                ReciprocityCalculationPolicyResult.self,
+                ReciprocityResult.self,
                 from: Data(json.utf8)
             )
         ) { error in
@@ -661,7 +661,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
         XCTAssertThrowsError(
             try JSONDecoder().decode(
-                ReciprocityCalculationPolicyResult.self,
+                ReciprocityResult.self,
                 from: Data(json.utf8)
             )
         ) { error in
@@ -692,7 +692,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
         XCTAssertThrowsError(
             try JSONDecoder().decode(
-                ReciprocityCalculationPolicyResult.self,
+                ReciprocityResult.self,
                 from: Data(json.utf8)
             )
         ) { error in
@@ -1024,6 +1024,187 @@ enum ReciprocityPolicyScenarioFactory {
                     )
                 )
             ]
+        )
+    }
+
+    /// Synthetic formula profile with an explicit upper boundary so the
+    /// `unsupportedFormulaBoundary` evaluator branch can be reached without
+    /// modifying any catalog film. Mirrors the HP5 shape (exponent 1.31)
+    /// but caps `meteredRange` at 30s.
+    static func formulaBoundedProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-formula-bounded-30s",
+            name: "Bounded formula profile",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerPublished,
+                authority: .official,
+                confidence: .high,
+                publisher: "Synthetic Vendor",
+                title: "Bounded reciprocity formula"
+            ),
+            rules: [
+                .threshold(
+                    ThresholdReciprocityRule(
+                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
+                    )
+                ),
+                .formula(
+                    FormulaReciprocityRule(
+                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001, maximumSeconds: 30),
+                        formula: ReciprocityFormula(
+                            exponent: 1.31,
+                            equation: "Tc = Tm^P"
+                        ),
+                        notes: ["Exponent P = 1.31 within bounded range."]
+                    )
+                )
+            ]
+        )
+    }
+
+    /// Variant of `triXProfile` with archival-official source. Used to
+    /// exercise the warning-level matrix on quantified table paths.
+    static func triXArchivalProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-tri-x-archival",
+            name: "Archival Tri-X variant",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerArchive,
+                authority: .official,
+                confidence: .medium,
+                publisher: "Kodak archive",
+                title: "Archived Tri-X reciprocity",
+                sourceVersion: "legacy"
+            ),
+            rules: triXProfile().rules
+        )
+    }
+
+    /// Variant of `triXProfile` with unofficial-secondary source.
+    static func triXSecondaryProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-tri-x-secondary",
+            name: "Secondary Tri-X variant",
+            source: ReciprocitySourceProvenance(
+                kind: .thirdPartyPublication,
+                authority: .unofficial,
+                confidence: .medium,
+                publisher: "Independent reciprocity notes"
+            ),
+            rules: triXProfile().rules
+        )
+    }
+
+    /// Variant of `triXProfile` with user-defined source.
+    static func triXUserDefinedProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-tri-x-user-defined",
+            name: "User-defined Tri-X variant",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                confidence: .unknown,
+                publisher: "Local User"
+            ),
+            rules: triXProfile().rules
+        )
+    }
+
+    /// Variant of `hp5FormulaProfile` with archival source. Used to
+    /// exercise the warning-level matrix on the `formulaDerived` branch.
+    static func hp5ArchivalFormulaProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-hp5-archival",
+            name: "Archival HP5 formula",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerArchive,
+                authority: .official,
+                confidence: .medium,
+                publisher: "Ilford archive",
+                title: "Archived reciprocity",
+                sourceVersion: "legacy"
+            ),
+            rules: hp5FormulaProfile().rules
+        )
+    }
+
+    /// Variant of `hp5FormulaProfile` with user-defined source.
+    static func hp5UserDefinedFormulaProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-hp5-user-defined",
+            name: "User-defined HP5 formula",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                confidence: .unknown,
+                publisher: "Local User"
+            ),
+            rules: hp5FormulaProfile().rules
+        )
+    }
+
+    /// Variant of `velviaProfile` with archival source so stop-signal
+    /// extrapolation can be re-exercised under a non-current authority.
+    static func velviaArchivalProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-velvia-archival",
+            name: "Archival Velvia variant",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerArchive,
+                authority: .official,
+                confidence: .medium,
+                publisher: "Fujifilm archive",
+                title: "Archived long exposure guide",
+                sourceVersion: "legacy"
+            ),
+            rules: velviaProfile().rules
+        )
+    }
+
+    /// Variant of `portraOfficialProfile` with archival source so the
+    /// advisory-only branch can be exercised across authorities.
+    static func portraArchivalAdvisoryProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-portra-archival-advisory",
+            name: "Archival Portra advisory",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerArchive,
+                authority: .official,
+                confidence: .medium,
+                publisher: "Kodak archive",
+                title: "Archived advisory"
+            ),
+            rules: portraOfficialProfile().rules
+        )
+    }
+
+    /// Variant of `portraOfficialProfile` with secondary source.
+    static func portraSecondaryAdvisoryProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-portra-secondary-advisory",
+            name: "Secondary Portra advisory",
+            source: ReciprocitySourceProvenance(
+                kind: .thirdPartyPublication,
+                authority: .unofficial,
+                confidence: .medium,
+                publisher: "Independent reciprocity notes"
+            ),
+            rules: portraOfficialProfile().rules
+        )
+    }
+
+    /// Variant of `portraOfficialProfile` with user-defined source.
+    static func portraUserDefinedAdvisoryProfile() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "synthetic-portra-user-defined-advisory",
+            name: "User-defined Portra advisory",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                confidence: .unknown,
+                publisher: "Local User"
+            ),
+            rules: portraOfficialProfile().rules
         )
     }
 }

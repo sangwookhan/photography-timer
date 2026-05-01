@@ -1,0 +1,296 @@
+import Combine
+import Foundation
+
+/// `TimerWorkspaceModel` carries the *timer collection / dock /
+/// workspace* responsibility extracted from the legacy
+/// `ExposureCalculatorViewModel` monolith as the third step of B1
+/// (`Docs/StructureImprovement/specs/B1-ViewModelDecomposition.md`).
+///
+/// PR3 of 6 — owns the timer state slice. The model owns:
+/// - the `TimerManager` instance (the live timer state machine)
+/// - timer metadata persistence (the `*Storing` store + the
+///   `timerMetadata` dict + `nextTimerOrder`)
+/// - the published `timers: [RunningTimerItem]` collection that views
+///   bind to (still surfaced through the legacy ViewModel for now)
+/// - the timer lifecycle operations the ViewModel previously hosted
+///   (`pause` / `resume` / `remove` / `clearCompletedTimers` /
+///   `start(id:duration:metadata:)`)
+/// - the `completedRelativeTimeFormatter` used to drive the
+///   "Completed N minutes ago" refresh schedule.
+///
+/// PR3 ships the model as `ObservableObject` + `@Published` so the
+/// existing legacy ViewModel `@Published var timers` surface can
+/// republish via `assign(to:)` without a Combine ↔ `@Observable`
+/// bridge. PR5/PR6 may flip the model to `@Observable` once views
+/// migrate.
+///
+/// Per spec §11 risk mitigation: this model carries only timer
+/// state. Cross-cutting "Start Timer from a calc result" workflow
+/// stays at the ViewModel/coordinator level until PR5/PR6.
+@MainActor
+final class TimerWorkspaceModel: ObservableObject {
+    @Published private(set) var timers: [RunningTimerItem] = []
+
+    /// Exposed to the ViewModel so it can construct the "Tri-X 400 - 2s"
+    /// timer name from the active calc/film state before delegating to
+    /// `start(id:duration:metadata:)`. Kept private(set) — only the
+    /// model mutates it via persistence + lifecycle paths.
+    private(set) var nextTimerOrder = 1
+
+    let timerManager: TimerManager
+
+    private let metadataPersistenceStore: TimerMetadataPersistenceStoring
+    private let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
+    private var timerMetadata: [UUID: TimerMetadataEntry] = [:]
+    private var cancellables: Set<AnyCancellable> = []
+    private var completedTimeContextRefreshTimer: Timer?
+
+    /// Closure used to derive the human-readable fallback name for a
+    /// timer whose metadata entry was not registered (e.g., a timer
+    /// that survived a relaunch where the metadata snapshot was
+    /// cleared). Mirrors the legacy ViewModel's `defaultName(for:)`
+    /// helper which formats via the calculator. Provided as a closure
+    /// so the model does not need to hold a reference to the
+    /// `ExposureCalculator`.
+    private let defaultName: (TimeInterval) -> String
+
+    init(
+        timerManager: TimerManager,
+        metadataPersistenceStore: TimerMetadataPersistenceStoring,
+        defaultName: @escaping (TimeInterval) -> String
+    ) {
+        self.timerManager = timerManager
+        self.metadataPersistenceStore = metadataPersistenceStore
+        self.defaultName = defaultName
+
+        restorePersistedTimerMetadata()
+        timerManager.$timers
+            .sink { [weak self] states in
+                self?.syncTimers(with: states)
+            }
+            .store(in: &cancellables)
+    }
+
+    // MARK: - Lifecycle
+
+    /// Starts a timer with the given metadata. Returns the timer's id
+    /// on success; nil if `TimerManager` rejected the duration.
+    /// Mirrors the legacy ViewModel's `startTimer(from:result:filmModeResult:startSource:)`
+    /// internal path: assign metadata before calling `TimerManager`,
+    /// roll back on failure, bump `nextTimerOrder` on success.
+    @discardableResult
+    func startTimer(
+        id: UUID = UUID(),
+        duration: TimeInterval,
+        name: String,
+        basisSummary: String
+    ) -> UUID? {
+        let order = nextTimerOrder
+        timerMetadata[id] = TimerMetadataEntry(
+            order: order,
+            name: name,
+            basisSummary: basisSummary
+        )
+
+        guard timerManager.start(id: id, duration: duration) != nil else {
+            timerMetadata.removeValue(forKey: id)
+            return nil
+        }
+
+        nextTimerOrder += 1
+        persistTimerMetadata()
+        return id
+    }
+
+    func pauseTimer(id: UUID) {
+        timerManager.pause(id: id)
+    }
+
+    func resumeTimer(id: UUID) {
+        timerManager.resume(id: id)
+    }
+
+    func removeTimer(id: UUID) {
+        timerManager.remove(id: id)
+        timerMetadata.removeValue(forKey: id)
+        persistTimerMetadata()
+    }
+
+    func clearCompletedTimers() {
+        let completedIDs = Set(
+            timers
+                .filter { $0.status == .completed }
+                .map(\.id)
+        )
+        timerManager.removeCompletedTimers()
+        completedIDs.forEach { id in
+            timerMetadata.removeValue(forKey: id)
+        }
+        persistTimerMetadata()
+    }
+
+    func reconcileTimersAfterAppBecomesActive() {
+        timerManager.reconcileAfterAppBecomesActive()
+    }
+
+    // MARK: - Display helpers
+
+    var runningTimerCount: Int {
+        timers.filter { $0.status == .running }.count
+    }
+
+    func compactCompletedRelativeTimeText(
+        for completionDate: Date?,
+        relativeTo referenceDate: Date
+    ) -> String {
+        guard let completionDate else {
+            return "--"
+        }
+
+        return completedRelativeTimeFormatter.compactString(
+            from: completionDate,
+            relativeTo: referenceDate
+        )
+    }
+
+    func relativeCompletedText(
+        from completionDate: Date,
+        relativeTo referenceDate: Date
+    ) -> String {
+        completedRelativeTimeFormatter.string(
+            from: completionDate,
+            relativeTo: referenceDate
+        )
+    }
+
+    // MARK: - Persistence + sync
+
+    private func restorePersistedTimerMetadata() {
+        guard let snapshot = metadataPersistenceStore.loadSnapshot() else {
+            return
+        }
+
+        nextTimerOrder = max(1, snapshot.nextTimerOrder)
+        timerMetadata = Dictionary(
+            uniqueKeysWithValues: snapshot.timers.map {
+                (
+                    $0.id,
+                    TimerMetadataEntry(
+                        order: $0.order,
+                        name: $0.name,
+                        basisSummary: $0.basisSummary
+                    )
+                )
+            }
+        )
+    }
+
+    private func persistTimerMetadata() {
+        guard !timerMetadata.isEmpty else {
+            metadataPersistenceStore.clearSnapshot()
+            return
+        }
+
+        let snapshot = PersistentTimerMetadataCollectionSnapshot(
+            nextTimerOrder: nextTimerOrder,
+            timers: timerMetadata
+                .map { id, metadata in
+                    PersistentTimerMetadataSnapshot(
+                        id: id,
+                        order: metadata.order,
+                        name: metadata.name,
+                        basisSummary: metadata.basisSummary
+                    )
+                }
+                .sorted { lhs, rhs in
+                    if lhs.order != rhs.order {
+                        return lhs.order < rhs.order
+                    }
+
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+        )
+
+        metadataPersistenceStore.saveSnapshot(snapshot)
+    }
+
+    private func syncTimers(with states: [TimerState]) {
+        let validIDs = Set(states.map(\.id))
+        let originalCount = timerMetadata.count
+        timerMetadata = timerMetadata.filter { validIDs.contains($0.key) }
+        if timerMetadata.count != originalCount {
+            persistTimerMetadata()
+        }
+        let referenceDate = timerManager.currentDate
+
+        timers = states
+            .map { state in
+                RunningTimerItem(
+                    id: state.id,
+                    order: timerMetadata[state.id]?.order ?? 0,
+                    name: timerMetadata[state.id]?.name ?? defaultName(state.duration),
+                    basisSummary: timerMetadata[state.id]?.basisSummary ?? "Manual timer",
+                    duration: state.duration,
+                    startDate: state.startDate,
+                    endDate: state.endDate,
+                    pausedRemainingTime: state.pausedRemainingTime,
+                    pausedAt: state.pausedAt,
+                    status: state.status,
+                    referenceDate: referenceDate
+                )
+            }
+            .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
+
+        scheduleCompletedTimeContextRefreshIfNeeded()
+    }
+
+    private func scheduleCompletedTimeContextRefreshIfNeeded() {
+        completedTimeContextRefreshTimer?.invalidate()
+        completedTimeContextRefreshTimer = nil
+
+        guard !timers.contains(where: { $0.status == .running }) else {
+            return
+        }
+
+        let referenceDate = timerManager.currentDate
+        let nextRefreshDate = timers
+            .filter { $0.status == .completed }
+            .compactMap(\.completedAt)
+            .compactMap {
+                completedRelativeTimeFormatter.nextRefreshDate(
+                    from: $0,
+                    relativeTo: referenceDate
+                )
+            }
+            .min()
+
+        guard let nextRefreshDate else {
+            return
+        }
+
+        let refreshTimer = Timer(
+            fire: nextRefreshDate,
+            interval: 0,
+            repeats: false
+        ) { [weak self] _ in
+            guard let self else {
+                return
+            }
+
+            self.syncTimers(with: self.timerManager.timers)
+        }
+
+        completedTimeContextRefreshTimer = refreshTimer
+        RunLoop.main.add(refreshTimer, forMode: .common)
+    }
+
+    deinit {
+        completedTimeContextRefreshTimer?.invalidate()
+    }
+}
+
+private struct TimerMetadataEntry {
+    let order: Int
+    let name: String
+    let basisSummary: String
+}

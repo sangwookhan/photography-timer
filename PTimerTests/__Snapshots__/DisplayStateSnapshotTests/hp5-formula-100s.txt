@@ -1,0 +1,15 @@
+  ▿ PTimer.ReciprocityResult.quantified
+    ▿ quantified: PTimer.ReciprocityResult.QuantifiedPayload
+      - meteredExposureSeconds: 100.0
+      - correctedExposureSeconds: 416.8693834703355
+      ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
+        - basis: PTimer.ReciprocityCalculationBasis.formulaDerived
+        - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
+        - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.withinStatedRange
+        - warningLevel: PTimer.ReciprocityCalculationWarningLevel.none
+        - estimationFamily: nil
+        ▿ notes: 1 element
+          ▿ PTimer.ReciprocityPolicyNote
+            - token: nil
+            - text: "Exponent P = 1.31."
+        - referencedRows: nil

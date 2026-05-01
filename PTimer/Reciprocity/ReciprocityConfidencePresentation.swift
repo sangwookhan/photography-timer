@@ -401,7 +401,7 @@ private extension ReciprocityConfidencePresentation {
 /// inspect raw domain rules or re-run calculation-policy decisions.
 struct ReciprocityConfidencePresentationMapper {
     func map(
-        result: ReciprocityCalculationPolicyResult
+        result: ReciprocityResult
     ) -> ReciprocityConfidencePresentation {
         let payload = payload(for: result)
 
@@ -420,7 +420,7 @@ struct ReciprocityConfidencePresentationMapper {
     }
 
     private func payload(
-        for result: ReciprocityCalculationPolicyResult
+        for result: ReciprocityResult
     ) -> ReciprocityConfidencePresentation.Payload {
         let explanationTokens = explanationTokens(for: result)
         let supportingNotes = result.metadata.notes.map(\.text)
@@ -548,7 +548,7 @@ struct ReciprocityConfidencePresentationMapper {
     }
 
     private func explanationTokens(
-        for result: ReciprocityCalculationPolicyResult
+        for result: ReciprocityResult
     ) -> [ReciprocityConfidenceExplanationToken] {
         var tokens: [ReciprocityConfidenceExplanationToken] = []
 
@@ -684,7 +684,7 @@ struct ReciprocityConfidencePresentationMapper {
     }
 }
 
-extension ReciprocityCalculationPolicyResult {
+extension ReciprocityResult {
     var confidencePresentation: ReciprocityConfidencePresentation {
         ReciprocityConfidencePresentationMapper().map(result: self)
     }

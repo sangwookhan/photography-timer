@@ -807,6 +807,103 @@ final class TimerManagerTests: XCTestCase {
     }
 
     @MainActor
+    func testPausedTimerEndDateIsDerivedFromFreezeMetadata() throws {
+        // PausedTimer.endDate is now computed (`pausedAt +
+        // pausedRemainingTime`) rather than stored. Verify the derived
+        // value equals the original endDate at the pause boundary, and
+        // — unlike the legacy stored field — also equals
+        // `pausedAt + pausedRemainingTime` for synthetic paused state
+        // constructed via the back-compat init.
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+        currentDate = startDate.addingTimeInterval(3)
+        manager.pause(id: id)
+
+        let paused = tryUnwrapTimer(withID: id, from: manager.timers)
+        let pausedAt = try XCTUnwrap(paused.pausedAt)
+        let remaining = try XCTUnwrap(paused.pausedRemainingTime)
+        XCTAssertEqual(paused.endDate, pausedAt.addingTimeInterval(remaining))
+        XCTAssertEqual(paused.endDate, startDate.addingTimeInterval(10))
+    }
+
+    @MainActor
+    func testPersistedPausedSnapshotOmitsExpectedCompletionAt() throws {
+        // Per Timer Spec §3.1, `expectedCompletionAt` is meaningful for
+        // running status only. The PersistentTimerSnapshot init now
+        // writes nil for paused timers; the hypothetical completion
+        // date is reconstructed on read from `pausedAt +
+        // pausedRemainingDuration`.
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 10))
+        currentDate = startDate.addingTimeInterval(4)
+        manager.pause(id: id)
+
+        let pausedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
+        let snapshot = PersistentTimerSnapshot(timer: pausedTimer)
+
+        XCTAssertEqual(snapshot.status, .paused)
+        XCTAssertNil(snapshot.expectedCompletionAt)
+        XCTAssertEqual(snapshot.pausedRemainingDuration, 6)
+        XCTAssertEqual(snapshot.pausedAt, startDate.addingTimeInterval(4))
+    }
+
+    @MainActor
+    func testRestoreLegacyPausedSnapshotIgnoresExpectedCompletionAt() throws {
+        // Legacy snapshots (pre-PTIMER-118 epic) wrote
+        // `expectedCompletionAt` for paused timers. Restore must
+        // ignore that field and reconstruct the hypothetical end
+        // date from the freeze metadata so the resumable state is
+        // identical regardless of whether the snapshot is legacy or
+        // current. Simulate a legacy snapshot via JSON decoding
+        // because the in-process initializer no longer accepts a
+        // non-nil `expectedCompletionAt` for paused.
+        let startDate = Date(timeIntervalSince1970: 100)
+        let pausedAt = startDate.addingTimeInterval(4)
+
+        // Legacy JSON deliberately makes expectedCompletionAt point
+        // somewhere far from `pausedAt + pausedRemainingDuration`
+        // (the legacy stored value could go stale across edits).
+        let legacyJSON = #"""
+        {
+          "id": "DEADBEEF-1111-2222-3333-444444444444",
+          "status": "paused",
+          "duration": 10,
+          "startDate": 100,
+          "expectedCompletionAt": 199,
+          "pausedRemainingDuration": 6,
+          "pausedAt": 104,
+          "completedAt": null
+        }
+        """#
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let legacy = try decoder.decode(
+            PersistentTimerSnapshot.self,
+            from: Data(legacyJSON.utf8)
+        )
+
+        let restored = legacy.restore(at: startDate.addingTimeInterval(50))
+
+        XCTAssertEqual(restored.status, .paused)
+        XCTAssertEqual(restored.pausedRemainingTime, 6)
+        XCTAssertEqual(restored.pausedAt, pausedAt)
+        XCTAssertEqual(restored.endDate, pausedAt.addingTimeInterval(6))
+    }
+
+    @MainActor
     func testTimerWithLongDurationOneDayCompletesCorrectly() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         let manager = TimerManager(
@@ -867,6 +964,26 @@ final class TimerManagerTests: XCTestCase {
 
         XCTAssertNil(zeroID)
         XCTAssertNil(negativeID)
+        XCTAssertTrue(manager.timers.isEmpty)
+    }
+
+    @MainActor
+    func testNonFiniteDurationIsIgnored() {
+        // Per Timer Spec §1.2 the system rejects creation with non-positive,
+        // non-finite, or NaN duration values. `+Infinity` previously slipped
+        // past the `> 0` guard because `.infinity > 0` is true, so it now
+        // requires an explicit `isFinite` check.
+        let manager = TimerManager(tickInterval: 60, dateProvider: Date.init)
+
+        let infiniteID = manager.start(duration: .infinity)
+        let negativeInfiniteID = manager.start(duration: -.infinity)
+        let nanID = manager.start(duration: .nan)
+        let signalingNanID = manager.start(duration: .signalingNaN)
+
+        XCTAssertNil(infiniteID)
+        XCTAssertNil(negativeInfiniteID)
+        XCTAssertNil(nanID)
+        XCTAssertNil(signalingNanID)
         XCTAssertTrue(manager.timers.isEmpty)
     }
 
@@ -967,7 +1084,14 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertEqual(resumed.remainingTime(at: pausedAt.addingTimeInterval(1)), 0, accuracy: 0.0001)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
-        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+        // P0-4 (PTIMER-118): PausedTimer.endDate is now computed as
+        // `pausedAt + pausedRemainingTime`, so this synthetic
+        // zero-remaining paused → resume → completed corner produces
+        // completedAt = pausedAt. The corner is unreachable from the
+        // normal pause path because `pausing(at:)` short-circuits to
+        // completed when remaining == 0; only the back-compat init or
+        // a corrupted snapshot can construct it.
+        XCTAssertEqual(resumed.endDate, pausedAt)
     }
 
     @MainActor
@@ -1171,7 +1295,9 @@ final class TimerManagerTests: XCTestCase {
         let resumed = timer.resume(at: pausedAt.addingTimeInterval(1))
 
         XCTAssertEqual(resumed.status, .completed)
-        XCTAssertEqual(resumed.endDate, startDate.addingTimeInterval(10))
+        // See testTimerStateResumeReturnsCompletedWhenNoRemainingTime
+        // for the P0-4 (PTIMER-118) corner-semantics note.
+        XCTAssertEqual(resumed.endDate, pausedAt)
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
     }

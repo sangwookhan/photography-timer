@@ -1,0 +1,11 @@
+  ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
+    ▿ activeCalculatorContext: PTimer.ActiveExposureCalculatorContext
+      - selectedPresetFilm: nil
+      - selectedProfileOverride: nil
+    - isFilmWorkflowActive: false
+    - canResetFilmModeWorkingContext: false
+    - filmReciprocityBindingState: nil
+    - filmModeExposureResultState: nil
+    - canShowFilmDetails: false
+    - canStartTimer: true
+    - timersCount: 0

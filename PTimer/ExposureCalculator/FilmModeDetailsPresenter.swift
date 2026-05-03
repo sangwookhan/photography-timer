@@ -1077,20 +1077,16 @@ struct FilmModeDetailsPresenter {
     ) -> [String]? {
         let meteredText = meteredExposureSelectorText(entry.meteredExposure, formatDuration: input.formatDuration)
 
-        let exposureText = entry.adjustments.compactMap { adjustment -> String? in
-            guard case let .exposure(exposureAdjustment) = adjustment else {
-                return nil
-            }
-
-            switch exposureAdjustment {
-            case .correctedTime(let mapping):
-                return input.formatDuration(mapping.correctedSeconds)
-            case .stopDelta(let adjustment):
-                return formattedStopDelta(adjustment.stopDelta)
-            case .multiplier(let adjustment):
-                return "\(formatCompactNumber(adjustment.factor))x"
-            }
-        }.first
+        // Combined stop/multiplier · correctedTime cell. When a row
+        // carries both a stopDelta (or multiplier) and a correctedTime
+        // — as Kodak's TRI-X / T-MAX tables and the FOMA / ADOX
+        // multiplier tables do — both facts are shown together so
+        // neither half of the published source is hidden. correctedTime
+        // values flagged `isApproximate` — rounded fractional-stop
+        // derivations like T-MAX 100 1 sec — are prefixed with "≈".
+        // Multiplier-derived corrected times are exact arithmetic and
+        // render without the marker.
+        let exposureText = combinedExposureColumn(for: entry, input: input)
 
         let developmentText = entry.adjustments.compactMap { adjustment -> String? in
             guard case let .development(development) = adjustment else {
@@ -1106,6 +1102,57 @@ struct FilmModeDetailsPresenter {
         }
 
         return [meteredText] + detailColumns
+    }
+
+    /// Combined "stop or multiplier · corrected time" column.
+    ///
+    /// The reference table's value column is intentionally compact; on
+    /// rows where the source publishes (or the catalog stores) both a
+    /// stop/multiplier directive and a corrected-time mapping, the user
+    /// benefits from seeing both — the stop/multiplier names what the
+    /// source said, and the corrected time names the resulting exposure
+    /// value the photographer will actually use.
+    ///
+    /// - When only one form is present, returns that form alone.
+    /// - When both are present, joins them with `" · "`.
+    /// - When the corrected time is `isApproximate` (a rounded display
+    ///   of an irrational fractional-stop derivation), prefixes its
+    ///   formatted value with `"≈"`. Multiplier-derived corrected
+    ///   times are exact arithmetic and are not marked.
+    private func combinedExposureColumn(
+        for entry: ReciprocityTableEntry,
+        input: FilmModeDetailsPresenterInput
+    ) -> String? {
+        var stopOrMultiplierText: String?
+        var correctedTimeText: String?
+
+        for adjustment in entry.adjustments {
+            guard case let .exposure(exposureAdjustment) = adjustment else { continue }
+            switch exposureAdjustment {
+            case .correctedTime(let mapping):
+                let formatted = input.formatDuration(mapping.correctedSeconds)
+                correctedTimeText = mapping.isApproximate ? "≈\(formatted)" : formatted
+            case .stopDelta(let adjustment):
+                if stopOrMultiplierText == nil {
+                    stopOrMultiplierText = formattedStopDelta(adjustment.stopDelta)
+                }
+            case .multiplier(let adjustment):
+                if stopOrMultiplierText == nil {
+                    stopOrMultiplierText = "\(formatCompactNumber(adjustment.factor))x"
+                }
+            }
+        }
+
+        switch (stopOrMultiplierText, correctedTimeText) {
+        case let (.some(stop), .some(corrected)):
+            return "\(stop) · \(corrected)"
+        case let (.some(stop), .none):
+            return stop
+        case let (.none, .some(corrected)):
+            return corrected
+        case (.none, .none):
+            return nil
+        }
     }
 
     private func compactDevelopmentReferenceText(from instruction: String) -> String {
@@ -1174,20 +1221,10 @@ struct FilmModeDetailsPresenter {
     ) -> String? {
         let meteredText = meteredExposureSelectorText(entry.meteredExposure, formatDuration: input.formatDuration)
 
-        let exposureText = entry.adjustments.compactMap { adjustment -> String? in
-            guard case let .exposure(exposureAdjustment) = adjustment else {
-                return nil
-            }
-
-            switch exposureAdjustment {
-            case .correctedTime(let mapping):
-                return input.formatDuration(mapping.correctedSeconds)
-            case .stopDelta(let adjustment):
-                return formattedStopDelta(adjustment.stopDelta)
-            case .multiplier(let adjustment):
-                return "\(formatCompactNumber(adjustment.factor))x"
-            }
-        }.first
+        // Combine stop/multiplier and corrected time the same way the
+        // compact column path does (see `combinedExposureColumn`) so
+        // both formatters surface both facts when a row carries both.
+        let exposureText = combinedExposureColumn(for: entry, input: input)
 
         let developmentText = entry.adjustments.compactMap { adjustment -> String? in
             guard case let .development(development) = adjustment else {

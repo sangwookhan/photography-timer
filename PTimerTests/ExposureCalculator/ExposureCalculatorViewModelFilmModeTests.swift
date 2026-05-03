@@ -22,7 +22,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     @MainActor
     func testSelectingPresetFilmUpdatesActiveCalculatorContextAndDisplayState() throws {
         let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
 
         viewModel.selectPresetFilm(film)
 
@@ -36,8 +38,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     @MainActor
     func testReplacingPresetFilmUpdatesActiveCalculatorContext() throws {
         let viewModel = makeViewModel()
-        let firstFilm = try XCTUnwrap(viewModel.availablePresetFilms.first)
-        let replacementFilm = try XCTUnwrap(viewModel.availablePresetFilms.dropFirst().first)
+        let firstFilm = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        let replacementFilm = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }
+        )
 
         viewModel.selectPresetFilm(firstFilm)
         viewModel.selectPresetFilm(replacementFilm)
@@ -53,20 +59,43 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
         XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
-        XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.primaryText), [
-            "Tri-X 400",
-            "Portra 400",
-            "Portra 400",
-            "Velvia 50",
-            "HP5 Plus"
-        ])
-        XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText), [
-            "ISO 400",
-            "ISO 400",
-            "Unofficial",
-            "ISO 50",
-            "ISO 400"
-        ])
+
+        // Every preset row carries an ISO secondary. Films that ship a
+        // registered unofficial practical profile (Portra 400 today) are
+        // surfaced as a second row whose primary text appends " · Unofficial"
+        // — the qualifier lives on the left because it describes the
+        // profile, not the ISO. Spot-check exemplars across batches without
+        // coupling to the full launch-catalog ordering.
+        let portraOfficial = viewModel.filmSelectorEntries.first { entry in
+            entry.primaryText == "Portra 400" && entry.profileOverride == nil
+        }
+        let portraUnofficial = viewModel.filmSelectorEntries.first { entry in
+            entry.primaryText == "Portra 400 · Unofficial"
+        }
+        XCTAssertNotNil(portraOfficial, "Portra 400 official row should exist.")
+        XCTAssertEqual(portraOfficial?.secondaryText, "ISO 400")
+        XCTAssertNotNil(portraUnofficial, "Portra 400 unofficial row should exist with the · Unofficial suffix.")
+        XCTAssertEqual(portraUnofficial?.secondaryText, "ISO 400", "Unofficial row's right column is the ISO speed, not the qualifier.")
+        XCTAssertNotNil(portraUnofficial?.profileOverride, "Unofficial row carries a profile override so the model can apply it on selection.")
+        XCTAssertNotEqual(
+            portraOfficial?.id,
+            portraUnofficial?.id,
+            "Official and unofficial rows must use distinct ids so scroll-to-selection lands on the correct variant."
+        )
+
+        let exemplars: [(name: String, expectedSecondary: String)] = [
+            ("Tri-X 400", "ISO 400"),
+            ("HP5 Plus", "ISO 400"),
+            ("Velvia 50", "ISO 50"),
+            ("Delta 3200", "ISO 3200"),
+        ]
+        for exemplar in exemplars {
+            let entry = viewModel.filmSelectorEntries.first { entry in
+                entry.primaryText == exemplar.name && entry.profileOverride == nil
+            }
+            XCTAssertNotNil(entry, "Missing selector entry for \(exemplar.name).")
+            XCTAssertEqual(entry?.secondaryText, exemplar.expectedSecondary, "Secondary text mismatch for \(exemplar.name).")
+        }
     }
 
     @MainActor
@@ -211,12 +240,16 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table", "Official manufacturer guidance"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
+        // Each TRI-X 400 row in the Reference panel keeps both the
+        // published stop correction and the published adjusted time
+        // alongside its development hint, so the user sees what the
+        // source actually says rather than only one fact per row.
         XCTAssertEqual(referenceSection.rows.map(\.value), [
             """
             <= 1s    No correction
-            1s       +1 stop          Dev -10%
-            10s      +2 stops         Dev -20%
-            100s     +3 stops         Dev -30%
+            1s       +1 stop · 2s        Dev -10%
+            10s      +2 stops · 50s      Dev -20%
+            100s     +3 stops · 1200s    Dev -30%
             """
         ])
         XCTAssertEqual(details.summary.summaryText, "Estimated between 1s and 10s")
@@ -227,6 +260,86 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.graph?.currentPoint?.style, .estimated)
         XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure from reference anchors")
         XCTAssertEqual(details.graph?.title, "Reference Graph")
+    }
+
+    @MainActor
+    func testFilmModeReferenceShowsBothStopAndCorrectedTimeForKodakTMax100() throws {
+        // Reference panel rule: when a row carries both a stop
+        // correction and an adjusted/corrected time, show both —
+        // neither half of the source publication should be hidden by
+        // a "first match wins" formatter. T-MAX 100 1s carries a
+        // catalog-derived corrected time (the source publishes only
+        // the +1/3 stop), so the formatter renders it with an "≈"
+        // prefix to distinguish it from published values like the
+        // 15s at 10 sec or 200s at 100 sec.
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
+
+        viewModel.baseShutter = 4
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
+
+        // Source-published anchors keep their corrected time without
+        // an "≈" marker. The existing app style renders stop deltas as
+        // decimals (e.g. "+0.5 stops") rather than fractions, so the
+        // combined column reads "<stop> · <time>" using that style.
+        XCTAssertTrue(referenceText.contains("+0.5 stops · 15s"), "T-MAX 100 10s row must show '+0.5 stops · 15s'. Got:\n\(referenceText)")
+        XCTAssertTrue(referenceText.contains("+1 stop · 200s"), "T-MAX 100 100s row must show '+1 stop · 200s'. Got:\n\(referenceText)")
+        // The 1s row's corrected time was derived from +0.33 stops
+        // (the policy-compatible logLog anchoring fix), so it must
+        // read with the approximate marker.
+        XCTAssertTrue(referenceText.contains("+0.33 stops · ≈"), "T-MAX 100 1s row must mark its derived corrected time with '≈'. Got:\n\(referenceText)")
+    }
+
+    @MainActor
+    func testFilmModeReferenceShowsFomaMultiplierAndExactCorrectedTimeWithoutApproximateMarker() throws {
+        // FOMA's data sheet publishes only the multiplier ("lengthen
+        // exposure 2x"). The catalog stores `metered × multiplier` as
+        // a corrected time so the policy can interpolate the table —
+        // but that conversion is exact arithmetic, not a fractional-
+        // stop irrational, so the presenter must NOT prefix it with
+        // "≈". The "≈" marker is reserved for stopDelta-derived
+        // corrected times where the conversion (metered × 2^stop)
+        // produces irrational values that round on display.
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
+
+        viewModel.baseShutter = 1
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
+
+        XCTAssertTrue(referenceText.contains("2x · 2s"), "Fomapan 100 Classic 1s row must show multiplier + exact corrected time. Got:\n\(referenceText)")
+        XCTAssertTrue(referenceText.contains("8x · 80s"), "Fomapan 100 Classic 10s row must show multiplier + exact corrected time. Got:\n\(referenceText)")
+        XCTAssertFalse(referenceText.contains("· ≈"), "Multiplier-derived rows are exact-arithmetic conversions; no row should be marked approximate. Got:\n\(referenceText)")
+    }
+
+    @MainActor
+    func testFilmModeReferenceShowsBothStopAndPublishedCorrectedTimeForAdoxChs100II() throws {
+        // ADOX publishes both the multiplier and the explicit
+        // corrected time ("2 sec → 1.5x (3 sec)"), so neither value
+        // is approximate. The Reference row must show both without
+        // any "≈" marker.
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "CHS 100 II" })
+
+        viewModel.baseShutter = 4
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
+
+        XCTAssertTrue(referenceText.contains("2x · 8s"), "CHS 100 II 4s row must show '2x · 8s' with no approximate marker. Got:\n\(referenceText)")
+        XCTAssertFalse(referenceText.contains("· ≈"), "CHS 100 II rows have source-published corrected times; no row should be marked approximate. Got:\n\(referenceText)")
     }
 
     @MainActor
@@ -1095,6 +1208,74 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
+    func testFilmSelectorSectionsGroupByManufacturerWithNoFilmAsHeaderlessLeadingSection() throws {
+        let viewModel = makeViewModel()
+        let sections = viewModel.filmSelectorSections
+
+        // The leading section is the "No film" sentinel — headerless
+        // (manufacturer == nil) so the view renders it as a plain row
+        // outside any group card. Every subsequent section is a
+        // manufacturer group card.
+        let leading = try XCTUnwrap(sections.first, "Sections must not be empty.")
+        XCTAssertEqual(leading.id, "no-film")
+        XCTAssertNil(leading.manufacturer)
+        XCTAssertEqual(leading.entries.map(\.primaryText), ["No film"])
+
+        let manufacturerSections = Array(sections.dropFirst())
+        XCTAssertFalse(manufacturerSections.isEmpty, "Catalog should produce at least one manufacturer section.")
+
+        // No section has zero entries.
+        for section in sections {
+            XCTAssertFalse(section.entries.isEmpty, "Section '\(section.id)' must not be empty.")
+        }
+
+        // Every manufacturer section's entries share its manufacturer label.
+        for section in manufacturerSections {
+            let manufacturer = try XCTUnwrap(section.manufacturer, "Non-leading section must have a manufacturer.")
+            XCTAssertEqual(section.id, manufacturer)
+            for entry in section.entries {
+                XCTAssertEqual(
+                    entry.manufacturer,
+                    manufacturer,
+                    "Entry '\(entry.primaryText)' is in the '\(manufacturer)' section but reports manufacturer '\(entry.manufacturer ?? "nil")'."
+                )
+            }
+        }
+
+        // Manufacturers appear in alphabetical order (case-insensitive)
+        // so the grouped cards are predictably ordered.
+        let manufacturers = manufacturerSections.compactMap(\.manufacturer)
+        let sortedManufacturers = manufacturers.sorted { lhs, rhs in
+            lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }
+        XCTAssertEqual(manufacturers, sortedManufacturers)
+
+        // The flattened section entries must match the flat
+        // filmSelectorEntries list — sections are a regrouping, not a
+        // filtered view, so scroll-to-current-selection by entry id
+        // works regardless of which property the view consumes.
+        XCTAssertEqual(
+            sections.flatMap(\.entries).map(\.id),
+            viewModel.filmSelectorEntries.map(\.id)
+        )
+
+        // Spot-check: Portra 400 official and unofficial rows live in the
+        // same Kodak section, contiguously, so the user does not have to
+        // hunt for the unofficial variant elsewhere in the list.
+        let kodakSection = try XCTUnwrap(
+            manufacturerSections.first(where: { $0.manufacturer == "Kodak" }),
+            "Kodak manufacturer section is required."
+        )
+        let portraIndices = kodakSection.entries.enumerated().compactMap { idx, entry in
+            entry.primaryText.hasPrefix("Portra 400") ? idx : nil
+        }
+        XCTAssertEqual(portraIndices.count, 2, "Kodak section should contain official + unofficial Portra 400 rows.")
+        if portraIndices.count == 2 {
+            XCTAssertEqual(portraIndices[1] - portraIndices[0], 1, "Official and unofficial Portra 400 rows must be contiguous in the Kodak section.")
+        }
+    }
+
+    @MainActor
     func testFilmSelectorEntriesKeepNoFilmFirstAndShowISOWhenAvailable() {
         let viewModel = makeViewModel()
 
@@ -1102,14 +1283,21 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
         XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
 
-        XCTAssertEqual(
-            viewModel.filmSelectorEntries.dropFirst().map(\.primaryText),
-            ["Tri-X 400", "Portra 400", "Portra 400", "Velvia 50", "HP5 Plus"]
-        )
-        XCTAssertEqual(
-            viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText),
-            ["ISO 400", "ISO 400", "Unofficial", "ISO 50", "ISO 400"]
-        )
+        // The leading "No film" sentinel must precede every preset film entry.
+        // Preset films carry an inferred ISO secondary when the canonical
+        // name / brand label / aliases contain a recognized speed token, and
+        // films registered in UnofficialPracticalProfiles add an "Unofficial"
+        // secondary alongside their official primary entry.
+        let entriesAfterNoFilm = viewModel.filmSelectorEntries.dropFirst()
+        XCTAssertGreaterThanOrEqual(entriesAfterNoFilm.count, viewModel.availablePresetFilms.count)
+        for entry in entriesAfterNoFilm {
+            if let secondary = entry.secondaryText {
+                XCTAssertTrue(
+                    secondary.hasPrefix("ISO ") || secondary == "Unofficial",
+                    "Selector secondary text '\(secondary)' for '\(entry.primaryText)' must be ISO metadata or 'Unofficial'."
+                )
+            }
+        }
     }
 
     private func fallbackFormulaDetailsFilm() -> FilmIdentity {
@@ -1120,6 +1308,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             manufacturer: "Fallback",
             brandLabel: nil,
             aliases: [],
+            iso: 100,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -1166,6 +1355,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             manufacturer: "Minimal",
             brandLabel: nil,
             aliases: [],
+            iso: 100,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -1201,6 +1391,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             manufacturer: "Linked",
             brandLabel: nil,
             aliases: [],
+            iso: 100,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(

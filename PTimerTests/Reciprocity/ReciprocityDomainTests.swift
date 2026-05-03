@@ -351,6 +351,7 @@ final class ReciprocityDomainTests: XCTestCase {
             manufacturer: "ILFORD / HARMAN",
             brandLabel: "ILFORD HP5 PLUS",
             aliases: ["HP5+", "HP5 Plus 400"],
+            iso: 400,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -397,6 +398,7 @@ final class ReciprocityDomainTests: XCTestCase {
             manufacturer: "Kodak",
             brandLabel: "KODAK PROFESSIONAL TRI-X 400",
             aliases: ["TRI-X", "TX 400"],
+            iso: 400,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -466,6 +468,7 @@ final class ReciprocityDomainTests: XCTestCase {
             manufacturer: "Fujifilm",
             brandLabel: "FUJICHROME Velvia 50",
             aliases: ["RVP 50", "Velvia"],
+            iso: 50,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -542,6 +545,7 @@ final class ReciprocityDomainTests: XCTestCase {
             manufacturer: "Kodak",
             brandLabel: "KODAK PROFESSIONAL PORTRA 400",
             aliases: ["PORTRA 400"],
+            iso: 400,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -617,6 +621,7 @@ final class ReciprocityDomainTests: XCTestCase {
             manufacturer: nil,
             brandLabel: nil,
             aliases: ["Mystery Roll"],
+            iso: 100,
             productionStatus: .unknown,
             profiles: [
                 ReciprocityProfile(
@@ -672,6 +677,7 @@ final class ReciprocityDomainTests: XCTestCase {
             manufacturer: "Agfa",
             brandLabel: "AGFAPAN APX 100",
             aliases: ["APX 100"],
+            iso: 100,
             productionStatus: .discontinued,
             profiles: [
                 ReciprocityProfile(
@@ -726,7 +732,7 @@ final class ReciprocityDomainTests: XCTestCase {
 final class Portra400SecondaryProfileTests: XCTestCase {
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
     private let filmID = "kodak-portra-400"
-    private let officialProfileID = "kodak-portra-official-threshold"
+    private let officialProfileID = "kodak-portra-400-official-threshold"
     private let unofficialProfileID = "kodak-portra-400-unofficial-practical"
 
     func testPortra400LaunchCatalogHasExactlyOneOfficialPrimaryProfile() {
@@ -804,6 +810,7 @@ final class Portra400SecondaryProfileTests: XCTestCase {
             manufacturer: "Kodak",
             brandLabel: "KODAK PROFESSIONAL PORTRA 400",
             aliases: ["PORTRA 400"],
+            iso: 400,
             productionStatus: .current,
             profiles: [officialProfile, UnofficialPracticalProfiles.kodakPortra400UnofficialPractical],
             userMetadata: nil

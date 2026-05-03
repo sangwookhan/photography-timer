@@ -1,6 +1,6 @@
   ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
     ▿ activeCalculatorContext: PTimer.ActiveExposureCalculatorContext
-      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-tri-x-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-tri-x-official-table", name: "Official table", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("Reciprocity data"), citation: Optional("Data sheet"), sourceVersion: nil), rules: [PTimer.ReciprocityRule.threshold(PTimer.ThresholdReciprocityRule(noCorrectionRange: PTimer.ReciprocityTimeRange(minimumSeconds: 0.0, maximumSeconds: Optional(1.0)), adjustments: [], notes: ["No correction required at 1 second or less."])), PTimer.ReciprocityRule.table(PTimer.TableReciprocityRule(entries: [PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 1.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: []), PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 2.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: []), PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 3.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: [])], notes: ["Table data stays table-shaped rather than converted to a formula."]))], notes: [], userMetadata: nil)], userMetadata: nil))
+      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-tri-x-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-tri-x-official-table", name: "Official table", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimer.ReciprocityRule.threshold(PTimer.ThresholdReciprocityRule(noCorrectionRange: PTimer.ReciprocityTimeRange(minimumSeconds: 0.0, maximumSeconds: Optional(1.0)), adjustments: [], notes: ["No correction required at 1 second or less."])), PTimer.ReciprocityRule.table(PTimer.TableReciprocityRule(entries: [PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 1.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: []), PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 2.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: []), PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 3.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: [])], notes: ["Table data stays table-shaped rather than converted to a formula."]))], notes: [], userMetadata: nil)], userMetadata: nil))
         ▿ some: PTimer.FilmIdentity
           - id: "kodak-tri-x-400"
           - kind: PTimer.FilmIdentityKind.preset
@@ -12,6 +12,7 @@
           ▿ aliases: 2 elements
             - "TRI-X"
             - "TX 400"
+          - iso: 400
           - productionStatus: PTimer.FilmProductionStatus.current
           ▿ profiles: 1 element
             ▿ PTimer.ReciprocityProfile
@@ -22,10 +23,10 @@
                 - authority: PTimer.ReciprocityAuthority.official
                 - confidence: PTimer.ReciprocityConfidence.high
                 - publisher: "Kodak"
-                ▿ title: Optional("Reciprocity data")
-                  - some: "Reciprocity data"
-                ▿ citation: Optional("Data sheet")
-                  - some: "Data sheet"
+                ▿ title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data")
+                  - some: "KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"
+                ▿ citation: Optional("Publication F-4017")
+                  - some: "Publication F-4017"
                 - sourceVersion: nil
               ▿ rules: 2 elements
                 ▿ PTimer.ReciprocityRule.threshold
@@ -54,6 +55,7 @@
                                 ▿ meteredSeconds: Optional(1.0)
                                   - some: 1.0
                                 - correctedSeconds: 2.0
+                                - isApproximate: false
                           ▿ PTimer.ReciprocityAdjustment.development
                             ▿ development: PTimer.DevelopmentAdjustment
                               - instruction: "-10% development"
@@ -73,6 +75,7 @@
                                 ▿ meteredSeconds: Optional(10.0)
                                   - some: 10.0
                                 - correctedSeconds: 50.0
+                                - isApproximate: false
                           ▿ PTimer.ReciprocityAdjustment.development
                             ▿ development: PTimer.DevelopmentAdjustment
                               - instruction: "-20% development"
@@ -92,6 +95,7 @@
                                 ▿ meteredSeconds: Optional(100.0)
                                   - some: 100.0
                                 - correctedSeconds: 1200.0
+                                - isApproximate: false
                           ▿ PTimer.ReciprocityAdjustment.development
                             ▿ development: PTimer.DevelopmentAdjustment
                               - instruction: "-30% development"

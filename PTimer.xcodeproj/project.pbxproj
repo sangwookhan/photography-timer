@@ -204,6 +204,7 @@
 		A0000000000000000000014A /* WheelPickerContinuousObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelPickerContinuousObserver.swift; sourceTree = "<group>"; };
 		A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDisplayStateBaselineTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000014E /* SharedFixtureGoldenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureGoldenTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = docs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -239,6 +240,7 @@
 				A00000000000000000000094 /* PTimerWidgets */,
 				A00000000000000000000033 /* PTimerTests */,
 				A00000000000000000000032 /* Products */,
+				A00000000000000000000200 /* docs */,
 			);
 			sourceTree = "<group>";
 		};

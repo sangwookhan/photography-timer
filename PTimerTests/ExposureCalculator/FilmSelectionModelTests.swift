@@ -151,59 +151,26 @@ final class FilmSelectionModelTests: XCTestCase {
         XCTAssertNil(FilmSelectionModel.filmRowAuthorityLabel(for: nil))
     }
 
-    // MARK: - ISO inference
+    // MARK: - ISO row text
 
     @MainActor
-    func testInferredISOValuePicksFirstStandardSpeedToken() {
+    func testFilmRowISOTextRendersStructuredISOFromFilmIdentity() {
         let film = FilmIdentity(
-            id: "tri-x-400-test",
+            id: "fp4-plus-test",
             kind: .preset,
-            canonicalStockName: "Kodak Tri-X 400",
-            manufacturer: "Eastman Kodak",
-            brandLabel: "Tri-X 400",
-            aliases: ["TX-400"],
+            canonicalStockName: "FP4 Plus",
+            manufacturer: "ILFORD / HARMAN",
+            brandLabel: "ILFORD FP4 PLUS",
+            aliases: ["FP4+"],
+            iso: 125,
             productionStatus: .current,
             profiles: [],
             userMetadata: nil
         )
 
-        XCTAssertEqual(FilmSelectionModel.inferredISOValue(for: film), "400")
-    }
-
-    @MainActor
-    func testInferredISOValueReturnsNilWhenNoStandardSpeedTokenIsPresent() {
-        let film = FilmIdentity(
-            id: "exotic-test",
-            kind: .preset,
-            canonicalStockName: "Exotic Stock 99",
-            manufacturer: "Boutique Films",
-            brandLabel: nil,
-            aliases: [],
-            productionStatus: .current,
-            profiles: [],
-            userMetadata: nil
-        )
-
-        XCTAssertNil(FilmSelectionModel.inferredISOValue(for: film))
-    }
-
-    @MainActor
-    func testInferredISOValueOnlyMatchesStandardSpeedTokens() {
-        // 1234 is not in the standard list (25,50,100,160,200,400,800,1600,3200).
-        // The matcher should ignore non-standard numbers.
-        let film = FilmIdentity(
-            id: "noise-test",
-            kind: .preset,
-            canonicalStockName: "Random 1234",
-            manufacturer: "Test Co",
-            brandLabel: nil,
-            aliases: [],
-            productionStatus: .current,
-            profiles: [],
-            userMetadata: nil
-        )
-
-        XCTAssertNil(FilmSelectionModel.inferredISOValue(for: film))
+        // Non-standard box speeds (125, 80, 20, ...) round-trip exactly because
+        // the value is stored on the identity rather than inferred from text.
+        XCTAssertEqual(FilmSelectionModel.filmRowISOText(for: film), "ISO 125")
     }
 }
 

@@ -183,7 +183,7 @@ A row's metered selector shall not overlap with another row's metered selector i
 
 A tagged union describing how an entry corrects exposure. The variants are:
 
-- **correctedTime** — `{ meteredSeconds?, correctedSeconds }`. `meteredSeconds` is optional context (the original metered point); `correctedSeconds` is the corrected exposure. Drives **log-log** estimation when interpolating between points.
+- **correctedTime** — `{ meteredSeconds?, correctedSeconds, isApproximate? }`. `meteredSeconds` is optional context (the original metered point); `correctedSeconds` is the corrected exposure. `isApproximate` (default `false`) marks values the catalog stores as a rounded display of an irrational conversion — typically a corrected time derived from a fractional `stopDelta` (`metered × 2^stopDelta`) on a row whose source published only the stop delta. Multiplier-derived corrected times (`metered × multiplier`) are exact arithmetic and are not marked, even though they are similarly catalog-derived. The presentation layer surfaces approximate values distinctly (for example with a leading "≈") so the user can tell published or exactly-converted anchors from rounded ones at a glance. Drives **log-log** estimation when interpolating between points.
 - **stopDelta** — `{ stops }`. The correction is a positive number of stops to add. Drives **stop-space** estimation when interpolating.
 - **multiplier** — `{ factor }`. The correction is a positive scalar multiplier on the metered time. Drives **stop-space** estimation when interpolating.
 
@@ -227,11 +227,36 @@ A catalog that fails any of these checks shall produce a clear decode diagnostic
 
 ## 12. Launch dataset scope
 
-The intended first-wave launch dataset is **34 films** (wiki 13172737). The current bundled catalog ships **a smaller subset** while spec-evolution work continues; the validation matrix in wiki 15138817 specifies the seven scenarios that must be covered by validation samples (official formula, official table, color guidance, threshold-only advisory, archival official, user-defined, multi-profile support).
+The bundled launch catalog ships the **34-film launch-ready scope** (wiki 13172737, PTIMER-86 preset dataset policy outcome). Each shipped identity carries exactly one primary profile sourced from current official manufacturer documentation with `kind = "manufacturer_published"`, `authority = "official"`, and `confidence = "high"`. The validation matrix in wiki 15138817 specifies the seven scenarios that must be covered by validation samples (official formula, official table, color guidance, threshold-only advisory, archival official, user-defined, multi-profile support); the launch dataset itself is restricted to current official scope and excludes archival, user-defined, and multi-profile entries.
 
-The current bundled subset includes representative profiles across the validation matrix scenarios. The path from current bundle → 34-film launch is incremental and is tracked alongside the policy spec.
+### 12.1 Launch-ready manufacturer breakdown
 
-### 12.1 Non-launch profiles bundled outside the catalog
+| Manufacturer       | Count | Method family            |
+|--------------------|------:|--------------------------|
+| ILFORD / HARMAN    |    12 | Exponent formula `Tc = Tm^P` |
+| Kodak Still Film   |     9 | Table, threshold-only, advisory |
+| Fujifilm           |     4 | Table with color-filter / stop-signal notes |
+| FOMA BOHEMIA       |     3 | Multiplier table |
+| Rollei             |     4 | Corrected-time table |
+| ADOX               |     2 | Multiplier / stop-delta table |
+| **Total**          |  **34** | |
+
+ILFORD/HARMAN films share the exponent-formula method with film-specific exponents and a common no-correction threshold at ≤ 1 sec. Kodak black-and-white films (TRI-X 400, T-MAX 100, T-MAX 400) ship as quantified tables that may also carry development-time guidance; Kodak color-negative films (Ektar 100, Portra 160 / 400, Gold 200, Ultra Max 400) ship as official threshold-only profiles with advisory continuation beyond the stated range; Ektachrome E100 ships as a threshold profile with a 120 sec CC10R filtration advisory. Fujifilm reversal films preserve published color-filtration values per row and explicit stop-signal rows where the manufacturer marks an exposure "not recommended". FOMA, Rollei, and ADOX films use multiplier or corrected-time tables; where the source publishes a corrected exposure as a range (e.g. "1 to 2 sec"), the row is recorded with the source text in `notes` rather than synthesised into a single corrected value.
+
+### 12.2 Excluded from the launch dataset
+
+The following classes are intentionally outside the launch catalog (PTIMER-86 source-priority policy):
+
+- Kodak Motion Picture Film (Vision3, Ektachrome 100D, Double-X) — still-photography-first scope.
+- AgfaPhoto current films — current official reciprocity extraction is still pending.
+- ORWO, Bergger, Film Ferrania — current product line confirmed but reciprocity extraction is too thin.
+- Archival-only Agfa / AgfaPhoto / Kodak Ektachrome E100G–E100GX entries — kept out so archival data is not promoted as current shipping data.
+- Any unofficial practical formula. In particular, the unofficial `T_c = T_m^1.34` Portra approximation is bundled outside the launch catalog (see §12.3) and shall not appear as the primary shipped Portra profile.
+- Films from the launch-ready manufacturer groups that the source list still classifies as `NV` (Fomapan R100, Cine 100, Cine 400, Cine Ortho 400; Rollei RPX 25, RETRO 400S, INFRARED, ORTHO 25 plus, PAUL & REINHOLD, BLACKBIRD, CROSSBIRD, REDBIRD; ADOX HR-50, Scala 50).
+
+### 12.3 Non-launch profiles bundled outside the catalog
+
+### 12.4 Non-launch profiles bundled outside the catalog
 
 The system may bundle additional **non-launch profiles** *outside* the launch catalog file, registered separately at runtime. These shall:
 
@@ -258,6 +283,7 @@ The domain shall **not**:
 6. Allow a launch preset profile to carry user metadata.
 7. Ignore catalog validation. A failing catalog is a load-time error, not a soft-warn.
 8. Collapse multiple official profiles for one film into one record. (Wiki 15138817 reserves multi-profile support; in launch, only one profile is shipped per identity.)
+9. Allow the quantified rows of a single table profile — the rows the calculation policy treats as interpolation anchors — to disagree on estimation family. When a manufacturer publishes some rows as `correctedTime` and other rows as `stopDelta`/`multiplier` only, the catalog author shall normalize all anchors into the same family, typically by deriving a `correctedTime` from the published stop delta (`corrected = metered × 2^stopDelta`) on stop-delta-only rows so every anchor selects the same `log-log` interpolation path. Mixed-family anchors short-circuit the bracketing interpolation to *unsupported* between adjacent anchors of different families even when both anchors sit inside the published table domain. This is a stricter cross-row companion to clause 5, which only forbids mixed families *within* a row. (Calculator Spec §3.3; regression: Kodak T-MAX 100 launch catalog mapping.)
 
 ---
 
@@ -267,7 +293,7 @@ The domain shall **not**:
 - **Multi-profile support.** Reserved by domain (an identity may carry multiple profiles) but the selection mechanism (which profile is "active" at a given metered exposure, push/pull semantics, developer-time variants) is not specified.
 - **Color correction metadata.** Velvia-style "M color correction" is mentioned in wiki 15138817 but has no schema entry. Currently captured (if at all) as free-form `notes`.
 - **Development-time adjustments.** Development-time adjustment metadata (e.g. Tri-X-style "dev −10%" from wiki guidance) is not represented as a first-class schema field.
-- **Launch dataset growth.** The bundled catalog is below the 34-film wiki target. There is no prioritized work plan in spec form for closing the gap.
+- **Next-wave catalog growth.** The bundled catalog covers the 34-film launch-ready scope; the next-wave candidates listed in PTIMER-86 (Kodak Motion Picture, NV-status films from the launch-ready manufacturer groups, deferred AgfaPhoto / ORWO / Bergger / Film Ferrania) have no prioritized work plan in spec form.
 - **Repackaging links.** The schema accepts `brandLabel` and `aliases` but does not formalize a "this brand X is the same film as identity Y" link suitable for runtime equivalence checks.
 - **Encoding versioning.** The encoding (JSON with `kind` discriminator) is informative-only in this spec, but no version field exists in the catalog. A future format change has no defined migration story.
 

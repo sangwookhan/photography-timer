@@ -175,7 +175,7 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.2 Reciprocity
 
-- **FR-2.1** The system shall present a curated set of preset films at launch, each with at least one published reciprocity profile. (Scenario 2)
+- **FR-2.1** The system shall present a curated set of preset films at launch, each with at least one published reciprocity profile. The launch catalog shall be sourced from current official manufacturer documentation, shall include both fully quantified (formula or table) and threshold-only / advisory-only entries, and shall preserve published guidance — threshold ranges, advisory continuations, stop-signal rows, development-time hints, and color-filter suggestions — in a form the user can drill into. (Scenario 2)
 - **FR-2.2** Given a metered exposure and an active profile, the system shall classify the result into exactly one of three forms — *quantified*, *advisory-only*, or *unsupported* — and shall not allow a result that represents more than one form at once. (Scenario 2)
 - **FR-2.3** A *quantified* result shall carry a corrected exposure value, a confidence indication that the user can read at a glance, and provenance the user can drill into to see the underlying table rows or formula. (Scenario 2)
 - **FR-2.4** An *advisory-only* result shall present calm guidance text instead of a corrected number. The system shall not fabricate a numeric corrected value when the underlying data does not support one. (Scenario 2 boundary)

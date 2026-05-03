@@ -148,7 +148,17 @@ The metadata block, present in all three forms, carries:
 
 The persistence layer shall accept both the flat-field layout (metered, corrected, an explicit returned-time flag, and the metadata block) and the three-form layout on decode; the encoder writes the three-form layout. (See [DomainSchema Spec](DomainSchema.md) §6.)
 
-### 3.6 Confidence presentation
+### 3.6 Reference data presentation
+
+The reference panel surfaces the source data used by a profile. Its presentation rules are about preserving source facts, not about calculation:
+
+- A table row that carries both a stop correction (or multiplier) and an adjusted/corrected time shall surface both. A formatter that picks one value and drops the other hides published source information from the user.
+- The compact column for a row shall combine the two facts in a single cell when both exist (e.g. `+0.5 stops · 15s`). When only one form is published, that form is shown alone.
+- A corrected-time value that the catalog stores as `isApproximate` (i.e. a rounded display of an irrational conversion, typically a fractional-stop derivation `metered × 2^stopDelta`) shall be visually distinguished — for example with a leading "≈" — so the user can tell rounded values from published or exactly-converted ones at a glance. Multiplier-derived corrected times (`metered × multiplier`) are exact arithmetic and are not marked.
+- Development-time hints and color-filter suggestions stay as separate cells / notes rather than being folded into the calculation column. They are documentation, not calculation inputs.
+- The reference panel shall not introduce new calculation policy. It is a presentation contract over data the calculation policy already consumes.
+
+### 3.7 Confidence presentation
 
 The presentation layer shall map each result to one of five confidence categories:
 

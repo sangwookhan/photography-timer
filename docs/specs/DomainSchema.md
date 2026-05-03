@@ -183,7 +183,7 @@ A row's metered selector shall not overlap with another row's metered selector i
 
 A tagged union describing how an entry corrects exposure. The variants are:
 
-- **correctedTime** — `{ meteredSeconds?, correctedSeconds }`. `meteredSeconds` is optional context (the original metered point); `correctedSeconds` is the corrected exposure. Drives **log-log** estimation when interpolating between points.
+- **correctedTime** — `{ meteredSeconds?, correctedSeconds, isApproximate? }`. `meteredSeconds` is optional context (the original metered point); `correctedSeconds` is the corrected exposure. `isApproximate` (default `false`) marks values the catalog stores as a rounded display of an irrational conversion — typically a corrected time derived from a fractional `stopDelta` (`metered × 2^stopDelta`) on a row whose source published only the stop delta. Multiplier-derived corrected times (`metered × multiplier`) are exact arithmetic and are not marked, even though they are similarly catalog-derived. The presentation layer surfaces approximate values distinctly (for example with a leading "≈") so the user can tell published or exactly-converted anchors from rounded ones at a glance. Drives **log-log** estimation when interpolating between points.
 - **stopDelta** — `{ stops }`. The correction is a positive number of stops to add. Drives **stop-space** estimation when interpolating.
 - **multiplier** — `{ factor }`. The correction is a positive scalar multiplier on the metered time. Drives **stop-space** estimation when interpolating.
 
@@ -283,6 +283,7 @@ The domain shall **not**:
 6. Allow a launch preset profile to carry user metadata.
 7. Ignore catalog validation. A failing catalog is a load-time error, not a soft-warn.
 8. Collapse multiple official profiles for one film into one record. (Wiki 15138817 reserves multi-profile support; in launch, only one profile is shipped per identity.)
+9. Allow the quantified rows of a single table profile — the rows the calculation policy treats as interpolation anchors — to disagree on estimation family. When a manufacturer publishes some rows as `correctedTime` and other rows as `stopDelta`/`multiplier` only, the catalog author shall normalize all anchors into the same family, typically by deriving a `correctedTime` from the published stop delta (`corrected = metered × 2^stopDelta`) on stop-delta-only rows so every anchor selects the same `log-log` interpolation path. Mixed-family anchors short-circuit the bracketing interpolation to *unsupported* between adjacent anchors of different families even when both anchors sit inside the published table domain. This is a stricter cross-row companion to clause 5, which only forbids mixed families *within* a row. (Calculator Spec §3.3; regression: Kodak T-MAX 100 launch catalog mapping.)
 
 ---
 

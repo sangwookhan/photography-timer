@@ -461,6 +461,42 @@ enum ExposureAdjustment: Codable, Equatable {
 struct CorrectedTimeMapping: Codable, Equatable {
     let meteredSeconds: Double?
     let correctedSeconds: Double
+    /// `true` when `correctedSeconds` should be displayed as a rounded
+    /// approximation of an irrational conversion — typically a
+    /// fractional-stop derivation `metered × 2^stopDelta` on a row
+    /// whose source published only the stop delta. Multiplier-derived
+    /// corrected times (`metered × multiplier`) are exact arithmetic
+    /// and are *not* marked, even though they too are catalog-derived.
+    /// The presenter prefixes flagged values with "≈" so the user can
+    /// tell rounded values from published or exactly-converted ones at
+    /// a glance. `false` for source-published rows and for exact-
+    /// arithmetic catalog conversions.
+    let isApproximate: Bool
+
+    init(
+        meteredSeconds: Double? = nil,
+        correctedSeconds: Double,
+        isApproximate: Bool = false
+    ) {
+        self.meteredSeconds = meteredSeconds
+        self.correctedSeconds = correctedSeconds
+        self.isApproximate = isApproximate
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case meteredSeconds
+        case correctedSeconds
+        case isApproximate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        meteredSeconds = try container.decodeIfPresent(Double.self, forKey: .meteredSeconds)
+        correctedSeconds = try container.decode(Double.self, forKey: .correctedSeconds)
+        // `isApproximate` is omitted from existing catalog fixtures
+        // so missing keys decode to `false` (source-published).
+        isApproximate = try container.decodeIfPresent(Bool.self, forKey: .isApproximate) ?? false
+    }
 }
 
 struct StopDeltaAdjustment: Codable, Equatable {

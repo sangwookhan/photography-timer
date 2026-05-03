@@ -240,12 +240,16 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table", "Official manufacturer guidance"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
+        // Each TRI-X 400 row in the Reference panel keeps both the
+        // published stop correction and the published adjusted time
+        // alongside its development hint, so the user sees what the
+        // source actually says rather than only one fact per row.
         XCTAssertEqual(referenceSection.rows.map(\.value), [
             """
             <= 1s    No correction
-            1s       +1 stop          Dev -10%
-            10s      +2 stops         Dev -20%
-            100s     +3 stops         Dev -30%
+            1s       +1 stop · 2s        Dev -10%
+            10s      +2 stops · 50s      Dev -20%
+            100s     +3 stops · 1200s    Dev -30%
             """
         ])
         XCTAssertEqual(details.summary.summaryText, "Estimated between 1s and 10s")
@@ -256,6 +260,86 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.graph?.currentPoint?.style, .estimated)
         XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure from reference anchors")
         XCTAssertEqual(details.graph?.title, "Reference Graph")
+    }
+
+    @MainActor
+    func testFilmModeReferenceShowsBothStopAndCorrectedTimeForKodakTMax100() throws {
+        // Reference panel rule: when a row carries both a stop
+        // correction and an adjusted/corrected time, show both —
+        // neither half of the source publication should be hidden by
+        // a "first match wins" formatter. T-MAX 100 1s carries a
+        // catalog-derived corrected time (the source publishes only
+        // the +1/3 stop), so the formatter renders it with an "≈"
+        // prefix to distinguish it from published values like the
+        // 15s at 10 sec or 200s at 100 sec.
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
+
+        viewModel.baseShutter = 4
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
+
+        // Source-published anchors keep their corrected time without
+        // an "≈" marker. The existing app style renders stop deltas as
+        // decimals (e.g. "+0.5 stops") rather than fractions, so the
+        // combined column reads "<stop> · <time>" using that style.
+        XCTAssertTrue(referenceText.contains("+0.5 stops · 15s"), "T-MAX 100 10s row must show '+0.5 stops · 15s'. Got:\n\(referenceText)")
+        XCTAssertTrue(referenceText.contains("+1 stop · 200s"), "T-MAX 100 100s row must show '+1 stop · 200s'. Got:\n\(referenceText)")
+        // The 1s row's corrected time was derived from +0.33 stops
+        // (the policy-compatible logLog anchoring fix), so it must
+        // read with the approximate marker.
+        XCTAssertTrue(referenceText.contains("+0.33 stops · ≈"), "T-MAX 100 1s row must mark its derived corrected time with '≈'. Got:\n\(referenceText)")
+    }
+
+    @MainActor
+    func testFilmModeReferenceShowsFomaMultiplierAndExactCorrectedTimeWithoutApproximateMarker() throws {
+        // FOMA's data sheet publishes only the multiplier ("lengthen
+        // exposure 2x"). The catalog stores `metered × multiplier` as
+        // a corrected time so the policy can interpolate the table —
+        // but that conversion is exact arithmetic, not a fractional-
+        // stop irrational, so the presenter must NOT prefix it with
+        // "≈". The "≈" marker is reserved for stopDelta-derived
+        // corrected times where the conversion (metered × 2^stop)
+        // produces irrational values that round on display.
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
+
+        viewModel.baseShutter = 1
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
+
+        XCTAssertTrue(referenceText.contains("2x · 2s"), "Fomapan 100 Classic 1s row must show multiplier + exact corrected time. Got:\n\(referenceText)")
+        XCTAssertTrue(referenceText.contains("8x · 80s"), "Fomapan 100 Classic 10s row must show multiplier + exact corrected time. Got:\n\(referenceText)")
+        XCTAssertFalse(referenceText.contains("· ≈"), "Multiplier-derived rows are exact-arithmetic conversions; no row should be marked approximate. Got:\n\(referenceText)")
+    }
+
+    @MainActor
+    func testFilmModeReferenceShowsBothStopAndPublishedCorrectedTimeForAdoxChs100II() throws {
+        // ADOX publishes both the multiplier and the explicit
+        // corrected time ("2 sec → 1.5x (3 sec)"), so neither value
+        // is approximate. The Reference row must show both without
+        // any "≈" marker.
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "CHS 100 II" })
+
+        viewModel.baseShutter = 4
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(film)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
+
+        XCTAssertTrue(referenceText.contains("2x · 8s"), "CHS 100 II 4s row must show '2x · 8s' with no approximate marker. Got:\n\(referenceText)")
+        XCTAssertFalse(referenceText.contains("· ≈"), "CHS 100 II rows have source-published corrected times; no row should be marked approximate. Got:\n\(referenceText)")
     }
 
     @MainActor

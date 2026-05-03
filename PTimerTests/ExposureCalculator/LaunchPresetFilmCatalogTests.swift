@@ -262,6 +262,122 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 0.5, accuracy: 0.000001)
     }
 
+    func testKodakTMax100TableProfileQuantifiesInsidePublishedRange() throws {
+        // Regression: T-MAX 100 used to mix estimation families across its
+        // table rows (1s as stopSpace, 10s/100s as logLog) which caused
+        // ReciprocityCalculationPolicyEvaluator.estimate to return nil for
+        // any metered value bracketed by mixed-family anchors, rendering
+        // the full [1 sec, 10 sec] segment unsupported even though it sits
+        // squarely inside Kodak's published table. The catalog now derives
+        // the corrected time at 1 sec from the source's +1/3 stop so every
+        // anchor joins the same logLog family — same shape as TRI-X 400.
+        let tmax100 = try XCTUnwrap(film(named: "T-MAX 100"))
+        let evaluator = ReciprocityCalculationPolicyEvaluator()
+
+        let result = evaluator.evaluate(profile: tmax100.profiles[0], meteredExposureSeconds: 4)
+        guard case let .quantified(payload) = result else {
+            return XCTFail("T-MAX 100 at 4 sec must produce a quantified result, got \(result).")
+        }
+        XCTAssertEqual(
+            payload.metadata.basis,
+            .interpolatedWithinTable,
+            "4 sec sits between the 1 sec and 10 sec table anchors, so it must interpolate."
+        )
+        // 1.2599 (1 sec corrected) → 15 (10 sec corrected) log-log slope
+        // ≈ 1.0757. At metered = 4 sec, corrected ≈ 5.60 sec.
+        XCTAssertEqual(payload.correctedExposureSeconds, 5.60, accuracy: 0.05)
+    }
+
+    func testKodakTMax100FollowsTriXLikeThresholdAndExtrapolationPath() throws {
+        // T-MAX 100 must walk the same evaluation path as TRI-X 400:
+        //   1. metered values inside the no-correction threshold band stay
+        //      as officialThresholdNoCorrection (corrected = metered).
+        //   2. metered values past the last published anchor (100 sec)
+        //      extrapolate via the same extrapolatedBeyondTable basis the
+        //      other Kodak black-and-white tables use.
+        let tmax100 = try XCTUnwrap(film(named: "T-MAX 100"))
+        let trix = try XCTUnwrap(film(named: "Tri-X 400"))
+        let evaluator = ReciprocityCalculationPolicyEvaluator()
+
+        let thresholdResult = evaluator.evaluate(profile: tmax100.profiles[0], meteredExposureSeconds: 0.05)
+        guard case let .quantified(thresholdPayload) = thresholdResult else {
+            return XCTFail("T-MAX 100 at 0.05 sec (inside no-correction band) must be quantified, got \(thresholdResult).")
+        }
+        XCTAssertEqual(thresholdPayload.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(thresholdPayload.correctedExposureSeconds, 0.05, accuracy: 0.000001)
+
+        let extrapolated = evaluator.evaluate(profile: tmax100.profiles[0], meteredExposureSeconds: 200)
+        let trixExtrapolated = evaluator.evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1500)
+        guard case let .quantified(extrapPayload) = extrapolated,
+              case let .quantified(trixPayload) = trixExtrapolated else {
+            return XCTFail(
+                """
+                Beyond the last published anchor T-MAX 100 must follow the same
+                extrapolation path as TRI-X 400. T-MAX = \(extrapolated), TRI-X = \(trixExtrapolated).
+                """
+            )
+        }
+        XCTAssertEqual(
+            extrapPayload.metadata.basis,
+            trixPayload.metadata.basis,
+            "T-MAX 100 and TRI-X 400 must share the same extrapolation basis past their final anchors."
+        )
+        XCTAssertEqual(extrapPayload.metadata.basis, .extrapolatedBeyondTable)
+    }
+
+    func testLaunchCatalogTableAnchorsAreFamilyConsistent() throws {
+        // Structural invariant guarding against the T-MAX 100 class of
+        // mapping bug. A table profile whose quantified anchors disagree
+        // on estimation family makes
+        // ReciprocityCalculationPolicyEvaluator.Estimation.estimate return
+        // nil for any bracketed metered value, silently routing
+        // user-visible exposures into the unsupported branch even though
+        // the source data sheet covers them. Catch that at fixture-load
+        // time so future catalog edits cannot reintroduce it.
+        for film in LaunchPresetFilmCatalog.films {
+            for profile in film.profiles {
+                for rule in profile.rules {
+                    guard case let .table(table) = rule else { continue }
+                    let families: Set<ReciprocityTableEstimationFamily> = Set(
+                        table.entries.compactMap(estimationFamily(for:))
+                    )
+                    XCTAssertLessThanOrEqual(
+                        families.count,
+                        1,
+                        "\(film.canonicalStockName): table mixes estimation families \(families). Add correctedTime (or the matching family) to every quantified row so the policy can interpolate."
+                    )
+                }
+            }
+        }
+    }
+
+    private func estimationFamily(for entry: ReciprocityTableEntry) -> ReciprocityTableEstimationFamily? {
+        // Mirrors TableSelector.quantifiedPoint's family selection without
+        // depending on the private type: stop-signal rows are excluded;
+        // a row with correctedTime is logLog; a row with only stopDelta /
+        // multiplier is stopSpace; everything else is non-quantified.
+        var hasCorrectedTime = false
+        var hasStopOrMultiplier = false
+        var isStopSignal = false
+        for adjustment in entry.adjustments {
+            switch adjustment {
+            case let .exposure(exposureAdjustment):
+                switch exposureAdjustment {
+                case .correctedTime: hasCorrectedTime = true
+                case .stopDelta, .multiplier: hasStopOrMultiplier = true
+                }
+            case let .warning(warning) where warning.severity == .notRecommended:
+                isStopSignal = true
+            default:
+                continue
+            }
+        }
+        if isStopSignal { return nil }
+        if hasCorrectedTime { return .logLog }
+        if hasStopOrMultiplier { return .stopSpace }
+        return nil
+    }
+
     func testKodakTriXTableProfileReturnsExactRow() throws {
         let trix = try XCTUnwrap(film(named: "Tri-X 400"))
         let result = ReciprocityCalculationPolicyEvaluator()

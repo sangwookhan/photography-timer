@@ -37,6 +37,13 @@ struct FilmModeDetailsSheet: View {
                     }
                     .frame(height: 0)
 
+                    if let subtitle = details.subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("film-mode-details-subtitle")
+                    }
+
                     FilmModeDetailsSummary(summary: details.summary)
 
                     FilmModeDetailsCurrentResultBlock(
@@ -51,6 +58,10 @@ struct FilmModeDetailsSheet: View {
                             section: section,
                             detailRowText: detailRowText(for:)
                         )
+                    }
+
+                    if let legend = details.legend {
+                        FilmModeDetailsLegend(legend: legend)
                     }
 
                     if let graph = details.graph {
@@ -494,6 +505,31 @@ private struct FilmModeDetailsCurrentResultBlock: View {
         case .trusted, .measured, .caution:
             return .primary
         }
+    }
+}
+
+private struct FilmModeDetailsLegend: View {
+    let legend: FilmModeDetailsLegendState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(legend.lines.enumerated()), id: \.offset) { _, line in
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                    Text(line)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(line)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("film-mode-details-legend")
     }
 }
 

@@ -114,12 +114,36 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     let yRange: ClosedRange<Double>
 }
 
+struct FilmModeDetailsLegendState: Equatable {
+    let lines: [String]
+}
+
 struct FilmModeDetailsDisplayState: Equatable, Identifiable {
     let title: String
+    let subtitle: String?
     let summary: FilmModeDetailsSummaryState
     let currentResult: FilmModeDetailsCurrentResultState
     let sections: [FilmModeDetailsSectionState]
     let graph: FilmModeDetailsGraphDisplayState?
+    let legend: FilmModeDetailsLegendState?
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        summary: FilmModeDetailsSummaryState,
+        currentResult: FilmModeDetailsCurrentResultState,
+        sections: [FilmModeDetailsSectionState],
+        graph: FilmModeDetailsGraphDisplayState? = nil,
+        legend: FilmModeDetailsLegendState? = nil
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.summary = summary
+        self.currentResult = currentResult
+        self.sections = sections
+        self.graph = graph
+        self.legend = legend
+    }
 
     var id: String {
         let graphID = graph.map {
@@ -128,12 +152,14 @@ struct FilmModeDetailsDisplayState: Equatable, Identifiable {
         return (
             [
                 title,
+                subtitle ?? "no-subtitle",
                 summary.badgeText,
                 summary.summaryText,
                 String(describing: currentResult.layout),
                 currentResult.adjustedShutter.valueText,
                 currentResult.correctedExposure.valueText,
-                graphID
+                graphID,
+                legend?.lines.joined(separator: "|") ?? "no-legend"
             ] + sections.map(\.id)
         ).joined(separator: "|")
     }

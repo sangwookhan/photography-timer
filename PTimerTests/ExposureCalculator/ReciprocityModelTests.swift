@@ -49,6 +49,7 @@ final class ReciprocityModelTests: XCTestCase {
             manufacturer: "Kodak",
             brandLabel: "Tri-X 400",
             aliases: [],
+            iso: 400,
             productionStatus: .current,
             profiles: [profile],
             userMetadata: nil
@@ -100,6 +101,7 @@ final class ReciprocityModelTests: XCTestCase {
             manufacturer: "Kodak",
             brandLabel: "Tri-X 400",
             aliases: [],
+            iso: 400,
             productionStatus: .current,
             profiles: [profile],
             userMetadata: nil
@@ -257,6 +259,7 @@ final class ReciprocityModelTests: XCTestCase {
             manufacturer: "Kodak",
             brandLabel: "Tri-X 400",
             aliases: [],
+            iso: 400,
             productionStatus: .current,
             profiles: [profile],
             userMetadata: nil

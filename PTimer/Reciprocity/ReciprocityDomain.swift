@@ -7,6 +7,7 @@ struct FilmIdentity: Codable, Equatable {
     let manufacturer: String?
     let brandLabel: String?
     let aliases: [String]
+    let iso: Int
     let productionStatus: FilmProductionStatus
     let profiles: [ReciprocityProfile]
     let userMetadata: UserEditableMetadata?

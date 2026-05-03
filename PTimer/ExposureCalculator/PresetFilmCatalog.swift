@@ -111,6 +111,10 @@ struct LaunchPresetFilmCatalogLoader {
                 throw LaunchPresetFilmCatalogLoaderError.invalidProductionStatus(filmID)
             }
 
+            guard film.iso > 0 else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidFilmISO(filmID: filmID, iso: film.iso)
+            }
+
             guard film.profiles.count == 1, let profile = film.profiles.first else {
                 throw LaunchPresetFilmCatalogLoaderError.invalidPrimaryProfileCount(
                     filmID: filmID,
@@ -170,6 +174,7 @@ enum LaunchPresetFilmCatalogLoaderError: Error, Equatable {
     case invalidProductionStatus(String)
     case invalidPrimaryProfileCount(filmID: String, count: Int)
     case invalidPrimaryProfileSource(String)
+    case invalidFilmISO(filmID: String, iso: Int)
 }
 
 extension LaunchPresetFilmCatalogLoaderError: LocalizedError {
@@ -199,6 +204,8 @@ extension LaunchPresetFilmCatalogLoaderError: LocalizedError {
             return "Bundled launch preset film catalog film '\(filmID)' has \(count) profiles; launch scope requires exactly one primary profile."
         case let .invalidPrimaryProfileSource(filmID):
             return "Bundled launch preset film catalog film '\(filmID)' does not use a current official manufacturer primary profile."
+        case let .invalidFilmISO(filmID, iso):
+            return "Bundled launch preset film catalog film '\(filmID)' has non-positive ISO \(iso); launch scope requires a positive box-speed ISO."
         }
     }
 }

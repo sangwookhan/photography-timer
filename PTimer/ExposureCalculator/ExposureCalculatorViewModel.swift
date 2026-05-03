@@ -197,7 +197,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             entries.append(FilmSelectorEntry(
                 id: film.id,
                 primaryText: film.canonicalStockName,
-                secondaryText: FilmSelectionModel.inferredISOValue(for: film).map { "ISO \($0)" },
+                secondaryText: FilmSelectionModel.filmRowISOText(for: film),
                 film: film
             ))
 

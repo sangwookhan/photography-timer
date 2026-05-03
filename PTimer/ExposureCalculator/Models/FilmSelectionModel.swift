@@ -165,33 +165,12 @@ final class FilmSelectionModel: ObservableObject {
         }
     }
 
-    /// Best-effort ISO inference for a preset film identity. Looks at
-    /// the canonical stock name, brand label, manufacturer, and any
-    /// aliases for the first standard ISO speed token. Returns nil if
-    /// no token matches. Pure value transform — used by the film
-    /// selector entry subtitle.
-    static func inferredISOValue(for film: FilmIdentity) -> String? {
-        let candidateFields = [
-            film.canonicalStockName,
-            film.brandLabel,
-            film.manufacturer
-        ].compactMap { $0 } + film.aliases
-
-        for field in candidateFields {
-            if let isoValue = firstISOValue(in: field) {
-                return isoValue
-            }
-        }
-
-        return nil
-    }
-
-    private static func firstISOValue(in text: String) -> String? {
-        let pattern = #"\b(25|50|100|160|200|400|800|1600|3200)\b"#
-        guard let range = text.range(of: pattern, options: .regularExpression) else {
-            return nil
-        }
-
-        return String(text[range])
+    /// ISO secondary text for a preset film identity. The launch
+    /// catalog stores ISO box speed as a structured field on
+    /// `FilmIdentity`, so this is a pure value transform — no
+    /// inference, no regex over names. Used by the film selector
+    /// entry subtitle.
+    static func filmRowISOText(for film: FilmIdentity) -> String {
+        "ISO \(film.iso)"
     }
 }

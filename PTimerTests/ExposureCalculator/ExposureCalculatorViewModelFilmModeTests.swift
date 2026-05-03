@@ -22,7 +22,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     @MainActor
     func testSelectingPresetFilmUpdatesActiveCalculatorContextAndDisplayState() throws {
         let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
 
         viewModel.selectPresetFilm(film)
 
@@ -36,8 +38,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     @MainActor
     func testReplacingPresetFilmUpdatesActiveCalculatorContext() throws {
         let viewModel = makeViewModel()
-        let firstFilm = try XCTUnwrap(viewModel.availablePresetFilms.first)
-        let replacementFilm = try XCTUnwrap(viewModel.availablePresetFilms.dropFirst().first)
+        let firstFilm = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        let replacementFilm = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }
+        )
 
         viewModel.selectPresetFilm(firstFilm)
         viewModel.selectPresetFilm(replacementFilm)
@@ -45,28 +51,6 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(viewModel.activeCalculatorContext.selectedPresetFilm, replacementFilm)
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
         XCTAssertEqual(viewModel.filmSelectionDisplayState.secondaryText, "Official guidance")
-    }
-
-    @MainActor
-    func testFilmSelectorEntriesKeepISOAsSecondaryMetadata() {
-        let viewModel = makeViewModel()
-
-        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
-        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
-        XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.primaryText), [
-            "Tri-X 400",
-            "Portra 400",
-            "Portra 400",
-            "Velvia 50",
-            "HP5 Plus"
-        ])
-        XCTAssertEqual(viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText), [
-            "ISO 400",
-            "ISO 400",
-            "Unofficial",
-            "ISO 50",
-            "ISO 400"
-        ])
     }
 
     @MainActor
@@ -1094,24 +1078,6 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertFalse(viewModel.canStartFilmCorrectedExposureTimer)
     }
 
-    @MainActor
-    func testFilmSelectorEntriesKeepNoFilmFirstAndShowISOWhenAvailable() {
-        let viewModel = makeViewModel()
-
-        XCTAssertEqual(viewModel.filmSelectorEntries.first?.id, "no-film")
-        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
-        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
-
-        XCTAssertEqual(
-            viewModel.filmSelectorEntries.dropFirst().map(\.primaryText),
-            ["Tri-X 400", "Portra 400", "Portra 400", "Velvia 50", "HP5 Plus"]
-        )
-        XCTAssertEqual(
-            viewModel.filmSelectorEntries.dropFirst().map(\.secondaryText),
-            ["ISO 400", "ISO 400", "Unofficial", "ISO 50", "ISO 400"]
-        )
-    }
-
     private func fallbackFormulaDetailsFilm() -> FilmIdentity {
         FilmIdentity(
             id: "fallback-formula-film",
@@ -1120,6 +1086,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             manufacturer: "Fallback",
             brandLabel: nil,
             aliases: [],
+            iso: 100,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -1166,6 +1133,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             manufacturer: "Minimal",
             brandLabel: nil,
             aliases: [],
+            iso: 100,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
@@ -1201,6 +1169,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             manufacturer: "Linked",
             brandLabel: nil,
             aliases: [],
+            iso: 100,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(

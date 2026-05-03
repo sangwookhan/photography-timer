@@ -160,7 +160,8 @@ private struct ExposureWorkspaceMainContent: View {
                 VariableSectionView(
                     baseShutter: $viewModel.baseShutter,
                     ndStop: $viewModel.ndStop,
-                    shutterSpeeds: CalculatorModel.shutterSpeeds,
+                    shutterSpeeds: viewModel.pickerShutterStepSeconds,
+                    ndStopValues: viewModel.pickerWholeNDStops,
                     formatShutter: viewModel.formatShutter,
                     onContinuousBaseShutterChange: { value in
                         Task { @MainActor in
@@ -981,6 +982,7 @@ private struct VariableSectionView: View {
     @Binding var baseShutter: Double
     @Binding var ndStop: Int
     let shutterSpeeds: [Double]
+    let ndStopValues: [Int]
     let formatShutter: (TimeInterval) -> String
     let onContinuousBaseShutterChange: (Double) -> Void
     let onContinuousNDStopChange: (Int) -> Void
@@ -1003,6 +1005,7 @@ private struct VariableSectionView: View {
 
                 NDStopSelectionRow(
                     ndStop: $ndStop,
+                    ndStopValues: ndStopValues,
                     onContinuousSelectionChange: onContinuousNDStopChange,
                     onInteractionEnd: onNDStopInteractionEnd,
                     pickerHeight: style.pickerHeight,
@@ -1404,6 +1407,7 @@ private struct CorrectedExposureDisplayBlock: View {
 
 private struct NDStopSelectionRow: View {
     @Binding var ndStop: Int
+    let ndStopValues: [Int]
     let onContinuousSelectionChange: (Int) -> Void
     let onInteractionEnd: () -> Void
     let pickerHeight: CGFloat
@@ -1419,7 +1423,7 @@ private struct NDStopSelectionRow: View {
                 .font(.subheadline.weight(.semibold))
 
             Picker("ND Filter", selection: $ndStop) {
-                ForEach(0...30, id: \.self) { stop in
+                ForEach(ndStopValues, id: \.self) { stop in
                     NDStopPickerValue(
                         valueText: "\(stop)",
                         style: style,
@@ -1435,11 +1439,11 @@ private struct NDStopSelectionRow: View {
             .background {
                 WheelPickerContinuousObserver(
                     onSelectedRowChange: { row in
-                        guard (0...30).contains(row) else {
+                        guard ndStopValues.indices.contains(row) else {
                             return
                         }
 
-                        onContinuousSelectionChange(row)
+                        onContinuousSelectionChange(ndStopValues[row])
                     },
                     onInteractionEnd: onInteractionEnd
                 )

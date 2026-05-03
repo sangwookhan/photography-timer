@@ -189,6 +189,35 @@ A **Cancel** action exits the sheet without changing selection. A row tap **imme
 
 The sheet does not include in-list edit, sort, or filter affordances; those are deferred. The launch dataset is small enough that scroll suffices. (See [DomainSchema Spec](DomainSchema.md) §8 for launch dataset scope.)
 
+### 4.1.1 Manufacturer grouping
+
+The film selector supports the expanded launch preset catalog and presents preset films grouped visually by manufacturer. Each manufacturer renders as a **subtle grouped card** — a tinted rounded surface containing the manufacturer's films plus a header label — so the grouping reads as a real visual group rather than only a faint text divider between rows. The leading "No film" sentinel is rendered as a plain headerless row outside any card so it stays visually distinct from the preset groups and clears the current film selection on tap.
+
+The manufacturer label sits inside the card as a **subtle header pill** — a small tinted rounded label with a slightly stronger fill than the card surface itself, paired with near-primary text contrast so the label reads immediately. The pill is bold + uppercase + tracked so it remains visually subordinate to film rows by size, not by faded color. Group cards stay light overall: no per-manufacturer colors, no heavy decoration.
+
+Within a manufacturer group, films are ordered alphabetically by canonical stock name. Manufacturer order itself is alphabetical for now unless a later explicit product sort order is introduced.
+
+Future fold/unfold gestures may toggle the rows region of any group card without changing the underlying section data shape.
+
+### 4.1.2 One-line row format
+
+Film rows are one-line rows. Each row carries a left-side label and a right-side ISO speed:
+
+- **Official primary profile:** `<Film name>` … `ISO <value>`
+- **Unofficial practical profile:** `<Film name> · Unofficial` … `ISO <value>`
+
+The qualifier `" · Unofficial"` lives on the **left** because it describes the profile, not the speed. The ISO right column is identical for an official row and its unofficial sibling, since both profiles describe the same film stock.
+
+Unofficial profile variants stay visible. They appear as sibling rows in the same manufacturer group, adjacent to their matching official film when possible — never moved to a separate section.
+
+The collapsed film row on the calculator screen carries an authority subtitle (`"Official guidance"` / `"Unofficial practical"`) so the user can tell which variant is active without opening the picker.
+
+### 4.1.3 Reopen at current selection
+
+Reopening the selector reveals the current selection. When the picker is presented with a film already selected, it scrolls to the exact selected row on appear so the user does not have to manually search the launch catalog. Manual scrolling within the picker is preserved — the auto-scroll fires once on presentation and does not interfere with subsequent gestures.
+
+Selector row identities are stable and distinguish official from unofficial variants for the same film. An active unofficial selection lands on the unofficial row, not on the official row above it. The implementation requires that every selector row participates in the layout pass before the scroll is requested, so the view materializes its rows eagerly rather than lazily.
+
 ### 4.2 Clear
 
 The "Clear" affordance lives in the header / mode strip on the calculator screen, not in the picker sheet. Clearing is a separate operation.

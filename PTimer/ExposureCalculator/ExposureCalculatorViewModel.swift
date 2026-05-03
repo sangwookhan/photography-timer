@@ -193,19 +193,34 @@ final class ExposureCalculatorViewModel: ObservableObject {
             FilmSelectorEntry(id: "no-film", primaryText: "No film")
         ]
 
-        for film in presetFilms {
+        let sortedFilms = presetFilms.sorted { lhs, rhs in
+            let lhsManufacturer = lhs.manufacturer ?? ""
+            let rhsManufacturer = rhs.manufacturer ?? ""
+            if lhsManufacturer != rhsManufacturer {
+                return lhsManufacturer.localizedCaseInsensitiveCompare(rhsManufacturer) == .orderedAscending
+            }
+            return lhs.canonicalStockName.localizedCaseInsensitiveCompare(rhs.canonicalStockName) == .orderedAscending
+        }
+
+        for film in sortedFilms {
             entries.append(FilmSelectorEntry(
                 id: film.id,
                 primaryText: film.canonicalStockName,
                 secondaryText: FilmSelectionModel.filmRowISOText(for: film),
+                manufacturer: film.manufacturer,
                 film: film
             ))
 
             if let unofficialProfile = UnofficialPracticalProfiles.profile(forFilmID: film.id) {
+                // The "Unofficial" qualifier describes the profile, not the
+                // ISO speed, so it lives on the left of the row alongside
+                // the canonical stock name. The right column stays an ISO
+                // value to match every other row's grid.
                 entries.append(FilmSelectorEntry(
                     id: unofficialProfile.id,
-                    primaryText: film.canonicalStockName,
-                    secondaryText: "Unofficial",
+                    primaryText: "\(film.canonicalStockName) · Unofficial",
+                    secondaryText: FilmSelectionModel.filmRowISOText(for: film),
+                    manufacturer: film.manufacturer,
                     film: film,
                     profileOverride: unofficialProfile
                 ))
@@ -218,6 +233,61 @@ final class ExposureCalculatorViewModel: ObservableObject {
     var selectedSelectorEntryID: String? {
         guard let film = selectedPresetFilm else { return nil }
         return filmSelectionModel.selectedProfileOverride?.id ?? film.id
+    }
+
+    /// Manufacturer-grouped view of `filmSelectorEntries` for the
+    /// grouped-card selector layout. Entries keep their flat-list order;
+    /// the leading "No film" sentinel becomes its own headerless
+    /// section, and contiguous entries sharing a manufacturer become a
+    /// single grouped section. The flat `filmSelectorEntries` is still
+    /// the source of truth so callers (collapsed-row accessibility lookup,
+    /// existing tests) keep working unchanged.
+    var filmSelectorSections: [FilmSelectorSection] {
+        let entries = filmSelectorEntries
+        guard !entries.isEmpty else { return [] }
+
+        var sections: [FilmSelectorSection] = []
+
+        // Leading entries with no manufacturer (the "No film" sentinel)
+        // form a headerless section rendered as a plain row.
+        let leading = Array(entries.prefix(while: { $0.manufacturer == nil }))
+        if !leading.isEmpty {
+            sections.append(
+                FilmSelectorSection(id: "no-film", manufacturer: nil, entries: leading)
+            )
+        }
+
+        // Group the remaining entries by manufacturer, preserving the
+        // sort order that `filmSelectorEntries` already established.
+        var currentManufacturer: String? = nil
+        var currentEntries: [FilmSelectorEntry] = []
+        for entry in entries.dropFirst(leading.count) {
+            if entry.manufacturer != currentManufacturer {
+                if let manufacturer = currentManufacturer, !currentEntries.isEmpty {
+                    sections.append(
+                        FilmSelectorSection(
+                            id: manufacturer,
+                            manufacturer: manufacturer,
+                            entries: currentEntries
+                        )
+                    )
+                }
+                currentManufacturer = entry.manufacturer
+                currentEntries = []
+            }
+            currentEntries.append(entry)
+        }
+        if let manufacturer = currentManufacturer, !currentEntries.isEmpty {
+            sections.append(
+                FilmSelectorSection(
+                    id: manufacturer,
+                    manufacturer: manufacturer,
+                    entries: currentEntries
+                )
+            )
+        }
+
+        return sections
     }
 
     var filmSelectionDisplayState: FilmSelectionDisplayState {

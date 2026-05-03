@@ -54,6 +54,51 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
+    func testFilmSelectorEntriesKeepISOAsSecondaryMetadata() {
+        let viewModel = makeViewModel()
+
+        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
+        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
+
+        // Every preset row carries an ISO secondary. Films that ship a
+        // registered unofficial practical profile (Portra 400 today) are
+        // surfaced as a second row whose primary text appends " · Unofficial"
+        // — the qualifier lives on the left because it describes the
+        // profile, not the ISO. Spot-check exemplars across batches without
+        // coupling to the full launch-catalog ordering.
+        let portraOfficial = viewModel.filmSelectorEntries.first { entry in
+            entry.primaryText == "Portra 400" && entry.profileOverride == nil
+        }
+        let portraUnofficial = viewModel.filmSelectorEntries.first { entry in
+            entry.primaryText == "Portra 400 · Unofficial"
+        }
+        XCTAssertNotNil(portraOfficial, "Portra 400 official row should exist.")
+        XCTAssertEqual(portraOfficial?.secondaryText, "ISO 400")
+        XCTAssertNotNil(portraUnofficial, "Portra 400 unofficial row should exist with the · Unofficial suffix.")
+        XCTAssertEqual(portraUnofficial?.secondaryText, "ISO 400", "Unofficial row's right column is the ISO speed, not the qualifier.")
+        XCTAssertNotNil(portraUnofficial?.profileOverride, "Unofficial row carries a profile override so the model can apply it on selection.")
+        XCTAssertNotEqual(
+            portraOfficial?.id,
+            portraUnofficial?.id,
+            "Official and unofficial rows must use distinct ids so scroll-to-selection lands on the correct variant."
+        )
+
+        let exemplars: [(name: String, expectedSecondary: String)] = [
+            ("Tri-X 400", "ISO 400"),
+            ("HP5 Plus", "ISO 400"),
+            ("Velvia 50", "ISO 50"),
+            ("Delta 3200", "ISO 3200"),
+        ]
+        for exemplar in exemplars {
+            let entry = viewModel.filmSelectorEntries.first { entry in
+                entry.primaryText == exemplar.name && entry.profileOverride == nil
+            }
+            XCTAssertNotNil(entry, "Missing selector entry for \(exemplar.name).")
+            XCTAssertEqual(entry?.secondaryText, exemplar.expectedSecondary, "Secondary text mismatch for \(exemplar.name).")
+        }
+    }
+
+    @MainActor
     func testChangingFromPresetFilmToNoFilmReturnsToDigitalWorkflow() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first)
@@ -1076,6 +1121,99 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
         XCTAssertFalse(viewModel.canStartFilmCorrectedExposureTimer)
+    }
+
+    @MainActor
+    func testFilmSelectorSectionsGroupByManufacturerWithNoFilmAsHeaderlessLeadingSection() throws {
+        let viewModel = makeViewModel()
+        let sections = viewModel.filmSelectorSections
+
+        // The leading section is the "No film" sentinel — headerless
+        // (manufacturer == nil) so the view renders it as a plain row
+        // outside any group card. Every subsequent section is a
+        // manufacturer group card.
+        let leading = try XCTUnwrap(sections.first, "Sections must not be empty.")
+        XCTAssertEqual(leading.id, "no-film")
+        XCTAssertNil(leading.manufacturer)
+        XCTAssertEqual(leading.entries.map(\.primaryText), ["No film"])
+
+        let manufacturerSections = Array(sections.dropFirst())
+        XCTAssertFalse(manufacturerSections.isEmpty, "Catalog should produce at least one manufacturer section.")
+
+        // No section has zero entries.
+        for section in sections {
+            XCTAssertFalse(section.entries.isEmpty, "Section '\(section.id)' must not be empty.")
+        }
+
+        // Every manufacturer section's entries share its manufacturer label.
+        for section in manufacturerSections {
+            let manufacturer = try XCTUnwrap(section.manufacturer, "Non-leading section must have a manufacturer.")
+            XCTAssertEqual(section.id, manufacturer)
+            for entry in section.entries {
+                XCTAssertEqual(
+                    entry.manufacturer,
+                    manufacturer,
+                    "Entry '\(entry.primaryText)' is in the '\(manufacturer)' section but reports manufacturer '\(entry.manufacturer ?? "nil")'."
+                )
+            }
+        }
+
+        // Manufacturers appear in alphabetical order (case-insensitive)
+        // so the grouped cards are predictably ordered.
+        let manufacturers = manufacturerSections.compactMap(\.manufacturer)
+        let sortedManufacturers = manufacturers.sorted { lhs, rhs in
+            lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }
+        XCTAssertEqual(manufacturers, sortedManufacturers)
+
+        // The flattened section entries must match the flat
+        // filmSelectorEntries list — sections are a regrouping, not a
+        // filtered view, so scroll-to-current-selection by entry id
+        // works regardless of which property the view consumes.
+        XCTAssertEqual(
+            sections.flatMap(\.entries).map(\.id),
+            viewModel.filmSelectorEntries.map(\.id)
+        )
+
+        // Spot-check: Portra 400 official and unofficial rows live in the
+        // same Kodak section, contiguously, so the user does not have to
+        // hunt for the unofficial variant elsewhere in the list.
+        let kodakSection = try XCTUnwrap(
+            manufacturerSections.first(where: { $0.manufacturer == "Kodak" }),
+            "Kodak manufacturer section is required."
+        )
+        let portraIndices = kodakSection.entries.enumerated().compactMap { idx, entry in
+            entry.primaryText.hasPrefix("Portra 400") ? idx : nil
+        }
+        XCTAssertEqual(portraIndices.count, 2, "Kodak section should contain official + unofficial Portra 400 rows.")
+        if portraIndices.count == 2 {
+            XCTAssertEqual(portraIndices[1] - portraIndices[0], 1, "Official and unofficial Portra 400 rows must be contiguous in the Kodak section.")
+        }
+    }
+
+    @MainActor
+    func testFilmSelectorEntriesKeepNoFilmFirstAndShowISOWhenAvailable() {
+        let viewModel = makeViewModel()
+
+        XCTAssertEqual(viewModel.filmSelectorEntries.first?.id, "no-film")
+        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
+        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
+
+        // The leading "No film" sentinel must precede every preset film entry.
+        // Preset films carry an inferred ISO secondary when the canonical
+        // name / brand label / aliases contain a recognized speed token, and
+        // films registered in UnofficialPracticalProfiles add an "Unofficial"
+        // secondary alongside their official primary entry.
+        let entriesAfterNoFilm = viewModel.filmSelectorEntries.dropFirst()
+        XCTAssertGreaterThanOrEqual(entriesAfterNoFilm.count, viewModel.availablePresetFilms.count)
+        for entry in entriesAfterNoFilm {
+            if let secondary = entry.secondaryText {
+                XCTAssertTrue(
+                    secondary.hasPrefix("ISO ") || secondary == "Unofficial",
+                    "Selector secondary text '\(secondary)' for '\(entry.primaryText)' must be ISO metadata or 'Unofficial'."
+                )
+            }
+        }
     }
 
     private func fallbackFormulaDetailsFilm() -> FilmIdentity {

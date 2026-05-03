@@ -25,11 +25,41 @@ struct FilmModeDetailsPresenter {
 
         return FilmModeDetailsDisplayState(
             title: "Reciprocity Details",
+            subtitle: filmIdentitySubtitle(for: input.bindingState),
             summary: makeFilmModeDetailsSummaryState(for: bindingState, input: input),
             currentResult: makeFilmModeDetailsCurrentResultState(input: input),
             sections: sections,
-            graph: makeFilmModeDetailsGraphDisplayState(for: bindingState, input: input)
+            graph: makeFilmModeDetailsGraphDisplayState(for: bindingState, input: input),
+            legend: legendDisplayState(for: input.bindingState.profile)
         )
+    }
+
+    private func filmIdentitySubtitle(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String? {
+        let trimmedName = bindingState.film.canonicalStockName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return nil }
+
+        if let label = subtitleAuthorityLabel(for: bindingState.profile.source.authority) {
+            return "\(trimmedName) · \(label)"
+        }
+        return trimmedName
+    }
+
+    private func subtitleAuthorityLabel(
+        for authority: ReciprocityAuthority
+    ) -> String? {
+        switch authority {
+        case .official:
+            return "Official guidance"
+        case .unofficial:
+            return "Unofficial guidance"
+        case .userDefined:
+            return "User-defined"
+        case .unknown:
+            return nil
+        }
     }
 
     // MARK: - Summary
@@ -310,7 +340,7 @@ struct FilmModeDetailsPresenter {
     ) -> [FilmModeDetailsRowState] {
         var rows: [FilmModeDetailsRowState] = []
         if let profileText = profileSummaryText(for: bindingState) {
-            rows.append(FilmModeDetailsRowState(title: "Profile", value: profileText))
+            rows.append(FilmModeDetailsRowState(title: "Method", value: profileText))
         }
         if let authorityText = profileAuthorityText(for: bindingState.profile) {
             rows.append(FilmModeDetailsRowState(title: "Authority", value: authorityText))
@@ -403,7 +433,11 @@ struct FilmModeDetailsPresenter {
                 lines.append(contentsOf: tableRule.entries.compactMap {
                     compactTableEntryReferenceColumns(for: $0, input: input)
                 })
-            case .formula, .advisory:
+            case .advisory(let advisoryRule):
+                if let columns = compactAdvisoryRuleColumns(for: advisoryRule, formatDuration: input.formatDuration) {
+                    lines.append(columns)
+                }
+            case .formula:
                 continue
             }
         }
@@ -469,6 +503,86 @@ struct FilmModeDetailsPresenter {
         }()
 
         return [referenceRow, citationRow].compactMap { $0 }
+    }
+
+    private func legendDisplayState(
+        for profile: ReciprocityProfile
+    ) -> FilmModeDetailsLegendState? {
+        let adjustments = profile.rules.flatMap { rule -> [ReciprocityAdjustment] in
+            switch rule {
+            case let .threshold(thresholdRule):
+                return thresholdRule.adjustments
+            case let .formula(formulaRule):
+                return formulaRule.additionalAdjustments
+            case let .table(tableRule):
+                return tableRule.entries.flatMap(\.adjustments)
+            case let .advisory(advisoryRule):
+                return advisoryRule.adjustments
+            }
+        }
+        let presentations = ReciprocitySecondaryGuidanceFormatter.format(adjustments)
+        guard !presentations.isEmpty else { return nil }
+
+        var lines: [String] = []
+
+        let colorValues = presentations
+            .filter { $0.kind == .colorCorrection }
+            .compactMap(\.valueText)
+        if !colorValues.isEmpty,
+           let line = colorCorrectionLegendLine(for: colorValues) {
+            lines.append(line)
+        }
+
+        if presentations.contains(where: { $0.kind == .developmentAdjustment }) {
+            lines.append("Development adjustment: Dev -10% means adjust development time by -10%.")
+        }
+
+        if presentations.contains(where: { $0.kind == .warning && $0.severity == .stop }) {
+            lines.append("Warning: Not recommended marks a manufacturer stop-signal.")
+        }
+
+        guard !lines.isEmpty else { return nil }
+        return FilmModeDetailsLegendState(lines: lines)
+    }
+
+    private func colorCorrectionLegendLine(for filterNames: [String]) -> String? {
+        if let kodakName = filterNames.first(where: { $0.uppercased().hasPrefix("CC") }) {
+            let channelDescription = colorChannelDescription(for: trailingChannelLetter(of: kodakName))
+            return "Color correction: \(kodakName) = color-compensating \(channelDescription) filtration."
+        }
+
+        let trailingLetters = Set(filterNames.compactMap(trailingChannelLetter))
+        if trailingLetters.count == 1, let letter = trailingLetters.first {
+            let description = colorChannelDescription(for: letter)
+            return "Color correction: \(letter) = \(description) filtration."
+        }
+
+        return nil
+    }
+
+    private func trailingChannelLetter(of filterName: String) -> String? {
+        guard let last = filterName.last,
+              last.isLetter else { return nil }
+        return String(last).uppercased()
+    }
+
+    private func colorChannelDescription(for channel: String?) -> String {
+        switch channel?.uppercased() {
+        case "M":
+            return "magenta"
+        case "G":
+            return "green"
+        case "B":
+            return "blue"
+        case "Y":
+            return "yellow"
+        case "C":
+            return "cyan"
+        case "R":
+            return "red"
+        default:
+            return "color"
+        }
     }
 
     // MARK: - Graph
@@ -1096,12 +1210,82 @@ struct FilmModeDetailsPresenter {
             return compactDevelopmentReferenceText(from: development.instruction)
         }.first
 
-        let detailColumns = [exposureText, developmentText].compactMap { $0 }
-        guard !detailColumns.isEmpty else {
-            return nil
+        // PTIMER-119 follow-up: surface color filter notation and stop-signal warnings
+        // alongside the source-row metered text so the reference table preserves the
+        // mapping between metered exposure and secondary guidance.
+        let colorCorrectionText = entry.adjustments.compactMap { adjustment -> String? in
+            guard case let .colorFilter(filter) = adjustment else { return nil }
+            return filter.filterName
+        }.first
+
+        let stopSignalText: String? = entry.adjustments.contains { adjustment in
+            if case let .warning(warning) = adjustment, warning.severity == .notRecommended {
+                return true
+            }
+            return false
+        } ? "Not recommended" : nil
+
+        if let exposureText {
+            // Existing rule: development beats color correction when both exist on
+            // the same entry (the launch catalog never mixes them today; preference
+            // is documented to keep behavior deterministic).
+            let secondaryText = developmentText ?? colorCorrectionText
+            let detailColumns = [exposureText, secondaryText].compactMap { $0 }
+            return [meteredText] + detailColumns
         }
 
-        return [meteredText] + detailColumns
+        // Warning-only entries (Velvia 50's "64 sec is not recommended.") have no
+        // exposure adjustment; surface them with the metered row so the user can
+        // see WHICH metered exposure the source flags.
+        if let stopSignalText {
+            return [meteredText, stopSignalText]
+        }
+
+        return nil
+    }
+
+    /// PTIMER-119 follow-up: advisory rules (e.g. Ektachrome E100's CC10R at 10s+)
+    /// expose published reference guidance for a metered range. Surface them in the
+    /// Reference data block so the user sees WHICH metered exposure the guidance
+    /// applies to, instead of hiding the rule.
+    private func compactAdvisoryRuleColumns(
+        for rule: AdvisoryReciprocityRule,
+        formatDuration: (Double) -> String
+    ) -> [String]? {
+        guard let appliesRange = rule.appliesWhenMetered else { return nil }
+        let meteredText = meteredExposureSelectorText(.range(appliesRange), formatDuration: formatDuration)
+
+        if let colorRow = rule.adjustments.compactMap({ adjustment -> (String, String?)? in
+            guard case let .colorFilter(filter) = adjustment else { return nil }
+            return (filter.filterName, filter.note)
+        }).first {
+            let trimmedNote = colorRow.1?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let value: String
+            if let trimmedNote, !trimmedNote.isEmpty {
+                value = "\(colorRow.0) — \(trimmedNote)"
+            } else {
+                value = colorRow.0
+            }
+            return [meteredText, "Color correction", value]
+        }
+
+        if rule.adjustments.contains(where: { adjustment in
+            if case let .warning(warning) = adjustment, warning.severity == .notRecommended {
+                return true
+            }
+            return false
+        }) {
+            return [meteredText, "Not recommended"]
+        }
+
+        if let developmentRow = rule.adjustments.compactMap({ adjustment -> String? in
+            guard case let .development(development) = adjustment else { return nil }
+            return development.instruction
+        }).first {
+            return [meteredText, "Development adjustment", developmentRow]
+        }
+
+        return nil
     }
 
     /// Combined "stop or multiplier · corrected time" column.

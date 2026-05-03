@@ -90,6 +90,7 @@
 		A00000000000000000000150 /* ReciprocitySecondaryGuidancePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */; };
 		A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */; };
 		A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */; };
+		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -210,6 +211,7 @@
 		A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidanceCatalogMappingTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = docs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -447,6 +449,7 @@
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */,
 				A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */,
+				A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */,
 				A00000000000000000000129 /* CalculatorModelTests.swift */,
 				A00000000000000000000133 /* ReciprocityModelTests.swift */,
 				A00000000000000000000137 /* TimerWorkspaceModelTests.swift */,
@@ -703,6 +706,7 @@
 				A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */,
 				A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */,
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
+				A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */,
 				A00000000000000000000128 /* CalculatorModelTests.swift in Sources */,
 				A00000000000000000000132 /* ReciprocityModelTests.swift in Sources */,
 				A00000000000000000000136 /* TimerWorkspaceModelTests.swift in Sources */,

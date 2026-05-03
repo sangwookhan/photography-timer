@@ -220,7 +220,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             "Sources"
         ])
         XCTAssertEqual(details.graph?.kind, .table)
-        XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Profile", "Authority"])
+        XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Method", "Authority"])
     }
 
     @MainActor
@@ -660,7 +660,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
         let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
 
-        XCTAssertEqual(profileSection.rows.map(\.title), ["Profile", "Authority"])
+        XCTAssertEqual(profileSection.rows.map(\.title), ["Method", "Authority"])
         XCTAssertEqual(profileSection.rows.map(\.value), ["Formula-based guidance", "Unofficial practical approximation"])
         XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.34"])
         XCTAssertEqual(details.summary.badgeText, "Formula-based")

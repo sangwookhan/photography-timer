@@ -9,13 +9,36 @@ import Observation
 @Observable
 final class CalculatorModel {
     /// Full-stop shutter ladder used by the digital shutter wheel and
-    /// the snap-to-full-stop logic.
-    nonisolated static let shutterSpeeds = ExposureCalculator.fullStopShutterSpeeds
+    /// the snap-to-full-stop logic. Sourced from the default
+    /// `ExposureScale` so the picker, the calc engine, and the
+    /// scale abstraction agree on one ladder.
+    nonisolated static let shutterSpeeds = ExposureScale.default.shutterSteps.map(\.seconds)
 
     /// The pure calculation engine, shared with the view-model facade
     /// so direct call sites (`calculator.formatShutter`, etc.) reach
     /// the same instance.
     let calculator: ExposureCalculator
+
+    /// Active exposure scale. PTIMER-79 introduces this as a model
+    /// concept defaulting to `.fullStop` so current behavior is
+    /// preserved exactly; PTIMER-80/81 will route fractional ND
+    /// calculation and the UI mode selector through this property.
+    let exposureScale: ExposureScale
+
+    /// Shutter ladder shown by the picker. Reads from the active
+    /// scale so swapping `exposureScale` flips the picker without any
+    /// view-side conditional.
+    var pickerShutterStepSeconds: [Double] {
+        exposureScale.shutterSteps.map(\.seconds)
+    }
+
+    /// Whole-stop ND values shown by the current picker. Today the
+    /// picker is integer-only; the helper filters the scale to the
+    /// whole-stop subset so the binding stays `Int` until PTIMER-81
+    /// promotes it.
+    var pickerWholeNDStops: [Int] {
+        exposureScale.ndSteps.compactMap(\.wholeStops)
+    }
 
     /// Working base shutter in seconds. Persisted committed value;
     /// the live preview overlay (`liveBaseShutter`) takes precedence
@@ -51,11 +74,13 @@ final class CalculatorModel {
     init(
         calculator: ExposureCalculator,
         baseShutterSeconds: Double = 1.0 / 30.0,
-        ndStop: Int = 0
+        ndStop: Int = 0,
+        exposureScale: ExposureScale = .default
     ) {
         self.calculator = calculator
         self.baseShutterSeconds = baseShutterSeconds
         self.ndStop = ndStop
+        self.exposureScale = exposureScale
     }
 
     /// Sets the live preview value. If the preview equals the committed

@@ -91,6 +91,8 @@
 		A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */; };
 		A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */; };
 		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
+		A00000000000000000000158 /* ExposureScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000159 /* ExposureScale.swift */; };
+		A0000000000000000000015A /* ExposureScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000015B /* ExposureScaleTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -212,6 +214,8 @@
 		A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidanceCatalogMappingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000159 /* ExposureScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScale.swift; sourceTree = "<group>"; };
+		A0000000000000000000015B /* ExposureScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = docs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -296,6 +300,7 @@
 				A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */,
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
+				A00000000000000000000159 /* ExposureScale.swift */,
 				A00000000000000000000107 /* FilmModeDetailsPresenter.swift */,
 				A00000000000000000000148 /* FilmModeDetailsView.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
@@ -456,6 +461,7 @@
 				A00000000000000000000141 /* FilmSelectionModelTests.swift */,
 				A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */,
 				A0000000000000000000014E /* SharedFixtureGoldenTests.swift */,
+				A0000000000000000000015B /* ExposureScaleTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -635,6 +641,7 @@
 				A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */,
 				A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */,
 				A00000000000000000000004 /* ExposureCalculator.swift in Sources */,
+				A00000000000000000000158 /* ExposureScale.swift in Sources */,
 				A00000000000000000000005 /* TimerManager.swift in Sources */,
 				A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */,
 				A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */,
@@ -714,6 +721,7 @@
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 				A0000000000000000000014D /* ViewModelDisplayStateBaselineTests.swift in Sources */,
 				A0000000000000000000014F /* SharedFixtureGoldenTests.swift in Sources */,
+				A0000000000000000000015A /* ExposureScaleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -170,6 +170,29 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
+    /// Active exposure scale exposed for UI consumption. Sourced from
+    /// `CalculatorModel` so the picker reads the same scale the calc
+    /// engine uses; defaults to `.fullStop` until PTIMER-81 wires the
+    /// mode selector.
+    var exposureScale: ExposureScale {
+        calculatorModel.exposureScale
+    }
+
+    /// Shutter values the base-shutter picker should render. Equivalent
+    /// to `exposureScale.shutterSteps.map(\.seconds)`; named for the
+    /// caller's intent.
+    var pickerShutterStepSeconds: [Double] {
+        calculatorModel.pickerShutterStepSeconds
+    }
+
+    /// Whole-stop ND values the integer-binding ND picker should
+    /// render. Filters the scale's ND ladder to the whole-stop subset
+    /// so the existing `Int` binding keeps working until PTIMER-81
+    /// promotes it.
+    var pickerWholeNDStops: [Int] {
+        calculatorModel.pickerWholeNDStops
+    }
+
     var availablePresetFilms: [FilmIdentity] {
         filmSelectionModel.availablePresetFilms
     }

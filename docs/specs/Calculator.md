@@ -157,6 +157,10 @@ The reference panel surfaces the source data used by a profile. Its presentation
 - A corrected-time value that the catalog stores as `isApproximate` (i.e. a rounded display of an irrational conversion, typically a fractional-stop derivation `metered × 2^stopDelta`) shall be visually distinguished — for example with a leading "≈" — so the user can tell rounded values from published or exactly-converted ones at a glance. Multiplier-derived corrected times (`metered × multiplier`) are exact arithmetic and are not marked.
 - Development-time hints and color-filter suggestions stay as separate cells / notes rather than being folded into the calculation column. They are documentation, not calculation inputs.
 - The reference panel shall not introduce new calculation policy. It is a presentation contract over data the calculation policy already consumes.
+- PTIMER-88 adds a secondary-guidance formatter in the presentation layer only.
+- The formatter preserves stored notation exactly (for example `5M`, `7.5M`, `2.5G`, `CC10R`, `-10% development`) and does not normalize text.
+- It maps guidance into separate categories: color correction, development adjustment, warning, and note.
+- Exposure-time output remains the primary calculator result; these rows are secondary guidance only.
 
 ### 3.7 Confidence presentation
 
@@ -226,4 +230,3 @@ trace the published research that informed it.
 - 15761409 — Reciprocity Table Interpolation and Calculation Policy Draft (responsibility split, metadata, policy direction)
 - 15138817 — Reciprocity Validation Samples (minimum validation matrix, example profiles)
 - 16482307 — Film Selection and Reciprocity Calculator UI (workflow direction, state semantics)
-

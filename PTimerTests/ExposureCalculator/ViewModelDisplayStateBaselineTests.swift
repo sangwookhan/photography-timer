@@ -39,6 +39,12 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     /// reciprocity scenario.
     func testFilmModeTriXExactTablePointBaseline() throws {
         let viewModel = makeViewModel()
+        // Pin the reserved full-stop scale so the snap-style result
+        // (1s exact table point) lands on the same Tri-X anchor the
+        // baseline was recorded against. The shipping default scale
+        // is one-third-stop; this test covers the legacy/regression
+        // surface explicitly.
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
             viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
         )
@@ -59,6 +65,12 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     /// composition path.
     func testFilmModeTriXWithNDStopBaseline() throws {
         let viewModel = makeViewModel()
+        // Pin the reserved full-stop scale: with snap on, 1/30 + 6
+        // stops → 2.0s, the exact table anchor that the recorded
+        // baseline points at. Without snap (shipping default) the
+        // intermediate value drifts to 2.133s and the reciprocity
+        // confidence shifts.
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
             viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
         )
@@ -81,6 +93,12 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     /// rather than a numeric value.
     func testFilmModePortraAdvisoryBaseline() throws {
         let viewModel = makeViewModel()
+        // Pin the reserved full-stop scale so the metered exposure
+        // aligns with the Portra advisory anchor the baseline was
+        // recorded against (snap is no-op for whole-second metered,
+        // but the consistency keeps this baseline aligned with the
+        // other film-mode baselines in the suite).
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
             viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }
         )

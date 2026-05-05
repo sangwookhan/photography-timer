@@ -1,13 +1,15 @@
 import Foundation
 
 /// Granularity of one increment along an exposure scale. Treat
-/// `oneThirdStop` as a first-class step, not a display-only formatting
-/// choice — both the shutter ladder and the ND ladder change with the
-/// selected mode.
+/// `oneThirdStop` as a first-class step, not a display-only
+/// formatting choice — the **shutter** ladder changes with the
+/// selected mode (the shipping product runs on the one-third-stop
+/// shutter ladder; per `docs/specs/Calculator.md` §1.4 the ND ladder
+/// stays whole-stop in every shipping mode).
 ///
-/// PTIMER-79 introduces the abstraction; PTIMER-80 will route the
-/// calculation engine through it; PTIMER-81 will surface the mode in
-/// the UI selector.
+/// `.fullStop` is retained as a reserved scale for tests and a future
+/// Settings preference; the shipping calculator does not surface a
+/// runtime scale selector.
 enum ExposureScaleMode: String, Codable, CaseIterable, Sendable {
     case fullStop
     case oneThirdStop
@@ -38,13 +40,16 @@ struct ShutterStep: Equatable, Hashable, Sendable {
     }
 }
 
-/// One ND-filter entry on an exposure scale's ND ladder, expressed in
-/// stops. Fractional values are first-class so a future
-/// `oneThirdStop` ND ladder can include `1/3`, `2/3`, `1 1/3`, … as
-/// distinct steps. `wholeStops` is non-nil only when the step lies on
-/// a whole-stop boundary, which is what the legacy integer calc API
+/// One ND-filter entry on an exposure scale's ND ladder, expressed
+/// in stops. Fractional values are representable on the type as
+/// **reserved domain infrastructure** so a future custom /
+/// variable-ND workflow can flow through the same calculation and
+/// persistence path; the shipping ND picker enumerates whole stops
+/// only (per `docs/specs/Calculator.md` §2.2). `wholeStops` is
+/// non-nil only when the step lies on a whole-stop boundary, which
+/// is what the legacy integer calc API
 /// (`ExposureCalculator.calculate(baseShutterSeconds:stop: Int)`)
-/// consumes today.
+/// consumes.
 struct NDStep: Equatable, Hashable, Sendable {
     let stops: Double
 
@@ -61,13 +66,14 @@ struct NDStep: Equatable, Hashable, Sendable {
     }
 }
 
-/// Canonical scale data for one `ExposureScaleMode`. Picker UI reads
-/// `shutterSteps` / `ndSteps` from the active scale; the calc layer
-/// reads `mode.stopsPerStep` (full routing through fractional ND lands
-/// in PTIMER-80).
+/// Canonical scale data for one `ExposureScaleMode`. Picker UI
+/// reads `shutterSteps` / `ndSteps` from the active scale; the
+/// calc layer reads `mode.stopsPerStep` and routes through the
+/// fractional-aware `NDStep` overload of the calculator.
 ///
-/// The scale is the single source of truth for "what values does the
-/// user pick from": picker rows shall not maintain a parallel list.
+/// The scale is the single source of truth for "what values does
+/// the user pick from": picker rows shall not maintain a parallel
+/// list.
 struct ExposureScale: Equatable, Sendable {
     let mode: ExposureScaleMode
     let shutterSteps: [ShutterStep]
@@ -87,37 +93,78 @@ extension ExposureScale {
         ndSteps: (0...maximumWholeNDStops).map { NDStep(stops: Double($0)) }
     )
 
-    /// Densified shutter and ND ladders for one-third-stop work. PTIMER-80
-    /// will route calculation through this scale and PTIMER-81 will expose
-    /// the mode in the UI; PTIMER-79 only declares the data so later work
-    /// has a stable model to build on.
+    /// Densified shutter ladder paired with the whole-stop ND ladder —
+    /// the shipping calculator scale. Shutter is the geometric-mean
+    /// densified ladder (55 entries spanning 1/8000…30s); ND stays on
+    /// the integer `0…maximumWholeNDStops` ladder because the shipping
+    /// product treats fractional ND as out-of-scope (real-world fixed
+    /// ND filters ship in whole-stop strengths). The fractional-aware
+    /// `NDStep` type is retained as a reserved domain primitive (e.g.
+    /// `thirdStopCount` for persistence round-trip) so a future
+    /// custom/variable-ND workflow can route through the same calc
+    /// path without redesigning the model layer; that capability
+    /// shall not surface in the shipping ND picker.
+    /// (Per Calculator spec §2.2, §2.3.)
     static let oneThirdStop: ExposureScale = ExposureScale(
         mode: .oneThirdStop,
         shutterSteps: oneThirdStopShutterSteps(
             fromFullStops: ExposureCalculator.fullStopShutterSpeeds
         ),
-        ndSteps: oneThirdStopNDSteps(maxWholeStops: maximumWholeNDStops)
+        ndSteps: (0...maximumWholeNDStops).map { NDStep(stops: Double($0)) }
     )
 
-    /// The mode the app currently ships with. Kept as a single
-    /// reference so test/setup paths can compare against the active
-    /// default without re-deriving it.
-    static let `default`: ExposureScale = .fullStop
+    /// The shipping calculator scale. Routes through the one-third-stop
+    /// ladders; the full-stop scale (`.fullStop`) is kept in the model
+    /// only for tests and the future Settings preference described in
+    /// `docs/specs/Calculator.md` §1.4.
+    static let `default`: ExposureScale = .oneThirdStop
 
-    /// Maximum whole ND stops the legacy picker supports. Hoisted to
-    /// a single constant so the full-stop scale and the one-third-stop
+    /// Maximum whole ND stops the calculator supports. Hoisted to a
+    /// single constant so the full-stop scale and the one-third-stop
     /// scale stay in lockstep instead of repeating `0...30`.
     static let maximumWholeNDStops: Int = 30
 }
 
 extension ExposureScale {
-    /// Lookup helper used by the calc layer. For whole-stop ND values,
-    /// returns the canonical `NDStep` from the ladder; for fractional
-    /// values the result is also a valid `NDStep` even when the scale
-    /// itself does not enumerate it. Kept here so future PTIMER-80
-    /// fractional routing has a single conversion site.
+    /// Lookup helper used by the calc layer. For whole-stop ND
+    /// values, returns the canonical `NDStep` from the ladder; for
+    /// fractional values the result is also a valid `NDStep` even
+    /// when the scale itself does not enumerate it (the shipping
+    /// scale enumerates whole stops only). Kept here so the
+    /// fractional-aware calc routing has a single conversion site
+    /// when the reserved fractional path is exercised by tests or
+    /// a future workflow.
     static func ndStep(forWholeStops stop: Int) -> NDStep {
         NDStep(stops: Double(stop))
+    }
+
+    /// Returns the canonical scale for a given mode. Single conversion
+    /// site so the ViewModel and persistence boundaries can flip
+    /// `ExposureScaleMode` without re-deriving the ladder data.
+    static func scale(for mode: ExposureScaleMode) -> ExposureScale {
+        switch mode {
+        case .fullStop:
+            return .fullStop
+        case .oneThirdStop:
+            return .oneThirdStop
+        }
+    }
+}
+
+extension NDStep {
+    /// Count of one-third-stop increments this step represents. Exact
+    /// integer identity for any third-stop value (0, 1/3, 2/3, 1, …).
+    /// Used by the persistence layer so fractional ND survives a
+    /// round-trip without `Double` becoming the source of truth.
+    var thirdStopCount: Int {
+        Int((stops * 3).rounded())
+    }
+
+    /// Builds an `NDStep` from a count of one-third-stops. Inverse of
+    /// `thirdStopCount` for any value the persistence layer is allowed
+    /// to write.
+    static func fromThirdStopCount(_ thirds: Int) -> NDStep {
+        NDStep(stops: Double(thirds) / 3.0)
     }
 }
 
@@ -127,7 +174,7 @@ private extension ExposureScale {
     /// each pair of neighbors at the geometric-mean ratios `2^(1/3)`
     /// and `2^(2/3)`. Using ratios off the lower neighbor preserves
     /// round-trip behavior at every full-stop boundary, which matters
-    /// when PTIMER-80 routes calculation through this ladder.
+    /// when calculation is routed through this ladder.
     static func oneThirdStopShutterSteps(fromFullStops fullStops: [Double]) -> [ShutterStep] {
         guard fullStops.count >= 2 else {
             return fullStops.map(ShutterStep.init(seconds:))
@@ -151,26 +198,71 @@ private extension ExposureScale {
 
         return steps
     }
+}
 
-    /// ND ladder for one-third-stop mode. Walks `0…maxWholeStops` and
-    /// inserts the `+1/3` and `+2/3` steps between whole stops; the
-    /// last whole stop has no trailing fractional steps so the ladder
-    /// ends cleanly on a whole boundary.
-    static func oneThirdStopNDSteps(maxWholeStops: Int) -> [NDStep] {
-        guard maxWholeStops >= 0 else { return [] }
+extension ExposureScale {
+    /// Camera-facing labels for each entry on `oneThirdStop.shutterSteps`,
+    /// indexed by ladder position. Real cameras and external meters
+    /// expose 1/3-stop shutter speeds with conventional rounded labels
+    /// (`1/20`, `1/2`, `1.3s`) rather than the canonical geometric-
+    /// mean seconds. The picker shows these labels so the value matches
+    /// what the photographer can find on the camera dial; the
+    /// underlying calculation continues to use the canonical seconds
+    /// from `oneThirdStop.shutterSteps`.
+    ///
+    /// The table has the same length and ordering as
+    /// `oneThirdStop.shutterSteps` (19 full-stop anchors + 36
+    /// one-third-stop intermediates = 55 entries).
+    ///
+    /// Notation rules (Nikon Z7-derived numeric ladder, with PTIMER's
+    /// existing `s` suffix kept for ≥ 1s):
+    /// - sub-1-second values always render as a reciprocal fraction
+    ///   `1/N` and never carry an `s` suffix — including the slow
+    ///   end `1/3, 1/2.5, 1/2, 1/1.6, 1/1.3` — so the slow-shutter
+    ///   range stays visually consistent with the fast-shutter range
+    /// - values ≥ 1s render as integer or `N.Ns` per camera
+    ///   convention.
+    ///
+    /// Underlying canonical seconds in `oneThirdStop.shutterSteps`
+    /// are unchanged; calculation continues to advance by stop-step
+    /// index so a transition like `1/10 + 3 stops` lands on the row
+    /// labeled `1/1.3`.
+    static let oneThirdStopShutterCameraLabels: [String] = [
+        // 1/8000 anchor + 2 intermediates → 1/4000 anchor + 2 → …
+        "1/8000", "1/6400", "1/5000",
+        "1/4000", "1/3200", "1/2500",
+        "1/2000", "1/1600", "1/1250",
+        "1/1000", "1/800",  "1/640",
+        "1/500",  "1/400",  "1/320",
+        "1/250",  "1/200",  "1/160",
+        "1/125",  "1/100",  "1/80",
+        "1/60",   "1/50",   "1/40",
+        "1/30",   "1/25",   "1/20",
+        "1/15",   "1/13",   "1/10",
+        "1/8",    "1/6",    "1/5",
+        "1/4",    "1/3",    "1/2.5",
+        "1/2",    "1/1.6",  "1/1.3",
+        "1s",     "1.3s",   "1.6s",
+        "2s",     "2.5s",   "3s",
+        "4s",     "5s",     "6s",
+        "8s",     "10s",    "13s",
+        "15s",    "20s",    "25s",
+        "30s"
+    ]
 
-        var steps: [NDStep] = []
-        steps.reserveCapacity(maxWholeStops * 3 + 1)
-
-        for whole in 0...maxWholeStops {
-            steps.append(NDStep(stops: Double(whole)))
-
-            guard whole < maxWholeStops else { continue }
-
-            steps.append(NDStep(stops: Double(whole) + 1.0 / 3.0))
-            steps.append(NDStep(stops: Double(whole) + 2.0 / 3.0))
+    /// Returns the camera-facing label for a one-third-stop shutter
+    /// value if the value sits on the canonical 1/3-stop ladder. Falls
+    /// back to `nil` for values that aren't on the ladder so callers
+    /// can use the standard formatter.
+    static func oneThirdStopShutterCameraLabel(forSeconds seconds: Double) -> String? {
+        let ladder = oneThirdStop.shutterSteps
+        guard ladder.count == oneThirdStopShutterCameraLabels.count else {
+            return nil
         }
-
-        return steps
+        for (index, step) in ladder.enumerated()
+        where abs(step.seconds - seconds) <= ExposureCalculator.stabilityEpsilon {
+            return oneThirdStopShutterCameraLabels[index]
+        }
+        return nil
     }
 }

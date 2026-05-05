@@ -11,6 +11,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertNil(viewModel.activeCalculatorContext.selectedPresetFilm)
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
@@ -123,6 +124,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1
         viewModel.ndStop = 0
@@ -379,6 +381,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             ),
             presetFilms: [minimalDetailsFilm()]
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 5
@@ -433,6 +436,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             ),
             presetFilms: [urlBackedDetailsFilm()]
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 2
         viewModel.ndStop = 0
@@ -483,6 +487,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             ),
             presetFilms: [fallbackFormulaDetailsFilm()]
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 8
         viewModel.ndStop = 0
@@ -633,6 +638,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             ),
             presetFilms: [minimalDetailsFilm()]
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 5
@@ -971,6 +977,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatReciprocityDuration(0.033), "0.033s")
         XCTAssertEqual(viewModel.formatReciprocityDuration(0.25), "0.25s")
@@ -1338,13 +1345,20 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
     @MainActor
     private func makeViewModel() -> ExposureCalculatorViewModel {
-        ExposureCalculatorViewModel(
+        let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
                 tickInterval: 60,
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        // Pin the legacy full-stop scale so the snap-style assertions
+        // in this suite stay green; the shipping calculator now
+        // defaults to the one-third-stop scale (per
+        // docs/specs/Calculator.md §1.4) and a separate suite covers
+        // the new shipping behavior.
+        viewModel.scaleMode = .fullStop
+        return viewModel
     }
 
     private func minimalDetailsFilm() -> FilmIdentity {

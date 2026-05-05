@@ -26,7 +26,8 @@ final class FilmSelectionModel: ObservableObject {
 
     private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
     private let currentBaseShutterSeconds: () -> Double
-    private let currentNDStop: () -> Int
+    private let currentNDStep: () -> NDStep
+    private let currentScaleMode: () -> ExposureScaleMode
 
     /// Result of restoring the persisted context. Either we have a
     /// valid restored snapshot (potentially with a missing film id, in
@@ -35,7 +36,8 @@ final class FilmSelectionModel: ObservableObject {
     struct RestoredContext {
         let selectedPresetFilm: FilmIdentity?
         let baseShutterSeconds: Double?
-        let ndStop: Int?
+        let ndStep: NDStep?
+        let scaleMode: ExposureScaleMode
         /// True when the persisted snapshot referenced a film id that
         /// is no longer in the catalog. The caller treats this the
         /// same as "no film selected" and clears the persisted
@@ -47,12 +49,14 @@ final class FilmSelectionModel: ObservableObject {
         presetFilms: [FilmIdentity],
         contextPersistenceStore: ExposureCalculatorContextPersistenceStoring,
         currentBaseShutterSeconds: @escaping () -> Double,
-        currentNDStop: @escaping () -> Int
+        currentNDStep: @escaping () -> NDStep,
+        currentScaleMode: @escaping () -> ExposureScaleMode = { .oneThirdStop }
     ) {
         self.presetFilms = presetFilms
         self.contextPersistenceStore = contextPersistenceStore
         self.currentBaseShutterSeconds = currentBaseShutterSeconds
-        self.currentNDStop = currentNDStop
+        self.currentNDStep = currentNDStep
+        self.currentScaleMode = currentScaleMode
     }
 
     // MARK: - Read accessors
@@ -101,7 +105,7 @@ final class FilmSelectionModel: ObservableObject {
 
     /// Loads the persisted snapshot and resolves the film reference
     /// against the current catalog. The caller is responsible for
-    /// applying `baseShutterSeconds` / `ndStop` to its calculation
+    /// applying `baseShutterSeconds` / `ndStep` to its calculation
     /// inputs (those live on `CalculatorModel`).
     func restoreContext() -> RestoredContext? {
         guard let snapshot = contextPersistenceStore.loadSnapshot() else {
@@ -115,7 +119,8 @@ final class FilmSelectionModel: ObservableObject {
                 return RestoredContext(
                     selectedPresetFilm: nil,
                     baseShutterSeconds: nil,
-                    ndStop: nil,
+                    ndStep: nil,
+                    scaleMode: snapshot.restoredScaleMode,
                     hadInvalidFilmReference: true
                 )
             }
@@ -128,20 +133,34 @@ final class FilmSelectionModel: ObservableObject {
         return RestoredContext(
             selectedPresetFilm: activeContext.selectedPresetFilm,
             baseShutterSeconds: snapshot.baseShutterSeconds,
-            ndStop: snapshot.ndStop,
+            ndStep: snapshot.restoredNDStep,
+            scaleMode: snapshot.restoredScaleMode,
             hadInvalidFilmReference: false
         )
     }
 
     /// Writes the combined `(selectedPresetFilmID + baseShutterSeconds
-    /// + ndStop)` snapshot to the persistence store, pulling the calc
-    /// inputs from the closures supplied at init time.
+    /// + ndStep)` snapshot to the persistence store, pulling the calc
+    /// inputs from the closures supplied at init time. Whole-stop ND
+    /// values populate `ndStop` for byte-for-byte backward compat with
+    /// pre-fractional snapshots; fractional values populate
+    /// `ndStopThirds` instead so a `1/3` or `2/3` step survives a
+    /// relaunch without being silently rounded to an integer.
     func persistContext() {
+        let ndStep = currentNDStep()
+        let scaleMode = currentScaleMode()
         contextPersistenceStore.saveSnapshot(
             PersistentExposureCalculatorContextSnapshot(
                 selectedPresetFilmID: activeContext.selectedPresetFilm?.id,
                 baseShutterSeconds: currentBaseShutterSeconds(),
-                ndStop: currentNDStop()
+                ndStop: ndStep.wholeStops,
+                ndStopThirds: ndStep.isWholeStop ? nil : ndStep.thirdStopCount,
+                // Persist `nil` for the shipping one-third-stop default so
+                // a steady-state snapshot stays compact. Only the reserved
+                // full-stop scale (kept for tests / the future Settings
+                // preference) writes the field. Restore defaults missing
+                // values back to `.oneThirdStop` per the spec.
+                exposureScaleMode: scaleMode == .oneThirdStop ? nil : scaleMode.rawValue
             )
         )
     }

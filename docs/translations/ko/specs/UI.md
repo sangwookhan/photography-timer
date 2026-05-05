@@ -49,8 +49,10 @@ Launch dataset ([DomainSchema Spec](DomainSchema.md) §11) 은 `authority = "off
 
 두 **wheel picker** 가 한 row 에 side-by-side:
 
-- **Base Shutter picker** — 1/8000 부터 30 s 까지 19 풀스톱 값. ([Calculator Spec](Calculator.md) §2.3 참조.)
-- **ND picker** — [0, 30] 닫힌 구간의 정수 stop.
+- **Base Shutter picker** — 1/3-stop 조밀화 ladder (1/8000 부터 30 s 까지 55개 entry, [Calculator Spec](Calculator.md) §2.3) 에 카메라 표기 라벨. 1초 미만 행은 reciprocal 분수 (`1/N`, slow end `1/3, 1/2.5, 1/2, 1/1.6, 1/1.3` 포함) 로 렌더링하고 `s` suffix 미포함; 1초 이상 행은 카메라 관습대로 정수 또는 `N.Ns`.
+- **ND picker** — **`[0, 30]` 닫힌 구간의 정수 stop**. One-third-stop 은 Base Shutter ladder 에만 적용 ([Calculator Spec](Calculator.md) §1.4); ND picker 는 실제 fixed ND 필터가 whole-stop 강도로 판매되기 때문에 whole-stop 유지. `7 1/3` 또는 `7 2/3` 같은 fractional 행은 출시 ND option list 에 **포함되지 않으며**, view 레이어에서 필터링하지 않는다 — option set 자체에 존재하지 않는다.
+
+사용자 노출 scale selector 는 현 release 에서 의도적으로 노출하지 않음; calculator 는 one-third-stop shutter scale 에서만 동작. 미래 Settings preference (Full / 1/2 / 1/3 stop, 그리고 미래의 fractional-ND opt-in) 는 유보 ([Calculator Spec](Calculator.md) §1.4 참조) — 출시 시 calculator 화면이 아닌 Settings 에 위치.
 
 Picker 쌍이 이 변수들의 유일한 입력 경로 — free-text 입력 없음. wheel 값 tap 시 calculator 즉시 update; 스크롤 중 live preview 지원. Aperture + ISO 컨트롤은 유보 — 현 release 에 나타나지 않는다.
 

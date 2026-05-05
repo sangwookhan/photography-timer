@@ -12,6 +12,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
         viewModel.baseShutter = 1
@@ -38,6 +39,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
         viewModel.baseShutter = 1
@@ -67,6 +69,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
         viewModel.baseShutter = 15
@@ -92,6 +95,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
         viewModel.baseShutter = 15
@@ -118,6 +122,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
         viewModel.baseShutter = 8
@@ -143,6 +148,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
         viewModel.baseShutter = 8
@@ -169,6 +175,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -190,6 +197,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         var nonEmptyEmissions: [[RunningTimerItem]] = []
 
         let cancellable = viewModel.$timers.sink { timers in
@@ -220,6 +228,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -246,6 +255,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -273,6 +283,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 30)
 
@@ -292,6 +303,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1
         viewModel.ndStop = 0
@@ -318,6 +330,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -377,6 +390,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 10)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
@@ -402,6 +416,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 10)
 
@@ -438,6 +453,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 20)
         let longerRunning = try XCTUnwrap(viewModel.timers.first)
@@ -464,6 +480,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 30)
         let olderRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 30 }))
@@ -534,6 +551,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 20)
         let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
@@ -638,6 +656,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 2)
 
@@ -662,6 +681,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 10)
         let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 10 }))
@@ -690,6 +710,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 15)
         let fallbackRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 15 }))
@@ -716,6 +737,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 20)
         let longRunning = try XCTUnwrap(viewModel.timers.first(where: { $0.duration == 20 }))
@@ -752,6 +774,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             timerManager: timerManager,
             lockScreenTargetExposer: exposer
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 6)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
@@ -775,6 +798,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 8)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
@@ -806,6 +830,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -843,6 +868,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 8)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
@@ -874,6 +900,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 2)
 
@@ -898,6 +925,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 2)
 
@@ -928,6 +956,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 90)
         currentDate = startDate.addingTimeInterval(8)
@@ -951,6 +980,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 90)
 
@@ -975,6 +1005,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 120)
 
@@ -995,6 +1026,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 120)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
@@ -1020,6 +1052,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 2)
         currentDate = startDate.addingTimeInterval(5)
@@ -1044,6 +1077,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 10
@@ -1077,6 +1111,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -1105,6 +1140,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 8)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
@@ -1143,6 +1179,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -1170,6 +1207,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -1192,6 +1230,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -1218,6 +1257,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 10)
         let id = try XCTUnwrap(viewModel.timers.first?.id)

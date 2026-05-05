@@ -40,27 +40,43 @@ There is no explicit "Digital / Film" toggle. Workflow is determined entirely by
 
 The Corrected Exposure row shall remain visible in all film-workflow states, including states where it carries non-quantified guidance. (See §4 for what "non-quantified" means.)
 
+### 1.4 Exposure scale mode
+
+The calculator runs on an **exposure scale** that defines the granularity of one Base Shutter increment. The current shipping scale is **one-third stop**: Base Shutter advances in 1/3-stop increments along a densified ladder with conventional camera-facing labels (§2.3). One-third-stop applies to the **Base Shutter ladder only** — the ND picker stays whole-stop in every shipping mode (§2.2).
+
+The model layer also retains a **full-stop** scale (1-stop shutter, same whole-stop ND) as a reserved abstraction. The full-stop scale shall not surface in the main calculator UI in the current release; it remains in the model so:
+
+- the model layer keeps a single ladder-aware abstraction rather than splitting "the shipping scale" from "everything else";
+- regression tests can validate full-stop math directly;
+- a future Settings preference (Full / 1/2 / 1/3 stop) can swap the active scale without redesigning the calculator domain.
+
+The fractional-aware `NDStep` domain primitive (with integer `thirdStopCount` round-trip) is likewise retained as **reserved domain infrastructure**, not a shipping ND option. It exists so a future custom or variable-ND workflow can flow through the same calculation and persistence path; the shipping ND picker shall not enumerate fractional ND values.
+
+Until those future preferences exist, the user shall not see a runtime control for the active scale. Persistence still records the active scale token (§5) so when a future preference ships, an upgrade carries the user's prior choice rather than overwriting it on first launch.
+
 ---
 
 ## 2. Stop-based exposure math
 
 ### 2.1 Unit
 
-All exposure adjustment math is performed in **stop space** (base-2 logarithmic). One stop represents a factor-of-two change in light. Internally, ND values are integer stops; shutter targets are computed as
+All exposure adjustment math is performed in **stop space** (base-2 logarithmic). One stop represents a factor-of-two change in light. Shutter targets are computed as
 
 ```
 output_seconds = base_seconds × 2^stops
 ```
 
-Inputs that arrive in factor form (e.g. ND 64×) shall be converted to stops before entering the calculator.
+ND values are stops. The shipping ND ladder is whole-stop (§2.2); the fractional-capable `NDStep` domain primitive is kept as reserved infrastructure for a future custom / variable-ND workflow (§1.4) and shall not surface in the shipping ND picker. Inputs that arrive in factor form (e.g. ND 64×) shall be converted to stops before entering the calculator.
 
 ### 2.2 ND input range
 
-ND stops are integers in the closed range **[0, 30]**. The picker shall present this range; values outside it shall not be representable.
+The ND picker shall present **integer stops in the closed range [0, 30]** in every shipping mode. One-third-stop applies to the Base Shutter ladder only (§1.4); the ND ladder stays whole-stop because real-world fixed ND filters are sold in whole-stop strengths (ND2 = 1, ND4 = 2, ND8 = 3, …). Picker rows are `0, 1, 2, …, 30` — fractional values such as `1/3, 2/3, 7 1/3, 7 2/3` are **not** part of the shipping ND option set, and shall not be filtered out at the view layer (they shall not exist in the option list at all). Values outside the `[0, 30]` range shall not be representable through the picker.
+
+The fractional-capable `NDStep` domain primitive (and its integer `thirdStopCount` persistence round-trip) is reserved infrastructure for a future custom / variable-ND workflow (§1.4); it shall not surface in the shipping ND picker without an explicit product decision.
 
 ### 2.3 Base shutter values
 
-The Base Shutter picker shall present the **19 full-stop standard speeds**:
+The Base Shutter picker presents a **1/3-stop densified ladder** built from the conventional 19-value full-stop reference (`1/8000 … 30 s`) by inserting two intermediate steps between each pair of neighbors at the geometric-mean ratios `2^(1/3)` and `2^(2/3)`. The full-stop reference is
 
 ```
 1/8000, 1/4000, 1/2000, 1/1000, 1/500, 1/250, 1/125,
@@ -68,17 +84,28 @@ The Base Shutter picker shall present the **19 full-stop standard speeds**:
 1, 2, 4, 8, 15, 30   (seconds)
 ```
 
-These are the values marked on analog camera shutter dials. There is no 1/3-stop input mode.
+so the densified ladder produces 55 entries spanning the same range. Picker rows render with conventional camera-facing labels (e.g. `1/8000, 1/6400, 1/5000, 1/4000, …, 1/30, 1/25, 1/20, 1/15, 1/13, 1/10, …, 1/2, 1/1.6, 1/1.3, 1s, 1.3s, 1.6s, 2s, 2.5s, 3s, 4s, …, 25s, 30s`) so the value matches what the photographer reads on a camera dial. The underlying canonical seconds remain the geometric-mean values; calculation continues to advance by stop-step index.
+
+Sub-1s values render as reciprocal fractions (`1/N`, including the slow end `1/3, 1/2.5, 1/2, 1/1.6, 1/1.3`) and never carry an `s` suffix. Values at or above 1s render as integer or `N.Ns` per camera convention. Free-form numeric entry is not accepted; the picker is the only entry path.
+
+The reserved full-stop scale (§1.4) presents the 19 full-stop values directly; that surface is currently used only for tests and reserved for a future Settings preference.
 
 ### 2.4 Snap-to-full-stop output rule
 
-When the system computes an output shutter, it shall report a value drawn from the same stop-aligned reference scale to keep notation conventional:
+When the system computes an output shutter, the snap-to-output policy is **gated on the active exposure scale and ND step**. Snap is applied only when **both** of these conditions hold:
+
+- the active scale is the reserved full-stop scale (§1.4); and
+- the ND value lies on a whole-stop boundary.
+
+In the shipping one-third-stop scale, neither condition holds for fractional inputs and the picker advances by 1/3 stop, so snap is **not** applied: collapsing a 1/3-stop input back onto the full-stop ladder would defeat the purpose of the finer scale. The calculated value is reported directly, formatted by the time-display rules in [UI Spec](UI.md) §2.4.
+
+When snap does apply (the reserved full-stop scale with whole-stop ND), the system reports a value drawn from the full-stop reference scale to keep notation conventional:
 
 - If the result falls **within the 1/8000 .. 30 s** range, it shall snap to the nearest of the 19 reference values.
 - Above 30 s, the system shall step in a **power-of-two** sequence — the snapped value is the nearer of the two adjacent powers of two surrounding the calculated value (64, 128, 256, …). The sequence is not "60, 120, 240" decimal doubling: 60 s would round to 64 s, not be reported as 60 s.
 - Across the 30 s boundary, the next presented value above 30 s is **64 s** (i.e. the post-30 s sequence is 30 → 64 → 128 → 256 → …). Inside the 30 s..64 s gap, the snap target is whichever of 30 or 64 is closer to the calculated value.
 
-The "exact" calculated value (without snap) shall be retained alongside the snapped notation so that downstream timer logic uses the precise number while UI shows the conventional one. **Below 1 s** the system may use rounded reciprocal notation (e.g. "1/30") even when the exact value is, say, 0.0327. **At or above 1 s** the system shall not round the calculated value: a 2.13 s result is retained as 2.13 s when used by a timer, even if shown as "2 s" in the conventional notation.
+The "exact" calculated value (without snap) shall be retained alongside any snapped notation so that downstream timer logic uses the precise number while UI shows the conventional one. **Below 1 s** the system may use rounded reciprocal notation (e.g. "1/30") even when the exact value is, say, 0.0327. **At or above 1 s** the system shall not round the calculated value: a 2.13 s result is retained as 2.13 s when used by a timer, even if shown as "2 s" in the conventional notation.
 
 ### 2.5 Direction
 
@@ -184,7 +211,9 @@ A timer's metadata shall be a snapshot of the calculation result at creation tim
 
 ## 5. Restoration across relaunches
 
-The calculator's working context — selected film identity, Base Shutter, and ND stops — shall be persisted and restored on relaunch in both digital and film workflows. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation, the system shall fall back safely to a defined default rather than crash or silently drift.
+The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, and ND value — shall be persisted and restored on relaunch in both digital and film workflows. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
+
+A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the **shipping one-third-stop scale** (§1.4) with the integer ND value treated as a whole-stop count on the new ladder. The shipping ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop value remains valid without rewriting it.
 
 ---
 

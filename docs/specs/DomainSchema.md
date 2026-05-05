@@ -2,7 +2,7 @@
 
 **Domain**: The data model behind film identities, reciprocity profiles, manufacturer rules, and the launch preset catalog.
 
-This document specifies the **shape and meaning** of the domain — what fields exist, what they mean, what invariants hold. The encoding format (JSON, with a `kind` discriminator on union types) is a serialization detail recorded in §10; the spec body is platform- and serializer-neutral.
+This document specifies the **shape and meaning** of the domain — what fields exist, what they mean, what invariants hold. The encoding format (JSON, with a `kind` discriminator on union types) is a serialization detail recorded in §11; the spec body is platform- and serializer-neutral.
 
 ---
 
@@ -157,7 +157,37 @@ The presence of `correctedExposure` is determined structurally by the form (Quan
 
 ---
 
-## 7. Reciprocity time range
+## 7. Calculator working context (persisted)
+
+The calculator's working context — the inputs the user has set on the calculator screen — is part of the domain because it is round-tripped through persistence to survive an app restart. ([Calculator Spec](Calculator.md) §5; [Requirements](../requirements/Requirements.md) FR-5.2)
+
+A working-context snapshot carries:
+
+- **filmId** — optional string identifying the selected film. Resolves against the catalog (§2). Absent ⇒ digital workflow.
+- **baseShutterSeconds** — non-negative finite number; the committed Base Shutter value. Sanitized on restore against the active exposure scale's shutter ladder (§7.1).
+- **ndStop** — optional non-negative integer in `[0, 30]`; a whole-stop ND value. Present whenever the persisted ND lies on a whole-stop boundary; absent when the persisted ND is fractional (§7.2).
+- **ndStopThirds** — optional non-negative integer; the persisted ND value expressed as a count of one-third-stops (so `0 ⇒ 0 stops`, `1 ⇒ 1/3 stop`, `3 ⇒ 1 stop`, `4 ⇒ 1 1/3 stop`, …). Present when the persisted ND is fractional; may also be present (and equivalent to `ndStop × 3`) for whole-stop values written by a release that always emits the field.
+- **exposureScaleMode** — optional string token identifying the active exposure scale (§7.3). Absent ⇒ the shipping one-third-stop scale.
+
+### 7.1 Schema evolution and backward compatibility
+
+The snapshot shape evolves only via backward-compatible additions ([Requirements](../requirements/Requirements.md) NFR-S.2). Older snapshots that predate `ndStopThirds` or `exposureScaleMode` shall continue to restore correctly:
+
+- A snapshot without `ndStopThirds` shall fall back to `ndStop` for the persisted ND value, treating it as a whole-stop count on the active scale's ND ladder.
+- A snapshot without `exposureScaleMode` shall fall back to the **shipping one-third-stop scale**. The shipping shutter ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop shutter value remains a valid ladder entry without rewriting it.
+- A snapshot whose `exposureScaleMode` is present but unrecognized shall fall back to the shipping one-third-stop scale rather than fail to decode.
+
+### 7.2 Fractional ND identity (reserved)
+
+The persistence layer represents fractional ND through `ndStopThirds` (an integer count of one-third-stops) rather than persisting the ND value as a `Double`. This is **reserved domain infrastructure**: the shipping ND picker enumerates whole stops only ([Calculator Spec](Calculator.md) §2.2), so a steady-state shipping snapshot does not write `ndStopThirds`. The field exists so a future custom / variable-ND workflow can persist fractional ND with integer identity rather than `Double` drift; the decoder shall prefer `ndStopThirds` over `ndStop` when both are present, treating `ndStop` as a legacy hint.
+
+### 7.3 Exposure scale token
+
+`exposureScaleMode` is a string token enumerating the active exposure scale. The launch tokens are `"oneThirdStop"` (the shipping default) and `"fullStop"` (reserved for the future Settings preference described in [Calculator Spec](Calculator.md) §1.4). Other tokens are reserved.
+
+---
+
+## 8. Reciprocity time range
 
 A range bounds metered exposure values:
 
@@ -168,18 +198,18 @@ When `maximumSeconds` is present, it shall be `≥ minimumSeconds`. The boundary
 
 ---
 
-## 8. Metered exposure selector
+## 9. Metered exposure selector
 
 Used inside table rule entries to identify which metered values a row applies to. A tagged union with two variants:
 
 - **exact** — a single non-negative finite seconds value. The row matches that value exactly.
-- **range** — a [time range](#7-reciprocity-time-range). The row matches any metered value in the range.
+- **range** — a [time range](#8-reciprocity-time-range). The row matches any metered value in the range.
 
 A row's metered selector shall not overlap with another row's metered selector inside the same table rule.
 
 ---
 
-## 9. Exposure adjustment
+## 10. Exposure adjustment
 
 A tagged union describing how an entry corrects exposure. The variants are:
 
@@ -191,7 +221,7 @@ A single table row's adjustments shall use only one estimation family at a time.
 
 ---
 
-## 10. Encoding (informative)
+## 11. Encoding (informative)
 
 The current serialization is JSON with field names in `camelCase`. Tagged unions use a `kind` discriminator field; the variant payload sits in a sibling field whose name matches the variant. Example shapes:
 
@@ -203,11 +233,11 @@ The current serialization is JSON with field names in `camelCase`. Tagged unions
 { "kind": "correctedTime", "correctedTime": { "correctedSeconds": 2.0 } }
 ```
 
-Field omission and explicit `null` shall be treated as equivalent on decode. The encoder shall omit absent optional fields rather than write `null`. The on-disk format may evolve; the spec body (§§1–9) is the contract, the encoding is not.
+Field omission and explicit `null` shall be treated as equivalent on decode. The encoder shall omit absent optional fields rather than write `null`. The on-disk format may evolve; the spec body (§§1–10) is the contract, the encoding is not.
 
 ---
 
-## 11. Catalog validation rules
+## 12. Catalog validation rules
 
 A bundled launch catalog shall pass these checks before the runtime accepts it.
 
@@ -225,7 +255,7 @@ A catalog that fails any of these checks shall produce a clear decode diagnostic
 
 ---
 
-## 12. Launch dataset scope
+## 13. Launch dataset scope
 
 The bundled launch catalog ships the **34-film launch-ready scope** (wiki 13172737, PTIMER-86 preset dataset policy outcome). Each shipped identity carries exactly one primary profile sourced from current official manufacturer documentation with `kind = "manufacturer_published"`, `authority = "official"`, and `confidence = "high"`. The validation matrix in wiki 15138817 specifies the seven scenarios that must be covered by validation samples (official formula, official table, color guidance, threshold-only advisory, archival official, user-defined, multi-profile support); the launch dataset itself is restricted to current official scope and excludes archival, user-defined, and multi-profile entries.
 
@@ -251,7 +281,7 @@ The following classes are intentionally outside the launch catalog (PTIMER-86 so
 - AgfaPhoto current films — current official reciprocity extraction is still pending.
 - ORWO, Bergger, Film Ferrania — current product line confirmed but reciprocity extraction is too thin.
 - Archival-only Agfa / AgfaPhoto / Kodak Ektachrome E100G–E100GX entries — kept out so archival data is not promoted as current shipping data.
-- Any unofficial practical formula. In particular, the unofficial `T_c = T_m^1.34` Portra approximation is bundled outside the launch catalog (see §12.3) and shall not appear as the primary shipped Portra profile.
+- Any unofficial practical formula. In particular, the unofficial `T_c = T_m^1.34` Portra approximation is bundled outside the launch catalog (see §13.3) and shall not appear as the primary shipped Portra profile.
 - Films from the launch-ready manufacturer groups that the source list still classifies as `NV` (Fomapan R100, Cine 100, Cine 400, Cine Ortho 400; Rollei RPX 25, RETRO 400S, INFRARED, ORTHO 25 plus, PAUL & REINHOLD, BLACKBIRD, CROSSBIRD, REDBIRD; ADOX HR-50, Scala 50).
 
 ### 12.3 Non-launch profiles bundled outside the catalog
@@ -260,10 +290,10 @@ The following classes are intentionally outside the launch catalog (PTIMER-86 so
 
 The system may bundle additional **non-launch profiles** *outside* the launch catalog file, registered separately at runtime. These shall:
 
-- follow the same domain shape (§§1–9) as launch profiles;
+- follow the same domain shape (§§1–10) as launch profiles;
 - carry honest provenance — for example, an unofficial practical formula must declare `kind = "community_field_tested"` (or equivalent) and `authority = "unofficial"`, not pretend to be official;
 - be selectable by the user as a *secondary alternative* on a film identity that already has a launch (official) primary profile;
-- not pass through the §11 launch-catalog validator (validation rules in §11 apply only to the launch catalog file).
+- not pass through the §12 launch-catalog validator (validation rules in §12 apply only to the launch catalog file).
 
 Example: an unofficial practical formula `T_c = T_m^1.34` for Kodak PORTRA 400 is bundled outside the launch catalog as a secondary alternative to PORTRA 400's official threshold-only profile.
 
@@ -271,7 +301,7 @@ The presentation contract for these profiles lives in [UI Spec](UI.md) §2.1 (ex
 
 ---
 
-## 13. Forbidden patterns
+## 14. Forbidden patterns
 
 The domain shall **not**:
 
@@ -287,7 +317,7 @@ The domain shall **not**:
 
 ---
 
-## 14. Drift and open questions
+## 15. Drift and open questions
 
 - **User-defined film schema.** Wiki 15138817 lists user-defined films as a validation requirement; the entry/edit UX, validation rules, and persistence boundary are not specified.
 - **Multi-profile support.** Reserved by domain (an identity may carry multiple profiles) but the selection mechanism (which profile is "active" at a given metered exposure, push/pull semantics, developer-time variants) is not specified.
@@ -299,7 +329,7 @@ The domain shall **not**:
 
 ---
 
-## 15. Sources of intent (reference)
+## 16. Sources of intent (reference)
 
 These are *reference material*, not normative.
 

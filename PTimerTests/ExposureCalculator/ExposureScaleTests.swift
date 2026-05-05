@@ -1,24 +1,36 @@
 import XCTest
 @testable import PTimer
 
-/// Focused tests for the `ExposureScale` abstraction introduced by
-/// PTIMER-79. Coverage:
+/// Focused tests for the `ExposureScale` abstraction. Coverage:
 ///
-/// 1. `.fullStop` reproduces the shipping ladders byte-for-byte.
-/// 2. `.oneThirdStop` exposes a 1/3-stop densified ladder without
-///    affecting the full-stop scale or the shipping calculator.
-/// 3. `NDStep` represents fractional-stop values losslessly so future
-///    PTIMER-80 calculation can route through it.
-/// 4. `CalculatorModel`'s default scale is `.fullStop`, and the
-///    integer ND picker bridge filters fractional steps out so the
-///    `Int`-binding picker stays well-formed.
+/// 1. `.fullStop` (the reserved scale, retained on the model for
+///    tests and the future Settings preference) reproduces the
+///    legacy ladders byte-for-byte.
+/// 2. `.oneThirdStop` (the shipping calculator scale) pairs the
+///    1/3-stop densified shutter ladder with the **whole-stop** ND
+///    ladder; one-third-stop applies to the Base Shutter only, so
+///    the shipping ND picker enumerates `0…30` whole stops in
+///    every shipping mode.
+/// 3. `NDStep` represents fractional-stop values losslessly as
+///    reserved domain infrastructure so a future custom /
+///    variable-ND workflow can round-trip via `thirdStopCount`
+///    rather than `Double` drift; the shipping ND picker does not
+///    enumerate fractional stops.
+/// 4. `CalculatorModel`'s default scale is `.oneThirdStop`,
+///    matching the shipping calculator UI.
 final class ExposureScaleTests: XCTestCase {
 
-    // MARK: - Full-stop scale parity with shipping behavior
+    // MARK: - Default scale is the shipping one-third-stop scale
 
-    func testDefaultScaleIsFullStop() {
-        XCTAssertEqual(ExposureScale.default.mode, .fullStop)
+    func testDefaultScaleIsOneThirdStop() {
+        // The shipping calculator scale is one-third-stop per
+        // docs/specs/Calculator.md §1.4. The full-stop scale is kept
+        // on the model only for tests and the future Settings
+        // preference.
+        XCTAssertEqual(ExposureScale.default.mode, .oneThirdStop)
     }
+
+    // MARK: - Reserved full-stop scale parity
 
     func testFullStopShutterLadderMatchesShippingFullStopSpeeds() {
         let ladder = ExposureScale.fullStop.shutterSteps.map(\.seconds)
@@ -88,31 +100,31 @@ final class ExposureScaleTests: XCTestCase {
         XCTAssertEqual(ladder[baseIndex + 2], (1.0 / 30.0) * twoThirdsRatio, accuracy: 1e-9)
     }
 
-    func testOneThirdStopNDLadderIncludesFractionalStops() {
-        let oneThirdNDStops = ExposureScale.oneThirdStop.ndSteps
+    func testOneThirdStopNDLadderIsWholeStopOnly() {
+        // Per docs/specs/Calculator.md §2.2: in the shipping product
+        // one-third-stop applies to the **shutter** ladder only; the
+        // ND picker stays whole-stop because real-world fixed ND
+        // filters are sold in whole-stop strengths. Fractional ND
+        // domain primitives (`NDStep.thirdStopCount`,
+        // `fromThirdStopCount`) are retained as reserved
+        // infrastructure but shall never appear as shipping ND
+        // options.
+        let ndSteps = ExposureScale.oneThirdStop.ndSteps
 
-        // Whole-stop boundaries 0…30 must appear.
-        for whole in 0...30 {
-            XCTAssertTrue(
-                oneThirdNDStops.contains { $0.wholeStops == whole },
-                "1/3-stop ND ladder must include whole stop \(whole)"
-            )
-        }
+        XCTAssertEqual(ndSteps.count, 31)
+        XCTAssertEqual(ndSteps.map(\.stops), (0...30).map { Double($0) })
+        XCTAssertTrue(
+            ndSteps.allSatisfy { $0.isWholeStop },
+            "Shipping 1/3-stop scale ND ladder must not enumerate fractional stops"
+        )
 
-        // The first fractional steps land at 1/3 and 2/3.
-        let fractional = oneThirdNDStops.filter { $0.wholeStops == nil }
-        XCTAssertFalse(fractional.isEmpty)
-        XCTAssertEqual(fractional[0].stops, 1.0 / 3.0, accuracy: 1e-9)
-        XCTAssertEqual(fractional[1].stops, 2.0 / 3.0, accuracy: 1e-9)
-        XCTAssertNil(fractional[0].wholeStops)
-        XCTAssertNil(fractional[1].wholeStops)
-    }
-
-    func testOneThirdStopNDLadderHasThreeStepsPerWholeStopExceptTheLast() {
-        let count = ExposureScale.oneThirdStop.ndSteps.count
-        // Whole 0…30 contributes 31 anchors; gaps 0→30 is 30, each
-        // adding two fractional steps. 31 + 30·2 = 91.
-        XCTAssertEqual(count, 31 + 30 * 2)
+        // The shipping ND ladder is identical to the reserved
+        // full-stop scale's ND ladder so a future Settings flip
+        // between scales does not reshuffle the ND wheel.
+        XCTAssertEqual(
+            ndSteps.map(\.stops),
+            ExposureScale.fullStop.ndSteps.map(\.stops)
+        )
     }
 
     // MARK: - NDStep fractional representation
@@ -147,44 +159,47 @@ final class ExposureScaleTests: XCTestCase {
     // MARK: - CalculatorModel integration with the abstraction
 
     @MainActor
-    func testCalculatorModelDefaultsToFullStopScale() {
+    func testCalculatorModelDefaultsToOneThirdStopScale() {
         let model = CalculatorModel(calculator: ExposureCalculator())
-        XCTAssertEqual(model.exposureScale.mode, .fullStop)
+        XCTAssertEqual(model.exposureScale.mode, .oneThirdStop)
 
-        // Picker bridges return the full-stop ladders verbatim so the
-        // shipping picker behavior is preserved.
-        XCTAssertEqual(model.pickerShutterStepSeconds, ExposureCalculator.fullStopShutterSpeeds)
+        // Shipping picker bridges: the 1/3-stop densified shutter
+        // ladder is paired with the whole-stop `[0, 30]` ND ladder,
+        // so the calculator surfaces both pickers without any UI
+        // flip. One-third-stop applies to the shutter ladder only.
+        XCTAssertEqual(
+            model.pickerShutterStepSeconds.count,
+            ExposureScale.oneThirdStop.shutterSteps.count
+        )
+        // The integer-ND picker bridge surfaces the same shipping
+        // whole-stop ladder for any caller still bound to Int.
         XCTAssertEqual(model.pickerWholeNDStops, Array(0...30))
     }
 
     @MainActor
-    func testCalculatorModelAcceptsAlternativeScaleWithoutMutatingDefaultBehavior() {
-        let oneThirdModel = CalculatorModel(
+    func testCalculatorModelAcceptsReservedFullStopScale() {
+        // The reserved full-stop scale is still constructible from a
+        // test/Settings call site even though the shipping default is
+        // 1/3 stop. Proves scales are per-instance, not global, and
+        // both ladders behave correctly under the same model.
+        let fullStopModel = CalculatorModel(
             calculator: ExposureCalculator(),
-            exposureScale: .oneThirdStop
+            exposureScale: .fullStop
         )
-        XCTAssertEqual(oneThirdModel.exposureScale.mode, .oneThirdStop)
-        XCTAssertEqual(
-            oneThirdModel.pickerShutterStepSeconds.count,
-            ExposureScale.oneThirdStop.shutterSteps.count
-        )
-        // The integer-ND picker bridge filters fractional steps so the
-        // legacy `Int` binding stays well-formed.
-        XCTAssertEqual(oneThirdModel.pickerWholeNDStops, Array(0...30))
+        XCTAssertEqual(fullStopModel.exposureScale.mode, .fullStop)
+        XCTAssertEqual(fullStopModel.pickerShutterStepSeconds, ExposureCalculator.fullStopShutterSpeeds)
+        XCTAssertEqual(fullStopModel.pickerWholeNDStops, Array(0...30))
 
-        // A second model built without a scale override still shows
-        // full-stop behavior — proving scales are per-instance, not
-        // global.
         let defaultModel = CalculatorModel(calculator: ExposureCalculator())
-        XCTAssertEqual(defaultModel.exposureScale.mode, .fullStop)
+        XCTAssertEqual(defaultModel.exposureScale.mode, .oneThirdStop)
     }
 
     @MainActor
-    func testCalculatorModelStaticShutterSpeedsMatchDefaultScale() {
-        // The legacy static (`CalculatorModel.shutterSpeeds`) is now
-        // sourced from `ExposureScale.default`. Existing call sites
-        // (the screen, the persistence sanitizer) must keep seeing the
-        // same full-stop ladder.
+    func testCalculatorModelStaticShutterSpeedsRemainFullStopForLegacyCallers() {
+        // The legacy static (`CalculatorModel.shutterSpeeds`) is the
+        // 19-value full-stop ladder — kept stable for the persistence
+        // sanitizer and any other legacy caller. The shipping picker
+        // reads `pickerShutterStepSeconds` instead.
         XCTAssertEqual(CalculatorModel.shutterSpeeds, ExposureCalculator.fullStopShutterSpeeds)
     }
 

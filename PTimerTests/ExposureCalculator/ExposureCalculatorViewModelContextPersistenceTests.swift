@@ -40,6 +40,11 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
+        // Pin the legacy full-stop scale so the snap-to-full-stop result
+        // (1/15 + ND 4 → 1.0s) lands on Tri-X's exact 1s table anchor;
+        // the persisted scale token is restored on relaunch so the
+        // reciprocity confidence remains "Exact".
+        initialViewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(initialViewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
         initialViewModel.baseShutter = 1.0 / 15.0
@@ -54,7 +59,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
         XCTAssertEqual(relaunchedViewModel.selectedPresetFilm?.id, film.id)
         XCTAssertEqual(relaunchedViewModel.filmSelectionDisplayState.primaryText, "Tri-X 400")
         XCTAssertTrue(relaunchedViewModel.isFilmWorkflowActive)
@@ -79,7 +83,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
         XCTAssertNil(viewModel.selectedPresetFilm)
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
@@ -107,7 +110,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
         XCTAssertNil(viewModel.selectedPresetFilm)
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "No film")
@@ -134,7 +136,9 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
+        // Pin the legacy full-stop scale so the snap-to-full-stop
+        // assertion below stays a model/legacy regression test.
+        viewModel.scaleMode = .fullStop
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
 
@@ -164,7 +168,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
         viewModel.baseShutter = 1
         viewModel.ndStop = 3
 
@@ -197,7 +200,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
         XCTAssertNil(viewModel.selectedPresetFilm)
         XCTAssertFalse(viewModel.isFilmWorkflowActive)
         XCTAssertEqual(viewModel.baseShutter, 1, accuracy: 0.000_001)
@@ -235,7 +237,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             ),
             contextPersistenceStore: contextStore
         )
-
         XCTAssertEqual(viewModel.selectedPresetFilm?.id, film.id)
         XCTAssertEqual(viewModel.baseShutter, 1.0 / 30.0, accuracy: 0.000_001)
         XCTAssertEqual(viewModel.ndStop, 0)
@@ -296,7 +297,9 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: initialTimerManager,
             metadataPersistenceStore: metadataStore
         )
-
+        // Pin the legacy full-stop scale so the timer names ("6 stops -
+        // 2s", "3 stops - 8s") match the snap-to-full-stop output.
+        initialViewModel.scaleMode = .fullStop
         initialViewModel.baseShutter = 1.0 / 30.0
         initialViewModel.ndStop = 6
         initialViewModel.startTimer()
@@ -321,7 +324,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: relaunchedTimerManager,
             metadataPersistenceStore: metadataStore
         )
-
         XCTAssertEqual(relaunchedViewModel.timers.map(\.id), [runningTimer.id, pausedTimer.id])
         XCTAssertEqual(relaunchedViewModel.timers.map(\.name), ["3 stops - 8s", "6 stops - 2s"])
         XCTAssertEqual(
@@ -369,7 +371,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: timerManager,
             metadataPersistenceStore: UserDefaultsTimerMetadataPersistenceStore(userDefaults: userDefaults)
         )
-
         XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
         XCTAssertEqual(viewModel.timers.map(\.status), [.running])
         XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
@@ -407,7 +408,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: timerManager,
             metadataPersistenceStore: metadataStore
         )
-
         XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
         XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
         XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Manual timer"])
@@ -444,7 +444,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: timerManager,
             metadataPersistenceStore: metadataStore
         )
-
         XCTAssertTrue(viewModel.timers.isEmpty)
         XCTAssertNil(metadataStore.snapshot)
     }
@@ -501,7 +500,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: timerManager,
             metadataPersistenceStore: metadataStore
         )
-
         XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
         XCTAssertEqual(viewModel.timers.map(\.name), ["Matched timer"])
         XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Matched summary"])
@@ -522,7 +520,6 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             timerManager: timerManager,
             metadataPersistenceStore: metadataStore
         )
-
         viewModel.startTimer(from: 10)
         let id = try XCTUnwrap(viewModel.timers.first?.id)
         XCTAssertNotNil(timerStore.snapshot)

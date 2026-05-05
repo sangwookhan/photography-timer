@@ -159,18 +159,19 @@ private struct ExposureWorkspaceMainContent: View {
                 )
                 VariableSectionView(
                     baseShutter: $viewModel.baseShutter,
-                    ndStop: $viewModel.ndStop,
+                    ndStep: $viewModel.ndStep,
                     shutterSpeeds: viewModel.pickerShutterStepSeconds,
-                    ndStopValues: viewModel.pickerWholeNDStops,
-                    formatShutter: viewModel.formatShutter,
+                    ndStepValues: viewModel.pickerNDSteps,
+                    formatShutter: viewModel.formatShutterStepLabel,
+                    formatNDStop: viewModel.formatNDStop,
                     onContinuousBaseShutterChange: { value in
                         Task { @MainActor in
                             viewModel.updateLiveBaseShutter(value)
                         }
                     },
-                    onContinuousNDStopChange: { value in
+                    onContinuousNDStepChange: { value in
                         Task { @MainActor in
-                            viewModel.updateLiveNDStop(value)
+                            viewModel.updateLiveNDStep(value)
                         }
                     },
                     onBaseShutterInteractionEnd: {
@@ -980,12 +981,13 @@ private struct FilmSelectorSectionCard: View {
 
 private struct VariableSectionView: View {
     @Binding var baseShutter: Double
-    @Binding var ndStop: Int
+    @Binding var ndStep: NDStep
     let shutterSpeeds: [Double]
-    let ndStopValues: [Int]
+    let ndStepValues: [NDStep]
     let formatShutter: (TimeInterval) -> String
+    let formatNDStop: (NDStep) -> String
     let onContinuousBaseShutterChange: (Double) -> Void
-    let onContinuousNDStopChange: (Int) -> Void
+    let onContinuousNDStepChange: (NDStep) -> Void
     let onBaseShutterInteractionEnd: () -> Void
     let onNDStopInteractionEnd: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
@@ -1004,9 +1006,10 @@ private struct VariableSectionView: View {
                 )
 
                 NDStopSelectionRow(
-                    ndStop: $ndStop,
-                    ndStopValues: ndStopValues,
-                    onContinuousSelectionChange: onContinuousNDStopChange,
+                    ndStep: $ndStep,
+                    ndStepValues: ndStepValues,
+                    formatNDStop: formatNDStop,
+                    onContinuousSelectionChange: onContinuousNDStepChange,
                     onInteractionEnd: onNDStopInteractionEnd,
                     pickerHeight: style.pickerHeight,
                     style: style
@@ -1406,9 +1409,10 @@ private struct CorrectedExposureDisplayBlock: View {
 }
 
 private struct NDStopSelectionRow: View {
-    @Binding var ndStop: Int
-    let ndStopValues: [Int]
-    let onContinuousSelectionChange: (Int) -> Void
+    @Binding var ndStep: NDStep
+    let ndStepValues: [NDStep]
+    let formatNDStop: (NDStep) -> String
+    let onContinuousSelectionChange: (NDStep) -> Void
     let onInteractionEnd: () -> Void
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
@@ -1422,14 +1426,14 @@ private struct NDStopSelectionRow: View {
             Text("ND Filter")
                 .font(.subheadline.weight(.semibold))
 
-            Picker("ND Filter", selection: $ndStop) {
-                ForEach(ndStopValues, id: \.self) { stop in
+            Picker("ND Filter", selection: $ndStep) {
+                ForEach(ndStepValues, id: \.self) { step in
                     NDStopPickerValue(
-                        valueText: "\(stop)",
+                        valueText: formatNDStop(step),
                         style: style,
                         layout: layout
                     )
-                    .tag(stop)
+                    .tag(step)
                 }
             }
             .pickerStyle(.wheel)
@@ -1439,11 +1443,11 @@ private struct NDStopSelectionRow: View {
             .background {
                 WheelPickerContinuousObserver(
                     onSelectedRowChange: { row in
-                        guard ndStopValues.indices.contains(row) else {
+                        guard ndStepValues.indices.contains(row) else {
                             return
                         }
 
-                        onContinuousSelectionChange(ndStopValues[row])
+                        onContinuousSelectionChange(ndStepValues[row])
                     },
                     onInteractionEnd: onInteractionEnd
                 )

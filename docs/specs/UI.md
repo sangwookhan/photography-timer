@@ -47,8 +47,10 @@ The "Clear" affordance shall remove the film selection without altering Base Shu
 
 Two **wheel pickers** sit side-by-side in a single row:
 
-- **Base Shutter picker** — 19 full-stop values from 1/8000 to 30 s. (See [Calculator Spec](Calculator.md) §2.3.)
-- **ND picker** — integer stops in the closed range [0, 30].
+- **Base Shutter picker** — the 1/3-stop densified ladder (55 entries from 1/8000 to 30 s, per [Calculator Spec](Calculator.md) §2.3) with conventional camera-facing labels. Sub-1 s rows render as reciprocal fractions (`1/N`, including the slow end `1/3, 1/2.5, 1/2, 1/1.6, 1/1.3`) and never carry an `s` suffix; rows at or above 1 s render as integer or `N.Ns` per camera convention.
+- **ND picker** — **integer stops in the closed range `[0, 30]`**. One-third-stop applies to the Base Shutter ladder only ([Calculator Spec](Calculator.md) §1.4); the ND picker stays whole-stop because real-world fixed ND filters are sold in whole-stop strengths. Fractional rows such as `7 1/3` or `7 2/3` are **not** part of the shipping ND option list and shall not be filtered out at the view layer — they shall not exist in the option set at all.
+
+A user-facing **exposure scale selector** is intentionally omitted in the current release; the calculator runs only on the one-third-stop shutter scale. A future Settings preference (Full / 1/2 / 1/3 stop, plus any future fractional-ND opt-in) is reserved (see [Calculator Spec](Calculator.md) §1.4); when it ships it will live in Settings, not in the calculator screen.
 
 The picker pair is the only entry path for these variables; there is no free-text input. Tapping a wheel value shall update the calculator immediately; live preview during scroll is supported. Aperture and ISO controls are deferred and shall not appear in the current release.
 

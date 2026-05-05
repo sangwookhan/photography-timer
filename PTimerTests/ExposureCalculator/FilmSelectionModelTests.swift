@@ -102,7 +102,7 @@ final class FilmSelectionModelTests: XCTestCase {
         XCTAssertFalse(restored.hadInvalidFilmReference)
         XCTAssertEqual(restored.selectedPresetFilm?.id, film.id)
         XCTAssertEqual(restored.baseShutterSeconds, 1.0 / 15.0)
-        XCTAssertEqual(restored.ndStop, 4)
+        XCTAssertEqual(restored.ndStep, NDStep(stops: 4))
         XCTAssertEqual(model.selectedPresetFilm?.id, film.id)
     }
 
@@ -210,6 +210,6 @@ private func makeModel(
         presetFilms: presetFilms,
         contextPersistenceStore: contextPersistenceStore,
         currentBaseShutterSeconds: { baseShutterSeconds },
-        currentNDStop: { ndStop }
+        currentNDStep: { NDStep(stops: Double(ndStop)) }
     )
 }

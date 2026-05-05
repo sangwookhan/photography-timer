@@ -34,7 +34,8 @@ final class WorkspaceCoordinator: ObservableObject {
             presetFilms: dependencies.presetFilms,
             contextPersistenceStore: dependencies.contextPersistenceStore,
             currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
-            currentNDStop: { calculatorModel.ndStop }
+            currentNDStep: { calculatorModel.ndStep },
+            currentScaleMode: { calculatorModel.scaleMode }
         )
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel

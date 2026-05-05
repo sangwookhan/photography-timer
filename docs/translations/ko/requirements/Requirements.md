@@ -38,16 +38,16 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 **목표.** 사진가가 카메라로 측광한 뒤, ND 필터로 N stop 줄였을 때 필요한 셔터 속도를 알고 싶다.
 
 **단계.**
-1. 풀스톱 ladder 에서 base shutter 를 설정.
-2. ND stops 를 음이 아닌 정수로 설정.
+1. 카메라 표기 라벨이 적용된 1/3-stop 조밀화 ladder 에서 base shutter 를 설정.
+2. whole-stop ND ladder 에서 ND 를 설정.
 3. 결과 행에서 출력 셔터를 읽음.
 4. (선택) 출력 셔터로부터 timer 를 시작 — 카메라 내부 셔터나 손목시계로 측정하기 어려운 길이일 때.
 
 **경계 조건.**
-- Base shutter 는 표준 19개 풀스톱 ladder (1/8000 ~ 30 s) 에서만 입력 가능. 자유 텍스트 입력은 거부.
-- ND stop 입력은 0 이상 30 이하 정수. 범위 밖 값은 받지 않음.
-- 출력 셔터는 관습적 사진 표기법으로 표시. ladder 와 정렬되지 않은 계산값은 표시용으로 반올림되되, 정확한 값은 하류 timer 가 사용할 수 있도록 보존.
-- 30 s 초과 시 출력은 power-of-two ladder (64, 128, 256 …) 로 snap. 표기에 60 s 는 등장하지 않으며, 30 s 다음 단계는 64 s.
+- Base shutter 는 1/3-stop 조밀화 ladder (1/8000 ~ 30 s 범위에 걸친 55개 값) 에서 카메라 표기 라벨로만 입력 가능. 자유 텍스트 입력은 거부.
+- ND 값은 whole-stop ladder `0, 1, 2, …, 30` 에서 입력. One-third-stop 은 base shutter 에만 적용; ND picker 는 실제 fixed ND 필터가 whole-stop 강도로 판매되기 때문에 whole-stop 유지. 범위 밖 값은 받지 않음.
+- 출력 셔터는 관습적 사진 표기법으로 표시. 출시 1/3-stop scale 에서는 계산값을 직접 보고 (표준 시간 표시 규칙으로 포맷); 더 거친 ladder 로 snap 하지 않으며, 정확한 값은 하류 timer 가 그대로 사용.
+- 미래 Settings preference 가 사용자에게 더 거친 scale (Full / 1/2 stop) 을 요청하게 할 수 있음. 그 preference 가 존재하면 범위 내 full-stop 결과는 관습 reference 로 snap, 30 s 초과 긴 값은 power-of-two doubling ladder (64, 128, 256 …) 로 표시 가능. 현 release 에는 그런 selector 가 노출되지 않으며, 모든 결과는 1/3-stop 보고 규칙을 따름.
 
 ### 시나리오 2 — 필름의 보정 노출 계산 (film workflow)
 
@@ -66,7 +66,7 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 - *quantified* 보정 노출은 숫자 primary 행 + 신뢰도 배지 표시. 신뢰도 카테고리는 *exact*, *estimated* (출판 표 내부 보간), *extrapolated* (표 외부), *trusted threshold* (제조사 임계치 이하 무보정) 중 하나.
 - *advisory-only* 결과는 숫자 대신 차분한 설명 텍스트를 표시. 데이터가 뒷받침하지 않을 때 앱은 결코 숫자를 *fabricate* 하지 않는다.
 - *unsupported* 결과는 안내 문구를 표시하고, 보정 행의 Start Timer 버튼은 설명 가능한 accessibility hint 와 함께 비활성화.
-- base shutter 의 풀스톱 ladder, ND 범위, snap-to-full-stop 표기 규칙은 시나리오 1 과 동일.
+- base shutter ladder, ND ladder, 결과 보고 규칙은 시나리오 1 과 동일. 필름 선택은 calculator 의 노출 scale 을 변경하지 않는다.
 
 ### 시나리오 3 — 장노출 timer 실행
 
@@ -152,7 +152,8 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 **경계 조건.**
 - 카탈로그에 더 이상 존재하지 않는 영속화된 film id 는 selection 을 silently drop 하고 깨끗한 snapshot 을 다시 써, 이후 read 가 혼란을 겪지 않게 한다.
-- base shutter 와 ND 는 복원 시 sanitize — 범위 밖 값은 거부, ladder 값만 받는다.
+- base shutter 와 ND 는 활성 노출 scale 의 ladder 에 대해 복원 시 sanitize — 범위 밖 값은 거부, ladder 값만 받는다.
+- 노출 scale 토큰 (또는 fractional ND) 등장 이전 release 에서 작성된 snapshot 도 정상 복원: 누락된 필드는 출시 1/3-stop scale 로 resolve 되고, legacy whole-stop 값은 출시 ladder 가 legacy full-stop ladder 의 strict superset 이므로 그대로 수용된다.
 
 ---
 
@@ -162,10 +163,10 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 ### 3.1 Calculator
 
-- **FR-1.1** 사용자는 base shutter 값을 관습적 사진 풀스톱 ladder (1/8000 s ~ 30 s) 에서만 입력. 자유형 숫자 입력은 받지 않는다. (시나리오 1, 2)
-- **FR-1.2** 사용자는 ND-stop 값을 지원 범위 내 음이 아닌 정수로만 입력. 지원 범위는 stacked-ND 실용 사용을 cover 할 정도로 넓다. (시나리오 1)
+- **FR-1.1** 사용자는 base shutter 값을 출시 1/3-stop 조밀화 ladder 의 카메라 표기 라벨 (1초 미만은 `1/N` reciprocal 분수, 1초 이상은 정수 또는 `N.Ns` 카메라 관습) 에서만 입력. 자유형 숫자 입력은 받지 않는다. (시나리오 1, 2)
+- **FR-1.2** 사용자는 ND 값을 whole-stop ladder `0, 1, 2, …, 30` 에서만 입력. 지원 범위는 stacked-ND 실용 사용을 cover 할 정도로 넓다. One-third-stop 은 base shutter 에만 적용; ND ladder 는 모든 출시 모드에서 whole-stop 유지. (시나리오 1)
 - **FR-1.3** 시스템은 base shutter 와 ND 로부터 출력 셔터를 노출 stop 산술로 계산. (시나리오 1)
-- **FR-1.4** 시스템은 출력 셔터를 관습적 사진 표기법으로 표시 — 범위 내 값은 같은 ladder 의 가장 가까운 reference 셔터로 snap, 30 s 초과 긴 값은 임의 소수가 아닌 doubling 형태 ladder 로 표시. 표시값이 snap 결과여도 정확한 값은 하류 timer 가 쓰도록 보존. (시나리오 1)
+- **FR-1.4** 시스템은 출력 셔터를 관습적 사진 표기법으로 표시. 출시 1/3-stop scale 에서는 표준 시간 표시 규칙으로 포맷한 계산값을 직접 보고하며 더 거친 ladder 로 snap 하지 않는다. 정확한 값은 하류 timer 가 쓰도록 보존. 미래 Settings preference 가 사용자에게 더 거친 scale 을 옵트인하게 할 때 full-stop ladder 로 snap 하고 (30 s 초과는 power-of-two ladder 로) 표시 가능; 그 전까지 그런 snap 은 적용되지 않는다. (시나리오 1)
 - **FR-1.5** 시스템은 non-finite 결과를 만드는 계산 입력을 거부 — 호출자에게 typed failure 로 표면화 (오해 가능한 숫자 대신). (시나리오 1 경계)
 - **FR-1.6** 사용자가 입력값을 드래그하는 동안 시스템은 입력에 commit 하지 않으면서 결과를 미리 보임 (gesture 가 끝날 때까지). 사용자는 원래 값에서 release 해 되돌릴 수 있다. (시나리오 1)
 
@@ -201,7 +202,7 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 ### 3.5 영속화
 
 - **FR-5.1** Timer 상태 (state machine 에 필요한 running / paused / completed 정보) 와 timer 표시 metadata (사용자가 보는 이름, basis-summary 행, LIFO 삽입 순서) 모두 앱 재시작에서 살아남는다. (시나리오 7)
-- **FR-5.2** Calculator 컨텍스트 — 선택된 필름, base shutter, ND — 는 앱 재시작에서 살아남아, 사용자가 매 중단마다 picker 를 다시 거치지 않게 한다. (시나리오 8)
+- **FR-5.2** Calculator 컨텍스트 — 선택된 필름, 노출 scale 토큰, base shutter, ND — 는 앱 재시작에서 살아남아, 사용자가 매 중단마다 picker 를 다시 거치지 않게 한다. 노출 scale 토큰을 기록하는 이유는 미래 Settings preference 가 사용자의 prior 선택을 upgrade 시 덮어쓰지 않고 carry 하기 위함이다. (시나리오 8)
 - **FR-5.3** 영속화된 형태는 backward-compatible 추가만으로 진화. 이전 release 가 쓴 snapshot 은 현 release 에서 정확하게 복원되어야 하며, 특히 이전 release 가 사용한 status 토큰은 read 시 계속 받아들여져야 한다. (시나리오 7)
 - **FR-5.4** 앱 다운타임 동안 종료시간이 이미 지난 실행 중 timer 는 completed 로 복원되며 완료 timestamp 는 *원래 종료시간* (복원 시점이 아님). (시나리오 7 경계)
 - **FR-5.5** Freeze metadata 가 누락되거나 일관성이 없는 영속화된 paused timer 는 손상된 입력으로 취급. 시스템은 그럴듯한 timestamp 를 fabricate 하지 않고 completed 로 표면화. (시나리오 7 경계)
@@ -266,6 +267,7 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 - 변수 섹션의 Aperture 와 ISO 컨트롤. wiki 3866625 의 4-variable 모델은 향후 Epic 으로 예약; 현 release 는 base-shutter + ND 만.
 - 자유 텍스트 셔터 입력.
+- 사용자 노출 scale selector. 출시 calculator 는 1/3-stop scale 에서만 동작; Full / 1/2 / 1/3 stop preference 는 미래 Settings surface 로 유보 ([Calculator Spec](../specs/Calculator.md) §1.4 참조).
 - 명시적 확인 없이 시트 외부 탭으로 필름 선택을 drop. selection 제거의 유일한 길은 "Clear" affordance.
 - Timer 큐잉 / 체이닝 (A 끝나면 B 시작). 다중 timer 는 *병렬로* 독립 실행되는 timer 들이지 sequence 가 아님.
 - 스튜디오 strobe / flash duration 모드.

@@ -42,16 +42,16 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Goal.** Photographer meters with the camera, then wants to know the shutter speed required after stopping down N stops with an ND filter.
 
 **Steps.**
-1. Set base shutter from the full-stop ladder.
-2. Set ND stops as a non-negative integer.
+1. Set base shutter from the 1/3-stop densified ladder with camera-facing labels.
+2. Set ND from the whole-stop ND ladder.
 3. Read the output shutter on the result row.
 4. (Optional) Start a timer from the output shutter when the value is long enough that an in-camera shutter or wristwatch is impractical.
 
 **Boundary conditions.**
-- The base shutter must come from the standard 19-value full-stop ladder (1/8000 .. 30 s). Free-text input is rejected.
-- The ND stop input is a non-negative integer ≤ 30; values outside that range are not accepted.
-- The output shutter is reported using conventional photographic notation. A computed value that does not align with the ladder is rounded for display while the precise value is preserved for any downstream timer.
-- Above 30 s the output snaps to a power-of-two ladder (64, 128, 256 …). 60 s does not appear in the notation; 64 s is the next step above 30 s.
+- The base shutter must come from the 1/3-stop densified ladder (55 values spanning 1/8000 .. 30 s) with conventional camera-facing labels. Free-text input is rejected.
+- ND values come from the whole-stop ladder `0, 1, 2, …, 30`. One-third-stop applies to the base shutter only; the ND picker stays whole-stop because real-world fixed ND filters are sold in whole-stop strengths. Values outside the range are not accepted.
+- The output shutter is reported using conventional photographic notation. In the shipping 1/3-stop scale the calculated value is reported directly (formatted by the standard time-display rules) without snapping to a coarser ladder; the precise value drives any downstream timer.
+- A future Settings preference may let a user request a coarser scale (Full / 1/2 stop). When such a preference exists, in-range full-stop results may snap to the conventional reference and long values above 30 s may present in a power-of-two doubling ladder (64, 128, 256 …). In the current release no such selector is exposed; all results follow the 1/3-stop reporting rule.
 
 ### Scenario 2 — Compute corrected exposure for a film stock (film workflow)
 
@@ -70,7 +70,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 - A *quantified* corrected exposure surfaces a numeric primary line plus a confidence badge. The confidence category is one of *exact*, *estimated* (interpolated within the published table), *extrapolated* (beyond the published range), or *trusted threshold* (no correction needed below the manufacturer's threshold).
 - An *advisory-only* result surfaces calm explanatory text in place of a number. The app never fabricates a numeric corrected value when the data does not support one.
 - An *unsupported* result surfaces a guidance note. The Start Timer button on the corrected row is disabled with an explanatory accessibility hint.
-- The full-stop ladder for base shutter, the ND range, and the snap-to-full-stop notation rules are identical to Scenario 1.
+- The base shutter ladder, the ND ladder, and the result-reporting rules are identical to Scenario 1. Film selection does not change the calculator's exposure scale.
 
 ### Scenario 3 — Run a long-exposure timer
 
@@ -147,7 +147,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 ### Scenario 8 — Restart with a film selection in flight
 
-**Goal.** Photographer's selected film stock survives app restart so they don't have to re-pick it after every interruption.
+**Goal.** Photographer's selected film stock and the calculator's working context survive app restart so they don't have to re-pick them after every interruption.
 
 **Steps.**
 1. Select a film, set base shutter and ND.
@@ -156,7 +156,8 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Boundary conditions.**
 - A persisted film id that no longer exists in the catalog drops the selection silently and writes a clean snapshot back so subsequent reads are not confused.
-- Base shutter and ND are sanitized on restore: out-of-range values are rejected, only ladder values are accepted.
+- Base shutter and ND are sanitized on restore against the active exposure scale's ladders: out-of-range values are rejected, only ladder values are accepted.
+- A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the shipping 1/3-stop scale, and a legacy whole-stop value shall be accepted because the shipping ladder is a strict superset of the legacy full-stop ladder.
 
 ---
 
@@ -166,10 +167,10 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.1 Calculator
 
-- **FR-1.1** The user shall enter base shutter values only from the conventional photographic full-stop ladder (1/8000 s through 30 s). Free-form numeric entry is not accepted. (Scenario 1, 2)
-- **FR-1.2** The user shall enter ND-stop values only as non-negative integers within the supported range. The supported range is wide enough to cover stacked-ND practical use. (Scenario 1)
+- **FR-1.1** The user shall enter base shutter values only from the shipping 1/3-stop densified ladder with conventional camera-facing labels (sub-1 s as `1/N` reciprocal fractions, ≥ 1 s as integer or `N.Ns` per camera convention). Free-form numeric entry is not accepted. (Scenario 1, 2)
+- **FR-1.2** The user shall enter ND values only from the whole-stop ladder `0, 1, 2, …, 30`. The supported range is wide enough to cover stacked-ND practical use. One-third-stop applies to the base shutter only; the ND ladder stays whole-stop in every shipping mode. (Scenario 1)
 - **FR-1.3** The system shall compute the output shutter from base shutter and ND using exposure-stop arithmetic. (Scenario 1)
-- **FR-1.4** The system shall present the output shutter using conventional photographic notation: in-range values snap to the closest reference shutter on the same ladder; long values above 30 s present in a doubling-style ladder rather than as arbitrary decimals. The exact value is preserved for downstream timer use even when the presented value is the snapped one. (Scenario 1)
+- **FR-1.4** The system shall present the output shutter using conventional photographic notation. In the shipping 1/3-stop scale the calculated value is reported directly, formatted by the standard time-display rules, without snapping back to a coarser ladder. The exact value is preserved for downstream timer use. A future Settings preference may enable snapping to a full-stop ladder (and the power-of-two ladder above 30 s) when the user opts into a coarser scale; until then no such snap is applied. (Scenario 1)
 - **FR-1.5** The system shall reject calculation inputs that produce non-finite results (overflow / NaN) by surfacing a typed failure to the caller rather than a number that could mislead. (Scenario 1 boundary)
 - **FR-1.6** While the user is dragging an input value, the system shall preview the resulting output without committing to the input until the gesture ends. The user can release on the original value to revert. (Scenario 1)
 
@@ -205,7 +206,7 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 ### 3.5 Persistence
 
 - **FR-5.1** Timer state (running / paused / completed information needed for the state machine) and timer presentation metadata (the name, the basis-summary line, and the LIFO insertion order the user sees) shall both survive an app restart. (Scenario 7)
-- **FR-5.2** The calculator context — selected film, base shutter, ND — shall survive an app restart so the user does not redo the picker on every interruption. (Scenario 8)
+- **FR-5.2** The calculator context — selected film, exposure scale token, base shutter, ND — shall survive an app restart so the user does not redo the picker on every interruption. The exposure scale token is recorded so a future Settings preference can carry the user's prior choice across an upgrade rather than overwriting it. (Scenario 8)
 - **FR-5.3** Persisted shapes shall evolve only via backward-compatible additions. A snapshot written by an older release of the app must continue to restore correctly under the current release; in particular, status tokens that older releases used must continue to be accepted on read. (Scenario 7)
 - **FR-5.4** A running timer whose end date has already passed during the app's downtime shall restore as completed, with the original end date as the completion timestamp — not the moment of restoration. (Scenario 7 boundary)
 - **FR-5.5** A persisted paused timer whose freeze metadata is missing or inconsistent shall be treated as corrupted input. The system shall surface such an entry as completed rather than fabricating a plausible-looking timestamp. (Scenario 7 boundary)
@@ -272,6 +273,7 @@ The product intentionally excludes:
 
 - Aperture and ISO controls in the variable section. The four-variable model from wiki 3866625 is reserved for a future Epic; the current release is base-shutter + ND only.
 - Free-text shutter input.
+- A user-facing exposure scale selector. The shipping calculator runs only on the 1/3-stop scale; a Full / 1/2 / 1/3 stop preference is reserved for a future Settings surface (see [Calculator Spec](../specs/Calculator.md) §1.4).
 - Dropping a film selection by tapping outside a sheet without explicit confirmation. The "Clear" affordance is the only way to remove a selection.
 - Timer queueing / chaining (start B when A finishes). Multi-timer is independent timers running in parallel, not a sequence.
 - Studio strobe / flash duration modes.

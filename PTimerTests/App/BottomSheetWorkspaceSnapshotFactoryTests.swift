@@ -137,6 +137,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
                 dateProvider: { now }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         let snapshot = BottomSheetWorkspaceSnapshot.make(
             from: [olderCompleted, newerCompleted],
@@ -493,6 +494,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
             calculator: ExposureCalculator(),
             timerManager: timerManager
         )
+        viewModel.scaleMode = .fullStop
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
             timeContext: viewModel.timerTimeContext,

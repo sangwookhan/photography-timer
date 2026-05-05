@@ -2,8 +2,42 @@ import Foundation
 
 struct ExposureCalculationResult: Equatable {
     let baseShutterSeconds: Double
-    let stop: Int
+    let ndStep: NDStep
     let resultShutterSeconds: Double
+
+    init(
+        baseShutterSeconds: Double,
+        ndStep: NDStep,
+        resultShutterSeconds: Double
+    ) {
+        self.baseShutterSeconds = baseShutterSeconds
+        self.ndStep = ndStep
+        self.resultShutterSeconds = resultShutterSeconds
+    }
+
+    /// Convenience initializer for whole-stop callers — wraps the
+    /// integer `stop` in a whole-stop `NDStep` so the legacy
+    /// `(baseShutterSeconds:, stop:, resultShutterSeconds:)` constructor
+    /// keeps working byte-for-byte after PTIMER-80 routes the model
+    /// state through `NDStep`.
+    init(
+        baseShutterSeconds: Double,
+        stop: Int,
+        resultShutterSeconds: Double
+    ) {
+        self.init(
+            baseShutterSeconds: baseShutterSeconds,
+            ndStep: NDStep(stops: Double(stop)),
+            resultShutterSeconds: resultShutterSeconds
+        )
+    }
+
+    /// Whole-stop view of the ND input. Returns the rounded integer for
+    /// any fractional `ndStep`; callers that need the exact fractional
+    /// identity must read `ndStep` directly.
+    var stop: Int {
+        ndStep.wholeStops ?? Int(ndStep.stops.rounded())
+    }
 }
 
 struct TimeDisplay: Equatable {
@@ -76,20 +110,54 @@ struct ExposureCalculator {
     }
 
     func calculate(baseShutterSeconds: Double, stop: Int) throws -> Double {
+        try calculate(
+            baseShutterSeconds: baseShutterSeconds,
+            ndStep: NDStep(stops: Double(stop)),
+            scaleMode: .fullStop
+        )
+    }
+
+    /// Whole-stop ND overload. Preserves the legacy snap-to-full-stop
+    /// behavior so any legacy full-stop caller stays byte-for-byte
+    /// identical. The fractional-aware `scaleMode`-taking overload
+    /// below is the canonical entry point: it gates snap on the
+    /// active scale and the ND step's whole-stop status, so a
+    /// 1/3-stop shutter input never collapses to the full-stop
+    /// ladder when ND happens to be whole.
+    func calculate(baseShutterSeconds: Double, ndStep: NDStep) throws -> Double {
+        try calculate(
+            baseShutterSeconds: baseShutterSeconds,
+            ndStep: ndStep,
+            scaleMode: .fullStop
+        )
+    }
+
+    /// Computes the ND-adjusted shutter for a fractional-aware ND input
+    /// in the given exposure-scale mode. Snap-to-full-stop applies
+    /// only in `.fullStop` mode with a whole-stop ND; in
+    /// `.oneThirdStop` mode the result is returned untouched so a
+    /// 1/3-stop shutter value (e.g. `(1/30) · 2^(1/3)`) can survive
+    /// even when ND is `0` or another whole stop.
+    func calculate(
+        baseShutterSeconds: Double,
+        ndStep: NDStep,
+        scaleMode: ExposureScaleMode
+    ) throws -> Double {
         guard baseShutterSeconds > 0 else {
             throw ExposureCalculatorError.nonPositiveBaseShutter
         }
 
-        guard stop >= 0 else {
+        guard ndStep.stops >= -Self.stabilityEpsilon else {
             throw ExposureCalculatorError.nonPositiveND
         }
 
-        let result = baseShutterSeconds * pow(2.0, Double(stop))
+        let result = baseShutterSeconds * pow(2.0, ndStep.stops)
         guard result.isFinite else {
             throw ExposureCalculatorError.overflow
         }
 
-        return snapToFullStop(result)
+        let snapAllowed = scaleMode == .fullStop && ndStep.isWholeStop
+        return snapAllowed ? snapToFullStop(result) : result
     }
 
     func formatShutter(_ seconds: Double) -> String {

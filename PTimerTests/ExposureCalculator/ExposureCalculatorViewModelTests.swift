@@ -11,6 +11,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         // Threshold: exactly 1 day gets coarse treatment
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(86_400), "1d")
@@ -44,6 +45,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -59,6 +61,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatTimerClock(0), "0s")
         XCTAssertEqual(viewModel.formatTimerClock(5), "5s")
@@ -81,6 +84,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatTimerClock(0.9), "0.9s")
         XCTAssertEqual(viewModel.formatTimerClock(-3), "0s")
@@ -95,6 +99,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatTimeDisplay(0), TimeDisplay(primary: "0s", secondary: "0s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(-3), TimeDisplay(primary: "0s", secondary: "0s"))
@@ -111,6 +116,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatTimeDisplay(0), TimeDisplay(primary: "0s", secondary: "0s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(0.033), TimeDisplay(primary: "0.033s", secondary: "0.033s"))
@@ -139,6 +145,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatTimeDisplay(128.25), TimeDisplay(primary: "02:08.250", secondary: "128.25s"))
         XCTAssertEqual(viewModel.formatTimeDisplay(12.345), TimeDisplay(primary: "12.345s", secondary: "12.345s"))
@@ -157,6 +164,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { currentDate }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         let running = RunningTimerItem(
             id: UUID(),
@@ -217,6 +225,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(
             viewModel.formatTimeDisplay(2_592_000),
@@ -237,6 +246,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         XCTAssertEqual(viewModel.formatTimeDisplay(128).secondary, "128s")
         XCTAssertEqual(viewModel.formatTimeDisplay(21.158).secondary, "21.158s")
@@ -252,6 +262,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -280,6 +291,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -302,6 +314,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -325,6 +338,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -357,6 +371,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
@@ -393,6 +408,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
                 dateProvider: { startDate }
             )
         )
+        viewModel.scaleMode = .fullStop
 
         viewModel.startTimer(from: 128)
 

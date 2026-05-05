@@ -3,7 +3,69 @@ import Foundation
 struct PersistentExposureCalculatorContextSnapshot: Codable, Equatable {
     let selectedPresetFilmID: String?
     let baseShutterSeconds: Double?
+    /// Whole-stop ND value, kept for byte-for-byte backward compat with
+    /// PTIMER-79 snapshots. Populated only when the active ND value sits
+    /// on a whole-stop boundary; fractional steps land in
+    /// `ndStopThirds` instead.
     let ndStop: Int?
+    /// Count of one-third-stop increments for the persisted ND value.
+    /// PTIMER-80 introduces this field so a `1/3` or `2/3` ND step
+    /// survives a relaunch without being silently truncated to an
+    /// integer. Optional so existing PTIMER-79 snapshots decode
+    /// unchanged.
+    let ndStopThirds: Int?
+    /// Persisted exposure-scale mode. Stored as the raw
+    /// `ExposureScaleMode` value so the field survives later scale
+    /// additions. Optional so legacy snapshots that predate the
+    /// field decode unchanged and restore as the shipping
+    /// `.oneThirdStop` scale (per `restoredScaleMode`).
+    let exposureScaleMode: String?
+
+    init(
+        selectedPresetFilmID: String?,
+        baseShutterSeconds: Double?,
+        ndStop: Int?,
+        ndStopThirds: Int? = nil,
+        exposureScaleMode: String? = nil
+    ) {
+        self.selectedPresetFilmID = selectedPresetFilmID
+        self.baseShutterSeconds = baseShutterSeconds
+        self.ndStop = ndStop
+        self.ndStopThirds = ndStopThirds
+        self.exposureScaleMode = exposureScaleMode
+    }
+}
+
+extension PersistentExposureCalculatorContextSnapshot {
+    /// Reconstructs the persisted ND value as an `NDStep`, preferring
+    /// the fractional-safe `ndStopThirds` field when present so a
+    /// PTIMER-80 fractional snapshot decodes losslessly. Falls back to
+    /// the legacy `ndStop` integer for PTIMER-79 snapshots.
+    var restoredNDStep: NDStep? {
+        if let thirds = ndStopThirds {
+            return NDStep.fromThirdStopCount(thirds)
+        }
+        if let ndStop {
+            return NDStep(stops: Double(ndStop))
+        }
+        return nil
+    }
+
+    /// Decodes the persisted scale mode, defaulting to the shipping
+    /// `.oneThirdStop` scale when the field is absent (legacy PTIMER-79 /
+    /// pre-default-flip snapshot) or when the stored raw value is
+    /// unrecognized (forward-compat: an unknown future mode rewinds
+    /// safely to the shipping default). The shipping shutter ladder is
+    /// a strict superset of the legacy full-stop ladder, so a legacy
+    /// whole-stop value remains a valid ladder entry without rewriting
+    /// it.
+    var restoredScaleMode: ExposureScaleMode {
+        guard let raw = exposureScaleMode,
+              let mode = ExposureScaleMode(rawValue: raw) else {
+            return .oneThirdStop
+        }
+        return mode
+    }
 }
 
 protocol ExposureCalculatorContextPersistenceStoring {

@@ -8,6 +8,7 @@ final class CalculatorModelTests: XCTestCase {
     @MainActor
     func testDefaultInputsProduceFullStopSnappedResult() {
         let model = CalculatorModel(calculator: ExposureCalculator())
+        model.scaleMode = .fullStop
 
         guard case .success(let result) = model.calculationResult else {
             XCTFail("Default inputs should produce a calculation success.")
@@ -28,6 +29,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         model.ndStop = 3
 
@@ -49,6 +51,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         model.baseShutterSeconds = 1.0
 
@@ -68,6 +71,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         guard case .failure(let error) = model.calculationResult else {
             XCTFail("Zero base shutter must surface as a failure.")
@@ -84,6 +88,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         // This overload serves the live-preview overlay
         // (effectiveBaseShutter / effectiveNDStop) and must NOT mutate
@@ -111,6 +116,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         XCTAssertNil(model.liveBaseShutter)
         XCTAssertEqual(model.effectiveBaseShutter, 1.0 / 30.0, accuracy: 1e-9)
@@ -126,6 +132,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         model.updateLiveBaseShutter(1.0 / 60.0)
         model.updateLiveNDStop(6)
@@ -143,6 +150,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         // Preview equal to committed clears the overlay so wheel-gesture
         // idle state does not keep transient preview values.
@@ -160,6 +168,7 @@ final class CalculatorModelTests: XCTestCase {
             baseShutterSeconds: 1.0 / 30.0,
             ndStop: 0
         )
+        model.scaleMode = .fullStop
 
         model.updateLiveBaseShutter(1.0 / 60.0)
         model.updateLiveNDStop(6)

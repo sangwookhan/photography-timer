@@ -168,6 +168,7 @@ A working-context snapshot carries:
 - **ndStop** — optional non-negative integer in `[0, 30]`; a whole-stop ND value. Present whenever the persisted ND lies on a whole-stop boundary; absent when the persisted ND is fractional (§7.2).
 - **ndStopThirds** — optional non-negative integer; the persisted ND value expressed as a count of one-third-stops (so `0 ⇒ 0 stops`, `1 ⇒ 1/3 stop`, `3 ⇒ 1 stop`, `4 ⇒ 1 1/3 stop`, …). Present when the persisted ND is fractional; may also be present (and equivalent to `ndStop × 3`) for whole-stop values written by a release that always emits the field.
 - **exposureScaleMode** — optional string token identifying the active exposure scale (§7.3). Absent ⇒ the shipping one-third-stop scale.
+- **activeCameraSlotIDRaw** — optional string carrying the raw identifier of the camera slot whose calculator state this snapshot describes. Forward-compatibility annotation only: present so an older release that only reads this single-context shape can still recover the right slot association when the multi-slot session snapshot (§7.4) is unavailable. Absent ⇒ default-slot association. The active source of truth for slot session state is §7.4; the context snapshot's annotation is a fallback.
 
 ### 7.1 Schema evolution and backward compatibility
 
@@ -184,6 +185,38 @@ The persistence layer represents fractional ND through `ndStopThirds` (an intege
 ### 7.3 Exposure scale token
 
 `exposureScaleMode` is a string token enumerating the active exposure scale. The launch tokens are `"oneThirdStop"` (the shipping default) and `"fullStop"` (reserved for the future Settings preference described in [Calculator Spec](Calculator.md) §1.4). Other tokens are reserved.
+
+### 7.4 Camera slot session snapshot
+
+A shooting session may carry multiple camera slots ([Requirements](../requirements/Requirements.md) §3.8; [Calculator Spec](Calculator.md) §1.5). The slot-session snapshot captures every slot's calculator state plus the active-slot id so a relaunch restores the full session, not just the active slot.
+
+A slot-session snapshot carries:
+
+- **schemaVersion** — non-negative integer identifying the on-disk format. The current shipping value is `1`. The decoder rejects unknown schema versions and falls back to the legacy single-context restore path (§7) so a snapshot written by a future format the current release does not understand cannot poison the session.
+- **activeSlotID** — string carrying the raw identifier of the slot that was active at save time. The runtime resolves it through the same slot-id alphabet used elsewhere (`camera1` … `camera4` in the current release, [Calculator Spec](Calculator.md) §1.5); an unrecognised value falls back to the canonical first slot rather than failing the load.
+- **slots** — array of per-slot snapshots, one entry per slot the user has visited (and optionally entries for slots whose only state is a custom label, see below). Order on disk is sorted by slot id for determinism; the runtime does not depend on order.
+
+Each per-slot snapshot carries:
+
+- **slotIDRaw** — string identifier matching the slot's stable id alphabet. Unknown ids are silently skipped on decode; persistence does not pretend a slot exists that the runtime cannot resolve.
+- **selectedPresetFilmID** — optional string; the catalog id of the slot's selected film, if any. Resolved against the catalog (§2); an id that no longer matches any catalog entry restores as **No film** (digital workflow) rather than crashing or fabricating a film identity.
+- **selectedProfileID** — optional string; the id of an active reciprocity profile override on the selected film. Resolved against the film's profile array (and the bundled non-launch profile registry, §13.4). An id that no longer resolves drops the override silently and the slot restores to the film's primary profile.
+- **baseShutterSeconds** — optional non-negative finite number; the slot's committed Base Shutter value. Sanitized on restore against the active exposure scale's shutter ladder; an absent or invalid value restores to the shipping default Base Shutter.
+- **ndStop** / **ndStopThirds** — same convention and precedence as §7 / §7.2 for the calculator working context: the fractional-aware `ndStopThirds` field is preferred when present, with `ndStop` treated as a legacy hint.
+- **exposureScaleMode** — optional string token following the same convention as §7.3; absent ⇒ shipping one-third-stop scale.
+- **customDisplayName** — optional photographer-supplied display label for the slot. Trimmed at write time; an empty / whitespace-only value persists as absent so the restored slot falls back to its canonical *Camera N* default. Renaming a slot changes only this field; the slot's stable id and per-slot calculator inputs are not affected.
+
+#### 7.4.1 Migration from the legacy single-context snapshot
+
+The slot session snapshot (§7.4) is the source of truth on restore. The legacy single-context snapshot (§7) is read once at first launch after upgrade as a migration source so a session that predates the multi-slot schema does not reset:
+
+- When no slot session snapshot exists, the runtime restores from the legacy single-context snapshot. Its `activeCameraSlotIDRaw` annotation, when present, names the slot the legacy values belong to; absent ⇒ the canonical default slot.
+- The first save after the migration writes a slot session snapshot. Subsequent launches read the new snapshot and ignore the legacy single-context store for slot-session purposes.
+- If the slot session store contains a snapshot whose `schemaVersion` the current release does not recognise, the load returns nothing and the runtime falls back to the legacy migration path; the next save re-writes the snapshot under the current schema.
+
+#### 7.4.2 Schema evolution
+
+The slot-session snapshot evolves only via backward-compatible additions ([Requirements](../requirements/Requirements.md) NFR-S.2). Adding an Optional field — for example the `customDisplayName` field above — is permitted without bumping `schemaVersion`; an older snapshot that lacks the field decodes unchanged, with the field treated as absent. A breaking change (renaming an existing field, dropping a required field, or changing the meaning of an existing field) is not permitted without a coordinated `schemaVersion` increment and a documented migration step.
 
 ---
 

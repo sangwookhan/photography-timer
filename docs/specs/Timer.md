@@ -41,6 +41,30 @@ A timer's `duration` is set at creation and is positive and finite. The system s
 
 When a timer is created, the calculator's current result is snapshotted into the timer's metadata: shutter value, ND stops, film identity (if any), reciprocity result. Subsequent calculator changes shall not alter the snapshot. Each timer carries its own creation-time snapshot.
 
+### 1.4 Timer identity
+
+Every timer carries an **identity** — a small bundle of associations describing *which shot* the timer belongs to. Identity is captured at start time and is independent of the runtime state machine (§1.1) and the time-semantics layer (§2).
+
+**Composition.** A timer's identity is the union of:
+
+- the **camera slot** it was started from (active-slot id and the human-readable slot label as it stood at start time, see [Requirements](../requirements/Requirements.md) §3.8 / FR-8.5);
+- a **film descriptor** — the canonical stock name and any active profile qualifier when a film was selected, otherwise the explicit *No film* descriptor that signals digital workflow;
+- the **exposure source** that produced the duration.
+
+**Exposure-source categories.** The defined sources are:
+
+- *digital result* — non-film calculator (no film selected); timer started from the ND-adjusted output shutter.
+- *film-adjusted shutter* — film workflow; timer started from the Adjusted Shutter row.
+- *film-corrected exposure* — film workflow; timer started from the Corrected Exposure row.
+- *target shutter* — reserved for the Target Shutter workflow described in [Requirements](../requirements/Requirements.md) Persona 1.1 / Scenario 1 boundary; surfaces a distinct identity so a target-shutter timer remains distinguishable from adjusted and corrected timers.
+- *manual* — an external precomputed shutter supplied outside the calculator. A manual timer **does not** capture calculator identity: it carries no camera slot, no film descriptor, and no calculator-bound exposure source, and its presentation falls back to a generic *Manual timer* basis label rather than borrowing the active slot's identity. (FR-4.7)
+
+**Capture rule.** Identity capture happens once, at start time. The captured values are frozen on the timer; they are not re-derived from runtime state and they are not overwritten when the user later switches the active camera slot, renames a slot, swaps the active film, or re-picks a profile.
+
+**Stability across timer states.** Identity is invariant across the timer's lifetime. The same identity bundle accompanies the timer when it is *running*, *paused*, *completed*, *reordered* within the workspace, *focused* by the user, *inspected* in the expanded view, or *restored* from persistence. State-machine transitions (§1.2) do not mutate identity.
+
+**Display vs. data.** Identity is data; *how* the workspace renders camera, film, and source as a card label or accessibility string is a presentation concern documented in [UI Spec](UI.md). The data shape of identity is the contract; presentation strings can change without breaking it.
+
 ---
 
 ## 2. Time semantics

@@ -27,7 +27,15 @@ The same photographer when shooting film stocks whose reciprocity behavior depar
 
 ### 1.3 Multi-camera photographer (specialization)
 
-The same photographer running two or more cameras through the same scene — for example an analog medium-format body that needs reciprocity correction in parallel with a digital body that doesn't. Needs to identify *which* timer belongs to *which* shot at a glance, not memorize an unlabelled queue.
+The same photographer running two to four cameras through the same scene during one shooting session — for example an analog medium-format body that needs reciprocity correction in parallel with a digital body that doesn't, or two film bodies loaded with different stocks that each need their own reciprocity profile. Common field combinations:
+
+- **Digital plus film** — one digital body and one film body alternated shot-to-shot. Switching between them shall not force the photographer to rebuild the calculator (re-pick the film, re-enter base shutter, re-set ND) every time the active camera changes.
+- **Two films, two bodies** — for example Portra 400 in one body and Acros II in another. Each camera needs its own selected film and its own reciprocity result preserved across switches.
+- **Multiple simultaneous timers from different cameras** — one camera holding a long exposure while the photographer prepares the next shot on another. Each running timer carries enough identity for the photographer to tell at a glance which camera and which shot it belongs to.
+- **Fast field switching** — composition changes are quick; the active-camera switch shall be a single, compact gesture rather than a settings detour, and shall not reset any inactive camera's setup.
+- **Two to four active cameras** — the field workflow stays small enough for a phone screen. Beyond four cameras the workspace would shade into an inventory manager, which is out of scope (see §5).
+
+Needs to identify *which* timer belongs to *which* shot at a glance, not memorize an unlabelled queue.
 
 The product is **not** designed for the casual snapshot user, the studio strobe shooter, or the cinematography use case (those have very different metering loops and timer needs).
 
@@ -197,11 +205,13 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.4 Multi-timer + lock-screen
 
-- **FR-4.1** The system shall support multiple concurrent timers, each with a stable identity that survives reordering, focus, and group transitions. (Scenario 5)
+- **FR-4.1** The system shall support multiple concurrent timers, each with a stable identity that survives running, paused, completed, reordered, focused, and inspected transitions. (Scenario 5)
 - **FR-4.2** Each timer shall carry a non-text identity cue (e.g. a tint, shape, or pattern) that distinguishes it from sibling timers at a glance, without depending on the user reading name or time text. The cue shall be stable for the timer's lifetime. (Scenario 5)
 - **FR-4.3** The lock-screen surface shall show at most one timer at a time. The selection rule (earliest end date, deterministic tiebreak) is documented in Scenario 6. (Scenario 6)
 - **FR-4.4** When no running or paused timer remains, the lock-screen surface shall end. The user shall never see a lock-screen timer that no longer exists. (Scenario 6)
 - **FR-4.5** The lock-screen surface shall update frequently enough that the user perceives time advancing without unlocking the phone. (Scenario 6)
+- **FR-4.6** Each timer shall carry enough identity metadata — at minimum the camera slot it was started from, its film selection (if any), and the exposure-source kind that produced it — to let the user associate it with the intended camera, shot, and exposure. Identity metadata is captured at start time and shall not drift across the timer's lifetime even when the active camera slot or active film selection later changes. (Scenario 5; Persona 1.3)
+- **FR-4.7** A timer started without a calculator-bound source — the *manual* path, used when an external precomputed shutter is supplied — shall not inherit camera-slot, film, or exposure-source identity from whatever is active at start time. The presentation layer falls back to a generic basis label rather than borrowing the active slot's identity. (Scenario 5; Persona 1.3)
 
 ### 3.5 Persistence
 
@@ -224,6 +234,17 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 - **FR-7.1** The app shall lock orientation so the photographer can hold the phone in a single grip while metering and adjusting. The current release supports portrait only. (Persona 1.1)
 - **FR-7.2** Base shutter and ND shall be entered through controls that snap to valid values. Free-text numeric input is not accepted, so a typo cannot put the calculator into an unphotographic state. (Scenario 1)
+
+### 3.8 Camera slots
+
+- **FR-8.1** The system shall expose multiple camera slots within a single shooting session. The supported range is two to four slots; configurations outside that range are not part of the shooting workspace's scope. (Persona 1.3; out-of-scope for the inventory case is recorded in §5)
+- **FR-8.2** Each camera slot shall preserve its own calculator state — workflow mode (digital vs. film), selected film and active reciprocity profile (when film workflow), base shutter, ND, exposure scale, and the most recently derived reciprocity result. Slots are independent: a calculator change made on the active slot shall not propagate to inactive slots. (Persona 1.3; Scenario 1, 2)
+- **FR-8.3** Switching the active slot shall preserve every inactive slot's calculator state untouched. The transition shall not invoke any "reset" path on the calculator, the film selection, or the reciprocity result; the active-input set is replaced, not mutated. (Persona 1.3)
+- **FR-8.4** The user shall be able to switch the active camera slot from the main shooting workspace through a single, glanceable affordance — not a settings detour. The exact affordance (paged TabView, segmented control, swipe gesture, or other) is a design decision; the requirement is that the switch is one gesture away from the calculator. (Persona 1.3)
+- **FR-8.5** Each camera slot shall expose enough identity information — at minimum a stable id and a human-readable display label — for the user to associate calculator state, timers, and (eventually) record-system handoffs with the intended camera. The stable id is independent of the display label and shall not change when the user renames the slot. (Persona 1.3; complements FR-4.6 / FR-8.7)
+- **FR-8.6** Camera-slot session state — the active slot id, every slot's preserved calculator state, and any photographer-supplied custom slot labels — shall survive an app restart on the same terms as the calculator working context (FR-5.2). Persisted slot state shall evolve only via backward-compatible additions (NFR-S.2); a snapshot written by an older release that did not yet record a custom slot label shall continue to restore correctly with the canonical default label. (Persona 1.3; Scenario 8)
+- **FR-8.7** The user shall be able to rename a camera slot's display label to a photographer-supplied value, and shall be able to reset a renamed slot back to the canonical *Camera N* default. The rename affordance shall live on the slot title in the main shooting workspace, not behind a settings detour. (Persona 1.3)
+- **FR-8.8** Empty or whitespace-only rename input shall be treated as a reset request rather than persisted as a blank label. A rename shall not modify the slot's stable id, calculator state, film selection, reciprocity result, any other slot's state, or the slot label captured on any timer that started before the rename. (Persona 1.3 boundary; complements FR-4.6 / FR-8.5)
 
 ---
 

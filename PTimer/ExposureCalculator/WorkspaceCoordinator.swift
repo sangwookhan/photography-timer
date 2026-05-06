@@ -31,14 +31,19 @@ final class WorkspaceCoordinator: ObservableObject {
                 "Timer - \(calculatorModel.calculator.formatShutter(duration))"
             }
         )
+        // The slot session model is built before `FilmSelectionModel`
+        // so the film-selection closure can read the active slot at
+        // persistence time — that lets the persisted calculator
+        // context capture which slot owns its values.
+        let cameraSlotSessionModel = CameraSlotSessionModel()
         let filmSelectionModel = FilmSelectionModel(
             presetFilms: dependencies.presetFilms,
             contextPersistenceStore: dependencies.contextPersistenceStore,
             currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
             currentNDStep: { calculatorModel.ndStep },
-            currentScaleMode: { calculatorModel.scaleMode }
+            currentScaleMode: { calculatorModel.scaleMode },
+            currentActiveCameraSlotID: { cameraSlotSessionModel.activeSlotID }
         )
-        let cameraSlotSessionModel = CameraSlotSessionModel()
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel

@@ -1,5 +1,27 @@
 import Foundation
 
+/// Legacy single-context calculator persistence. **No longer the
+/// source of truth** for camera-slot state — that role belongs to
+/// `PersistentCameraSlotSessionSnapshot`, which captures all four
+/// camera slots, not just the active one.
+///
+/// This snapshot survives for two reasons:
+///   1. **First-launch-after-upgrade migration** — when a fresh
+///      install of the slot-aware build runs against UserDefaults
+///      that contains only this older shape, the ViewModel's
+///      restore path falls back to this snapshot, applies its
+///      values to the active slot, and the next persist writes the
+///      new session snapshot. Subsequent launches read the session
+///      snapshot and ignore this one.
+///   2. **Forward compatibility window** — the active-slot writer in
+///      `FilmSelectionModel.persistContext` continues writing here
+///      so an older app version reading the legacy `UserDefaults`
+///      key sees a sensible single-camera context instead of
+///      nothing.
+///
+/// Treat this type as legacy schema. New fields belong on
+/// `PersistentCameraSlotSessionSnapshot` /
+/// `PersistentCameraSlotCalculatorSnapshot`.
 struct PersistentExposureCalculatorContextSnapshot: Codable, Equatable {
     let selectedPresetFilmID: String?
     let baseShutterSeconds: Double?
@@ -20,19 +42,33 @@ struct PersistentExposureCalculatorContextSnapshot: Codable, Equatable {
     /// field decode unchanged and restore as the shipping
     /// `.oneThirdStop` scale (per `restoredScaleMode`).
     let exposureScaleMode: String?
+    /// Raw `CameraSlotID` for the slot that owned the persisted
+    /// context at save time. Optional so older snapshots without
+    /// slot awareness decode unchanged (and would restore into
+    /// Camera 1 if the legacy fallback path were the only restore
+    /// route).
+    ///
+    /// In the current build the new
+    /// `PersistentCameraSlotSessionSnapshot` is the source of truth
+    /// for slot identity on restore — this field is only consulted
+    /// when no session snapshot exists yet (first launch after
+    /// upgrade migration).
+    let activeCameraSlotIDRaw: String?
 
     init(
         selectedPresetFilmID: String?,
         baseShutterSeconds: Double?,
         ndStop: Int?,
         ndStopThirds: Int? = nil,
-        exposureScaleMode: String? = nil
+        exposureScaleMode: String? = nil,
+        activeCameraSlotIDRaw: String? = nil
     ) {
         self.selectedPresetFilmID = selectedPresetFilmID
         self.baseShutterSeconds = baseShutterSeconds
         self.ndStop = ndStop
         self.ndStopThirds = ndStopThirds
         self.exposureScaleMode = exposureScaleMode
+        self.activeCameraSlotIDRaw = activeCameraSlotIDRaw
     }
 }
 

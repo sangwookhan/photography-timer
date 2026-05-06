@@ -2,11 +2,11 @@ import Combine
 import Foundation
 
 /// `CameraSlotSessionModel` owns the camera-slot session state: which
-/// slot is currently active, plus the calculator snapshot for every
-/// slot the photographer is not currently active on. Inactive slot
-/// snapshots stay here untouched so a slot switch can restore the
-/// slot's exposure inputs and film selection without invoking any
-/// reset behavior on the active calculator/film models.
+/// slot is currently active, and the calculator snapshot for every
+/// slot the user has not currently active. Inactive slot snapshots
+/// stay here untouched so a slot switch can restore the slot's
+/// exposure inputs and film selection without invoking any reset
+/// behavior on the active calculator/film models.
 ///
 /// The model holds session state only. Snapshot capture / load is
 /// orchestrated by the `ExposureCalculatorViewModel` facade so the
@@ -94,12 +94,11 @@ final class CameraSlotSessionModel: ObservableObject {
 
     /// Atomic slot switch: stores `outgoingSnapshot` for the
     /// currently active slot, sets `targetSlotID` as the new active
-    /// slot, and returns the snapshot the caller should load into
-    /// the calculator/film models for the incoming slot.
+    /// slot, and returns the snapshot the caller should load into the
+    /// calculator/film models for the incoming slot.
     ///
-    /// A no-op switch (target is already active, or target is not in
-    /// `availableSlots`) returns nil so the caller can avoid
-    /// redundant model writes.
+    /// A no-op switch (target is already active) returns nil so the
+    /// caller can avoid redundant model writes.
     @discardableResult
     func switchActiveSlot(
         to targetSlotID: CameraSlotID,
@@ -127,5 +126,47 @@ final class CameraSlotSessionModel: ObservableObject {
         let incomingSnapshot = inactiveSnapshots.removeValue(forKey: targetSlotID) ?? .initial
         activeSlotID = targetSlotID
         return incomingSnapshot
+    }
+
+    /// Sets the active slot id at app-start restore time. Used when
+    /// persistence captured the last active slot and the calculator
+    /// context has been (or is about to be) loaded into the live
+    /// calc/film models for that slot. Removes any stale snapshot for
+    /// `slotID` because the live models are now the source of truth
+    /// for it.
+    ///
+    /// No outgoing-snapshot capture happens here: the prior active
+    /// slot at this point is the default placeholder (`camera1`) and
+    /// no real state was set against it. Callers should invoke this
+    /// before mutating the live calc/film models with the persisted
+    /// context.
+    func restoreActiveSlot(to slotID: CameraSlotID) {
+        guard availableSlots.contains(slotID) else { return }
+        inactiveSnapshots.removeValue(forKey: slotID)
+        activeSlotID = slotID
+    }
+
+    /// Bulk-loads inactive-slot snapshots at app-start restore time.
+    /// Callers (the ViewModel during persistence restore) build the
+    /// dictionary from a `PersistentCameraSlotSessionSnapshot`, drop
+    /// the entry for the active slot (its state lives on the live
+    /// calc/film models), and pass the rest here.
+    ///
+    /// Slots not in `availableSlots` are silently filtered — keeps
+    /// the model robust against a future schema mismatch where a
+    /// persisted snapshot references a slot the runtime no longer
+    /// exposes.
+    func restoreInactiveSnapshots(_ snapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]) {
+        let filtered = snapshots
+            .filter { availableSlots.contains($0.key) && $0.key != activeSlotID }
+        inactiveSnapshots = filtered
+    }
+
+    /// Read access to the full inactive-snapshot dictionary. Used by
+    /// the persistence layer to serialise the session shape; not by
+    /// regular slot navigation paths (those go through
+    /// `snapshot(forInactiveSlot:)` and `switchActiveSlot(...)`).
+    func currentInactiveSnapshots() -> [CameraSlotID: CameraSlotCalculatorSnapshot] {
+        inactiveSnapshots
     }
 }

@@ -106,6 +106,9 @@
 		A00000000000000000000213 /* CalculatorDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000212 /* CalculatorDefaults.swift */; };
 		A00000000000000000000215 /* ExposureTimerIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000214 /* ExposureTimerIdentity.swift */; };
 		A00000000000000000000217 /* TimerCardIdentityPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000216 /* TimerCardIdentityPresenter.swift */; };
+		A00000000000000000000219 /* PersistentCameraSlotSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000218 /* PersistentCameraSlotSession.swift */; };
+		A0000000000000000000021B /* CameraSlotSessionPersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */; };
+		A0000000000000000000021D /* CameraSlotSessionPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -243,6 +246,9 @@
 		A00000000000000000000212 /* CalculatorDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorDefaults.swift; sourceTree = "<group>"; };
 		A00000000000000000000214 /* ExposureTimerIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureTimerIdentity.swift; sourceTree = "<group>"; };
 		A00000000000000000000216 /* TimerCardIdentityPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCardIdentityPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000218 /* PersistentCameraSlotSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCameraSlotSession.swift; sourceTree = "<group>"; };
+		A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionPersistenceController.swift; sourceTree = "<group>"; };
+		A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionPersistenceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -349,6 +355,8 @@
 				A00000000000000000000201 /* CameraSlotIdentity.swift */,
 				A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */,
 				A00000000000000000000205 /* CameraSlotPageState.swift */,
+				A00000000000000000000218 /* PersistentCameraSlotSession.swift */,
+				A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */,
 				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
 			);
 			path = CameraSlot;
@@ -509,6 +517,7 @@
 				A0000000000000000000020A /* CameraSlotIdentityTests.swift */,
 				A0000000000000000000020C /* CameraSlotSessionModelTests.swift */,
 				A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */,
+				A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -731,6 +740,8 @@
 				A00000000000000000000213 /* CalculatorDefaults.swift in Sources */,
 				A00000000000000000000215 /* ExposureTimerIdentity.swift in Sources */,
 				A00000000000000000000217 /* TimerCardIdentityPresenter.swift in Sources */,
+				A00000000000000000000219 /* PersistentCameraSlotSession.swift in Sources */,
+				A0000000000000000000021B /* CameraSlotSessionPersistenceController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -782,6 +793,7 @@
 				A0000000000000000000020B /* CameraSlotIdentityTests.swift in Sources */,
 				A0000000000000000000020D /* CameraSlotSessionModelTests.swift in Sources */,
 				A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */,
+				A0000000000000000000021D /* CameraSlotSessionPersistenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

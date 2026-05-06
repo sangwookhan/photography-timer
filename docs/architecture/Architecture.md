@@ -79,14 +79,14 @@ Five `@Observable` feature models, each owning one slice of state:
   lifecycle commands around `TimerManager`.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
-- **`CameraSlotSessionModel`** — active camera-slot identity plus
-  the per-slot calculator snapshot for inactive slots. The active
-  slot's live state remains on `CalculatorModel` +
-  `FilmSelectionModel`; the session model only stores the inactive
-  slot snapshots and the `activeSlotID`. Snapshot capture and load
-  on slot switch are orchestrated by the view-model facade (the
-  only place that already reads/writes both `CalculatorModel` and
-  `FilmSelectionModel` in one step).
+- **`CameraSlotSessionModel`** — active camera-slot identity plus the
+  per-slot calculator snapshot for inactive slots. The active slot's
+  live state remains on `CalculatorModel` + `FilmSelectionModel`; the
+  session model only stores the inactive slot snapshots and the
+  `activeSlotID`. Snapshot capture and load on slot switch are
+  orchestrated by the view-model facade (the only place that already
+  reads/writes both `CalculatorModel` and `FilmSelectionModel` in one
+  step).
 
 The feature models do not import each other. Cross-model wiring lives
 on `WorkspaceCoordinator`. A model that consumes another model's state
@@ -146,10 +146,11 @@ real implementation plus a `NoOp*` implementation that unit tests use.
 Directory: `ExposureCalculator/CameraSlot/`.
 
 - `CameraSlotIdentity` — `CameraSlotID` enum (`camera1` … `camera4`)
-  plus a stable id + default/custom display label pair.
-  `displayName` prefers a non-empty `customDisplayName` and
-  otherwise falls back to `defaultDisplayName` so a future "rename
-  this slot" surface can land without rewriting presentation code.
+  plus a stable id + default/custom display label pair. The id is
+  the only value written to timer metadata; the display label is
+  reconstructed on decode and also captured at start time so the
+  workspace can render the timer's slot label without resolving the
+  id back.
 - `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
   calculator working state (base shutter, ND, scale mode, selected
   film, profile override). Live-preview overlays
@@ -160,30 +161,37 @@ Directory: `ExposureCalculator/CameraSlot/`.
   the workspace TabView pages. Active slot reads live calculator
   state; inactive slots read their preserved snapshot from the
   session model.
-- `CameraSlotPagerIndicator` — minimal `4-dot + "N of M"` indicator
-  rendered below the calculator pages. Presentation only; slot
-  transitions go through the ViewModel's `selectCameraSlot(_:)` /
-  next/previous paths.
+- `PersistentCameraSlotSession` — on-disk schema
+  (`PersistentCameraSlotSessionSnapshot` +
+  `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
+  session. Stores raw `CameraSlotID` raw values and film/profile
+  ids; the runtime resolves ids back through the preset catalog and
+  falls back to "No film" for any id no longer in the catalog.
+- `CameraSlotSessionPersistenceController` — bridges the runtime
+  `CameraSlotSessionModel` and the on-disk session snapshot. Owns
+  serialise/deserialise so the ViewModel facade stays a thin
+  wiring layer.
 
-Slot session state lives on `CameraSlotSessionModel` (see §1.4).
-Fresh-slot defaults derive from `CalculatorDefaults` so the
-ViewModel's initial calculator state and a brand-new slot's snapshot
-share a single source of truth.
-
-Exposure-calculated timer identity lives in
-`ExposureCalculator/Models/ExposureTimerIdentity.swift`:
-`ExposureTimerSource` enum + `ExposureTimerIdentitySnapshot`
-struct. The runtime `Timers/` layer carries no exposure-source
-concept on its own — those types describe which exposure
-computation produced the timer, which is a calculator-domain
-concern. Display formatting (`"C2"`, `"Camera 2 · CHS 100 II"`,
-`"Adjusted Shutter"`) lives in `App/Workspace/TimerCardIdentityPresenter.swift`
-so the runtime types stay free of UI copy.
-
-The camera-slot identity that gets stamped on a timer flows into
+Slot session state lives on `CameraSlotSessionModel` (see §1.4). The
+camera-slot identity that gets stamped on a timer flows into
 `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` /
 `cameraSlotDisplayName`; both fields are optional so older snapshots
 without slot identity decode unchanged.
+
+Multi-slot persistence: every slot's calculator snapshot is saved to
+`UserDefaultsCameraSlotSessionPersistenceStore` under a dedicated
+key. On first launch after upgrade, the legacy single-context store
+(`UserDefaultsExposureCalculatorContextPersistenceStore`) is read by
+the ViewModel's restore path; once any state mutation happens, the
+new session snapshot becomes the source of truth and the legacy key
+is ignored.
+
+Exposure-calculated timer identity lives in
+`ExposureCalculator/Models/ExposureTimerIdentity.swift`:
+`ExposureTimerSource` enum + `ExposureTimerIdentitySnapshot` struct.
+The runtime `Timers/` layer carries no exposure-source concept on
+its own — those types describe which exposure computation produced
+the timer, which is a calculator-domain concern.
 
 ### 1.8 Film catalog
 
@@ -305,8 +313,8 @@ Test files under `PTimerTests/` mirror the source layout:
   catalog loading, feature-model unit tests
   (`CalculatorModelTests`, `ReciprocityModelTests`,
   `TimerWorkspaceModelTests`, `FilmSelectionModelTests`,
-  `CameraSlotSessionModelTests`, `CameraSlotIdentityTests`,
-  `ExposureCalculatorViewModelCameraSlotsTests`).
+  `CameraSlotSessionModelTests`), and the slot-routing facade tests
+  (`ExposureCalculatorViewModelCameraSlotsTests`).
 - `Reciprocity/` — policy evaluation, confidence mapping.
 - `Timers/` — TimerManager lifecycle, time formatting.
 - `App/` — workspace shell behavior.

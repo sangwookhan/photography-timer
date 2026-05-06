@@ -28,6 +28,12 @@ final class FilmSelectionModel: ObservableObject {
     private let currentBaseShutterSeconds: () -> Double
     private let currentNDStep: () -> NDStep
     private let currentScaleMode: () -> ExposureScaleMode
+    /// Closure providing the active camera-slot id at persistence
+    /// time. Returns `nil` when the consumer has no camera-slot
+    /// concept (older test setups). Stored alongside the calc inputs
+    /// so a relaunch grafts the persisted context back onto the
+    /// correct slot rather than overwriting Camera 1's state.
+    private let currentActiveCameraSlotID: () -> CameraSlotID?
 
     /// Result of restoring the persisted context. Either we have a
     /// valid restored snapshot (potentially with a missing film id, in
@@ -38,6 +44,12 @@ final class FilmSelectionModel: ObservableObject {
         let baseShutterSeconds: Double?
         let ndStep: NDStep?
         let scaleMode: ExposureScaleMode
+        /// Camera slot the persisted context belonged to at save
+        /// time, or `nil` for older snapshots that predate slot
+        /// awareness. The caller restores the session model's active
+        /// slot to this id before applying the calc inputs so the
+        /// values land on the right page.
+        let activeCameraSlotID: CameraSlotID?
         /// True when the persisted snapshot referenced a film id that
         /// is no longer in the catalog. The caller treats this the
         /// same as "no film selected" and clears the persisted
@@ -50,13 +62,15 @@ final class FilmSelectionModel: ObservableObject {
         contextPersistenceStore: ExposureCalculatorContextPersistenceStoring,
         currentBaseShutterSeconds: @escaping () -> Double,
         currentNDStep: @escaping () -> NDStep,
-        currentScaleMode: @escaping () -> ExposureScaleMode = { .oneThirdStop }
+        currentScaleMode: @escaping () -> ExposureScaleMode = { .oneThirdStop },
+        currentActiveCameraSlotID: @escaping () -> CameraSlotID? = { nil }
     ) {
         self.presetFilms = presetFilms
         self.contextPersistenceStore = contextPersistenceStore
         self.currentBaseShutterSeconds = currentBaseShutterSeconds
         self.currentNDStep = currentNDStep
         self.currentScaleMode = currentScaleMode
+        self.currentActiveCameraSlotID = currentActiveCameraSlotID
     }
 
     // MARK: - Read accessors
@@ -125,6 +139,9 @@ final class FilmSelectionModel: ObservableObject {
             return nil
         }
 
+        let restoredSlotID: CameraSlotID? = snapshot.activeCameraSlotIDRaw
+            .flatMap { CameraSlotID(rawValue: $0) }
+
         if let selectedPresetFilmID = snapshot.selectedPresetFilmID {
             guard let restoredFilm = presetFilms.first(where: { $0.id == selectedPresetFilmID }) else {
                 activeContext.selectedPresetFilm = nil
@@ -134,6 +151,7 @@ final class FilmSelectionModel: ObservableObject {
                     baseShutterSeconds: nil,
                     ndStep: nil,
                     scaleMode: snapshot.restoredScaleMode,
+                    activeCameraSlotID: restoredSlotID,
                     hadInvalidFilmReference: true
                 )
             }
@@ -148,6 +166,7 @@ final class FilmSelectionModel: ObservableObject {
             baseShutterSeconds: snapshot.baseShutterSeconds,
             ndStep: snapshot.restoredNDStep,
             scaleMode: snapshot.restoredScaleMode,
+            activeCameraSlotID: restoredSlotID,
             hadInvalidFilmReference: false
         )
     }
@@ -173,7 +192,19 @@ final class FilmSelectionModel: ObservableObject {
                 // full-stop scale (kept for tests / the future Settings
                 // preference) writes the field. Restore defaults missing
                 // values back to `.oneThirdStop` per the spec.
-                exposureScaleMode: scaleMode == .oneThirdStop ? nil : scaleMode.rawValue
+                exposureScaleMode: scaleMode == .oneThirdStop ? nil : scaleMode.rawValue,
+                // Persist `nil` for the default `camera1` slot so
+                // single-slot users (and PTIMER-79/PTIMER-80 era
+                // snapshots that never set a slot id) round-trip
+                // byte-for-byte. Only Camera 2-4 snapshots carry the
+                // new field.
+                activeCameraSlotIDRaw: {
+                    guard let slotID = currentActiveCameraSlotID(),
+                          slotID != .camera1 else {
+                        return nil
+                    }
+                    return slotID.rawValue
+                }()
             )
         )
     }

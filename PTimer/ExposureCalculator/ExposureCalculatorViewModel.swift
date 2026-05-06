@@ -71,6 +71,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
     }
     @Published private(set) var timers: [RunningTimerItem] = []
+    /// Active camera-slot id mirrored from `cameraSlotSessionModel`.
+    /// The slot pager UI binds to this so a slot switch driven by
+    /// any path (UI tap, test action, future deep-link) flows through
+    /// the same observed surface.
+    @Published private(set) var activeCameraSlotID: CameraSlotID = .camera1
 
     /// Calculation responsibility (calculator instance, inputs, result).
     /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
@@ -93,6 +98,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// single source of truth.
     private let filmSelectionModel: FilmSelectionModel
     private var presetFilms: [FilmIdentity] { filmSelectionModel.presetFilms }
+    /// Camera-slot session state: which slot is currently active.
+    /// Slot navigation is gesture-driven via the workspace TabView;
+    /// the ViewModel exposes a `selectCameraSlot(_:)` entry point so
+    /// every transition is single-rooted on this model.
+    private let cameraSlotSessionModel: CameraSlotSessionModel
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
 
@@ -127,7 +137,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             calculatorModel: calculatorModel,
             reciprocityModel: ReciprocityModel(),
             timerWorkspaceModel: timerWorkspaceModel,
-            filmSelectionModel: filmSelectionModel
+            filmSelectionModel: filmSelectionModel,
+            cameraSlotSessionModel: CameraSlotSessionModel()
         )
     }
 
@@ -140,12 +151,16 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel: CalculatorModel,
         reciprocityModel: ReciprocityModel,
         timerWorkspaceModel: TimerWorkspaceModel,
-        filmSelectionModel: FilmSelectionModel
+        filmSelectionModel: FilmSelectionModel,
+        cameraSlotSessionModel: CameraSlotSessionModel? = nil
     ) {
+        let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
         self.filmSelectionModel = filmSelectionModel
+        self.cameraSlotSessionModel = resolvedSlotSession
+        self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: dependencies.lockScreenTargetExposer
         )
@@ -160,6 +175,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$timers)
         filmSelectionModel.$activeContext
             .assign(to: &$activeCalculatorContext)
+        resolvedSlotSession.$activeSlotID
+            .assign(to: &$activeCameraSlotID)
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -170,9 +187,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
         contextPersistenceStore: ExposureCalculatorContextPersistenceStoring = NoOpExposureCalculatorContextPersistenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
-        lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer()
+        lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
+        cameraSlotSessionModel: CameraSlotSessionModel? = nil
     ) {
         let calculatorModel = CalculatorModel(calculator: calculator)
+        let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         self.calculatorModel = calculatorModel
         self.reciprocityModel = ReciprocityModel()
         self.timerWorkspaceModel = TimerWorkspaceModel(
@@ -189,6 +208,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             currentNDStep: { calculatorModel.ndStep },
             currentScaleMode: { calculatorModel.scaleMode }
         )
+        self.cameraSlotSessionModel = resolvedSlotSession
+        self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: lockScreenTargetExposer
         )
@@ -197,6 +218,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$timers)
         filmSelectionModel.$activeContext
             .assign(to: &$activeCalculatorContext)
+        resolvedSlotSession.$activeSlotID
+            .assign(to: &$activeCameraSlotID)
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -482,6 +505,87 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     var canStartFilmCorrectedExposureTimer: Bool {
         filmModeExposureResultState?.correctedExposureAction.canStartTimer == true
+    }
+
+    // MARK: - Camera slots
+
+    /// Slots exposed to the slot pager in shipping order. The first
+    /// implementation surfaces all four slots through this same array;
+    /// a future configuration step can return a subset (still
+    /// honoring the "minimum two" requirement enforced by the
+    /// session model itself).
+    var availableCameraSlots: [CameraSlotID] {
+        cameraSlotSessionModel.availableSlots
+    }
+
+    /// Identity for the currently active slot. Includes the stable
+    /// id and the user-facing display label.
+    var activeCameraSlot: CameraSlotIdentity {
+        cameraSlotSessionModel.activeSlot
+    }
+
+    /// Identity for an arbitrary slot id. Used by the slot pager to
+    /// render the display label without reaching into the session
+    /// model directly.
+    func cameraSlotIdentity(for slotID: CameraSlotID) -> CameraSlotIdentity {
+        cameraSlotSessionModel.identity(for: slotID)
+    }
+
+    /// Zero-based index of the active slot inside
+    /// `availableCameraSlots`. Drives the page indicator dot
+    /// rendering and the swipe-direction math.
+    var activeCameraSlotIndex: Int {
+        availableCameraSlots.firstIndex(of: activeCameraSlotID) ?? 0
+    }
+
+    /// VoiceOver value text for the slot pager.
+    /// Format: `"Camera 2, 2 of 4"` — slot identity followed by
+    /// position in the bounded set so a blind user can hear both at
+    /// once.
+    var activeCameraSlotPageText: String {
+        let count = availableCameraSlots.count
+        let position = activeCameraSlotIndex + 1
+        return "\(activeCameraSlot.displayName), \(position) of \(count)"
+    }
+
+    /// Switches the active camera slot. Per-slot calculator-state
+    /// preservation is not part of this iteration — every page
+    /// currently renders the same live calculator state, so a slot
+    /// switch is a pure id flip on the session model. The next
+    /// commit replaces this with snapshot capture/load.
+    func selectCameraSlot(_ targetSlotID: CameraSlotID) {
+        cameraSlotSessionModel.setActiveSlot(targetSlotID)
+    }
+
+    /// Advances to the next slot in `availableCameraSlots`. No-op
+    /// when the active slot is already the last available slot —
+    /// the pager is bounded, not wrapping.
+    func selectNextCameraSlot() {
+        let slots = availableCameraSlots
+        let index = activeCameraSlotIndex
+        guard index + 1 < slots.count else { return }
+        selectCameraSlot(slots[index + 1])
+    }
+
+    /// Reverses to the previous slot in `availableCameraSlots`.
+    /// No-op at the first slot for the same bounded-pager reason.
+    func selectPreviousCameraSlot() {
+        let slots = availableCameraSlots
+        let index = activeCameraSlotIndex
+        guard index - 1 >= 0 else { return }
+        selectCameraSlot(slots[index - 1])
+    }
+
+    /// Per-slot view-facing snapshot the workspace TabView consumes
+    /// for a single page. This iteration carries identity only;
+    /// every page renders the same live calculator data.
+    func cameraSlotPageState(for slotID: CameraSlotID) -> CameraSlotPageState {
+        let identity = cameraSlotSessionModel.identity(for: slotID)
+        return CameraSlotPageState(
+            slotID: slotID,
+            cameraDisplayName: identity.displayName,
+            isActive: slotID == cameraSlotSessionModel.activeSlotID
+        )
     }
 
     func selectEntry(_ entry: FilmSelectorEntry) {

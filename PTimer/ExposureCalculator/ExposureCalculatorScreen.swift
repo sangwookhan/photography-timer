@@ -50,7 +50,6 @@ struct ExposureCalculatorScreen: View {
         )
 
         assertNoKoreanUIStrings([
-            "Exposure",
             "View All"
         ])
     }
@@ -148,65 +147,49 @@ private struct ExposureWorkspaceMainContent: View {
     var body: some View {
         ZStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 0) {
-                HeaderView(
-                    selectorEntries: viewModel.filmSelectorEntries,
-                    selectedFilmID: viewModel.selectedSelectorEntryID,
-                    filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
-                    onToggleSelector: { isFilmSelectorPresented.toggle() },
-                    showsResetAction: viewModel.canResetFilmModeWorkingContext,
-                    onResetFilmModeContext: viewModel.resetFilmModeWorkingContext,
-                    style: style
-                )
-                VariableSectionView(
-                    baseShutter: $viewModel.baseShutter,
-                    ndStep: $viewModel.ndStep,
-                    shutterSpeeds: viewModel.pickerShutterStepSeconds,
-                    ndStepValues: viewModel.pickerNDSteps,
-                    formatShutter: viewModel.formatShutterStepLabel,
-                    formatNDStop: viewModel.formatNDStop,
-                    onContinuousBaseShutterChange: { value in
-                        Task { @MainActor in
-                            viewModel.updateLiveBaseShutter(value)
-                        }
-                    },
-                    onContinuousNDStepChange: { value in
-                        Task { @MainActor in
-                            viewModel.updateLiveNDStep(value)
-                        }
-                    },
-                    onBaseShutterInteractionEnd: {
-                        Task { @MainActor in
-                            viewModel.clearLiveBaseShutterPreview()
-                        }
-                    },
-                    onNDStopInteractionEnd: {
-                        Task { @MainActor in
-                            viewModel.clearLiveNDStopPreview()
-                        }
-                    },
-                    style: style
-                )
+                TabView(selection: slotSelectionBinding) {
+                    ForEach(viewModel.availableCameraSlots, id: \.self) { slotID in
+                        CameraSlotCalculatorPage(
+                            pageState: viewModel.cameraSlotPageState(for: slotID),
+                            viewModel: viewModel,
+                            style: style,
+                            onToggleFilmSelector: {
+                                isFilmSelectorPresented.toggle()
+                            },
+                            onShowFilmDetails: { details in
+                                presentedFilmDetails = details
+                            }
+                        )
+                        .tag(slotID)
+                    }
+                }
+                // Page style with an always-hidden index strip — we
+                // render our own `CameraSlotPagerIndicator` below the
+                // TabView so the dots stay aligned with the
+                // calculator card stack.
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .indexViewStyle(.page(backgroundDisplayMode: .never))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                ResultSectionView(
-                    isFilmWorkflowActive: viewModel.isFilmWorkflowActive,
-                    calculationResult: viewModel.calculationResult,
-                    filmModeExposureResultState: viewModel.filmModeExposureResultState,
-                    canShowFilmDetails: viewModel.canShowFilmDetails,
-                    formatTimeDisplay: viewModel.formatTimeDisplay,
-                    formatReciprocityTimeDisplay: viewModel.formatReciprocityTimeDisplay,
-                    canStartTimer: viewModel.canStartTimer,
-                    onStartTimer: viewModel.startTimer,
-                    onStartFilmAdjustedShutterTimer: viewModel.startFilmAdjustedShutterTimer,
-                    onStartFilmCorrectedExposureTimer: viewModel.startFilmCorrectedExposureTimer,
-                    onShowFilmDetails: { presentedFilmDetails = viewModel.filmModeDetailsDisplayState },
-                    style: style
+                CameraSlotPagerIndicator(
+                    count: viewModel.availableCameraSlots.count,
+                    activeIndex: viewModel.activeCameraSlotIndex
                 )
-
-                Spacer(minLength: style.resultFlowSpacerMinLength)
 
                 Color.clear
                     .frame(height: style.workspaceSeparation)
                     .accessibilityHidden(true)
+            }
+            // VoiceOver users get explicit slot-step actions on the
+            // workspace container in addition to TabView's
+            // gesture-driven paging — the dot indicator stays
+            // non-interactive so the slot transition source is
+            // single-rooted on the workspace itself.
+            .accessibilityAction(named: Text("Next camera slot")) {
+                viewModel.selectNextCameraSlot()
+            }
+            .accessibilityAction(named: Text("Previous camera slot")) {
+                viewModel.selectPreviousCameraSlot()
             }
 
             if isFilmSelectorPresented {
@@ -249,6 +232,19 @@ private struct ExposureWorkspaceMainContent: View {
         .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
     }
 
+    /// Binding that bridges `TabView`'s selection to the ViewModel's
+    /// single state-transition entry point. `selectCameraSlot(_:)`
+    /// remains the source of truth — TabView's gesture paging fires
+    /// the setter once after the snap completes.
+    private var slotSelectionBinding: Binding<CameraSlotID> {
+        Binding(
+            get: { viewModel.activeCameraSlotID },
+            set: { newSelection in
+                viewModel.selectCameraSlot(newSelection)
+            }
+        )
+    }
+
     private var selectorOverlayTopPadding: CGFloat {
         switch style {
         case .regular:
@@ -258,6 +254,88 @@ private struct ExposureWorkspaceMainContent: View {
         case .dense:
             return 86
         }
+    }
+}
+
+/// Single calculator workspace page consumed by the slot `TabView`.
+/// This iteration binds every page to the live calculator state, so
+/// every slot's page renders the same data — slot navigation works
+/// (titles change, indicator advances, swipe pages slide) but
+/// per-slot state preservation is not yet wired in. The next commit
+/// adds per-slot data binding via the page state's snapshot fields.
+private struct CameraSlotCalculatorPage: View {
+    let pageState: CameraSlotPageState
+    @ObservedObject var viewModel: ExposureCalculatorViewModel
+    let style: ExposureWorkspaceMainLayoutStyle
+    let onToggleFilmSelector: () -> Void
+    let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HeaderView(
+                cameraSlotTitle: pageState.cameraDisplayName,
+                activeCameraSlotID: pageState.slotID,
+                selectorEntries: viewModel.filmSelectorEntries,
+                selectedFilmID: viewModel.selectedSelectorEntryID,
+                filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
+                onToggleSelector: onToggleFilmSelector,
+                showsResetAction: viewModel.canResetFilmModeWorkingContext,
+                onResetFilmModeContext: viewModel.resetFilmModeWorkingContext,
+                style: style
+            )
+            VariableSectionView(
+                baseShutter: $viewModel.baseShutter,
+                ndStep: $viewModel.ndStep,
+                shutterSpeeds: viewModel.pickerShutterStepSeconds,
+                ndStepValues: viewModel.pickerNDSteps,
+                formatShutter: viewModel.formatShutterStepLabel,
+                formatNDStop: viewModel.formatNDStop,
+                onContinuousBaseShutterChange: { value in
+                    Task { @MainActor in
+                        viewModel.updateLiveBaseShutter(value)
+                    }
+                },
+                onContinuousNDStepChange: { value in
+                    Task { @MainActor in
+                        viewModel.updateLiveNDStep(value)
+                    }
+                },
+                onBaseShutterInteractionEnd: {
+                    Task { @MainActor in
+                        viewModel.clearLiveBaseShutterPreview()
+                    }
+                },
+                onNDStopInteractionEnd: {
+                    Task { @MainActor in
+                        viewModel.clearLiveNDStopPreview()
+                    }
+                },
+                style: style
+            )
+
+            ResultSectionView(
+                isFilmWorkflowActive: viewModel.isFilmWorkflowActive,
+                calculationResult: viewModel.calculationResult,
+                filmModeExposureResultState: viewModel.filmModeExposureResultState,
+                canShowFilmDetails: viewModel.canShowFilmDetails,
+                formatTimeDisplay: viewModel.formatTimeDisplay,
+                formatReciprocityTimeDisplay: viewModel.formatReciprocityTimeDisplay,
+                canStartTimer: viewModel.canStartTimer,
+                onStartTimer: viewModel.startTimer,
+                onStartFilmAdjustedShutterTimer: viewModel.startFilmAdjustedShutterTimer,
+                onStartFilmCorrectedExposureTimer: viewModel.startFilmCorrectedExposureTimer,
+                onShowFilmDetails: {
+                    if let details = viewModel.filmModeDetailsDisplayState {
+                        onShowFilmDetails(details)
+                    }
+                },
+                style: style
+            )
+
+            Spacer(minLength: style.resultFlowSpacerMinLength)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityIdentifier("camera-slot-page-\(pageState.slotID.rawValue)")
     }
 }
 
@@ -668,6 +746,17 @@ private struct PickerColumnLayout {
 }
 
 private struct HeaderView: View {
+    /// Active camera slot's display name. Used as the screen's main
+    /// title so the workspace itself reads as "the page for this
+    /// camera." Sourced from the slot identity's computed
+    /// `displayName` so a future custom-name surface (out of scope
+    /// here) can change the displayed text without touching this
+    /// view.
+    let cameraSlotTitle: String
+    /// Identity of the slot driving the title. Wired to
+    /// `.contentTransition` so a slot switch crossfades the title
+    /// rather than swapping it instantly.
+    let activeCameraSlotID: CameraSlotID
     let selectorEntries: [FilmSelectorEntry]
     let selectedFilmID: String?
     let filmSelectionDisplayState: FilmSelectionDisplayState
@@ -678,8 +767,13 @@ private struct HeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.headerContentSpacing) {
-            Text("Exposure")
+            Text(cameraSlotTitle)
                 .font(style.headerTitleFont)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.18), value: activeCameraSlotID)
+                .accessibilityIdentifier("camera-slot-title")
 
             FilmSelectionRow(
                 selectorEntries: selectorEntries,

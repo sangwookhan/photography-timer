@@ -95,6 +95,13 @@
 		A0000000000000000000015A /* ExposureScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000015B /* ExposureScaleTests.swift */; };
 		A00000000000000000000160 /* OneThirdStopExposureModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000161 /* OneThirdStopExposureModeTests.swift */; };
 		A00000000000000000000162 /* ExposureScaleModeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000163 /* ExposureScaleModeUITests.swift */; };
+		A00000000000000000000202 /* CameraSlotIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000201 /* CameraSlotIdentity.swift */; };
+		A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000203 /* CameraSlotPagerIndicator.swift */; };
+		A00000000000000000000206 /* CameraSlotPageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000205 /* CameraSlotPageState.swift */; };
+		A00000000000000000000208 /* CameraSlotSessionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000207 /* CameraSlotSessionModel.swift */; };
+		A0000000000000000000020B /* CameraSlotIdentityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020A /* CameraSlotIdentityTests.swift */; };
+		A0000000000000000000020D /* CameraSlotSessionModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020C /* CameraSlotSessionModelTests.swift */; };
+		A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -221,6 +228,13 @@
 		A00000000000000000000161 /* OneThirdStopExposureModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneThirdStopExposureModeTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000163 /* ExposureScaleModeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleModeUITests.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = docs; sourceTree = "<group>"; };
+		A00000000000000000000201 /* CameraSlotIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotIdentity.swift; sourceTree = "<group>"; };
+		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
+		A00000000000000000000205 /* CameraSlotPageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPageState.swift; sourceTree = "<group>"; };
+		A00000000000000000000207 /* CameraSlotSessionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionModel.swift; sourceTree = "<group>"; };
+		A0000000000000000000020A /* CameraSlotIdentityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotIdentityTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000020C /* CameraSlotSessionModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionModelTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelCameraSlotsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -308,6 +322,7 @@
 				A00000000000000000000107 /* FilmModeDetailsPresenter.swift */,
 				A00000000000000000000148 /* FilmModeDetailsView.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
+				A00000000000000000000209 /* CameraSlot */,
 				A000000000000000000000F0 /* FilmContext */,
 				A00000000000000000000127 /* Models */,
 				A000000000000000000000B6 /* PresetFilmCatalog.swift */,
@@ -318,6 +333,16 @@
 			path = ExposureCalculator;
 			sourceTree = "<group>";
 		};
+		A00000000000000000000209 /* CameraSlot */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000201 /* CameraSlotIdentity.swift */,
+				A00000000000000000000205 /* CameraSlotPageState.swift */,
+				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
+			);
+			path = CameraSlot;
+			sourceTree = "<group>";
+		};
 		A00000000000000000000127 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -326,6 +351,7 @@
 				A00000000000000000000135 /* TimerWorkspaceModel.swift */,
 				A00000000000000000000139 /* FilmSelectionModel.swift */,
 				A00000000000000000000144 /* RunningTimerItem.swift */,
+				A00000000000000000000207 /* CameraSlotSessionModel.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -468,6 +494,9 @@
 				A0000000000000000000015B /* ExposureScaleTests.swift */,
 				A00000000000000000000161 /* OneThirdStopExposureModeTests.swift */,
 				A00000000000000000000163 /* ExposureScaleModeUITests.swift */,
+				A0000000000000000000020A /* CameraSlotIdentityTests.swift */,
+				A0000000000000000000020C /* CameraSlotSessionModelTests.swift */,
+				A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -682,6 +711,10 @@
 				A00000000000000000000147 /* TimerMetadataPersistence.swift in Sources */,
 				A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */,
 				A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */,
+				A00000000000000000000202 /* CameraSlotIdentity.swift in Sources */,
+				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,
+				A00000000000000000000206 /* CameraSlotPageState.swift in Sources */,
+				A00000000000000000000208 /* CameraSlotSessionModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -730,6 +763,9 @@
 				A0000000000000000000015A /* ExposureScaleTests.swift in Sources */,
 				A00000000000000000000160 /* OneThirdStopExposureModeTests.swift in Sources */,
 				A00000000000000000000162 /* ExposureScaleModeUITests.swift in Sources */,
+				A0000000000000000000020B /* CameraSlotIdentityTests.swift in Sources */,
+				A0000000000000000000020D /* CameraSlotSessionModelTests.swift in Sources */,
+				A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

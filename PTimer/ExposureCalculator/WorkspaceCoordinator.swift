@@ -18,6 +18,7 @@ final class WorkspaceCoordinator: ObservableObject {
     let reciprocityModel: ReciprocityModel
     let timerWorkspaceModel: TimerWorkspaceModel
     let filmSelectionModel: FilmSelectionModel
+    let cameraSlotSessionModel: CameraSlotSessionModel
     let viewModel: ExposureCalculatorViewModel
 
     init(dependencies: ViewModelDependencies) {
@@ -37,16 +38,19 @@ final class WorkspaceCoordinator: ObservableObject {
             currentNDStep: { calculatorModel.ndStep },
             currentScaleMode: { calculatorModel.scaleMode }
         )
+        let cameraSlotSessionModel = CameraSlotSessionModel()
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
         self.filmSelectionModel = filmSelectionModel
+        self.cameraSlotSessionModel = cameraSlotSessionModel
         self.viewModel = ExposureCalculatorViewModel(
             dependencies: dependencies,
             calculatorModel: calculatorModel,
             reciprocityModel: reciprocityModel,
             timerWorkspaceModel: timerWorkspaceModel,
-            filmSelectionModel: filmSelectionModel
+            filmSelectionModel: filmSelectionModel,
+            cameraSlotSessionModel: cameraSlotSessionModel
         )
     }
 }

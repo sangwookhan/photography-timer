@@ -97,6 +97,143 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
         XCTAssertFalse(snapshot.compactItems.map(\.identityCue.markerText).contains("T4"))
     }
 
+    // MARK: - Camera-slot + film identity surfacing
+
+    @MainActor
+    func testCompactCueShowsCameraShortLabelAndFilmDescriptorWhenSnapshotPresent() throws {
+        let timer = makeIdentityTimer(
+            cameraSlot: CameraSlotIdentity(id: .camera2),
+            filmDisplayName: "CHS 100 II",
+            exposureSource: .filmAdjustedShutter
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let item = try XCTUnwrap(snapshot.compactItems.first)
+
+        XCTAssertEqual(item.identityCue.markerText, "C2")
+        XCTAssertEqual(item.identityCue.fullCameraLabel, "Camera 2")
+        XCTAssertEqual(item.identityCue.filmDescriptor, "CHS 100 II")
+        XCTAssertEqual(item.identityCue.sourceLabel, "Adjusted Shutter")
+        XCTAssertEqual(item.identityFilmText, "CHS 100 II")
+    }
+
+    @MainActor
+    func testCompactCueRendersNoFilmForDigitalTimer() throws {
+        let timer = makeIdentityTimer(
+            cameraSlot: CameraSlotIdentity(id: .camera1),
+            filmDisplayName: nil,
+            exposureSource: .digitalResult
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let item = try XCTUnwrap(snapshot.compactItems.first)
+
+        XCTAssertEqual(item.identityCue.markerText, "C1")
+        XCTAssertEqual(item.identityCue.filmDescriptor, "No film")
+        XCTAssertEqual(item.identityFilmText, "No film")
+    }
+
+    @MainActor
+    func testLargeTitleIsCameraDotFilmAndSubtitleCarriesExposureSource() throws {
+        let timer = makeIdentityTimer(
+            cameraSlot: CameraSlotIdentity(id: .camera2),
+            filmDisplayName: "CHS 100 II",
+            exposureSource: .filmAdjustedShutter,
+            order: 7,
+            name: "16 stops - 832255.3s"
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let row = try XCTUnwrap(snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(row.title, "Camera 2 · CHS 100 II")
+        XCTAssertEqual(row.identitySubtitle, "Adjusted Shutter · 16 stops - 832255.3s")
+    }
+
+    @MainActor
+    func testLargeTitleShowsNoFilmForDigitalTimerWithSlot() throws {
+        let timer = makeIdentityTimer(
+            cameraSlot: CameraSlotIdentity(id: .camera4),
+            filmDisplayName: nil,
+            exposureSource: .digitalResult
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let row = try XCTUnwrap(snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(row.title, "Camera 4 · No film")
+    }
+
+    @MainActor
+    func testLargeVoiceOverLabelIncludesCameraFilmSourceAndStatus() throws {
+        let timer = makeIdentityTimer(
+            cameraSlot: CameraSlotIdentity(id: .camera2),
+            filmDisplayName: "CHS 100 II",
+            exposureSource: .filmAdjustedShutter,
+            status: .running
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let row = try XCTUnwrap(snapshot.sections.first?.items.first)
+
+        XCTAssertEqual(
+            row.voiceOverLabel,
+            "Camera 2, CHS 100 II, Adjusted Shutter timer, running"
+        )
+    }
+
+    @MainActor
+    func testTwoCameraSlotsGetDistinctTints() {
+        let camera1Timer = makeIdentityTimer(
+            id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+            cameraSlot: CameraSlotIdentity(id: .camera1),
+            filmDisplayName: nil,
+            exposureSource: .digitalResult
+        )
+        let camera2Timer = makeIdentityTimer(
+            id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
+            cameraSlot: CameraSlotIdentity(id: .camera2),
+            filmDisplayName: nil,
+            exposureSource: .digitalResult
+        )
+
+        let snapshot = makeSnapshot(from: [camera1Timer, camera2Timer])
+        let cuesByMarker = Dictionary(
+            uniqueKeysWithValues: snapshot.compactItems.map { ($0.identityCue.markerText, $0.identityCue) }
+        )
+        let camera1Cue = try? XCTUnwrap(cuesByMarker["C1"])
+        let camera2Cue = try? XCTUnwrap(cuesByMarker["C2"])
+
+        XCTAssertNotNil(camera1Cue)
+        XCTAssertNotNil(camera2Cue)
+        XCTAssertNotEqual(camera1Cue?.tintSlot, camera2Cue?.tintSlot)
+    }
+
+    @MainActor
+    func testFallbackToOrderMarkerWhenSnapshotAbsent() throws {
+        let timer = RunningTimerItem(
+            id: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
+            order: 5,
+            name: "Legacy",
+            basisSummary: "manual",
+            duration: 30,
+            startDate: Date(timeIntervalSince1970: 1),
+            endDate: Date(timeIntervalSince1970: 31),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: Date(timeIntervalSince1970: 1)
+        )
+
+        let snapshot = makeSnapshot(from: [timer])
+        let item = try XCTUnwrap(snapshot.compactItems.first)
+
+        XCTAssertEqual(item.identityCue.markerText, "T5")
+        XCTAssertNil(item.identityCue.fullCameraLabel)
+        XCTAssertNil(item.identityCue.filmDescriptor)
+        XCTAssertNil(item.identityFilmText)
+    }
+
     private func sampleTimers() -> [RunningTimerItem] {
         let now = Date(timeIntervalSince1970: 1_000)
 
@@ -154,6 +291,39 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
                 referenceDate: now
             )
         ]
+    }
+
+    /// Builds a single-running timer with a captured identity snapshot.
+    /// Used by the identity-surfacing tests so each test stays
+    /// readable about which slot/film/source it cares about.
+    private func makeIdentityTimer(
+        id: UUID = UUID(uuidString: "12345678-1234-1234-1234-123456789abc")!,
+        cameraSlot: CameraSlotIdentity?,
+        filmDisplayName: String?,
+        filmProfileQualifier: String? = nil,
+        exposureSource: ExposureTimerSource,
+        order: Int = 1,
+        name: String = "Test - 60s",
+        status: TimerStatus = .running
+    ) -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 1_000)
+        return RunningTimerItem(
+            id: id,
+            order: order,
+            name: name,
+            basisSummary: "Base 1/30s · 6 stops",
+            duration: 60,
+            startDate: now,
+            endDate: status == .running ? now.addingTimeInterval(45) : nil,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: status,
+            referenceDate: now,
+            cameraSlot: cameraSlot,
+            filmDisplayName: filmDisplayName,
+            filmProfileQualifier: filmProfileQualifier,
+            exposureSource: exposureSource
+        )
     }
 
     private func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {

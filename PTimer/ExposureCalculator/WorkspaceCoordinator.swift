@@ -18,6 +18,7 @@ final class WorkspaceCoordinator: ObservableObject {
     let reciprocityModel: ReciprocityModel
     let timerWorkspaceModel: TimerWorkspaceModel
     let filmSelectionModel: FilmSelectionModel
+    let cameraSlotSessionModel: CameraSlotSessionModel
     let viewModel: ExposureCalculatorViewModel
 
     init(dependencies: ViewModelDependencies) {
@@ -30,23 +31,31 @@ final class WorkspaceCoordinator: ObservableObject {
                 "Timer - \(calculatorModel.calculator.formatShutter(duration))"
             }
         )
+        // The slot session model is built before `FilmSelectionModel`
+        // so the film-selection closure can read the active slot at
+        // persistence time — that lets the persisted calculator
+        // context capture which slot owns its values.
+        let cameraSlotSessionModel = CameraSlotSessionModel()
         let filmSelectionModel = FilmSelectionModel(
             presetFilms: dependencies.presetFilms,
             contextPersistenceStore: dependencies.contextPersistenceStore,
             currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
             currentNDStep: { calculatorModel.ndStep },
-            currentScaleMode: { calculatorModel.scaleMode }
+            currentScaleMode: { calculatorModel.scaleMode },
+            currentActiveCameraSlotID: { cameraSlotSessionModel.activeSlotID }
         )
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
         self.filmSelectionModel = filmSelectionModel
+        self.cameraSlotSessionModel = cameraSlotSessionModel
         self.viewModel = ExposureCalculatorViewModel(
             dependencies: dependencies,
             calculatorModel: calculatorModel,
             reciprocityModel: reciprocityModel,
             timerWorkspaceModel: timerWorkspaceModel,
-            filmSelectionModel: filmSelectionModel
+            filmSelectionModel: filmSelectionModel,
+            cameraSlotSessionModel: cameraSlotSessionModel
         )
     }
 }

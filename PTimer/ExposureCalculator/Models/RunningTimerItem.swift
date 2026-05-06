@@ -24,6 +24,80 @@ struct RunningTimerItem: Identifiable, Equatable {
     let pausedAt: Date?
     let status: TimerStatus
     let referenceDate: Date
+    /// Camera slot the timer was started from. Optional so manual or
+    /// non-camera-slot timers (e.g., timers restored from older
+    /// snapshots without slot identity) stay decoupled from slot
+    /// identity. Kept as a separate axis from the timer's
+    /// exposure-source tag.
+    let cameraSlot: CameraSlotIdentity?
+    /// Canonical film stock name captured at start time.
+    /// `nil` indicates a digital workflow (no film selected).
+    let filmDisplayName: String?
+    /// Optional profile qualifier (e.g. `"Unofficial"`) captured at
+    /// start time so a later switch of the active film does not
+    /// retroactively rewrite this timer's identity.
+    let filmProfileQualifier: String?
+    /// Which exposure stream this timer was started from. Optional so
+    /// older snapshots without the field decode unchanged; UI surfaces
+    /// fall back gracefully when absent.
+    let exposureSource: ExposureTimerSource?
+
+    init(
+        id: UUID,
+        order: Int,
+        name: String,
+        basisSummary: String,
+        duration: TimeInterval,
+        startDate: Date,
+        endDate: Date?,
+        pausedRemainingTime: TimeInterval?,
+        pausedAt: Date?,
+        status: TimerStatus,
+        referenceDate: Date,
+        cameraSlot: CameraSlotIdentity? = nil,
+        filmDisplayName: String? = nil,
+        filmProfileQualifier: String? = nil,
+        exposureSource: ExposureTimerSource? = nil
+    ) {
+        self.id = id
+        self.order = order
+        self.name = name
+        self.basisSummary = basisSummary
+        self.duration = duration
+        self.startDate = startDate
+        self.endDate = endDate
+        self.pausedRemainingTime = pausedRemainingTime
+        self.pausedAt = pausedAt
+        self.status = status
+        self.referenceDate = referenceDate
+        self.cameraSlot = cameraSlot
+        self.filmDisplayName = filmDisplayName
+        self.filmProfileQualifier = filmProfileQualifier
+        self.exposureSource = exposureSource
+    }
+
+    /// Convenience packaging of the slot + film + source identity
+    /// fields. Used by the workspace snapshot to compose dock/sheet
+    /// identity cues without re-deriving the same composition rule
+    /// in two places.
+    ///
+    /// Returns `nil` when the timer has no exposure source — that's
+    /// the "manual" path (external precomputed shutter) which must
+    /// not inherit camera/film/source identity. Identity-bearing
+    /// timers always carry a non-nil `exposureSource`; the snapshot
+    /// is built from those fields and never has to fabricate one.
+    var identitySnapshot: ExposureTimerIdentitySnapshot? {
+        guard let exposureSource else {
+            return nil
+        }
+
+        return ExposureTimerIdentitySnapshot(
+            cameraSlot: cameraSlot,
+            filmDisplayName: filmDisplayName,
+            filmProfileQualifier: filmProfileQualifier,
+            exposureSource: exposureSource
+        )
+    }
 
     var remainingTime: TimeInterval {
         assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")

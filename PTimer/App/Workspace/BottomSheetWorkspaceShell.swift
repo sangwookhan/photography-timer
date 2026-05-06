@@ -321,6 +321,21 @@ private struct CompactTimerMiniCardView: View {
                     .minimumScaleFactor(0.85)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 2)
+            } else if let filmText = item.identityFilmText {
+                // Surface the film/digital descriptor inline so the
+                // photographer can read identity from the compact
+                // dock without expanding. Uses the same styling slot
+                // the relative-time text occupies for completed
+                // timers — only one of the two appears per card.
+                Text(filmText)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(compactTertiaryTextColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
+                    .padding(.horizontal, 2)
+                    .accessibilityIdentifier("bottom-sheet-compact-mini-card-film-\(item.id.uuidString)")
             } else {
                 Spacer(minLength: 6)
             }
@@ -749,14 +764,24 @@ private struct LargeWorkspaceTimerRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if let title = item.title {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                VStack(alignment: .leading, spacing: 3) {
+                    if let title = item.title {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .accessibilityIdentifier("bottom-sheet-large-row-title-\(item.id.uuidString)")
+                    }
+                    if let subtitle = item.identitySubtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .accessibilityIdentifier("bottom-sheet-large-row-subtitle-\(item.id.uuidString)")
+                    }
                 }
-
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 StatusChip(status: item.status, label: item.statusLabel, size: .regular)
             }
@@ -841,6 +866,9 @@ private struct LargeWorkspaceTimerRowView: View {
                     lineWidth: isFocused ? 1.5 : 1
                 )
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(item.voiceOverLabel)
+        .accessibilityValue(item.remainingText)
         .accessibilityIdentifier(rowAccessibilityIdentifier)
     }
 

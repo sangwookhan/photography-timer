@@ -71,7 +71,7 @@ computed properties on the facade, not stored business state.
 Directory: `ExposureCalculator/Models/`. Plus
 `FilmModeDetailsPresenter.swift`.
 
-Four `@Observable` feature models, each owning one slice of state:
+Five `@Observable` feature models, each owning one slice of state:
 
 - **`CalculatorModel`** — calculator inputs and pure ND calculation.
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
@@ -79,10 +79,18 @@ Four `@Observable` feature models, each owning one slice of state:
   lifecycle commands around `TimerManager`.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
+- **`CameraSlotSessionModel`** — active camera-slot identity plus the
+  per-slot calculator snapshot for inactive slots. The active slot's
+  live state remains on `CalculatorModel` + `FilmSelectionModel`; the
+  session model only stores the inactive slot snapshots and the
+  `activeSlotID`. Snapshot capture and load on slot switch are
+  orchestrated by the view-model facade (the only place that already
+  reads/writes both `CalculatorModel` and `FilmSelectionModel` in one
+  step).
 
-The four feature models do not import each other. Cross-model wiring
-lives on `WorkspaceCoordinator`. A model that consumes another model's
-state through an opaque closure parameter
+The feature models do not import each other. Cross-model wiring lives
+on `WorkspaceCoordinator`. A model that consumes another model's state
+through an opaque closure parameter
 (e.g. `currentBaseShutterSeconds: () -> Double`) is permitted but the
 closure shall be supplied by `WorkspaceCoordinator`.
 
@@ -133,6 +141,58 @@ Directory: `ExposureCalculator/FilmContext/`.
 All persistence stores follow a `*Storing` protocol pair pattern with a
 real implementation plus a `NoOp*` implementation that unit tests use.
 
+### 1.7a Camera slot domain
+
+Directory: `ExposureCalculator/CameraSlot/`.
+
+- `CameraSlotIdentity` — `CameraSlotID` enum (`camera1` … `camera4`)
+  plus a stable id + default/custom display label pair. The id is
+  the only value written to timer metadata; the display label is
+  reconstructed on decode and also captured at start time so the
+  workspace can render the timer's slot label without resolving the
+  id back.
+- `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
+  calculator working state (base shutter, ND, scale mode, selected
+  film, profile override). Live-preview overlays
+  (`CalculatorModel.liveBaseShutter` / `liveNDStep`) deliberately
+  stay out of the snapshot — a preview only exists while a wheel
+  drag is in flight on the active slot.
+- `CameraSlotPageState` — per-slot view-facing snapshot consumed by
+  the workspace TabView pages. Active slot reads live calculator
+  state; inactive slots read their preserved snapshot from the
+  session model.
+- `PersistentCameraSlotSession` — on-disk schema
+  (`PersistentCameraSlotSessionSnapshot` +
+  `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
+  session. Stores raw `CameraSlotID` raw values and film/profile
+  ids; the runtime resolves ids back through the preset catalog and
+  falls back to "No film" for any id no longer in the catalog.
+- `CameraSlotSessionPersistenceController` — bridges the runtime
+  `CameraSlotSessionModel` and the on-disk session snapshot. Owns
+  serialise/deserialise so the ViewModel facade stays a thin
+  wiring layer.
+
+Slot session state lives on `CameraSlotSessionModel` (see §1.4). The
+camera-slot identity that gets stamped on a timer flows into
+`PersistentTimerMetadataSnapshot.cameraSlotIDRaw` /
+`cameraSlotDisplayName`; both fields are optional so older snapshots
+without slot identity decode unchanged.
+
+Multi-slot persistence: every slot's calculator snapshot is saved to
+`UserDefaultsCameraSlotSessionPersistenceStore` under a dedicated
+key. On first launch after upgrade, the legacy single-context store
+(`UserDefaultsExposureCalculatorContextPersistenceStore`) is read by
+the ViewModel's restore path; once any state mutation happens, the
+new session snapshot becomes the source of truth and the legacy key
+is ignored.
+
+Exposure-calculated timer identity lives in
+`ExposureCalculator/Models/ExposureTimerIdentity.swift`:
+`ExposureTimerSource` enum + `ExposureTimerIdentitySnapshot` struct.
+The runtime `Timers/` layer carries no exposure-source concept on
+its own — those types describe which exposure computation produced
+the timer, which is a calculator-domain concern.
+
 ### 1.8 Film catalog
 
 Files: `PresetFilmCatalog.swift`,
@@ -172,6 +232,8 @@ maintain a parallel copy.
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerManager` (via `TimerWorkspaceModel`) |
+| Active camera-slot id + inactive slot snapshots | `CameraSlotSessionModel` |
+| Camera-slot identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
 | Calculator context persistence | `UserDefaultsExposureCalculatorContextPersistenceStore` |
@@ -191,7 +253,7 @@ SwiftUI Views
 WorkspaceCoordinator  ─▶  ExposureCalculatorViewModel (facade)
     │                          │
     ▼                          ▼
-CalculatorModel  ReciprocityModel  TimerWorkspaceModel  FilmSelectionModel
+CalculatorModel  ReciprocityModel  TimerWorkspaceModel  FilmSelectionModel  CameraSlotSessionModel
     │                                   │
     ▼                                   ▼
 Domain / Policy  (pure)            TimerManager + persistence + notification
@@ -248,9 +310,11 @@ introduced for the same role shall reuse them.
 Test files under `PTimerTests/` mirror the source layout:
 
 - `ExposureCalculator/` — calculation accuracy, ViewModel state, film
-  catalog loading, four-model unit tests
+  catalog loading, feature-model unit tests
   (`CalculatorModelTests`, `ReciprocityModelTests`,
-  `TimerWorkspaceModelTests`, `FilmSelectionModelTests`).
+  `TimerWorkspaceModelTests`, `FilmSelectionModelTests`,
+  `CameraSlotSessionModelTests`), and the slot-routing facade tests
+  (`ExposureCalculatorViewModelCameraSlotsTests`).
 - `Reciprocity/` — policy evaluation, confidence mapping.
 - `Timers/` — TimerManager lifecycle, time formatting.
 - `App/` — workspace shell behavior.
@@ -272,7 +336,7 @@ discipline. The full taxonomy lives in
 - The `ExposureCalculatorViewModel` facade shall not import
   `ActivityKit`; lock-screen concerns belong in
   `LockScreenTimerCoordinator`.
-- The four feature models shall not import each other by type name.
+- The feature models shall not import each other by type name.
 - A SwiftUI view shall observe at most one feature model.
   Cross-cutting state belongs on `WorkspaceCoordinator`.
 - The reciprocity result shape (the legacy

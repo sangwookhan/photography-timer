@@ -23,7 +23,15 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 ### 1.3 다중 카메라 사진가 (specialization)
 
-같은 장면을 두 대 이상 카메라로 동시에 촬영하는 사진가. 예: reciprocity 보정이 필요한 아날로그 중형 + 보정 불필요한 디지털 바디를 병행. 어떤 timer 가 *어느 컷* 에 속하는지 *한눈에* 식별해야 함. 라벨 없는 큐를 외울 수는 없다.
+한 촬영 세션 안에서 두 대에서 네 대까지 카메라를 운용하는 사진가. 예: reciprocity 보정이 필요한 아날로그 중형 바디를 보정 불필요한 디지털 바디와 병행, 또는 서로 다른 필름이 들어 있는 두 필름 바디 — 각자 자기 reciprocity profile 이 필요한 — 를 동시 사용. 흔한 필드 조합:
+
+- **디지털 + 필름** — 디지털 바디 한 대와 필름 바디 한 대를 컷 단위로 번갈아. 활성 카메라가 바뀔 때마다 calculator 를 매번 재구축 (필름 다시 고르기, base shutter 다시 입력, ND 다시 설정) 하지 않아야 한다.
+- **두 필름, 두 바디** — 예: Portra 400 한 바디 + Acros II 한 바디. 각 카메라가 자기 선택 필름과 자기 reciprocity 결과를 슬롯 전환 사이에 보존해야 한다.
+- **카메라별 다중 동시 timer** — 한 카메라가 장노출을 잡는 사이 사진가가 다른 카메라의 다음 컷을 준비. 실행 중 각 timer 는 어느 카메라 / 어느 컷에 속하는지 사진가가 한눈에 알 수 있을 만큼의 식별 정보를 carry.
+- **빠른 필드 전환** — 구도 변경이 빠르다. 활성 카메라 전환은 settings detour 가 아닌 단일 / compact 제스처여야 하며, 비활성 카메라의 setup 을 reset 하지 않는다.
+- **2~4대 active 카메라** — 폰 화면에 들어맞을 정도로 필드 워크플로우는 작게 유지. 4대를 넘어가면 inventory manager 영역으로 이행되며 이는 out of scope (§5 참조).
+
+어떤 timer 가 *어느 컷* 에 속하는지 *한눈에* 식별해야 함 — 라벨 없는 큐를 외울 수는 없다.
 
 본 제품은 캐주얼 스냅샷 사용자, 스튜디오 스트로브 촬영자, cinematography 사용 사례를 위해 설계되지 *않았다*. 이들은 측광 루프와 timer 필요성이 매우 다르다.
 
@@ -193,11 +201,13 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 ### 3.4 Multi-timer + 잠금 화면
 
-- **FR-4.1** 시스템은 다중 동시 timer 를 지원하며, 각각 재정렬 / focus / 그룹 전환을 가로질러 살아남는 안정된 식별자를 가진다. (시나리오 5)
+- **FR-4.1** 시스템은 다중 동시 timer 를 지원하며, 각 timer 는 running / paused / completed / 재정렬 / focus / inspect 전환을 가로질러 살아남는 안정된 식별자를 가진다. (시나리오 5)
 - **FR-4.2** 각 timer 는 비-텍스트 식별 단서 (예: 색조, 형태, 패턴) 를 carry — 사용자가 이름이나 시간 텍스트를 읽지 않고도 형제 timer 들과 한눈에 구분 가능하도록. 단서는 timer 의 lifetime 동안 안정. (시나리오 5)
 - **FR-4.3** 잠금 화면 표면은 한 번에 최대 한 개의 timer 만 표시. 선택 규칙 (가장 빠른 종료시간, 결정적 동률 해소) 은 시나리오 6 에 문서화. (시나리오 6)
 - **FR-4.4** running / paused timer 가 남지 않으면 잠금 화면 표면은 종료. 사용자는 더 이상 존재하지 않는 잠금 화면 timer 를 보지 않는다. (시나리오 6)
 - **FR-4.5** 잠금 화면 표면은 사용자가 폰 unlock 없이 시간이 흐르는 것을 인지할 만큼 자주 갱신. (시나리오 6)
+- **FR-4.6** 각 timer 는 의도한 카메라 / 컷 / 노출과 연결할 수 있을 만큼의 식별 metadata 를 carry — 최소한 시작된 카메라 슬롯, 필름 선택 (있을 경우), 그리고 timer 를 produce 한 노출 source 종류. 식별 metadata 는 timer 시작 시점에 captured 되며, 이후 활성 카메라 슬롯이나 활성 필름 선택이 바뀌어도 timer 의 lifetime 을 가로질러 drift 하지 않는다. (시나리오 5; Persona 1.3)
+- **FR-4.7** Calculator 와 결합되지 않은 source 로 시작한 timer — *manual* 경로, 외부 사전 계산된 셔터값을 받는 경우 — 는 시작 시점의 활성 카메라 슬롯 / 필름 / 노출 source 식별을 *상속하지 않는다*. 표시 계층은 활성 슬롯 식별을 빌리지 않고 generic basis 라벨로 fallback 한다. (시나리오 5; Persona 1.3)
 
 ### 3.5 영속화
 
@@ -220,6 +230,17 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 
 - **FR-7.1** 앱은 orientation 을 lock 해 사진가가 측광 / 조정 중에 단일 grip 으로 폰을 잡을 수 있도록 한다. 현 release 는 portrait 만 지원. (Persona 1.1)
 - **FR-7.2** Base shutter 와 ND 는 유효 값으로 snap 하는 컨트롤로 입력. 자유 텍스트 숫자 입력은 받지 않는다 — 오타가 calculator 를 비-사진학적 상태로 빠뜨릴 수 없도록. (시나리오 1)
+
+### 3.8 카메라 슬롯
+
+- **FR-8.1** 시스템은 단일 촬영 세션 안에 다중 카메라 슬롯을 노출. 지원 범위는 두 개에서 네 개까지 — 그 범위 밖 구성은 촬영 workspace scope 의 일부가 아니다. (Persona 1.3; inventory 사례 out of scope 는 §5 에 기록)
+- **FR-8.2** 각 카메라 슬롯은 자기 calculator 상태를 보존 — workflow 모드 (digital vs film), 선택 필름과 활성 reciprocity profile (film workflow 시), base shutter, ND, 노출 scale, 가장 최근 도출된 reciprocity 결과. 슬롯은 독립적: 활성 슬롯에서 만든 calculator 변경은 비활성 슬롯으로 propagate 하지 않는다. (Persona 1.3; 시나리오 1, 2)
+- **FR-8.3** 활성 슬롯 전환은 모든 비활성 슬롯의 calculator 상태를 그대로 보존한다. 전환은 calculator / 필름 선택 / reciprocity 결과 어디에서도 "reset" 경로를 호출하지 않는다 — 활성 입력 set 이 *교체* 되지 *변경* 되지 않는다. (Persona 1.3)
+- **FR-8.4** 사용자는 메인 촬영 workspace 에서 단일 / 한눈에 잡히는 affordance 로 활성 카메라 슬롯을 전환할 수 있다 — settings detour 가 아니다. 정확한 affordance (paged TabView, segmented control, swipe gesture, 그 외) 는 디자인 결정이며, 요구사항은 calculator 에서 한 제스처 거리에 전환이 있는 것이다. (Persona 1.3)
+- **FR-8.5** 각 카메라 슬롯은 calculator 상태 / timer / (장차) record 시스템 핸드오프를 의도한 카메라와 연결하기에 충분한 식별 정보를 노출한다 — 최소한 안정된 id 와 사람이 읽을 수 있는 표시 라벨. 안정된 id 는 표시 라벨과 독립적이며 사용자가 슬롯을 rename 해도 변하지 않는다. (Persona 1.3; FR-4.6 / FR-8.7 보완)
+- **FR-8.6** 카메라 슬롯 세션 상태 — 활성 슬롯 id, 모든 슬롯의 보존된 calculator 상태, 그리고 사진가가 지정한 custom 슬롯 라벨 — 는 calculator working 컨텍스트 (FR-5.2) 와 같은 조건으로 앱 재시작에서 살아남는다. 영속화된 슬롯 상태는 backward-compatible 추가만으로 진화 (NFR-S.2); custom 슬롯 라벨 필드를 아직 기록하지 않던 이전 release 가 작성한 snapshot 은 canonical default 라벨로 정상 복원되어야 한다. (Persona 1.3; 시나리오 8)
+- **FR-8.7** 사용자는 카메라 슬롯의 표시 라벨을 사진가 지정값으로 rename 할 수 있고, rename 된 슬롯을 canonical *Camera N* default 로 reset 할 수 있다. Rename affordance 는 settings detour 가 아닌, 메인 촬영 workspace 의 슬롯 타이틀에 위치한다. (Persona 1.3)
+- **FR-8.8** 빈 값 또는 whitespace-only rename 입력은 빈 라벨로 영속화되지 않고 reset 요청으로 처리된다. Rename 은 슬롯의 안정된 id, calculator 상태, 필름 선택, reciprocity 결과, 다른 슬롯의 상태, 그리고 rename 이전에 시작된 timer 가 capture 한 슬롯 라벨을 변경하지 않는다. (Persona 1.3 경계; FR-4.6 / FR-8.5 보완)
 
 ---
 

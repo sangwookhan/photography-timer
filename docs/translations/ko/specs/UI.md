@@ -45,6 +45,17 @@ Launch dataset ([DomainSchema Spec](DomainSchema.md) §11) 은 `authority = "off
 
 "Clear" affordance 는 Base Shutter 또는 ND 를 변경하지 않으면서 필름 선택을 제거. Empty state 에는 나타나지 않는다.
 
+### 2.1.1 카메라 슬롯 페이저 + 이름 변경
+
+Calculator 화면은 네 개의 독립적인 카메라 슬롯 (`Camera 1` ~ `Camera 4`) 사이를 페이지로 전환. 활성 슬롯의 이름이 화면 메인 타이틀로 렌더링; calculator 아래 페이지 indicator 는 bounded set 내 활성 슬롯 위치를 표시. 각 슬롯은 자기 calculator 입력, 필름 선택, scale, reciprocity 결과를 보유 — 슬롯 전환은 전환되지 않는 슬롯들을 절대 reset 하지 않는다.
+
+슬롯 타이틀은 이름 변경 affordance 도 겸한다. 활성 페이지에서 타이틀을 tap 하면 사진가가 다음을 할 수 있는 sheet 가 열림:
+
+- custom 이름 입력 (예: `Hasselblad 500CM`, `Mamiya 7`); 빈 값 또는 whitespace-only 입력은 reset 요청으로 처리되어 canonical `Camera N` 라벨로 fallback.
+- 명시적 "Reset to Camera N" 액션을 통해 이전에 rename 된 슬롯을 canonical default 로 reset.
+
+표시 이름은 선택 필름 / profile 과 별개의 축. 이름 변경 surface 는 calculator 입력, 필름 선택, scale, reciprocity 결과, 또는 슬롯의 안정된 식별자를 변경하지 않는다. 이미 시작된 timer 는 시작 시점에 captured 된 슬롯 라벨을 유지 — 이후 rename 이 실행 중이거나 완료된 timer 의 식별을 retroactively 다시 쓰지 않는다. Custom 이름은 카메라 슬롯 세션 snapshot 을 통해 launch 가로질러 영속 ([DomainSchema Spec](DomainSchema.md) §7.4 참조).
+
 ### 2.2 Variable section
 
 두 **wheel picker** 가 한 row 에 side-by-side:

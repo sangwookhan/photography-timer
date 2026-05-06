@@ -1,0 +1,64 @@
+import Foundation
+
+/// Pure-value transform from a `ExposureTimerIdentitySnapshot` into the
+/// presentation strings the timer dock + expanded sheet render. Lives
+/// in `App/Workspace/` because the consumer is the bottom-sheet
+/// snapshot factory; keeping it here means the timer runtime layer
+/// (`Timers/`) has no UI copy in it.
+///
+/// All methods are static and side-effect-free — this is a pure
+/// formatter, not a stateful object. Add cases here when a new UI
+/// surface needs another formatted shape rather than reaching into
+/// the snapshot fields directly.
+enum TimerCardIdentityPresenter {
+    /// Compact slot label rendered as the colored capsule badge on
+    /// dock cards (`"C2"`). Returns `nil` when the timer has no slot
+    /// identity — the caller falls back to a non-slot marker (e.g.
+    /// `"T<order>"`). A `switch` on the enum is used (rather than a
+    /// rawValue prefix-strip) so adding a future `CameraSlotID` case
+    /// surfaces as a compile error instead of a silently-wrong label.
+    static func compactCameraLabel(for snapshot: ExposureTimerIdentitySnapshot) -> String? {
+        guard let slotID = snapshot.cameraSlot?.id else { return nil }
+        switch slotID {
+        case .camera1: return "C1"
+        case .camera2: return "C2"
+        case .camera3: return "C3"
+        case .camera4: return "C4"
+        }
+    }
+
+    /// Full slot label used as the leading title segment on the
+    /// expanded sheet's row title. `nil` when no slot identity is
+    /// present — the caller uses the legacy timer name fallback.
+    static func fullCameraLabel(for snapshot: ExposureTimerIdentitySnapshot) -> String? {
+        snapshot.cameraSlot?.displayName
+    }
+
+    /// Inline film/digital descriptor. `"CHS 100 II"` when a film is
+    /// selected, `"CHS 100 II · Unofficial"` when an Unofficial
+    /// profile was chosen, `"No film"` otherwise. The separator
+    /// (`·`) and "No film" wording stay here so changing them never
+    /// requires editing the runtime snapshot type.
+    static func filmDescriptor(for snapshot: ExposureTimerIdentitySnapshot) -> String {
+        guard let filmName = snapshot.filmDisplayName, !filmName.isEmpty else {
+            return "No film"
+        }
+        let trimmedQualifier = snapshot.filmProfileQualifier?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let qualifier = trimmedQualifier, !qualifier.isEmpty {
+            return "\(filmName) · \(qualifier)"
+        }
+        return filmName
+    }
+
+    /// Human-readable source label used in the expanded sheet's
+    /// subtitle (`"Adjusted Shutter · 16 stops - 1/30s"`). Centralised
+    /// so the same wording appears wherever the source is rendered.
+    static func sourceLabel(for source: ExposureTimerSource) -> String {
+        switch source {
+        case .digitalResult: return "Calculated"
+        case .filmAdjustedShutter: return "Adjusted Shutter"
+        case .filmCorrectedExposure: return "Corrected Exposure"
+        }
+    }
+}

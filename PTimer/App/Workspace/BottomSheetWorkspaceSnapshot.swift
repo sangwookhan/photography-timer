@@ -5,9 +5,31 @@ struct CompactRemainingScaleLayer: Equatable {
     let fraction: Double
 }
 
+/// Identity surface a timer presents in the dock and the expanded
+/// sheet. Compact cards render the colored capsule
+/// (`markerText` + `tintSlot`) and may render `filmDescriptor` as
+/// inline text. Large cards compose `fullCameraLabel` and
+/// `filmDescriptor` into the row title and route `sourceLabel` into
+/// the subtitle. VoiceOver consumers read every field.
+///
+/// `markerText` stays the only required string — manual / pre-camera-
+/// slot timers fall back to `T<order>` so the dock never renders an
+/// empty badge.
 struct BottomSheetIdentityCue: Equatable {
     let markerText: String
     let tintSlot: Int
+    /// Full camera-slot label (e.g. `"Camera 2"`). `nil` when the
+    /// timer has no slot identity, in which case the large title
+    /// falls through to the timer name.
+    let fullCameraLabel: String?
+    /// Film descriptor captured at start time. Either the canonical
+    /// film name (with optional profile qualifier) or `"No film"`
+    /// for the digital workflow. `nil` indicates a timer that
+    /// predates the identity-snapshot fields.
+    let filmDescriptor: String?
+    /// Exposure-source label sentence (e.g. `"Adjusted Shutter"`).
+    /// `nil` for legacy timers without a captured source.
+    let sourceLabel: String?
 }
 
 struct BottomSheetCompactItem: Identifiable, Equatable {
@@ -17,6 +39,12 @@ struct BottomSheetCompactItem: Identifiable, Equatable {
     let primaryRemainingText: String
     let secondaryTotalText: String?
     let tertiaryStatusText: String?
+    /// Inline film/digital descriptor rendered inside the compact
+    /// card so the slot badge (`C2`) is paired with the film name
+    /// (`CHS 100 II`) without forcing the user to expand the sheet.
+    /// `nil` for timers without an identity snapshot — the legacy
+    /// rendering shows only the time text in that case.
+    let identityFilmText: String?
     let showsDecorativeTimeline: Bool
     let sixtySecondLayer: CompactRemainingScaleLayer
     let sixtyMinuteLayer: CompactRemainingScaleLayer?
@@ -32,6 +60,15 @@ struct BottomSheetCompactItem: Identifiable, Equatable {
 struct BottomSheetLargeItem: Identifiable, Equatable {
     let id: UUID
     let title: String?
+    /// Identity-first subtitle composed from the exposure source +
+    /// the original timer name. e.g. `"Adjusted Shutter · 16 stops"`.
+    /// Rendered below `title` on the large row so the camera/film
+    /// identity stays at the top of the card.
+    let identitySubtitle: String?
+    /// Full VoiceOver label composed from camera + film + source +
+    /// status. Captured here so the row view does not have to
+    /// re-derive the same composition rule.
+    let voiceOverLabel: String
     let statusLabel: String
     let status: TimerStatus
     let identityCue: BottomSheetIdentityCue
@@ -111,6 +148,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                         for: timer,
                         compactCompletedSupplementaryText: compactCompletedSupplementaryText
                     ),
+                    identityFilmText: compactFilmText(for: timer),
                     showsDecorativeTimeline: timer.status != .completed,
                     sixtySecondLayer: compactSixtySecondLayer(for: timer),
                     sixtyMinuteLayer: compactSixtyMinuteLayer(for: timer),
@@ -180,13 +218,26 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                 let totalDurationText = largeTotalDurationText(for: timer, formatRemaining: formatRemaining)
                 let contextText = largeContextText(for: timer)
                 let identityCue = identityCue(for: timer)
+                let identityTitle = largeIdentityTitle(for: timer, fallback: largeTitleText(
+                    for: timer,
+                    totalDurationText: totalDurationText,
+                    contextText: contextText
+                ))
 
                 return BottomSheetLargeItem(
                     id: timer.id,
-                    title: largeTitleText(
+                    title: identityTitle,
+                    identitySubtitle: largeIdentitySubtitle(
                         for: timer,
-                        totalDurationText: totalDurationText,
-                        contextText: contextText
+                        fallback: largeTitleText(
+                            for: timer,
+                            totalDurationText: totalDurationText,
+                            contextText: contextText
+                        )
+                    ),
+                    voiceOverLabel: largeVoiceOverLabel(
+                        for: timer,
+                        statusLabel: visibleStatusLabel(for: timer.status)
                     ),
                     statusLabel: visibleStatusLabel(for: timer.status),
                     status: timer.status,
@@ -203,10 +254,119 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
     }
 
     private static func identityCue(for timer: RunningTimerItem) -> BottomSheetIdentityCue {
-        BottomSheetIdentityCue(
-            markerText: "T\(timer.order)",
-            tintSlot: stableIdentityTintSlot(for: timer.id)
+        let snapshot = timer.identitySnapshot
+        let markerText = snapshot.flatMap(TimerCardIdentityPresenter.compactCameraLabel(for:))
+            ?? "T\(timer.order)"
+        // Tint slot for camera-slot timers comes from the slot id —
+        // this gives `Camera 1` and `Camera 2` consistent palette
+        // colors across the dock, sheet, and process restarts.
+        // Pre-snapshot timers fall back to the prior id-derived hash
+        // so existing tint behavior is preserved for them.
+        let tintSlot: Int
+        if let slotID = snapshot?.cameraSlot?.id {
+            tintSlot = stableIdentityTintSlot(forSlot: slotID)
+        } else {
+            tintSlot = stableIdentityTintSlot(for: timer.id)
+        }
+        return BottomSheetIdentityCue(
+            markerText: markerText,
+            tintSlot: tintSlot,
+            fullCameraLabel: snapshot.flatMap(TimerCardIdentityPresenter.fullCameraLabel(for:)),
+            filmDescriptor: snapshot.map(TimerCardIdentityPresenter.filmDescriptor(for:)),
+            sourceLabel: snapshot.map { TimerCardIdentityPresenter.sourceLabel(for: $0.exposureSource) }
         )
+    }
+
+    private static func stableIdentityTintSlot(forSlot slotID: CameraSlotID) -> Int {
+        slotID.rawValue.utf8.reduce(0) { partial, byte in
+            ((partial * 33) + Int(byte)) % BottomSheetIdentityPalette.slotCount
+        }
+    }
+
+    private static func compactFilmText(for timer: RunningTimerItem) -> String? {
+        timer.identitySnapshot.map(TimerCardIdentityPresenter.filmDescriptor(for:))
+    }
+
+    /// Identity-first title for the large card. Format examples:
+    ///   - `"Camera 2 · CHS 100 II"`
+    ///   - `"Camera 4 · No film"`
+    /// Falls back to the legacy timer-name-derived title when the
+    /// timer has no identity snapshot.
+    private static func largeIdentityTitle(
+        for timer: RunningTimerItem,
+        fallback: String?
+    ) -> String? {
+        guard let snapshot = timer.identitySnapshot else {
+            return fallback
+        }
+
+        let cameraLabel = TimerCardIdentityPresenter.fullCameraLabel(for: snapshot)
+        let filmLabel = TimerCardIdentityPresenter.filmDescriptor(for: snapshot)
+
+        switch (cameraLabel, filmLabel.isEmpty) {
+        case (let label?, false):
+            return "\(label) · \(filmLabel)"
+        case (let label?, true):
+            return label
+        case (nil, false):
+            return filmLabel
+        case (nil, true):
+            return fallback
+        }
+    }
+
+    /// Identity-first subtitle composed from exposure source and the
+    /// legacy timer name. Renders as `"Adjusted Shutter · 16 stops - 832255.3s"`,
+    /// keeping calculation/source detail visible without burying the
+    /// camera/film identity above it. `nil` when nothing meaningful
+    /// is available to compose.
+    private static func largeIdentitySubtitle(
+        for timer: RunningTimerItem,
+        fallback: String?
+    ) -> String? {
+        guard let source = timer.identitySnapshot?.exposureSource else {
+            return nil
+        }
+
+        let sourceLabel = TimerCardIdentityPresenter.sourceLabel(for: source)
+        let trimmedName = (fallback ?? timer.name)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty {
+            return sourceLabel
+        }
+
+        return "\(sourceLabel) · \(trimmedName)"
+    }
+
+    /// VoiceOver label combining slot, film, source, and status.
+    /// Example: `"Camera 2, CHS 100 II, Adjusted Shutter timer, running"`.
+    /// Status text is appended; the row view inserts the remaining
+    /// time after this label so screen readers hear duration last.
+    private static func largeVoiceOverLabel(
+        for timer: RunningTimerItem,
+        statusLabel: String
+    ) -> String {
+        var components: [String] = []
+
+        if let snapshot = timer.identitySnapshot {
+            if let camera = TimerCardIdentityPresenter.fullCameraLabel(for: snapshot) {
+                components.append(camera)
+            }
+            components.append(TimerCardIdentityPresenter.filmDescriptor(for: snapshot))
+            components.append(
+                "\(TimerCardIdentityPresenter.sourceLabel(for: snapshot.exposureSource)) timer"
+            )
+        } else {
+            // Pre-snapshot timer: fall back to the legacy name so
+            // VoiceOver still has something concrete to say.
+            let trimmed = timer.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                components.append(trimmed)
+            }
+        }
+
+        components.append(statusLabel.lowercased())
+        return components.joined(separator: ", ")
     }
 
     private static func stableIdentityTintSlot(for id: UUID) -> Int {

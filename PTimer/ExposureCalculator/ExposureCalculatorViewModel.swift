@@ -115,6 +115,38 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case digitalResult
         case filmAdjustedShutter
         case filmCorrectedExposure
+        /// Manual timer entry — a precomputed shutter passed in by an
+        /// external caller (or tests) rather than the live calculator
+        /// state. Manual timers must NOT inherit the active camera
+        /// slot, film, or exposure-source identity: the photographer
+        /// did not deliberately associate them with the active slot.
+        case manual
+
+        /// Maps the internal start-source enum to the public
+        /// `ExposureTimerSource` recorded on `RunningTimerItem` and
+        /// `PersistentTimerMetadataSnapshot`. `nil` for manual timers
+        /// — they have no exposure source axis at all, which lets the
+        /// timer card fall back to the order-based marker (`T1`, `T2`)
+        /// and skip identity-first composition.
+        var timerExposureSource: ExposureTimerSource? {
+            switch self {
+            case .digitalResult: return .digitalResult
+            case .filmAdjustedShutter: return .filmAdjustedShutter
+            case .filmCorrectedExposure: return .filmCorrectedExposure
+            case .manual: return nil
+            }
+        }
+
+        /// True when this start path should stamp the timer with the
+        /// active camera slot + film + exposure-source identity.
+        var capturesCalculatorIdentity: Bool {
+            switch self {
+            case .digitalResult, .filmAdjustedShutter, .filmCorrectedExposure:
+                return true
+            case .manual:
+                return false
+            }
+        }
     }
 
     /// Convenience init that builds the four child models from the
@@ -938,11 +970,22 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func startTimer(from resultShutter: TimeInterval) {
+        // External / manual entry: the caller passed in a precomputed
+        // shutter, not a calculation result derived from the active
+        // slot. The timer must not inherit the active slot's
+        // camera/film/source identity — see `.manual` doc.
+        //
+        // Pass `result: nil` so the basis summary always reads
+        // `"Manual timer"` and the name falls through to the generic
+        // `Timer - <duration>` shape. Reaching into
+        // `calculationPayload(for:)` here would let a coincidental
+        // match against the live calc result leak ND/film wording
+        // into a manual timer's basis line.
         startTimer(
             from: resultShutter,
-            result: calculationPayload(for: resultShutter),
+            result: nil,
             filmModeResult: nil,
-            startSource: .digitalResult
+            startSource: .manual
         )
     }
 
@@ -986,10 +1029,36 @@ final class ExposureCalculatorViewModel: ObservableObject {
             startSource: startSource
         )
 
+        // Capture the film/profile snapshot at start time so a later
+        // change to the active film does not retroactively rewrite
+        // the started timer's identity. Digital (no-film) timers
+        // leave `filmDisplayName` nil; UI surfaces render the
+        // digital cue from the absent film + the exposure-source
+        // tag.
+        //
+        // Manual timers (external precomputed shutter) skip identity
+        // capture entirely — they neither belong to the active slot
+        // nor to any exposure source, so all four identity fields
+        // stay nil and the dock falls back to the order-based
+        // marker.
+        let captured = startSource.capturesCalculatorIdentity
+        let activeFilm = captured ? filmSelectionModel.selectedPresetFilm : nil
+        let activeProfile = captured ? filmSelectionModel.selectedProfileOverride : nil
+        let filmProfileQualifier = activeProfile.flatMap { profile in
+            switch profile.source.authority {
+            case .unofficial: return "Unofficial"
+            case .official, .userDefined, .unknown: return nil
+            }
+        }
+
         timerWorkspaceModel.startTimer(
             duration: resultShutter,
             name: timerName,
-            basisSummary: basisSummary
+            basisSummary: basisSummary,
+            cameraSlot: captured ? cameraSlotSessionModel.activeSlot : nil,
+            filmDisplayName: activeFilm?.canonicalStockName,
+            filmProfileQualifier: filmProfileQualifier,
+            exposureSource: startSource.timerExposureSource
         )
     }
 
@@ -1167,7 +1236,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
 
             return "\(film.canonicalStockName) - \(targetLabel)"
-        case .digitalResult, .filmAdjustedShutter:
+        case .digitalResult, .filmAdjustedShutter, .manual:
+            // Manual timers reuse the same ND-prefixed name shape as
+            // digital — without a deliberate calculator-origin tag we
+            // still render the matched calc result if one exists.
             return "\(ndStopLabel(for: result.ndStep)) - \(targetLabel)"
         }
     }

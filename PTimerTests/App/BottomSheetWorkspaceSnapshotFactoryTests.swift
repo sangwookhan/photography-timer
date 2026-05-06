@@ -329,12 +329,15 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 0)
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active"])
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.count, 1)
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue.markerText, "T2")
+        // Surviving timer was started from the default `camera1` slot,
+        // so its identity badge is `C1`. Camera-slot identity replaces
+        // the prior `T<order>` marker on the dock when a slot is
+        // present.
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue.markerText, "C1")
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.contextText, "Base 1s · 3 stops")
 
         XCTAssertFalse(harness.snapshotStore.snapshot.sections.contains { $0.title == "Recently Completed" })
         XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.timingText == "Completed recently" })
-        XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.identityCue.markerText == "T1" })
     }
 
     @MainActor

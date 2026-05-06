@@ -104,6 +104,8 @@
 		A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */; };
 		A00000000000000000000211 /* CameraSlotCalculatorSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */; };
 		A00000000000000000000213 /* CalculatorDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000212 /* CalculatorDefaults.swift */; };
+		A00000000000000000000215 /* ExposureTimerIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000214 /* ExposureTimerIdentity.swift */; };
+		A00000000000000000000217 /* TimerCardIdentityPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000216 /* TimerCardIdentityPresenter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -239,6 +241,8 @@
 		A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelCameraSlotsTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotCalculatorSnapshot.swift; sourceTree = "<group>"; };
 		A00000000000000000000212 /* CalculatorDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorDefaults.swift; sourceTree = "<group>"; };
+		A00000000000000000000214 /* ExposureTimerIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureTimerIdentity.swift; sourceTree = "<group>"; };
+		A00000000000000000000216 /* TimerCardIdentityPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCardIdentityPresenter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -311,6 +315,7 @@
 				A000000000000000000000D9 /* BottomSheetWorkspaceSnapshotStore.swift */,
 				A000000000000000000000DB /* BottomSheetWorkspaceActions.swift */,
 				A000000000000000000000DD /* BottomSheetWorkspaceSnapshot.swift */,
+				A00000000000000000000216 /* TimerCardIdentityPresenter.swift */,
 			);
 			path = Workspace;
 			sourceTree = "<group>";
@@ -358,6 +363,7 @@
 				A00000000000000000000139 /* FilmSelectionModel.swift */,
 				A00000000000000000000144 /* RunningTimerItem.swift */,
 				A00000000000000000000207 /* CameraSlotSessionModel.swift */,
+				A00000000000000000000214 /* ExposureTimerIdentity.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -723,6 +729,8 @@
 				A00000000000000000000208 /* CameraSlotSessionModel.swift in Sources */,
 				A00000000000000000000211 /* CameraSlotCalculatorSnapshot.swift in Sources */,
 				A00000000000000000000213 /* CalculatorDefaults.swift in Sources */,
+				A00000000000000000000215 /* ExposureTimerIdentity.swift in Sources */,
+				A00000000000000000000217 /* TimerCardIdentityPresenter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

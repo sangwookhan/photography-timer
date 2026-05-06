@@ -262,6 +262,113 @@ final class ExposureCalculatorViewModelCameraSlotsTests: XCTestCase {
         )
     }
 
+    // MARK: - Timer identity capture
+
+    func testStartedTimerCarriesActiveCameraSlotIdentity() throws {
+        let viewModel = makeViewModel()
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.baseShutter = 1.0
+        viewModel.ndStop = 6
+
+        viewModel.startTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.cameraSlot?.id, .camera2)
+        XCTAssertEqual(timer.cameraSlot?.displayName, "Camera 2")
+    }
+
+    func testStartedFilmTimerCarriesFilmDisplayNameAndExposureSource() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 1.0
+        viewModel.ndStop = 6
+
+        viewModel.startFilmAdjustedShutterTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(timer.exposureSource, .filmAdjustedShutter)
+        XCTAssertEqual(timer.cameraSlot?.id, .camera2)
+    }
+
+    func testDigitalTimerIdentityHasNilFilmAndDigitalSource() throws {
+        let viewModel = makeViewModel()
+        viewModel.selectCameraSlot(.camera1)
+        viewModel.baseShutter = 1.0
+        viewModel.ndStop = 6
+
+        viewModel.startTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertNil(timer.filmDisplayName)
+        XCTAssertEqual(timer.exposureSource, .digitalResult)
+    }
+
+    func testTimerIdentityIsImmutableAfterSlotAndFilmChanges() throws {
+        let viewModel = makeViewModel()
+        let triX = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.selectPresetFilm(triX)
+        viewModel.baseShutter = 1.0
+        viewModel.ndStop = 6
+
+        viewModel.startFilmAdjustedShutterTimer()
+        let captured = try XCTUnwrap(viewModel.timers.first)
+
+        // Now mutate the active slot and the active film. The
+        // already-started timer's identity must NOT rewrite.
+        viewModel.selectCameraSlot(.camera1)
+        viewModel.baseShutter = 1.0 / 60.0
+        viewModel.ndStop = 0
+        if let portra = viewModel.availablePresetFilms.first(where: { $0.canonicalStockName.contains("Portra 400") }) {
+            viewModel.selectCameraSlot(.camera2)
+            viewModel.selectPresetFilm(portra)
+        }
+
+        let after = try XCTUnwrap(viewModel.timers.first { $0.id == captured.id })
+        XCTAssertEqual(after.cameraSlot?.id, .camera2)
+        XCTAssertEqual(after.cameraSlot?.displayName, "Camera 2")
+        XCTAssertEqual(after.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(after.exposureSource, .filmAdjustedShutter)
+    }
+
+    // MARK: - Manual timer origin (no slot/film/source contamination)
+
+    func testManualTimerDoesNotCaptureCameraSlotOrFilmIdentity() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+
+        // Set up a "rich" active context so any contamination would
+        // be visible: Camera 2, Tri-X selected, custom inputs.
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 1.0 / 60.0
+        viewModel.ndStop = 6
+
+        // Manual timer entry: external shutter that has nothing to
+        // do with the active slot.
+        viewModel.startTimer(from: 12.5)
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertNil(timer.cameraSlot)
+        XCTAssertNil(timer.filmDisplayName)
+        XCTAssertNil(timer.filmProfileQualifier)
+        XCTAssertNil(timer.exposureSource)
+        // Identity snapshot must be nil so the dock falls back to
+        // the order-based marker rather than rendering Camera 2's
+        // identity onto a manual timer.
+        XCTAssertNil(timer.identitySnapshot)
+        XCTAssertEqual(timer.basisSummary, "Manual timer")
+    }
+
     // MARK: - Helpers
 
     private func makeViewModel() -> ExposureCalculatorViewModel {

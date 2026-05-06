@@ -70,13 +70,21 @@ final class TimerWorkspaceModel: ObservableObject {
         id: UUID = UUID(),
         duration: TimeInterval,
         name: String,
-        basisSummary: String
+        basisSummary: String,
+        cameraSlot: CameraSlotIdentity? = nil,
+        filmDisplayName: String? = nil,
+        filmProfileQualifier: String? = nil,
+        exposureSource: ExposureTimerSource? = nil
     ) -> UUID? {
         let order = nextTimerOrder
         timerMetadata[id] = TimerMetadataEntry(
             order: order,
             name: name,
-            basisSummary: basisSummary
+            basisSummary: basisSummary,
+            cameraSlot: cameraSlot,
+            filmDisplayName: filmDisplayName,
+            filmProfileQualifier: filmProfileQualifier,
+            exposureSource: exposureSource
         )
 
         guard timerManager.start(id: id, duration: duration) != nil else {
@@ -159,13 +167,29 @@ final class TimerWorkspaceModel: ObservableObject {
 
         nextTimerOrder = max(1, snapshot.nextTimerOrder)
         timerMetadata = Dictionary(
-            uniqueKeysWithValues: snapshot.timers.map {
-                (
-                    $0.id,
+            uniqueKeysWithValues: snapshot.timers.map { entry -> (UUID, TimerMetadataEntry) in
+                let cameraSlot: CameraSlotIdentity? = {
+                    guard let raw = entry.cameraSlotIDRaw,
+                          let slotID = CameraSlotID(rawValue: raw) else {
+                        return nil
+                    }
+                    return CameraSlotIdentity(
+                        id: slotID,
+                        displayName: entry.cameraSlotDisplayName
+                    )
+                }()
+                let exposureSource = entry.exposureSourceRaw
+                    .flatMap { ExposureTimerSource(rawValue: $0) }
+                return (
+                    entry.id,
                     TimerMetadataEntry(
-                        order: $0.order,
-                        name: $0.name,
-                        basisSummary: $0.basisSummary
+                        order: entry.order,
+                        name: entry.name,
+                        basisSummary: entry.basisSummary,
+                        cameraSlot: cameraSlot,
+                        filmDisplayName: entry.filmDisplayName,
+                        filmProfileQualifier: entry.filmProfileQualifier,
+                        exposureSource: exposureSource
                     )
                 )
             }
@@ -186,7 +210,12 @@ final class TimerWorkspaceModel: ObservableObject {
                         id: id,
                         order: metadata.order,
                         name: metadata.name,
-                        basisSummary: metadata.basisSummary
+                        basisSummary: metadata.basisSummary,
+                        cameraSlotIDRaw: metadata.cameraSlot?.id.rawValue,
+                        cameraSlotDisplayName: metadata.cameraSlot?.displayName,
+                        filmDisplayName: metadata.filmDisplayName,
+                        filmProfileQualifier: metadata.filmProfileQualifier,
+                        exposureSourceRaw: metadata.exposureSource?.rawValue
                     )
                 }
                 .sorted { lhs, rhs in
@@ -212,18 +241,23 @@ final class TimerWorkspaceModel: ObservableObject {
 
         timers = states
             .map { state in
-                RunningTimerItem(
+                let metadata = timerMetadata[state.id]
+                return RunningTimerItem(
                     id: state.id,
-                    order: timerMetadata[state.id]?.order ?? 0,
-                    name: timerMetadata[state.id]?.name ?? defaultName(state.duration),
-                    basisSummary: timerMetadata[state.id]?.basisSummary ?? "Manual timer",
+                    order: metadata?.order ?? 0,
+                    name: metadata?.name ?? defaultName(state.duration),
+                    basisSummary: metadata?.basisSummary ?? "Manual timer",
                     duration: state.duration,
                     startDate: state.startDate,
                     endDate: state.endDate,
                     pausedRemainingTime: state.pausedRemainingTime,
                     pausedAt: state.pausedAt,
                     status: state.status,
-                    referenceDate: referenceDate
+                    referenceDate: referenceDate,
+                    cameraSlot: metadata?.cameraSlot,
+                    filmDisplayName: metadata?.filmDisplayName,
+                    filmProfileQualifier: metadata?.filmProfileQualifier,
+                    exposureSource: metadata?.exposureSource
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
@@ -280,4 +314,8 @@ private struct TimerMetadataEntry {
     let order: Int
     let name: String
     let basisSummary: String
+    let cameraSlot: CameraSlotIdentity?
+    let filmDisplayName: String?
+    let filmProfileQualifier: String?
+    let exposureSource: ExposureTimerSource?
 }

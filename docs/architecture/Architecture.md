@@ -170,6 +170,21 @@ Fresh-slot defaults derive from `CalculatorDefaults` so the
 ViewModel's initial calculator state and a brand-new slot's snapshot
 share a single source of truth.
 
+Exposure-calculated timer identity lives in
+`ExposureCalculator/Models/ExposureTimerIdentity.swift`:
+`ExposureTimerSource` enum + `ExposureTimerIdentitySnapshot`
+struct. The runtime `Timers/` layer carries no exposure-source
+concept on its own — those types describe which exposure
+computation produced the timer, which is a calculator-domain
+concern. Display formatting (`"C2"`, `"Camera 2 · CHS 100 II"`,
+`"Adjusted Shutter"`) lives in `App/Workspace/TimerCardIdentityPresenter.swift`
+so the runtime types stay free of UI copy.
+
+The camera-slot identity that gets stamped on a timer flows into
+`PersistentTimerMetadataSnapshot.cameraSlotIDRaw` /
+`cameraSlotDisplayName`; both fields are optional so older snapshots
+without slot identity decode unchanged.
+
 ### 1.8 Film catalog
 
 Files: `PresetFilmCatalog.swift`,
@@ -210,6 +225,7 @@ maintain a parallel copy.
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerManager` (via `TimerWorkspaceModel`) |
 | Active camera-slot id + inactive slot snapshots | `CameraSlotSessionModel` |
+| Camera-slot identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
 | Calculator context persistence | `UserDefaultsExposureCalculatorContextPersistenceStore` |

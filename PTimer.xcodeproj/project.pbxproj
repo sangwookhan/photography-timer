@@ -102,6 +102,8 @@
 		A0000000000000000000020B /* CameraSlotIdentityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020A /* CameraSlotIdentityTests.swift */; };
 		A0000000000000000000020D /* CameraSlotSessionModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020C /* CameraSlotSessionModelTests.swift */; };
 		A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */; };
+		A00000000000000000000211 /* CameraSlotCalculatorSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */; };
+		A00000000000000000000213 /* CalculatorDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000212 /* CalculatorDefaults.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -235,6 +237,8 @@
 		A0000000000000000000020A /* CameraSlotIdentityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotIdentityTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000020C /* CameraSlotSessionModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionModelTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelCameraSlotsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotCalculatorSnapshot.swift; sourceTree = "<group>"; };
+		A00000000000000000000212 /* CalculatorDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorDefaults.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -315,6 +319,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000014 /* ExposureCalculator.swift */,
+				A00000000000000000000212 /* CalculatorDefaults.swift */,
 				A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */,
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
@@ -337,6 +342,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000201 /* CameraSlotIdentity.swift */,
+				A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */,
 				A00000000000000000000205 /* CameraSlotPageState.swift */,
 				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
 			);
@@ -715,6 +721,8 @@
 				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,
 				A00000000000000000000206 /* CameraSlotPageState.swift in Sources */,
 				A00000000000000000000208 /* CameraSlotSessionModel.swift in Sources */,
+				A00000000000000000000211 /* CameraSlotCalculatorSnapshot.swift in Sources */,
+				A00000000000000000000213 /* CalculatorDefaults.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

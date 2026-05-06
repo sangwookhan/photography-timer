@@ -17,29 +17,90 @@ final class CameraSlotSessionModelTests: XCTestCase {
     }
 
     @MainActor
-    func testSetActiveSlotChangesActiveID() {
+    func testInactiveSnapshotReturnsInitialDefaultUntilSlotIsVisited() {
         let model = CameraSlotSessionModel()
 
-        model.setActiveSlot(.camera3)
-        XCTAssertEqual(model.activeSlotID, .camera3)
+        let snapshot = model.snapshot(forInactiveSlot: .camera2)
+
+        XCTAssertEqual(snapshot, CameraSlotCalculatorSnapshot.initial)
     }
 
     @MainActor
-    func testSetActiveSlotIsNoOpForActiveSlot() {
+    func testActiveSlotHasNoStoredSnapshotInTheInactiveMap() {
         let model = CameraSlotSessionModel()
 
-        model.setActiveSlot(.camera1)
+        XCTAssertNil(model.snapshot(forInactiveSlot: .camera1))
+    }
+
+    @MainActor
+    func testSwitchActiveSlotStoresOutgoingSnapshotAndReturnsIncomingDefault() {
+        let model = CameraSlotSessionModel()
+        let outgoing = CameraSlotCalculatorSnapshot(
+            baseShutterSeconds: 1.0 / 60.0,
+            ndStep: NDStep(stops: 6),
+            scaleMode: .oneThirdStop,
+            selectedPresetFilm: nil,
+            selectedProfileOverride: nil
+        )
+
+        let incoming = model.switchActiveSlot(to: .camera2, capturing: outgoing)
+
+        XCTAssertEqual(model.activeSlotID, .camera2)
+        XCTAssertEqual(incoming, .initial)
+        XCTAssertEqual(model.snapshot(forInactiveSlot: .camera1), outgoing)
+        // Newly-active slot's snapshot is intentionally absent —
+        // the calc/film models hold the live state for it.
+        XCTAssertNil(model.snapshot(forInactiveSlot: .camera2))
+    }
+
+    @MainActor
+    func testSwitchingBackRestoresStoredInactiveSnapshot() {
+        let model = CameraSlotSessionModel()
+        let cameraOneState = CameraSlotCalculatorSnapshot(
+            baseShutterSeconds: 1.0 / 60.0,
+            ndStep: NDStep(stops: 6),
+            scaleMode: .oneThirdStop,
+            selectedPresetFilm: nil,
+            selectedProfileOverride: nil
+        )
+        let cameraTwoState = CameraSlotCalculatorSnapshot(
+            baseShutterSeconds: 1.0 / 30.0,
+            ndStep: NDStep(stops: 10),
+            scaleMode: .fullStop,
+            selectedPresetFilm: nil,
+            selectedProfileOverride: nil
+        )
+
+        // Active=Camera 1, capture Camera 1 state, move to Camera 2
+        _ = model.switchActiveSlot(to: .camera2, capturing: cameraOneState)
+        // Active=Camera 2, capture Camera 2 state, move back to Camera 1
+        let restored = model.switchActiveSlot(to: .camera1, capturing: cameraTwoState)
+
+        XCTAssertEqual(model.activeSlotID, .camera1)
+        XCTAssertEqual(restored, cameraOneState)
+        XCTAssertEqual(model.snapshot(forInactiveSlot: .camera2), cameraTwoState)
+    }
+
+    @MainActor
+    func testSwitchToActiveSlotIsNoOp() {
+        let model = CameraSlotSessionModel()
+
+        let result = model.switchActiveSlot(to: .camera1, capturing: .initial)
+
+        XCTAssertNil(result)
         XCTAssertEqual(model.activeSlotID, .camera1)
     }
 
     @MainActor
-    func testSetActiveSlotRejectsSlotsOutsideAvailableSet() {
+    func testSwitchRejectsSlotsOutsideAvailableSet() {
         let model = CameraSlotSessionModel(
             availableSlots: [.camera1, .camera2],
             initialActiveSlotID: .camera1
         )
 
-        model.setActiveSlot(.camera3)
+        let result = model.switchActiveSlot(to: .camera3, capturing: .initial)
+
+        XCTAssertNil(result)
         XCTAssertEqual(model.activeSlotID, .camera1)
     }
 

@@ -258,11 +258,13 @@ private struct ExposureWorkspaceMainContent: View {
 }
 
 /// Single calculator workspace page consumed by the slot `TabView`.
-/// This iteration binds every page to the live calculator state, so
-/// every slot's page renders the same data — slot navigation works
-/// (titles change, indicator advances, swipe pages slide) but
-/// per-slot state preservation is not yet wired in. The next commit
-/// adds per-slot data binding via the page state's snapshot fields.
+/// Active and inactive pages render the same visual layout — the
+/// only difference is binding source: the active page binds its
+/// pickers to live `CalculatorModel` state so wheel drags propagate
+/// immediately, while inactive pages bind to constants drawn from
+/// `pageState`. `.allowsHitTesting(false)` on inactive pages keeps
+/// the photographer's swipe-paging gesture clean even on a brief
+/// peek where the wheel is partially exposed.
 private struct CameraSlotCalculatorPage: View {
     let pageState: CameraSlotPageState
     @ObservedObject var viewModel: ExposureCalculatorViewModel
@@ -276,36 +278,41 @@ private struct CameraSlotCalculatorPage: View {
                 cameraSlotTitle: pageState.cameraDisplayName,
                 activeCameraSlotID: pageState.slotID,
                 selectorEntries: viewModel.filmSelectorEntries,
-                selectedFilmID: viewModel.selectedSelectorEntryID,
-                filmSelectionDisplayState: viewModel.filmSelectionDisplayState,
-                onToggleSelector: onToggleFilmSelector,
-                showsResetAction: viewModel.canResetFilmModeWorkingContext,
-                onResetFilmModeContext: viewModel.resetFilmModeWorkingContext,
+                selectedFilmID: pageState.selectedSelectorEntryID,
+                filmSelectionDisplayState: pageState.filmSelectionDisplayState,
+                onToggleSelector: pageState.isActive ? onToggleFilmSelector : {},
+                showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
+                onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
                 style: style
             )
+
             VariableSectionView(
-                baseShutter: $viewModel.baseShutter,
-                ndStep: $viewModel.ndStep,
-                shutterSpeeds: viewModel.pickerShutterStepSeconds,
-                ndStepValues: viewModel.pickerNDSteps,
+                baseShutter: baseShutterBinding,
+                ndStep: ndStepBinding,
+                shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
+                ndStepValues: viewModel.pickerNDSteps(forPage: pageState),
                 formatShutter: viewModel.formatShutterStepLabel,
                 formatNDStop: viewModel.formatNDStop,
                 onContinuousBaseShutterChange: { value in
+                    guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.updateLiveBaseShutter(value)
                     }
                 },
                 onContinuousNDStepChange: { value in
+                    guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.updateLiveNDStep(value)
                     }
                 },
                 onBaseShutterInteractionEnd: {
+                    guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.clearLiveBaseShutterPreview()
                     }
                 },
                 onNDStopInteractionEnd: {
+                    guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.clearLiveNDStopPreview()
                     }
@@ -314,20 +321,26 @@ private struct CameraSlotCalculatorPage: View {
             )
 
             ResultSectionView(
-                isFilmWorkflowActive: viewModel.isFilmWorkflowActive,
-                calculationResult: viewModel.calculationResult,
-                filmModeExposureResultState: viewModel.filmModeExposureResultState,
-                canShowFilmDetails: viewModel.canShowFilmDetails,
+                isFilmWorkflowActive: pageState.isFilmWorkflowActive,
+                calculationResult: viewModel.calculationResult(forPage: pageState),
+                filmModeExposureResultState: viewModel.filmModeExposureResultState(forPage: pageState),
+                canShowFilmDetails: pageState.isActive && viewModel.canShowFilmDetails,
                 formatTimeDisplay: viewModel.formatTimeDisplay,
                 formatReciprocityTimeDisplay: viewModel.formatReciprocityTimeDisplay,
-                canStartTimer: viewModel.canStartTimer,
-                onStartTimer: viewModel.startTimer,
-                onStartFilmAdjustedShutterTimer: viewModel.startFilmAdjustedShutterTimer,
-                onStartFilmCorrectedExposureTimer: viewModel.startFilmCorrectedExposureTimer,
+                canStartTimer: pageState.isActive && viewModel.canStartTimer,
+                onStartTimer: pageState.isActive ? viewModel.startTimer : {},
+                onStartFilmAdjustedShutterTimer: pageState.isActive
+                    ? viewModel.startFilmAdjustedShutterTimer
+                    : {},
+                onStartFilmCorrectedExposureTimer: pageState.isActive
+                    ? viewModel.startFilmCorrectedExposureTimer
+                    : {},
                 onShowFilmDetails: {
-                    if let details = viewModel.filmModeDetailsDisplayState {
-                        onShowFilmDetails(details)
+                    guard pageState.isActive,
+                          let details = viewModel.filmModeDetailsDisplayState else {
+                        return
                     }
+                    onShowFilmDetails(details)
                 },
                 style: style
             )
@@ -335,7 +348,30 @@ private struct CameraSlotCalculatorPage: View {
             Spacer(minLength: style.resultFlowSpacerMinLength)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .allowsHitTesting(pageState.isActive)
         .accessibilityIdentifier("camera-slot-page-\(pageState.slotID.rawValue)")
+    }
+
+    /// Routes the wheel picker's `Binding<Double>` to live state when
+    /// the page is active and to a constant otherwise.
+    private var baseShutterBinding: Binding<Double> {
+        if pageState.isActive {
+            return Binding(
+                get: { viewModel.baseShutter },
+                set: { viewModel.baseShutter = $0 }
+            )
+        }
+        return .constant(pageState.baseShutter)
+    }
+
+    private var ndStepBinding: Binding<NDStep> {
+        if pageState.isActive {
+            return Binding(
+                get: { viewModel.ndStep },
+                set: { viewModel.ndStep = $0 }
+            )
+        }
+        return .constant(pageState.ndStep)
     }
 }
 

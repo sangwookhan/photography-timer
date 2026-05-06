@@ -1,8 +1,8 @@
 import Combine
 import Foundation
 
-private let defaultFilmModeBaseShutter = 1.0 / 30.0
-private let defaultFilmModeNDStop = 0
+private let defaultFilmModeBaseShutter = CalculatorDefaults.baseShutterSeconds
+private let defaultFilmModeNDStop = CalculatorDefaults.ndStop
 
 @MainActor
 final class ExposureCalculatorViewModel: ObservableObject {
@@ -98,13 +98,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// single source of truth.
     private let filmSelectionModel: FilmSelectionModel
     private var presetFilms: [FilmIdentity] { filmSelectionModel.presetFilms }
-    /// Camera-slot session state: which slot is currently active.
-    /// Slot navigation is gesture-driven via the workspace TabView;
-    /// the ViewModel exposes a `selectCameraSlot(_:)` entry point so
-    /// every transition is single-rooted on this model.
+    /// Camera-slot session state: which slot is currently active,
+    /// plus the calculator snapshot for every inactive slot. The
+    /// facade orchestrates snapshot capture/load on slot switching
+    /// so per-slot state survives navigation.
     private let cameraSlotSessionModel: CameraSlotSessionModel
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
+    /// Suppresses `persistCalculatorContext` calls during a camera-slot
+    /// snapshot apply so the transition writes a single coherent
+    /// snapshot at the end rather than four intermediate snapshots
+    /// stamped with mismatched calc / film state.
+    private var isApplyingSlotSnapshot = false
 
     private enum TimerStartSource {
         case digitalResult
@@ -548,13 +553,23 @@ final class ExposureCalculatorViewModel: ObservableObject {
         return "\(activeCameraSlot.displayName), \(position) of \(count)"
     }
 
-    /// Switches the active camera slot. Per-slot calculator-state
-    /// preservation is not part of this iteration — every page
-    /// currently renders the same live calculator state, so a slot
-    /// switch is a pure id flip on the session model. The next
-    /// commit replaces this with snapshot capture/load.
+    /// Switches the active camera slot, preserving the previous
+    /// slot's calculator state and loading the target slot's
+    /// preserved snapshot (or a fresh default if the slot has not
+    /// been visited yet). The transition does not call any film/calc
+    /// reset path, so inactive slots stay intact.
     func selectCameraSlot(_ targetSlotID: CameraSlotID) {
-        cameraSlotSessionModel.setActiveSlot(targetSlotID)
+        guard targetSlotID != cameraSlotSessionModel.activeSlotID else {
+            return
+        }
+        let outgoing = currentCameraSlotSnapshot()
+        guard let incoming = cameraSlotSessionModel.switchActiveSlot(
+            to: targetSlotID,
+            capturing: outgoing
+        ) else {
+            return
+        }
+        applyCameraSlotSnapshot(incoming)
     }
 
     /// Advances to the next slot in `availableCameraSlots`. No-op
@@ -576,15 +591,225 @@ final class ExposureCalculatorViewModel: ObservableObject {
         selectCameraSlot(slots[index - 1])
     }
 
-    /// Per-slot view-facing snapshot the workspace TabView consumes
-    /// for a single page. This iteration carries identity only;
-    /// every page renders the same live calculator data.
+    /// Builds the per-slot page state the workspace TabView
+    /// consumes. Active slots read live calculator/film state
+    /// directly so the page binds to whatever the user is currently
+    /// dragging; inactive slots read their preserved snapshot so
+    /// each TabView page shows that slot's own values during a swipe
+    /// rather than the active slot's data leaking across pages.
     func cameraSlotPageState(for slotID: CameraSlotID) -> CameraSlotPageState {
+        let isActive = slotID == cameraSlotSessionModel.activeSlotID
         let identity = cameraSlotSessionModel.identity(for: slotID)
+
+        let baseShutter: Double
+        let ndStep: NDStep
+        let scaleMode: ExposureScaleMode
+        let film: FilmIdentity?
+        let profileOverride: ReciprocityProfile?
+
+        if isActive {
+            baseShutter = calculatorModel.baseShutterSeconds
+            ndStep = calculatorModel.ndStep
+            scaleMode = calculatorModel.scaleMode
+            film = filmSelectionModel.selectedPresetFilm
+            profileOverride = filmSelectionModel.selectedProfileOverride
+        } else {
+            let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) ?? .initial
+            baseShutter = snapshot.baseShutterSeconds
+            ndStep = snapshot.ndStep
+            scaleMode = snapshot.scaleMode
+            film = snapshot.selectedPresetFilm
+            profileOverride = snapshot.selectedProfileOverride
+        }
+
+        let filmDisplay: FilmSelectionDisplayState = {
+            guard let film else {
+                return FilmSelectionDisplayState(primaryText: "No film", secondaryText: nil)
+            }
+            let activeProfile = profileOverride ?? film.profiles.first
+            return FilmSelectionDisplayState(
+                primaryText: film.canonicalStockName,
+                secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile)
+            )
+        }()
+
         return CameraSlotPageState(
             slotID: slotID,
             cameraDisplayName: identity.displayName,
-            isActive: slotID == cameraSlotSessionModel.activeSlotID
+            baseShutter: baseShutter,
+            ndStep: ndStep,
+            scaleMode: scaleMode,
+            selectedFilm: film,
+            selectedProfileOverride: profileOverride,
+            filmSelectionDisplayState: filmDisplay,
+            isFilmWorkflowActive: film != nil,
+            isActive: isActive
+        )
+    }
+
+    /// Calculator result for a given page state. The active slot
+    /// reuses the live `calculationResult` (which already accounts
+    /// for live wheel-drag previews); inactive slots run the pure
+    /// `CalculatorModel.calculate(...)` overload against the
+    /// snapshot's inputs so each peek-during-drag TabView page shows
+    /// the adjusted shutter the photographer would see if they paged
+    /// over without changing anything.
+    func calculationResult(
+        forPage pageState: CameraSlotPageState
+    ) -> Result<ExposureCalculationResult, ExposureCalculatorError> {
+        if pageState.isActive {
+            return calculationResult
+        }
+        return calculatorModel.calculate(
+            baseShutterSeconds: pageState.baseShutter,
+            ndStep: pageState.ndStep
+        )
+    }
+
+    /// Reciprocity binding state derived from a page's snapshot. The
+    /// active page proxies through to the live binding state so any
+    /// future change in derivation rules lands on every page; the
+    /// inactive path mirrors the same composition without touching
+    /// live state.
+    func filmReciprocityBindingState(
+        forPage pageState: CameraSlotPageState
+    ) -> FilmModeReciprocityBindingState? {
+        if pageState.isActive {
+            return filmReciprocityBindingState
+        }
+
+        guard let film = pageState.selectedFilm,
+              let profile = pageState.selectedProfileOverride ?? film.profiles.first,
+              case .success(let result) = calculationResult(forPage: pageState) else {
+            return nil
+        }
+        let policyResult = reciprocityModel.evaluate(
+            profile: profile,
+            meteredExposureSeconds: result.resultShutterSeconds
+        )
+        return FilmModeReciprocityBindingState(
+            film: film,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
+    }
+
+    /// Film-mode result state for a given page. Inactive pages
+    /// disable **both** the adjusted-shutter and corrected-exposure
+    /// timer actions in state, not just visually — the page
+    /// presentation must completely express that an inactive slot
+    /// cannot start a timer. View-level guards
+    /// (`.allowsHitTesting(false)`) are a belt-and-suspenders
+    /// measure, not the policy source.
+    func filmModeExposureResultState(
+        forPage pageState: CameraSlotPageState
+    ) -> FilmModeExposureResultState? {
+        if pageState.isActive {
+            return filmModeExposureResultState
+        }
+
+        guard pageState.isFilmWorkflowActive,
+              case .success(let result) = calculationResult(forPage: pageState),
+              let bindingState = filmReciprocityBindingState(forPage: pageState) else {
+            return nil
+        }
+
+        let liveCorrectedAction = reciprocityModel.correctedExposureActionState(
+            for: bindingState
+        )
+
+        return FilmModeExposureResultState(
+            adjustedShutterSeconds: result.resultShutterSeconds,
+            reciprocityState: reciprocityModel.reciprocityStateDisplayState(for: bindingState),
+            adjustedShutterAction: Self.inactiveTimerActionState(
+                targetSeconds: result.resultShutterSeconds,
+                accessibilityLabel: "Start timer from adjusted shutter"
+            ),
+            correctedExposure: reciprocityModel.correctedExposureDisplayState(
+                for: bindingState
+            ),
+            correctedExposureAction: Self.inactiveTimerActionState(
+                targetSeconds: liveCorrectedAction.targetSeconds,
+                accessibilityLabel: liveCorrectedAction.accessibilityLabel
+            )
+        )
+    }
+
+    /// Builds a disabled action state for an inactive page.
+    /// Centralised so both the adjusted and corrected actions emit
+    /// the same "page to this slot first" hint and the same
+    /// `canStartTimer` policy.
+    private static func inactiveTimerActionState(
+        targetSeconds: TimeInterval?,
+        accessibilityLabel: String
+    ) -> FilmModeTimerActionState {
+        FilmModeTimerActionState(
+            targetSeconds: targetSeconds,
+            canStartTimer: false,
+            accessibilityLabel: accessibilityLabel,
+            accessibilityHint: "Inactive camera slot — page to this slot to start a timer"
+        )
+    }
+
+    /// Picker shutter-step list for a given page's scale.
+    func pickerShutterStepSeconds(forPage pageState: CameraSlotPageState) -> [Double] {
+        ExposureScale.scale(for: pageState.scaleMode).shutterSteps.map(\.seconds)
+    }
+
+    /// Picker `NDStep` list for a given page's scale.
+    func pickerNDSteps(forPage pageState: CameraSlotPageState) -> [NDStep] {
+        ExposureScale.scale(for: pageState.scaleMode).ndSteps
+    }
+
+    /// Captures the active slot's current calculator/film state into
+    /// a snapshot value. Sources of truth: `CalculatorModel` (base
+    /// shutter, ND, scale) and `FilmSelectionModel` (selected film,
+    /// profile override). The active slot's state is always read
+    /// from the live models rather than from the session model.
+    private func currentCameraSlotSnapshot() -> CameraSlotCalculatorSnapshot {
+        CameraSlotCalculatorSnapshot(
+            baseShutterSeconds: calculatorModel.baseShutterSeconds,
+            ndStep: calculatorModel.ndStep,
+            scaleMode: calculatorModel.scaleMode,
+            selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
+            selectedProfileOverride: filmSelectionModel.selectedProfileOverride
+        )
+    }
+
+    /// Loads `snapshot` into the calculator/film models without
+    /// invoking any reset path or per-mutation persistence. A single
+    /// `persistCalculatorContext` call writes a coherent snapshot at
+    /// the end so the on-disk state always matches a single slot's
+    /// view of the world.
+    private func applyCameraSlotSnapshot(_ snapshot: CameraSlotCalculatorSnapshot) {
+        isApplyingSlotSnapshot = true
+        defer {
+            isApplyingSlotSnapshot = false
+            persistCalculatorContext()
+        }
+
+        calculatorModel.clearLiveBaseShutterPreview()
+        calculatorModel.clearLiveNDStopPreview()
+
+        // Write through the `@Published` wrappers so SwiftUI observers
+        // see the flip. Order matters: `scaleMode` first so the calc
+        // model's didSet snap pass operates before we overwrite
+        // base shutter / ND with the snapshot's values, which already
+        // sit on the new scale's ladder.
+        if scaleMode != snapshot.scaleMode {
+            scaleMode = snapshot.scaleMode
+        }
+        if baseShutter != snapshot.baseShutterSeconds {
+            baseShutter = snapshot.baseShutterSeconds
+        }
+        if ndStep != snapshot.ndStep {
+            ndStep = snapshot.ndStep
+        }
+
+        filmSelectionModel.replaceActiveSelection(
+            film: snapshot.selectedPresetFilm,
+            profileOverride: snapshot.selectedProfileOverride
         )
     }
 
@@ -1052,6 +1277,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func persistCalculatorContext() {
+        // During a camera-slot snapshot apply we suppress per-mutation
+        // persistence so the transition writes a single coherent
+        // snapshot at the end (see `applyCameraSlotSnapshot`).
+        guard !isApplyingSlotSnapshot else {
+            return
+        }
         filmSelectionModel.persistContext()
     }
 

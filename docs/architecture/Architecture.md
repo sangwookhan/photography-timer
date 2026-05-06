@@ -79,11 +79,14 @@ Five `@Observable` feature models, each owning one slice of state:
   lifecycle commands around `TimerManager`.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
-- **`CameraSlotSessionModel`** — active camera-slot identity. The
-  slot pager UI binds to this model's `activeSlotID` so navigation
-  flows through a single state-transition entry point. Per-slot
-  calculator-state preservation lands as a follow-up commit and
-  extends this model with an inactive-snapshot map.
+- **`CameraSlotSessionModel`** — active camera-slot identity plus
+  the per-slot calculator snapshot for inactive slots. The active
+  slot's live state remains on `CalculatorModel` +
+  `FilmSelectionModel`; the session model only stores the inactive
+  slot snapshots and the `activeSlotID`. Snapshot capture and load
+  on slot switch are orchestrated by the view-model facade (the
+  only place that already reads/writes both `CalculatorModel` and
+  `FilmSelectionModel` in one step).
 
 The feature models do not import each other. Cross-model wiring lives
 on `WorkspaceCoordinator`. A model that consumes another model's state
@@ -143,20 +146,29 @@ real implementation plus a `NoOp*` implementation that unit tests use.
 Directory: `ExposureCalculator/CameraSlot/`.
 
 - `CameraSlotIdentity` — `CameraSlotID` enum (`camera1` … `camera4`)
-  plus a stable id + default/custom display label pair. `displayName`
-  prefers a non-empty `customDisplayName` and otherwise falls back
-  to `defaultDisplayName` so a future "rename this slot" surface
-  can land without rewriting presentation code.
+  plus a stable id + default/custom display label pair.
+  `displayName` prefers a non-empty `customDisplayName` and
+  otherwise falls back to `defaultDisplayName` so a future "rename
+  this slot" surface can land without rewriting presentation code.
+- `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
+  calculator working state (base shutter, ND, scale mode, selected
+  film, profile override). Live-preview overlays
+  (`CalculatorModel.liveBaseShutter` / `liveNDStep`) deliberately
+  stay out of the snapshot — a preview only exists while a wheel
+  drag is in flight on the active slot.
 - `CameraSlotPageState` — per-slot view-facing snapshot consumed by
-  the workspace TabView pages. Carries the slot identity and the
-  active flag; per-slot calculator inputs are added in a follow-up
-  commit when state independence lands.
+  the workspace TabView pages. Active slot reads live calculator
+  state; inactive slots read their preserved snapshot from the
+  session model.
 - `CameraSlotPagerIndicator` — minimal `4-dot + "N of M"` indicator
   rendered below the calculator pages. Presentation only; slot
   transitions go through the ViewModel's `selectCameraSlot(_:)` /
   next/previous paths.
 
 Slot session state lives on `CameraSlotSessionModel` (see §1.4).
+Fresh-slot defaults derive from `CalculatorDefaults` so the
+ViewModel's initial calculator state and a brand-new slot's snapshot
+share a single source of truth.
 
 ### 1.8 Film catalog
 
@@ -197,7 +209,7 @@ maintain a parallel copy.
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerManager` (via `TimerWorkspaceModel`) |
-| Active camera-slot id | `CameraSlotSessionModel` |
+| Active camera-slot id + inactive slot snapshots | `CameraSlotSessionModel` |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
 | Calculator context persistence | `UserDefaultsExposureCalculatorContextPersistenceStore` |

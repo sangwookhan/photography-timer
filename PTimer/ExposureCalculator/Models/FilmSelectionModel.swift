@@ -101,6 +101,19 @@ final class FilmSelectionModel: ObservableObject {
         activeContext.selectedProfileOverride = nil
     }
 
+    /// Replaces the active film selection without persisting. Used by
+    /// camera-slot switching where the caller updates the calc-input
+    /// state and the film selection together and wants a single
+    /// persistence write at the end of the transition rather than a
+    /// per-mutation write.
+    func replaceActiveSelection(
+        film: FilmIdentity?,
+        profileOverride: ReciprocityProfile?
+    ) {
+        activeContext.selectedPresetFilm = film
+        activeContext.selectedProfileOverride = profileOverride
+    }
+
     // MARK: - Persistence
 
     /// Loads the persisted snapshot and resolves the film reference

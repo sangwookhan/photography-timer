@@ -23,12 +23,15 @@ final class CameraSlotSessionModel: ObservableObject {
     /// step can shorten it without reshaping the model.
     let availableSlots: [CameraSlotID]
 
-    /// Identity for each slot, resolved by `CameraSlotID` so the
-    /// switcher UI can render a stable display label without needing
-    /// access to the snapshot dictionary.
-    let identityProvider: (CameraSlotID) -> CameraSlotIdentity
-
     @Published private(set) var activeSlotID: CameraSlotID
+
+    /// Photographer-supplied display names keyed by slot id. Absent
+    /// keys mean "use the canonical `Camera N` default"; entries are
+    /// stored already-trimmed so the round-trip from `displayName`
+    /// rendering matches the editing surface byte-for-byte.
+    /// `@Published` so a rename or reset propagates through to the
+    /// ViewModel facade and any view bound to the session model.
+    @Published private(set) var customDisplayNames: [CameraSlotID: String]
 
     /// Snapshots for slots that are not currently active. The active
     /// slot's snapshot is intentionally absent — the live state on
@@ -40,7 +43,7 @@ final class CameraSlotSessionModel: ObservableObject {
         availableSlots: [CameraSlotID] = CameraSlotID.allOrdered,
         initialActiveSlotID: CameraSlotID = .camera1,
         initialSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot] = [:],
-        identityProvider: @escaping (CameraSlotID) -> CameraSlotIdentity = { CameraSlotIdentity(id: $0) }
+        initialCustomDisplayNames: [CameraSlotID: String] = [:]
     ) {
         // Camera-slot session shape invariants. The shipping
         // experience exposes Camera 1-4; the underlying domain caps
@@ -65,19 +68,79 @@ final class CameraSlotSessionModel: ObservableObject {
             "Initial active slot must be one of the available slots."
         )
         self.availableSlots = availableSlots
-        self.identityProvider = identityProvider
         self.activeSlotID = initialActiveSlotID
         self.inactiveSnapshots = initialSnapshots.filter { $0.key != initialActiveSlotID }
+        self.customDisplayNames = Self.sanitizeCustomNames(
+            initialCustomDisplayNames,
+            availableSlots: availableSlots
+        )
     }
 
     /// Identity for the currently active slot.
     var activeSlot: CameraSlotIdentity {
-        identityProvider(activeSlotID)
+        identity(for: activeSlotID)
     }
 
-    /// Identity for an arbitrary slot id.
+    /// Identity for an arbitrary slot id. The session model is the
+    /// single owner of `customDisplayName`; the returned identity
+    /// merges the canonical default with any photographer-supplied
+    /// custom name held in `customDisplayNames`.
     func identity(for slotID: CameraSlotID) -> CameraSlotIdentity {
-        identityProvider(slotID)
+        CameraSlotIdentity(
+            id: slotID,
+            customDisplayName: customDisplayNames[slotID]
+        )
+    }
+
+    /// Sets the slot's photographer-supplied display name. Whitespace
+    /// is trimmed; an empty / whitespace-only / nil value clears the
+    /// custom entry (equivalent to `resetCustomDisplayName(for:)`).
+    /// Mirrors the trimming rule on
+    /// `CameraSlotIdentity.displayName` so the editing path round-
+    /// trips with the rendering path.
+    func setCustomDisplayName(_ name: String?, for slotID: CameraSlotID) {
+        guard availableSlots.contains(slotID) else { return }
+        let trimmed = name?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmed, !trimmed.isEmpty {
+            customDisplayNames[slotID] = trimmed
+        } else {
+            customDisplayNames.removeValue(forKey: slotID)
+        }
+    }
+
+    /// Clears the slot's custom display name so `identity(for:)`
+    /// falls back to the canonical `Camera N` label.
+    func resetCustomDisplayName(for slotID: CameraSlotID) {
+        guard availableSlots.contains(slotID) else { return }
+        customDisplayNames.removeValue(forKey: slotID)
+    }
+
+    /// Bulk-loads photographer-supplied display names at app-start
+    /// restore time. Keys outside `availableSlots` are filtered, and
+    /// each value is trimmed; an empty trimmed value drops the entry.
+    /// Replaces any current map so a relaunch never carries forward a
+    /// stale runtime entry that the persisted snapshot does not
+    /// re-assert.
+    func restoreCustomDisplayNames(_ names: [CameraSlotID: String]) {
+        customDisplayNames = Self.sanitizeCustomNames(
+            names,
+            availableSlots: availableSlots
+        )
+    }
+
+    private static func sanitizeCustomNames(
+        _ names: [CameraSlotID: String],
+        availableSlots: [CameraSlotID]
+    ) -> [CameraSlotID: String] {
+        let allowed = Set(availableSlots)
+        var sanitized: [CameraSlotID: String] = [:]
+        for (slotID, value) in names where allowed.contains(slotID) {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            sanitized[slotID] = trimmed
+        }
+        return sanitized
     }
 
     /// Returns the snapshot stored for an inactive slot. Returns nil

@@ -109,6 +109,7 @@
 		A00000000000000000000219 /* PersistentCameraSlotSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000218 /* PersistentCameraSlotSession.swift */; };
 		A0000000000000000000021B /* CameraSlotSessionPersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */; };
 		A0000000000000000000021D /* CameraSlotSessionPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */; };
+		A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* CameraSlotRenameSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -249,6 +250,7 @@
 		A00000000000000000000218 /* PersistentCameraSlotSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCameraSlotSession.swift; sourceTree = "<group>"; };
 		A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionPersistenceController.swift; sourceTree = "<group>"; };
 		A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionPersistenceTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -358,6 +360,7 @@
 				A00000000000000000000218 /* PersistentCameraSlotSession.swift */,
 				A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */,
 				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
+				A0000000000000000000021E /* CameraSlotRenameSheet.swift */,
 			);
 			path = CameraSlot;
 			sourceTree = "<group>";
@@ -742,6 +745,7 @@
 				A00000000000000000000217 /* TimerCardIdentityPresenter.swift in Sources */,
 				A00000000000000000000219 /* PersistentCameraSlotSession.swift in Sources */,
 				A0000000000000000000021B /* CameraSlotSessionPersistenceController.swift in Sources */,
+				A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

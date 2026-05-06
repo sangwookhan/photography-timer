@@ -4,11 +4,17 @@ import Foundation
 /// implementation supports `Camera 1` through `Camera 4`; identities
 /// stay stable across slot switches and persist into timer metadata so
 /// a timer can be associated with the camera that started it.
-enum CameraSlotID: String, CaseIterable, Codable, Equatable, Hashable {
+enum CameraSlotID: String, CaseIterable, Codable, Equatable, Hashable, Identifiable {
     case camera1
     case camera2
     case camera3
     case camera4
+
+    /// `Identifiable` conformance for SwiftUI surfaces (e.g.
+    /// `.sheet(item:)` on the rename sheet). Each slot is its own
+    /// stable identity, which is exactly what `Identifiable` asks
+    /// for — no wrapper struct is required.
+    var id: CameraSlotID { self }
 
     /// Default order used by the session model and the slot pager
     /// UI. The shipping experience exposes all four slots — the
@@ -35,22 +41,19 @@ enum CameraSlotID: String, CaseIterable, Codable, Equatable, Hashable {
 ///
 /// The display layer reads `displayName`, which prefers
 /// `customDisplayName` (when present and non-empty) and otherwise
-/// falls back to `defaultDisplayName`. The split exists so a future
-/// "rename this slot" feature can land without rewriting presentation
-/// or persistence code — the editing surface only writes to
-/// `customDisplayName`, and clearing it falls back to the canonical
-/// "Camera N" label.
+/// falls back to `defaultDisplayName`. The rename / reset surface
+/// writes only `customDisplayName`; clearing it restores the
+/// canonical `Camera N` label without touching slot identity.
 struct CameraSlotIdentity: Equatable, Hashable, Codable {
     let id: CameraSlotID
     /// Canonical, locale-stable label tied to the slot id (e.g.
     /// `"Camera 1"`). Always present so the display layer has a
     /// guaranteed fallback when no custom name exists.
     let defaultDisplayName: String
-    /// Optional photographer-supplied label. `nil` means "use
-    /// default". Custom-name editing is intentionally not implemented
-    /// in this iteration — the field is reserved storage so the
-    /// presentation contract (`displayName`) does not change shape
-    /// when editing lands.
+    /// Optional photographer-supplied label. `nil` means "use default".
+    /// The rename / reset surface writes only this value; clearing it
+    /// restores the canonical `Camera N` label without changing slot
+    /// identity.
     var customDisplayName: String?
 
     /// Active label for any UI surface. Non-empty `customDisplayName`

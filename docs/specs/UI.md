@@ -43,6 +43,33 @@ The launch dataset (per [DomainSchema Spec](DomainSchema.md) §11) ships only `a
 
 The "Clear" affordance shall remove the film selection without altering Base Shutter or ND. It shall not appear in the empty state.
 
+### 2.1.1 Camera slot pager and rename
+
+The calculator screen pages between four independent camera slots
+(`Camera 1` through `Camera 4`). The active slot's name renders as
+the screen's main title; the page indicator below the calculator
+shows the active slot's position in the bounded set. Each slot owns
+its own calculator inputs, film selection, scale, and reciprocity
+result — switching slots never resets the slots not being switched.
+
+The slot title doubles as the rename affordance. Tapping it on the
+active page opens a sheet that lets the photographer:
+
+- enter a custom name (e.g., `Hasselblad 500CM`, `Mamiya 7`); empty
+  or whitespace-only input is treated as a reset request, falling
+  back to the canonical `Camera N` label.
+- reset a previously-renamed slot back to its canonical default
+  through an explicit "Reset to Camera N" action.
+
+The display name is a separate axis from the selected film/profile;
+the rename surface shall not change calculator inputs, film
+selection, scale, reciprocity result, or the slot's stable
+identifier. Started timers keep the slot label captured at start
+time; subsequent renames do not retroactively rewrite a running or
+completed timer's identity. Custom names persist across launches
+through the camera-slot session snapshot (see
+[DomainSchema Spec](DomainSchema.md) §7.4).
+
 ### 2.2 Variable section
 
 Two **wheel pickers** sit side-by-side in a single row:

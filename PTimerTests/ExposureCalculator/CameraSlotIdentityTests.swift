@@ -2,10 +2,9 @@ import XCTest
 @testable import PTimer
 
 /// Unit tests for the camera-slot identity domain type. The display
-/// name carries a deliberate split between `defaultDisplayName` (the
-/// canonical "Camera N" label) and `customDisplayName` (reserved for
-/// a future rename surface). These tests fence the contract so a
-/// later editing UI lands without UI / persistence rewrites.
+/// name carries a deliberate split between `defaultDisplayName` and
+/// `customDisplayName` so rename / reset can change the visible slot
+/// label without changing stable slot identity.
 final class CameraSlotIdentityTests: XCTestCase {
 
     func testDefaultIdentityFallsBackToCanonicalLabel() {

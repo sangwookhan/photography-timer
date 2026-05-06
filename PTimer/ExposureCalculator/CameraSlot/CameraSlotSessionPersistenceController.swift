@@ -23,9 +23,13 @@ struct CameraSlotSessionPersistenceController {
     /// pulls it out and applies it to those models, then loads the
     /// remaining entries via
     /// `CameraSlotSessionModel.restoreInactiveSnapshots(_:)`.
+    /// `customDisplayNames` is loaded into the session model in
+    /// bulk via `restoreCustomDisplayNames(_:)` so a relaunch does
+    /// not have to re-derive labels from runtime defaults.
     struct RestoredSession {
         let activeSlotID: CameraSlotID
         let snapshotsBySlotID: [CameraSlotID: CameraSlotCalculatorSnapshot]
+        let customDisplayNames: [CameraSlotID: String]
     }
 
     /// Loads the new session snapshot, or `nil` when none exists.
@@ -44,16 +48,39 @@ struct CameraSlotSessionPersistenceController {
     /// schema; the legacy store stays read-only after first launch
     /// (its writer in `FilmSelectionModel` continues for the active
     /// slot, but session restore now ignores it).
+    ///
+    /// `customDisplayNames` carries the photographer-supplied slot
+    /// labels keyed by slot id. Slots with no entry persist no
+    /// custom name (Optional field stays `nil`), so a session that
+    /// never used the rename surface round-trips byte-for-byte with
+    /// the pre-PTIMER-123 shape.
     func save(
         activeSlotID: CameraSlotID,
         activeSlotSnapshot: CameraSlotCalculatorSnapshot,
-        inactiveSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]
+        inactiveSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot],
+        customDisplayNames: [CameraSlotID: String] = [:]
     ) {
         var allSnapshots = inactiveSnapshots
         allSnapshots[activeSlotID] = activeSlotSnapshot
 
+        // A slot the photographer renamed but never visited has no
+        // calc snapshot in `inactiveSnapshots`. Without this fallback
+        // the rename would silently drop on the next save — promote
+        // those slots to a `.initial` calc snapshot so the persisted
+        // entry can carry the custom name. Visited slots already
+        // have a snapshot above and skip this branch.
+        for slotID in customDisplayNames.keys where allSnapshots[slotID] == nil {
+            allSnapshots[slotID] = .initial
+        }
+
         let persistentSlots = allSnapshots
-            .map { slotID, snapshot in persistentSnapshot(for: slotID, snapshot: snapshot) }
+            .map { slotID, snapshot in
+                persistentSnapshot(
+                    for: slotID,
+                    snapshot: snapshot,
+                    customDisplayName: customDisplayNames[slotID]
+                )
+            }
             .sorted { $0.slotIDRaw < $1.slotIDRaw }
 
         sessionStore.saveSnapshot(
@@ -76,15 +103,23 @@ struct CameraSlotSessionPersistenceController {
     ) -> RestoredSession {
         let activeSlotID = CameraSlotID(rawValue: session.activeSlotIDRaw) ?? .camera1
         var resolved: [CameraSlotID: CameraSlotCalculatorSnapshot] = [:]
+        var customNames: [CameraSlotID: String] = [:]
         for entry in session.slots {
             guard let slotID = CameraSlotID(rawValue: entry.slotIDRaw) else {
                 continue
             }
             resolved[slotID] = runtimeSnapshot(from: entry)
+            if let raw = entry.customDisplayName {
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    customNames[slotID] = trimmed
+                }
+            }
         }
         return RestoredSession(
             activeSlotID: activeSlotID,
-            snapshotsBySlotID: resolved
+            snapshotsBySlotID: resolved,
+            customDisplayNames: customNames
         )
     }
 
@@ -131,9 +166,21 @@ struct CameraSlotSessionPersistenceController {
 
     private func persistentSnapshot(
         for slotID: CameraSlotID,
-        snapshot: CameraSlotCalculatorSnapshot
+        snapshot: CameraSlotCalculatorSnapshot,
+        customDisplayName: String?
     ) -> PersistentCameraSlotCalculatorSnapshot {
-        PersistentCameraSlotCalculatorSnapshot(
+        // Trim whitespace at write time so the on-disk shape matches
+        // what `CameraSlotIdentity.displayName` would render. An
+        // empty trimmed value persists as `nil` so the steady-state
+        // "no custom name" snapshot stays byte-for-byte compatible
+        // with pre-PTIMER-123 records.
+        let trimmedCustomName: String? = {
+            guard let raw = customDisplayName else { return nil }
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }()
+
+        return PersistentCameraSlotCalculatorSnapshot(
             slotIDRaw: slotID.rawValue,
             selectedPresetFilmID: snapshot.selectedPresetFilm?.id,
             selectedProfileID: snapshot.selectedProfileOverride?.id,
@@ -143,7 +190,8 @@ struct CameraSlotSessionPersistenceController {
             // Persist `nil` for the shipping `.oneThirdStop` so a
             // steady-state snapshot stays compact, mirroring the
             // legacy convention.
-            exposureScaleMode: snapshot.scaleMode == .oneThirdStop ? nil : snapshot.scaleMode.rawValue
+            exposureScaleMode: snapshot.scaleMode == .oneThirdStop ? nil : snapshot.scaleMode.rawValue,
+            customDisplayName: trimmedCustomName
         )
     }
 }

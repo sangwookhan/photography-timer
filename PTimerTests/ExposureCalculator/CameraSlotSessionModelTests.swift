@@ -107,13 +107,22 @@ final class CameraSlotSessionModelTests: XCTestCase {
     }
 
     @MainActor
-    func testIdentityProviderResolvesDisplayName() {
+    func testInitialCustomDisplayNamesResolveDisplayName() {
+        // The session model owns photographer-supplied display
+        // names directly. Seeding `initialCustomDisplayNames` is
+        // equivalent to calling `setCustomDisplayName(_:for:)` for
+        // every entry; verifies that both `activeSlot` and
+        // `identity(for:)` route through the merged identity.
         let model = CameraSlotSessionModel(
-            identityProvider: { CameraSlotIdentity(id: $0, displayName: "Cam \($0.rawValue)") }
+            initialCustomDisplayNames: [
+                .camera1: "Hasselblad 500CM",
+                .camera2: "Mamiya 7"
+            ]
         )
 
-        XCTAssertEqual(model.identity(for: .camera2).displayName, "Cam camera2")
-        XCTAssertEqual(model.activeSlot.displayName, "Cam camera1")
+        XCTAssertEqual(model.identity(for: .camera2).displayName, "Mamiya 7")
+        XCTAssertEqual(model.activeSlot.displayName, "Hasselblad 500CM")
+        XCTAssertEqual(model.customDisplayNames[.camera1], "Hasselblad 500CM")
     }
 
     // MARK: - Invariants
@@ -172,6 +181,160 @@ final class CameraSlotSessionModelTests: XCTestCase {
 
         XCTAssertEqual(model.activeSlotID, .camera2)
         XCTAssertNil(model.snapshot(forInactiveSlot: .camera2))
+    }
+
+    // MARK: - Custom display names
+
+    @MainActor
+    func testSetCustomDisplayNameUpdatesIdentity() {
+        let model = CameraSlotSessionModel()
+
+        model.setCustomDisplayName("Hasselblad 500CM", for: .camera1)
+
+        XCTAssertEqual(model.identity(for: .camera1).customDisplayName, "Hasselblad 500CM")
+        XCTAssertEqual(model.identity(for: .camera1).displayName, "Hasselblad 500CM")
+        XCTAssertEqual(model.activeSlot.displayName, "Hasselblad 500CM")
+        XCTAssertEqual(model.customDisplayNames[.camera1], "Hasselblad 500CM")
+    }
+
+    @MainActor
+    func testRenamingOneSlotDoesNotAffectAnotherSlotLabel() {
+        let model = CameraSlotSessionModel()
+
+        model.setCustomDisplayName("Mamiya 7", for: .camera2)
+
+        XCTAssertEqual(model.identity(for: .camera2).displayName, "Mamiya 7")
+        XCTAssertEqual(model.identity(for: .camera1).displayName, "Camera 1")
+        XCTAssertEqual(model.identity(for: .camera3).displayName, "Camera 3")
+        XCTAssertEqual(model.identity(for: .camera4).displayName, "Camera 4")
+    }
+
+    @MainActor
+    func testRenameTrimsLeadingAndTrailingWhitespace() {
+        let model = CameraSlotSessionModel()
+
+        model.setCustomDisplayName("  Leica M6  ", for: .camera3)
+
+        XCTAssertEqual(model.identity(for: .camera3).customDisplayName, "Leica M6")
+        XCTAssertEqual(model.identity(for: .camera3).displayName, "Leica M6")
+    }
+
+    @MainActor
+    func testRenameWithEmptyStringClearsCustomName() {
+        let model = CameraSlotSessionModel()
+        model.setCustomDisplayName("Hasselblad", for: .camera1)
+        XCTAssertEqual(model.identity(for: .camera1).customDisplayName, "Hasselblad")
+
+        model.setCustomDisplayName("", for: .camera1)
+
+        XCTAssertNil(model.identity(for: .camera1).customDisplayName)
+        XCTAssertEqual(model.identity(for: .camera1).displayName, "Camera 1")
+    }
+
+    @MainActor
+    func testRenameWithWhitespaceOnlyStringClearsCustomName() {
+        let model = CameraSlotSessionModel()
+        model.setCustomDisplayName("Mamiya", for: .camera2)
+
+        model.setCustomDisplayName("   ", for: .camera2)
+
+        XCTAssertNil(model.identity(for: .camera2).customDisplayName)
+        XCTAssertEqual(model.identity(for: .camera2).displayName, "Camera 2")
+    }
+
+    @MainActor
+    func testRenameWithNilClearsCustomName() {
+        let model = CameraSlotSessionModel()
+        model.setCustomDisplayName("Pentax 67", for: .camera4)
+
+        model.setCustomDisplayName(nil, for: .camera4)
+
+        XCTAssertNil(model.identity(for: .camera4).customDisplayName)
+        XCTAssertEqual(model.identity(for: .camera4).displayName, "Camera 4")
+    }
+
+    @MainActor
+    func testResetCustomDisplayNameRestoresDefault() {
+        let model = CameraSlotSessionModel()
+        model.setCustomDisplayName("Hasselblad 500CM", for: .camera1)
+
+        model.resetCustomDisplayName(for: .camera1)
+
+        XCTAssertNil(model.customDisplayNames[.camera1])
+        XCTAssertNil(model.identity(for: .camera1).customDisplayName)
+        XCTAssertEqual(model.identity(for: .camera1).displayName, "Camera 1")
+    }
+
+    @MainActor
+    func testRenameDoesNotMutateInactiveCalculatorSnapshot() {
+        let model = CameraSlotSessionModel()
+        let storedSnapshot = CameraSlotCalculatorSnapshot(
+            baseShutterSeconds: 1.0 / 60.0,
+            ndStep: NDStep(stops: 6),
+            scaleMode: .oneThirdStop,
+            selectedPresetFilm: nil,
+            selectedProfileOverride: nil
+        )
+        // Park a snapshot for camera2 by switching away and back.
+        _ = model.switchActiveSlot(to: .camera2, capturing: storedSnapshot)
+        XCTAssertEqual(model.snapshot(forInactiveSlot: .camera1), storedSnapshot)
+
+        // Renaming the inactive slot must not perturb its parked
+        // calculator snapshot — display name and calc state are
+        // separate axes.
+        model.setCustomDisplayName("Hasselblad 500CM", for: .camera1)
+
+        XCTAssertEqual(model.snapshot(forInactiveSlot: .camera1), storedSnapshot)
+        XCTAssertEqual(model.identity(for: .camera1).displayName, "Hasselblad 500CM")
+    }
+
+    @MainActor
+    func testRenameForSlotOutsideAvailableSetIsIgnored() {
+        let model = CameraSlotSessionModel(
+            availableSlots: [.camera1, .camera2],
+            initialActiveSlotID: .camera1
+        )
+
+        // .camera3 is not part of `availableSlots` for this 2-slot
+        // session — the mutation must be silently ignored rather
+        // than poisoning the custom-name map with an unreachable
+        // entry.
+        model.setCustomDisplayName("Should be ignored", for: .camera3)
+
+        XCTAssertNil(model.customDisplayNames[.camera3])
+    }
+
+    @MainActor
+    func testRestoreCustomDisplayNamesReplacesPriorMap() {
+        let model = CameraSlotSessionModel()
+        model.setCustomDisplayName("Stale", for: .camera1)
+
+        // Bulk restore should fully replace the runtime map so a
+        // relaunch never carries forward a stale label that the
+        // persisted snapshot does not re-assert.
+        model.restoreCustomDisplayNames([
+            .camera2: "Mamiya 7",
+            .camera4: "Pentax 67"
+        ])
+
+        XCTAssertNil(model.customDisplayNames[.camera1])
+        XCTAssertEqual(model.customDisplayNames[.camera2], "Mamiya 7")
+        XCTAssertEqual(model.customDisplayNames[.camera4], "Pentax 67")
+    }
+
+    @MainActor
+    func testRestoreCustomDisplayNamesTrimsAndDropsBlankEntries() {
+        let model = CameraSlotSessionModel()
+
+        model.restoreCustomDisplayNames([
+            .camera1: "  Leica M6  ",
+            .camera2: "   ",
+            .camera3: ""
+        ])
+
+        XCTAssertEqual(model.customDisplayNames[.camera1], "Leica M6")
+        XCTAssertNil(model.customDisplayNames[.camera2])
+        XCTAssertNil(model.customDisplayNames[.camera3])
     }
 
     @MainActor

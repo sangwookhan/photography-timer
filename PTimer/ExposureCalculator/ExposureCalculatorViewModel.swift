@@ -76,6 +76,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// any path (UI tap, test action, future deep-link) flows through
     /// the same observed surface.
     @Published private(set) var activeCameraSlotID: CameraSlotID = .camera1
+    /// Photographer-supplied display names keyed by slot id, mirrored
+    /// from `cameraSlotSessionModel.$customDisplayNames`. Republishing
+    /// here lets SwiftUI views observing the facade redraw the slot
+    /// title and pager labels when the rename surface fires, without
+    /// adding a second observed-model dependency in the screen.
+    @Published private(set) var cameraSlotCustomDisplayNames: [CameraSlotID: String] = [:]
 
     /// Calculation responsibility (calculator instance, inputs, result).
     /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
@@ -211,6 +217,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             presetFilms: dependencies.presetFilms
         )
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
+        self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: dependencies.lockScreenTargetExposer
         )
@@ -227,6 +234,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$activeCalculatorContext)
         resolvedSlotSession.$activeSlotID
             .assign(to: &$activeCameraSlotID)
+        resolvedSlotSession.$customDisplayNames
+            .assign(to: &$cameraSlotCustomDisplayNames)
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -266,6 +275,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             presetFilms: presetFilms
         )
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
+        self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: lockScreenTargetExposer
         )
@@ -276,6 +286,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$activeCalculatorContext)
         resolvedSlotSession.$activeSlotID
             .assign(to: &$activeCameraSlotID)
+        resolvedSlotSession.$customDisplayNames
+            .assign(to: &$cameraSlotCustomDisplayNames)
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -617,6 +629,30 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// model directly.
     func cameraSlotIdentity(for slotID: CameraSlotID) -> CameraSlotIdentity {
         cameraSlotSessionModel.identity(for: slotID)
+    }
+
+    /// Sets the photographer-supplied display name for `slotID`.
+    /// Whitespace is trimmed; empty/whitespace-only/`nil` input
+    /// clears the custom name (resetting back to the canonical
+    /// `Camera N` label). Persists the session snapshot so the
+    /// rename survives a relaunch.
+    ///
+    /// Renaming does not touch any calculator/film state and does
+    /// not change `CameraSlotID` raw values; already-started timers
+    /// keep the slot label captured at start time
+    /// (`RunningTimerItem.cameraSlot.displayName`).
+    func setCameraSlotCustomName(_ name: String?, for slotID: CameraSlotID) {
+        cameraSlotSessionModel.setCustomDisplayName(name, for: slotID)
+        persistCalculatorContext()
+    }
+
+    /// Clears any photographer-supplied display name for `slotID`,
+    /// restoring the canonical `Camera N` label. Persists the change
+    /// so the reset survives a relaunch. No calculator/film state is
+    /// touched.
+    func resetCameraSlotCustomName(_ slotID: CameraSlotID) {
+        cameraSlotSessionModel.resetCustomDisplayName(for: slotID)
+        persistCalculatorContext()
     }
 
     /// Switches the active camera slot, preserving the previous slot's
@@ -1398,6 +1434,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         // rationale.
         cameraSlotSessionModel.restoreInactiveSnapshots(snapshotsBySlotID)
 
+        // Restore photographer-supplied custom names before the
+        // trailing persist inside `applyCameraSlotSnapshot` so the
+        // first re-write of the session snapshot captures both calc
+        // state and labels.
+        cameraSlotSessionModel.restoreCustomDisplayNames(session.customDisplayNames)
+
         // Apply the active slot's snapshot to the live models. Reuse
         // `applyCameraSlotSnapshot` so the same Combine wrapper rules
         // (live-preview clear, scale-then-inputs ordering, single
@@ -1444,11 +1486,13 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         // Multi-slot session store: capture every slot's current
         // snapshot (active reads from live models, inactive from the
-        // session model) and write the full session shape.
+        // session model) and write the full session shape, including
+        // photographer-supplied custom display names.
         sessionPersistence?.save(
             activeSlotID: cameraSlotSessionModel.activeSlotID,
             activeSlotSnapshot: currentCameraSlotSnapshot(),
-            inactiveSnapshots: cameraSlotSessionModel.currentInactiveSnapshots()
+            inactiveSnapshots: cameraSlotSessionModel.currentInactiveSnapshots(),
+            customDisplayNames: cameraSlotSessionModel.customDisplayNames
         )
     }
 

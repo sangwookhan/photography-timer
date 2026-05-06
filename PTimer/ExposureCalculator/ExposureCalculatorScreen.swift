@@ -143,6 +143,11 @@ private struct ExposureWorkspaceMainContent: View {
     let availableHeight: CGFloat
     @State private var presentedFilmDetails: FilmModeDetailsDisplayState?
     @State private var isFilmSelectorPresented = false
+    /// Slot id currently being renamed via the title-tap sheet.
+    /// `.sheet(item:)` keys off this so dismissal clears it back to
+    /// `nil` automatically. Only the active slot can request a
+    /// rename — the title affordance on inactive pages is hidden.
+    @State private var slotIDPendingRename: CameraSlotID?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -158,6 +163,9 @@ private struct ExposureWorkspaceMainContent: View {
                             },
                             onShowFilmDetails: { details in
                                 presentedFilmDetails = details
+                            },
+                            onRequestRename: {
+                                slotIDPendingRename = slotID
                             }
                         )
                         .tag(slotID)
@@ -229,6 +237,23 @@ private struct ExposureWorkspaceMainContent: View {
         .sheet(item: $presentedFilmDetails) { details in
             FilmModeDetailsSheet(details: details)
         }
+        .sheet(item: $slotIDPendingRename) { slotID in
+            CameraSlotRenameSheet(
+                slotID: slotID,
+                defaultDisplayName: viewModel
+                    .cameraSlotIdentity(for: slotID)
+                    .defaultDisplayName,
+                initialCustomName: viewModel
+                    .cameraSlotIdentity(for: slotID)
+                    .customDisplayName,
+                onSave: { newName in
+                    viewModel.setCameraSlotCustomName(newName, for: slotID)
+                },
+                onReset: {
+                    viewModel.resetCameraSlotCustomName(slotID)
+                }
+            )
+        }
         .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
     }
 
@@ -271,6 +296,10 @@ private struct CameraSlotCalculatorPage: View {
     let style: ExposureWorkspaceMainLayoutStyle
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
+    /// Tap handler for the slot title rename affordance. Wired
+    /// through only on the active page; inactive pages pass `nil`
+    /// so the title renders as plain text.
+    let onRequestRename: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -283,6 +312,7 @@ private struct CameraSlotCalculatorPage: View {
                 onToggleSelector: pageState.isActive ? onToggleFilmSelector : {},
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
+                onRequestRename: pageState.isActive ? onRequestRename : nil,
                 style: style
             )
 
@@ -785,9 +815,8 @@ private struct HeaderView: View {
     /// Active camera slot's display name. Used as the screen's main
     /// title so the workspace itself reads as "the page for this
     /// camera." Sourced from the slot identity's computed
-    /// `displayName` so a future custom-name surface (out of scope
-    /// here) can change the displayed text without touching this
-    /// view.
+    /// `displayName` so the rename surface can change the displayed
+    /// text without touching this view.
     let cameraSlotTitle: String
     /// Identity of the slot driving the title. Wired to
     /// `.contentTransition` so a slot switch crossfades the title
@@ -799,11 +828,15 @@ private struct HeaderView: View {
     let onToggleSelector: () -> Void
     let showsResetAction: Bool
     let onResetFilmModeContext: () -> Void
+    /// Tap handler that opens the rename sheet. Non-nil only on the
+    /// active page — inactive pages render the title as plain text
+    /// so the photographer cannot rename a slot they are not on.
+    let onRequestRename: (() -> Void)?
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.headerContentSpacing) {
-            Text(cameraSlotTitle)
+            slotTitleView
                 .font(style.headerTitleFont)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -836,6 +869,34 @@ private struct HeaderView: View {
             .frame(maxWidth: .infinity, minHeight: 18, alignment: .trailing)
         }
         .sectionCardStyle(style: style)
+    }
+
+    @ViewBuilder
+    private var slotTitleView: some View {
+        // Inactive pages render the title as plain text — the page
+        // itself is `.allowsHitTesting(false)` so even a wrapped
+        // Button would not fire, but keeping the view shape distinct
+        // matches "rename only on the active page" without relying
+        // on a global hit-test guard.
+        if let onRequestRename {
+            Button(action: onRequestRename) {
+                HStack(spacing: 6) {
+                    Text(cameraSlotTitle)
+                        .foregroundStyle(.primary)
+                    Image(systemName: "pencil")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Rename camera slot"))
+            .accessibilityValue(Text(cameraSlotTitle))
+            .accessibilityHint("Opens a sheet to rename or reset the camera slot label")
+            .accessibilityIdentifier("camera-slot-rename-button")
+        } else {
+            Text(cameraSlotTitle)
+        }
     }
 }
 

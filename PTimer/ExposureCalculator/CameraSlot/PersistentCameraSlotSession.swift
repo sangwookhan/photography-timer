@@ -54,6 +54,14 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     /// Persisted exposure-scale mode `rawValue`. Optional so legacy
     /// snapshots default to the shipping `.oneThirdStop` scale.
     let exposureScaleMode: String?
+    /// Photographer-supplied display name for this slot. Optional so
+    /// a slot left at its canonical `Camera N` label persists no
+    /// custom entry — the field is additive and pre-PTIMER-123
+    /// snapshots decode unchanged. The decode path treats
+    /// whitespace-only values as "no custom name" to mirror the
+    /// editing path; the load layer also performs that trim before
+    /// handing values to `CameraSlotSessionModel`.
+    let customDisplayName: String?
 
     init(
         slotIDRaw: String,
@@ -62,7 +70,8 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         baseShutterSeconds: Double?,
         ndStop: Int?,
         ndStopThirds: Int? = nil,
-        exposureScaleMode: String? = nil
+        exposureScaleMode: String? = nil,
+        customDisplayName: String? = nil
     ) {
         self.slotIDRaw = slotIDRaw
         self.selectedPresetFilmID = selectedPresetFilmID
@@ -71,6 +80,7 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         self.ndStop = ndStop
         self.ndStopThirds = ndStopThirds
         self.exposureScaleMode = exposureScaleMode
+        self.customDisplayName = customDisplayName
     }
 }
 

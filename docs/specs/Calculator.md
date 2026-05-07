@@ -54,6 +54,20 @@ The fractional-aware `NDStep` domain primitive (with integer `thirdStopCount` ro
 
 Until those future preferences exist, the user shall not see a runtime control for the active scale. Persistence still records the active scale token (§5) so when a future preference ships, an upgrade carries the user's prior choice rather than overwriting it on first launch.
 
+### 1.5 Active-slot scoping of calculator inputs
+
+The calculator's inputs — workflow mode (digital vs. film), selected film and active reciprocity profile, Base Shutter, ND, exposure scale mode, and the most recently derived reciprocity result — are scoped to the **active camera slot**. A shooting session may carry multiple slots ([Requirements](../requirements/Requirements.md) §3.8); at any moment exactly one slot is active and its inputs drive the calculator surface and any timer that starts from the result section.
+
+Switching the active slot replaces the input set rather than mutating it:
+
+- The departing slot's calculator state is preserved as that slot's own state — film, base shutter, ND, scale, and reciprocity result are kept untouched.
+- The arriving slot's previously-stored state becomes the calculator's active inputs, and the result section recomputes against those inputs.
+- A slot that has never been visited arrives with the same defaults a fresh app launch would expose; visiting it does not consume any state from another slot.
+
+A switch shall not invoke any "reset" or "clear" path on the calculator, the film selection, or the reciprocity result. Slots are independent: a calculator input mutation made on the active slot — moving Base Shutter, changing ND, picking a different film, swapping profiles — shall affect only the active slot's state.
+
+The above rules describe input scoping only. Calculation policy (§2 and §3) is unchanged: every slot evaluates its own inputs against the same exposure math and the same reciprocity policy.
+
 ---
 
 ## 2. Stop-based exposure math
@@ -211,9 +225,9 @@ A timer's metadata shall be a snapshot of the calculation result at creation tim
 
 ## 5. Restoration across relaunches
 
-The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, and ND value — shall be persisted and restored on relaunch in both digital and film workflows. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
+The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, and ND value — shall be persisted and restored on relaunch in both digital and film workflows. The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
 
-A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the **shipping one-third-stop scale** (§1.4) with the integer ND value treated as a whole-stop count on the new ladder. The shipping ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop value remains valid without rewriting it.
+A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the **shipping one-third-stop scale** (§1.4) with the integer ND value treated as a whole-stop count on the new ladder. The shipping ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop value remains valid without rewriting it. A snapshot written by a release that predates the multi-slot session shall similarly continue to restore correctly: the legacy single-context shape is read at first launch after upgrade and the next save writes the multi-slot session shape (see [DomainSchema Spec](DomainSchema.md) §7.4.1).
 
 ---
 

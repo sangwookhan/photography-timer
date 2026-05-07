@@ -170,6 +170,7 @@ Working-context snapshot 이 carry 하는 것:
 - **ndStop** — `[0, 30]` 의 음이 아닌 정수, optional; whole-stop ND 값. 영속화된 ND 가 whole-stop 경계에 위치할 때 존재; fractional 일 때 부재 (§7.2).
 - **ndStopThirds** — 음이 아닌 정수, optional; 영속화된 ND 값을 1/3-stop 카운트로 표현 (`0 ⇒ 0 stops`, `1 ⇒ 1/3 stop`, `3 ⇒ 1 stop`, `4 ⇒ 1 1/3 stop`, …). 영속화된 ND 가 fractional 일 때 존재; whole-stop 값에 대해서도 항상 필드를 emit 하는 release 가 작성한 snapshot 에서는 (`ndStop × 3` 과 동등하게) 함께 존재 가능.
 - **exposureScaleMode** — optional 문자열 토큰, 활성 노출 scale 식별 (§7.3). 부재 ⇒ 출시 one-third-stop scale.
+- **activeCameraSlotIDRaw** — optional 문자열, 이 snapshot 이 기술하는 calculator 상태가 어느 카메라 슬롯에 속하는지의 raw 식별자. Forward-compatibility 주석 전용: 다중 슬롯 세션 snapshot (§7.4) 이 부재할 때 단일 컨텍스트 형태만 읽을 수 있는 이전 release 도 올바른 슬롯 연결을 복원할 수 있도록 존재. 부재 ⇒ default 슬롯 연결. 슬롯 세션 상태의 active source of truth 는 §7.4 — 컨텍스트 snapshot 의 이 주석은 fallback.
 
 ### 7.1 스키마 진화 + 하위 호환
 
@@ -186,6 +187,38 @@ Persistence 레이어는 fractional ND 를 `Double` 이 아닌 `ndStopThirds` (1
 ### 7.3 노출 scale 토큰
 
 `exposureScaleMode` 는 활성 노출 scale 을 enumerate 하는 문자열 토큰. 출시 토큰은 `"oneThirdStop"` (출시 default) 와 `"fullStop"` ([Calculator Spec](Calculator.md) §1.4 의 미래 Settings preference 용 reserved). 다른 토큰은 reserved.
+
+### 7.4 카메라 슬롯 세션 snapshot
+
+한 촬영 세션은 다중 카메라 슬롯을 carry 할 수 있다 ([Requirements](../requirements/Requirements.md) §3.8; [Calculator Spec](Calculator.md) §1.5). 슬롯 세션 snapshot 은 모든 슬롯의 calculator 상태와 활성 슬롯 id 를 capture — 재시작이 활성 슬롯뿐 아니라 전체 세션을 복원하도록.
+
+슬롯 세션 snapshot 이 carry 하는 것:
+
+- **schemaVersion** — on-disk 형태를 식별하는 음이 아닌 정수. 출시 값은 `1`. Decoder 는 알 수 없는 schemaVersion 을 거부하고 legacy 단일 컨텍스트 복원 경로 (§7) 로 fallback — 현 release 가 이해하지 못하는 미래 형식의 snapshot 이 세션을 오염시킬 수 없도록.
+- **activeSlotID** — 저장 시점의 활성 슬롯 raw 식별자 문자열. 다른 곳에서 사용하는 같은 슬롯 id alphabet 으로 resolve (현 release 의 `camera1` … `camera4`, [Calculator Spec](Calculator.md) §1.5); 인식되지 않는 값은 load 실패 대신 canonical 첫 슬롯으로 fallback.
+- **slots** — 사용자가 방문한 슬롯별 (그리고 옵션으로 custom 라벨만 가진 슬롯의) snapshot 배열. On-disk 순서는 결정성을 위해 슬롯 id 정렬; runtime 은 순서에 의존하지 않는다.
+
+각 슬롯별 snapshot 이 carry 하는 것:
+
+- **slotIDRaw** — 슬롯의 안정된 id alphabet 과 일치하는 식별자 문자열. 알 수 없는 id 는 decode 시 silently skip — 영속화는 runtime 이 resolve 못 하는 슬롯이 존재하는 척하지 않는다.
+- **selectedPresetFilmID** — optional 문자열; 슬롯의 선택 필름 카탈로그 id (있을 경우). 카탈로그 (§2) 에서 resolve; 어떤 카탈로그 entry 와도 더 이상 매칭되지 않는 id 는 crash 또는 필름 identity fabricate 대신 **No film** (digital workflow) 로 복원.
+- **selectedProfileID** — optional 문자열; 선택 필름 위의 활성 reciprocity profile override id. 필름의 profile 배열 (그리고 bundled non-launch profile 레지스트리, §13.4) 에 대해 resolve. 더 이상 resolve 되지 않는 id 는 override 를 silently drop 하고 슬롯은 필름의 primary profile 로 복원.
+- **baseShutterSeconds** — optional 음이 아닌 finite 숫자; 슬롯의 commit 된 Base Shutter 값. 활성 노출 scale 의 셔터 ladder 에 대해 복원 시 sanitize; 부재 또는 invalid 값은 출시 default Base Shutter 로 복원.
+- **ndStop** / **ndStopThirds** — calculator working context (§7 / §7.2) 와 동일한 규약과 우선순위: fractional-aware `ndStopThirds` 가 우선, `ndStop` 은 legacy hint 취급.
+- **exposureScaleMode** — §7.3 과 같은 규약을 따르는 optional 문자열 토큰; 부재 ⇒ 출시 one-third-stop scale.
+- **customDisplayName** — 사진가가 지정한 슬롯 표시 라벨 (optional). Write 시점에 trim; 빈 / whitespace-only 값은 부재로 영속화 — 복원된 슬롯이 canonical *Camera N* default 로 fallback 하도록. 슬롯 rename 은 이 필드만 변경; 슬롯의 안정된 id 와 슬롯별 calculator 입력은 영향받지 않는다.
+
+#### 7.4.1 Legacy 단일 컨텍스트 snapshot 으로부터의 마이그레이션
+
+복원 시 슬롯 세션 snapshot (§7.4) 이 source of truth. Legacy 단일 컨텍스트 snapshot (§7) 은 다중 슬롯 스키마 이전의 세션이 reset 되지 않도록 첫 launch 후 한 번 마이그레이션 source 로 read:
+
+- 슬롯 세션 snapshot 이 부재할 때 runtime 은 legacy 단일 컨텍스트 snapshot 으로부터 복원. 그 `activeCameraSlotIDRaw` 주석이 존재하면 legacy 값들이 속한 슬롯을 가리킴; 부재 ⇒ canonical default 슬롯.
+- 마이그레이션 후 첫 save 는 슬롯 세션 snapshot 을 작성. 이후 launch 는 새 snapshot 을 read 하고 슬롯 세션 목적으로는 legacy 단일 컨텍스트 store 를 무시.
+- 슬롯 세션 store 가 현 release 가 인식하지 못하는 `schemaVersion` 의 snapshot 을 가지면 load 가 nothing 을 반환하고 runtime 은 legacy 마이그레이션 경로로 fallback; 다음 save 는 현 스키마로 snapshot 을 다시 쓴다.
+
+#### 7.4.2 스키마 진화
+
+슬롯 세션 snapshot 은 backward-compatible 추가만으로 진화 ([Requirements](../requirements/Requirements.md) NFR-S.2). Optional 필드 추가 — 예: 위의 `customDisplayName` — 는 `schemaVersion` bump 없이 허용; 그 필드가 없는 이전 snapshot 은 그대로 decode (필드는 부재로 처리). Breaking change (기존 필드 rename, 필수 필드 drop, 기존 필드 의미 변경) 는 조정된 `schemaVersion` 증가와 문서화된 마이그레이션 단계 없이는 허용되지 않는다.
 
 ---
 

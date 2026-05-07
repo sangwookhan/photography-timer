@@ -79,14 +79,20 @@ Five `@Observable` feature models, each owning one slice of state:
   lifecycle commands around `TimerManager`.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
-- **`CameraSlotSessionModel`** — active camera-slot identity plus the
-  per-slot calculator snapshot for inactive slots. The active slot's
-  live state remains on `CalculatorModel` + `FilmSelectionModel`; the
-  session model only stores the inactive slot snapshots and the
-  `activeSlotID`. Snapshot capture and load on slot switch are
-  orchestrated by the view-model facade (the only place that already
-  reads/writes both `CalculatorModel` and `FilmSelectionModel` in one
-  step).
+- **`CameraSlotSessionModel`** — active camera-slot identity, the
+  per-slot calculator snapshot for inactive slots, and the
+  photographer-supplied custom display names keyed by slot id. The
+  active slot's live state remains on `CalculatorModel` +
+  `FilmSelectionModel`; the session model only stores the inactive
+  slot snapshots, the `activeSlotID`, and `customDisplayNames`.
+  Snapshot capture and load on slot switch are orchestrated by the
+  view-model facade (the only place that already reads/writes both
+  `CalculatorModel` and `FilmSelectionModel` in one step). Rename
+  and reset are pure session-model mutations
+  (`setCustomDisplayName(_:for:)` /
+  `resetCustomDisplayName(for:)`); the facade re-publishes them as
+  `cameraSlotCustomDisplayNames` so SwiftUI surfaces redraw without
+  a slot switch.
 
 The feature models do not import each other. Cross-model wiring lives
 on `WorkspaceCoordinator`. A model that consumes another model's state
@@ -150,7 +156,9 @@ Directory: `ExposureCalculator/CameraSlot/`.
   the only value written to timer metadata; the display label is
   reconstructed on decode and also captured at start time so the
   workspace can render the timer's slot label without resolving the
-  id back.
+  id back. The `customDisplayName` field is the photographer-
+  supplied label set through the rename surface; it lives on the
+  session model and is merged into the identity on read.
 - `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
   calculator working state (base shutter, ND, scale mode, selected
   film, profile override). Live-preview overlays
@@ -164,9 +172,12 @@ Directory: `ExposureCalculator/CameraSlot/`.
 - `PersistentCameraSlotSession` — on-disk schema
   (`PersistentCameraSlotSessionSnapshot` +
   `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
-  session. Stores raw `CameraSlotID` raw values and film/profile
-  ids; the runtime resolves ids back through the preset catalog and
-  falls back to "No film" for any id no longer in the catalog.
+  session. Stores raw `CameraSlotID` raw values, film/profile ids,
+  and an Optional photographer-supplied `customDisplayName` per
+  slot. The runtime resolves ids back through the preset catalog
+  and falls back to "No film" for any id no longer in the catalog.
+  The `customDisplayName` field is additive; pre-PTIMER-123
+  snapshots decode unchanged and the schema version stays at `1`.
 - `CameraSlotSessionPersistenceController` — bridges the runtime
   `CameraSlotSessionModel` and the on-disk session snapshot. Owns
   serialise/deserialise so the ViewModel facade stays a thin
@@ -232,7 +243,7 @@ maintain a parallel copy.
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerManager` (via `TimerWorkspaceModel`) |
-| Active camera-slot id + inactive slot snapshots | `CameraSlotSessionModel` |
+| Active camera-slot id + inactive slot snapshots + custom slot display names | `CameraSlotSessionModel` |
 | Camera-slot identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |

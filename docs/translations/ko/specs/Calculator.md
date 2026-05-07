@@ -56,6 +56,20 @@ Fractional-aware `NDStep` 도메인 primitive (정수 `thirdStopCount` round-tri
 
 이 미래 preference 들이 존재하기 전까지, 사용자에게 활성 scale 의 runtime control 을 노출하지 않음. Persistence 는 활성 scale 토큰을 계속 기록 (§5) — 미래 preference 가 출시될 때 첫 launch 시 사용자의 prior 선택을 덮어쓰지 않고 carry 하기 위함.
 
+### 1.5 활성 슬롯에 종속되는 calculator 입력
+
+Calculator 의 입력 — workflow 모드 (digital vs film), 선택 필름과 활성 reciprocity profile, Base Shutter, ND, 노출 scale 모드, 가장 최근 도출된 reciprocity 결과 — 는 **활성 카메라 슬롯** 에 종속된다. 한 촬영 세션은 다중 슬롯을 보유할 수 있다 ([Requirements](../../../requirements/Requirements.md) §3.8); 어느 시점에서도 정확히 하나의 슬롯이 활성이며 그 입력이 calculator 표면과 결과 섹션에서 시작되는 모든 timer 를 driven 한다.
+
+활성 슬롯 전환은 입력 set 을 *변경하지* 않고 *교체* 한다:
+
+- 떠나는 슬롯의 calculator 상태는 그 슬롯 자신의 상태로 보존 — 필름, base shutter, ND, scale, reciprocity 결과를 그대로 유지.
+- 도착하는 슬롯의 이전 저장 상태가 calculator 의 활성 입력이 되며, 결과 섹션은 그 입력에 대해 재계산.
+- 한 번도 방문하지 않은 슬롯은 fresh 앱 launch 와 동일한 default 로 도착; 슬롯을 방문하는 동작이 다른 슬롯의 상태를 소비하지 않는다.
+
+전환은 calculator / 필름 선택 / reciprocity 결과 어디에서도 "reset" 또는 "clear" 경로를 호출하지 않는다. 슬롯은 독립적: 활성 슬롯에 가하는 calculator 입력 변경 — Base Shutter 이동, ND 변경, 다른 필름 선택, profile swap — 은 활성 슬롯 상태에만 영향.
+
+위 규칙은 입력 종속(scoping) 만을 기술. 계산 정책 (§2, §3) 은 변경되지 않는다 — 모든 슬롯은 자기 입력을 같은 노출 math 와 같은 reciprocity 정책에 대해 평가한다.
+
 ---
 
 ## 2. Stop 기반 노출 math
@@ -199,9 +213,9 @@ Timer 의 metadata 는 생성 시점의 계산 결과 snapshot. 후속 calculato
 
 ## 5. 재시작 가로지른 복원
 
-Calculator 의 working context — 선택된 필름 identity + **노출 scale 토큰** (§1.4) + Base Shutter + ND 값 — 는 digital + film 양 workflow 에서 영속화 + 재시작 시 복원. 저장된 preset identity 가 어떤 catalog entry 로도 resolve 되지 않거나 활성 scale 의 ladder 에 대한 숫자 값 검증이 실패면, 시스템은 정의된 default 로 안전하게 fallback (crash 또는 silent drift 아님).
+Calculator 의 working context — 선택된 필름 identity + **노출 scale 토큰** (§1.4) + Base Shutter + ND 값 — 는 digital + film 양 workflow 에서 영속화 + 재시작 시 복원. Working context 는 카메라 슬롯별로 종속 (§1.5) — 모든 슬롯의 상태와 활성 슬롯 id 가 함께 보존되며, 다중 슬롯 세션의 on-disk 형태는 [DomainSchema Spec](DomainSchema.md) §7.4 에 기술. 저장된 preset identity 가 어떤 catalog entry 로도 resolve 되지 않거나 활성 scale 의 ladder 에 대한 숫자 값 검증이 실패면, 시스템은 정의된 default 로 안전하게 fallback (crash 또는 silent drift 아님).
 
-노출 scale 토큰 (또는 fractional ND) 등장 이전 release 에서 작성된 snapshot 도 정상 복원: 누락된 필드는 **출시 one-third-stop scale** (§1.4) 로 resolve 되고, 정수 ND 값은 새 ladder 의 whole-stop count 로 처리됨. 출시 ladder 는 legacy full-stop ladder 의 strict superset 이므로 legacy whole-stop 값을 다시 쓸 필요 없이 유효한 ladder entry 로 유지됨.
+노출 scale 토큰 (또는 fractional ND) 등장 이전 release 에서 작성된 snapshot 도 정상 복원: 누락된 필드는 **출시 one-third-stop scale** (§1.4) 로 resolve 되고, 정수 ND 값은 새 ladder 의 whole-stop count 로 처리됨. 출시 ladder 는 legacy full-stop ladder 의 strict superset 이므로 legacy whole-stop 값을 다시 쓸 필요 없이 유효한 ladder entry 로 유지됨. 다중 슬롯 세션이 등장하기 이전 release 에서 작성된 snapshot 도 마찬가지로 정상 복원: 첫 launch 시 legacy 단일 컨텍스트 형태를 읽고, 이후 저장은 다중 슬롯 세션 형태로 작성된다 ([DomainSchema Spec](DomainSchema.md) §7.4.1 참조).
 
 ---
 

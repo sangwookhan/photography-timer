@@ -123,6 +123,66 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertTrue(BottomSheetCompactDockMetrics.scrollsHorizontally)
     }
 
+    /// Compact mini card has a fixed `timerCardHeight` that must
+    /// accommodate every internal sub-frame for the worst-case
+    /// content path (film-identity timer with the layered decorative
+    /// timeline and the bottom identity badge). The card uses
+    /// `clipShape` after its frame, so any over-budget content
+    /// disappears at the bottom edge — the source of PTIMER-124.
+    func testCompactCardHeightAccommodatesWorstCaseLayoutBudget() {
+        // Sub-frame heights mirror `CompactTimerMiniCardView`'s body:
+        //   - Status header HStack (status icon + secondary total): explicit 22pt frame.
+        //   - Primary remaining-text VStack: explicit 34pt minHeight.
+        //   - Tertiary status text or identity-film text slot: caption2 line
+        //     height (~13pt) plus 2pt top padding = 15pt. Falls back to a 6pt
+        //     spacer when both are nil, so 15pt is the worst case.
+        //   - Decorative timeline (running/paused) or fallback spacer: 9pt minHeight.
+        //   - Bottom identity-badge HStack: 10pt minHeight + 3pt top padding = 13pt.
+        // Outer card padding is 9pt top + 12pt bottom = 21pt.
+        let statusHeaderHeight: CGFloat = 22
+        let primaryRemainingMinHeight: CGFloat = 34
+        let tertiaryOrFilmSlotHeight: CGFloat = 15
+        let decorativeTimelineMinHeight: CGFloat = 9
+        let identityBadgeHeight: CGFloat = 13
+        let verticalPadding: CGFloat = 9 + 12
+
+        let requiredHeight = statusHeaderHeight
+            + primaryRemainingMinHeight
+            + tertiaryOrFilmSlotHeight
+            + decorativeTimelineMinHeight
+            + identityBadgeHeight
+            + verticalPadding
+
+        XCTAssertGreaterThanOrEqual(
+            BottomSheetCompactDockMetrics.timerCardHeight,
+            requiredHeight,
+            "timerCardHeight must fit the worst-case compact card content " +
+            "without bottom clipping (PTIMER-124)."
+        )
+    }
+
+    @MainActor
+    func testCompactCardSnapshotEntersWorstCaseFilmIdentityLayout() {
+        // Reproduces the PTIMER-124 setup: film-mode running timer
+        // started from a camera slot with a long-exposure duration.
+        // The snapshot must populate `identityFilmText` and request
+        // all three decorative timeline layers so the compact card
+        // renders the worst-case content stack the metrics test sizes
+        // the card height for. If a future refactor stops surfacing
+        // either signal here, the regression budget tracked by
+        // `testCompactCardHeightAccommodatesWorstCaseLayoutBudget`
+        // would silently stop being load-bearing.
+        let snapshot = makeSnapshot(from: [filmIdentityRunningTimer()])
+        let item = snapshot.compactItems.first
+
+        XCTAssertEqual(item?.identityFilmText, "Provia 100F")
+        XCTAssertTrue(item?.showsDecorativeTimeline ?? false)
+        XCTAssertEqual(item?.visibleLayerCount, 3)
+
+        let host = makeBottomSheetHost(detent: .compact, snapshot: snapshot)
+        XCTAssertGreaterThan(host.view.bounds.height, 0)
+    }
+
     func testCompactDockOverflowCaseUsesSameSymmetricInsetModel() {
         let totalHorizontalInset = BottomSheetCompactDockMetrics.contentInsets.leading
             + BottomSheetCompactDockMetrics.contentInsets.trailing
@@ -766,6 +826,28 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
             pausedAt: nil,
             status: .running,
             referenceDate: now
+        )
+    }
+
+    private func filmIdentityRunningTimer() -> RunningTimerItem {
+        let now = Date(timeIntervalSince1970: 9_000)
+
+        return RunningTimerItem(
+            id: UUID(uuidString: "67676767-6767-6767-6767-676767676767")!,
+            order: 1,
+            name: "Film Identity Card",
+            basisSummary: "Base 1/3s · 14 stops",
+            duration: 19_660,
+            startDate: now,
+            endDate: now.addingTimeInterval(19_660),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running,
+            referenceDate: now,
+            cameraSlot: CameraSlotIdentity(id: .camera4),
+            filmDisplayName: "Provia 100F",
+            filmProfileQualifier: nil,
+            exposureSource: .filmAdjustedShutter
         )
     }
 

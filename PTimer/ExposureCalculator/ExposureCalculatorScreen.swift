@@ -94,6 +94,17 @@ struct ExposureCalculatorScreen: View {
                     onPauseTimer: viewModel.pauseTimer,
                     onResumeTimer: viewModel.resumeTimer,
                     onRemoveTimer: viewModel.removeTimer,
+                    onStartTimerAgain: { id in
+                        // Look the source timer up on the facade rather
+                        // than threading the row's full RunningTimerItem
+                        // through the snapshot — the snapshot carries
+                        // presentation values, not the metadata-bearing
+                        // runtime item that the clone path needs.
+                        guard let source = viewModel.timers.first(where: { $0.id == id }) else {
+                            return
+                        }
+                        viewModel.startNewTimer(fromCompleted: source)
+                    },
                     onClearCompletedTimers: viewModel.clearCompletedTimers
                 )
                 .padding(.bottom, geometry.safeAreaInsets.bottom)

@@ -156,6 +156,252 @@ final class TimerWorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.timers.first?.id, runningID)
     }
 
+    // MARK: - Clone-from-completed (PTIMER-36)
+
+    @MainActor
+    func testCloningCompletedTimerStartsNewRunningTimerWithSameDuration() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 30,
+            name: "0 stops - 30s",
+            basisSummary: "Base 30s · 0 stops"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        // Drive the source to `.completed` by advancing wall clock past
+        // its end and ticking the manager.
+        dateBox.date = Date(timeIntervalSince1970: 200)
+        timerManager.tick()
+        guard let completedSource = model.timers.first(where: { $0.id == sourceID }),
+              completedSource.status == .completed else {
+            XCTFail("Source timer should be completed before cloning")
+            return
+        }
+
+        let newID = model.startTimer(cloningCompleted: completedSource)
+
+        XCTAssertNotNil(newID)
+        XCTAssertNotEqual(newID, sourceID, "Clone must get a fresh id")
+        XCTAssertEqual(model.timers.count, 2)
+
+        guard let newTimer = model.timers.first(where: { $0.id == newID }) else {
+            XCTFail("Cloned timer should be in the workspace")
+            return
+        }
+        XCTAssertEqual(newTimer.status, .running)
+        XCTAssertEqual(newTimer.duration, completedSource.duration, accuracy: 0.0001)
+        XCTAssertEqual(newTimer.name, completedSource.name)
+        XCTAssertEqual(newTimer.basisSummary, completedSource.basisSummary)
+
+        // Source remains unchanged.
+        guard let sourceAfter = model.timers.first(where: { $0.id == sourceID }) else {
+            XCTFail("Source timer should still be in the workspace")
+            return
+        }
+        XCTAssertEqual(sourceAfter.status, .completed)
+        XCTAssertEqual(sourceAfter.duration, completedSource.duration, accuracy: 0.0001)
+        XCTAssertEqual(sourceAfter.completedAt, completedSource.completedAt)
+        XCTAssertEqual(sourceAfter.order, completedSource.order)
+    }
+
+    @MainActor
+    func testCloningCompletedTimerCopiesShootingContextIdentity() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        // Plain camera-slot identity; this test only verifies that
+        // existing shooting context flows from the completed source
+        // onto the clone.
+        let cameraSlot = CameraSlotIdentity(id: .camera2)
+        guard let sourceID = model.startTimer(
+            duration: 64,
+            name: "Tri-X 400 - 64s",
+            basisSummary: "Base 1s · 6 stops · Tri-X 400",
+            cameraSlot: cameraSlot,
+            filmDisplayName: "Tri-X 400",
+            filmProfileQualifier: "Unofficial",
+            exposureSource: .filmCorrectedExposure
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 200)
+        timerManager.tick()
+        guard let completedSource = model.timers.first(where: { $0.id == sourceID }),
+              completedSource.status == .completed else {
+            XCTFail("Source timer should be completed before cloning")
+            return
+        }
+
+        let newID = model.startTimer(cloningCompleted: completedSource)
+        XCTAssertNotNil(newID)
+
+        let newTimer = model.timers.first { $0.id == newID }
+        XCTAssertEqual(newTimer?.cameraSlot, cameraSlot)
+        XCTAssertEqual(newTimer?.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(newTimer?.filmProfileQualifier, "Unofficial")
+        XCTAssertEqual(newTimer?.exposureSource, .filmCorrectedExposure)
+    }
+
+    @MainActor
+    func testCloningCompletedTimerPreservesFunctionalityWithoutShootingContext() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 12,
+            name: "Manual",
+            basisSummary: "Manual timer"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 200)
+        timerManager.tick()
+        guard let completedSource = model.timers.first(where: { $0.id == sourceID }),
+              completedSource.status == .completed else {
+            XCTFail("Source timer should be completed before cloning")
+            return
+        }
+
+        guard let newID = model.startTimer(cloningCompleted: completedSource),
+              let newTimer = model.timers.first(where: { $0.id == newID }) else {
+            XCTFail("Cloned timer should be in the workspace")
+            return
+        }
+
+        XCTAssertEqual(newTimer.status, .running)
+        XCTAssertEqual(newTimer.duration, 12, accuracy: 0.0001)
+        XCTAssertNil(newTimer.cameraSlot)
+        XCTAssertNil(newTimer.filmDisplayName)
+        XCTAssertNil(newTimer.filmProfileQualifier)
+        XCTAssertNil(newTimer.exposureSource)
+    }
+
+    @MainActor
+    func testCloneAssignsFreshOrderIndependentOfSource() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 5,
+            name: "src",
+            basisSummary: "manual"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        let nextOrderBeforeClone = model.nextTimerOrder
+
+        dateBox.date = Date(timeIntervalSince1970: 200)
+        timerManager.tick()
+        guard let completedSource = model.timers.first(where: { $0.id == sourceID }),
+              completedSource.status == .completed else {
+            XCTFail("Source timer should be completed before cloning")
+            return
+        }
+
+        let newID = model.startTimer(cloningCompleted: completedSource)
+        let newTimer = model.timers.first { $0.id == newID }
+
+        XCTAssertEqual(newTimer?.order, nextOrderBeforeClone)
+        XCTAssertNotEqual(newTimer?.order, completedSource.order)
+        XCTAssertEqual(model.nextTimerOrder, nextOrderBeforeClone + 1)
+    }
+
+    @MainActor
+    func testCloningRejectsNonCompletedTimer() {
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard model.startTimer(
+            duration: 600,
+            name: "running",
+            basisSummary: "manual"
+        ) != nil,
+              let runningSource = model.timers.first else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        XCTAssertEqual(runningSource.status, .running)
+        let newID = model.startTimer(cloningCompleted: runningSource)
+        XCTAssertNil(newID)
+        XCTAssertEqual(model.timers.count, 1, "Workspace must not gain a clone for a non-completed source")
+    }
+
+    @MainActor
+    func testCloneIsIndependentLifecycleFromSource() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 30,
+            name: "src",
+            basisSummary: "manual"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 200)
+        timerManager.tick()
+        guard let completedSource = model.timers.first(where: { $0.id == sourceID }) else {
+            XCTFail("Source timer missing")
+            return
+        }
+
+        guard let newID = model.startTimer(cloningCompleted: completedSource) else {
+            XCTFail("Clone should start")
+            return
+        }
+
+        // Pause the new timer; the source's recorded completion state
+        // must not change as a side effect.
+        dateBox.date = Date(timeIntervalSince1970: 210)
+        model.pauseTimer(id: newID)
+        guard let newAfterPause = model.timers.first(where: { $0.id == newID }),
+              let sourceAfterPause = model.timers.first(where: { $0.id == sourceID }) else {
+            XCTFail("Both timers should still be in the workspace")
+            return
+        }
+
+        XCTAssertEqual(newAfterPause.status, .paused)
+        XCTAssertEqual(sourceAfterPause.status, .completed)
+        XCTAssertEqual(sourceAfterPause.completedAt, completedSource.completedAt)
+        XCTAssertEqual(sourceAfterPause.duration, completedSource.duration, accuracy: 0.0001)
+    }
+
     // MARK: - Persistence
 
     @MainActor

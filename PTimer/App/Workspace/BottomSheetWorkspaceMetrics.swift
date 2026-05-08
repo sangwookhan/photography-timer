@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 struct BottomSheetLayoutMetrics {
-    static let compactMainContentReservation: CGFloat = 132
+    static let compactMainContentReservation: CGFloat = 152
     static let largeFixedHeight: CGFloat = 560
 
     static func fixedHeight(for detent: BottomSheetDetent) -> CGFloat? {
@@ -42,7 +42,7 @@ enum BottomSheetCompactDockMetrics {
     static let contentInsets = EdgeInsets(top: 1, leading: 18, bottom: 1, trailing: 18)
     static let cardSpacing: CGFloat = 10
     static let timerCardWidth: CGFloat = 96
-    static let timerCardHeight: CGFloat = 96
+    static let timerCardHeight: CGFloat = 116
     static let overflowCardWidth: CGFloat = 86
     static let viewportHeight: CGFloat = timerCardHeight + contentInsets.top + contentInsets.bottom
     static let viewportCornerRadius: CGFloat = 22

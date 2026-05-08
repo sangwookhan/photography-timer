@@ -7,6 +7,7 @@ struct BottomSheetWorkspaceShell: View {
     let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
+    let onStartTimerAgain: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
 
     var body: some View {
@@ -24,6 +25,7 @@ struct BottomSheetWorkspaceShell: View {
                     onPauseTimer: onPauseTimer,
                     onResumeTimer: onResumeTimer,
                     onRemoveTimer: onRemoveTimer,
+                    onStartTimerAgain: onStartTimerAgain,
                     onClearCompletedTimers: onClearCompletedTimers
                 )
             }
@@ -92,6 +94,7 @@ private struct BottomSheetContentHost: View {
     let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
+    let onStartTimerAgain: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
 
     var body: some View {
@@ -118,6 +121,7 @@ private struct BottomSheetContentHost: View {
                         onPauseTimer: onPauseTimer,
                         onResumeTimer: onResumeTimer,
                         onRemoveTimer: onRemoveTimer,
+                        onStartTimerAgain: onStartTimerAgain,
                         onClearCompletedTimers: onClearCompletedTimers,
                         onCollapse: onCollapse
                     )
@@ -638,6 +642,7 @@ private struct BottomSheetLargeWorkspaceView: View {
     let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
+    let onStartTimerAgain: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onCollapse: () -> Void
     @State private var hasAppliedInitialFocus = false
@@ -735,6 +740,8 @@ private struct BottomSheetLargeWorkspaceView: View {
             onResumeTimer(id)
         case .remove:
             onRemoveTimer(id)
+        case .startAgain:
+            onStartTimerAgain(id)
         }
     }
 }
@@ -884,7 +891,7 @@ private struct LargeWorkspaceTimerRowView: View {
         switch action {
         case .pause:
             return .orange
-        case .resume:
+        case .resume, .startAgain:
             return .blue
         case .remove:
             return .secondary

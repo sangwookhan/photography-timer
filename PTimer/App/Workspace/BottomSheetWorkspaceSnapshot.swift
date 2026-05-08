@@ -457,7 +457,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
         case .paused:
             return [.resume, .remove]
         case .completed:
-            return [.remove]
+            return [.startAgain, .remove]
         }
     }
 

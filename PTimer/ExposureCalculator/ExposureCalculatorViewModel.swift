@@ -1052,6 +1052,17 @@ final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
+    /// Starts a new timer from a completed source timer in the
+    /// workspace. The source timer is unchanged; the new timer
+    /// reuses the source's duration and inherits its identity
+    /// snapshot (camera slot, film display name, profile qualifier,
+    /// exposure source) when present. No-op when `source` is not in
+    /// the completed state, so view layers can route every row through
+    /// this path safely.
+    func startNewTimer(fromCompleted source: RunningTimerItem) {
+        timerWorkspaceModel.startTimer(cloningCompleted: source)
+    }
+
     func pauseTimer(id: UUID) {
         timerWorkspaceModel.pauseTimer(id: id)
     }

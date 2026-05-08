@@ -340,6 +340,91 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.timingText == "Completed recently" })
     }
 
+    // MARK: - PTIMER-36 Start Again surface
+
+    @MainActor
+    func testCompletedRowSurfacesStartAgainActionAndOtherStatusesDoNot() throws {
+        let snapshot = makeSnapshot(from: sampleTimers())
+        let activeSection = try XCTUnwrap(
+            snapshot.sections.first(where: { $0.title == "Active" })
+        )
+        let completedSection = try XCTUnwrap(
+            snapshot.sections.first(where: { $0.title == "Recently Completed" })
+        )
+
+        for activeItem in activeSection.items {
+            XCTAssertFalse(
+                activeItem.actions.contains(.startAgain),
+                "\(activeItem.status) timers must not surface the Start Again action"
+            )
+        }
+
+        for completedItem in completedSection.items {
+            XCTAssertTrue(
+                completedItem.actions.contains(.startAgain),
+                "Completed timers must surface the Start Again action"
+            )
+            XCTAssertEqual(
+                completedItem.actions,
+                [.startAgain, .remove],
+                "Start Again is presented before Remove on completed rows"
+            )
+        }
+    }
+
+    @MainActor
+    func testStartingNewTimerFromCompletedAddsCloneAndLeavesSourceUnchanged() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 8)
+        let sourceID = try XCTUnwrap(harness.viewModel.timers.first?.id)
+
+        // Drive the source to completed.
+        harness.currentDate = Date(timeIntervalSince1970: 200)
+        harness.timerManager.tick(now: harness.currentDate)
+        let completedSource = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id == sourceID }
+        )
+        XCTAssertEqual(completedSource.status, .completed)
+
+        // Advance the clock again so the cloned timer's start date is
+        // distinct from the source's start date (the clone's running
+        // payload must not share start/completion timestamps).
+        harness.currentDate = Date(timeIntervalSince1970: 250)
+        harness.viewModel.startNewTimer(fromCompleted: completedSource)
+
+        XCTAssertEqual(harness.viewModel.timers.count, 2)
+
+        let sourceAfter = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id == sourceID }
+        )
+        let cloned = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id != sourceID }
+        )
+
+        XCTAssertEqual(sourceAfter.status, .completed)
+        XCTAssertEqual(sourceAfter.duration, completedSource.duration, accuracy: 0.0001)
+        XCTAssertEqual(sourceAfter.completedAt, completedSource.completedAt)
+
+        XCTAssertEqual(cloned.status, .running)
+        XCTAssertEqual(cloned.duration, completedSource.duration, accuracy: 0.0001)
+        XCTAssertNotEqual(cloned.id, sourceID)
+        XCTAssertEqual(cloned.startDate, harness.currentDate)
+    }
+
+    @MainActor
+    func testStartingNewTimerFromNonCompletedRowIsRejected() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 60)
+        let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
+        XCTAssertEqual(runningSource.status, .running)
+
+        harness.viewModel.startNewTimer(fromCompleted: runningSource)
+
+        XCTAssertEqual(harness.viewModel.timers.count, 1)
+    }
+
     @MainActor
     func testSnapshotStoreReflectsPreviewStateTimerStartWithoutChangingWorkspaceFlow() throws {
         let harness = makeRuntimeHarness(now: 100)

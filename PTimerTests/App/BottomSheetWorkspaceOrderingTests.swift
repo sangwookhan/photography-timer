@@ -402,6 +402,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                 onPauseTimer: { _ in },
                 onResumeTimer: { _ in },
                 onRemoveTimer: { _ in },
+                onStartTimerAgain: { _ in },
                 onClearCompletedTimers: {}
             )
             .frame(width: 390, height: 480)

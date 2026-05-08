@@ -97,6 +97,40 @@ final class TimerWorkspaceModel: ObservableObject {
         return id
     }
 
+    /// Starts a new timer cloned from a completed source timer. The
+    /// new timer gets a fresh id, order, and runtime lifecycle from
+    /// `TimerManager`; identity-bearing fields (camera slot, film
+    /// name, profile qualifier, exposure source) come from the
+    /// source's already-captured metadata. The source timer is read
+    /// only — its runtime state, ordering, and persisted metadata are
+    /// untouched.
+    ///
+    /// Returns the new timer's id on success; `nil` when `source` is
+    /// not in the `completed` state or `TimerManager` rejected the
+    /// duration. The completed-status guard lets the UI route every
+    /// row through this path while staying inert for running or
+    /// paused rows.
+    @discardableResult
+    func startTimer(
+        cloningCompleted source: RunningTimerItem,
+        id: UUID = UUID()
+    ) -> UUID? {
+        guard source.status == .completed else {
+            return nil
+        }
+
+        return startTimer(
+            id: id,
+            duration: source.duration,
+            name: source.name,
+            basisSummary: source.basisSummary,
+            cameraSlot: source.cameraSlot,
+            filmDisplayName: source.filmDisplayName,
+            filmProfileQualifier: source.filmProfileQualifier,
+            exposureSource: source.exposureSource
+        )
+    }
+
     func pauseTimer(id: UUID) {
         timerManager.pause(id: id)
     }

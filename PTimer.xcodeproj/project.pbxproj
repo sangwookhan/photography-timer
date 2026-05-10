@@ -110,6 +110,15 @@
 		A0000000000000000000021B /* CameraSlotSessionPersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */; };
 		A0000000000000000000021D /* CameraSlotSessionPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */; };
 		A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* CameraSlotRenameSheet.swift */; };
+		A00000000000000000000220 /* TargetShutterModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000221 /* TargetShutterModel.swift */; };
+		A00000000000000000000222 /* TargetShutterDisplayState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000223 /* TargetShutterDisplayState.swift */; };
+		A00000000000000000000224 /* TargetShutterPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000225 /* TargetShutterPresenter.swift */; };
+		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
+		A00000000000000000000228 /* TargetShutterModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000229 /* TargetShutterModelTests.swift */; };
+		A0000000000000000000022A /* TargetShutterPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022B /* TargetShutterPresenterTests.swift */; };
+		A0000000000000000000022C /* ExposureCalculatorViewModelTargetShutterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */; };
+		A0000000000000000000022E /* TargetShutterInputState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022F /* TargetShutterInputState.swift */; };
+		A00000000000000000000230 /* TargetShutterInputStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000231 /* TargetShutterInputStateTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -251,6 +260,15 @@
 		A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionPersistenceController.swift; sourceTree = "<group>"; };
 		A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionPersistenceTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
+		A00000000000000000000221 /* TargetShutterModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000223 /* TargetShutterDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterDisplayState.swift; sourceTree = "<group>"; };
+		A00000000000000000000225 /* TargetShutterPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
+		A00000000000000000000229 /* TargetShutterModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterModelTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000022B /* TargetShutterPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterPresenterTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTargetShutterTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000022F /* TargetShutterInputState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterInputState.swift; sourceTree = "<group>"; };
+		A00000000000000000000231 /* TargetShutterInputStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterInputStateTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -345,6 +363,10 @@
 				A00000000000000000000127 /* Models */,
 				A000000000000000000000B6 /* PresetFilmCatalog.swift */,
 				A00000000000000000000103 /* RunningTimerPanelView.swift */,
+				A00000000000000000000223 /* TargetShutterDisplayState.swift */,
+				A0000000000000000000022F /* TargetShutterInputState.swift */,
+				A00000000000000000000225 /* TargetShutterPresenter.swift */,
+				A00000000000000000000227 /* TargetShutterSectionView.swift */,
 				A00000000000000000000106 /* ViewModelDependencyFactory.swift */,
 				A00000000000000000000124 /* WorkspaceCoordinator.swift */,
 			);
@@ -375,6 +397,7 @@
 				A00000000000000000000144 /* RunningTimerItem.swift */,
 				A00000000000000000000207 /* CameraSlotSessionModel.swift */,
 				A00000000000000000000214 /* ExposureTimerIdentity.swift */,
+				A00000000000000000000221 /* TargetShutterModel.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -521,6 +544,10 @@
 				A0000000000000000000020C /* CameraSlotSessionModelTests.swift */,
 				A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */,
 				A0000000000000000000021C /* CameraSlotSessionPersistenceTests.swift */,
+				A00000000000000000000229 /* TargetShutterModelTests.swift */,
+				A0000000000000000000022B /* TargetShutterPresenterTests.swift */,
+				A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */,
+				A00000000000000000000231 /* TargetShutterInputStateTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -746,6 +773,11 @@
 				A00000000000000000000219 /* PersistentCameraSlotSession.swift in Sources */,
 				A0000000000000000000021B /* CameraSlotSessionPersistenceController.swift in Sources */,
 				A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */,
+				A00000000000000000000220 /* TargetShutterModel.swift in Sources */,
+				A00000000000000000000222 /* TargetShutterDisplayState.swift in Sources */,
+				A00000000000000000000224 /* TargetShutterPresenter.swift in Sources */,
+				A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */,
+				A0000000000000000000022E /* TargetShutterInputState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -798,6 +830,10 @@
 				A0000000000000000000020D /* CameraSlotSessionModelTests.swift in Sources */,
 				A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */,
 				A0000000000000000000021D /* CameraSlotSessionPersistenceTests.swift in Sources */,
+				A00000000000000000000228 /* TargetShutterModelTests.swift in Sources */,
+				A0000000000000000000022A /* TargetShutterPresenterTests.swift in Sources */,
+				A0000000000000000000022C /* ExposureCalculatorViewModelTargetShutterTests.swift in Sources */,
+				A00000000000000000000230 /* TargetShutterInputStateTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

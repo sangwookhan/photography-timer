@@ -108,6 +108,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// the calculator snapshot for every inactive slot. The facade
     /// orchestrates snapshot capture/load on slot switching.
     private let cameraSlotSessionModel: CameraSlotSessionModel
+    /// Optional Target Shutter slice — owns the photographer-supplied
+    /// final exposure duration that the calculator compares its
+    /// current result against. The facade reads the model's
+    /// `targetSeconds` to compose `targetShutterDisplayState` and
+    /// delegates user actions through `setTargetShutter` / `clearTargetShutter`.
+    private let targetShutterModel: TargetShutterModel
     /// Bridges the runtime session and the on-disk camera-slot
     /// snapshot. Owns save/load/migration so this facade does not
     /// have to know schema details. Optional because tests / the
@@ -126,6 +132,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         case digitalResult
         case filmAdjustedShutter
         case filmCorrectedExposure
+        case targetShutter
         /// Manual timer entry — a precomputed shutter passed in by an
         /// external caller (or tests) rather than the live calculator
         /// state. Manual timers must NOT inherit the active camera
@@ -144,6 +151,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             case .digitalResult: return .digitalResult
             case .filmAdjustedShutter: return .filmAdjustedShutter
             case .filmCorrectedExposure: return .filmCorrectedExposure
+            case .targetShutter: return .targetShutter
             case .manual: return nil
             }
         }
@@ -154,7 +162,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         /// case doc above.
         var capturesCalculatorIdentity: Bool {
             switch self {
-            case .digitalResult, .filmAdjustedShutter, .filmCorrectedExposure:
+            case .digitalResult, .filmAdjustedShutter, .filmCorrectedExposure, .targetShutter:
                 return true
             case .manual:
                 return false
@@ -190,7 +198,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             reciprocityModel: ReciprocityModel(),
             timerWorkspaceModel: timerWorkspaceModel,
             filmSelectionModel: filmSelectionModel,
-            cameraSlotSessionModel: cameraSlotSessionModel
+            cameraSlotSessionModel: cameraSlotSessionModel,
+            targetShutterModel: TargetShutterModel()
         )
     }
 
@@ -204,7 +213,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
         reciprocityModel: ReciprocityModel,
         timerWorkspaceModel: TimerWorkspaceModel,
         filmSelectionModel: FilmSelectionModel,
-        cameraSlotSessionModel: CameraSlotSessionModel? = nil
+        cameraSlotSessionModel: CameraSlotSessionModel? = nil,
+        targetShutterModel: TargetShutterModel? = nil
     ) {
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         self.calculatorModel = calculatorModel
@@ -212,6 +222,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.timerWorkspaceModel = timerWorkspaceModel
         self.filmSelectionModel = filmSelectionModel
         self.cameraSlotSessionModel = resolvedSlotSession
+        self.targetShutterModel = targetShutterModel ?? TargetShutterModel()
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
             presetFilms: dependencies.presetFilms
@@ -248,7 +259,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring = NoOpCameraSlotSessionPersistenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
-        cameraSlotSessionModel: CameraSlotSessionModel? = nil
+        cameraSlotSessionModel: CameraSlotSessionModel? = nil,
+        targetShutterModel: TargetShutterModel? = nil
     ) {
         let calculatorModel = CalculatorModel(calculator: calculator)
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
@@ -270,6 +282,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             currentActiveCameraSlotID: { resolvedSlotSession.activeSlotID }
         )
         self.cameraSlotSessionModel = resolvedSlotSession
+        self.targetShutterModel = targetShutterModel ?? TargetShutterModel()
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: cameraSlotSessionPersistenceStore,
             presetFilms: presetFilms
@@ -376,6 +389,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             // reserved fractional path).
             || abs(ndStep.stops - Double(defaultFilmModeNDStop)) > ExposureCalculator.stabilityEpsilon
             || scaleMode != .oneThirdStop
+            || targetShutterModel.isActive
     }
 
     var filmSelectorEntries: [FilmSelectorEntry] {
@@ -604,6 +618,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         // unchanged), so a fractional drift would survive the reset.
         ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
         ndStop = defaultFilmModeNDStop
+        // Target Shutter is part of the slot's shooting context, so
+        // the workspace reset also drops it. Tap-to-reset returns the
+        // entire slot to a clean shooting setup, not just the
+        // calculator inputs.
+        targetShutterModel.clear()
         filmSelectionModel.clearPersistedContext()
     }
 
@@ -729,6 +748,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         let scaleMode: ExposureScaleMode
         let film: FilmIdentity?
         let profileOverride: ReciprocityProfile?
+        let targetSeconds: TimeInterval?
 
         if isActive {
             baseShutter = calculatorModel.baseShutterSeconds
@@ -736,6 +756,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             scaleMode = calculatorModel.scaleMode
             film = filmSelectionModel.selectedPresetFilm
             profileOverride = filmSelectionModel.selectedProfileOverride
+            targetSeconds = targetShutterModel.targetSeconds
         } else {
             let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) ?? .initial
             baseShutter = snapshot.baseShutterSeconds
@@ -743,6 +764,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             scaleMode = snapshot.scaleMode
             film = snapshot.selectedPresetFilm
             profileOverride = snapshot.selectedProfileOverride
+            targetSeconds = snapshot.targetShutterSeconds
         }
 
         let filmDisplay: FilmSelectionDisplayState = {
@@ -766,7 +788,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             selectedProfileOverride: profileOverride,
             filmSelectionDisplayState: filmDisplay,
             isFilmWorkflowActive: film != nil,
-            isActive: isActive
+            isActive: isActive,
+            targetShutterSeconds: targetSeconds
         )
     }
 
@@ -890,16 +913,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     /// Captures the active slot's current calculator/film state into a
     /// snapshot value. Sources of truth: `CalculatorModel` (base
-    /// shutter, ND, scale) and `FilmSelectionModel` (selected film,
-    /// profile override). The active slot's state is always read from
-    /// the live models rather than from the session model.
+    /// shutter, ND, scale), `FilmSelectionModel` (selected film,
+    /// profile override), and `TargetShutterModel` (per-slot target
+    /// duration). The active slot's state is always read from the live
+    /// models rather than from the session model.
     private func currentCameraSlotSnapshot() -> CameraSlotCalculatorSnapshot {
         CameraSlotCalculatorSnapshot(
             baseShutterSeconds: calculatorModel.baseShutterSeconds,
             ndStep: calculatorModel.ndStep,
             scaleMode: calculatorModel.scaleMode,
             selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
-            selectedProfileOverride: filmSelectionModel.selectedProfileOverride
+            selectedProfileOverride: filmSelectionModel.selectedProfileOverride,
+            targetShutterSeconds: targetShutterModel.targetSeconds
         )
     }
 
@@ -937,6 +962,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
             film: snapshot.selectedPresetFilm,
             profileOverride: snapshot.selectedProfileOverride
         )
+
+        // Restore the per-slot target. `setTarget` re-sanitises the
+        // value, so a corrupted snapshot can never resurface as an
+        // invalid target — same rule the persistence controller
+        // applies at decode time.
+        targetShutterModel.setTarget(snapshot.targetShutterSeconds)
     }
 
     var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
@@ -1029,6 +1060,179 @@ final class ExposureCalculatorViewModel: ObservableObject {
             filmModeResult: filmModeResult,
             startSource: .filmCorrectedExposure
         )
+    }
+
+    // MARK: - Target Shutter
+
+    /// Currently set Target Shutter duration in seconds. `nil` when
+    /// the photographer has not set a target. Read-through to
+    /// `TargetShutterModel` so the source-of-truth contract stays
+    /// single-rooted on the model.
+    var targetShutterSeconds: TimeInterval? {
+        targetShutterModel.targetSeconds
+    }
+
+    /// True when Target Shutter is set to a finite positive value.
+    var isTargetShutterActive: Bool {
+        targetShutterModel.isActive
+    }
+
+    /// Last positive target the photographer set in the current
+    /// session — surfaces from `TargetShutterModel.lastUsedTargetSeconds`
+    /// so the input sheet can pre-fill the most-recent value when the
+    /// active slot has no target yet.
+    var lastUsedTargetShutterSeconds: TimeInterval? {
+        targetShutterModel.lastUsedTargetSeconds
+    }
+
+    /// Composed display state for the Target Shutter card. Routes the
+    /// presenter through the active workflow's comparison source so
+    /// the stop-difference text reflects the same value the
+    /// photographer reads in the result section.
+    var targetShutterDisplayState: TargetShutterDisplayState {
+        TargetShutterPresenter.makeDisplayState(
+            targetSeconds: targetShutterModel.targetSeconds,
+            comparisonSource: targetShutterComparisonSource
+        )
+    }
+
+    /// True when the photographer can start a timer from the current
+    /// Target Shutter value. The target itself is the timer duration —
+    /// no comparison is needed for the timer to start, so this only
+    /// guards against unset / non-finite / zero values that the
+    /// model would already reject.
+    var canStartTargetShutterTimer: Bool {
+        guard let target = targetShutterModel.targetSeconds else {
+            return false
+        }
+        return target.isFinite && target > 0
+    }
+
+    /// Sets the Target Shutter duration. Non-finite, zero, and
+    /// negative inputs are rejected and clear the target back to
+    /// inactive — see `TargetShutterModel.setTarget(_:)`. Persists the
+    /// active slot's snapshot so the new target survives a relaunch on
+    /// the same slot.
+    func setTargetShutter(_ seconds: TimeInterval?) {
+        targetShutterModel.setTarget(seconds)
+        persistCalculatorContext()
+    }
+
+    /// Clears the Target Shutter back to inactive. The result section
+    /// stops rendering the comparison and the start-target-timer
+    /// affordance. Persists so the cleared state survives a relaunch.
+    func clearTargetShutter() {
+        targetShutterModel.clear()
+        persistCalculatorContext()
+    }
+
+    /// Starts a timer using the current Target Shutter value. The
+    /// timer carries `.targetShutter` as its exposure source plus the
+    /// active camera-slot identity so the dock can label it
+    /// distinctly from Adjusted Shutter / Corrected Exposure timers.
+    func startTargetShutterTimer() {
+        guard let target = targetShutterModel.targetSeconds,
+              target.isFinite,
+              target > 0 else {
+            return
+        }
+
+        // Pull the current calc result so the basis summary still
+        // reflects the active calculator inputs (Base / ND), giving
+        // the row a useful subtitle alongside the Target Shutter
+        // source label. A calc failure path falls through to the
+        // generic "Manual timer" basis — keeping the start path
+        // tolerant of edge cases (e.g. a zero base shutter typed
+        // by the user) while still stamping the target source.
+        let liveResult: ExposureCalculationResult? = {
+            if case .success(let result) = calculationResult {
+                return result
+            }
+            return nil
+        }()
+
+        startTimer(
+            from: target,
+            result: liveResult,
+            filmModeResult: filmModeExposureResultState,
+            startSource: .targetShutter
+        )
+    }
+
+    /// Builds the Target Shutter display state for an arbitrary
+    /// camera-slot page. Active pages reuse the live
+    /// `targetShutterDisplayState` (so the comparison reflects the
+    /// drag-in-flight calculator state); inactive pages compose the
+    /// presenter against the slot's stored snapshot so each TabView
+    /// page surfaces its slot's own target without leaking the
+    /// active slot's value during a peek.
+    func targetShutterDisplayState(forPage pageState: CameraSlotPageState) -> TargetShutterDisplayState {
+        if pageState.isActive {
+            return targetShutterDisplayState
+        }
+        return TargetShutterPresenter.makeDisplayState(
+            targetSeconds: pageState.targetShutterSeconds,
+            comparisonSource: targetShutterComparisonSource(forPage: pageState)
+        )
+    }
+
+    /// Per-page comparison source. Routes the inactive-page calc and
+    /// reciprocity bindings (computed from the slot's snapshot) into
+    /// the same digital-vs-film selector logic the active path uses.
+    private func targetShutterComparisonSource(
+        forPage pageState: CameraSlotPageState
+    ) -> TargetShutterPresenter.ComparisonSource {
+        if pageState.isFilmWorkflowActive {
+            if let resultState = filmModeExposureResultState(forPage: pageState),
+               resultState.hasQuantifiedCorrectedExposure,
+               let correctedSeconds = resultState.correctedExposure.correctedExposureSeconds,
+               correctedSeconds.isFinite,
+               correctedSeconds > 0 {
+                return .correctedExposure(correctedSeconds)
+            }
+            return .unavailable
+        }
+
+        guard case .success(let result) = calculationResult(forPage: pageState),
+              result.resultShutterSeconds.isFinite,
+              result.resultShutterSeconds > 0 else {
+            return .unavailable
+        }
+        return .adjustedShutter(result.resultShutterSeconds)
+    }
+
+    /// Comparison source the presenter uses when composing the Target
+    /// Shutter display state. Digital workflow compares against the
+    /// Adjusted Shutter; film workflow compares against the
+    /// quantified Corrected Exposure when present, otherwise reports
+    /// `unavailable` so the UI surfaces the calm `noComparisonAvailable`
+    /// state rather than fabricating a number.
+    private var targetShutterComparisonSource: TargetShutterPresenter.ComparisonSource {
+        if isFilmWorkflowActive {
+            // Film mode: compare against the quantified corrected
+            // exposure when present. Advisory / unsupported / calc
+            // failure paths return `unavailable` so the UI never
+            // silently compares against the intermediate Adjusted
+            // Shutter value.
+            if let filmModeExposureResultState,
+               filmModeExposureResultState.hasQuantifiedCorrectedExposure,
+               let correctedSeconds = filmModeExposureResultState.correctedExposure.correctedExposureSeconds,
+               correctedSeconds.isFinite,
+               correctedSeconds > 0 {
+                return .correctedExposure(correctedSeconds)
+            }
+            return .unavailable
+        }
+
+        // Digital workflow: compare against the calculated Adjusted
+        // Shutter. A calc failure falls through to `unavailable` so
+        // the UI keeps the target visible without a fabricated value.
+        guard case .success(let result) = calculationResult,
+              result.resultShutterSeconds.isFinite,
+              result.resultShutterSeconds > 0 else {
+            return .unavailable
+        }
+        return .adjustedShutter(result.resultShutterSeconds)
     }
 
     func startTimer(from resultShutter: TimeInterval) {
@@ -1308,6 +1512,16 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
 
             return "\(film.canonicalStockName) - \(targetLabel)"
+        case .targetShutter:
+            // Target Shutter timers stamp a `Target` prefix so the
+            // dock title distinguishes the photographer-supplied
+            // duration from the calculated paths. When a film is
+            // selected the film name is preserved as the leading
+            // segment, matching the corrected-exposure shape.
+            if let film = selectedPresetFilm {
+                return "\(film.canonicalStockName) · Target - \(targetLabel)"
+            }
+            return "Target - \(targetLabel)"
         case .digitalResult, .filmAdjustedShutter, .manual:
             // Manual timers reuse the same ND-prefixed name shape as
             // digital — without a deliberate calculator-origin tag we
@@ -1332,7 +1546,21 @@ final class ExposureCalculatorViewModel: ObservableObject {
         let adjustedShutter = calculator.formatShutter(result.resultShutterSeconds)
         let baseSummary = "Base \(calculator.formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.ndStep))"
 
+        // Target Shutter timers always append a `Target <duration>`
+        // segment so the dock subtitle reads
+        // `Base 1/30s · 6 stops · Target 20m` even in the digital
+        // workflow. The film-mode block below still adds Adjusted /
+        // film-name segments when relevant.
+        var targetSegment: String?
+        if startSource == .targetShutter,
+           let target = targetShutterModel.targetSeconds {
+            targetSegment = "Target \(calculator.formatShutter(target))"
+        }
+
         guard let filmModeResult else {
+            if let targetSegment {
+                return "\(baseSummary) · \(targetSegment)"
+            }
             return baseSummary
         }
 
@@ -1348,6 +1576,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
         if startSource == .filmCorrectedExposure,
            let correctedExposureSeconds = filmModeResult.correctedExposure.correctedExposureSeconds {
             segments.append("Corrected \(calculator.formatShutter(correctedExposureSeconds))")
+        }
+
+        if let targetSegment {
+            segments.append(targetSegment)
         }
 
         return segments.joined(separator: " · ")

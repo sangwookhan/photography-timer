@@ -386,6 +386,22 @@ private struct CameraSlotCalculatorPage: View {
                 style: style
             )
 
+            // Target Shutter card sits below the result hierarchy so the
+            // photographer's primary read remains Adjusted/Corrected Shutter;
+            // the optional comparison is a secondary affordance.
+            TargetShutterSectionView(
+                displayState: viewModel.targetShutterDisplayState(forPage: pageState),
+                canStartTimer: pageState.isActive && viewModel.canStartTargetShutterTimer,
+                lastUsedTargetSeconds: viewModel.lastUsedTargetShutterSeconds,
+                formatTimeDisplay: viewModel.formatTimeDisplay,
+                onSetTarget: pageState.isActive
+                    ? { seconds in viewModel.setTargetShutter(seconds) }
+                    : { _ in },
+                onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
+                onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
+                style: style
+            )
+
             Spacer(minLength: style.resultFlowSpacerMinLength)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -416,7 +432,11 @@ private struct CameraSlotCalculatorPage: View {
     }
 }
 
-private enum ExposureWorkspaceMainLayoutStyle {
+/// Shared by the calculator's main content and by
+/// `TargetShutterSectionView`, which renders inside the camera-slot
+/// page and needs the same density-driven measurements as the rest
+/// of the result section.
+enum ExposureWorkspaceMainLayoutStyle {
     case regular
     case compact
     case dense
@@ -746,7 +766,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
         10
     }
 
-    func pickerColumnLayout(for column: CalculatorPickerColumn) -> PickerColumnLayout {
+    fileprivate func pickerColumnLayout(for column: CalculatorPickerColumn) -> PickerColumnLayout {
         switch (self, column) {
         case (.regular, .ndStop):
             return PickerColumnLayout(
@@ -1863,7 +1883,10 @@ struct DurationDisplayBlock: View {
         .frame(maxWidth: .infinity)
     }
 }
-private extension View {
+extension View {
+    /// Internal so cross-file result-section views (e.g.,
+    /// `TargetShutterSectionView`) can render with the same card
+    /// chrome as the in-file result rows.
     func sectionCardStyle(style: ExposureWorkspaceMainLayoutStyle = .regular) -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -1,149 +1,31 @@
 import Combine
 import SwiftUI
 
-struct BottomSheetWorkspaceShell: View {
-    @ObservedObject var stateStore: BottomSheetWorkspaceStateStore
-    let snapshot: BottomSheetWorkspaceSnapshot
-    let onPauseTimer: (UUID) -> Void
-    let onResumeTimer: (UUID) -> Void
-    let onRemoveTimer: (UUID) -> Void
-    let onStartTimerAgain: (UUID) -> Void
-    let onClearCompletedTimers: () -> Void
+/// PTIMER-126 redesign: the closed-state Timers UI is no longer a
+/// custom bottom-sheet dock. Timers surface in two screen-level
+/// places:
+///
+/// - When timers exist: `CompactTimerCardStripView` is rendered as a
+///   screen-level strip above the bottom safe area. Tapping the
+///   strip opens `FullScreenTimersWindow`.
+/// - When no timers exist: nothing is rendered for the timer surface
+///   at all (no dock, no handle, no title).
+///
+/// `FullScreenTimersWindow` replaces the former 70%-height bottom
+/// sheet for the opened state. It owns the full management surface
+/// and is presented via `.fullScreenCover`.
+///
+/// Types kept from the old shell, used by the new layout:
+///
+/// - `CompactTimerCardStripView` — screen-level closed-state strip.
+/// - `BottomSheetLargeWorkspaceView` — list-rendering body of the
+///   opened Timers window. Internal so `FullScreenTimersWindow` can
+///   embed it.
 
-    var body: some View {
-        BottomSheetContainer(
-            detent: stateStore.detent,
-            onDragEnded: stateStore.handleDragEnd(translation:),
-            content: {
-                BottomSheetContentHost(
-                    detent: stateStore.detent,
-                    snapshot: snapshot,
-                    focusedTimerID: stateStore.selectedTimerID,
-                    onCompactItemTap: stateStore.expandAndFocusTimer(_:),
-                    onOverflowTap: stateStore.expand,
-                    onCollapse: stateStore.collapse,
-                    onPauseTimer: onPauseTimer,
-                    onResumeTimer: onResumeTimer,
-                    onRemoveTimer: onRemoveTimer,
-                    onStartTimerAgain: onStartTimerAgain,
-                    onClearCompletedTimers: onClearCompletedTimers
-                )
-            }
-        )
-    }
-}
-
-private struct BottomSheetContainer<Content: View>: View {
-    let detent: BottomSheetDetent
-    let onDragEnded: (CGFloat) -> Void
-    @ViewBuilder let content: Content
-
-    private var handleDragGesture: some Gesture {
-        DragGesture(minimumDistance: detent == .compact ? 20 : 14)
-            .onEnded { value in
-                onDragEnded(value.translation.height)
-            }
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.35))
-                    .frame(width: detent == .compact ? 34 : 42, height: 5)
-                    .frame(maxWidth: .infinity)
-            }
-            .padding(.top, detent == .compact ? 5 : 10)
-            .padding(.bottom, detent.isExpanded ? 8 : 6)
-            .padding(.horizontal, 18)
-            .contentShape(Rectangle())
-            .gesture(handleDragGesture)
-            .accessibilityIdentifier("bottom-sheet-handle-area")
-
-            content
-                .frame(maxWidth: .infinity, alignment: .top)
-        }
-        .frame(maxWidth: .infinity)
-        .ifLet(BottomSheetLayoutMetrics.fixedHeight(for: detent)) { view, height in
-            view.frame(height: height)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(detent.isExpanded ? 0.45 : 0.3), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(detent.isExpanded ? 0.22 : 0.12), radius: detent.isExpanded ? 30 : 18, x: 0, y: -6)
-        .padding(.horizontal, 8)
-        .padding(.top, 6)
-        .padding(.bottom, 0)
-        .accessibilityIdentifier("bottom-sheet-shell")
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: detent)
-    }
-}
-
-private struct BottomSheetContentHost: View {
-    let detent: BottomSheetDetent
-    let snapshot: BottomSheetWorkspaceSnapshot
-    let focusedTimerID: UUID?
-    let onCompactItemTap: (UUID) -> Void
-    let onOverflowTap: () -> Void
-    let onCollapse: () -> Void
-    let onPauseTimer: (UUID) -> Void
-    let onResumeTimer: (UUID) -> Void
-    let onRemoveTimer: (UUID) -> Void
-    let onStartTimerAgain: (UUID) -> Void
-    let onClearCompletedTimers: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: detent.isExpanded ? 10 : 6) {
-            HStack(alignment: .center, spacing: 12) {
-                Text(BottomSheetWorkspaceCopy.title)
-                    .font(detent == .compact ? .subheadline.weight(.semibold) : .headline)
-
-                Spacer()
-            }
-
-            Group {
-                switch detent {
-                case .compact:
-                    BottomSheetCompactSummaryView(
-                        snapshot: snapshot,
-                        onItemTap: onCompactItemTap,
-                        onOverflowTap: onOverflowTap
-                    )
-                case .large:
-                    BottomSheetLargeWorkspaceView(
-                        snapshot: snapshot,
-                        focusedTimerID: focusedTimerID,
-                        onPauseTimer: onPauseTimer,
-                        onResumeTimer: onResumeTimer,
-                        onRemoveTimer: onRemoveTimer,
-                        onStartTimerAgain: onStartTimerAgain,
-                        onClearCompletedTimers: onClearCompletedTimers,
-                        onCollapse: onCollapse
-                    )
-                }
-            }
-            .frame(
-                maxWidth: .infinity,
-                maxHeight: detent.isExpanded ? .infinity : nil,
-                alignment: .top
-            )
-        }
-        .padding(.horizontal, 18)
-        .padding(.bottom, detent.isExpanded ? 14 : 8)
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: detent.isExpanded ? .infinity : nil,
-            alignment: .topLeading
-        )
-    }
-}
-
-private struct BottomSheetCompactSummaryView: View {
+/// Screen-level row of compact timer mini-cards. It is rendered
+/// outside any dock or sheet container so cards are not clipped.
+/// When no timers exist, this strip is not rendered.
+struct CompactTimerCardStripView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let onItemTap: (UUID) -> Void
     let onOverflowTap: () -> Void
@@ -151,65 +33,42 @@ private struct BottomSheetCompactSummaryView: View {
     var body: some View {
         Group {
             if snapshot.compactItems.isEmpty {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color.secondary.opacity(0.35))
-                        .frame(width: 8, height: 8)
-
-                    Text("Start a timer to pin it here.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityIdentifier("bottom-sheet-compact-empty")
+                EmptyView()
+                    .accessibilityIdentifier("main-screen-timer-strip-empty")
             } else {
-                ZStack {
-                    RoundedRectangle(
-                        cornerRadius: BottomSheetCompactDockMetrics.viewportCornerRadius,
-                        style: .continuous
-                    )
-                    .fill(Color(.secondarySystemBackground).opacity(0.58))
+                ScrollView(
+                    BottomSheetCompactDockMetrics.scrollsHorizontally ? .horizontal : .vertical,
+                    showsIndicators: false
+                ) {
+                    LazyHStack(spacing: BottomSheetCompactDockMetrics.cardSpacing) {
+                        Color.clear
+                            .frame(width: BottomSheetCompactDockMetrics.contentInsets.leading, height: 1)
+                            .accessibilityHidden(true)
 
-                    ScrollView(
-                        BottomSheetCompactDockMetrics.scrollsHorizontally ? .horizontal : .vertical,
-                        showsIndicators: false
-                    ) {
-                        LazyHStack(spacing: BottomSheetCompactDockMetrics.cardSpacing) {
-                            Color.clear
-                                .frame(width: BottomSheetCompactDockMetrics.contentInsets.leading, height: 1)
-                                .accessibilityHidden(true)
-
-                            ForEach(snapshot.compactItems) { item in
-                                CompactTimerMiniCardView(
-                                    item: item,
-                                    onTap: {
-                                        onItemTap(item.id)
-                                    }
-                                )
-                            }
-
-                            if let overflowText = snapshot.compactOverflowText {
-                                CompactOverflowMiniCard(
-                                    text: overflowText,
-                                    onTap: onOverflowTap
-                                )
-                            }
-
-                            Color.clear
-                                .frame(width: BottomSheetCompactDockMetrics.contentInsets.trailing, height: 1)
-                                .accessibilityHidden(true)
+                        ForEach(snapshot.compactItems) { item in
+                            CompactTimerMiniCardView(
+                                item: item,
+                                onTap: {
+                                    onItemTap(item.id)
+                                }
+                            )
                         }
-                        .padding(.vertical, BottomSheetCompactDockMetrics.contentInsets.top)
+
+                        if let overflowText = snapshot.compactOverflowText {
+                            CompactOverflowMiniCard(
+                                text: overflowText,
+                                onTap: onOverflowTap
+                            )
+                        }
+
+                        Color.clear
+                            .frame(width: BottomSheetCompactDockMetrics.contentInsets.trailing, height: 1)
+                            .accessibilityHidden(true)
                     }
+                    .padding(.vertical, BottomSheetCompactDockMetrics.contentInsets.top)
                 }
                 .frame(height: BottomSheetCompactDockMetrics.viewportHeight, alignment: .top)
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: BottomSheetCompactDockMetrics.viewportCornerRadius,
-                        style: .continuous
-                    )
-                )
-                .accessibilityIdentifier("bottom-sheet-compact-dock")
+                .accessibilityIdentifier("main-screen-timer-strip")
             }
         }
     }
@@ -328,7 +187,7 @@ private struct CompactTimerMiniCardView: View {
             } else if let filmText = item.identityFilmText {
                 // Surface the film/digital descriptor inline so the
                 // photographer can read identity from the compact
-                // dock without expanding. Uses the same styling slot
+                // card without expanding. Uses the same styling slot
                 // the relative-time text occupies for completed
                 // timers — only one of the two appears per card.
                 Text(filmText)
@@ -636,9 +495,27 @@ private struct CompactOverflowMiniCard: View {
     }
 }
 
-private struct BottomSheetLargeWorkspaceView: View {
+/// Body of the opened Timers workspace — active + completed sections,
+/// per-row actions, and "clear completed" affordance. Embedded in
+/// `FullScreenTimersWindow` for the opened state. Kept internal so
+/// the screen layer can compose the navigation chrome around it.
+struct BottomSheetLargeWorkspaceView: View {
+    /// Stable scroll-target identifier for the Active section
+    /// header. Used by `applyFocusIfNeeded` when the photographer
+    /// tapped an active compact card — scrolling the row by id
+    /// would push the `Active` title above the viewport.
+    static let activeSectionScrollID = "timers-section-active"
+
+    /// Stable scroll-target identifier for the Recently Completed
+    /// section header. Used so the workspace can scroll the section
+    /// header (and the `Clear` button) into view when the
+    /// photographer drilled in from a completed compact card —
+    /// scrolling the first completed row by id would push the
+    /// header above the viewport.
+    static let recentlyCompletedSectionScrollID = "timers-section-recently-completed"
+
     let snapshot: BottomSheetWorkspaceSnapshot
-    let focusedTimerID: UUID?
+    let openFocus: TimersOpenFocus
     let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
@@ -649,12 +526,12 @@ private struct BottomSheetLargeWorkspaceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if snapshot.completedCount > 0 {
-                LargeWorkspaceSummaryStrip(
-                    onClearCompletedTimers: onClearCompletedTimers
-                )
-            }
-
+            // The `Clear` affordance used to live in a top-level
+            // summary strip. That strip was conditionally rendered,
+            // which caused the Active section to shift when the
+            // first timer completed (PTIMER-126). The button now
+            // lives in the Recently Completed section header so
+            // Active section position is independent of `Clear`.
             if snapshot.sections.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("No timers in workspace")
@@ -677,14 +554,12 @@ private struct BottomSheetLargeWorkspaceView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(snapshot.sections) { section in
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text(section.title)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.secondary)
+                                    sectionHeader(for: section)
 
                                     ForEach(section.items) { item in
                                         LargeWorkspaceTimerRowView(
                                             item: item,
-                                            isFocused: item.id == focusedTimerID,
+                                            isFocused: item.id == openFocus.activeTimerID,
                                             onAction: { action in
                                                 handle(action: action, for: item.id)
                                             }
@@ -697,7 +572,7 @@ private struct BottomSheetLargeWorkspaceView: View {
                         .onAppear {
                             applyFocusIfNeeded(using: proxy, animated: false)
                         }
-                        .onChange(of: focusedTimerID) { _, _ in
+                        .onChange(of: openFocus) { _, _ in
                             applyFocusIfNeeded(using: proxy, animated: true)
                         }
                     }
@@ -709,17 +584,64 @@ private struct BottomSheetLargeWorkspaceView: View {
         }
     }
 
+    @ViewBuilder
+    private func sectionHeader(for section: TimerWorkspaceSection) -> some View {
+        let header = HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(section.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 8)
+
+            if section.isCompletedSection {
+                Button("Clear") {
+                    onClearCompletedTimers()
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .accessibilityIdentifier("bottom-sheet-clear-completed-button")
+            }
+        }
+
+        // Tag each section header with a stable scroll id so
+        // `applyFocusIfNeeded` can land on the header (and not on a
+        // row) when the photographer drilled in from a compact
+        // card. Both Active and Recently Completed taps preserve
+        // their section title this way.
+        if section.isCompletedSection {
+            header.id(Self.recentlyCompletedSectionScrollID)
+        } else {
+            header.id(Self.activeSectionScrollID)
+        }
+    }
+
     private func applyFocusIfNeeded(using proxy: ScrollViewProxy, animated: Bool) {
-        guard let focusedTimerID else {
+        let scroll: (() -> Void)?
+        switch openFocus {
+        case .none:
+            scroll = nil
+        case .activeSection:
+            // Always scroll to the Active section header — the
+            // optional highlighted timer id is *not* used as a
+            // scroll anchor (which would push the section title
+            // above the viewport).
+            scroll = {
+                proxy.scrollTo(Self.activeSectionScrollID, anchor: .top)
+            }
+        case .recentlyCompletedSection:
+            // Land on the section header so the `Recently Completed`
+            // title and `Clear` button stay visible after opening.
+            scroll = {
+                proxy.scrollTo(Self.recentlyCompletedSectionScrollID, anchor: .top)
+            }
+        }
+
+        guard let scroll else {
             return
         }
 
         if !animated && hasAppliedInitialFocus {
             return
-        }
-
-        let scroll = {
-            proxy.scrollTo(focusedTimerID, anchor: .top)
         }
 
         if animated {
@@ -742,23 +664,6 @@ private struct BottomSheetLargeWorkspaceView: View {
             onRemoveTimer(id)
         case .startAgain:
             onStartTimerAgain(id)
-        }
-    }
-}
-
-private struct LargeWorkspaceSummaryStrip: View {
-    let onClearCompletedTimers: () -> Void
-
-    var body: some View {
-        HStack {
-            Spacer(minLength: 0)
-
-            Button("Clear") {
-                onClearCompletedTimers()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .accessibilityIdentifier("bottom-sheet-clear-completed-button")
         }
     }
 }
@@ -1053,5 +958,53 @@ private func statusColor(for status: TimerStatus) -> Color {
         return .orange
     case .completed:
         return .gray
+    }
+}
+
+/// Full-screen Timers management window (PTIMER-126). Replaces the
+/// former 70%-height bottom sheet for the opened state. Wraps the
+/// existing list-rendering body in a `NavigationStack` with a title
+/// and an explicit close button — opening Timers no longer takes a
+/// fractional slice of the screen.
+struct FullScreenTimersWindow: View {
+    let snapshot: BottomSheetWorkspaceSnapshot
+    let openFocus: TimersOpenFocus
+    let onPauseTimer: (UUID) -> Void
+    let onResumeTimer: (UUID) -> Void
+    let onRemoveTimer: (UUID) -> Void
+    let onStartTimerAgain: (UUID) -> Void
+    let onClearCompletedTimers: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            BottomSheetLargeWorkspaceView(
+                snapshot: snapshot,
+                openFocus: openFocus,
+                onPauseTimer: onPauseTimer,
+                onResumeTimer: onResumeTimer,
+                onRemoveTimer: onRemoveTimer,
+                onStartTimerAgain: onStartTimerAgain,
+                onClearCompletedTimers: onClearCompletedTimers,
+                onCollapse: onClose
+            )
+            .padding(.horizontal, 18)
+            .padding(.top, 4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .navigationTitle(BottomSheetWorkspaceCopy.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(Text("Close timers"))
+                    .accessibilityIdentifier("full-screen-timers-close-button")
+                }
+            }
+        }
+        .accessibilityIdentifier("full-screen-timers-window")
     }
 }

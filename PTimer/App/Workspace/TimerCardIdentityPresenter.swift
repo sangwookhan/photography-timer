@@ -1,10 +1,11 @@
 import Foundation
 
-/// Pure-value transform from a `ExposureTimerIdentitySnapshot` into the
-/// presentation strings the timer dock + expanded sheet render. Lives
-/// in `App/Workspace/` because the consumer is the bottom-sheet
-/// snapshot factory; keeping it here means the timer runtime layer
-/// (`Timers/`) has no UI copy in it.
+/// Pure-value transform from a `ExposureTimerIdentitySnapshot` into
+/// the presentation strings the screen-level timer card strip and
+/// the full-screen Timers window render. Lives in `App/Workspace/`
+/// because the consumer is the timer-workspace snapshot factory;
+/// keeping it here means the timer runtime layer (`Timers/`) has no
+/// UI copy in it.
 ///
 /// All methods are static and side-effect-free — this is a pure
 /// formatter, not a stateful object. Add cases here when a new UI
@@ -12,7 +13,7 @@ import Foundation
 /// the snapshot fields directly.
 enum TimerCardIdentityPresenter {
     /// Compact slot label rendered as the colored capsule badge on
-    /// dock cards (`"C2"`). Returns `nil` when the timer has no slot
+    /// timer cards (`"C2"`). Returns `nil` when the timer has no slot
     /// identity — the caller falls back to a non-slot marker (e.g.
     /// `"T<order>"`). A `switch` on the enum is used (rather than a
     /// rawValue prefix-strip) so adding a future `CameraSlotID` case

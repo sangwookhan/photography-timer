@@ -11,6 +11,18 @@ struct ExposureCalculatorScreen: View {
     @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
     @StateObject private var bottomSheetSnapshotStore: BottomSheetWorkspaceSnapshotStore
 
+    /// Film selector visibility lives at the screen level so the
+    /// overlay can render above both the camera workspace and the
+    /// timer card strip. Toggling does not touch the Timers
+    /// presentation detent or any timer state.
+    @State private var isFilmSelectorPresented = false
+    @State private var presentedFilmDetails: FilmModeDetailsDisplayState?
+    /// Slot id currently being renamed via the title-tap sheet.
+    /// `.sheet(item:)` keys off this so dismissal clears it back to
+    /// `nil` automatically. Only the active slot can request a
+    /// rename — the title affordance on inactive pages is hidden.
+    @State private var slotIDPendingRename: CameraSlotID?
+
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
     @MainActor
@@ -56,41 +68,119 @@ struct ExposureCalculatorScreen: View {
 
     var body: some View {
         GeometryReader { geometry in
-            // Keep the calculator on a stable footprint so sheet detent changes do
-            // not cause the core exposure workflow to relayout underneath runtime UI.
-            let compactMainContentReservation = Self.calculatorReservedHeight(
+            let snapshot = bottomSheetSnapshotStore.snapshot
+            let hasTimers = Self.hasTimerPresentation(in: snapshot)
+            // PTIMER-126 stability rule: workspace budget and marker
+            // y-position never vary with timer presence. The strip's
+            // footprint is always reserved; only the strip view's
+            // rendering is conditional. Starting the first timer
+            // adds the strip without reflowing the calculator.
+            let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
                 screenHeight: geometry.size.height,
                 topSafeArea: geometry.safeAreaInsets.top,
                 bottomSafeArea: geometry.safeAreaInsets.bottom
             )
+            let style = layoutStyle(for: workspaceHeight)
 
             ZStack(alignment: .bottom) {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
                 ExposureWorkspaceMainContent(
-                    style: layoutStyle(for: compactMainContentReservation),
+                    style: style,
                     viewModel: viewModel,
-                    availableHeight: compactMainContentReservation
+                    availableHeight: workspaceHeight,
+                    onToggleFilmSelector: {
+                        isFilmSelectorPresented.toggle()
+                    },
+                    onShowFilmDetails: { details in
+                        presentedFilmDetails = details
+                    },
+                    onRequestRename: { slotID in
+                        slotIDPendingRename = slotID
+                    }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                if bottomSheetStateStore.isExpanded {
+                // Page marker — single fixed y-position. Same
+                // location whether or not the timer strip is
+                // currently rendered.
+                CameraSlotPagerIndicator(
+                    count: viewModel.availableCameraSlots.count,
+                    activeIndex: viewModel.activeCameraSlotIndex
+                )
+                .padding(
+                    .bottom,
+                    ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(
+                        bottomSafeArea: geometry.safeAreaInsets.bottom
+                    )
+                )
+                .frame(maxWidth: .infinity)
+
+                // Screen-level timer strip — only rendered when timers
+                // exist. The reservation in the workspace budget is
+                // unconditional, so the strip can appear without
+                // pushing anything else around.
+                if hasTimers {
+                    CompactTimerCardStripView(
+                        snapshot: snapshot,
+                        onItemTap: { id in
+                            Self.handleCompactCardTap(
+                                id: id,
+                                in: snapshot,
+                                store: bottomSheetStateStore
+                            )
+                        },
+                        onOverflowTap: {
+                            Self.handleOverflowTap(
+                                in: snapshot,
+                                store: bottomSheetStateStore
+                            )
+                        }
+                    )
+                    .padding(
+                        .bottom,
+                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset(
+                            bottomSafeArea: geometry.safeAreaInsets.bottom
+                        )
+                    )
+                    .frame(maxWidth: .infinity)
+                    .allowsHitTesting(!isFilmSelectorPresented)
+                    .accessibilityIdentifier("main-screen-timer-strip-container")
+                }
+
+                if isFilmSelectorPresented {
                     Button {
-                        bottomSheetStateStore.collapse()
+                        isFilmSelectorPresented = false
                     } label: {
-                        Color.black
-                            .opacity(BottomSheetLayoutMetrics.dimOpacity(for: bottomSheetStateStore.detent))
+                        Color.black.opacity(0.06)
                             .ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
-                    .transition(.opacity)
-                    .accessibilityIdentifier("bottom-sheet-dim-background")
-                }
+                    .accessibilityIdentifier("film-selector-overlay-dismiss")
 
-                BottomSheetWorkspaceShell(
-                    stateStore: bottomSheetStateStore,
+                    FilmSelectorOverlay(
+                        sections: viewModel.filmSelectorSections,
+                        selectedFilmID: viewModel.selectedSelectorEntryID,
+                        onSelectEntry: { entry in
+                            viewModel.selectEntry(entry)
+                            isFilmSelectorPresented = false
+                        },
+                        style: style
+                    )
+                    .padding(.top, screenLevelSelectorOverlayTopPadding(
+                        topSafeArea: geometry.safeAreaInsets.top,
+                        style: style
+                    ))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                }
+            }
+            .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
+            .fullScreenCover(isPresented: timersWindowBinding) {
+                FullScreenTimersWindow(
                     snapshot: bottomSheetSnapshotStore.snapshot,
+                    openFocus: bottomSheetStateStore.openFocus,
                     onPauseTimer: viewModel.pauseTimer,
                     onResumeTimer: viewModel.resumeTimer,
                     onRemoveTimer: viewModel.removeTimer,
@@ -105,9 +195,29 @@ struct ExposureCalculatorScreen: View {
                         }
                         viewModel.startNewTimer(fromCompleted: source)
                     },
-                    onClearCompletedTimers: viewModel.clearCompletedTimers
+                    onClearCompletedTimers: viewModel.clearCompletedTimers,
+                    onClose: bottomSheetStateStore.collapse
                 )
-                .padding(.bottom, geometry.safeAreaInsets.bottom)
+            }
+            .sheet(item: $presentedFilmDetails) { details in
+                FilmModeDetailsSheet(details: details)
+            }
+            .sheet(item: $slotIDPendingRename) { slotID in
+                CameraSlotRenameSheet(
+                    slotID: slotID,
+                    defaultDisplayName: viewModel
+                        .cameraSlotIdentity(for: slotID)
+                        .defaultDisplayName,
+                    initialCustomName: viewModel
+                        .cameraSlotIdentity(for: slotID)
+                        .customDisplayName,
+                    onSave: { newName in
+                        viewModel.setCameraSlotCustomName(newName, for: slotID)
+                    },
+                    onReset: {
+                        viewModel.resetCameraSlotCustomName(slotID)
+                    }
+                )
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -122,17 +232,87 @@ struct ExposureCalculatorScreen: View {
         }
     }
 
-    static func calculatorReservedHeight(
-        screenHeight: CGFloat,
-        topSafeArea: CGFloat,
-        bottomSafeArea: CGFloat
-    ) -> CGFloat {
-        ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            screenHeight: screenHeight,
-            bottomSheetDetent: .compact,
-            topSafeArea: topSafeArea,
-            bottomSafeArea: bottomSafeArea
+    /// Binds `BottomSheetWorkspaceStateStore`'s detent to a Boolean
+    /// the `.fullScreenCover` modifier consumes. The store predates
+    /// PTIMER-126 and uses `.compact`/`.large` terminology;
+    /// `.large` now means "the full-screen Timers window is
+    /// presented".
+    private var timersWindowBinding: Binding<Bool> {
+        Binding(
+            get: { bottomSheetStateStore.isExpanded },
+            set: { newValue in
+                if newValue {
+                    bottomSheetStateStore.expand()
+                } else {
+                    bottomSheetStateStore.collapse()
+                }
+            }
         )
+    }
+
+    /// True when the snapshot should surface a closed-state timer
+    /// strip. False when no timers exist — in which case the strip,
+    /// the open affordance, and any Timers chrome are all hidden.
+    static func hasTimerPresentation(in snapshot: BottomSheetWorkspaceSnapshot) -> Bool {
+        !snapshot.compactItems.isEmpty
+    }
+
+    /// Routes a compact-card tap to the appropriate full-screen
+    /// focus. Active/paused cards focus the row by id so the row
+    /// scrolls into view; completed cards focus the
+    /// `Recently Completed` section header so the section title
+    /// and `Clear` button stay visible (PTIMER-126).
+    static func handleCompactCardTap(
+        id: UUID,
+        in snapshot: BottomSheetWorkspaceSnapshot,
+        store: BottomSheetWorkspaceStateStore
+    ) {
+        let item = snapshot.compactItems.first(where: { $0.id == id })
+
+        switch item?.status {
+        case .completed:
+            store.expandFocusingCompletedSection()
+        case .running, .paused:
+            store.expandAndFocusActiveTimer(id)
+        case nil:
+            store.expand()
+        }
+    }
+
+    /// Overflow tap routes to a sensible section header depending
+    /// on what's in the snapshot:
+    ///
+    /// - any active or paused timer present → Active section header
+    /// - only completed timers present → Recently Completed section header
+    /// - empty snapshot → no focus
+    ///
+    /// Active here is the same as "not completed" so paused timers
+    /// also count.
+    static func handleOverflowTap(
+        in snapshot: BottomSheetWorkspaceSnapshot,
+        store: BottomSheetWorkspaceStateStore
+    ) {
+        let hasActive = snapshot.compactItems.contains { $0.status != .completed }
+        let hasAnyCompleted = snapshot.compactItems.contains { $0.status == .completed }
+
+        if hasActive {
+            store.expandFocusingActiveSection()
+        } else if hasAnyCompleted {
+            store.expandFocusingCompletedSection()
+        } else {
+            store.expand()
+        }
+    }
+
+    /// Top padding for the screen-level film selector overlay so it
+    /// drops underneath the camera title area instead of starting at
+    /// the very top of the screen. Mirrors the visual offset the
+    /// overlay had when it lived inside the camera workspace.
+    private func screenLevelSelectorOverlayTopPadding(
+        topSafeArea: CGFloat,
+        style: ExposureWorkspaceMainLayoutStyle
+    ) -> CGFloat {
+        topSafeArea + style.topPadding + style.selectorOverlayTopPadding
     }
 
     private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
@@ -152,88 +332,46 @@ private struct ExposureWorkspaceMainContent: View {
     let style: ExposureWorkspaceMainLayoutStyle
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let availableHeight: CGFloat
-    @State private var presentedFilmDetails: FilmModeDetailsDisplayState?
-    @State private var isFilmSelectorPresented = false
-    /// Slot id currently being renamed via the title-tap sheet.
-    /// `.sheet(item:)` keys off this so dismissal clears it back to
-    /// `nil` automatically. Only the active slot can request a
-    /// rename — the title affordance on inactive pages is hidden.
-    @State private var slotIDPendingRename: CameraSlotID?
+    let onToggleFilmSelector: () -> Void
+    let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
+    let onRequestRename: (CameraSlotID) -> Void
 
     var body: some View {
-        ZStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 0) {
-                TabView(selection: slotSelectionBinding) {
-                    ForEach(viewModel.availableCameraSlots, id: \.self) { slotID in
-                        CameraSlotCalculatorPage(
-                            pageState: viewModel.cameraSlotPageState(for: slotID),
-                            viewModel: viewModel,
-                            style: style,
-                            onToggleFilmSelector: {
-                                isFilmSelectorPresented.toggle()
-                            },
-                            onShowFilmDetails: { details in
-                                presentedFilmDetails = details
-                            },
-                            onRequestRename: {
-                                slotIDPendingRename = slotID
-                            }
-                        )
-                        .tag(slotID)
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            TabView(selection: slotSelectionBinding) {
+                ForEach(viewModel.availableCameraSlots, id: \.self) { slotID in
+                    CameraSlotCalculatorPage(
+                        pageState: viewModel.cameraSlotPageState(for: slotID),
+                        viewModel: viewModel,
+                        style: style,
+                        onToggleFilmSelector: onToggleFilmSelector,
+                        onShowFilmDetails: onShowFilmDetails,
+                        onRequestRename: {
+                            onRequestRename(slotID)
+                        }
+                    )
+                    .tag(slotID)
                 }
-                // Page style with an always-hidden index strip — we
-                // render our own `CameraSlotPagerIndicator` below the
-                // TabView so the dots stay aligned with the
-                // calculator card stack.
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .indexViewStyle(.page(backgroundDisplayMode: .never))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                CameraSlotPagerIndicator(
-                    count: viewModel.availableCameraSlots.count,
-                    activeIndex: viewModel.activeCameraSlotIndex
-                )
-
-                Color.clear
-                    .frame(height: style.workspaceSeparation)
-                    .accessibilityHidden(true)
             }
-            // VoiceOver users get explicit slot-step actions on the
-            // workspace container in addition to TabView's
-            // gesture-driven paging — the dot indicator stays
-            // non-interactive so the slot transition source is
-            // single-rooted on the workspace itself.
-            .accessibilityAction(named: Text("Next camera slot")) {
-                viewModel.selectNextCameraSlot()
-            }
-            .accessibilityAction(named: Text("Previous camera slot")) {
-                viewModel.selectPreviousCameraSlot()
-            }
-
-            if isFilmSelectorPresented {
-                Button {
-                    isFilmSelectorPresented = false
-                } label: {
-                    Color.black.opacity(0.06)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityIdentifier("film-selector-overlay-dismiss")
-
-                FilmSelectorOverlay(
-                    sections: viewModel.filmSelectorSections,
-                    selectedFilmID: viewModel.selectedSelectorEntryID,
-                    onSelectEntry: { entry in
-                        viewModel.selectEntry(entry)
-                        isFilmSelectorPresented = false
-                    },
-                    style: style
-                )
-                .padding(.top, selectorOverlayTopPadding)
-                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                .zIndex(1)
-            }
+            // Page style with an always-hidden index strip — the
+            // screen-level `CameraSlotPagerIndicator` is the only
+            // pager surface. Hosting it here would re-introduce the
+            // content-driven marker movement we are deliberately
+            // moving away from.
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .indexViewStyle(.page(backgroundDisplayMode: .never))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        // VoiceOver users get explicit slot-step actions on the
+        // workspace container in addition to TabView's
+        // gesture-driven paging — the dot indicator stays
+        // non-interactive so the slot transition source is
+        // single-rooted on the workspace itself.
+        .accessibilityAction(named: Text("Next camera slot")) {
+            viewModel.selectNextCameraSlot()
+        }
+        .accessibilityAction(named: Text("Previous camera slot")) {
+            viewModel.selectPreviousCameraSlot()
         }
         .padding(.horizontal, style.horizontalPadding)
         .padding(.top, style.topPadding)
@@ -245,27 +383,6 @@ private struct ExposureWorkspaceMainContent: View {
             alignment: .top
         )
         .accessibilityIdentifier("exposure-main-content")
-        .sheet(item: $presentedFilmDetails) { details in
-            FilmModeDetailsSheet(details: details)
-        }
-        .sheet(item: $slotIDPendingRename) { slotID in
-            CameraSlotRenameSheet(
-                slotID: slotID,
-                defaultDisplayName: viewModel
-                    .cameraSlotIdentity(for: slotID)
-                    .defaultDisplayName,
-                initialCustomName: viewModel
-                    .cameraSlotIdentity(for: slotID)
-                    .customDisplayName,
-                onSave: { newName in
-                    viewModel.setCameraSlotCustomName(newName, for: slotID)
-                },
-                onReset: {
-                    viewModel.resetCameraSlotCustomName(slotID)
-                }
-            )
-        }
-        .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
     }
 
     /// Binding that bridges `TabView`'s selection to the ViewModel's
@@ -279,17 +396,6 @@ private struct ExposureWorkspaceMainContent: View {
                 viewModel.selectCameraSlot(newSelection)
             }
         )
-    }
-
-    private var selectorOverlayTopPadding: CGFloat {
-        switch style {
-        case .regular:
-            return 112
-        case .compact:
-            return 98
-        case .dense:
-            return 86
-        }
     }
 }
 
@@ -728,6 +834,22 @@ private enum ExposureWorkspaceMainLayoutStyle {
             return 8
         case .dense:
             return 6
+        }
+    }
+
+    /// Distance from the top of the camera workspace area down to the
+    /// film selector overlay's top edge. Mirrors the offset the
+    /// overlay had when it was scoped inside the workspace; used by
+    /// the screen-level renderer to drop the overlay underneath the
+    /// camera title area.
+    var selectorOverlayTopPadding: CGFloat {
+        switch self {
+        case .regular:
+            return 112
+        case .compact:
+            return 98
+        case .dense:
+            return 86
         }
     }
 

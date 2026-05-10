@@ -174,7 +174,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
 
         store.focusTimer(focusedID)
 
-        let host = makeBottomSheetHost(store: store, snapshot: snapshot)
+        let host = makeFullScreenTimersHost(store: store, snapshot: snapshot)
 
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertEqual(store.selectedTimerID, focusedID)
@@ -391,25 +391,26 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
     }
 
     @MainActor
-    private func makeBottomSheetHost(
+    private func makeFullScreenTimersHost(
         store: BottomSheetWorkspaceStateStore,
         snapshot: BottomSheetWorkspaceSnapshot
     ) -> UIViewController {
         let host = UIHostingController(
-            rootView: BottomSheetWorkspaceShell(
-                stateStore: store,
+            rootView: FullScreenTimersWindow(
                 snapshot: snapshot,
+                openFocus: store.openFocus,
                 onPauseTimer: { _ in },
                 onResumeTimer: { _ in },
                 onRemoveTimer: { _ in },
                 onStartTimerAgain: { _ in },
-                onClearCompletedTimers: {}
+                onClearCompletedTimers: {},
+                onClose: {}
             )
-            .frame(width: 390, height: 480)
+            .frame(width: 390, height: 844)
         )
 
         host.loadViewIfNeeded()
-        host.view.frame = CGRect(x: 0, y: 0, width: 390, height: 480)
+        host.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
         host.view.layoutIfNeeded()
         return host
     }

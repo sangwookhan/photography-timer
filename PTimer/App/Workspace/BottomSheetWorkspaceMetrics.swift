@@ -1,42 +1,16 @@
 import Combine
 import SwiftUI
 
-struct BottomSheetLayoutMetrics {
-    static let compactMainContentReservation: CGFloat = 152
-    static let largeFixedHeight: CGFloat = 560
-
-    static func fixedHeight(for detent: BottomSheetDetent) -> CGFloat? {
-        switch detent {
-        case .compact:
-            return nil
-        case .large:
-            return largeFixedHeight
-        }
-    }
-
-    static func mainContentReservation(for detent: BottomSheetDetent) -> CGFloat {
-        switch detent {
-        case .compact:
-            return compactMainContentReservation
-        case .large:
-            return largeFixedHeight
-        }
-    }
-
-    static func dimOpacity(for detent: BottomSheetDetent) -> Double {
-        switch detent {
-        case .compact:
-            return 0
-        case .large:
-            return 0.2
-        }
-    }
-}
-
 enum BottomSheetWorkspaceCopy {
     static let title = "Timers"
 }
 
+/// Geometry of the compact timer mini cards. Despite the
+/// `BottomSheet` prefix (a holdover from when these cards lived
+/// inside the bottom-sheet dock), the dimensions are now consumed by
+/// the screen-level `CompactTimerCardStripView` — see
+/// `ExposureWorkspaceLayoutMetrics.timerStripHeight`, which is
+/// derived from `viewportHeight` here.
 enum BottomSheetCompactDockMetrics {
     static let scrollsHorizontally = true
     static let contentInsets = EdgeInsets(top: 1, leading: 18, bottom: 1, trailing: 18)

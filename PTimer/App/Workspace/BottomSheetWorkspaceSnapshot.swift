@@ -81,10 +81,26 @@ struct BottomSheetLargeItem: Identifiable, Equatable {
 }
 
 struct TimerWorkspaceSection: Identifiable, Equatable {
+    /// Section title strings used by both the snapshot factory and
+    /// the view layer. Lifted into named constants so the view can
+    /// identify the completed section without re-typing the literal
+    /// (and so a future copy change does not silently desynchronize
+    /// the writer and the reader).
+    static let activeTitle = "Active"
+    static let completedTitle = "Recently Completed"
+
     let title: String
     let items: [BottomSheetLargeItem]
 
     var id: String { title }
+
+    /// True when this section contains the recently-completed
+    /// timers. Used by the full-screen Timers window to scope the
+    /// `Clear` affordance to this section's header instead of a
+    /// top-level summary strip.
+    var isCompletedSection: Bool {
+        title == Self.completedTitle
+    }
 }
 
 struct BottomSheetWorkspaceSnapshot: Equatable {
@@ -188,13 +204,13 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
 
         return [
             makeSection(
-                title: "Active",
+                title: TimerWorkspaceSection.activeTitle,
                 timers: activeTimers,
                 formatRemaining: formatRemaining,
                 timeContext: timeContext
             ),
             makeSection(
-                title: "Recently Completed",
+                title: TimerWorkspaceSection.completedTitle,
                 timers: completedTimers,
                 formatRemaining: formatRemaining,
                 timeContext: timeContext

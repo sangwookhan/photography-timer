@@ -62,6 +62,12 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     /// editing path; the load layer also performs that trim before
     /// handing values to `CameraSlotSessionModel`.
     let customDisplayName: String?
+    /// Optional per-slot Target Shutter duration in seconds. Additive
+    /// field — pre-PTIMER-25 snapshots decode unchanged with `nil`
+    /// (target inactive). `nil` round-trips through the runtime as
+    /// "no target set"; a positive finite value means the
+    /// photographer has a target locked in for this slot.
+    let targetShutterSeconds: TimeInterval?
 
     init(
         slotIDRaw: String,
@@ -71,7 +77,8 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         ndStop: Int?,
         ndStopThirds: Int? = nil,
         exposureScaleMode: String? = nil,
-        customDisplayName: String? = nil
+        customDisplayName: String? = nil,
+        targetShutterSeconds: TimeInterval? = nil
     ) {
         self.slotIDRaw = slotIDRaw
         self.selectedPresetFilmID = selectedPresetFilmID
@@ -81,6 +88,7 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         self.ndStopThirds = ndStopThirds
         self.exposureScaleMode = exposureScaleMode
         self.customDisplayName = customDisplayName
+        self.targetShutterSeconds = targetShutterSeconds
     }
 }
 

@@ -24,6 +24,14 @@ struct CameraSlotPageState {
     let filmSelectionDisplayState: FilmSelectionDisplayState
     let isFilmWorkflowActive: Bool
     let isActive: Bool
+    /// Per-slot Target Shutter duration in seconds. `nil` when the
+    /// photographer has not set a target for this slot. The active
+    /// slot reads this through the live `TargetShutterModel`; inactive
+    /// slots read the value stored on their snapshot. Surfacing it on
+    /// the page state lets each TabView page render the correct
+    /// per-slot target while the photographer is paging through
+    /// without having to fan out per-slot facade lookups in views.
+    let targetShutterSeconds: TimeInterval?
 
     /// Selector-row id used to drive the film picker's `selected`
     /// highlight. Mirrors `ExposureCalculatorViewModel

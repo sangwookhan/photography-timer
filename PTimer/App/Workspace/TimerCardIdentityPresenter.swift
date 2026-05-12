@@ -60,6 +60,7 @@ enum TimerCardIdentityPresenter {
         case .digitalResult: return "Calculated"
         case .filmAdjustedShutter: return "Adjusted Shutter"
         case .filmCorrectedExposure: return "Corrected Exposure"
+        case .targetShutter: return "Target Shutter"
         }
     }
 }

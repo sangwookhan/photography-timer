@@ -160,8 +160,20 @@ struct CameraSlotSessionPersistenceController {
             ndStep: entry.restoredNDStep ?? CalculatorDefaults.ndStep,
             scaleMode: entry.restoredScaleMode,
             selectedPresetFilm: film,
-            selectedProfileOverride: profile
+            selectedProfileOverride: profile,
+            targetShutterSeconds: sanitizedTargetShutterSeconds(entry.targetShutterSeconds)
         )
+    }
+
+    /// Re-sanitises a persisted target value at decode time. Anything
+    /// non-finite or non-positive is treated as "no target" so a
+    /// corrupted snapshot can never resurface as an invalid timer
+    /// duration; the same rule lives on `TargetShutterModel.setTarget`.
+    private func sanitizedTargetShutterSeconds(_ value: TimeInterval?) -> TimeInterval? {
+        guard let value, value.isFinite, value > 0 else {
+            return nil
+        }
+        return value
     }
 
     private func persistentSnapshot(
@@ -191,7 +203,8 @@ struct CameraSlotSessionPersistenceController {
             // steady-state snapshot stays compact, mirroring the
             // legacy convention.
             exposureScaleMode: snapshot.scaleMode == .oneThirdStop ? nil : snapshot.scaleMode.rawValue,
-            customDisplayName: trimmedCustomName
+            customDisplayName: trimmedCustomName,
+            targetShutterSeconds: snapshot.targetShutterSeconds
         )
     }
 }

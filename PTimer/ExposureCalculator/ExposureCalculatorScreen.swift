@@ -491,6 +491,41 @@ private struct CameraSlotCalculatorPage: View {
                 },
                 style: style
             )
+            // Result card content (Adjusted Shutter, Reciprocity,
+            // Corrected Exposure) is the photographer's primary read.
+            // Without these two modifiers, adding the Target Shutter
+            // card below pushes the page's intrinsic content total
+            // past `workspaceHeight`, and SwiftUI's sibling-
+            // compression heuristic shrinks `ResultSectionView` —
+            // the inner 3-row hierarchy then overflows the section's
+            // frame and the outer `clipShape(RoundedRectangle)` cuts
+            // the bottom row (Corrected Exposure).
+            //
+            // `.layoutPriority(1)` signals intent (allocate this
+            // section first); `.fixedSize(horizontal: false,
+            // vertical: true)` is the *hard* constraint that forces
+            // SwiftUI to honour the section's full intrinsic
+            // vertical size even under tight parent budgets.
+            // Together they guarantee all film result rows render
+            // without clipping; the Target Shutter card (secondary
+            // affordance) absorbs any overflow at the bottom of the
+            // page, which is the spec's stated priority.
+            .layoutPriority(1)
+            .fixedSize(horizontal: false, vertical: true)
+
+            // Target Shutter card sits below the result hierarchy so the
+            // photographer's primary read remains Adjusted/Corrected Shutter;
+            // the optional comparison is a secondary affordance.
+            TargetShutterSectionView(
+                displayState: viewModel.targetShutterDisplayState(forPage: pageState),
+                canStartTimer: pageState.isActive && viewModel.canStartTargetShutterTimer,
+                onSetTarget: pageState.isActive
+                    ? { seconds in viewModel.setTargetShutter(seconds) }
+                    : { _ in },
+                onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
+                onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
+                style: style
+            )
 
             Spacer(minLength: style.resultFlowSpacerMinLength)
         }
@@ -522,7 +557,11 @@ private struct CameraSlotCalculatorPage: View {
     }
 }
 
-private enum ExposureWorkspaceMainLayoutStyle {
+/// Shared by the calculator's main content and by
+/// `TargetShutterSectionView`, which renders inside the camera-slot
+/// page and needs the same density-driven measurements as the rest
+/// of the result section.
+enum ExposureWorkspaceMainLayoutStyle {
     case regular
     case compact
     case dense
@@ -868,7 +907,7 @@ private enum ExposureWorkspaceMainLayoutStyle {
         10
     }
 
-    func pickerColumnLayout(for column: CalculatorPickerColumn) -> PickerColumnLayout {
+    fileprivate func pickerColumnLayout(for column: CalculatorPickerColumn) -> PickerColumnLayout {
         switch (self, column) {
         case (.regular, .ndStop):
             return PickerColumnLayout(
@@ -1985,7 +2024,10 @@ struct DurationDisplayBlock: View {
         .frame(maxWidth: .infinity)
     }
 }
-private extension View {
+extension View {
+    /// Internal so cross-file result-section views (e.g.,
+    /// `TargetShutterSectionView`) can render with the same card
+    /// chrome as the in-file result rows.
     func sectionCardStyle(style: ExposureWorkspaceMainLayoutStyle = .regular) -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -11,19 +11,23 @@ import Foundation
 /// and `filmCorrectedExposure` cover the two film-mode timer entry
 /// points; both still carry slot + film identity, but the
 /// presentation layer's source-label string distinguishes which row
-/// the user tapped.
+/// the user tapped. `targetShutter` covers timers started from a
+/// photographer-supplied Target Shutter duration; the timer's
+/// duration is the target itself, not a calculated result, so the
+/// dock and expanded sheet can render a distinct source label.
 ///
 /// This type lives in the ExposureCalculator domain (not the generic
 /// `Timers/` runtime layer) because it describes which exposure
 /// computation produced the timer, not a property of timer state
 /// itself. Presentation strings (`"Adjusted Shutter"` / `"Corrected
-/// Exposure"`) live in the workspace presentation layer
-/// (`TimerCardIdentityPresenter`) so the runtime layer stays free of
-/// UI copy.
+/// Exposure"` / `"Target Shutter"`) live in the workspace presentation
+/// layer (`TimerCardIdentityPresenter`) so the runtime layer stays
+/// free of UI copy.
 enum ExposureTimerSource: String, Codable, Equatable, Hashable {
     case digitalResult
     case filmAdjustedShutter
     case filmCorrectedExposure
+    case targetShutter
 }
 
 /// Identity snapshot stamped on a timer at start time. Pure value —

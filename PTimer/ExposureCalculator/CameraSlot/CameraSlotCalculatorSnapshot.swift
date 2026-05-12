@@ -16,6 +16,12 @@ struct CameraSlotCalculatorSnapshot: Equatable {
     var scaleMode: ExposureScaleMode
     var selectedPresetFilm: FilmIdentity?
     var selectedProfileOverride: ReciprocityProfile?
+    /// Optional Target Shutter duration captured per slot. `nil` means
+    /// the photographer has not set a target on this slot — Target
+    /// Shutter is part of each slot's shooting context (the same axis
+    /// as base shutter / ND / film), not a global ViewModel concern,
+    /// so a target set on Camera 1 must not bleed into Camera 2.
+    var targetShutterSeconds: TimeInterval?
 
     /// Default snapshot used when a slot is initialized without prior
     /// state. Reads through `CalculatorDefaults` so a fresh slot is
@@ -26,6 +32,7 @@ struct CameraSlotCalculatorSnapshot: Equatable {
         ndStep: CalculatorDefaults.ndStep,
         scaleMode: CalculatorDefaults.scaleMode,
         selectedPresetFilm: nil,
-        selectedProfileOverride: nil
+        selectedProfileOverride: nil,
+        targetShutterSeconds: nil
     )
 }

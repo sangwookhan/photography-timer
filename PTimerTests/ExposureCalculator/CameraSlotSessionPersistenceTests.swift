@@ -180,6 +180,82 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(camera1Page.baseShutter, 1.0 / 60.0, accuracy: 1e-9)
     }
 
+    // MARK: - Target Shutter persistence
+
+    /// PTIMER-25 follow-up: per-slot Target Shutter state must round-
+    /// trip through the session snapshot. Configure distinct targets
+    /// on three slots, leave a fourth without a target, then relaunch
+    /// the ViewModel against the same store and confirm each slot
+    /// restores its captured target (or absence of one).
+    func testTargetShutterRoundTripsAcrossRelaunchPerSlot() throws {
+        let sessionStore = InMemorySessionStore()
+        let viewModel = makeViewModel(sessionStore: sessionStore)
+
+        viewModel.setTargetShutter(300) // Camera 1 → 5m
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.setTargetShutter(3600) // Camera 2 → 1h
+        viewModel.selectCameraSlot(.camera3)
+        viewModel.setTargetShutter(8 * 3600) // Camera 3 → 8h
+        viewModel.selectCameraSlot(.camera4)
+        // Camera 4 deliberately left without a target.
+
+        // Bring the persisted snapshot up to date by switching back
+        // through Camera 1 so its (live) target is captured into the
+        // inactive map at session save time.
+        viewModel.selectCameraSlot(.camera1)
+
+        let restored = makeViewModel(sessionStore: sessionStore)
+
+        XCTAssertEqual(restored.activeCameraSlotID, .camera1)
+        XCTAssertEqual(restored.targetShutterSeconds ?? 0, 300, accuracy: 0.0001,
+                       "Camera 1's 5m target must survive the relaunch")
+
+        XCTAssertEqual(
+            restored.cameraSlotPageState(for: .camera2).targetShutterSeconds ?? 0,
+            3600,
+            accuracy: 0.0001,
+            "Camera 2's 1h target must persist on its inactive snapshot"
+        )
+        XCTAssertEqual(
+            restored.cameraSlotPageState(for: .camera3).targetShutterSeconds ?? 0,
+            8 * 3600,
+            accuracy: 0.0001,
+            "Camera 3's 8h target must persist on its inactive snapshot"
+        )
+        XCTAssertNil(
+            restored.cameraSlotPageState(for: .camera4).targetShutterSeconds,
+            "Camera 4 had no target set — restore must surface nil, not a leaked value"
+        )
+    }
+
+    /// Sanitises a corrupted target value at decode time. A negative
+    /// or non-finite value must be treated as "no target" rather than
+    /// resurfacing as an invalid timer duration.
+    func testCorruptedPersistedTargetIsSanitisedAtDecodeTime() {
+        let snapshot = PersistentCameraSlotSessionSnapshot(
+            schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
+            activeSlotIDRaw: CameraSlotID.camera1.rawValue,
+            slots: [
+                PersistentCameraSlotCalculatorSnapshot(
+                    slotIDRaw: CameraSlotID.camera1.rawValue,
+                    selectedPresetFilmID: nil,
+                    selectedProfileID: nil,
+                    baseShutterSeconds: 1,
+                    ndStop: 0,
+                    targetShutterSeconds: -10
+                )
+            ]
+        )
+        let sessionStore = InMemorySessionStore()
+        sessionStore.saveSnapshot(snapshot)
+
+        let restored = makeViewModel(sessionStore: sessionStore)
+
+        XCTAssertNil(restored.targetShutterSeconds,
+                     "Negative persisted target must decode as nil")
+        XCTAssertFalse(restored.isTargetShutterActive)
+    }
+
     // MARK: - Legacy migration
 
     func testLegacySingleContextMigratesToSessionOnFirstLaunch() throws {

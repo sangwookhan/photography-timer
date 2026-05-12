@@ -205,6 +205,7 @@ Each per-slot snapshot carries:
 - **ndStop** / **ndStopThirds** — same convention and precedence as §7 / §7.2 for the calculator working context: the fractional-aware `ndStopThirds` field is preferred when present, with `ndStop` treated as a legacy hint.
 - **exposureScaleMode** — optional string token following the same convention as §7.3; absent ⇒ shipping one-third-stop scale.
 - **customDisplayName** — optional photographer-supplied display label for the slot. Trimmed at write time; an empty / whitespace-only value persists as absent so the restored slot falls back to its canonical *Camera N* default. Renaming a slot changes only this field; the slot's stable id and per-slot calculator inputs are not affected.
+- **targetShutterSeconds** — optional positive finite number; the slot's committed Target Shutter duration ([Calculator Spec](Calculator.md) §3.8). An absent, non-finite, zero, or negative persisted value restores as no target on the slot. Per-slot target persistence shall not be seeded from session-global last-used target memory; doing so would surface one slot's value on another slot.
 
 #### 7.4.1 Migration from the legacy single-context snapshot
 
@@ -216,7 +217,7 @@ The slot session snapshot (§7.4) is the source of truth on restore. The legacy 
 
 #### 7.4.2 Schema evolution
 
-The slot-session snapshot evolves only via backward-compatible additions ([Requirements](../requirements/Requirements.md) NFR-S.2). Adding an Optional field — for example the `customDisplayName` field above — is permitted without bumping `schemaVersion`; an older snapshot that lacks the field decodes unchanged, with the field treated as absent. A breaking change (renaming an existing field, dropping a required field, or changing the meaning of an existing field) is not permitted without a coordinated `schemaVersion` increment and a documented migration step.
+The slot-session snapshot evolves only via backward-compatible additions ([Requirements](../requirements/Requirements.md) NFR-S.2). Adding an Optional field — for example the `customDisplayName` or `targetShutterSeconds` fields above — is permitted without bumping `schemaVersion`; an older snapshot that lacks the field decodes unchanged, with the field treated as absent. A breaking change (renaming an existing field, dropping a required field, or changing the meaning of an existing field) is not permitted without a coordinated `schemaVersion` increment and a documented migration step.
 
 ---
 

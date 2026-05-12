@@ -139,6 +139,25 @@ A secondary affordance opens a **Reciprocity Details sheet** that shows referenc
 
 **Graph axis**: the formula graph shall extend to a **canonical 120 s upper bound** regardless of the current input metered exposure, so the reference curve is visually stable across inputs.
 
+### 2.7 Target Shutter row
+
+The Target Shutter row (see [Calculator Spec](Calculator.md) §3.8) is an optional, compact surface in the main shooting calculator. It does not replace the calculator's primary result hierarchy — Adjusted Shutter, Reciprocity status, and Corrected Exposure remain the photographer's primary read in film workflow, and the Output Shutter remains primary in digital workflow.
+
+**Row states.** The row presents two states:
+
+- **Inactive** — a compact status row indicating no committed target. Tapping the row opens the input sheet.
+- **Active** — a compact row presenting the target duration, the stop difference against the active comparison value, and a timer-start affordance for the target. The comparison basis is not redisplayed on the row — it is determined by workflow per [Calculator Spec](Calculator.md) §3.8.
+
+The main row shall not present a destructive `Clear` affordance or an enable/disable switch. Removal and disabling are owned by the input sheet so the main surface stays status/action oriented.
+
+**Input sheet.** The input sheet is a draft editing surface. Mutations to the draft (enabling, disabling, picking a value) shall not affect the committed target until the user confirms.
+
+- **Confirm** commits the draft (a positive enabled value sets the target; a disabled draft removes the target).
+- **Cancel** discards the draft.
+- **Sheet dismissal** (drag-to-dismiss, tap-outside, or any non-`Confirm` exit) shall behave as Cancel.
+
+The sheet shall present a native switch that controls whether the draft target is enabled; disabling the switch shall not immediately remove the committed target. Duration entry shall offer two complementary surfaces — **Quick** (preset durations) and **Fine Tune** (h/m/s entry) — so the photographer can pick a common value quickly or dial in a custom one. The two surfaces share a single draft target; switching between them shall not destroy work done in the other.
+
 ---
 
 ## 3. Timer workspace (bottom sheet)
@@ -276,6 +295,8 @@ The UI shall **not**:
 7. Animate progress bars at bar level. Only status icons may animate.
 8. Reorder timers inside the view layer. Ordering is decided by the runtime ([Timer Spec](Timer.md) §6).
 9. Open a film selection dropdown in-screen. Selection always opens the dedicated sheet.
+10. Place a Clear or enable/disable switch on the main Target Shutter row (§2.7). Those affordances live only inside the input sheet.
+11. Treat Target Shutter sheet dismissal (drag-to-dismiss, tap-outside) as commit. Only `Confirm` mutates the committed Target Shutter (§2.7).
 
 ---
 

@@ -71,7 +71,7 @@ computed properties on the facade, not stored business state.
 Directory: `ExposureCalculator/Models/`. Plus
 `FilmModeDetailsPresenter.swift`.
 
-Five `@Observable` feature models, each owning one slice of state:
+`@Observable` feature models, each owning one slice of state:
 
 - **`CalculatorModel`** — calculator inputs and pure ND calculation.
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
@@ -93,6 +93,13 @@ Five `@Observable` feature models, each owning one slice of state:
   `resetCustomDisplayName(for:)`); the facade re-publishes them as
   `cameraSlotCustomDisplayNames` so SwiftUI surfaces redraw without
   a slot switch.
+- **`TargetShutterModel`** — the active slot's optional Target
+  Shutter duration ([Calculator Spec](../specs/Calculator.md) §3.8)
+  plus an in-session last-used memory. Per-slot persistence lives on
+  the snapshot layer (`CameraSlotCalculatorSnapshot.targetShutterSeconds`);
+  the session-global last-used memory is **not** wired into the
+  input sheet's seed for an inactive slot, so one slot's last target
+  cannot leak onto another.
 
 The feature models do not import each other. Cross-model wiring lives
 on `WorkspaceCoordinator`. A model that consumes another model's state
@@ -161,10 +168,10 @@ Directory: `ExposureCalculator/CameraSlot/`.
   session model and is merged into the identity on read.
 - `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
   calculator working state (base shutter, ND, scale mode, selected
-  film, profile override). Live-preview overlays
-  (`CalculatorModel.liveBaseShutter` / `liveNDStep`) deliberately
-  stay out of the snapshot — a preview only exists while a wheel
-  drag is in flight on the active slot.
+  film, profile override, optional `targetShutterSeconds`).
+  Live-preview overlays (`CalculatorModel.liveBaseShutter` /
+  `liveNDStep`) deliberately stay out of the snapshot — a preview
+  only exists while a wheel drag is in flight on the active slot.
 - `CameraSlotPageState` — per-slot view-facing snapshot consumed by
   the workspace TabView pages. Active slot reads live calculator
   state; inactive slots read their preserved snapshot from the
@@ -245,6 +252,8 @@ maintain a parallel copy.
 | Running timer collection + remaining time | `TimerManager` (via `TimerWorkspaceModel`) |
 | Active camera-slot id + inactive slot snapshots + custom slot display names | `CameraSlotSessionModel` |
 | Camera-slot identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
+| Active slot's Target Shutter duration | `TargetShutterModel` |
+| Per-slot persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
 | Calculator context persistence | `UserDefaultsExposureCalculatorContextPersistenceStore` |

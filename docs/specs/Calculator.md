@@ -213,19 +213,35 @@ The presentation layer shall map each result to one of five confidence categorie
 - **Advisory-only** — basis = `advisory_only_beyond_official_range` or threshold no-correction beyond the threshold band. The UI shall show calm explanatory text in place of a number; it shall not fabricate a value.
 - **Unsupported** — basis = `unsupported_out_of_policy_range`. Same rule: no fabricated number.
 
+### 3.8 Target Shutter comparison (optional, post-reciprocity)
+
+Target Shutter is an optional workflow that compares a photographer-supplied target duration against the calculator's current result. It is layered on top of the calculation policy (§2) and the reciprocity policy (§3.1–§3.7); enabling, disabling, or editing the target shall not feed back into either policy or alter any committed result.
+
+**Comparison basis.** Selection is determined by workflow:
+
+- **Non-film workflow** — the comparison value is the Adjusted Shutter.
+- **Film workflow with a quantified corrected exposure** — the comparison value is the Corrected Exposure.
+- **Film workflow without a quantified corrected exposure** (advisory-only or unsupported, §3.5) — no comparison value is available.
+
+**Stop-difference reporting.** When a comparison value is available, the system shall report the stop difference between the target duration and the comparison value. The displayed stop difference is rounded to the app's stop-display granularity. Differences that round to zero are presented as a *match* form rather than as a signed zero. The system shall not fabricate a stop difference when no comparison value is available; in that case the row surfaces a calm unavailable indicator while the target itself remains visible.
+
+**Target stability.** The target duration shall remain fixed while base shutter, ND, film selection, or reciprocity policy results change; only the comparison value updates. Editing the target is the only way to mutate it.
+
+**Per-slot scoping.** Target Shutter state is scoped to the active camera slot on the same terms as other calculator inputs (§1.5). Switching the active slot replaces the target along with the rest of the slot's inputs; an inactive slot's stored target shall not surface on another slot.
+
 ---
 
 ## 4. Timer integration
 
-A timer is created from the **Output Shutter** (digital workflow) or the **Corrected Exposure** (film workflow). The system shall not start a timer from a non-quantified result: when the corrected exposure is advisory-only or unsupported, the Film-mode timer-start affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly.
+A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.8). The system shall not start a timer from a non-quantified reciprocity result: when the corrected exposure is advisory-only or unsupported, the Film-mode timer-start affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
 
-A timer's metadata shall be a snapshot of the calculation result at creation time. Subsequent changes to the calculator inputs shall not mutate any already-created timer. (See [Timer Spec](Timer.md) §1.)
+A timer's metadata shall be a snapshot of the calculation result at creation time. Subsequent changes to the calculator inputs shall not mutate any already-created timer. A timer's exposure source remains distinguishable across its lifetime — a Target-Shutter timer remains a Target-Shutter timer regardless of later input changes. (See [Timer Spec](Timer.md) §1.4.)
 
 ---
 
 ## 5. Restoration across relaunches
 
-The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, and ND value — shall be persisted and restored on relaunch in both digital and film workflows. The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
+The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, ND value, and Target Shutter duration (§3.8) when set — shall be persisted and restored on relaunch in both digital and film workflows. The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
 
 A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the **shipping one-third-stop scale** (§1.4) with the integer ND value treated as a whole-stop count on the new ladder. The shipping ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop value remains valid without rewriting it. A snapshot written by a release that predates the multi-slot session shall similarly continue to restore correctly: the legacy single-context shape is read at first launch after upgrade and the next save writes the multi-slot session shape (see [DomainSchema Spec](DomainSchema.md) §7.4.1).
 
@@ -242,6 +258,8 @@ The system shall **not**:
 5. Round a calculated value at or above 1 s. (Rounded notation is permitted only sub-second.)
 6. Allow calculator input changes to mutate already-created timer metadata.
 7. Start a timer from a non-quantified corrected exposure.
+8. Fabricate a Target Shutter stop difference when the active workflow has no quantified comparison value. The row shall surface a calm unavailable indicator instead.
+9. Present a signed-zero Target Shutter stop difference; differences that round to zero shall collapse to the *match* form (§3.8).
 
 ---
 

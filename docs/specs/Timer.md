@@ -56,7 +56,7 @@ Every timer carries an **identity** — a small bundle of associations describin
 - *digital result* — non-film calculator (no film selected); timer started from the ND-adjusted output shutter.
 - *film-adjusted shutter* — film workflow; timer started from the Adjusted Shutter row.
 - *film-corrected exposure* — film workflow; timer started from the Corrected Exposure row.
-- *target shutter* — reserved for the Target Shutter workflow described in [Requirements](../requirements/Requirements.md) Persona 1.1 / Scenario 1 boundary; surfaces a distinct identity so a target-shutter timer remains distinguishable from adjusted and corrected timers.
+- *target shutter* — timer started from the photographer's Target Shutter duration. The target duration itself is the timer duration, independent of any comparison value's availability. Surfaces a distinct identity so a target-shutter timer remains distinguishable from adjusted and corrected timers across the timer's lifetime. (See [Requirements](../requirements/Requirements.md) §3.9 and [Calculator Spec](Calculator.md) §3.8.)
 - *manual* — an external precomputed shutter supplied outside the calculator. A manual timer **does not** capture calculator identity: it carries no camera slot, no film descriptor, and no calculator-bound exposure source, and its presentation falls back to a generic *Manual timer* basis label rather than borrowing the active slot's identity. (FR-4.7)
 
 **Capture rule.** Identity capture happens once, at start time. The captured values are frozen on the timer; they are not re-derived from runtime state and they are not overwritten when the user later switches the active camera slot, renames a slot, swaps the active film, or re-picks a profile.

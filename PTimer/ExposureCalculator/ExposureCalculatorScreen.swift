@@ -70,15 +70,12 @@ struct ExposureCalculatorScreen: View {
         GeometryReader { geometry in
             let snapshot = bottomSheetSnapshotStore.snapshot
             let hasTimers = Self.hasTimerPresentation(in: snapshot)
-            // PTIMER-126 stability rule: workspace budget and marker
-            // y-position never vary with timer presence. The strip's
-            // footprint is always reserved; only the strip view's
-            // rendering is conditional. Starting the first timer
-            // adds the strip without reflowing the calculator.
+            // `geometry.size` is already safe-area-trimmed, so pass
+            // it as the workspace area without re-subtracting safe
+            // insets. The ZStack below lives in the same trimmed
+            // region; bottom paddings measure from its bottom edge.
             let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-                screenHeight: geometry.size.height,
-                topSafeArea: geometry.safeAreaInsets.top,
-                bottomSafeArea: geometry.safeAreaInsets.bottom
+                workspaceArea: geometry.size.height
             )
             let style = layoutStyle(for: workspaceHeight)
 
@@ -102,25 +99,30 @@ struct ExposureCalculatorScreen: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                // Page marker — single fixed y-position. Same
-                // location whether or not the timer strip is
-                // currently rendered.
+                // Page marker — anchored above the rail's reserved
+                // band. y-position is independent of timer presence.
                 CameraSlotPagerIndicator(
                     count: viewModel.availableCameraSlots.count,
                     activeIndex: viewModel.activeCameraSlotIndex
                 )
                 .padding(
                     .bottom,
-                    ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(
-                        bottomSafeArea: geometry.safeAreaInsets.bottom
-                    )
+                    ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
                 )
                 .frame(maxWidth: .infinity)
 
-                // Screen-level timer strip — only rendered when timers
-                // exist. The reservation in the workspace budget is
-                // unconditional, so the strip can appear without
-                // pushing anything else around.
+                // Running timer preview rail boundary. Always
+                // rendered so the area reads as a preview surface
+                // even when no cards are present.
+                TimerPreviewRailBackground()
+                    .padding(
+                        .bottom,
+                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
+                    )
+                    .frame(maxWidth: .infinity)
+
+                // Compact timer cards — rendered inside the rail
+                // band when timers exist.
                 if hasTimers {
                     CompactTimerCardStripView(
                         snapshot: snapshot,
@@ -140,9 +142,7 @@ struct ExposureCalculatorScreen: View {
                     )
                     .padding(
                         .bottom,
-                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset(
-                            bottomSafeArea: geometry.safeAreaInsets.bottom
-                        )
+                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
                     )
                     .frame(maxWidth: .infinity)
                     .allowsHitTesting(!isFilmSelectorPresented)
@@ -168,10 +168,7 @@ struct ExposureCalculatorScreen: View {
                         },
                         style: style
                     )
-                    .padding(.top, screenLevelSelectorOverlayTopPadding(
-                        topSafeArea: geometry.safeAreaInsets.top,
-                        style: style
-                    ))
+                    .padding(.top, screenLevelSelectorOverlayTopPadding(style: style))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                 }
@@ -304,15 +301,13 @@ struct ExposureCalculatorScreen: View {
         }
     }
 
-    /// Top padding for the screen-level film selector overlay so it
-    /// drops underneath the camera title area instead of starting at
-    /// the very top of the screen. Mirrors the visual offset the
-    /// overlay had when it lived inside the camera workspace.
+    /// Top padding for the film selector overlay so it drops below
+    /// the camera title row. Measured from the top of the trimmed
+    /// ZStack; the top safe area sits above and is owned by SwiftUI.
     private func screenLevelSelectorOverlayTopPadding(
-        topSafeArea: CGFloat,
         style: ExposureWorkspaceMainLayoutStyle
     ) -> CGFloat {
-        topSafeArea + style.topPadding + style.selectorOverlayTopPadding
+        style.topPadding + style.selectorOverlayTopPadding
     }
 
     private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
@@ -432,6 +427,31 @@ private struct CameraSlotCalculatorPage: View {
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
                 style: style
             )
+            // Header carries required visible content (camera title
+            // and film selector), so it shares the priority of the
+            // Target Shutter and result cards.
+            .layoutPriority(1)
+
+            // Target Shutter goal row — sits between the film/profile
+            // card and the Base Shutter / ND Filter controls because
+            // the target is a shooting input, not a secondary read of
+            // the result. Stop-difference is computed against the
+            // Adjusted Shutter (non-film) or Corrected Exposure (film);
+            // see `TargetShutterPresenter`.
+            //
+            // Shares `layoutPriority(1)` with the header and result
+            // cards so workspace shortfall is distributed evenly.
+            TargetShutterSectionView(
+                displayState: viewModel.targetShutterDisplayState(forPage: pageState),
+                canStartTimer: pageState.isActive && viewModel.canStartTargetShutterTimer,
+                onSetTarget: pageState.isActive
+                    ? { seconds in viewModel.setTargetShutter(seconds) }
+                    : { _ in },
+                onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
+                onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
+                style: style
+            )
+            .layoutPriority(1)
 
             VariableSectionView(
                 baseShutter: baseShutterBinding,
@@ -491,41 +511,11 @@ private struct CameraSlotCalculatorPage: View {
                 },
                 style: style
             )
-            // Result card content (Adjusted Shutter, Reciprocity,
-            // Corrected Exposure) is the photographer's primary read.
-            // Without these two modifiers, adding the Target Shutter
-            // card below pushes the page's intrinsic content total
-            // past `workspaceHeight`, and SwiftUI's sibling-
-            // compression heuristic shrinks `ResultSectionView` —
-            // the inner 3-row hierarchy then overflows the section's
-            // frame and the outer `clipShape(RoundedRectangle)` cuts
-            // the bottom row (Corrected Exposure).
-            //
-            // `.layoutPriority(1)` signals intent (allocate this
-            // section first); `.fixedSize(horizontal: false,
-            // vertical: true)` is the *hard* constraint that forces
-            // SwiftUI to honour the section's full intrinsic
-            // vertical size even under tight parent budgets.
-            // Together they guarantee all film result rows render
-            // without clipping; the Target Shutter card (secondary
-            // affordance) absorbs any overflow at the bottom of the
-            // page, which is the spec's stated priority.
+            // Result card carries the photographer's primary read.
+            // The `filmResultCardMinHeight` floor enforced inside
+            // `ResultSectionView` keeps the 3-row film hierarchy
+            // from being compressed past its inner clipShape.
             .layoutPriority(1)
-            .fixedSize(horizontal: false, vertical: true)
-
-            // Target Shutter card sits below the result hierarchy so the
-            // photographer's primary read remains Adjusted/Corrected Shutter;
-            // the optional comparison is a secondary affordance.
-            TargetShutterSectionView(
-                displayState: viewModel.targetShutterDisplayState(forPage: pageState),
-                canStartTimer: pageState.isActive && viewModel.canStartTargetShutterTimer,
-                onSetTarget: pageState.isActive
-                    ? { seconds in viewModel.setTargetShutter(seconds) }
-                    : { _ in },
-                onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
-                onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
-                style: style
-            )
 
             Spacer(minLength: style.resultFlowSpacerMinLength)
         }
@@ -591,7 +581,7 @@ enum ExposureWorkspaceMainLayoutStyle {
         case .regular:
             return 14
         case .compact:
-            return 10
+            return 6
         case .dense:
             return 6
         }
@@ -602,7 +592,7 @@ enum ExposureWorkspaceMainLayoutStyle {
         case .regular:
             return 6
         case .compact:
-            return 4
+            return 2
         case .dense:
             return 2
         }
@@ -665,8 +655,10 @@ enum ExposureWorkspaceMainLayoutStyle {
         switch self {
         case .regular:
             return 10
-        case .compact, .dense:
-            return 8
+        case .compact:
+            return 6
+        case .dense:
+            return 6
         }
     }
 
@@ -675,9 +667,9 @@ enum ExposureWorkspaceMainLayoutStyle {
         case .regular:
             return 10
         case .compact:
-            return 8
+            return 4
         case .dense:
-            return 6
+            return 4
         }
     }
 
@@ -686,7 +678,7 @@ enum ExposureWorkspaceMainLayoutStyle {
         case .regular:
             return 164
         case .compact:
-            return 124
+            return 108
         case .dense:
             return 92
         }
@@ -752,7 +744,7 @@ enum ExposureWorkspaceMainLayoutStyle {
         case .regular:
             return 12
         case .compact:
-            return 11
+            return 8
         case .dense:
             return 8
         }
@@ -780,15 +772,23 @@ enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
+    /// Minimum height of the result-section *inner* block (after
+    /// `resultBlockPadding` is applied). Sized to fit three film
+    /// rows at their respective row-level minimums plus dividers,
+    /// body spacings, and the corrected-exposure row's extra
+    /// height. Acts as a hard floor for the result card under
+    /// sibling compression so the inner content never overflows
+    /// the section's clipShape.
     var filmResultCardMinHeight: CGFloat {
-        switch self {
-        case .regular:
-            return 152
-        case .compact:
-            return 140
-        case .dense:
-            return 126
-        }
+        let rowsAtFloor = 3 * filmResultRowMinHeight
+        let dividers: CGFloat = 2
+        let interRowSpacings = 4 * bodySpacing
+        let correctedExposureExtra = correctedExposureValueMinHeight - filmResultRowMinHeight
+        let innerContent = rowsAtFloor
+            + dividers
+            + interRowSpacings
+            + max(0, correctedExposureExtra)
+        return innerContent + 2 * resultBlockPadding
     }
 
     var correctedExposurePrimaryFont: Font {
@@ -1996,6 +1996,31 @@ private struct TimerActionView: View {
     }
 }
 
+
+/// Boundary for the running-timer preview rail. Hairline top edge
+/// and a barely-perceptible fill mark the rail as a preview surface
+/// without claiming the weight of a card or container.
+private struct TimerPreviewRailBackground: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color(.tertiarySystemFill).opacity(0.45))
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color(.separator).opacity(0.65))
+                    .frame(height: hairlineThickness)
+            }
+            .frame(height: ExposureWorkspaceLayoutMetrics.timerStripHeight)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .accessibilityIdentifier("main-screen-timer-rail-background")
+    }
+
+    /// Pixel-accurate 1-physical-pixel divider that scales with the
+    /// device's screen scale (e.g. 1/3 pt on @3x displays).
+    private var hairlineThickness: CGFloat {
+        1.0 / max(UIScreen.main.scale, 1)
+    }
+}
 
 struct DurationDisplayBlock: View {
     let primaryText: String

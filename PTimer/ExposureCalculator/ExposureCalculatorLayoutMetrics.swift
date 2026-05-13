@@ -8,98 +8,83 @@ enum ExposureWorkspaceLayoutDensity {
 
 /// Screen-level layout metrics for the exposure-calculator screen.
 ///
-/// PTIMER-126 redesign: the closed-state Timers UI is no longer a
-/// custom bottom-sheet dock. Timers surface in two screen-level
-/// places:
+/// The bottom of the trimmed workspace area is partitioned, top to
+/// bottom, into: camera workspace → marker gap → page marker →
+/// marker-to-rail gap → timer preview rail → rail bottom margin.
+/// The rail footprint is reserved unconditionally so timer presence
+/// never reflows the camera workspace; only the rail's *contents*
+/// (`CompactTimerCardStripView`) are conditional.
 ///
-/// - When timers exist: `CompactTimerCardStripView` is rendered as a
-///   screen-level strip just above the bottom safe area.
-/// - When no timers exist: nothing is rendered for the timer surface.
-///
-/// **Layout stability rule (PTIMER-126):** the camera workspace
-/// budget and the page marker y-position do *not* depend on whether
-/// timers exist. Both are computed against a single reservation that
-/// always assumes the strip's footprint. The strip's *rendering* is
-/// conditional, but the *space it would occupy* is always reserved
-/// — so the calculator does not visibly reflow when the first timer
-/// starts (no density change, no marker jump, no result-card
-/// resize). Only the strip view itself appears or disappears.
-///
-/// Opened state: `FullScreenTimersWindow` is presented via
-/// `.fullScreenCover`. The camera screen layout underneath is
-/// unchanged because the window covers it.
+/// The screen-level `GeometryReader` is hosted inside the default
+/// safe area, so `geometry.size.height` is already safe-area-trimmed
+/// and the metrics below partition that trimmed area only.
 struct ExposureWorkspaceLayoutMetrics {
 
-    /// Vertical extent of the screen-level timer-card strip. Sized to
-    /// fit the compact card viewport exactly. Always reserved in the
-    /// layout budget even when no timers are rendered, so a timer
-    /// appearing does not cause the workspace to reflow.
+    /// Height of the timer preview rail band.
     static let timerStripHeight: CGFloat = BottomSheetCompactDockMetrics.viewportHeight
 
-    /// Distance from the top of the bottom safe area to the timer
-    /// strip's bottom edge. Provides breathing room so cards don't
-    /// crowd the home-indicator zone.
-    static let timerStripBottomMargin: CGFloat = 12
+    /// Distance from the trimmed-area bottom edge to the rail's
+    /// bottom edge.
+    static let timerStripBottomMargin: CGFloat = 2
 
-    /// Visual gap between the timer strip's top edge and the page
-    /// marker's bottom edge. Always reserved.
-    static let pageMarkerToStripGap: CGFloat = 8
+    /// Visual gap between the rail's top edge and the page marker's
+    /// bottom edge.
+    static let pageMarkerToStripGap: CGFloat = 4
 
     /// Effective vertical footprint of the page marker view.
-    static let pageMarkerHeight: CGFloat = 14
+    static let pageMarkerHeight: CGFloat = 12
 
     /// Visual gap between the page marker's top edge and the camera
     /// workspace's bottom edge.
-    static let workspaceMarkerGap: CGFloat = 6
+    static let workspaceMarkerGap: CGFloat = 4
+
+    /// Total reservation below the camera workspace: marker gap +
+    /// marker + marker-to-rail gap + rail + rail bottom margin.
+    static let bottomReservation: CGFloat =
+        timerStripBottomMargin
+        + timerStripHeight
+        + pageMarkerToStripGap
+        + pageMarkerHeight
+        + workspaceMarkerGap
 
     // MARK: - Page marker
 
-    /// Bottom-anchored y-offset of the page marker. The marker sits
-    /// at the same y whether or not timers exist — the strip's
-    /// footprint is always reserved in the layout, so a timer
-    /// appearing or disappearing does not move the marker.
-    static func pageMarkerBottomOffset(bottomSafeArea: CGFloat) -> CGFloat {
-        bottomSafeArea
-            + timerStripBottomMargin
+    /// Bottom-anchored y-offset of the page marker. The marker
+    /// always sits above the rail's reserved band; its position is
+    /// independent of timer presence.
+    static func pageMarkerBottomOffset() -> CGFloat {
+        timerStripBottomMargin
             + timerStripHeight
             + pageMarkerToStripGap
     }
 
-    // MARK: - Timer strip offset
+    // MARK: - Timer rail offset
 
-    /// Bottom-anchored y-offset of the timer strip. Used only when
-    /// the strip is rendered (i.e., timers exist). The reservation
-    /// for this band exists in the workspace budget regardless.
-    static func timerStripBottomOffset(bottomSafeArea: CGFloat) -> CGFloat {
-        bottomSafeArea + timerStripBottomMargin
+    /// Bottom-anchored y-offset of the rail (boundary background
+    /// and, when present, the compact strip cards).
+    static func timerStripBottomOffset() -> CGFloat {
+        timerStripBottomMargin
     }
 
     // MARK: - Camera workspace budget
 
-    /// The camera workspace's available content height. Independent
-    /// of whether timers exist — always reserves the full timer-strip
-    /// + marker stack so the workspace size is stable across timer
-    /// presence transitions.
-    static func availableMainContentHeight(
-        screenHeight: CGFloat,
-        topSafeArea: CGFloat = 0,
-        bottomSafeArea: CGFloat = 34
-    ) -> CGFloat {
-        let bottomReservation = timerStripBottomMargin
-            + timerStripHeight
-            + pageMarkerToStripGap
-            + pageMarkerHeight
-            + workspaceMarkerGap
-
-        return screenHeight - topSafeArea - bottomSafeArea - bottomReservation
+    /// Available height for the camera workspace, derived from the
+    /// trimmed `workspaceArea` minus the unconditional bottom
+    /// reservation. Safe-area insets are already excluded from
+    /// `workspaceArea` and must not be subtracted again here.
+    static func availableMainContentHeight(workspaceArea: CGFloat) -> CGFloat {
+        workspaceArea - bottomReservation
     }
 
+    /// Minimum workspace budget at which the given density tier is
+    /// allowed to render the page without overflowing required
+    /// visible content.
     static func estimatedMainContentHeight(for density: ExposureWorkspaceLayoutDensity) -> CGFloat {
         switch density {
         case .regular:
-            return 620
+            return 700
         case .compact:
-            return 560
+            return 600
         case .dense:
             return 488
         }

@@ -432,6 +432,27 @@ private struct CameraSlotCalculatorPage: View {
             // Target Shutter and result cards.
             .layoutPriority(1)
 
+            // Target Shutter goal row — sits between the film/profile
+            // card and the Base Shutter / ND Filter controls because
+            // the target is a shooting input, not a secondary read of
+            // the result. Stop-difference is computed against the
+            // Adjusted Shutter (non-film) or Corrected Exposure (film);
+            // see `TargetShutterPresenter`.
+            //
+            // Shares `layoutPriority(1)` with the header and result
+            // cards so workspace shortfall is distributed evenly.
+            TargetShutterSectionView(
+                displayState: viewModel.targetShutterDisplayState(forPage: pageState),
+                canStartTimer: pageState.isActive && viewModel.canStartTargetShutterTimer,
+                onSetTarget: pageState.isActive
+                    ? { seconds in viewModel.setTargetShutter(seconds) }
+                    : { _ in },
+                onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
+                onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
+                style: style
+            )
+            .layoutPriority(1)
+
             VariableSectionView(
                 baseShutter: baseShutterBinding,
                 ndStep: ndStepBinding,
@@ -494,24 +515,6 @@ private struct CameraSlotCalculatorPage: View {
             // The `filmResultCardMinHeight` floor enforced inside
             // `ResultSectionView` keeps the 3-row film hierarchy
             // from being compressed past its inner clipShape.
-            .layoutPriority(1)
-
-            // Target Shutter card — the optional shooting goal.
-            // Shares `layoutPriority(1)` with the header and result
-            // cards so workspace shortfall is distributed evenly
-            // across the three protected rows. Stop-difference is
-            // computed against the Adjusted Shutter (non-film) or
-            // Corrected Exposure (film); see `TargetShutterPresenter`.
-            TargetShutterSectionView(
-                displayState: viewModel.targetShutterDisplayState(forPage: pageState),
-                canStartTimer: pageState.isActive && viewModel.canStartTargetShutterTimer,
-                onSetTarget: pageState.isActive
-                    ? { seconds in viewModel.setTargetShutter(seconds) }
-                    : { _ in },
-                onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
-                onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
-                style: style
-            )
             .layoutPriority(1)
 
             Spacer(minLength: style.resultFlowSpacerMinLength)

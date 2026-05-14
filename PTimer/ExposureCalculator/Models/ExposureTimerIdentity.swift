@@ -51,4 +51,25 @@ struct ExposureTimerIdentitySnapshot: Equatable, Hashable {
     /// chose a non-primary profile.
     let filmProfileQualifier: String?
     let exposureSource: ExposureTimerSource
+    /// True when the timer was started from a formula-extrapolated
+    /// corrected exposure that sits outside the manufacturer-supported
+    /// guidance range. Captured at start time so a later film switch
+    /// or policy change does not retroactively rewrite the basis the
+    /// user committed to. Defaults to `false` for the supported
+    /// quantified path and for non-film timers.
+    let isOutsideManufacturerGuidance: Bool
+
+    init(
+        cameraSlot: CameraSlotIdentity?,
+        filmDisplayName: String?,
+        filmProfileQualifier: String?,
+        exposureSource: ExposureTimerSource,
+        isOutsideManufacturerGuidance: Bool = false
+    ) {
+        self.cameraSlot = cameraSlot
+        self.filmDisplayName = filmDisplayName
+        self.filmProfileQualifier = filmProfileQualifier
+        self.exposureSource = exposureSource
+        self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+    }
 }

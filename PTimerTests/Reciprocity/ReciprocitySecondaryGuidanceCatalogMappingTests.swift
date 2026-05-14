@@ -131,8 +131,10 @@ final class ReciprocitySecondaryGuidanceCatalogMappingTests: XCTestCase {
     private func formattedSecondaryGuidance(
         for film: FilmIdentity
     ) -> [ReciprocitySecondaryGuidancePresentation] {
-        let adjustments = film.profiles.flatMap { profile in
-            profile.rules.flatMap(adjustments(in:))
+        let adjustments = film.profiles.flatMap { profile -> [ReciprocityAdjustment] in
+            let ruleAdjustments = profile.rules.flatMap(adjustments(in:))
+            let evidenceAdjustments = profile.sourceEvidence.flatMap(\.adjustments)
+            return ruleAdjustments + evidenceAdjustments
         }
         return ReciprocitySecondaryGuidanceFormatter.format(adjustments)
     }

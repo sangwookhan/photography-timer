@@ -954,6 +954,22 @@ private struct FilmModeDetailsGraph: View {
                         .stroke(Color.accentColor.opacity(0.3), lineWidth: 5)
                 }
                     .position(plotted)
+        case .noCorrection:
+            // Hollow ring to signal "no correction, identity line" — the
+            // current input lies on adjusted == corrected by policy, not
+            // because the formula predicted it. Distinct from the filled
+            // accent disc used for `.formulaDerived` so a future reader
+            // does not misread no-correction inputs as formula
+            // predictions on the curve.
+            Circle()
+                .stroke(Color.green, lineWidth: 2)
+                .frame(width: 14, height: 14)
+                .background(
+                    Circle()
+                        .fill(Color(.systemBackground))
+                        .frame(width: 14, height: 14)
+                )
+                .position(plotted)
         }
     }
 
@@ -1042,9 +1058,11 @@ private struct FilmModeDetailsGraph: View {
             case .estimated:
                 return "Current point estimated"
             case .extrapolated:
-                return "Current point extrapolated"
+                return "Current point extrapolated outside manufacturer guidance"
             case .formulaDerived:
                 return "Current point on formula curve"
+            case .noCorrection:
+                return "Current input in no-correction range"
             }
         } ?? (graph.usesCurrentInputGuideOnly ? "Current input shown as x position only" : "No current point")
 
@@ -1060,10 +1078,13 @@ private struct FilmModeDetailsGraph: View {
                     ("line.diagonal", .red, "Current input")
                 ]
             }
-            return [
-                ("line.horizontal.3", .accentColor, "Formula curve"),
-                ("circle.fill", .accentColor, "Current point")
+            var items: [(symbol: String, color: Color, text: String)] = [
+                ("line.horizontal.3", .accentColor, "Formula curve")
             ]
+            if let currentPoint = graph.currentPoint {
+                items.append(currentPointLegendItem(for: currentPoint.style))
+            }
+            return items
         case .table:
             var items: [(symbol: String, color: Color, text: String)] = [
                 ("circle", .secondary, "Reference")
@@ -1095,6 +1116,8 @@ private struct FilmModeDetailsGraph: View {
             return ("triangle.fill", .orange, "Extrapolated")
         case .formulaDerived:
             return ("circle.fill", .accentColor, "Current point")
+        case .noCorrection:
+            return ("circle", .green, "No correction")
         }
     }
 
@@ -1112,6 +1135,8 @@ private struct FilmModeDetailsGraph: View {
             return "arrow.up.forward.circle"
         case .formulaDerived:
             return "function"
+        case .noCorrection:
+            return "checkmark.circle"
         case .none:
             return "info.circle"
         }
@@ -1123,7 +1148,7 @@ private struct FilmModeDetailsGraph: View {
         }
 
         switch graph.currentPoint?.style {
-        case .exact:
+        case .exact, .noCorrection:
             return .green
         case .estimated, .formulaDerived:
             return .blue

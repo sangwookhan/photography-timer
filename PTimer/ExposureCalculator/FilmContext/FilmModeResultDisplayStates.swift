@@ -18,8 +18,29 @@ struct FilmModeReciprocityStateDisplayState: Equatable {
 struct FilmModeTimerActionState: Equatable {
     let targetSeconds: TimeInterval?
     let canStartTimer: Bool
+    /// True when the timer would start from a formula-extrapolated
+    /// corrected exposure that sits outside the manufacturer's
+    /// supported guidance. The play-button presenter renders a
+    /// warning-oriented treatment when this flag is set, but the
+    /// timer still starts because the user has a numeric value to
+    /// commit to.
+    let isOutsideManufacturerGuidance: Bool
     let accessibilityLabel: String
     let accessibilityHint: String
+
+    init(
+        targetSeconds: TimeInterval?,
+        canStartTimer: Bool,
+        isOutsideManufacturerGuidance: Bool = false,
+        accessibilityLabel: String,
+        accessibilityHint: String
+    ) {
+        self.targetSeconds = targetSeconds
+        self.canStartTimer = canStartTimer
+        self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityHint = accessibilityHint
+    }
 }
 
 enum FilmModeCorrectedExposureDisplayKind: Equatable {

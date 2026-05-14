@@ -1034,7 +1034,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testNoCorrectionDetailsUseCompactSummaryAndDoNotPlotCurrentPoint() throws {
+    func testNoCorrectionDetailsUseCompactSummaryAndPlotIdentityCurrentPoint() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -1049,7 +1049,13 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.currentResult.layout, .compactValue)
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "0.5s")
         XCTAssertEqual(details.currentResult.correctedExposure.valueText, "0.5s")
-        XCTAssertNil(details.graph?.currentPoint)
+        // No-correction current point sits on the identity line with
+        // the `.noCorrection` marker so it does not read as a formula
+        // prediction.
+        let currentPoint = try XCTUnwrap(details.graph?.currentPoint)
+        XCTAssertEqual(currentPoint.style, .noCorrection)
+        XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 0.5, accuracy: 1e-6)
+        XCTAssertEqual(currentPoint.point.correctedExposureSeconds, 0.5, accuracy: 1e-6)
     }
 
     @MainActor

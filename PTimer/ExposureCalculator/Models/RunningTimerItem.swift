@@ -41,6 +41,11 @@ struct RunningTimerItem: Identifiable, Equatable {
     /// older snapshots without the field decode unchanged; UI surfaces
     /// fall back gracefully when absent.
     let exposureSource: ExposureTimerSource?
+    /// Captured-at-start flag: true when the timer was started from a
+    /// formula-extrapolated corrected exposure outside manufacturer
+    /// guidance. Defaults to `false` for older snapshots and for the
+    /// supported quantified path.
+    let isOutsideManufacturerGuidance: Bool
 
     init(
         id: UUID,
@@ -57,7 +62,8 @@ struct RunningTimerItem: Identifiable, Equatable {
         cameraSlot: CameraSlotIdentity? = nil,
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
-        exposureSource: ExposureTimerSource? = nil
+        exposureSource: ExposureTimerSource? = nil,
+        isOutsideManufacturerGuidance: Bool = false
     ) {
         self.id = id
         self.order = order
@@ -74,6 +80,7 @@ struct RunningTimerItem: Identifiable, Equatable {
         self.filmDisplayName = filmDisplayName
         self.filmProfileQualifier = filmProfileQualifier
         self.exposureSource = exposureSource
+        self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
     }
 
     /// Convenience packaging of the slot + film + source identity
@@ -95,7 +102,8 @@ struct RunningTimerItem: Identifiable, Equatable {
             cameraSlot: cameraSlot,
             filmDisplayName: filmDisplayName,
             filmProfileQualifier: filmProfileQualifier,
-            exposureSource: exposureSource
+            exposureSource: exposureSource,
+            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance
         )
     }
 

@@ -1335,6 +1335,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
         }
 
+        // Stamp the outside-manufacturer-guidance bit only on the
+        // corrected-exposure start path. Adjusted-shutter and
+        // target-shutter timers reflect calculator inputs, not the
+        // reciprocity policy, so they never inherit this basis.
+        let isOutsideManufacturerGuidance: Bool
+        if startSource == .filmCorrectedExposure {
+            isOutsideManufacturerGuidance =
+                filmModeResult?.correctedExposureAction.isOutsideManufacturerGuidance == true
+        } else {
+            isOutsideManufacturerGuidance = false
+        }
+
         timerWorkspaceModel.startTimer(
             duration: resultShutter,
             name: timerName,
@@ -1342,7 +1354,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             cameraSlot: captured ? cameraSlotSessionModel.activeSlot : nil,
             filmDisplayName: activeFilm?.canonicalStockName,
             filmProfileQualifier: filmProfileQualifier,
-            exposureSource: startSource.timerExposureSource
+            exposureSource: startSource.timerExposureSource,
+            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance
         )
     }
 

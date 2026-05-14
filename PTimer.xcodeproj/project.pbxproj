@@ -90,6 +90,7 @@
 		A00000000000000000000150 /* ReciprocitySecondaryGuidancePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */; };
 		A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */; };
 		A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */; };
+		A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */; };
 		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
 		A00000000000000000000158 /* ExposureScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000159 /* ExposureScale.swift */; };
 		A0000000000000000000015A /* ExposureScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000015B /* ExposureScaleTests.swift */; };
@@ -239,6 +240,7 @@
 		A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidanceCatalogMappingTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000159 /* ExposureScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScale.swift; sourceTree = "<group>"; };
 		A0000000000000000000015B /* ExposureScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleTests.swift; sourceTree = "<group>"; };
@@ -561,6 +563,7 @@
 				A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */,
 				A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */,
 				A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */,
+				A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */,
 				A0000000000000000000011F /* ReciprocityResultLegacyShapeBaselineTests.swift */,
 				A00000000000000000000121 /* ReciprocityResultCodableTests.swift */,
 			);
@@ -814,6 +817,7 @@
 				A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */,
 				A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */,
 				A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */,
+				A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */,
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
 				A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */,
 				A00000000000000000000128 /* CalculatorModelTests.swift in Sources */,

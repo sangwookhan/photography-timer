@@ -48,6 +48,12 @@ enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
     case estimated
     case extrapolated
     case formulaDerived
+    /// Current input falls inside the no-correction threshold range.
+    /// The plotted point sits on the identity line because adjusted
+    /// shutter equals corrected exposure; the marker is intentionally
+    /// distinct from `.formulaDerived` so the user does not read the
+    /// no-correction case as a formula prediction.
+    case noCorrection
 }
 
 struct FilmModeDetailsGraphPoint: Equatable {

@@ -48,6 +48,12 @@ struct ReciprocityProfile: Codable, Equatable {
     let rules: [ReciprocityRule]
     let notes: [String]
     let userMetadata: UserEditableMetadata?
+    /// Published manufacturer reference points the user can verify
+    /// against. Display-only — the calculation policy evaluator does
+    /// not consume this field, so source evidence cannot hijack the
+    /// calculation basis back to an exact table point even when the
+    /// profile's active calculation is formula-based.
+    let sourceEvidence: [ReciprocitySourceEvidenceRow]
 
     init(
         id: String,
@@ -55,7 +61,8 @@ struct ReciprocityProfile: Codable, Equatable {
         source: ReciprocitySourceProvenance,
         rules: [ReciprocityRule],
         notes: [String] = [],
-        userMetadata: UserEditableMetadata? = nil
+        userMetadata: UserEditableMetadata? = nil,
+        sourceEvidence: [ReciprocitySourceEvidenceRow] = []
     ) {
         self.id = id
         self.name = name
@@ -63,6 +70,67 @@ struct ReciprocityProfile: Codable, Equatable {
         self.rules = rules
         self.notes = notes
         self.userMetadata = userMetadata
+        self.sourceEvidence = sourceEvidence
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case source
+        case rules
+        case notes
+        case userMetadata
+        case sourceEvidence
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.source = try container.decode(ReciprocitySourceProvenance.self, forKey: .source)
+        self.rules = try container.decode([ReciprocityRule].self, forKey: .rules)
+        self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+        self.userMetadata = try container.decodeIfPresent(UserEditableMetadata.self, forKey: .userMetadata)
+        self.sourceEvidence = try container.decodeIfPresent(
+            [ReciprocitySourceEvidenceRow].self,
+            forKey: .sourceEvidence
+        ) ?? []
+    }
+}
+
+/// Display-only source-evidence row carried by a `ReciprocityProfile`.
+///
+/// Mirrors `ReciprocityTableEntry`'s shape but is kept as a separate
+/// type so the calculation policy never reads it as a calculation
+/// table row. The presenter renders these rows so the user can verify
+/// formula-based predictions against the manufacturer's published
+/// reference points.
+struct ReciprocitySourceEvidenceRow: Codable, Equatable {
+    let meteredExposure: MeteredExposureSelector
+    let adjustments: [ReciprocityAdjustment]
+    let notes: [String]
+
+    init(
+        meteredExposure: MeteredExposureSelector,
+        adjustments: [ReciprocityAdjustment],
+        notes: [String] = []
+    ) {
+        self.meteredExposure = meteredExposure
+        self.adjustments = adjustments
+        self.notes = notes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case meteredExposure
+        case adjustments
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.meteredExposure = try container.decode(MeteredExposureSelector.self, forKey: .meteredExposure)
+        self.adjustments = try container.decode([ReciprocityAdjustment].self, forKey: .adjustments)
+        self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
     }
 }
 

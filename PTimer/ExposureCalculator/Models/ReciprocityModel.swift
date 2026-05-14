@@ -194,11 +194,19 @@ final class ReciprocityModel {
         }
 
         if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
+            // Outside-guidance numeric results prefix the value with
+            // "≈" and add an outside-guidance caption so the user
+            // reads them as approximate rather than as published
+            // manufacturer guidance.
+            let isOutsideManufacturerGuidance = bindingState.presentation.category == .unsupported
+            let formattedDuration = formatReciprocityDurationCoarse(correctedExposureSeconds)
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
-                primaryText: formatReciprocityDurationCoarse(correctedExposureSeconds),
-                secondaryText: "",
+                primaryText: isOutsideManufacturerGuidance ? "≈\(formattedDuration)" : formattedDuration,
+                secondaryText: isOutsideManufacturerGuidance
+                    ? "Outside manufacturer guidance — extrapolated from the formula curve."
+                    : "",
                 usesNumericExposure: true
             )
         }
@@ -234,9 +242,11 @@ final class ReciprocityModel {
 
     /// Pure transform: given the current binding state (or nil), produce
     /// the timer-action state for the corrected-exposure Start Timer
-    /// button. A non-nil quantified corrected exposure with a positive
-    /// value enables the timer; everything else returns a disabled state
-    /// with a category-specific accessibility hint.
+    /// button. A non-nil corrected exposure with a positive value
+    /// enables the timer — including the formula-extrapolated unsupported
+    /// path, where the action state additionally flags itself as
+    /// outside manufacturer guidance so the button can render with a
+    /// warning treatment without losing the start affordance.
     func correctedExposureActionState(
         for bindingState: FilmModeReciprocityBindingState?
     ) -> FilmModeTimerActionState {
@@ -244,19 +254,26 @@ final class ReciprocityModel {
             return FilmModeTimerActionState(
                 targetSeconds: nil,
                 canStartTimer: false,
+                isOutsideManufacturerGuidance: false,
                 accessibilityLabel: "Start timer from corrected exposure",
                 accessibilityHint: "Timer unavailable because no film-specific corrected exposure is available"
             )
         }
 
         let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds
+        let isOutsideManufacturerGuidance = bindingState.presentation.category == .unsupported
 
         if let correctedExposureSeconds, correctedExposureSeconds > 0 {
+            let hint = isOutsideManufacturerGuidance
+                ? "Starts a timer using a formula-extrapolated corrected exposure outside manufacturer guidance"
+                : "Starts a timer using the film-specific corrected exposure value"
+
             return FilmModeTimerActionState(
                 targetSeconds: correctedExposureSeconds,
                 canStartTimer: true,
+                isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
                 accessibilityLabel: "Start timer from corrected exposure",
-                accessibilityHint: "Starts a timer using the film-specific corrected exposure value"
+                accessibilityHint: hint
             )
         }
 
@@ -273,6 +290,7 @@ final class ReciprocityModel {
         return FilmModeTimerActionState(
             targetSeconds: nil,
             canStartTimer: false,
+            isOutsideManufacturerGuidance: false,
             accessibilityLabel: "Start timer from corrected exposure",
             accessibilityHint: disabledHint
         )

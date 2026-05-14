@@ -243,9 +243,11 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
             guard badgeStyle == .unsupported else {
                 return "unsupported presentation must use unsupported badge styling."
             }
-            guard !returnsCalculatedExposureTime else {
-                return "unsupported presentation must not imply a calculated exposure time."
-            }
+            // Unsupported classifies the result as outside
+            // manufacturer-supported guidance, not as unavailable. A
+            // formula-backed profile may still hand back a numeric
+            // corrected exposure; presenters mark such values as
+            // approximate / outside guidance.
         case .exact, .estimated, .extrapolated:
             break
         }
@@ -361,7 +363,7 @@ private extension ReciprocityConfidencePresentation {
             explanationTokens: payload.explanationTokens,
             supportingNotes: payload.supportingNotes,
             defaultExplanation: payload.defaultExplanation,
-            returnsCalculatedExposureTime: false
+            returnsCalculatedExposureTime: payload.returnsCalculatedExposureTime
         )
     }
 

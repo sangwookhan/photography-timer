@@ -1932,31 +1932,37 @@
   "correctedExposureSeconds" : 86.10509370128239,
   "hasCalculatedExposureTime" : true,
   "metadata" : {
-    "basis" : "formulaDerived",
+    "basis" : "unsupportedOutOfPolicyRange",
     "notes" : [
       {
-        "text" : "Exponent P = 1.31 within bounded range."
+        "text" : "Manufacturer guidance ends at 30 sec.",
+        "token" : "beyondOfficialQuantifiedRange"
+      },
+      {
+        "text" : "Outside manufacturer guidance — value extrapolated from the published formula curve.",
+        "token" : "unsupportedByPolicy"
       }
     ],
-    "rangeStatus" : "withinStatedRange",
+    "rangeStatus" : "beyondPolicyLimit",
     "sourceAuthorityImpact" : "currentOfficial",
-    "warningLevel" : "none"
+    "warningLevel" : "strongWarning"
   },
   "meteredExposureSeconds" : 30
 }
 
 === case 62: synthetic-formula-bounded-30s | metered=31.0 | Beyond bounded formula at 31s yields formula-boundary unsupported ===
 {
-  "hasCalculatedExposureTime" : false,
+  "correctedExposureSeconds" : 89.88429551803198,
+  "hasCalculatedExposureTime" : true,
   "metadata" : {
     "basis" : "unsupportedOutOfPolicyRange",
     "notes" : [
       {
-        "text" : "Formula guidance is defined only through 30 sec.",
+        "text" : "Manufacturer guidance ends at 30 sec.",
         "token" : "beyondOfficialQuantifiedRange"
       },
       {
-        "text" : "This metered exposure is beyond the explicit formula policy boundary.",
+        "text" : "Outside manufacturer guidance — value extrapolated from the published formula curve.",
         "token" : "unsupportedByPolicy"
       }
     ],
@@ -1969,16 +1975,17 @@
 
 === case 63: synthetic-formula-bounded-30s | metered=100.0 | Far beyond bounded formula at 100s ===
 {
-  "hasCalculatedExposureTime" : false,
+  "correctedExposureSeconds" : 416.8693834703355,
+  "hasCalculatedExposureTime" : true,
   "metadata" : {
     "basis" : "unsupportedOutOfPolicyRange",
     "notes" : [
       {
-        "text" : "Formula guidance is defined only through 30 sec.",
+        "text" : "Manufacturer guidance ends at 30 sec.",
         "token" : "beyondOfficialQuantifiedRange"
       },
       {
-        "text" : "This metered exposure is beyond the explicit formula policy boundary.",
+        "text" : "Outside manufacturer guidance — value extrapolated from the published formula curve.",
         "token" : "unsupportedByPolicy"
       }
     ],

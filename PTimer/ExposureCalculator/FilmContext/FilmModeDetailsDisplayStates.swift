@@ -48,6 +48,12 @@ enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
     case estimated
     case extrapolated
     case formulaDerived
+    /// Current input falls inside the no-correction threshold range.
+    /// The plotted point sits on the identity line because adjusted
+    /// shutter equals corrected exposure; the marker is intentionally
+    /// distinct from `.formulaDerived` so the user does not read the
+    /// no-correction case as a formula prediction.
+    case noCorrection
 }
 
 struct FilmModeDetailsGraphPoint: Equatable {
@@ -108,10 +114,61 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     let yAxisLabel: String
     let xAxisTicks: [FilmModeDetailsGraphAxisTick]
     let yAxisTicks: [FilmModeDetailsGraphAxisTick]
+    /// Upper bound of the manufacturer-supported region — for formula
+    /// graphs this is the formula `meteredRange.maximumSeconds`, the
+    /// boundary at which the result transitions from `.formulaDerived`
+    /// to `.unsupportedOutOfPolicyRange`. Drives the dashed boundary
+    /// guide in the view.
     let supportedRangeUpperBoundSeconds: Double?
     let unsupportedRegionStartSeconds: Double?
+    /// Upper bound of the threshold no-correction range, when the
+    /// active profile carries one (e.g. Provia 100F's 128 s threshold).
+    /// Drives the light-green no-correction shading and the threshold
+    /// boundary guide in the formula graph so the user reads the
+    /// no-correction region as policy-derived rather than as an
+    /// extrapolation of the formula curve. `nil` for profiles without
+    /// a threshold rule (HP5 Plus etc.).
+    let noCorrectionRangeUpperBoundSeconds: Double?
     let xRange: ClosedRange<Double>
     let yRange: ClosedRange<Double>
+
+    init(
+        kind: FilmModeDetailsGraphKind,
+        title: String,
+        sourcePoints: [FilmModeDetailsGraphPoint],
+        currentPoint: FilmModeDetailsGraphCurrentPoint?,
+        currentMeteredExposureSeconds: Double?,
+        usesCurrentInputGuideOnly: Bool,
+        caption: String,
+        unsupportedExplanation: String?,
+        xAxisLabel: String,
+        yAxisLabel: String,
+        xAxisTicks: [FilmModeDetailsGraphAxisTick],
+        yAxisTicks: [FilmModeDetailsGraphAxisTick],
+        supportedRangeUpperBoundSeconds: Double?,
+        unsupportedRegionStartSeconds: Double?,
+        noCorrectionRangeUpperBoundSeconds: Double? = nil,
+        xRange: ClosedRange<Double>,
+        yRange: ClosedRange<Double>
+    ) {
+        self.kind = kind
+        self.title = title
+        self.sourcePoints = sourcePoints
+        self.currentPoint = currentPoint
+        self.currentMeteredExposureSeconds = currentMeteredExposureSeconds
+        self.usesCurrentInputGuideOnly = usesCurrentInputGuideOnly
+        self.caption = caption
+        self.unsupportedExplanation = unsupportedExplanation
+        self.xAxisLabel = xAxisLabel
+        self.yAxisLabel = yAxisLabel
+        self.xAxisTicks = xAxisTicks
+        self.yAxisTicks = yAxisTicks
+        self.supportedRangeUpperBoundSeconds = supportedRangeUpperBoundSeconds
+        self.unsupportedRegionStartSeconds = unsupportedRegionStartSeconds
+        self.noCorrectionRangeUpperBoundSeconds = noCorrectionRangeUpperBoundSeconds
+        self.xRange = xRange
+        self.yRange = yRange
+    }
 }
 
 struct FilmModeDetailsLegendState: Equatable {

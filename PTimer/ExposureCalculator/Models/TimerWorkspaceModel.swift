@@ -74,7 +74,8 @@ final class TimerWorkspaceModel: ObservableObject {
         cameraSlot: CameraSlotIdentity? = nil,
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
-        exposureSource: ExposureTimerSource? = nil
+        exposureSource: ExposureTimerSource? = nil,
+        isOutsideManufacturerGuidance: Bool = false
     ) -> UUID? {
         let order = nextTimerOrder
         timerMetadata[id] = TimerMetadataEntry(
@@ -84,7 +85,8 @@ final class TimerWorkspaceModel: ObservableObject {
             cameraSlot: cameraSlot,
             filmDisplayName: filmDisplayName,
             filmProfileQualifier: filmProfileQualifier,
-            exposureSource: exposureSource
+            exposureSource: exposureSource,
+            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance
         )
 
         guard timerManager.start(id: id, duration: duration) != nil else {
@@ -127,7 +129,8 @@ final class TimerWorkspaceModel: ObservableObject {
             cameraSlot: source.cameraSlot,
             filmDisplayName: source.filmDisplayName,
             filmProfileQualifier: source.filmProfileQualifier,
-            exposureSource: source.exposureSource
+            exposureSource: source.exposureSource,
+            isOutsideManufacturerGuidance: source.isOutsideManufacturerGuidance
         )
     }
 
@@ -223,7 +226,8 @@ final class TimerWorkspaceModel: ObservableObject {
                         cameraSlot: cameraSlot,
                         filmDisplayName: entry.filmDisplayName,
                         filmProfileQualifier: entry.filmProfileQualifier,
-                        exposureSource: exposureSource
+                        exposureSource: exposureSource,
+                        isOutsideManufacturerGuidance: entry.isOutsideManufacturerGuidance ?? false
                     )
                 )
             }
@@ -249,7 +253,10 @@ final class TimerWorkspaceModel: ObservableObject {
                         cameraSlotDisplayName: metadata.cameraSlot?.displayName,
                         filmDisplayName: metadata.filmDisplayName,
                         filmProfileQualifier: metadata.filmProfileQualifier,
-                        exposureSourceRaw: metadata.exposureSource?.rawValue
+                        exposureSourceRaw: metadata.exposureSource?.rawValue,
+                        isOutsideManufacturerGuidance: metadata.isOutsideManufacturerGuidance
+                            ? true
+                            : nil
                     )
                 }
                 .sorted { lhs, rhs in
@@ -291,7 +298,8 @@ final class TimerWorkspaceModel: ObservableObject {
                     cameraSlot: metadata?.cameraSlot,
                     filmDisplayName: metadata?.filmDisplayName,
                     filmProfileQualifier: metadata?.filmProfileQualifier,
-                    exposureSource: metadata?.exposureSource
+                    exposureSource: metadata?.exposureSource,
+                    isOutsideManufacturerGuidance: metadata?.isOutsideManufacturerGuidance ?? false
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
@@ -352,4 +360,25 @@ private struct TimerMetadataEntry {
     let filmDisplayName: String?
     let filmProfileQualifier: String?
     let exposureSource: ExposureTimerSource?
+    let isOutsideManufacturerGuidance: Bool
+
+    init(
+        order: Int,
+        name: String,
+        basisSummary: String,
+        cameraSlot: CameraSlotIdentity? = nil,
+        filmDisplayName: String? = nil,
+        filmProfileQualifier: String? = nil,
+        exposureSource: ExposureTimerSource? = nil,
+        isOutsideManufacturerGuidance: Bool = false
+    ) {
+        self.order = order
+        self.name = name
+        self.basisSummary = basisSummary
+        self.cameraSlot = cameraSlot
+        self.filmDisplayName = filmDisplayName
+        self.filmProfileQualifier = filmProfileQualifier
+        self.exposureSource = exposureSource
+        self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+    }
 }

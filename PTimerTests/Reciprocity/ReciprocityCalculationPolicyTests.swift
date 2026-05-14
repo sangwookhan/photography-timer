@@ -446,7 +446,18 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
+        // An explicit upper boundary flips the basis to unsupported,
+        // but the formula keeps producing a numeric extrapolation
+        // past the boundary so the result stays actionable.
+        XCTAssertTrue(
+            result.hasCalculatedExposureTime,
+            "Bounded formula past its supported range carries a numeric extrapolation."
+        )
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            pow(601.0, 1.31),
+            accuracy: 1.0
+        )
         XCTAssertEqual(
             result.metadata.notes.map(\.token),
             [.beyondOfficialQuantifiedRange, .unsupportedByPolicy]
@@ -673,7 +684,12 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         }
     }
 
-    func testDecodingRejectsUnsupportedResultThatReturnsCorrectedExposure() {
+    func testDecodingAllowsUnsupportedResultThatReturnsCorrectedExposure() throws {
+        // Unsupported results may carry a formula-extrapolated
+        // numeric corrected exposure. Legacy-shape input that includes
+        // the corrected value must round-trip to the unsupported case
+        // with the value preserved. Older snapshots that omit the
+        // field decode unchanged (covered by legacy-shape baseline).
         let json = """
         {
           "meteredExposureSeconds": 1000,
@@ -690,18 +706,14 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         }
         """
 
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ReciprocityResult.self,
-                from: Data(json.utf8)
-            )
-        ) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                return XCTFail("Expected dataCorrupted error, got \(error)")
-            }
+        let decoded = try JSONDecoder().decode(
+            ReciprocityResult.self,
+            from: Data(json.utf8)
+        )
 
-            XCTAssertTrue(context.debugDescription.contains("must not return a corrected exposure time"))
-        }
+        XCTAssertEqual(decoded.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertEqual(decoded.correctedExposureSeconds, 1200)
+        XCTAssertTrue(decoded.hasCalculatedExposureTime)
     }
 
     private func exactSeconds(_ row: ReciprocityTableRowReference) throws -> Double {

@@ -122,6 +122,12 @@ struct FilmModeDetailsPresenter {
     ) -> String? {
         switch bindingState.presentation.category {
         case .unsupported:
+            // Numeric outside-guidance results call out the
+            // extrapolation directly so the user reads the value as
+            // approximate, not as published manufacturer guidance.
+            if bindingState.policyResult.correctedExposureSeconds != nil {
+                return "Current input is outside manufacturer guidance. The corrected value is extrapolated from the formula curve."
+            }
             return "Current input is outside the supported range and no quantified corrected point is available."
         case .advisoryOnly:
             return "No published quantified correction is available beyond this range."
@@ -159,7 +165,13 @@ struct FilmModeDetailsPresenter {
         case .advisoryOnly:
             return "No quantified correction"
         case .unsupported:
-            return "Unsupported"
+            // Numeric outside-guidance results read as "Outside
+            // guidance" so the badge differentiates from the no-value
+            // unsupported case while staying in the same severity
+            // bucket.
+            return bindingState.policyResult.correctedExposureSeconds != nil
+                ? "Outside guidance"
+                : "Unsupported"
         case .exact, .estimated, .extrapolated:
             return presentation.shortLabel
         }
@@ -319,6 +331,7 @@ struct FilmModeDetailsPresenter {
     ) -> [FilmModeDetailsSectionState] {
         let profileRows = profileDetailsRows(for: bindingState)
         let formulaRows = formulaReferenceRows(for: bindingState) ?? []
+        let sourceEvidenceRows = sourceEvidenceReferenceRows(for: bindingState, input: input)
         let sourceRows = sourceDetailsRows(for: bindingState.profile)
 
         return [
@@ -328,11 +341,63 @@ struct FilmModeDetailsPresenter {
             !formulaRows.isEmpty
                 ? FilmModeDetailsSectionState(title: "Formula", rows: formulaRows)
                 : nil,
+            !sourceEvidenceRows.isEmpty
+                ? FilmModeDetailsSectionState(title: "Reference", rows: sourceEvidenceRows)
+                : nil,
             !sourceRows.isEmpty
                 ? FilmModeDetailsSectionState(title: "Sources", rows: sourceRows)
                 : nil
         ]
         .compactMap { $0 }
+    }
+
+    /// Renders manufacturer source-evidence rows in the same block
+    /// format as the table-based "Reference" section. Used by
+    /// formula-backed profiles (e.g. Provia 100F) so users can verify
+    /// formula-derived predictions against the published reference
+    /// points without those points hijacking the calculation basis.
+    private func sourceEvidenceReferenceRows(
+        for bindingState: FilmModeReciprocityBindingState,
+        input: FilmModeDetailsPresenterInput
+    ) -> [FilmModeDetailsRowState] {
+        let evidence = bindingState.profile.sourceEvidence
+        guard !evidence.isEmpty else {
+            return []
+        }
+
+        var lines: [[String]] = []
+        for rule in bindingState.profile.rules {
+            if case let .threshold(thresholdRule) = rule {
+                lines.append(
+                    compactThresholdReferenceColumns(
+                        for: thresholdRule,
+                        formatDuration: input.formatDuration
+                    )
+                )
+            }
+        }
+
+        for evidenceRow in evidence {
+            if let columns = compactReferenceColumns(
+                meteredExposure: evidenceRow.meteredExposure,
+                adjustments: evidenceRow.adjustments,
+                input: input
+            ) {
+                lines.append(columns)
+            }
+        }
+
+        guard !lines.isEmpty else {
+            return []
+        }
+
+        return [
+            FilmModeDetailsRowState(
+                title: "",
+                value: formattedReferenceBlock(from: lines),
+                style: .referenceBlock
+            )
+        ]
     }
 
     private func profileDetailsRows(
@@ -362,18 +427,22 @@ struct FilmModeDetailsPresenter {
     private func profileSummaryText(
         for bindingState: FilmModeReciprocityBindingState
     ) -> String? {
-        if bindingState.profile.rules.contains(where: {
-            if case .table = $0 { return true }
-            return false
-        }) {
-            return "Reference table"
-        }
-
+        // Formula-backed profiles win over table-only profiles when
+        // both rule kinds coexist on the same profile, so the method
+        // label names the active calculation basis rather than a
+        // residual table rule.
         if bindingState.profile.rules.contains(where: {
             if case .formula = $0 { return true }
             return false
         }) {
             return "Formula-based guidance"
+        }
+
+        if bindingState.profile.rules.contains(where: {
+            if case .table = $0 { return true }
+            return false
+        }) {
+            return "Reference table"
         }
 
         if bindingState.presentation.category == .advisoryOnly || bindingState.presentation.category == .unsupported {
@@ -508,7 +577,7 @@ struct FilmModeDetailsPresenter {
     private func legendDisplayState(
         for profile: ReciprocityProfile
     ) -> FilmModeDetailsLegendState? {
-        let adjustments = profile.rules.flatMap { rule -> [ReciprocityAdjustment] in
+        let ruleAdjustments = profile.rules.flatMap { rule -> [ReciprocityAdjustment] in
             switch rule {
             case let .threshold(thresholdRule):
                 return thresholdRule.adjustments
@@ -520,6 +589,8 @@ struct FilmModeDetailsPresenter {
                 return advisoryRule.adjustments
             }
         }
+        let evidenceAdjustments = profile.sourceEvidence.flatMap(\.adjustments)
+        let adjustments = ruleAdjustments + evidenceAdjustments
         let presentations = ReciprocitySecondaryGuidanceFormatter.format(adjustments)
         guard !presentations.isEmpty else { return nil }
 
@@ -622,10 +693,12 @@ struct FilmModeDetailsPresenter {
         currentPoint: FilmModeDetailsGraphCurrentPoint?,
         input: FilmModeDetailsPresenterInput
     ) -> FilmModeDetailsGraphDisplayState? {
-        guard bindingState.policyResult.metadata.basis != .officialThresholdNoCorrection else {
-            return nil
-        }
-
+        // The formula curve is the same reference regardless of where
+        // the current input lands: no-correction range, supported
+        // formula range, or formula-extrapolated outside guidance.
+        // The graph stays visible whenever a graphable formula
+        // exists; the current-point marker style and the shaded
+        // regions separate the three states.
         guard let formulaRule = bindingState.profile.rules.compactMap({ rule -> FormulaReciprocityRule? in
             guard case let .formula(formulaRule) = rule else {
                 return nil
@@ -654,20 +727,29 @@ struct FilmModeDetailsPresenter {
         }
 
         let supportedUpperBoundSeconds = formulaRule.meteredRange?.maximumSeconds
+        let noCorrectionRangeUpperBoundSeconds = profileThresholdUpperBounds(in: bindingState.profile)
+            .filter { $0 > 0 }
+            .max()
+
+        // Only fall back to the "current input as x-position only" view
+        // when the unsupported result truly carries no numeric corrected
+        // exposure. Formula-extrapolated unsupported numeric results
+        // plot a real (x, y) point so the user can see the value on
+        // the curve.
+        let usesCurrentInputGuideOnly = bindingState.presentation.category == .unsupported
+            && currentPoint == nil
 
         return FilmModeDetailsGraphDisplayState(
             kind: .formula,
             title: "Reference Graph",
             sourcePoints: sourcePoints,
-            currentPoint: currentPoint.map {
-                FilmModeDetailsGraphCurrentPoint(
-                    point: $0.point,
-                    style: .formulaDerived
-                )
-            },
+            currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
-            usesCurrentInputGuideOnly: bindingState.presentation.category == .unsupported,
-            caption: "Adjusted shutter vs corrected exposure on the active formula curve",
+            usesCurrentInputGuideOnly: usesCurrentInputGuideOnly,
+            caption: formulaGraphCaption(
+                for: bindingState,
+                noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds
+            ),
             unsupportedExplanation: graphUnsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
@@ -679,9 +761,36 @@ struct FilmModeDetailsPresenter {
                 currentMeteredExposureSeconds: currentMeteredExposureSeconds,
                 isUnsupported: bindingState.presentation.category == .unsupported
             ),
+            noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds,
             xRange: ranges.xRange,
             yRange: ranges.yRange
         )
+    }
+
+    /// State-aware caption for the formula graph. Branches on the
+    /// current basis so the headline matches the shaded region the
+    /// user sees: no-correction inputs read as identity-line guidance,
+    /// numeric outside-guidance reads as extrapolation, supported
+    /// formula inputs read as on the active curve.
+    ///
+    /// Caption strings omit a trailing period to match the rest of
+    /// the graph caption surface, which renders as banner text.
+    private func formulaGraphCaption(
+        for bindingState: FilmModeReciprocityBindingState,
+        noCorrectionRangeUpperBoundSeconds: Double?
+    ) -> String {
+        let basis = bindingState.policyResult.metadata.basis
+        if basis == .officialThresholdNoCorrection,
+           noCorrectionRangeUpperBoundSeconds != nil {
+            return "Adjusted shutter equals corrected exposure within the no-correction range"
+        }
+
+        if bindingState.presentation.category == .unsupported,
+           bindingState.policyResult.correctedExposureSeconds != nil {
+            return "Formula curve extrapolated past the manufacturer-supported boundary"
+        }
+
+        return "Adjusted shutter vs corrected exposure on the active formula curve"
     }
 
     private func tableDetailsGraphDisplayState(
@@ -742,17 +851,28 @@ struct FilmModeDetailsPresenter {
         input: FilmModeDetailsPresenterInput
     ) -> FilmModeDetailsGraphCurrentPoint? {
         guard case .success(let result) = input.calculationResult,
-              let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds,
-              result.resultShutterSeconds > 0,
-              correctedExposureSeconds > 0 else {
+              result.resultShutterSeconds > 0 else {
             return nil
         }
 
+        // In the no-correction range the corrected exposure equals
+        // the adjusted shutter. Plot the identity point with the
+        // dedicated `.noCorrection` style so it does not read as a
+        // formula prediction. Formula-backed films land here when the
+        // input drops below the no-correction threshold.
         if bindingState.policyResult.metadata.basis == .officialThresholdNoCorrection {
-            return nil
+            return FilmModeDetailsGraphCurrentPoint(
+                point: FilmModeDetailsGraphPoint(
+                    meteredExposureSeconds: result.resultShutterSeconds,
+                    correctedExposureSeconds: result.resultShutterSeconds
+                ),
+                style: .noCorrection
+            )
         }
 
-        guard bindingState.presentation.returnsCalculatedExposureTime else {
+        guard let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds,
+              correctedExposureSeconds > 0,
+              bindingState.presentation.returnsCalculatedExposureTime else {
             return nil
         }
 
@@ -761,10 +881,20 @@ struct FilmModeDetailsPresenter {
         case .exact:
             style = .exact
         case .estimated:
-            style = .estimated
+            // Formula-derived results map to .estimated category. Use
+            // the formula-specific marker so the legend shows "on
+            // formula curve" rather than the table-estimation diamond.
+            style = bindingState.policyResult.metadata.basis == .formulaDerived
+                ? .formulaDerived
+                : .estimated
         case .extrapolated:
             style = .extrapolated
-        case .advisoryOnly, .unsupported:
+        case .unsupported:
+            // Formula-extrapolated unsupported numeric — render with the
+            // extrapolated marker so the user reads it as outside the
+            // supported range without losing the on-curve placement.
+            style = .extrapolated
+        case .advisoryOnly:
             return nil
         }
 
@@ -782,12 +912,20 @@ struct FilmModeDetailsPresenter {
         profile: ReciprocityProfile,
         currentMeteredExposureSeconds: Double
     ) -> [FilmModeDetailsGraphPoint] {
+        // Anchor the formula curve to the formula's own supported
+        // zone. When a threshold rule defines a no-correction range
+        // (e.g. Provia 100F's 0…128 s), the curve must not extend
+        // through that range or it reads as the active prediction
+        // there. The view shades the no-correction region separately
+        // so the zone left of the curve reads as policy-controlled.
         let thresholdCandidates = profileThresholdUpperBounds(in: profile)
-        let lowerBoundCandidates = [
+        let lowerBoundCandidates: [Double?] = [
             rule.meteredRange?.minimumSeconds,
             thresholdCandidates.min(),
-            currentMeteredExposureSeconds / 4,
-            1
+            // Legacy fallback for formula profiles that carry neither
+            // an explicit meteredRange nor a threshold rule. Keeps the
+            // curve at 1 s when both anchors above are nil.
+            (rule.meteredRange?.minimumSeconds == nil && thresholdCandidates.isEmpty) ? 1 : nil
         ]
         // When no explicit meteredRange is defined, use a canonical practical range
         // so the graph shows a stable reference viewport rather than auto-scaling
@@ -802,7 +940,7 @@ struct FilmModeDetailsPresenter {
         let positiveLowerBound = lowerBoundCandidates
             .compactMap { $0 }
             .filter { $0 > 0 }
-            .min()
+            .max()
         let positiveUpperBound = upperBoundCandidates
             .compactMap { $0 }
             .filter { $0 > 0 }
@@ -815,17 +953,13 @@ struct FilmModeDetailsPresenter {
 
         let clampedLowerBound = min(lowerBound, upperBound)
         let clampedUpperBound = max(lowerBound, upperBound)
-        let domain = expandedGraphDomain(
-            minimum: clampedLowerBound,
-            maximum: clampedUpperBound
-        )
         let sampleCount = 24
 
         return (0..<sampleCount).compactMap { index in
             let progress = Double(index) / Double(sampleCount - 1)
             let meteredExposureSeconds = logInterpolatedValue(
-                minimum: domain.lowerBound,
-                maximum: domain.upperBound,
+                minimum: clampedLowerBound,
+                maximum: clampedUpperBound,
                 progress: progress
             )
 
@@ -982,6 +1116,14 @@ struct FilmModeDetailsPresenter {
     ) -> String? {
         guard bindingState.presentation.category == .unsupported else {
             return nil
+        }
+
+        // Distinguish "outside guidance with a numeric extrapolation
+        // available" from "outside guidance with no value at all".
+        // Same copy in both cases would mask the timer-start
+        // affordance for the numeric path.
+        if bindingState.policyResult.correctedExposureSeconds != nil {
+            return "Current input is outside manufacturer guidance. The plotted value is extrapolated from the formula curve and should be verified."
         }
 
         return "Current input is outside the supported range. No quantified corrected point is available."
@@ -1189,7 +1331,24 @@ struct FilmModeDetailsPresenter {
         for entry: ReciprocityTableEntry,
         input: FilmModeDetailsPresenterInput
     ) -> [String]? {
-        let meteredText = meteredExposureSelectorText(entry.meteredExposure, formatDuration: input.formatDuration)
+        compactReferenceColumns(
+            meteredExposure: entry.meteredExposure,
+            adjustments: entry.adjustments,
+            input: input
+        )
+    }
+
+    /// Shared formatter behind both the table-rule reference block and
+    /// the source-evidence reference block. Keeps the metered-exposure
+    /// + secondary-guidance layout identical so users see a consistent
+    /// reference block whether the profile is table-driven or
+    /// formula-backed with manufacturer reference points.
+    private func compactReferenceColumns(
+        meteredExposure: MeteredExposureSelector,
+        adjustments: [ReciprocityAdjustment],
+        input: FilmModeDetailsPresenterInput
+    ) -> [String]? {
+        let meteredText = meteredExposureSelectorText(meteredExposure, formatDuration: input.formatDuration)
 
         // Combined stop/multiplier · correctedTime cell. When a row
         // carries both a stopDelta (or multiplier) and a correctedTime
@@ -1200,9 +1359,12 @@ struct FilmModeDetailsPresenter {
         // derivations like T-MAX 100 1 sec — are prefixed with "≈".
         // Multiplier-derived corrected times are exact arithmetic and
         // render without the marker.
-        let exposureText = combinedExposureColumn(for: entry, input: input)
+        let exposureText = combinedExposureColumn(
+            adjustments: adjustments,
+            input: input
+        )
 
-        let developmentText = entry.adjustments.compactMap { adjustment -> String? in
+        let developmentText = adjustments.compactMap { adjustment -> String? in
             guard case let .development(development) = adjustment else {
                 return nil
             }
@@ -1213,12 +1375,12 @@ struct FilmModeDetailsPresenter {
         // PTIMER-119 follow-up: surface color filter notation and stop-signal warnings
         // alongside the source-row metered text so the reference table preserves the
         // mapping between metered exposure and secondary guidance.
-        let colorCorrectionText = entry.adjustments.compactMap { adjustment -> String? in
+        let colorCorrectionText = adjustments.compactMap { adjustment -> String? in
             guard case let .colorFilter(filter) = adjustment else { return nil }
             return filter.filterName
         }.first
 
-        let stopSignalText: String? = entry.adjustments.contains { adjustment in
+        let stopSignalText: String? = adjustments.contains { adjustment in
             if case let .warning(warning) = adjustment, warning.severity == .notRecommended {
                 return true
             }
@@ -1304,13 +1466,13 @@ struct FilmModeDetailsPresenter {
     ///   formatted value with `"≈"`. Multiplier-derived corrected
     ///   times are exact arithmetic and are not marked.
     private func combinedExposureColumn(
-        for entry: ReciprocityTableEntry,
+        adjustments: [ReciprocityAdjustment],
         input: FilmModeDetailsPresenterInput
     ) -> String? {
         var stopOrMultiplierText: String?
         var correctedTimeText: String?
 
-        for adjustment in entry.adjustments {
+        for adjustment in adjustments {
             guard case let .exposure(exposureAdjustment) = adjustment else { continue }
             switch exposureAdjustment {
             case .correctedTime(let mapping):
@@ -1408,7 +1570,10 @@ struct FilmModeDetailsPresenter {
         // Combine stop/multiplier and corrected time the same way the
         // compact column path does (see `combinedExposureColumn`) so
         // both formatters surface both facts when a row carries both.
-        let exposureText = combinedExposureColumn(for: entry, input: input)
+        let exposureText = combinedExposureColumn(
+            adjustments: entry.adjustments,
+            input: input
+        )
 
         let developmentText = entry.adjustments.compactMap { adjustment -> String? in
             guard case let .development(development) = adjustment else {

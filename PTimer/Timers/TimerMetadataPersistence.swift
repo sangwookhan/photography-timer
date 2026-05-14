@@ -38,6 +38,11 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     /// `rawValue` of `ExposureTimerSource` rather than the enum so a
     /// future case addition does not invalidate older snapshots.
     let exposureSourceRaw: String?
+    /// Captured-at-start flag: true when the timer was started from a
+    /// formula-extrapolated corrected exposure outside manufacturer
+    /// guidance. Optional so older snapshots decode unchanged; the
+    /// default decoded value is `false`.
+    let isOutsideManufacturerGuidance: Bool?
 
     init(
         id: UUID,
@@ -48,7 +53,8 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         cameraSlotDisplayName: String? = nil,
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
-        exposureSourceRaw: String? = nil
+        exposureSourceRaw: String? = nil,
+        isOutsideManufacturerGuidance: Bool? = nil
     ) {
         self.id = id
         self.order = order
@@ -59,6 +65,54 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         self.filmDisplayName = filmDisplayName
         self.filmProfileQualifier = filmProfileQualifier
         self.exposureSourceRaw = exposureSourceRaw
+        self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case order
+        case name
+        case basisSummary
+        case cameraSlotIDRaw
+        case cameraSlotDisplayName
+        case filmDisplayName
+        case filmProfileQualifier
+        case exposureSourceRaw
+        case isOutsideManufacturerGuidance
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.order = try container.decode(Int.self, forKey: .order)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.basisSummary = try container.decode(String.self, forKey: .basisSummary)
+        self.cameraSlotIDRaw = try container.decodeIfPresent(String.self, forKey: .cameraSlotIDRaw)
+        self.cameraSlotDisplayName = try container.decodeIfPresent(String.self, forKey: .cameraSlotDisplayName)
+        self.filmDisplayName = try container.decodeIfPresent(String.self, forKey: .filmDisplayName)
+        self.filmProfileQualifier = try container.decodeIfPresent(String.self, forKey: .filmProfileQualifier)
+        self.exposureSourceRaw = try container.decodeIfPresent(String.self, forKey: .exposureSourceRaw)
+        self.isOutsideManufacturerGuidance = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isOutsideManufacturerGuidance
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(order, forKey: .order)
+        try container.encode(name, forKey: .name)
+        try container.encode(basisSummary, forKey: .basisSummary)
+        try container.encodeIfPresent(cameraSlotIDRaw, forKey: .cameraSlotIDRaw)
+        try container.encodeIfPresent(cameraSlotDisplayName, forKey: .cameraSlotDisplayName)
+        try container.encodeIfPresent(filmDisplayName, forKey: .filmDisplayName)
+        try container.encodeIfPresent(filmProfileQualifier, forKey: .filmProfileQualifier)
+        try container.encodeIfPresent(exposureSourceRaw, forKey: .exposureSourceRaw)
+        try container.encodeIfPresent(
+            isOutsideManufacturerGuidance,
+            forKey: .isOutsideManufacturerGuidance
+        )
     }
 }
 

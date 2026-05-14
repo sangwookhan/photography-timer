@@ -727,6 +727,9 @@ struct FilmModeDetailsPresenter {
         }
 
         let supportedUpperBoundSeconds = formulaRule.meteredRange?.maximumSeconds
+        let noCorrectionRangeUpperBoundSeconds = profileThresholdUpperBounds(in: bindingState.profile)
+            .filter { $0 > 0 }
+            .max()
 
         // Only fall back to the "current input as x-position only" view
         // when the unsupported result truly carries no numeric corrected
@@ -743,7 +746,10 @@ struct FilmModeDetailsPresenter {
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             usesCurrentInputGuideOnly: usesCurrentInputGuideOnly,
-            caption: "Adjusted shutter vs corrected exposure on the active formula curve",
+            caption: formulaGraphCaption(
+                for: bindingState,
+                noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds
+            ),
             unsupportedExplanation: graphUnsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
@@ -755,9 +761,36 @@ struct FilmModeDetailsPresenter {
                 currentMeteredExposureSeconds: currentMeteredExposureSeconds,
                 isUnsupported: bindingState.presentation.category == .unsupported
             ),
+            noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds,
             xRange: ranges.xRange,
             yRange: ranges.yRange
         )
+    }
+
+    /// State-aware caption for the formula graph. Branches on the
+    /// current basis so the headline matches the shaded region the
+    /// user sees: no-correction inputs read as identity-line guidance,
+    /// numeric outside-guidance reads as extrapolation, supported
+    /// formula inputs read as on the active curve.
+    ///
+    /// Caption strings omit a trailing period to match the rest of
+    /// the graph caption surface, which renders as banner text.
+    private func formulaGraphCaption(
+        for bindingState: FilmModeReciprocityBindingState,
+        noCorrectionRangeUpperBoundSeconds: Double?
+    ) -> String {
+        let basis = bindingState.policyResult.metadata.basis
+        if basis == .officialThresholdNoCorrection,
+           noCorrectionRangeUpperBoundSeconds != nil {
+            return "Adjusted shutter equals corrected exposure within the no-correction range"
+        }
+
+        if bindingState.presentation.category == .unsupported,
+           bindingState.policyResult.correctedExposureSeconds != nil {
+            return "Formula curve extrapolated past the manufacturer-supported boundary"
+        }
+
+        return "Adjusted shutter vs corrected exposure on the active formula curve"
     }
 
     private func tableDetailsGraphDisplayState(
@@ -879,12 +912,20 @@ struct FilmModeDetailsPresenter {
         profile: ReciprocityProfile,
         currentMeteredExposureSeconds: Double
     ) -> [FilmModeDetailsGraphPoint] {
+        // Anchor the formula curve to the formula's own supported
+        // zone. When a threshold rule defines a no-correction range
+        // (e.g. Provia 100F's 0…128 s), the curve must not extend
+        // through that range or it reads as the active prediction
+        // there. The view shades the no-correction region separately
+        // so the zone left of the curve reads as policy-controlled.
         let thresholdCandidates = profileThresholdUpperBounds(in: profile)
-        let lowerBoundCandidates = [
+        let lowerBoundCandidates: [Double?] = [
             rule.meteredRange?.minimumSeconds,
             thresholdCandidates.min(),
-            currentMeteredExposureSeconds / 4,
-            1
+            // Legacy fallback for formula profiles that carry neither
+            // an explicit meteredRange nor a threshold rule. Keeps the
+            // curve at 1 s when both anchors above are nil.
+            (rule.meteredRange?.minimumSeconds == nil && thresholdCandidates.isEmpty) ? 1 : nil
         ]
         // When no explicit meteredRange is defined, use a canonical practical range
         // so the graph shows a stable reference viewport rather than auto-scaling
@@ -899,7 +940,7 @@ struct FilmModeDetailsPresenter {
         let positiveLowerBound = lowerBoundCandidates
             .compactMap { $0 }
             .filter { $0 > 0 }
-            .min()
+            .max()
         let positiveUpperBound = upperBoundCandidates
             .compactMap { $0 }
             .filter { $0 > 0 }
@@ -912,17 +953,13 @@ struct FilmModeDetailsPresenter {
 
         let clampedLowerBound = min(lowerBound, upperBound)
         let clampedUpperBound = max(lowerBound, upperBound)
-        let domain = expandedGraphDomain(
-            minimum: clampedLowerBound,
-            maximum: clampedUpperBound
-        )
         let sampleCount = 24
 
         return (0..<sampleCount).compactMap { index in
             let progress = Double(index) / Double(sampleCount - 1)
             let meteredExposureSeconds = logInterpolatedValue(
-                minimum: domain.lowerBound,
-                maximum: domain.upperBound,
+                minimum: clampedLowerBound,
+                maximum: clampedUpperBound,
                 progress: progress
             )
 

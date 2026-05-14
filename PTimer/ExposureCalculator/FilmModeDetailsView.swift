@@ -692,6 +692,17 @@ private struct FilmModeDetailsGraph: View {
                                     .padding(plotInset)
                                 }
 
+                                // Shade the no-correction range so it
+                                // reads as policy-controlled, not as a
+                                // missing chunk of the formula curve.
+                                if let noCorrectionUpperBound = graph.noCorrectionRangeUpperBoundSeconds {
+                                    noCorrectionRegion(
+                                        endSeconds: noCorrectionUpperBound,
+                                        in: plotSize
+                                    )
+                                    .padding(plotInset)
+                                }
+
                                 if let unsupportedStart = graph.unsupportedRegionStartSeconds {
                                     unsupportedRegion(
                                         startSeconds: unsupportedStart,
@@ -721,6 +732,19 @@ private struct FilmModeDetailsGraph: View {
                                 if let supportedRangeUpperBoundSeconds = graph.supportedRangeUpperBoundSeconds {
                                     supportedBoundary(
                                         at: supportedRangeUpperBoundSeconds,
+                                        in: plotSize
+                                    )
+                                    .padding(plotInset)
+                                }
+
+                                // Threshold boundary line at the no-
+                                // correction upper edge. Distinct dash
+                                // pattern from the manufacturer-supported
+                                // boundary so the two boundaries read
+                                // differently when both are visible.
+                                if let noCorrectionUpperBound = graph.noCorrectionRangeUpperBoundSeconds {
+                                    noCorrectionBoundary(
+                                        at: noCorrectionUpperBound,
                                         in: plotSize
                                     )
                                     .padding(plotInset)
@@ -845,6 +869,40 @@ private struct FilmModeDetailsGraph: View {
             path.addLine(to: CGPoint(x: x, y: size.height))
         }
         .stroke(Color.primary.opacity(0.22), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+    }
+
+    /// Light-green band covering the no-correction shutter range —
+    /// e.g. Provia 100F's 0…128 s. Marks the policy zone where
+    /// adjusted shutter equals corrected exposure so the user reads
+    /// the area under no-correction guidance, not as a missing portion
+    /// of the formula curve.
+    private func noCorrectionRegion(
+        endSeconds: Double,
+        in size: CGSize
+    ) -> some View {
+        let x = scaledValue(endSeconds, within: graph.xRange, size: size.width)
+
+        return Rectangle()
+            .fill(Color.green.opacity(0.10))
+            .frame(width: max(x, 0), height: size.height)
+            .position(x: max(x, 0) / 2, y: size.height / 2)
+    }
+
+    /// Dashed vertical at the no-correction upper edge. Uses a tighter
+    /// dash than the supported-range boundary so the two boundaries
+    /// read distinctly when a profile (e.g. Provia 100F) carries both
+    /// a 128 s threshold and a 480 s formula upper bound.
+    private func noCorrectionBoundary(
+        at seconds: Double,
+        in size: CGSize
+    ) -> some View {
+        let x = scaledValue(seconds, within: graph.xRange, size: size.width)
+
+        return Path { path in
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: size.height))
+        }
+        .stroke(Color.green.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [2, 3]))
     }
 
     @ViewBuilder
@@ -1081,6 +1139,11 @@ private struct FilmModeDetailsGraph: View {
             var items: [(symbol: String, color: Color, text: String)] = [
                 ("line.horizontal.3", .accentColor, "Formula curve")
             ]
+            // Name the shaded no-correction band in the legend when
+            // the active profile has one.
+            if graph.noCorrectionRangeUpperBoundSeconds != nil {
+                items.append(("square.fill", .green.opacity(0.5), "No correction"))
+            }
             if let currentPoint = graph.currentPoint {
                 items.append(currentPointLegendItem(for: currentPoint.style))
             }

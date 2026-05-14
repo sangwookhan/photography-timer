@@ -277,6 +277,61 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         )
     }
 
+    /// The no-correction range upper bound (Provia 100F's 128 s
+    /// threshold) must be exposed on the graph state so the view can
+    /// shade the no-correction band and draw the boundary guide.
+    @MainActor
+    func testProvia100FGraphCarriesNoCorrectionRangeUpperBound() throws {
+        for metered in [60.0, 240.0, 600.0] {
+            let displayState = try makeDisplayState(meteredExposureSeconds: metered)
+            let graph = try XCTUnwrap(displayState.graph)
+            XCTAssertEqual(
+                graph.noCorrectionRangeUpperBoundSeconds ?? 0,
+                128,
+                accuracy: 1e-6,
+                "Metered \(metered) s: graph must expose Provia 100F's 128 s threshold so the view can shade the no-correction range."
+            )
+        }
+    }
+
+    /// The formula curve must not be drawn through the no-correction
+    /// range. The lowest sampled metered exposure stays at or above
+    /// the threshold upper bound so the region left of 128 s reads as
+    /// policy-controlled rather than as a formula prediction.
+    @MainActor
+    func testProvia100FFormulaCurveDoesNotExtendIntoNoCorrectionRange() throws {
+        let displayState = try makeDisplayState(meteredExposureSeconds: 60)
+        let graph = try XCTUnwrap(displayState.graph)
+
+        let minimumSampledMetered = try XCTUnwrap(
+            graph.sourcePoints.map(\.meteredExposureSeconds).min(),
+            "Formula curve must produce at least one source sample."
+        )
+        XCTAssertGreaterThanOrEqual(
+            minimumSampledMetered,
+            128,
+            "Formula curve sampling must start at or above Provia 100F's 128 s threshold; got \(minimumSampledMetered) s."
+        )
+    }
+
+    /// The no-correction caption must not describe the point as
+    /// sitting on the active formula curve. It must call out the
+    /// no-correction range explicitly.
+    @MainActor
+    func testProvia100FNoCorrectionGraphCaptionDoesNotReferenceFormulaCurve() throws {
+        let displayState = try makeDisplayState(meteredExposureSeconds: 60)
+        let graph = try XCTUnwrap(displayState.graph)
+
+        XCTAssertFalse(
+            graph.caption.lowercased().contains("formula curve"),
+            "No-correction graph caption must not describe the point as being on the active formula curve; got: \(graph.caption)"
+        )
+        XCTAssertTrue(
+            graph.caption.lowercased().contains("no-correction"),
+            "No-correction graph caption must reference the no-correction range; got: \(graph.caption)"
+        )
+    }
+
     /// At unsupported inputs that still produce a numeric formula
     /// extrapolation, the Details graph plots the current point on
     /// the formula curve with the `.extrapolated` style, not the

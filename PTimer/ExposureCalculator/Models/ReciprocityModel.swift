@@ -194,19 +194,29 @@ final class ReciprocityModel {
         }
 
         if let correctedExposureSeconds = bindingState.policyResult.correctedExposureSeconds {
-            // Outside-guidance numeric results prefix the value with
-            // "≈" and add an outside-guidance caption so the user
-            // reads them as approximate rather than as published
-            // manufacturer guidance.
+            // Outside-guidance numeric results render as approximate
+            // ("≈") so the user reads them differently from published
+            // manufacturer guidance. The coarse formatter may have
+            // already prefixed the value with "≈" (month/year
+            // coarsening), so guard against doubling the marker.
             let isOutsideManufacturerGuidance = bindingState.presentation.category == .unsupported
             let formattedDuration = formatReciprocityDurationCoarse(correctedExposureSeconds)
+            let primaryText: String
+            if isOutsideManufacturerGuidance, !formattedDuration.hasPrefix("≈") {
+                primaryText = "≈\(formattedDuration)"
+            } else {
+                primaryText = formattedDuration
+            }
+            // The Main card no longer carries a per-state caption —
+            // detailed wording lives in the Detail graph note. The
+            // model still produces a non-empty `secondaryText` would
+            // be a regression on the Main card, so keep it empty for
+            // every numeric path.
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
-                primaryText: isOutsideManufacturerGuidance ? "≈\(formattedDuration)" : formattedDuration,
-                secondaryText: isOutsideManufacturerGuidance
-                    ? "Outside manufacturer guidance — extrapolated from the formula curve."
-                    : "",
+                primaryText: primaryText,
+                secondaryText: "",
                 usesNumericExposure: true
             )
         }
@@ -264,8 +274,15 @@ final class ReciprocityModel {
         let isOutsideManufacturerGuidance = bindingState.presentation.category == .unsupported
 
         if let correctedExposureSeconds, correctedExposureSeconds > 0 {
+            let isConvertedFormulaProfile = bindingState.profile.isConvertedFormulaProfile
+            let outsideGuidanceHint: String
+            if isConvertedFormulaProfile {
+                outsideGuidanceHint = "Starts a timer using a formula prediction beyond the manufacturer source range"
+            } else {
+                outsideGuidanceHint = "Starts a timer using a formula-extrapolated corrected exposure outside manufacturer guidance"
+            }
             let hint = isOutsideManufacturerGuidance
-                ? "Starts a timer using a formula-extrapolated corrected exposure outside manufacturer guidance"
+                ? outsideGuidanceHint
                 : "Starts a timer using the film-specific corrected exposure value"
 
             return FilmModeTimerActionState(

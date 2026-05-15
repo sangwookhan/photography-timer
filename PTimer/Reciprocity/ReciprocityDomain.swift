@@ -134,6 +134,23 @@ struct ReciprocitySourceEvidenceRow: Codable, Equatable {
     }
 }
 
+extension ReciprocityProfile {
+    /// `true` when the profile mixes a formula rule with at least
+    /// one manufacturer-published source-evidence row. Such profiles
+    /// were converted from a table-based calculation to formula
+    /// prediction while preserving the published reference, which
+    /// lets presentation surfaces swap "Extrapolated" wording for
+    /// source-range language without affecting source-less formula
+    /// profiles (HP5 Plus etc.).
+    var isConvertedFormulaProfile: Bool {
+        let hasFormulaRule = rules.contains { rule in
+            if case .formula = rule { return true }
+            return false
+        }
+        return hasFormulaRule && !sourceEvidence.isEmpty
+    }
+}
+
 struct ReciprocitySourceProvenance: Codable, Equatable {
     let kind: ReciprocitySourceKind
     let authority: ReciprocityAuthority

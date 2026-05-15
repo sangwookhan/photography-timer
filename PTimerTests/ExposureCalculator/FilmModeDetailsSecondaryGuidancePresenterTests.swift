@@ -56,22 +56,42 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
 
     // MARK: - Provia 100F
 
-    func testProvia100FReferenceDataPreservesGreenChannelContextAndStopRow() throws {
+    func testProvia100FSourceReferenceAndGuidanceBoundaryPreserveGreenChannelAndStopRow() throws {
         let film = try XCTUnwrap(film(named: "Provia 100F"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
-        let referenceSection = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Reference" }))
-        let block = try XCTUnwrap(referenceSection.rows.first?.value)
-
+        let sourceReferenceSection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Source reference" })
+        )
+        let sourceBlock = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
         let greenLine = try XCTUnwrap(
-            block.split(separator: "\n").map(String.init).first(where: { $0.contains("2.5G") })
+            sourceBlock.split(separator: "\n").map(String.init).first(where: { $0.contains("2.5G") })
         )
-        XCTAssertTrue(greenLine.first?.isNumber ?? false, "Green-correction row should start with a metered exposure: \(greenLine)")
+        XCTAssertTrue(
+            greenLine.first?.isNumber ?? false,
+            "Green-correction row should start with a metered exposure: \(greenLine)"
+        )
 
-        let stopLine = try XCTUnwrap(
-            block.split(separator: "\n").map(String.init).first(where: { $0.contains("Not recommended") })
+        let guidanceBoundarySection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Guidance boundary" })
         )
-        XCTAssertTrue(stopLine.first?.isNumber ?? false, "Stop row should start with a metered exposure: \(stopLine)")
+        let boundaryBlock = try XCTUnwrap(guidanceBoundarySection.rows.first?.value)
+        let stopLine = try XCTUnwrap(
+            boundaryBlock.split(separator: "\n").map(String.init).first(where: { $0.contains("Not recommended") })
+        )
+        XCTAssertTrue(
+            stopLine.first?.isNumber ?? false,
+            "Stop row should start with a metered exposure: \(stopLine)"
+        )
+
+        XCTAssertFalse(
+            sourceBlock.contains("Not recommended"),
+            "Source reference section must not pull in the 480 s not-recommended boundary."
+        )
+        XCTAssertFalse(
+            boundaryBlock.contains("2.5G"),
+            "Guidance boundary section must not pull in the 240 s source-reference row."
+        )
     }
 
     func testProvia100FDetailsExposesFilmSubtitleAndGreenLegend() throws {
@@ -165,7 +185,10 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 4))
 
         XCTAssertFalse(displayState.sections.contains(where: { $0.title == "Additional Guidance" }))
-        XCTAssertTrue(displayState.sections.contains(where: { $0.title == "Formula" }))
+        // The Formula metadata section is gone; the formula
+        // expression now sits next to the graph.
+        XCTAssertFalse(displayState.sections.contains(where: { $0.title == "Formula" }))
+        XCTAssertNotNil(displayState.graph?.formulaDisplayText)
         XCTAssertEqual(displayState.subtitle, "Pan F Plus · Official guidance")
         XCTAssertNil(displayState.legend, "Films without secondary guidance must not produce an empty legend.")
     }

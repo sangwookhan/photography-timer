@@ -100,9 +100,20 @@ final class ReciprocityModel {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    /// Coarse variant used by the corrected-exposure summary card,
-    /// where multi-day values collapse to "N,NNNd" with thousands
-    /// separators rather than a clock notation.
+    /// Coarse variant used by the corrected-exposure summary card on
+    /// both Main and Detail surfaces. Sub-day values fall through to
+    /// the fine formatter; longer values coarsen so the user reads
+    /// "≈1mo" instead of "30d" and "≈68y" instead of "24,855d".
+    ///
+    /// Bucket layout:
+    /// - `< 1 d` → fine formatter (sub-second / clock notation / `Nd HH:MM:SS`)
+    /// - `1 d–29 d` → `"<N>d"`
+    /// - `30 d–364 d` → `"≈<N>mo"` or `"≈<N>mo <R>d"`
+    /// - `365 d+` → `"≈<N>y"` (year-only; raw day counts never resurface)
+    ///
+    /// The month/year buckets use 30-day months and 365-day years as
+    /// fixed approximations and prefix the value with `≈` because
+    /// month and year boundaries are not aligned to calendar months.
     func formatReciprocityDurationCoarse(_ seconds: TimeInterval) -> String {
         let safeSeconds = max(seconds, 0)
         let roundedSeconds = Int(safeSeconds.rounded())
@@ -113,12 +124,22 @@ final class ReciprocityModel {
         }
 
         let days = roundedSeconds / secondsPerDay
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.usesGroupingSeparator = true
-        formatter.groupingSeparator = ","
-        formatter.groupingSize = 3
-        return (formatter.string(from: NSNumber(value: days)) ?? "\(days)") + "d"
+
+        if days >= 365 {
+            let years = days / 365
+            return "≈\(years)y"
+        }
+
+        if days >= 30 {
+            let months = days / 30
+            let remainderDays = days - months * 30
+            if remainderDays == 0 {
+                return "≈\(months)mo"
+            }
+            return "≈\(months)mo \(remainderDays)d"
+        }
+
+        return "\(days)d"
     }
 
     /// Tight, axis-friendly variant. Sub-second values keep one decimal,

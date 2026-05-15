@@ -1372,8 +1372,13 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func formatReciprocityTimeDisplay(_ seconds: TimeInterval) -> TimeDisplay {
+        // Use the coarse formatter so Main and Detail render the
+        // same string for the Adjusted Shutter and Corrected Exposure
+        // cards. Sub-day values still fall through to the fine
+        // formatter; multi-day values now read as "≈Nmo" / "≈Ny"
+        // instead of raw day counts.
         let safeSeconds = max(seconds, 0)
-        let primary = formatReciprocityDuration(safeSeconds)
+        let primary = formatReciprocityDurationCoarse(safeSeconds)
         return TimeDisplay(primary: primary, secondary: "")
     }
 

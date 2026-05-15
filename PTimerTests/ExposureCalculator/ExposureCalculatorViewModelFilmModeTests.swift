@@ -1002,7 +1002,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testTopLevelCorrectedExposureUsesCoarseDayDisplayForVeryLongDurations() throws {
+    func testTopLevelCorrectedExposureCoarsensVeryLongDurationsIntoYears() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
 
@@ -1015,8 +1015,10 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         XCTAssertEqual(corrected.kind, .quantified)
         XCTAssertNotNil(corrected.correctedExposureSeconds)
-        // primaryText must be coarse day-only (no hour/min/sec noise)
-        XCTAssertEqual(corrected.primaryText, "13,599d")
+        // primaryText now uses month/year coarsening so the user
+        // never reads a five-digit raw-day string. The 13,599-day
+        // intermediate value coarsens to roughly 37 years.
+        XCTAssertEqual(corrected.primaryText, "≈37y")
         // exact seconds remain available for timer use
         XCTAssertEqual(corrected.usesNumericExposure, true)
     }

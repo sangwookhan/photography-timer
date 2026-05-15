@@ -163,18 +163,29 @@ final class ReciprocityModelTests: XCTestCase {
     }
 
     @MainActor
-    func testFormatReciprocityDurationCoarseUsesGroupedDayCountAboveOneDay() {
+    func testFormatReciprocityDurationCoarseCoarsensLargeValuesIntoMonthsAndYears() {
         let model = ReciprocityModel()
 
         // Below one day, falls through to formatReciprocityDuration.
         XCTAssertEqual(model.formatReciprocityDurationCoarse(45), "45s")
         XCTAssertEqual(model.formatReciprocityDurationCoarse(3_725), "01:02:05")
-        // At 1 day exactly, switches to "Nd" notation with thousands grouping.
+
+        // 1 d–29 d → raw "Nd"
         XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400), "1d")
-        XCTAssertEqual(
-            model.formatReciprocityDurationCoarse(86_400 * 1_500),
-            "1,500d"
-        )
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 29), "29d")
+
+        // 30 d–364 d → "≈Nmo" or "≈Nmo Nd"
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 30), "≈1mo")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 65), "≈2mo 5d")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 278), "≈9mo 8d")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 360), "≈12mo")
+
+        // 365 d+ → "≈Ny" with no raw-day tail
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 365), "≈1y")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 1_500), "≈4y")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 24_855), "≈68y")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 372_827), "≈1021y")
+        XCTAssertEqual(model.formatReciprocityDurationCoarse(86_400 * 11_252_025), "≈30827y")
     }
 
     @MainActor

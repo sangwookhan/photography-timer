@@ -13,27 +13,24 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
         viewModel.scaleMode = .fullStop
 
-        // Threshold: exactly 1 day gets coarse treatment
+        // Threshold: exactly 1 day still reads as raw "Nd"
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(86_400), "1d")
 
-        // Below 1 day — delegates to exact formatter (no regression)
+        // Below 1 day — delegates to fine formatter (no regression)
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(86_399), "23:59:59")
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(3_600), "01:00:00")
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(64), "01:04")
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(5.41), "5.4s")
 
-        // 6d 01:08:05 (522,484.861s) → coarse "6d"
+        // 1 d–29 d → raw days
         XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(522_484.861), "6d")
 
-        // Ticket examples: hour/min/sec noise stripped for day-scale values
-        // 388d 08:40:32 → "388d"
-        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(33_554_432), "388d")
-        // 278d 22:14:08 → "278d"
-        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(24_099_248), "278d")
-        // 83602d 09:00:06 → "83,602d" (thousands separator)
-        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(7_223_245_206), "83,602d")
-        // 587989d 13:41:34 → "587,989d" (thousands separator)
-        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(50_802_298_894), "587,989d")
+        // 30 d+ coarsens into months / years so the user never sees
+        // five- or six-digit day strings like "83,602d".
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(33_554_432), "≈1y")
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(24_099_248), "≈9mo 8d")
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(7_223_245_206), "≈229y")
+        XCTAssertEqual(viewModel.formatReciprocityDurationCoarse(50_802_298_894), "≈1610y")
     }
 
     @MainActor

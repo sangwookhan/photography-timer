@@ -217,16 +217,14 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertNil(details.currentResult.correctedExposure.detailText)
         XCTAssertTrue(details.currentResult.correctedExposure.emphasizesValue)
         XCTAssertEqual(details.sections.map(\.title), [
-            "Profile",
             "Reference",
             "Sources"
         ])
         XCTAssertEqual(details.graph?.kind, .table)
-        XCTAssertEqual(details.sections.first?.rows.map(\.title), ["Method", "Authority"])
     }
 
     @MainActor
-    func testFilmModeDetailsPrioritizeProfileAndReferenceBeforeSources() throws {
+    func testFilmModeDetailsPrioritizeReferenceBeforeSources() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -235,11 +233,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
         let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
         let sourcesSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Sources" }))
 
-        XCTAssertEqual(profileSection.rows.map(\.value), ["Reference table", "Official manufacturer guidance"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
         // Each TRI-X 400 row in the Reference panel keeps both the
@@ -255,7 +251,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             """
         ])
         XCTAssertEqual(details.summary.summaryText, "Estimated between 1s and 10s")
-        XCTAssertEqual(sourcesSection.rows.map(\.title), ["Reference", "Citation"])
+        // Sources are now an unlabeled list (one row per item); the
+        // legacy Reference / Citation sub-labels are gone.
+        XCTAssertEqual(sourcesSection.rows.map(\.title), ["", ""])
         XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Basis"))
         XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Entry"))
         XCTAssertEqual(sourcesSection.rows.last?.destinationURL, nil)
@@ -355,16 +353,16 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
         let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
         XCTAssertEqual(details.sections.last?.title, "Sources")
-        XCTAssertEqual(profileSection.rows.map(\.value), ["No quantified manufacturer data", "Official manufacturer guidance"])
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
         XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-1s    No correction"])
         XCTAssertEqual(details.summary.badgeText, "No quantified correction")
         XCTAssertEqual(details.summary.summaryText, "Beyond published no-correction range")
-        XCTAssertEqual(details.currentResult.layout, .compactPair)
+        // Every case shares the same comparison-card layout now,
+        // including this advisory-only path.
+        XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "15s")
         XCTAssertEqual(details.currentResult.correctedExposure.valueText, resultState.correctedExposure.primaryText)
         XCTAssertEqual(details.currentResult.correctedExposure.detailText, resultState.correctedExposure.secondaryText)
@@ -413,7 +411,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
         XCTAssertEqual(resultState.reciprocityState.badgeText, "Exact")
         XCTAssertEqual(resultState.reciprocityState.tone, .trusted)
-        XCTAssertEqual(details.sections.first?.title, "Profile")
+        // Profile metadata block was removed; non-formula table
+        // profiles now lead with Reference.
+        XCTAssertEqual(details.sections.first?.title, "Reference")
         XCTAssertEqual(
             resultState.adjustedShutterAction.targetSeconds ?? 0,
             1,
@@ -445,14 +445,17 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         let sourcesSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Sources" }))
 
+        // Sources rows are unlabeled now; the row carrying the
+        // citation text is the last entry and exposes the link via
+        // its `destinationURL`.
         XCTAssertEqual(
-            sourcesSection.rows.first(where: { $0.title == "Citation" })?.destinationURL,
+            sourcesSection.rows.last?.destinationURL,
             URL(string: "https://example.com/reciprocity")
         )
     }
 
     @MainActor
-    func testFilmModeDetailsShowFormulaInReferenceForFormulaProfile() throws {
+    func testFilmModeDetailsShowFormulaNearReferenceGraphForFormulaProfile() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
 
@@ -461,20 +464,17 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
-
-        XCTAssertEqual(details.sections.map(\.title), ["Profile", "Formula", "Sources"])
-        XCTAssertEqual(formulaSection.rows.map(\.title), [""])
-        XCTAssertEqual(formulaSection.rows.map(\.style), [.formulaExpression])
-        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.31"])
-        XCTAssertFalse(formulaSection.rows.contains { $0.value == "Tc = Tm^P" })
-        let formulaProfileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
-        XCTAssertEqual(formulaProfileSection.rows.map(\.value), ["Formula-based guidance", "Official manufacturer guidance"])
-        XCTAssertEqual(details.summary.badgeText, "Formula-based")
+        // Formula and Profile metadata sections are gone; the
+        // formula expression now lives next to the graph.
+        XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
+        XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
+        XCTAssertEqual(details.sections.map(\.title), ["Sources"])
+        let formula = try XCTUnwrap(details.graph?.formulaDisplayText)
+        XCTAssertEqual(formula, "Tc = Tm^1.31")
+        XCTAssertEqual(details.summary.badgeText, "Formula-derived")
         XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
         XCTAssertEqual(details.graph?.kind, .formula)
         XCTAssertEqual(details.graph?.currentPoint?.style, .formulaDerived)
-        XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure on the active formula curve")
     }
 
     @MainActor
@@ -494,13 +494,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.selectPresetFilm(try XCTUnwrap(viewModel.availablePresetFilms.first))
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
-
-        XCTAssertEqual(formulaSection.rows.map(\.title), [""])
-        XCTAssertEqual(formulaSection.rows.map(\.style), [.formulaExpression])
-        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.31"])
+        let formula = try XCTUnwrap(details.graph?.formulaDisplayText)
+        XCTAssertEqual(formula, "Tc = Tm^1.31")
         XCTAssertEqual(details.graph?.kind, .formula)
         XCTAssertEqual(details.graph?.currentPoint?.style, .formulaDerived)
+        XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
+        XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
     }
 
     @MainActor
@@ -625,7 +624,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.summary.summaryText, "Extrapolated beyond 10s reference data")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "17:04")
         XCTAssertNotEqual(details.currentResult.correctedExposure.valueText, "No quantified correction")
-        XCTAssertEqual(details.sections.map(\.title), ["Profile", "Reference", "Sources"])
+        XCTAssertEqual(details.sections.map(\.title), ["Reference", "Sources"])
     }
 
     @MainActor
@@ -663,19 +662,24 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.selectEntry(unofficialEntry)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
-        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
-
-        XCTAssertEqual(profileSection.rows.map(\.title), ["Method", "Authority"])
-        XCTAssertEqual(profileSection.rows.map(\.value), ["Formula-based guidance", "Unofficial practical approximation"])
-        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.34"])
-        XCTAssertEqual(details.summary.badgeText, "Formula-based")
+        // Profile + Formula metadata sections are no longer
+        // rendered; the formula expression now lives next to the
+        // graph and the film authority sits in the subtitle.
+        let formula = try XCTUnwrap(details.graph?.formulaDisplayText)
+        XCTAssertEqual(formula, "Tc = Tm^1.34")
+        XCTAssertEqual(details.summary.badgeText, "Formula-derived")
+        XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
+        XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
+        XCTAssertTrue(
+            details.subtitle?.contains("Unofficial guidance") == true,
+            "Authority appears in the subtitle now: \(details.subtitle ?? "<nil>")"
+        )
         XCTAssertNil(details.sections.first(where: { $0.title == "Sources" }),
                      "Unofficial profile with no verified source metadata must not show Sources section.")
     }
 
     @MainActor
-    func testFilmModeDetailsOfficialPortra400ShowsOfficialAuthorityInProfileSection() throws {
+    func testFilmModeDetailsOfficialPortra400ShowsOfficialAuthorityInSubtitle() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
@@ -684,11 +688,11 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
-        let authorityRow = try XCTUnwrap(profileSection.rows.first(where: { $0.title == "Authority" }))
-
-        XCTAssertEqual(authorityRow.value, "Official manufacturer guidance")
-        XCTAssertFalse(profileSection.rows.map(\.value).contains("Unofficial practical approximation"))
+        XCTAssertTrue(
+            details.subtitle?.contains("Official guidance") == true,
+            "Authority is surfaced in the subtitle: \(details.subtitle ?? "<nil>")"
+        )
+        XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
     }
 
     @MainActor
@@ -747,10 +751,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsUnofficialPortra400HasFormulaAndProfileSectionsPresent() throws {
-        // Verifies that both Profile and Formula sections exist in the sections array —
-        // the view renders non-Sources sections before the graph, so this guarantees
-        // Formula appears before Graph in the rendered UI.
+    func testFilmModeDetailsUnofficialPortra400ShowsFormulaNearGraphWithoutProfileSection() throws {
         let viewModel = makeViewModel()
         let unofficialEntry = try XCTUnwrap(
             viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
@@ -762,13 +763,14 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
 
-        let profileSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Profile" }))
-        let formulaSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Formula" }))
         XCTAssertNotNil(details.graph, "Formula profile must produce a graph.")
-        XCTAssertEqual(formulaSection.rows.map(\.value), ["Tc = Tm^1.34"])
-        XCTAssertEqual(
-            profileSection.rows.first(where: { $0.title == "Authority" })?.value,
-            "Unofficial practical approximation"
+        let formula = try XCTUnwrap(details.graph?.formulaDisplayText)
+        XCTAssertEqual(formula, "Tc = Tm^1.34")
+        XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
+        XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
+        XCTAssertTrue(
+            details.subtitle?.contains("Unofficial guidance") == true,
+            "Authority is surfaced in the subtitle: \(details.subtitle ?? "<nil>")"
         )
         XCTAssertNil(details.sections.first(where: { $0.title == "Sources" }),
                      "Unofficial profile with no verified source must not show Sources section.")
@@ -851,9 +853,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
     @MainActor
     func testFilmModeDetailsSectionOrderIsConsistentAcrossOfficialAndUnofficialPortra400() throws {
-        // For both profiles, all non-Sources sections must precede any Sources section.
-        // The view renders: non-Sources → graph → Sources. This test ensures no section
-        // ordering regression in the underlying display state.
+        // Profile / Formula metadata sections are removed in this
+        // pass; the only stable invariant is that Sources, when
+        // present, is the last section in the array.
         let viewModel = makeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
         let unofficialEntry = try XCTUnwrap(
@@ -871,15 +873,21 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             }
 
             let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-            let sourcesIndex = details.sections.firstIndex(where: { $0.title == "Sources" })
-            let profileIndex = details.sections.firstIndex(where: { $0.title == "Profile" })
-
-            // If a Sources section exists it must come after Profile
-            if let si = sourcesIndex, let pi = profileIndex {
-                XCTAssertGreaterThan(si, pi, "[\(label)] Sources must appear after Profile in sections array.")
+            XCTAssertFalse(
+                details.sections.contains { $0.title == "Profile" },
+                "[\(label)] Profile metadata section must no longer appear in sections."
+            )
+            XCTAssertFalse(
+                details.sections.contains { $0.title == "Formula" },
+                "[\(label)] Formula metadata section must no longer appear in sections."
+            )
+            if let sourcesIndex = details.sections.firstIndex(where: { $0.title == "Sources" }) {
+                XCTAssertEqual(
+                    sourcesIndex,
+                    details.sections.count - 1,
+                    "[\(label)] Sources must be the last section when present."
+                )
             }
-            // Profile must exist
-            XCTAssertNotNil(profileIndex, "[\(label)] Profile section must be present in details sections.")
         }
     }
 
@@ -994,7 +1002,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testTopLevelCorrectedExposureUsesCoarseDayDisplayForVeryLongDurations() throws {
+    func testTopLevelCorrectedExposureCoarsensVeryLongDurationsIntoYears() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
 
@@ -1007,8 +1015,10 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         XCTAssertEqual(corrected.kind, .quantified)
         XCTAssertNotNil(corrected.correctedExposureSeconds)
-        // primaryText must be coarse day-only (no hour/min/sec noise)
-        XCTAssertEqual(corrected.primaryText, "13,599d")
+        // primaryText now uses month/year coarsening so the user
+        // never reads a five-digit raw-day string. The 13,599-day
+        // intermediate value coarsens to roughly 37 years.
+        XCTAssertEqual(corrected.primaryText, "≈37y")
         // exact seconds remain available for timer use
         XCTAssertEqual(corrected.usesNumericExposure, true)
     }
@@ -1034,7 +1044,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testNoCorrectionDetailsUseCompactSummaryAndPlotIdentityCurrentPoint() throws {
+    func testNoCorrectionDetailsUseSharedComparisonLayoutAndPlotIdentityCurrentPoint() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -1046,9 +1056,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         XCTAssertEqual(details.summary.badgeText, "No correction")
         XCTAssertEqual(details.summary.summaryText, "No correction at 0.5s")
-        XCTAssertEqual(details.currentResult.layout, .compactValue)
+        // No-correction now shares the comparison layout with every
+        // other case; the legacy `compactValue` variant is gone.
+        XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "0.5s")
         XCTAssertEqual(details.currentResult.correctedExposure.valueText, "0.5s")
+        XCTAssertEqual(details.currentResult.statusText, "No correction")
         // No-correction current point sits on the identity line with
         // the `.noCorrection` marker so it does not read as a formula
         // prediction.
@@ -1142,7 +1155,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         XCTAssertEqual(resultState.adjustedShutterSeconds, 8_192, accuracy: 0.0001)
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .formulaDerived)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-based")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-derived")
         XCTAssertEqual(resultState.reciprocityState.tone, .measured)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)

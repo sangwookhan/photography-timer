@@ -44,15 +44,23 @@ struct FilmModeDetailsSheet: View {
                             .accessibilityIdentifier("film-mode-details-subtitle")
                     }
 
-                    FilmModeDetailsSummary(summary: details.summary)
-
+                    // Current Result block (Adjusted Shutter,
+                    // Corrected Exposure, Status) is the primary
+                    // surface. The big top heading from the legacy
+                    // summary block is intentionally removed — every
+                    // case now reads the same shape.
                     FilmModeDetailsCurrentResultBlock(
                         currentResult: details.currentResult,
                         summary: details.summary
                     )
 
-                    // Evidence sections (Profile, Formula, Reference) before graph
-                    ForEach(details.sections.filter { $0.title != "Sources" }) { section in
+                    if let graph = details.graph {
+                        FilmModeDetailsGraph(graph: graph)
+                    } else if details.summary.tone != .advisory {
+                        FilmModeDetailsGraphUnavailableNote()
+                    }
+
+                    ForEach(details.sections.filter(isEvidenceSection)) { section in
                         FilmModeDetailsSectionCard(
                             title: sectionDisplayTitle(for: section.title),
                             section: section,
@@ -64,13 +72,6 @@ struct FilmModeDetailsSheet: View {
                         FilmModeDetailsLegend(legend: legend)
                     }
 
-                    if let graph = details.graph {
-                        FilmModeDetailsGraph(graph: graph)
-                    } else if details.summary.tone != .advisory && details.currentResult.layout != .compactValue {
-                        FilmModeDetailsGraphUnavailableNote()
-                    }
-
-                    // Sources section after graph
                     ForEach(details.sections.filter { $0.title == "Sources" }) { section in
                         FilmModeDetailsSectionCard(
                             title: sectionDisplayTitle(for: section.title),
@@ -161,6 +162,20 @@ struct FilmModeDetailsSheet: View {
         }
     }
 
+    /// Sections that describe manufacturer source evidence. Placed
+    /// directly under the reference graph so the user can read each
+    /// plotted element (source reference, guidance boundary, or the
+    /// table reference for non-converted profiles) without scrolling
+    /// past the profile metadata first.
+    private func isEvidenceSection(_ section: FilmModeDetailsSectionState) -> Bool {
+        switch section.title {
+        case "Source reference", "Guidance boundary", "Reference":
+            return true
+        default:
+            return false
+        }
+    }
+
     private var showsStickySummary: Bool {
         verticalSizeClass != .compact && scrollOffset < -110
     }
@@ -226,12 +241,7 @@ private struct FilmModeDetailsStickySummary: View {
     }
 
     private var secondaryLine: String? {
-        switch currentResult.layout {
-        case .compactValue:
-            return nil
-        case .compactPair, .comparison:
-            return "\(currentResult.adjustedShutter.valueText) adjusted"
-        }
+        "\(currentResult.adjustedShutter.valueText) adjusted"
     }
 
     private var badgeBackgroundColor: Color {
@@ -385,16 +395,7 @@ private struct FilmModeDetailsCurrentResultBlock: View {
     let summary: FilmModeDetailsSummaryState
 
     var body: some View {
-        Group {
-            switch currentResult.layout {
-            case .compactValue:
-                compactValueBody
-            case .compactPair:
-                compactPairBody
-            case .comparison:
-                comparisonBody
-            }
-        }
+        comparisonBody
     }
 
     private func valueColumn(
@@ -421,47 +422,17 @@ private struct FilmModeDetailsCurrentResultBlock: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var compactValueBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let note = currentResult.correctedExposure.detailText, !note.isEmpty {
-                Text(note)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var compactPairBody: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            compactLine(
-                title: currentResult.adjustedShutter.title,
-                value: currentResult.adjustedShutter.valueText,
-                valueColor: .primary
-            )
-
-            compactLine(
-                title: currentResult.correctedExposure.title,
-                value: currentResult.correctedExposure.valueText,
-                valueColor: secondaryValueColor(for: currentResult.correctedExposure)
-            )
-
-            if let detailText = currentResult.correctedExposure.detailText, !detailText.isEmpty {
-                Text(detailText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
     private var comparisonBody: some View {
-        HStack(spacing: 12) {
-            valueColumn(for: currentResult.adjustedShutter)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                valueColumn(for: currentResult.adjustedShutter)
 
-            Divider()
+                Divider()
 
-            valueColumn(for: currentResult.correctedExposure)
+                valueColumn(for: currentResult.correctedExposure)
+            }
+
+            statusLine
         }
         .padding(16)
         .background(
@@ -474,21 +445,46 @@ private struct FilmModeDetailsCurrentResultBlock: View {
         )
     }
 
-    private func compactLine(
-        title: String,
-        value: String,
-        valueColor: Color
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(title)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+    /// Compact "Status: …" line driven by
+    /// `currentResult.statusText`. Replaces the legacy big top
+    /// summary heading; every case (no correction, formula-derived,
+    /// beyond source range, beyond visible range, …) reads through
+    /// this single short row.
+    @ViewBuilder
+    private var statusLine: some View {
+        let text = currentResult.statusText
+        if !text.isEmpty {
+            HStack(spacing: 6) {
+                Text("Status")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-            Text(value)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(valueColor)
-                .monospacedDigit()
-                .minimumScaleFactor(0.8)
+                Text(text)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(statusTone)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Status: \(text)")
+        }
+    }
+
+    private var statusTone: Color {
+        switch currentResult.statusTone {
+        case .trusted:
+            return .green
+        case .measured:
+            return .blue
+        case .caution:
+            return .orange
+        case .advisory:
+            return .yellow.opacity(0.9)
+        case .unsupported:
+            return .red
         }
     }
 
@@ -607,6 +603,40 @@ private struct FilmModeDetailsLegendFlow: View {
     }
 }
 
+/// Renders a formula reference string with the same superscript
+/// styling as the Formula section row. Reused inside the Reference
+/// Graph card so the curve and its equation read together.
+private struct FilmModeDetailsFormulaExpressionText: View {
+    private let value: String
+
+    init(_ value: String) {
+        self.value = value
+    }
+
+    var body: some View {
+        text
+            .foregroundStyle(.primary.opacity(0.84))
+    }
+
+    private var text: Text {
+        guard
+            let caretIndex = value.firstIndex(of: "^"),
+            value.index(after: caretIndex) < value.endIndex
+        else {
+            return Text(value).font(.callout.weight(.medium))
+        }
+
+        let base = String(value[..<caretIndex])
+        let exponent = String(value[value.index(after: caretIndex)...])
+
+        return Text(base)
+            .font(.callout.weight(.medium))
+        + Text(exponent)
+            .font(.caption.weight(.semibold))
+            .baselineOffset(7)
+    }
+}
+
 private struct FilmModeDetailsGraphAxisLabel: View {
     let text: String
     let vertical: Bool
@@ -660,9 +690,10 @@ private struct FilmModeDetailsGraph: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
 
-            Text("Corrected exposure vs adjusted shutter")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            if let formulaDisplayText = graph.formulaDisplayText {
+                FilmModeDetailsFormulaExpressionText(formulaDisplayText)
+                    .accessibilityIdentifier("film-mode-details-graph-formula")
+            }
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 12) {
@@ -703,7 +734,20 @@ private struct FilmModeDetailsGraph: View {
                                     .padding(plotInset)
                                 }
 
-                                if let unsupportedStart = graph.unsupportedRegionStartSeconds {
+                                // Pink "beyond manufacturer source
+                                // range" region is persistent on
+                                // converted formula graphs; the
+                                // legacy red unsupported region only
+                                // applies to non-converted profiles
+                                // and only when the current input
+                                // crosses the boundary.
+                                if let beyondSourceStart = graph.beyondSourceRangeStartSeconds {
+                                    beyondSourceRangeRegion(
+                                        startSeconds: beyondSourceStart,
+                                        in: plotSize
+                                    )
+                                    .padding(plotInset)
+                                } else if let unsupportedStart = graph.unsupportedRegionStartSeconds {
                                     unsupportedRegion(
                                         startSeconds: unsupportedStart,
                                         in: plotSize
@@ -729,7 +773,16 @@ private struct FilmModeDetailsGraph: View {
                                     )
                                     .padding(plotInset)
 
-                                if let supportedRangeUpperBoundSeconds = graph.supportedRangeUpperBoundSeconds {
+                                // When a profile publishes both a
+                                // formula upper-bound and a manufacturer
+                                // not-recommended boundary at the same
+                                // shutter (e.g. Provia 100F's 480 s),
+                                // skip the neutral supported-boundary
+                                // line so the red dashed not-recommended
+                                // marker is not overlaid by a near-
+                                // duplicate gray dash.
+                                if let supportedRangeUpperBoundSeconds = graph.supportedRangeUpperBoundSeconds,
+                                   !shouldSuppressSupportedBoundary(at: supportedRangeUpperBoundSeconds) {
                                     supportedBoundary(
                                         at: supportedRangeUpperBoundSeconds,
                                         in: plotSize
@@ -750,19 +803,36 @@ private struct FilmModeDetailsGraph: View {
                                     .padding(plotInset)
                                 }
 
+                                if let notRecommendedBoundarySeconds = graph.notRecommendedBoundarySeconds {
+                                    notRecommendedBoundary(
+                                        at: notRecommendedBoundarySeconds,
+                                        in: plotSize
+                                    )
+                                    .padding(plotInset)
+                                }
+
                                 if graph.kind == .table {
                                     tableAnchorMarkers(in: plotSize)
                                         .padding(plotInset)
                                 }
 
+                                if !graph.sourceReferenceMarkers.isEmpty {
+                                    sourceReferenceMarkers(in: plotSize)
+                                        .padding(plotInset)
+                                }
+
                                 if graph.usesCurrentInputGuideOnly,
+                                   !graph.isBeyondVisibleRange,
+                                   !graph.isBelowVisibleRange,
                                    let currentMeteredExposureSeconds = graph.currentMeteredExposureSeconds {
                                     currentInputGuideOnly(
                                         currentMeteredExposureSeconds: currentMeteredExposureSeconds,
                                         in: plotSize
                                     )
                                     .padding(plotInset)
-                                } else if let currentPoint = graph.currentPoint {
+                                } else if let currentPoint = graph.currentPoint,
+                                          !graph.isBeyondVisibleRange,
+                                          !graph.isBelowVisibleRange {
                                     currentPointGuide(
                                         for: currentPoint,
                                         in: plotSize
@@ -775,7 +845,15 @@ private struct FilmModeDetailsGraph: View {
                                     )
                                     .padding(plotInset)
                                 }
+
+                                if graph.isBeyondVisibleRange || graph.isBelowVisibleRange {
+                                    outsideVisibleRangeIndicator(in: plotSize)
+                                        .padding(plotInset)
+                                }
                             }
+                            .clipShape(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            )
                         }
                         .frame(height: graphHeight)
 
@@ -790,11 +868,13 @@ private struct FilmModeDetailsGraph: View {
 
                 FilmModeDetailsLegendFlow(items: graphLegendItems)
 
-                FilmModeDetailsGraphStateNote(
-                    symbol: graphExplanationSymbol,
-                    tint: graphExplanationTint,
-                    text: graphExplanationText
-                )
+                if !graphExplanationText.isEmpty {
+                    FilmModeDetailsGraphStateNote(
+                        symbol: graphExplanationSymbol,
+                        tint: graphExplanationTint,
+                        text: graphExplanationText
+                    )
+                }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(graphAccessibilityLabel)
@@ -856,6 +936,23 @@ private struct FilmModeDetailsGraph: View {
             .fill(Color.green.opacity(0.06))
             .frame(width: max(x, 0), height: size.height)
             .position(x: max(x, 0) / 2, y: size.height / 2)
+    }
+
+    /// Persistent pink band marking the metered-exposure region
+    /// where the formula extrapolates past the published manufacturer
+    /// source range. Shown for converted formula profiles regardless
+    /// of where the current input lands, so the user can always see
+    /// which portion of the curve is past the published reference.
+    private func beyondSourceRangeRegion(
+        startSeconds: Double,
+        in size: CGSize
+    ) -> some View {
+        let x = scaledValue(startSeconds, within: graph.xRange, size: size.width)
+
+        return Rectangle()
+            .fill(Color.pink.opacity(0.10))
+            .frame(width: max(size.width - x, 0), height: size.height)
+            .position(x: x + max(size.width - x, 0) / 2, y: size.height / 2)
     }
 
     private func supportedBoundary(
@@ -921,6 +1018,108 @@ private struct FilmModeDetailsGraph: View {
         }
     }
 
+    /// Small open green rings (with attached labels) drawn over the
+    /// formula curve for each manufacturer source-reference point.
+    /// The ring is roughly half the size of the current-result blue
+    /// dot so visual priority always sits with the current result,
+    /// not the static reference. The label hugs the ring (right
+    /// above by default, beside it as a fallback) so the "240s" tag
+    /// reads as a piece of the marker rather than a stray annotation.
+    @ViewBuilder
+    private func sourceReferenceMarkers(in size: CGSize) -> some View {
+        ZStack {
+            ForEach(Array(graph.sourceReferenceMarkers.enumerated()), id: \.offset) { _, marker in
+                let plotted = plottedPoint(for: marker.point, in: size)
+                let labelPosition = sourceReferenceLabelPosition(
+                    for: plotted,
+                    in: size
+                )
+
+                Circle()
+                    .fill(Color(.systemBackground))
+                    .frame(width: 6, height: 6)
+                    .overlay {
+                        Circle()
+                            .stroke(Color.green, lineWidth: 1)
+                    }
+                    .position(plotted)
+
+                Text(marker.label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.green)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 0.5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color(.systemBackground).opacity(0.9))
+                    )
+                    .fixedSize()
+                    .position(labelPosition)
+            }
+        }
+    }
+
+    /// Anchors a source-reference label tight against its small
+    /// green ring. The label sits directly above the marker by
+    /// default so it reads as part of the marker; it falls back to
+    /// directly beside the marker when the marker hugs the top
+    /// edge, and it gets pushed inward at the plot's right edge so
+    /// the text never clips. The compact offset prevents the label
+    /// from drifting onto the formula curve or into the area where
+    /// the current-result blue dot could be misread as the labeled
+    /// point.
+    private func sourceReferenceLabelPosition(
+        for plotted: CGPoint,
+        in size: CGSize
+    ) -> CGPoint {
+        let verticalOffset: CGFloat = 10
+        let sideOffset: CGFloat = 14
+        let topGuard: CGFloat = verticalOffset + 6
+        let edgePadding: CGFloat = 18
+
+        if plotted.y < topGuard {
+            // Marker pinned near the top — place the label beside
+            // the marker instead of below, so it does not float
+            // onto the curve.
+            let x: CGFloat
+            if plotted.x + sideOffset + edgePadding > size.width {
+                x = max(plotted.x - sideOffset, edgePadding)
+            } else {
+                x = plotted.x + sideOffset
+            }
+            return CGPoint(x: x, y: plotted.y)
+        }
+
+        let clampedX = max(edgePadding, min(plotted.x, size.width - edgePadding))
+        return CGPoint(x: clampedX, y: plotted.y - verticalOffset)
+    }
+
+    /// Red dashed vertical at the manufacturer not-recommended
+    /// boundary (e.g. Provia 100F's 480 s). Stays visually distinct
+    /// from the neutral supported-range boundary so the user reads it
+    /// as a stop-signal, not as a generic upper bound.
+    private func notRecommendedBoundary(
+        at seconds: Double,
+        in size: CGSize
+    ) -> some View {
+        let x = scaledValue(seconds, within: graph.xRange, size: size.width)
+
+        return Path { path in
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: size.height))
+        }
+        .stroke(Color.red.opacity(0.75), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+    }
+
+    private func shouldSuppressSupportedBoundary(at seconds: Double) -> Bool {
+        guard let notRecommendedBoundarySeconds = graph.notRecommendedBoundarySeconds else {
+            return false
+        }
+        let supportedLog = log10(max(seconds, 0.000_001))
+        let boundaryLog = log10(max(notRecommendedBoundarySeconds, 0.000_001))
+        return abs(supportedLog - boundaryLog) < 0.02
+    }
+
     @ViewBuilder
     private func currentPointGuide(
         for currentPoint: FilmModeDetailsGraphCurrentPoint,
@@ -967,67 +1166,96 @@ private struct FilmModeDetailsGraph: View {
     ) -> some View {
         let plotted = plottedPoint(for: currentPoint.point, in: size)
 
+        switch graph.kind {
+        case .formula:
+            // Every in-range current result on a formula graph is a
+            // filled blue dot regardless of policy basis (exact,
+            // estimated, formula-derived, no-correction, extrapolated).
+            // The status line, region shading, and source-reference
+            // marker carry the state-specific meaning; the current
+            // marker stays one consistent shape so it never reads
+            // as a source reference.
+            Circle()
+                .fill(Color.blue)
+                .frame(width: 13, height: 13)
+                .overlay {
+                    Circle()
+                        .stroke(Color(.systemBackground), lineWidth: 2)
+                }
+                .position(plotted)
+        case .table:
+            tableCurrentPointMarker(for: currentPoint, plotted: plotted)
+        }
+    }
+
+    /// Legacy per-policy marker styling preserved for non-converted
+    /// table profiles. Formula graphs route to the blue-dot rule
+    /// above.
+    @ViewBuilder
+    private func tableCurrentPointMarker(
+        for currentPoint: FilmModeDetailsGraphCurrentPoint,
+        plotted: CGPoint
+    ) -> some View {
         switch currentPoint.style {
         case .exact:
             Circle()
                 .fill(Color.green)
                 .frame(width: 14, height: 14)
-                .overlay {
-                    Circle()
-                        .stroke(Color(.systemBackground), lineWidth: 2)
-                }
+                .overlay { Circle().stroke(Color(.systemBackground), lineWidth: 2) }
                 .position(plotted)
         case .estimated:
             Diamond()
                 .fill(Color.blue)
                 .frame(width: 15, height: 15)
-                .overlay {
-                    Diamond()
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 5)
-                }
-                .overlay {
-                    Diamond()
-                        .stroke(Color(.systemBackground), lineWidth: 2)
-                }
+                .overlay { Diamond().stroke(Color.blue.opacity(0.25), lineWidth: 5) }
+                .overlay { Diamond().stroke(Color(.systemBackground), lineWidth: 2) }
                 .position(plotted)
         case .extrapolated:
             Triangle()
                 .fill(Color.orange)
                 .frame(width: 16, height: 15)
-                .overlay {
-                    Triangle()
-                        .stroke(Color(.systemBackground), lineWidth: 2)
-                }
+                .overlay { Triangle().stroke(Color(.systemBackground), lineWidth: 2) }
                 .position(plotted)
         case .formulaDerived:
             Circle()
                 .fill(Color.accentColor)
                 .frame(width: 15, height: 15)
-                .overlay {
-                    Circle()
-                        .stroke(Color(.systemBackground), lineWidth: 2)
-                }
-                .overlay {
-                    Circle()
-                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 5)
-                }
-                    .position(plotted)
+                .overlay { Circle().stroke(Color(.systemBackground), lineWidth: 2) }
+                .overlay { Circle().stroke(Color.accentColor.opacity(0.3), lineWidth: 5) }
+                .position(plotted)
         case .noCorrection:
-            // Hollow ring to signal "no correction, identity line" — the
-            // current input lies on adjusted == corrected by policy, not
-            // because the formula predicted it. Distinct from the filled
-            // accent disc used for `.formulaDerived` so a future reader
-            // does not misread no-correction inputs as formula
-            // predictions on the curve.
             Circle()
                 .stroke(Color.green, lineWidth: 2)
                 .frame(width: 14, height: 14)
                 .background(
-                    Circle()
-                        .fill(Color(.systemBackground))
-                        .frame(width: 14, height: 14)
+                    Circle().fill(Color(.systemBackground)).frame(width: 14, height: 14)
                 )
                 .position(plotted)
+        }
+    }
+
+    /// Edge-anchored orange triangle that signals the current
+    /// result sits outside the visible graph range. The triangle's
+    /// orientation matches whether the value spilled past the right
+    /// edge (beyond visible) or the left edge (below visible).
+    @ViewBuilder
+    private func outsideVisibleRangeIndicator(in size: CGSize) -> some View {
+        if graph.isBeyondVisibleRange {
+            Triangle()
+                .fill(Color.orange)
+                .frame(width: 14, height: 12)
+                .overlay { Triangle().stroke(Color(.systemBackground), lineWidth: 2) }
+                .rotationEffect(.degrees(90))
+                .position(x: size.width - 10, y: size.height / 2)
+                .accessibilityIdentifier("film-mode-details-graph-outside-visible")
+        } else if graph.isBelowVisibleRange {
+            Triangle()
+                .fill(Color.orange)
+                .frame(width: 14, height: 12)
+                .overlay { Triangle().stroke(Color(.systemBackground), lineWidth: 2) }
+                .rotationEffect(.degrees(-90))
+                .position(x: 10, y: size.height / 2)
+                .accessibilityIdentifier("film-mode-details-graph-outside-visible")
         }
     }
 
@@ -1137,15 +1365,23 @@ private struct FilmModeDetailsGraph: View {
                 ]
             }
             var items: [(symbol: String, color: Color, text: String)] = [
-                ("line.horizontal.3", .accentColor, "Formula curve")
+                ("line.horizontal.3", .accentColor, "Formula curve"),
+                ("circle.fill", .blue, "Current result")
             ]
-            // Name the shaded no-correction band in the legend when
-            // the active profile has one.
-            if graph.noCorrectionRangeUpperBoundSeconds != nil {
-                items.append(("square.fill", .green.opacity(0.5), "No correction"))
+            if !graph.sourceReferenceMarkers.isEmpty {
+                items.append(("circle", .green, "Source reference"))
             }
-            if let currentPoint = graph.currentPoint {
-                items.append(currentPointLegendItem(for: currentPoint.style))
+            if graph.noCorrectionRangeUpperBoundSeconds != nil {
+                items.append(("square.fill", .green.opacity(0.5), "No-correction range"))
+            }
+            if graph.notRecommendedBoundarySeconds != nil {
+                items.append(("minus", .red, "Not-recommended boundary"))
+            }
+            if graph.beyondSourceRangeStartSeconds != nil {
+                items.append(("square.fill", .pink.opacity(0.5), "Beyond source range"))
+            }
+            if graph.isBeyondVisibleRange || graph.isBelowVisibleRange {
+                items.append(("triangle.fill", .orange, "Outside visible range"))
             }
             return items
         case .table:
@@ -1176,9 +1412,17 @@ private struct FilmModeDetailsGraph: View {
         case .estimated:
             return ("diamond.fill", .blue, "Estimated")
         case .extrapolated:
-            return ("triangle.fill", .orange, "Extrapolated")
+            // Converted formula profiles (formula + source evidence)
+            // present the same orange triangle marker but read as
+            // beyond the manufacturer source range. Non-converted
+            // table profiles keep the legacy "Extrapolated" label so
+            // their wording is unchanged.
+            let isConvertedFormulaProfile = graph.kind == .formula
+                && !graph.sourceReferenceMarkers.isEmpty
+            let label = isConvertedFormulaProfile ? "Beyond source range" : "Extrapolated"
+            return ("triangle.fill", .orange, label)
         case .formulaDerived:
-            return ("circle.fill", .accentColor, "Current point")
+            return ("circle.fill", .accentColor, "Current result")
         case .noCorrection:
             return ("circle", .green, "No correction")
         }
@@ -1186,6 +1430,10 @@ private struct FilmModeDetailsGraph: View {
 
     private var graphExplanationSymbol: String {
         if graph.usesCurrentInputGuideOnly {
+            return "info.circle"
+        }
+
+        if shouldRenderDescriptionLines {
             return "info.circle"
         }
 
@@ -1210,6 +1458,10 @@ private struct FilmModeDetailsGraph: View {
             return .orange
         }
 
+        if shouldRenderDescriptionLines {
+            return .secondary
+        }
+
         switch graph.currentPoint?.style {
         case .exact, .noCorrection:
             return .green
@@ -1223,11 +1475,23 @@ private struct FilmModeDetailsGraph: View {
     }
 
     private var graphExplanationText: String {
+        if shouldRenderDescriptionLines {
+            return graph.descriptionLines.joined(separator: "\n")
+        }
+        if graph.kind == .formula {
+            // Formula graphs route every state-specific note through
+            // `descriptionLines`; if that list is empty, the curve
+            // and legend already convey enough — no caption needed.
+            return ""
+        }
         if let unsupportedExplanation = graph.unsupportedExplanation {
             return unsupportedExplanation
         }
-
         return graph.caption
+    }
+
+    private var shouldRenderDescriptionLines: Bool {
+        !graph.descriptionLines.isEmpty
     }
 }
 

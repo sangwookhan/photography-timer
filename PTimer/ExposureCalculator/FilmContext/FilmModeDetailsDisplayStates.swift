@@ -43,6 +43,112 @@ enum FilmModeDetailsGraphKind: Equatable {
     case table
 }
 
+/// Stop-spaced / log-based scale tier for the formula reciprocity
+/// graph. Tiers exist so the graph never auto-expands to multi-day
+/// domains when the current input produces an extreme corrected
+/// exposure. Each tier defines a fixed `[1s, upper]` window and a
+/// readable tick set; the presenter picks the smallest tier that
+/// contains every plotted value (curve samples, current point,
+/// source-reference markers, not-recommended boundary).
+///
+/// - `t1` covers the normal up-to-1h range used by most short
+///   exposures.
+/// - `t2` extends to 10h for long-exposure work.
+/// - `t3` extends to 100h and is the largest visible domain. Values
+///   above the `t3` upper bound trigger `isBeyondVisibleRange` on the
+///   graph state rather than pushing the domain higher.
+enum FilmModeDetailsGraphScaleTier: Equatable {
+    case t1
+    case t2
+    case t3
+
+    var lowerBoundSeconds: Double { 1 }
+
+    var upperBoundSeconds: Double {
+        switch self {
+        case .t1: return 3_600          // 1 hour
+        case .t2: return 36_000         // 10 hours
+        case .t3: return 360_000        // 100 hours
+        }
+    }
+
+    var range: ClosedRange<Double> {
+        lowerBoundSeconds...upperBoundSeconds
+    }
+
+    /// Tick values + readable labels for an axis at this tier. Both
+    /// axes use the same tick set because both render durations.
+    /// Label density is calibrated for phone-width plots so the
+    /// labels do not overlap.
+    var axisTicks: [FilmModeDetailsGraphAxisTick] {
+        switch self {
+        case .t1:
+            return [
+                FilmModeDetailsGraphAxisTick(value: 1, label: "1s"),
+                FilmModeDetailsGraphAxisTick(value: 4, label: "4s"),
+                FilmModeDetailsGraphAxisTick(value: 15, label: "15s"),
+                FilmModeDetailsGraphAxisTick(value: 60, label: "1m"),
+                FilmModeDetailsGraphAxisTick(value: 240, label: "4m"),
+                FilmModeDetailsGraphAxisTick(value: 960, label: "16m"),
+                FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h")
+            ]
+        case .t2:
+            return [
+                FilmModeDetailsGraphAxisTick(value: 1, label: "1s"),
+                FilmModeDetailsGraphAxisTick(value: 10, label: "10s"),
+                FilmModeDetailsGraphAxisTick(value: 60, label: "1m"),
+                FilmModeDetailsGraphAxisTick(value: 600, label: "10m"),
+                FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h"),
+                FilmModeDetailsGraphAxisTick(value: 36_000, label: "10h")
+            ]
+        case .t3:
+            return [
+                FilmModeDetailsGraphAxisTick(value: 1, label: "1s"),
+                FilmModeDetailsGraphAxisTick(value: 60, label: "1m"),
+                FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h"),
+                FilmModeDetailsGraphAxisTick(value: 36_000, label: "10h"),
+                FilmModeDetailsGraphAxisTick(value: 360_000, label: "100h")
+            ]
+        }
+    }
+}
+
+/// Pure-value selector for `FilmModeDetailsGraphScaleTier`. Kept as a
+/// free-standing enum (rather than a method on the tier) so it is
+/// trivially testable in isolation and can be called from the
+/// presenter without instantiating a struct.
+enum FilmModeDetailsGraphScalePolicy {
+    /// Picks the smallest tier whose `upperBoundSeconds` accommodates
+    /// every plotted value. Values greater than the `t3` upper bound
+    /// still return `t3`; callers should check
+    /// `isBeyondVisibleRange(maxPlottedSeconds:)` separately.
+    static func selectTier(
+        maxPlottedSeconds: Double
+    ) -> FilmModeDetailsGraphScaleTier {
+        guard maxPlottedSeconds.isFinite, maxPlottedSeconds > 0 else {
+            return .t1
+        }
+        if maxPlottedSeconds <= FilmModeDetailsGraphScaleTier.t1.upperBoundSeconds {
+            return .t1
+        }
+        if maxPlottedSeconds <= FilmModeDetailsGraphScaleTier.t2.upperBoundSeconds {
+            return .t2
+        }
+        return .t3
+    }
+
+    /// `true` when at least one plotted value exceeds the `t3` upper
+    /// bound. The graph still uses `t3` for its domain; the view
+    /// surfaces an overflow indicator instead of expanding into
+    /// multi-day labels.
+    static func isBeyondVisibleRange(
+        maxPlottedSeconds: Double
+    ) -> Bool {
+        guard maxPlottedSeconds.isFinite else { return false }
+        return maxPlottedSeconds > FilmModeDetailsGraphScaleTier.t3.upperBoundSeconds
+    }
+}
+
 enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
     case exact
     case estimated
@@ -59,6 +165,15 @@ enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
 struct FilmModeDetailsGraphPoint: Equatable {
     let meteredExposureSeconds: Double
     let correctedExposureSeconds: Double
+}
+
+/// Open-ring marker pinned to a manufacturer-published reference
+/// point. The label is rendered next to the marker so the user can
+/// see which metered exposure (e.g. "240s") the reference matches
+/// without consulting an external legend.
+struct FilmModeDetailsGraphSourceReference: Equatable {
+    let point: FilmModeDetailsGraphPoint
+    let label: String
 }
 
 struct FilmModeDetailsGraphCurrentPoint: Equatable {
@@ -83,8 +198,11 @@ struct FilmModeDetailsSummaryState: Equatable {
 }
 
 enum FilmModeDetailsCurrentResultLayout: Equatable {
-    case compactValue
-    case compactPair
+    /// Single comparison-card layout used by every reciprocity
+    /// state (no correction, formula-derived, beyond source range,
+    /// table-based exact/estimated/extrapolated, …). The legacy
+    /// `compactValue` / `compactPair` variants were removed so every
+    /// case reads the same shape: Adjusted / Corrected / Status.
     case comparison
 }
 
@@ -99,6 +217,28 @@ struct FilmModeDetailsCurrentResultState: Equatable {
     let layout: FilmModeDetailsCurrentResultLayout
     let adjustedShutter: FilmModeDetailsCurrentResultValueState
     let correctedExposure: FilmModeDetailsCurrentResultValueState
+    /// Short, fixed-vocabulary status string rendered next to the
+    /// active values. Replaces the big top heading so every case
+    /// surfaces the same shape: Adjusted / Corrected / Status.
+    let statusText: String
+    /// Tone used to color the status text. Mirrors the summary tone
+    /// so the colour cue stays consistent if both surfaces show the
+    /// same row.
+    let statusTone: FilmModeReciprocityStateTone
+
+    init(
+        layout: FilmModeDetailsCurrentResultLayout,
+        adjustedShutter: FilmModeDetailsCurrentResultValueState,
+        correctedExposure: FilmModeDetailsCurrentResultValueState,
+        statusText: String = "",
+        statusTone: FilmModeReciprocityStateTone = .measured
+    ) {
+        self.layout = layout
+        self.adjustedShutter = adjustedShutter
+        self.correctedExposure = correctedExposure
+        self.statusText = statusText
+        self.statusTone = statusTone
+    }
 }
 
 struct FilmModeDetailsGraphDisplayState: Equatable {
@@ -129,6 +269,52 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// extrapolation of the formula curve. `nil` for profiles without
     /// a threshold rule (HP5 Plus etc.).
     let noCorrectionRangeUpperBoundSeconds: Double?
+    /// Open-ring markers (with adjacent labels) showing manufacturer
+    /// source reference points that anchor a formula curve (e.g.
+    /// Provia 100F's 240 s +1/3 stop reference). Distinct from
+    /// `sourcePoints` (which holds the formula sample curve) so the
+    /// user can read a single published data point versus the
+    /// predicted curve passing through it. 480 s "not recommended"
+    /// boundary entries are never placed here — see
+    /// `notRecommendedBoundarySeconds`.
+    let sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference]
+    /// Metered-exposure x-position at which the manufacturer signals
+    /// "not recommended" (e.g. Provia 100F's 480 s). Drives the red
+    /// dashed vertical boundary distinct from the source-reference
+    /// markers above.
+    let notRecommendedBoundarySeconds: Double?
+    /// Metered-exposure x at which the manufacturer-published source
+    /// range ends. Drives the persistent pink shading on converted
+    /// formula graphs (everything to the right is the formula's
+    /// extrapolation past the published reference). `nil` for
+    /// profiles without a defined source range upper bound.
+    let beyondSourceRangeStartSeconds: Double?
+    /// User-facing formula expression rendered next to the graph
+    /// (e.g. "Tc = 128 × (Tm / 128)^1.3676") so the curve is read
+    /// alongside its equation. `nil` for table graphs.
+    let formulaDisplayText: String?
+    /// Descriptive bullet-style notes shown below the graph when the
+    /// profile pairs a formula curve with manufacturer source-evidence
+    /// markers and a not-recommended boundary. Empty when nothing
+    /// extra needs to be called out, in which case the view falls back
+    /// to the state-aware caption.
+    let descriptionLines: [String]
+    /// Tier driving `xRange`, `yRange`, and the axis tick set for
+    /// formula graphs. `nil` for table graphs, which keep their
+    /// existing data-fitted ranges and tick selection.
+    let scaleTier: FilmModeDetailsGraphScaleTier?
+    /// `true` when the current input (or its corrected exposure)
+    /// exceeds the `t3` upper bound, i.e. > 100h. The graph stays
+    /// pinned to `t3` and the view shows an overflow indicator instead
+    /// of expanding the domain.
+    let isBeyondVisibleRange: Bool
+    /// `true` when the current input (or its corrected exposure) sits
+    /// below the active tier's lower bound (1s for every tier). Sub-
+    /// second inputs would otherwise be drawn at the left edge of
+    /// the plot — looking as if they sat on the 1s axis — so the
+    /// view suppresses the marker and surfaces a below-visible-range
+    /// chip instead.
+    let isBelowVisibleRange: Bool
     let xRange: ClosedRange<Double>
     let yRange: ClosedRange<Double>
 
@@ -148,6 +334,14 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
         supportedRangeUpperBoundSeconds: Double?,
         unsupportedRegionStartSeconds: Double?,
         noCorrectionRangeUpperBoundSeconds: Double? = nil,
+        sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference] = [],
+        notRecommendedBoundarySeconds: Double? = nil,
+        beyondSourceRangeStartSeconds: Double? = nil,
+        formulaDisplayText: String? = nil,
+        descriptionLines: [String] = [],
+        scaleTier: FilmModeDetailsGraphScaleTier? = nil,
+        isBeyondVisibleRange: Bool = false,
+        isBelowVisibleRange: Bool = false,
         xRange: ClosedRange<Double>,
         yRange: ClosedRange<Double>
     ) {
@@ -166,6 +360,14 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
         self.supportedRangeUpperBoundSeconds = supportedRangeUpperBoundSeconds
         self.unsupportedRegionStartSeconds = unsupportedRegionStartSeconds
         self.noCorrectionRangeUpperBoundSeconds = noCorrectionRangeUpperBoundSeconds
+        self.sourceReferenceMarkers = sourceReferenceMarkers
+        self.notRecommendedBoundarySeconds = notRecommendedBoundarySeconds
+        self.beyondSourceRangeStartSeconds = beyondSourceRangeStartSeconds
+        self.formulaDisplayText = formulaDisplayText
+        self.descriptionLines = descriptionLines
+        self.scaleTier = scaleTier
+        self.isBeyondVisibleRange = isBeyondVisibleRange
+        self.isBelowVisibleRange = isBelowVisibleRange
         self.xRange = xRange
         self.yRange = yRange
     }

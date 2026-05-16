@@ -819,8 +819,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "kodak-tmax-100-official-table"
-          - name: "Official table"
+          - id: "kodak-tmax-100-official-formula"
+          - name: "Official log-log formula fit through published 10/100 sec corrected times"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -841,64 +841,73 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No exposure adjustment required from 1/1000 sec to 1/10 sec per the published data sheet."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 3 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 1.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(1.0)
-                              - some: 1.0
-                            - correctedSeconds: 1.2599210498948732
-                            - isApproximate: true
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.3333333333333333
-                    ▿ notes: 1 element
-                      - "Source publishes +1/3 stop at 1 sec without a corrected time; the corrected time is derived (1 sec × 2^(1/3) ≈ 1.26 sec) so this anchor joins the same log-log estimation family as the 10 sec / 100 sec rows."
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 10.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.5
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(10.0)
-                              - some: 10.0
-                            - correctedSeconds: 15.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 100.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 1.0
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(100.0)
-                              - some: 100.0
-                            - correctedSeconds: 200.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 0.100001, maximumSeconds: Optional(100.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 0.100001
+                    ▿ maximumSeconds: Optional(100.000001)
+                      - some: 100.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.0966
+                  ▿ coefficient: Optional(1.249)
+                    - some: 1.249
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 0.1 × (Tm / 0.1)^P")
+                    - some: "Tc = 0.1 × (Tm / 0.1)^P"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = 0.1 × (Tm / 0.1)^P, P ≈ 1.0966. Threshold-anchored constrained log-log fit through the 1/10 sec no-correction boundary and Kodak\'s published 10 sec → 15 sec / 100 sec → 200 sec corrected-time rows. The 1 sec +1/3 stop row is preserved as source evidence (stop delta only — Kodak publishes no corrected time at 1 sec, so the catalog does not synthesize one) and does not act as a fitting point; the 1/10,000 sec short-exposure guidance is preserved as a profile note and deliberately excluded from the long-exposure curve. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
           ▿ notes: 2 elements
             - "Source data sheet states no exposure adjustment is required from 1/1,000 sec to 1/10 sec."
-            - "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the launch reciprocity catalog scopes long-exposure data only and preserves this fact as a note rather than a quantified anchor."
+            - "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity formula deliberately excludes that short-exposure anchor — it is preserved as a profile-level note only."
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 3 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 1.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.3333333333333333
+              ▿ notes: 1 element
+                - "1 sec → +1/3 stop. Source publishes only the stop delta; the derived corrected time (≈ 1.26 sec) tracks the formula curve within ~1/80 stop, so this row is kept as source evidence rather than a fitting point."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 10.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.5
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(10.0)
+                        - some: 10.0
+                      - correctedSeconds: 15.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "10 sec → +1/2 stop, corrected 15 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 100.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 1.0
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(100.0)
+                        - some: 100.0
+                      - correctedSeconds: 200.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "100 sec → +1 stop, corrected 200 sec."
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-tmax-400"

@@ -2,10 +2,11 @@ import Foundation
 import XCTest
 @testable import PTimer
 
-/// Shared fixtures for the per-film formula-profile test suites
-/// (Velvia 50, Velvia 100, Acros II). Kept in one place so each
-/// per-film test file can stay focused on its own behavior contract
-/// without duplicating the catalog-lookup and display-state plumbing.
+/// Shared fixtures for the per-film formula-profile test suites.
+/// Kept in one place so each per-film test file (Velvia 50,
+/// Velvia 100, Acros II, Tri-X 400, T-MAX 100, T-MAX 400, …) can
+/// stay focused on its own behavior contract without duplicating
+/// the catalog-lookup and display-state plumbing.
 enum FormulaProfileTestSupport {
 
     static func profile(

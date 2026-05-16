@@ -270,15 +270,15 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeReferenceShowsBothStopAndCorrectedTimeForKodakTMax100() throws {
-        // Reference panel rule: when a row carries both a stop
-        // correction and an adjusted/corrected time, show both —
-        // neither half of the source publication should be hidden by
-        // a "first match wins" formatter. T-MAX 100 1s carries a
-        // catalog-derived corrected time (the source publishes only
-        // the +1/3 stop), so the formatter renders it with an "≈"
-        // prefix to distinguish it from published values like the
-        // 15s at 10 sec or 200s at 100 sec.
+    func testFilmModeSourceReferenceShowsBothStopAndCorrectedTimeForKodakTMax100() throws {
+        // Source reference panel rule for converted formula profiles:
+        // when a row carries both a stop correction and a published
+        // corrected time, show both. Kodak's T-MAX 100 publishes a
+        // corrected time at 10 sec (15 sec) and 100 sec (200 sec) so
+        // both rows render the combined "stop · corrected" column.
+        // The 1 sec row publishes only the +1/3 stop delta, so the
+        // catalog does not synthesize a corrected time — that row
+        // shows the stop delta alone.
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
 
@@ -287,19 +287,26 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Reference" }))
+        let referenceSection = try XCTUnwrap(details.sections.first(where: { $0.title == "Source reference" }))
         let referenceText = try XCTUnwrap(referenceSection.rows.first?.value)
 
-        // Source-published anchors keep their corrected time without
-        // an "≈" marker. The existing app style renders stop deltas as
-        // decimals (e.g. "+0.5 stops") rather than fractions, so the
-        // combined column reads "<stop> · <time>" using that style.
         XCTAssertTrue(referenceText.contains("+0.5 stops · 15s"), "T-MAX 100 10s row must show '+0.5 stops · 15s'. Got:\n\(referenceText)")
         XCTAssertTrue(referenceText.contains("+1 stop · 200s"), "T-MAX 100 100s row must show '+1 stop · 200s'. Got:\n\(referenceText)")
-        // The 1s row's corrected time was derived from +0.33 stops
-        // (the policy-compatible logLog anchoring fix), so it must
-        // read with the approximate marker.
-        XCTAssertTrue(referenceText.contains("+0.33 stops · ≈"), "T-MAX 100 1s row must mark its derived corrected time with '≈'. Got:\n\(referenceText)")
+        let oneSecLine = try XCTUnwrap(
+            referenceText.split(separator: "\n").map(String.init).first(where: { line in
+                let prefix = line.prefix(while: { !$0.isWhitespace })
+                return prefix == "1s"
+            }),
+            "T-MAX 100 1s source-evidence row must surface in the Source reference block; got:\n\(referenceText)"
+        )
+        XCTAssertTrue(
+            oneSecLine.contains("+0.33 stop"),
+            "T-MAX 100 1s row must surface the published +1/3 stop delta; got: \(oneSecLine)"
+        )
+        XCTAssertFalse(
+            oneSecLine.contains("·"),
+            "T-MAX 100 1s row publishes stop delta only; the formatter must not synthesize a corrected-time column for it; got: \(oneSecLine)"
+        )
     }
 
     @MainActor

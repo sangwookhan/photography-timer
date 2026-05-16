@@ -262,15 +262,11 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 0.5, accuracy: 0.000001)
     }
 
-    func testKodakTMax100TableProfileQuantifiesInsidePublishedRange() throws {
-        // Regression: T-MAX 100 used to mix estimation families across its
-        // table rows (1s as stopSpace, 10s/100s as logLog) which caused
-        // ReciprocityCalculationPolicyEvaluator.estimate to return nil for
-        // any metered value bracketed by mixed-family anchors, rendering
-        // the full [1 sec, 10 sec] segment unsupported even though it sits
-        // squarely inside Kodak's published table. The catalog now derives
-        // the corrected time at 1 sec from the source's +1/3 stop so every
-        // anchor joins the same logLog family — same shape as TRI-X 400.
+    func testKodakTMax100FormulaProfileQuantifiesInsidePublishedRange() throws {
+        // T-MAX 100 is now formula-based; inputs inside the source-
+        // backed long-exposure range stay quantified with
+        // basis = .formulaDerived and the formula curve passes near
+        // Kodak's published rows.
         let tmax100 = try XCTUnwrap(film(named: "T-MAX 100"))
         let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -278,14 +274,11 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         guard case let .quantified(payload) = result else {
             return XCTFail("T-MAX 100 at 4 sec must produce a quantified result, got \(result).")
         }
-        XCTAssertEqual(
-            payload.metadata.basis,
-            .interpolatedWithinTable,
-            "4 sec sits between the 1 sec and 10 sec table anchors, so it must interpolate."
-        )
-        // 1.2599 (1 sec corrected) → 15 (10 sec corrected) log-log slope
-        // ≈ 1.0757. At metered = 4 sec, corrected ≈ 5.60 sec.
-        XCTAssertEqual(payload.correctedExposureSeconds, 5.60, accuracy: 0.05)
+        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
+        // Threshold-anchored log-log fit through Kodak's published
+        // 10 sec / 100 sec corrected times predicts ≈ 5.7 sec at
+        // metered = 4 sec.
+        XCTAssertEqual(payload.correctedExposureSeconds, 5.7, accuracy: 0.2)
     }
 
     func testKodakBlackAndWhiteFilmsPreserveNoCorrectionThresholdBand() throws {

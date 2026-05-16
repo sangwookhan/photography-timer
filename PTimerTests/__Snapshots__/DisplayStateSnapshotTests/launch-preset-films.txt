@@ -1288,8 +1288,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "fujifilm-acros-ii-official-table"
-          - name: "Official long-exposure guidance"
+          - id: "fujifilm-acros-ii-official-formula"
+          - name: "Official constant correction across published 120–1000 s range"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -1305,31 +1305,45 @@
               ▿ threshold: PTimer.ThresholdReciprocityRule
                 ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
                   - minimumSeconds: 0.0
-                  ▿ maximumSeconds: Optional(120.0)
-                    - some: 120.0
+                  ▿ maximumSeconds: Optional(119.999999)
+                    - some: 119.999999
                 - adjustments: 0 elements
                 ▿ notes: 1 element
-                  - "No correction required for exposures of 120 sec or less."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 1 element
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.range
-                      ▿ range: PTimer.ReciprocityTimeRange
-                        - minimumSeconds: 120.0
-                        ▿ maximumSeconds: Optional(1000.0)
-                          - some: 1000.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.5
-                    ▿ notes: 1 element
-                      - "120 to 1000 sec → +1/2 stop."
-                - notes: 0 elements
+                  - "No correction required for exposures below 120 sec."
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 120.0, maximumSeconds: Optional(1000.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 120.0
+                    ▿ maximumSeconds: Optional(1000.000001)
+                      - some: 1000.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.0
+                  ▿ coefficient: Optional(1.4142135623730951)
+                    - some: 1.4142135623730951
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = √2 × Tm")
+                    - some: "Tc = √2 × Tm"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = √2 × Tm (constant +1/2 stop). Encodes Fujifilm\'s published 120–1000 sec range guidance verbatim. Above 1000 sec the same +1/2 stop continues as numeric continuation outside the published source range."
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 1 element
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.range
+                ▿ range: PTimer.ReciprocityTimeRange
+                  - minimumSeconds: 120.0
+                  ▿ maximumSeconds: Optional(1000.0)
+                    - some: 1000.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.5
+              ▿ notes: 1 element
+                - "120 to 1000 sec → +1/2 stop."
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-velvia-50"

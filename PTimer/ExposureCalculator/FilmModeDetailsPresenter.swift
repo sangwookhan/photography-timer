@@ -1557,13 +1557,20 @@ struct FilmModeDetailsPresenter {
 
         switch formula.kind {
         case .exponentPower:
-            if let equation = normalizedDetailText(formula.equation),
-               let substitutedEquation = substituteFormulaPlaceholder(
-                in: equation,
-                placeholder: "P",
-                replacement: formattedExponent
-               ) {
-                return substitutedEquation
+            if let equation = normalizedDetailText(formula.equation) {
+                if let substitutedEquation = substituteFormulaPlaceholder(
+                    in: equation,
+                    placeholder: "P",
+                    replacement: formattedExponent
+                ) {
+                    return substitutedEquation
+                }
+                // Profiles whose equation does not parameterize the
+                // exponent (e.g. constant-multiplier forms) render
+                // verbatim. Falling through to "Tc = Tm^N" here would
+                // misrepresent a formula like "Tc = √2 × Tm" as
+                // "Tc = Tm^1".
+                return equation
             }
 
             return "Tc = Tm^\(formattedExponent)"
@@ -1625,7 +1632,13 @@ struct FilmModeDetailsPresenter {
         let lowerBound = rule.noCorrectionRange.minimumSeconds
 
         if lowerBound <= 0, let upperBound {
-            return ["<= \(formatDuration(upperBound))", "No correction range"]
+            return [
+                sourceReferenceThresholdUpperBoundLabel(
+                    for: upperBound,
+                    formatDuration: formatDuration
+                ),
+                "No correction range",
+            ]
         }
 
         if let upperBound {
@@ -1633,6 +1646,26 @@ struct FilmModeDetailsPresenter {
         }
 
         return [">= \(formatDuration(lowerBound))", "No correction range"]
+    }
+
+    /// Upper-bound label for the Source reference threshold row.
+    /// Threshold rules that sit one ε below a round value (e.g. Acros
+    /// II's 119.999999, used so the +1/2 stop formula fires at
+    /// exactly 120 s) render as strict "< 120s" rather than the
+    /// literal "<= 119.999999s". Rules whose upper bound is the round
+    /// value itself (Provia 100F's 128 s, Velvia 50's 1 s) keep the
+    /// inclusive "<= X" wording so the boundary value still reads as
+    /// no-correction.
+    private func sourceReferenceThresholdUpperBoundLabel(
+        for upperBound: Double,
+        formatDuration: (Double) -> String
+    ) -> String {
+        let ceiling = ceil(upperBound)
+        let gap = ceiling - upperBound
+        if gap > 0, gap < 1e-3 {
+            return "< \(formatDuration(ceiling))"
+        }
+        return "<= \(formatDuration(upperBound))"
     }
 
     private func compactTableEntryReferenceColumns(

@@ -1495,8 +1495,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "fujifilm-acros-ii-official-table",
-        "name": "Official long-exposure guidance",
+        "id": "fujifilm-acros-ii-official-formula",
+        "name": "Official constant correction across published 120\u20131000 s range",
         "notes": [],
         "rules": [
           {
@@ -1504,44 +1504,32 @@
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 120,
+                "maximumSeconds": 119.999999,
                 "minimumSeconds": 0
               },
               "notes": [
-                "No correction required for exposures of 120 sec or less."
+                "No correction required for exposures below 120 sec."
               ]
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "kind": "range",
-                    "range": {
-                      "maximumSeconds": 1000,
-                      "minimumSeconds": 120
-                    }
-                  },
-                  "notes": [
-                    "120 to 1000 sec \u2192 +1/2 stop."
-                  ]
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.4142135623730951,
+                "equation": "Tc = \u221a2 \u00d7 Tm",
+                "exponent": 1,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 1000.000001,
+                "minimumSeconds": 120
+              },
+              "notes": [
+                "Tc = \u221a2 \u00d7 Tm (constant +1/2 stop). Encodes Fujifilm's published 120\u20131000 sec range guidance verbatim. Above 1000 sec the same +1/2 stop continues as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1551,7 +1539,32 @@
           "kind": "manufacturerPublished",
           "publisher": "Fujifilm",
           "title": "NEOPAN 100 ACROS II \u2014 Reciprocity guidance"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "kind": "range",
+              "range": {
+                "maximumSeconds": 1000,
+                "minimumSeconds": 120
+              }
+            },
+            "notes": [
+              "120 to 1000 sec \u2192 +1/2 stop."
+            ]
+          }
+        ]
       }
     ]
   },

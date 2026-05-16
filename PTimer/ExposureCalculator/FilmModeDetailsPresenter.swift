@@ -137,7 +137,7 @@ struct FilmModeDetailsPresenter {
             }
             return "Current input is outside the supported range and no quantified corrected point is available."
         case .advisoryOnly:
-            return "No published quantified correction is available beyond this range."
+            return "No official quantified prediction is available beyond this range."
         case .exact, .estimated, .extrapolated:
             return nil
         }
@@ -174,7 +174,7 @@ struct FilmModeDetailsPresenter {
 
         switch presentation.category {
         case .advisoryOnly:
-            return "No quantified correction"
+            return "No quantified prediction"
         case .unsupported:
             // Converted formula profiles (formula + source evidence)
             // surface as "Beyond source range" — the

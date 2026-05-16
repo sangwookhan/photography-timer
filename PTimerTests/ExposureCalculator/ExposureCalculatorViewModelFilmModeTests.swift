@@ -372,7 +372,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
         XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-1s    No correction"])
-        XCTAssertEqual(details.summary.badgeText, "No quantified correction")
+        XCTAssertEqual(details.summary.badgeText, "No quantified prediction")
         XCTAssertEqual(details.summary.summaryText, "Beyond published no-correction range")
         // Every case shares the same comparison-card layout now,
         // including this advisory-only path.
@@ -657,7 +657,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.summary.badgeText, "Beyond source range")
         XCTAssertEqual(details.summary.summaryText, "Beyond source range")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "17:04")
-        XCTAssertNotEqual(details.currentResult.correctedExposure.valueText, "No quantified correction")
+        XCTAssertNotEqual(details.currentResult.correctedExposure.valueText, "No quantified prediction")
         XCTAssertEqual(details.sections.map(\.title), ["Source reference", "Sources"])
     }
 
@@ -1212,7 +1212,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 15, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "No quantified correction")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "No quantified prediction")
         XCTAssertEqual(resultState.reciprocityState.tone, .advisory)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 15, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
@@ -1226,7 +1226,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             "Timer unavailable because this corrected result is non-quantified"
         )
         XCTAssertEqual(resultState.correctedExposure.primaryText, "No corrected value")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "No published quantified correction is available for this metered exposure.")
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "No official quantified prediction is available for this metered exposure.")
         XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)

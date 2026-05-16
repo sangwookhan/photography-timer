@@ -98,8 +98,11 @@ final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
         }
 
         XCTAssertEqual(comparison.label, "Corrected Exposure")
-        XCTAssertEqual(comparison.seconds, 2, accuracy: 0.0001)
-        XCTAssertEqual(stopDifference.stops, 1, accuracy: 0.001)
+        // Tri-X 400's free log-log formula fit lands at 2.014 s at
+        // Tm = 1 s; the comparison and stop difference inherit that
+        // sub-1/50-stop drift from Kodak's published 2 s row.
+        XCTAssertEqual(comparison.seconds, 2, accuracy: 0.05)
+        XCTAssertEqual(stopDifference.stops, 1, accuracy: 0.02)
         XCTAssertEqual(stopDifference.kind, .longerThanComparison)
     }
 

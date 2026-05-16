@@ -985,6 +985,17 @@ struct FilmModeDetailsPresenter {
         meteredExposureSeconds: Double,
         adjustments: [ReciprocityAdjustment]
     ) -> Double? {
+        // Prefer the published correctedTime when the row carries
+        // both forms: Kodak (and several other manufacturers) publish
+        // the stop delta as a rounded quick-reference alongside a
+        // separately-published corrected time, and those two values
+        // can disagree by up to a third of a stop (e.g. Tri-X 400's
+        // 10 sec row publishes "+2 stops" and "50 sec" even though
+        // +2 stops literally derives to 40 sec). Returning the
+        // stop-delta derivation here would plot the source-reference
+        // marker at the wrong y-coordinate.
+        var stopAdjustment: StopDeltaAdjustment?
+        var multiplierAdjustment: MultiplierAdjustment?
         for adjustment in adjustments {
             guard case let .exposure(exposureAdjustment) = adjustment else {
                 continue
@@ -992,11 +1003,17 @@ struct FilmModeDetailsPresenter {
             switch exposureAdjustment {
             case .correctedTime(let mapping):
                 return mapping.correctedSeconds
-            case .stopDelta(let stopAdjustment):
-                return meteredExposureSeconds * pow(2, stopAdjustment.stopDelta)
-            case .multiplier(let multiplierAdjustment):
-                return meteredExposureSeconds * multiplierAdjustment.factor
+            case .stopDelta(let value):
+                if stopAdjustment == nil { stopAdjustment = value }
+            case .multiplier(let value):
+                if multiplierAdjustment == nil { multiplierAdjustment = value }
             }
+        }
+        if let stopAdjustment {
+            return meteredExposureSeconds * pow(2, stopAdjustment.stopDelta)
+        }
+        if let multiplierAdjustment {
+            return meteredExposureSeconds * multiplierAdjustment.factor
         }
         return nil
     }

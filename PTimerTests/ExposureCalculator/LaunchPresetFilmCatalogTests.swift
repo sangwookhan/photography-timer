@@ -288,41 +288,49 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 5.60, accuracy: 0.05)
     }
 
-    func testKodakTMax100FollowsTriXLikeThresholdAndExtrapolationPath() throws {
-        // T-MAX 100 must walk the same evaluation path as TRI-X 400:
-        //   1. metered values inside the no-correction threshold band stay
-        //      as officialThresholdNoCorrection (corrected = metered).
-        //   2. metered values past the last published anchor (100 sec)
-        //      extrapolate via the same extrapolatedBeyondTable basis the
-        //      other Kodak black-and-white tables use.
-        let tmax100 = try XCTUnwrap(film(named: "T-MAX 100"))
-        let trix = try XCTUnwrap(film(named: "Tri-X 400"))
+    func testKodakBlackAndWhiteFilmsPreserveNoCorrectionThresholdBand() throws {
+        // Every Kodak B/W formula profile must keep its published
+        // no-correction threshold band intact: inside the band the
+        // result stays quantified with
+        // basis = .officialThresholdNoCorrection and corrected =
+        // metered.
         let evaluator = ReciprocityCalculationPolicyEvaluator()
-
-        let thresholdResult = evaluator.evaluate(profile: tmax100.profiles[0], meteredExposureSeconds: 0.05)
-        guard case let .quantified(thresholdPayload) = thresholdResult else {
-            return XCTFail("T-MAX 100 at 0.05 sec (inside no-correction band) must be quantified, got \(thresholdResult).")
-        }
-        XCTAssertEqual(thresholdPayload.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(thresholdPayload.correctedExposureSeconds, 0.05, accuracy: 0.000001)
-
-        let extrapolated = evaluator.evaluate(profile: tmax100.profiles[0], meteredExposureSeconds: 200)
-        let trixExtrapolated = evaluator.evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1500)
-        guard case let .quantified(extrapPayload) = extrapolated,
-              case let .quantified(trixPayload) = trixExtrapolated else {
-            return XCTFail(
-                """
-                Beyond the last published anchor T-MAX 100 must follow the same
-                extrapolation path as TRI-X 400. T-MAX = \(extrapolated), TRI-X = \(trixExtrapolated).
-                """
+        for stock in ["Tri-X 400", "T-MAX 100", "T-MAX 400"] {
+            let film = try XCTUnwrap(self.film(named: stock))
+            let thresholdMetered: Double
+            switch stock {
+            case "T-MAX 100":
+                thresholdMetered = 0.05
+            default:
+                thresholdMetered = 0.25
+            }
+            let thresholdResult = evaluator.evaluate(
+                profile: film.profiles[0],
+                meteredExposureSeconds: thresholdMetered
             )
+            guard case let .quantified(thresholdPayload) = thresholdResult else {
+                return XCTFail("\(stock) at \(thresholdMetered) sec must remain quantified inside the no-correction band, got \(thresholdResult).")
+            }
+            XCTAssertEqual(thresholdPayload.metadata.basis, .officialThresholdNoCorrection)
+            XCTAssertEqual(thresholdPayload.correctedExposureSeconds, thresholdMetered, accuracy: 1e-6)
         }
-        XCTAssertEqual(
-            extrapPayload.metadata.basis,
-            trixPayload.metadata.basis,
-            "T-MAX 100 and TRI-X 400 must share the same extrapolation basis past their final anchors."
-        )
-        XCTAssertEqual(extrapPayload.metadata.basis, .extrapolatedBeyondTable)
+    }
+
+    func testKodakTriX400FormulaExtrapolatesBeyond100SecondsAsUnsupportedNumeric() throws {
+        // Tri-X 400 is now formula-based; inputs above the published
+        // 100 sec upper anchor land on the same curve as a numeric
+        // continuation outside the published source range
+        // (basis = .unsupportedOutOfPolicyRange with a non-nil
+        // corrected exposure).
+        let trix = try XCTUnwrap(film(named: "Tri-X 400"))
+        let result = ReciprocityCalculationPolicyEvaluator()
+            .evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1500)
+
+        guard case let .unsupported(payload) = result else {
+            return XCTFail("Expected unsupported (formula-extrapolated) result past Tri-X 400's published range, got \(result).")
+        }
+        XCTAssertEqual(payload.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
     func testLaunchCatalogTableAnchorsAreFamilyConsistent() throws {
@@ -378,16 +386,19 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         return nil
     }
 
-    func testKodakTriXTableProfileReturnsExactRow() throws {
+    func testKodakTriXFormulaProfileTracksPublished1SecondRow() throws {
+        // Tri-X 400 is now formula-based; the published 1 sec row
+        // (+1 stop, corrected 2 sec) is preserved as source evidence
+        // and the formula's free LSQ fit tracks it within ~0.01 stop.
         let trix = try XCTUnwrap(film(named: "Tri-X 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1)
 
         guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified table result, got \(result).")
+            return XCTFail("Expected quantified formula result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 0.000001)
+        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
+        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 0.05)
     }
 
     func testKodakColorNegativeAdvisoryBeyondThreshold() throws {

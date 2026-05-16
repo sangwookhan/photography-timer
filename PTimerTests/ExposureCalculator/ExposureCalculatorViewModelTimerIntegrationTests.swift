@@ -21,11 +21,14 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "Tri-X 400 - 2s")
+        // Tri-X 400's free log-log formula fit lands at 2.014 s at
+        // Tm = 1 s (within ~1/100 stop of Kodak's published 2 s row);
+        // the duration formatter renders that as "2.0s".
+        XCTAssertEqual(timer.duration, 2, accuracy: 0.05)
+        XCTAssertEqual(timer.name, "Tri-X 400 - 2.0s")
         XCTAssertEqual(
             timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2s"
+            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2.0s"
         )
     }
 

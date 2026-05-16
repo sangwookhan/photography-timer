@@ -161,14 +161,21 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
 
     // MARK: - Tri-X 400
 
-    func testTriX400ReferenceDataKeepsDevelopmentRowsWithMeteredContext() throws {
+    func testTriX400SourceReferenceKeepsDevelopmentRowsWithMeteredContext() throws {
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
         XCTAssertFalse(displayState.sections.contains(where: { $0.title == "Additional Guidance" }))
+        XCTAssertFalse(
+            displayState.sections.contains(where: { $0.title == "Reference" }),
+            "Converted Tri-X 400 must not surface the legacy Reference section."
+        )
 
-        let referenceSection = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Reference" }))
-        let block = try XCTUnwrap(referenceSection.rows.first?.value)
+        let sourceReferenceSection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Source reference" }),
+            "Converted Tri-X 400 must surface a Source reference section carrying the published rows."
+        )
+        let block = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
         let lines = block.split(separator: "\n").map(String.init)
 
         let devLines = lines.filter { $0.contains("Dev ") }

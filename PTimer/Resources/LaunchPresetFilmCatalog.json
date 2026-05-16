@@ -730,8 +730,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tri-x-official-table",
-        "name": "Official table",
+        "id": "kodak-tri-x-official-formula",
+        "name": "Official log-log formula fit through published 1/10/100 sec rows",
         "notes": [],
         "rules": [
           {
@@ -739,125 +739,32 @@
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 1,
+                "maximumSeconds": 0.999999,
                 "minimumSeconds": 0
               },
               "notes": [
-                "No correction required at 1 second or less."
+                "No correction required below 1 sec. Kodak's published guidance starts at 1 sec (+1 stop, corrected 2 sec)."
               ]
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 2,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "development": {
-                        "instruction": "-10% development"
-                      },
-                      "kind": "development"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 2
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 50,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "development": {
-                        "instruction": "-20% development"
-                      },
-                      "kind": "development"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 3
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1200,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "development": {
-                        "instruction": "-30% development"
-                      },
-                      "kind": "development"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 2.013654,
+                "equation": "Tc = 2.0137 \u00d7 Tm^P",
+                "exponent": 1.3891,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 1
+              },
               "notes": [
-                "Table data stays table-shaped rather than converted to a formula."
+                "Tc = 2.0137 \u00d7 Tm^P, P \u2248 1.3891. Free log-log least squares fit through Kodak's published corrected-time rows (1 sec \u2192 2 sec, 10 sec \u2192 50 sec, 100 sec \u2192 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to \u2248 2 sec, matching Kodak's published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
               ]
-            }
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -867,7 +774,117 @@
           "kind": "manufacturerPublished",
           "publisher": "Kodak",
           "title": "KODAK PROFESSIONAL TRI-X 400 Film \u2014 Technical Data"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-10% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 +1 stop, corrected 2 sec, develop -10%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-20% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +2 stops, corrected 50 sec, develop -20%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1200,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-30% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 +3 stops, corrected 1200 sec, develop -30%."
+            ]
+          }
+        ]
       }
     ]
   },

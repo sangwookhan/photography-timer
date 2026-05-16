@@ -948,20 +948,24 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             "Source-less formula profiles must not be classified as converted."
         )
 
-        let triX = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Tri-X 400" }?.profiles.first
+        let fomapan100 = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Fomapan 100 Classic" }?.profiles.first
         )
         XCTAssertFalse(
-            triX.isConvertedFormulaProfile,
+            fomapan100.isConvertedFormulaProfile,
             "Table-based profiles without a formula rule must not be classified as converted."
         )
     }
 
     @MainActor
-    func testTriX400TableProfileKeepsExistingWordingAndAxisTicks() throws {
+    func testFomapan100TableProfileKeepsExistingWordingAndAxisTicks() throws {
+        // Fomapan 100 Classic still uses the table-based path; this
+        // pins that the converted-profile wording remains scoped to
+        // formula profiles with sourceEvidence, so unrelated table
+        // films do not silently inherit the new vocabulary.
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Tri-X 400" },
-            "Tri-X 400 must remain in the launch catalog."
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Fomapan 100 Classic" },
+            "Fomapan 100 Classic must remain in the launch catalog."
         )
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
@@ -988,13 +992,13 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         )
 
         let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertEqual(graph.kind, .table, "Tri-X 400 must keep the table graph path.")
+        XCTAssertEqual(graph.kind, .table, "Fomapan 100 Classic must keep the table graph path.")
         XCTAssertNil(graph.scaleTier, "Table graphs must not be forced onto the formula tier policy.")
         XCTAssertFalse(graph.isBeyondVisibleRange)
 
-        // Tri-X 400 outside-table summary wording must continue to
-        // use the legacy reference-data phrasing — the source-range
-        // rewording is scoped to converted formula profiles only.
+        // Non-converted table profiles must not pick up the
+        // source-range wording — that vocabulary is scoped to
+        // converted formula profiles with sourceEvidence.
         XCTAssertFalse(
             displayState.summary.summaryText.lowercased().contains("source range"),
             "Non-converted table profiles must not pick up source-range wording; got: \(displayState.summary.summaryText)"

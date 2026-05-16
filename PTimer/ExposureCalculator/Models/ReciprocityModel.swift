@@ -248,7 +248,7 @@ final class ReciprocityModel {
                 kind: .advisory,
                 correctedExposureSeconds: nil,
                 primaryText: "No corrected value",
-                secondaryText: "No published quantified correction is available for this metered exposure.",
+                secondaryText: "No official quantified prediction is available for this metered exposure.",
                 usesNumericExposure: false
             )
         case .unsupported:

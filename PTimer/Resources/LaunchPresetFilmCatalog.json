@@ -730,8 +730,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tri-x-official-table",
-        "name": "Official table",
+        "id": "kodak-tri-x-official-formula",
+        "name": "Official log-log formula fit through published 1/10/100 sec rows",
         "notes": [],
         "rules": [
           {
@@ -739,125 +739,32 @@
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 1,
+                "maximumSeconds": 0.999999,
                 "minimumSeconds": 0
               },
               "notes": [
-                "No correction required at 1 second or less."
+                "No correction required below 1 sec. Kodak's published guidance starts at 1 sec (+1 stop, corrected 2 sec)."
               ]
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 2,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "development": {
-                        "instruction": "-10% development"
-                      },
-                      "kind": "development"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 2
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 50,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "development": {
-                        "instruction": "-20% development"
-                      },
-                      "kind": "development"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 3
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1200,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "development": {
-                        "instruction": "-30% development"
-                      },
-                      "kind": "development"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 2.013654,
+                "equation": "Tc = 2.0137 \u00d7 Tm^P",
+                "exponent": 1.3891,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 1
+              },
               "notes": [
-                "Table data stays table-shaped rather than converted to a formula."
+                "Tc = 2.0137 \u00d7 Tm^P, P \u2248 1.3891. Free log-log least squares fit through Kodak's published corrected-time rows (1 sec \u2192 2 sec, 10 sec \u2192 50 sec, 100 sec \u2192 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to \u2248 2 sec, matching Kodak's published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
               ]
-            }
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -867,7 +774,117 @@
           "kind": "manufacturerPublished",
           "publisher": "Kodak",
           "title": "KODAK PROFESSIONAL TRI-X 400 Film \u2014 Technical Data"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-10% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 +1 stop, corrected 2 sec, develop -10%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-20% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +2 stops, corrected 50 sec, develop -20%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1200,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-30% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 +3 stops, corrected 1200 sec, develop -30%."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -885,11 +902,11 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tmax-100-official-table",
-        "name": "Official table",
+        "id": "kodak-tmax-100-official-formula",
+        "name": "Official log-log formula fit through published 10/100 sec corrected times",
         "notes": [
           "Source data sheet states no exposure adjustment is required from 1/1,000 sec to 1/10 sec.",
-          "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the launch reciprocity catalog scopes long-exposure data only and preserves this fact as a note rather than a quantified anchor."
+          "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity formula deliberately excludes that short-exposure anchor \u2014 it is preserved as a profile-level note only."
         ],
         "rules": [
           {
@@ -906,99 +923,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1.2599210498948732,
-                          "isApproximate": true,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.3333333333333333
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "Source publishes +1/3 stop at 1 sec without a corrected time; the corrected time is derived (1 sec \u00d7 2^(1/3) \u2248 1.26 sec) so this anchor joins the same log-log estimation family as the 10 sec / 100 sec rows."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 15,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 200,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.249,
+                "equation": "Tc = 0.1 \u00d7 (Tm / 0.1)^P",
+                "exponent": 1.0966,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.100001
+              },
+              "notes": [
+                "Tc = 0.1 \u00d7 (Tm / 0.1)^P, P \u2248 1.0966. Threshold-anchored constrained log-log fit through the 1/10 sec no-correction boundary and Kodak's published 10 sec \u2192 15 sec / 100 sec \u2192 200 sec corrected-time rows. The 1 sec +1/3 stop row is preserved as source evidence (stop delta only \u2014 Kodak publishes no corrected time at 1 sec, so the catalog does not synthesize one) and does not act as a fitting point; the 1/10,000 sec short-exposure guidance is preserved as a profile note and deliberately excluded from the long-exposure curve. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1008,7 +949,89 @@
           "kind": "manufacturerPublished",
           "publisher": "Kodak",
           "title": "KODAK PROFESSIONAL T-MAX 100 Film \u2014 Technical Data"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 +1/3 stop. Source publishes only the stop delta; the derived corrected time (\u2248 1.26 sec) tracks the formula curve within ~1/80 stop, so this row is kept as source evidence rather than a fitting point."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 15,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +1/2 stop, corrected 15 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 200,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 +1 stop, corrected 200 sec."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -1026,8 +1049,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tmax-400-official-table",
-        "name": "Official table",
+        "id": "kodak-tmax-400-official-formula",
+        "name": "Official log-log formula fit through published 10/100 sec corrected times",
         "notes": [],
         "rules": [
           {
@@ -1044,68 +1067,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 15,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 300,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1,
+                "equation": "Tc = Tm^P",
+                "exponent": 1.2261,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = Tm^P, P \u2248 1.2261. Threshold-anchored constrained log-log fit through the 1 sec no-correction boundary and Kodak's published 10 sec \u2192 15 sec / 100 sec \u2192 300 sec corrected-time rows. Kodak rounds the published corrected times for practical use, so the curve sits ~1/6 stop above the 10 sec row and ~1/12 stop below the 100 sec row; the markers stay visible as source evidence so users can verify the deviation. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1115,7 +1093,69 @@
           "kind": "manufacturerPublished",
           "publisher": "Kodak",
           "title": "KODAK PROFESSIONAL T-MAX 400 Film \u2014 Technical Data"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 15,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +1/2 stop, corrected 15 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 300,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 +1 1/2 stops, corrected 300 sec."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -1495,8 +1535,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "fujifilm-acros-ii-official-table",
-        "name": "Official long-exposure guidance",
+        "id": "fujifilm-acros-ii-official-formula",
+        "name": "Official constant correction across published 120\u20131000 s range",
         "notes": [],
         "rules": [
           {
@@ -1504,44 +1544,32 @@
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 120,
+                "maximumSeconds": 119.999999,
                 "minimumSeconds": 0
               },
               "notes": [
-                "No correction required for exposures of 120 sec or less."
+                "No correction required for exposures below 120 sec."
               ]
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "kind": "range",
-                    "range": {
-                      "maximumSeconds": 1000,
-                      "minimumSeconds": 120
-                    }
-                  },
-                  "notes": [
-                    "120 to 1000 sec \u2192 +1/2 stop."
-                  ]
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.4142135623730951,
+                "equation": "Tc = \u221a2 \u00d7 Tm",
+                "exponent": 1,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 1000.000001,
+                "minimumSeconds": 120
+              },
+              "notes": [
+                "Tc = \u221a2 \u00d7 Tm (constant +1/2 stop). Encodes Fujifilm's published 120\u20131000 sec range guidance verbatim. Above 1000 sec the same +1/2 stop continues as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1551,7 +1579,32 @@
           "kind": "manufacturerPublished",
           "publisher": "Fujifilm",
           "title": "NEOPAN 100 ACROS II \u2014 Reciprocity guidance"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "kind": "range",
+              "range": {
+                "maximumSeconds": 1000,
+                "minimumSeconds": 120
+              }
+            },
+            "notes": [
+              "120 to 1000 sec \u2192 +1/2 stop."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -1569,8 +1622,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "fujifilm-velvia-50-official-table",
-        "name": "Official table and color guidance",
+        "id": "fujifilm-velvia-50-official-formula",
+        "name": "Official formula anchored to 1 s threshold",
         "notes": [],
         "rules": [
           {
@@ -1587,124 +1640,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.3333333333333333
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 4,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "7.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 8,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.6666666666666666
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "10M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 16,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "12.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 32,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "kind": "warning",
-                      "warning": {
-                        "message": "64 sec is not recommended.",
-                        "severity": "notRecommended"
-                      }
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 64,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1,
+                "equation": "Tc = Tm^P",
+                "exponent": 1.1821,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 64,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = Tm^P, P \u2248 1.1821. Threshold-anchored constrained log-log fit through Fujifilm's published 4/8/16/32 sec source references. 64 sec is not recommended."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1714,7 +1666,129 @@
           "kind": "manufacturerPublished",
           "publisher": "Fujifilm",
           "title": "FUJICHROME Velvia 50 \u2014 Long exposure guide"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec \u2192 +1/3 stop, 5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "7.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec \u2192 +1/2 stop, 7.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.6666666666666666
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "10M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 16,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "16 sec \u2192 +2/3 stop, 10M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "12.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 32,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "32 sec \u2192 +1 stop, 12.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "64 sec is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 64,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
       }
     ]
   },
@@ -1731,8 +1805,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "fujifilm-velvia-100-official-table",
-        "name": "Official table and color guidance",
+        "id": "fujifilm-velvia-100-official-formula",
+        "name": "Official formula anchored to 60 s threshold",
         "notes": [],
         "rules": [
           {
@@ -1749,64 +1823,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.3333333333333333
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "2.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 120,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "2 min \u2192 +1/3 stop, 2.5M."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "2.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 240,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "4 min \u2192 +1/2 stop, 2.5M."
-                  ]
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 0.335603,
+                "equation": "Tc = 60 \u00d7 (Tm / 60)^P",
+                "exponent": 1.2667,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 240.000001,
+                "minimumSeconds": 60.000001
+              },
+              "notes": [
+                "Tc = 60 \u00d7 (Tm / 60)^P, P \u2248 1.2667. Threshold-anchored constrained log-log fit through the 60 s no-correction boundary and Fujifilm's published 2-min (+1/3 stop) and 4-min (+1/2 stop) references. Inputs above 240 sec extrapolate the same curve outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1816,7 +1849,61 @@
           "kind": "manufacturerPublished",
           "publisher": "Fujifilm",
           "title": "FUJICHROME Velvia 100 \u2014 Long exposure guide"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 120,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 min \u2192 +1/3 stop, 2.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 240,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 min \u2192 +1/2 stop, 2.5M."
+            ]
+          }
+        ]
       }
     ]
   },

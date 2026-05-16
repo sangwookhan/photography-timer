@@ -91,6 +91,14 @@
 		A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */; };
 		A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */; };
 		A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */; };
+		A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */; };
+		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
+		A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */; };
+		A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400FormulaProfileTests.swift */; };
+		A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100FormulaProfileTests.swift */; };
+		A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400FormulaProfileTests.swift */; };
+		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
+		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
 		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
 		A00000000000000000000158 /* ExposureScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000159 /* ExposureScale.swift */; };
 		A0000000000000000000015A /* ExposureScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000015B /* ExposureScaleTests.swift */; };
@@ -241,6 +249,14 @@
 		A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidanceCatalogMappingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia50FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcrosIIFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000245 /* TriX400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000247 /* TMax100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000249 /* TMax400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000159 /* ExposureScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScale.swift; sourceTree = "<group>"; };
 		A0000000000000000000015B /* ExposureScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleTests.swift; sourceTree = "<group>"; };
@@ -564,6 +580,14 @@
 				A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */,
 				A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */,
 				A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */,
+				A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */,
+				A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */,
+				A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */,
+				A00000000000000000000245 /* TriX400FormulaProfileTests.swift */,
+				A00000000000000000000247 /* TMax100FormulaProfileTests.swift */,
+				A00000000000000000000249 /* TMax400FormulaProfileTests.swift */,
+				A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */,
+				A00000000000000000000243 /* FormulaProfileTestSupport.swift */,
 				A0000000000000000000011F /* ReciprocityResultLegacyShapeBaselineTests.swift */,
 				A00000000000000000000121 /* ReciprocityResultCodableTests.swift */,
 			);
@@ -818,6 +842,14 @@
 				A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */,
 				A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */,
 				A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */,
+				A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */,
+				A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */,
+				A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */,
+				A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */,
+				A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */,
+				A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */,
+				A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */,
+				A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */,
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
 				A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */,
 				A00000000000000000000128 /* CalculatorModelTests.swift in Sources */,

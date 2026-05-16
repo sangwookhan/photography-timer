@@ -137,7 +137,7 @@ struct FilmModeDetailsPresenter {
             }
             return "Current input is outside the supported range and no quantified corrected point is available."
         case .advisoryOnly:
-            return "No published quantified correction is available beyond this range."
+            return "No official quantified prediction is available beyond this range."
         case .exact, .estimated, .extrapolated:
             return nil
         }
@@ -174,7 +174,7 @@ struct FilmModeDetailsPresenter {
 
         switch presentation.category {
         case .advisoryOnly:
-            return "No quantified correction"
+            return "No quantified prediction"
         case .unsupported:
             // Converted formula profiles (formula + source evidence)
             // surface as "Beyond source range" — the
@@ -985,6 +985,17 @@ struct FilmModeDetailsPresenter {
         meteredExposureSeconds: Double,
         adjustments: [ReciprocityAdjustment]
     ) -> Double? {
+        // Prefer the published correctedTime when the row carries
+        // both forms: Kodak (and several other manufacturers) publish
+        // the stop delta as a rounded quick-reference alongside a
+        // separately-published corrected time, and those two values
+        // can disagree by up to a third of a stop (e.g. Tri-X 400's
+        // 10 sec row publishes "+2 stops" and "50 sec" even though
+        // +2 stops literally derives to 40 sec). Returning the
+        // stop-delta derivation here would plot the source-reference
+        // marker at the wrong y-coordinate.
+        var stopAdjustment: StopDeltaAdjustment?
+        var multiplierAdjustment: MultiplierAdjustment?
         for adjustment in adjustments {
             guard case let .exposure(exposureAdjustment) = adjustment else {
                 continue
@@ -992,11 +1003,17 @@ struct FilmModeDetailsPresenter {
             switch exposureAdjustment {
             case .correctedTime(let mapping):
                 return mapping.correctedSeconds
-            case .stopDelta(let stopAdjustment):
-                return meteredExposureSeconds * pow(2, stopAdjustment.stopDelta)
-            case .multiplier(let multiplierAdjustment):
-                return meteredExposureSeconds * multiplierAdjustment.factor
+            case .stopDelta(let value):
+                if stopAdjustment == nil { stopAdjustment = value }
+            case .multiplier(let value):
+                if multiplierAdjustment == nil { multiplierAdjustment = value }
             }
+        }
+        if let stopAdjustment {
+            return meteredExposureSeconds * pow(2, stopAdjustment.stopDelta)
+        }
+        if let multiplierAdjustment {
+            return meteredExposureSeconds * multiplierAdjustment.factor
         }
         return nil
     }
@@ -1557,13 +1574,20 @@ struct FilmModeDetailsPresenter {
 
         switch formula.kind {
         case .exponentPower:
-            if let equation = normalizedDetailText(formula.equation),
-               let substitutedEquation = substituteFormulaPlaceholder(
-                in: equation,
-                placeholder: "P",
-                replacement: formattedExponent
-               ) {
-                return substitutedEquation
+            if let equation = normalizedDetailText(formula.equation) {
+                if let substitutedEquation = substituteFormulaPlaceholder(
+                    in: equation,
+                    placeholder: "P",
+                    replacement: formattedExponent
+                ) {
+                    return substitutedEquation
+                }
+                // Profiles whose equation does not parameterize the
+                // exponent (e.g. constant-multiplier forms) render
+                // verbatim. Falling through to "Tc = Tm^N" here would
+                // misrepresent a formula like "Tc = √2 × Tm" as
+                // "Tc = Tm^1".
+                return equation
             }
 
             return "Tc = Tm^\(formattedExponent)"
@@ -1625,7 +1649,13 @@ struct FilmModeDetailsPresenter {
         let lowerBound = rule.noCorrectionRange.minimumSeconds
 
         if lowerBound <= 0, let upperBound {
-            return ["<= \(formatDuration(upperBound))", "No correction range"]
+            return [
+                sourceReferenceThresholdUpperBoundLabel(
+                    for: upperBound,
+                    formatDuration: formatDuration
+                ),
+                "No correction range",
+            ]
         }
 
         if let upperBound {
@@ -1633,6 +1663,26 @@ struct FilmModeDetailsPresenter {
         }
 
         return [">= \(formatDuration(lowerBound))", "No correction range"]
+    }
+
+    /// Upper-bound label for the Source reference threshold row.
+    /// Threshold rules that sit one ε below a round value (e.g. Acros
+    /// II's 119.999999, used so the +1/2 stop formula fires at
+    /// exactly 120 s) render as strict "< 120s" rather than the
+    /// literal "<= 119.999999s". Rules whose upper bound is the round
+    /// value itself (Provia 100F's 128 s, Velvia 50's 1 s) keep the
+    /// inclusive "<= X" wording so the boundary value still reads as
+    /// no-correction.
+    private func sourceReferenceThresholdUpperBoundLabel(
+        for upperBound: Double,
+        formatDuration: (Double) -> String
+    ) -> String {
+        let ceiling = ceil(upperBound)
+        let gap = ceiling - upperBound
+        if gap > 0, gap < 1e-3 {
+            return "< \(formatDuration(ceiling))"
+        }
+        return "<= \(formatDuration(upperBound))"
     }
 
     private func compactTableEntryReferenceColumns(

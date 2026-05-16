@@ -6,7 +6,7 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
 
     // MARK: - Velvia 50
 
-    func testVelvia50ReferenceDataPreservesPerEntryColorCorrectionAndStopRow() throws {
+    func testVelvia50FormulaSourceReferenceAndGuidanceBoundaryPreservePerEntryColorCorrectionAndStopRow() throws {
         let film = try XCTUnwrap(film(named: "Velvia 50"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -14,23 +14,45 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
             displayState.sections.contains(where: { $0.title == "Additional Guidance" }),
             "PTIMER-119 follow-up: the detached Additional Guidance section must remain removed."
         )
+        XCTAssertFalse(
+            displayState.sections.contains(where: { $0.title == "Reference" }),
+            "Velvia 50 is now a formula profile with source evidence; legacy Reference section must be gone."
+        )
 
-        let referenceSection = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Reference" }))
-        let block = try XCTUnwrap(referenceSection.rows.first?.value)
-        let lines = block.split(separator: "\n").map(String.init)
+        let sourceReferenceSection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Source reference" }),
+            "Velvia 50 must surface a Source reference section for its converted formula profile."
+        )
+        let sourceBlock = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
+        let sourceLines = sourceBlock.split(separator: "\n").map(String.init)
 
-        func assertPaired(meteredPrefix: String, valueSuffix: String, file: StaticString = #filePath, line: UInt = #line) {
+        func assertPaired(in lines: [String], block: String, meteredPrefix: String, valueSuffix: String, file: StaticString = #filePath, line: UInt = #line) {
             let match = lines.first { candidate in
                 candidate.hasPrefix(meteredPrefix) && candidate.hasSuffix(" \(valueSuffix)")
             }
             XCTAssertNotNil(match, "Expected \(meteredPrefix) row to end with \(valueSuffix). Block was:\n\(block)", file: file, line: line)
         }
 
-        assertPaired(meteredPrefix: "4.0s", valueSuffix: "5M")
-        assertPaired(meteredPrefix: "8.0s", valueSuffix: "7.5M")
-        assertPaired(meteredPrefix: "16.0s", valueSuffix: "10M")
-        assertPaired(meteredPrefix: "32.0s", valueSuffix: "12.5M")
-        assertPaired(meteredPrefix: "64.0s", valueSuffix: "Not recommended")
+        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "4.0s", valueSuffix: "5M")
+        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "8.0s", valueSuffix: "7.5M")
+        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "16.0s", valueSuffix: "10M")
+        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "32.0s", valueSuffix: "12.5M")
+        XCTAssertFalse(
+            sourceBlock.contains("Not recommended"),
+            "Source reference section must not pull the 64 s not-recommended boundary row into it."
+        )
+
+        let guidanceBoundarySection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Guidance boundary" }),
+            "Velvia 50's 64 s not-recommended boundary must surface in the Guidance boundary section."
+        )
+        let boundaryBlock = try XCTUnwrap(guidanceBoundarySection.rows.first?.value)
+        let boundaryLines = boundaryBlock.split(separator: "\n").map(String.init)
+        assertPaired(in: boundaryLines, block: boundaryBlock, meteredPrefix: "64.0s", valueSuffix: "Not recommended")
+        XCTAssertFalse(
+            boundaryBlock.contains("5M"),
+            "Guidance boundary section must not pull source-reference color rows into it."
+        )
     }
 
     func testVelvia50DetailsExposesFilmSubtitleAndLegend() throws {
@@ -139,14 +161,21 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
 
     // MARK: - Tri-X 400
 
-    func testTriX400ReferenceDataKeepsDevelopmentRowsWithMeteredContext() throws {
+    func testTriX400SourceReferenceKeepsDevelopmentRowsWithMeteredContext() throws {
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
         XCTAssertFalse(displayState.sections.contains(where: { $0.title == "Additional Guidance" }))
+        XCTAssertFalse(
+            displayState.sections.contains(where: { $0.title == "Reference" }),
+            "Converted Tri-X 400 must not surface the legacy Reference section."
+        )
 
-        let referenceSection = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Reference" }))
-        let block = try XCTUnwrap(referenceSection.rows.first?.value)
+        let sourceReferenceSection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Source reference" }),
+            "Converted Tri-X 400 must surface a Source reference section carrying the published rows."
+        )
+        let block = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
         let lines = block.split(separator: "\n").map(String.init)
 
         let devLines = lines.filter { $0.contains("Dev ") }

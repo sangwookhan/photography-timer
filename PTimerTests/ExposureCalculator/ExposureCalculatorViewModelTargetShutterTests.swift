@@ -98,8 +98,11 @@ final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
         }
 
         XCTAssertEqual(comparison.label, "Corrected Exposure")
-        XCTAssertEqual(comparison.seconds, 2, accuracy: 0.0001)
-        XCTAssertEqual(stopDifference.stops, 1, accuracy: 0.001)
+        // Tri-X 400's free log-log formula fit lands at 2.014 s at
+        // Tm = 1 s; the comparison and stop difference inherit that
+        // sub-1/50-stop drift from Kodak's published 2 s row.
+        XCTAssertEqual(comparison.seconds, 2, accuracy: 0.05)
+        XCTAssertEqual(stopDifference.stops, 1, accuracy: 0.02)
         XCTAssertEqual(stopDifference.kind, .longerThanComparison)
     }
 
@@ -128,13 +131,22 @@ final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmWorkflowUnsupportedDoesNotFabricateStopDifference() throws {
+    func testFilmWorkflowBeyondVelvia50SourceRangeComparesAgainstFormulaPrediction() throws {
+        // Velvia 50's 64 s row is the formula's not-recommended
+        // boundary, and the formula still yields a numeric corrected
+        // exposure past the source range. Target Shutter must
+        // compare against that quantified value rather than
+        // reporting "no comparison available". The synthetic
+        // unsupported-without-numeric path is exercised in
+        // `TargetShutterPresenterTests` via a direct `.unavailable`
+        // comparison source — no launch-catalog film reaches that
+        // path today.
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
         viewModel.baseShutter = 8
         viewModel.ndStop = 3
         viewModel.selectPresetFilm(film)
-        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .unsupported)
+        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .quantified)
 
         viewModel.setTargetShutter(60)
 
@@ -142,8 +154,10 @@ final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
             return XCTFail("Expected available state with target preserved")
         }
 
-        XCTAssertNil(state.comparison)
-        XCTAssertNil(state.stopDifference)
+        let comparison = try XCTUnwrap(state.comparison)
+        XCTAssertEqual(comparison.label, "Corrected Exposure")
+        XCTAssertEqual(comparison.seconds, pow(64.0, 1.1821), accuracy: 0.5)
+        XCTAssertNotNil(state.stopDifference)
     }
 
     @MainActor

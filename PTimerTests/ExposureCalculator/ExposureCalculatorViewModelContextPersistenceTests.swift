@@ -69,7 +69,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
         XCTAssertEqual(bindingState.profile.id, film.profiles.first?.id)
         XCTAssertTrue(bindingState.policyResult.hasCalculatedExposureTime)
         XCTAssertTrue(bindingState.presentation.returnsCalculatedExposureTime)
-        XCTAssertEqual(relaunchedViewModel.filmModeExposureResultState?.reciprocityState.badgeText, "Exact")
+        XCTAssertEqual(relaunchedViewModel.filmModeExposureResultState?.reciprocityState.badgeText, "Formula-derived")
     }
 
     @MainActor

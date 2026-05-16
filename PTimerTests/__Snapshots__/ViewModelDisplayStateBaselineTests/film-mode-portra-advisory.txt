@@ -63,7 +63,7 @@
         - correctedExposureSeconds: nil
         - presentationCategory: "advisoryOnly"
         - presentationBadgeStyle: "advisory"
-    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 4.0, reciprocityStateTone: "advisory", adjustedShutterCanStart: true, correctedKind: "advisory", correctedSeconds: nil, correctedPrimary: "No corrected value", correctedSecondary: "No published quantified correction is available for this metered exposure.", correctedExposureCanStart: false))
+    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 4.0, reciprocityStateTone: "advisory", adjustedShutterCanStart: true, correctedKind: "advisory", correctedSeconds: nil, correctedPrimary: "No corrected value", correctedSecondary: "No official quantified prediction is available for this metered exposure.", correctedExposureCanStart: false))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump
         - adjustedShutterSeconds: 4.0
         - reciprocityStateTone: "advisory"
@@ -71,7 +71,7 @@
         - correctedKind: "advisory"
         - correctedSeconds: nil
         - correctedPrimary: "No corrected value"
-        - correctedSecondary: "No published quantified correction is available for this metered exposure."
+        - correctedSecondary: "No official quantified prediction is available for this metered exposure."
         - correctedExposureCanStart: false
     - canShowFilmDetails: true
     - canStartTimer: false

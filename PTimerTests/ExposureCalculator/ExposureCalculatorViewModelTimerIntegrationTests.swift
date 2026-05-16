@@ -21,11 +21,14 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "Tri-X 400 - 2s")
+        // Tri-X 400's free log-log formula fit lands at 2.014 s at
+        // Tm = 1 s (within ~1/100 stop of Kodak's published 2 s row);
+        // the duration formatter renders that as "2.0s".
+        XCTAssertEqual(timer.duration, 2, accuracy: 0.05)
+        XCTAssertEqual(timer.name, "Tri-X 400 - 2.0s")
         XCTAssertEqual(
             timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2s"
+            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2.0s"
         )
     }
 
@@ -113,7 +116,12 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeUnsupportedDoesNotProvideCorrectedExposureTimerSource() throws {
+    func testFilmModeBeyondVelvia50SourceRangeStartsCorrectedExposureTimerFromFormulaPrediction() throws {
+        // Velvia 50's 64 s row is the formula's not-recommended
+        // boundary. The formula still produces a numeric corrected
+        // exposure past the published source range, so the
+        // corrected-exposure timer affordance enables and stamps the
+        // timer with the formula-extrapolated duration.
         let timerManager = TimerManager(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
@@ -129,13 +137,16 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
         viewModel.ndStop = 3
         viewModel.selectPresetFilm(film)
 
-        XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
-        XCTAssertFalse(viewModel.canStartFilmCorrectedExposureTimer)
+        let expectedCorrected = pow(64.0, 1.1821)
+        XCTAssertNotNil(viewModel.filmModePrimaryResultSeconds)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, expectedCorrected, accuracy: 0.5)
+        XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
 
         viewModel.startFilmCorrectedExposureTimer()
 
-        XCTAssertTrue(viewModel.timers.isEmpty)
-        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .unsupported)
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.duration, expectedCorrected, accuracy: 0.5)
+        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .quantified)
     }
 
     @MainActor

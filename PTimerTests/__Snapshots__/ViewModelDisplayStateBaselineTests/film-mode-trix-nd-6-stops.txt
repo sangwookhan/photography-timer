@@ -1,6 +1,6 @@
   ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
     ▿ activeCalculatorContext: PTimer.ActiveExposureCalculatorContext
-      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-tri-x-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-tri-x-official-table", name: "Official table", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimer.ReciprocityRule.threshold(PTimer.ThresholdReciprocityRule(noCorrectionRange: PTimer.ReciprocityTimeRange(minimumSeconds: 0.0, maximumSeconds: Optional(1.0)), adjustments: [], notes: ["No correction required at 1 second or less."])), PTimer.ReciprocityRule.table(PTimer.TableReciprocityRule(entries: [PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 1.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: []), PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 2.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: []), PTimer.ReciprocityTableEntry(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 3.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: [])], notes: ["Table data stays table-shaped rather than converted to a formula."]))], notes: [], userMetadata: nil, sourceEvidence: [])], userMetadata: nil))
+      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-tri-x-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-tri-x-official-formula", name: "Official log-log formula fit through published 1/10/100 sec rows", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimer.ReciprocityRule.threshold(PTimer.ThresholdReciprocityRule(noCorrectionRange: PTimer.ReciprocityTimeRange(minimumSeconds: 0.0, maximumSeconds: Optional(0.999999)), adjustments: [], notes: ["No correction required below 1 sec. Kodak\'s published guidance starts at 1 sec (+1 stop, corrected 2 sec)."])), PTimer.ReciprocityRule.formula(PTimer.FormulaReciprocityRule(meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: Optional(100.000001))), formula: PTimer.ReciprocityFormula(kind: PTimer.ReciprocityFormulaKind.exponentPower, exponent: 1.3891, coefficient: Optional(2.013654), offsetSeconds: nil, equation: Optional("Tc = 2.0137 × Tm^P")), additionalAdjustments: [], notes: ["Tc = 2.0137 × Tm^P, P ≈ 1.3891. Free log-log least squares fit through Kodak\'s published corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to ≈ 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."]))], notes: [], userMetadata: nil, sourceEvidence: [PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 1.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: ["1 sec → +1 stop, corrected 2 sec, develop -10%."]), PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 2.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: ["10 sec → +2 stops, corrected 50 sec, develop -20%."]), PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 3.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: ["100 sec → +3 stops, corrected 1200 sec, develop -30%."])])], userMetadata: nil))
         ▿ some: PTimer.FilmIdentity
           - id: "kodak-tri-x-400"
           - kind: PTimer.FilmIdentityKind.preset
@@ -16,8 +16,8 @@
           - productionStatus: PTimer.FilmProductionStatus.current
           ▿ profiles: 1 element
             ▿ PTimer.ReciprocityProfile
-              - id: "kodak-tri-x-official-table"
-              - name: "Official table"
+              - id: "kodak-tri-x-official-formula"
+              - name: "Official log-log formula fit through published 1/10/100 sec rows"
               ▿ source: PTimer.ReciprocitySourceProvenance
                 - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
                 - authority: PTimer.ReciprocityAuthority.official
@@ -33,100 +33,116 @@
                   ▿ threshold: PTimer.ThresholdReciprocityRule
                     ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
                       - minimumSeconds: 0.0
-                      ▿ maximumSeconds: Optional(1.0)
-                        - some: 1.0
+                      ▿ maximumSeconds: Optional(0.999999)
+                        - some: 0.999999
                     - adjustments: 0 elements
                     ▿ notes: 1 element
-                      - "No correction required at 1 second or less."
-                ▿ PTimer.ReciprocityRule.table
-                  ▿ table: PTimer.TableReciprocityRule
-                    ▿ entries: 3 elements
-                      ▿ PTimer.ReciprocityTableEntry
-                        ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                          - exactSeconds: 1.0
-                        ▿ adjustments: 3 elements
-                          ▿ PTimer.ReciprocityAdjustment.exposure
-                            ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                              ▿ stopDelta: PTimer.StopDeltaAdjustment
-                                - stopDelta: 1.0
-                          ▿ PTimer.ReciprocityAdjustment.exposure
-                            ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                              ▿ correctedTime: PTimer.CorrectedTimeMapping
-                                ▿ meteredSeconds: Optional(1.0)
-                                  - some: 1.0
-                                - correctedSeconds: 2.0
-                                - isApproximate: false
-                          ▿ PTimer.ReciprocityAdjustment.development
-                            ▿ development: PTimer.DevelopmentAdjustment
-                              - instruction: "-10% development"
-                              - note: nil
-                        - notes: 0 elements
-                      ▿ PTimer.ReciprocityTableEntry
-                        ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                          - exactSeconds: 10.0
-                        ▿ adjustments: 3 elements
-                          ▿ PTimer.ReciprocityAdjustment.exposure
-                            ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                              ▿ stopDelta: PTimer.StopDeltaAdjustment
-                                - stopDelta: 2.0
-                          ▿ PTimer.ReciprocityAdjustment.exposure
-                            ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                              ▿ correctedTime: PTimer.CorrectedTimeMapping
-                                ▿ meteredSeconds: Optional(10.0)
-                                  - some: 10.0
-                                - correctedSeconds: 50.0
-                                - isApproximate: false
-                          ▿ PTimer.ReciprocityAdjustment.development
-                            ▿ development: PTimer.DevelopmentAdjustment
-                              - instruction: "-20% development"
-                              - note: nil
-                        - notes: 0 elements
-                      ▿ PTimer.ReciprocityTableEntry
-                        ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                          - exactSeconds: 100.0
-                        ▿ adjustments: 3 elements
-                          ▿ PTimer.ReciprocityAdjustment.exposure
-                            ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                              ▿ stopDelta: PTimer.StopDeltaAdjustment
-                                - stopDelta: 3.0
-                          ▿ PTimer.ReciprocityAdjustment.exposure
-                            ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                              ▿ correctedTime: PTimer.CorrectedTimeMapping
-                                ▿ meteredSeconds: Optional(100.0)
-                                  - some: 100.0
-                                - correctedSeconds: 1200.0
-                                - isApproximate: false
-                          ▿ PTimer.ReciprocityAdjustment.development
-                            ▿ development: PTimer.DevelopmentAdjustment
-                              - instruction: "-30% development"
-                              - note: nil
-                        - notes: 0 elements
+                      - "No correction required below 1 sec. Kodak\'s published guidance starts at 1 sec (+1 stop, corrected 2 sec)."
+                ▿ PTimer.ReciprocityRule.formula
+                  ▿ formula: PTimer.FormulaReciprocityRule
+                    ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: Optional(100.000001)))
+                      ▿ some: PTimer.ReciprocityTimeRange
+                        - minimumSeconds: 1.0
+                        ▿ maximumSeconds: Optional(100.000001)
+                          - some: 100.000001
+                    ▿ formula: PTimer.ReciprocityFormula
+                      - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                      - exponent: 1.3891
+                      ▿ coefficient: Optional(2.013654)
+                        - some: 2.013654
+                      - offsetSeconds: nil
+                      ▿ equation: Optional("Tc = 2.0137 × Tm^P")
+                        - some: "Tc = 2.0137 × Tm^P"
+                    - additionalAdjustments: 0 elements
                     ▿ notes: 1 element
-                      - "Table data stays table-shaped rather than converted to a formula."
+                      - "Tc = 2.0137 × Tm^P, P ≈ 1.3891. Free log-log least squares fit through Kodak\'s published corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to ≈ 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
               - notes: 0 elements
               - userMetadata: nil
-              - sourceEvidence: 0 elements
+              ▿ sourceEvidence: 3 elements
+                ▿ PTimer.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 1.0
+                  ▿ adjustments: 3 elements
+                    ▿ PTimer.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                        ▿ stopDelta: PTimer.StopDeltaAdjustment
+                          - stopDelta: 1.0
+                    ▿ PTimer.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimer.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(1.0)
+                            - some: 1.0
+                          - correctedSeconds: 2.0
+                          - isApproximate: false
+                    ▿ PTimer.ReciprocityAdjustment.development
+                      ▿ development: PTimer.DevelopmentAdjustment
+                        - instruction: "-10% development"
+                        - note: nil
+                  ▿ notes: 1 element
+                    - "1 sec → +1 stop, corrected 2 sec, develop -10%."
+                ▿ PTimer.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 10.0
+                  ▿ adjustments: 3 elements
+                    ▿ PTimer.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                        ▿ stopDelta: PTimer.StopDeltaAdjustment
+                          - stopDelta: 2.0
+                    ▿ PTimer.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimer.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(10.0)
+                            - some: 10.0
+                          - correctedSeconds: 50.0
+                          - isApproximate: false
+                    ▿ PTimer.ReciprocityAdjustment.development
+                      ▿ development: PTimer.DevelopmentAdjustment
+                        - instruction: "-20% development"
+                        - note: nil
+                  ▿ notes: 1 element
+                    - "10 sec → +2 stops, corrected 50 sec, develop -20%."
+                ▿ PTimer.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 100.0
+                  ▿ adjustments: 3 elements
+                    ▿ PTimer.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                        ▿ stopDelta: PTimer.StopDeltaAdjustment
+                          - stopDelta: 3.0
+                    ▿ PTimer.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimer.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(100.0)
+                            - some: 100.0
+                          - correctedSeconds: 1200.0
+                          - isApproximate: false
+                    ▿ PTimer.ReciprocityAdjustment.development
+                      ▿ development: PTimer.DevelopmentAdjustment
+                        - instruction: "-30% development"
+                        - note: nil
+                  ▿ notes: 1 element
+                    - "100 sec → +3 stops, corrected 1200 sec, develop -30%."
           - userMetadata: nil
       - selectedProfileOverride: nil
     - isFilmWorkflowActive: true
     - canResetFilmModeWorkingContext: true
-    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "interpolatedWithinTable", correctedExposureSeconds: Optional(5.270500640101245), presentationCategory: "estimated", presentationBadgeStyle: "measured"))
+    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "formulaDerived", correctedExposureSeconds: Optional(5.2740666780432095), presentationCategory: "estimated", presentationBadgeStyle: "measured"))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump
         - filmStockName: "Tri-X 400"
         - profileAuthority: "official"
-        - policyResultBasis: "interpolatedWithinTable"
-        ▿ correctedExposureSeconds: Optional(5.270500640101245)
-          - some: 5.270500640101245
+        - policyResultBasis: "formulaDerived"
+        ▿ correctedExposureSeconds: Optional(5.2740666780432095)
+          - some: 5.2740666780432095
         - presentationCategory: "estimated"
         - presentationBadgeStyle: "measured"
-    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 2.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(5.270500640101245), correctedPrimary: "5.3s", correctedSecondary: "", correctedExposureCanStart: true))
+    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 2.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(5.2740666780432095), correctedPrimary: "5.3s", correctedSecondary: "", correctedExposureCanStart: true))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump
         - adjustedShutterSeconds: 2.0
         - reciprocityStateTone: "measured"
         - adjustedShutterCanStart: true
         - correctedKind: "quantified"
-        ▿ correctedSeconds: Optional(5.270500640101245)
-          - some: 5.270500640101245
+        ▿ correctedSeconds: Optional(5.2740666780432095)
+          - some: 5.2740666780432095
         - correctedPrimary: "5.3s"
         - correctedSecondary: ""
         - correctedExposureCanStart: true

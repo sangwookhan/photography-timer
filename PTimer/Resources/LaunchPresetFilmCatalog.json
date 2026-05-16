@@ -1752,8 +1752,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "fujifilm-velvia-100-official-table",
-        "name": "Official table and color guidance",
+        "id": "fujifilm-velvia-100-official-formula",
+        "name": "Official formula anchored to 60 s threshold",
         "notes": [],
         "rules": [
           {
@@ -1770,64 +1770,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.3333333333333333
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "2.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 120,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "2 min \u2192 +1/3 stop, 2.5M."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "2.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 240,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "4 min \u2192 +1/2 stop, 2.5M."
-                  ]
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 0.335603,
+                "equation": "Tc = 60 \u00d7 (Tm / 60)^P",
+                "exponent": 1.2667,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 240.000001,
+                "minimumSeconds": 60.000001
+              },
+              "notes": [
+                "Tc = 60 \u00d7 (Tm / 60)^P, P \u2248 1.2667. Threshold-anchored constrained log-log fit through the 60 s no-correction boundary and Fujifilm's published 2-min (+1/3 stop) and 4-min (+1/2 stop) references. Inputs above 240 sec extrapolate the same curve outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1837,7 +1796,61 @@
           "kind": "manufacturerPublished",
           "publisher": "Fujifilm",
           "title": "FUJICHROME Velvia 100 \u2014 Long exposure guide"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 120,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 min \u2192 +1/3 stop, 2.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 240,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 min \u2192 +1/2 stop, 2.5M."
+            ]
+          }
+        ]
       }
     ]
   },

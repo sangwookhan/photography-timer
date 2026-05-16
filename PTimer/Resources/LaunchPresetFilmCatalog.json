@@ -1049,8 +1049,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tmax-400-official-table",
-        "name": "Official table",
+        "id": "kodak-tmax-400-official-formula",
+        "name": "Official log-log formula fit through published 10/100 sec corrected times",
         "notes": [],
         "rules": [
           {
@@ -1067,68 +1067,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 15,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 300,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1,
+                "equation": "Tc = Tm^P",
+                "exponent": 1.2261,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = Tm^P, P \u2248 1.2261. Threshold-anchored constrained log-log fit through the 1 sec no-correction boundary and Kodak's published 10 sec \u2192 15 sec / 100 sec \u2192 300 sec corrected-time rows. Kodak rounds the published corrected times for practical use, so the curve sits ~1/6 stop above the 10 sec row and ~1/12 stop below the 100 sec row; the markers stay visible as source evidence so users can verify the deviation. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1138,7 +1093,69 @@
           "kind": "manufacturerPublished",
           "publisher": "Kodak",
           "title": "KODAK PROFESSIONAL T-MAX 400 Film \u2014 Technical Data"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 15,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +1/2 stop, corrected 15 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 300,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 +1 1/2 stops, corrected 300 sec."
+            ]
+          }
+        ]
       }
     ]
   },

@@ -1346,8 +1346,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "fujifilm-velvia-50-official-table"
-          - name: "Official table and color guidance"
+          - id: "fujifilm-velvia-50-official-formula"
+          - name: "Official formula anchored to 1 s threshold"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -1368,74 +1368,92 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No correction required from 1/4000 sec to 1 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 5 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 4.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.3333333333333333
-                      ▿ PTimer.ReciprocityAdjustment.colorFilter
-                        ▿ colorFilter: PTimer.ColorFilterRecommendation
-                          - filterName: "5M"
-                          - note: nil
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 8.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.5
-                      ▿ PTimer.ReciprocityAdjustment.colorFilter
-                        ▿ colorFilter: PTimer.ColorFilterRecommendation
-                          - filterName: "7.5M"
-                          - note: nil
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 16.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.6666666666666666
-                      ▿ PTimer.ReciprocityAdjustment.colorFilter
-                        ▿ colorFilter: PTimer.ColorFilterRecommendation
-                          - filterName: "10M"
-                          - note: nil
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 32.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 1.0
-                      ▿ PTimer.ReciprocityAdjustment.colorFilter
-                        ▿ colorFilter: PTimer.ColorFilterRecommendation
-                          - filterName: "12.5M"
-                          - note: nil
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 64.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.warning
-                        ▿ warning: PTimer.ReciprocityWarning
-                          - severity: PTimer.ReciprocityWarningSeverity.notRecommended
-                          - message: "64 sec is not recommended."
-                    - notes: 0 elements
-                - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.000001, maximumSeconds: Optional(64.0)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 1.000001
+                    ▿ maximumSeconds: Optional(64.0)
+                      - some: 64.0
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.1821
+                  ▿ coefficient: Optional(1.0)
+                    - some: 1.0
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = Tm^P")
+                    - some: "Tc = Tm^P"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = Tm^P, P ≈ 1.1821. Threshold-anchored constrained log-log fit through Fujifilm\'s published 4/8/16/32 sec source references. 64 sec is not recommended."
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 5 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 4.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.3333333333333333
+                ▿ PTimer.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                    - filterName: "5M"
+                    - note: nil
+              ▿ notes: 1 element
+                - "4 sec → +1/3 stop, 5M."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 8.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.5
+                ▿ PTimer.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                    - filterName: "7.5M"
+                    - note: nil
+              ▿ notes: 1 element
+                - "8 sec → +1/2 stop, 7.5M."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 16.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.6666666666666666
+                ▿ PTimer.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                    - filterName: "10M"
+                    - note: nil
+              ▿ notes: 1 element
+                - "16 sec → +2/3 stop, 10M."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 32.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 1.0
+                ▿ PTimer.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                    - filterName: "12.5M"
+                    - note: nil
+              ▿ notes: 1 element
+                - "32 sec → +1 stop, 12.5M."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 64.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.warning
+                  ▿ warning: PTimer.ReciprocityWarning
+                    - severity: PTimer.ReciprocityWarningSeverity.notRecommended
+                    - message: "64 sec is not recommended."
+              - notes: 0 elements
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-velvia-100"

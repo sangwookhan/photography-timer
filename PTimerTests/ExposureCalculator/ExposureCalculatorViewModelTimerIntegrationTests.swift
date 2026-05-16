@@ -113,7 +113,12 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeUnsupportedDoesNotProvideCorrectedExposureTimerSource() throws {
+    func testFilmModeBeyondVelvia50SourceRangeStartsCorrectedExposureTimerFromFormulaPrediction() throws {
+        // Velvia 50's 64 s row is the formula's not-recommended
+        // boundary. The formula still produces a numeric corrected
+        // exposure past the published source range, so the
+        // corrected-exposure timer affordance enables and stamps the
+        // timer with the formula-extrapolated duration.
         let timerManager = TimerManager(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
@@ -129,13 +134,16 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
         viewModel.ndStop = 3
         viewModel.selectPresetFilm(film)
 
-        XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
-        XCTAssertFalse(viewModel.canStartFilmCorrectedExposureTimer)
+        let expectedCorrected = pow(64.0, 1.1821)
+        XCTAssertNotNil(viewModel.filmModePrimaryResultSeconds)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, expectedCorrected, accuracy: 0.5)
+        XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
 
         viewModel.startFilmCorrectedExposureTimer()
 
-        XCTAssertTrue(viewModel.timers.isEmpty)
-        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .unsupported)
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.duration, expectedCorrected, accuracy: 0.5)
+        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .quantified)
     }
 
     @MainActor

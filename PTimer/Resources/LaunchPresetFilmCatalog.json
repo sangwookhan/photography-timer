@@ -1569,8 +1569,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "fujifilm-velvia-50-official-table",
-        "name": "Official table and color guidance",
+        "id": "fujifilm-velvia-50-official-formula",
+        "name": "Official formula anchored to 1 s threshold",
         "notes": [],
         "rules": [
           {
@@ -1587,124 +1587,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.3333333333333333
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 4,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "7.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 8,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.6666666666666666
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "10M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 16,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 1
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "colorFilter": {
-                        "filterName": "12.5M"
-                      },
-                      "kind": "colorFilter"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 32,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "kind": "warning",
-                      "warning": {
-                        "message": "64 sec is not recommended.",
-                        "severity": "notRecommended"
-                      }
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 64,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1,
+                "equation": "Tc = Tm^P",
+                "exponent": 1.1821,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 64,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = Tm^P, P \u2248 1.1821. Threshold-anchored constrained log-log fit through Fujifilm's published 4/8/16/32 sec source references. 64 sec is not recommended."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -1714,7 +1613,129 @@
           "kind": "manufacturerPublished",
           "publisher": "Fujifilm",
           "title": "FUJICHROME Velvia 50 \u2014 Long exposure guide"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec \u2192 +1/3 stop, 5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "7.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec \u2192 +1/2 stop, 7.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.6666666666666666
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "10M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 16,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "16 sec \u2192 +2/3 stop, 10M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "12.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 32,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "32 sec \u2192 +1 stop, 12.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "64 sec is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 64,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
       }
     ]
   },

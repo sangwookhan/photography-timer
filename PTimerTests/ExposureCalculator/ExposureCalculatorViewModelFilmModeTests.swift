@@ -581,7 +581,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsGraphShowsReferenceRangeAndXOnlyMarkerForUnsupportedResult() throws {
+    func testFilmModeDetailsGraphSurfacesFormulaPredictionBeyondVelvia50SourceRange() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
@@ -589,24 +589,35 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.ndStop = 3
         viewModel.selectPresetFilm(film)
 
-        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        _ = try XCTUnwrap(viewModel.filmModeExposureResultState)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         let graph = try XCTUnwrap(details.graph)
 
-        XCTAssertEqual(details.summary.badgeText, "Unsupported")
-        XCTAssertEqual(details.summary.summaryText, "Outside supported reciprocity range")
-        XCTAssertEqual(details.summary.detailText, "Current input is outside the supported range and no quantified corrected point is available.")
+        // Velvia 50's 64 s row is the formula's not-recommended
+        // boundary. The result is unsupported-with-numeric (formula
+        // extrapolated past the source range), so the current-point
+        // marker plots at its real (64 s, ~120 s) position instead
+        // of collapsing to an x-only guide.
+        XCTAssertEqual(details.summary.badgeText, "Beyond source range")
+        XCTAssertEqual(details.summary.summaryText, "Beyond source range")
+        XCTAssertEqual(
+            details.summary.detailText,
+            "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
+        )
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "01:04")
-        XCTAssertEqual(details.currentResult.correctedExposure.valueText, resultState.correctedExposure.primaryText)
-        XCTAssertEqual(details.currentResult.correctedExposure.detailText, resultState.correctedExposure.secondaryText)
-        XCTAssertFalse(details.currentResult.correctedExposure.emphasizesValue)
-        XCTAssertTrue(graph.usesCurrentInputGuideOnly)
-        XCTAssertNil(graph.currentPoint)
+        XCTAssertFalse(graph.usesCurrentInputGuideOnly)
+        let currentPoint = try XCTUnwrap(graph.currentPoint)
+        XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 64, accuracy: 0.0001)
+        XCTAssertEqual(currentPoint.point.correctedExposureSeconds, pow(64.0, 1.1821), accuracy: 0.5)
         XCTAssertEqual(graph.currentMeteredExposureSeconds ?? 0, 64, accuracy: 0.0001)
         XCTAssertNotNil(graph.supportedRangeUpperBoundSeconds)
-        XCTAssertNotNil(graph.unsupportedRegionStartSeconds)
-        XCTAssertEqual(graph.unsupportedExplanation, "Current input is outside the supported range. No quantified corrected point is available.")
+        let explanation = try XCTUnwrap(graph.unsupportedExplanation)
+        XCTAssertTrue(
+            explanation.lowercased().contains("source range"),
+            "Graph explanation must mention the source range for converted formula profiles; got: \(explanation)"
+        )
+        XCTAssertEqual(graph.notRecommendedBoundarySeconds ?? 0, 64, accuracy: 0.0001)
     }
 
     @MainActor
@@ -1199,7 +1210,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeUnsupportedResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
+    func testFilmModeBeyondVelvia50SourceRangeKeepsCorrectedExposureRowQuantifiedFromFormula() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
@@ -1207,30 +1218,50 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         viewModel.ndStop = 3
         viewModel.selectPresetFilm(film)
 
+        // Velvia 50's 64 s row is the formula's not-recommended
+        // boundary. The formula keeps producing a numeric corrected
+        // exposure past the published source range, so the
+        // corrected-exposure card surfaces the predicted value and
+        // the Play button enables.
+        let expectedCorrected = pow(64.0, 1.1821)
+
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 64, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Unsupported")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Beyond source range")
         XCTAssertEqual(resultState.reciprocityState.tone, .unsupported)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 64, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
-        XCTAssertEqual(resultState.correctedExposure.kind, .unsupported)
-        XCTAssertNil(resultState.correctedExposure.correctedExposureSeconds)
-        XCTAssertNil(resultState.correctedExposureAction.targetSeconds)
-        XCTAssertFalse(resultState.correctedExposureAction.canStartTimer)
+        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
+        XCTAssertEqual(
+            resultState.correctedExposure.correctedExposureSeconds ?? 0,
+            expectedCorrected,
+            accuracy: 0.5
+        )
+        XCTAssertEqual(
+            resultState.correctedExposureAction.targetSeconds ?? 0,
+            expectedCorrected,
+            accuracy: 0.5
+        )
+        XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
+        XCTAssertTrue(resultState.correctedExposureAction.isOutsideManufacturerGuidance)
         XCTAssertEqual(resultState.correctedExposureAction.accessibilityLabel, "Start timer from corrected exposure")
         XCTAssertEqual(
             resultState.correctedExposureAction.accessibilityHint,
-            "Timer unavailable because this corrected result is unsupported"
+            "Starts a timer using a formula prediction beyond the manufacturer source range"
         )
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "Unavailable")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "64 sec is not recommended.")
-        XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
+        XCTAssertTrue(
+            resultState.correctedExposure.primaryText.hasPrefix("≈"),
+            "Outside-guidance numeric values must be marked approximate; got: \(resultState.correctedExposure.primaryText)"
+        )
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
+        XCTAssertTrue(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
         XCTAssertEqual(bindingState.presentation.category, .unsupported)
-        XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
+        XCTAssertTrue(bindingState.profile.isConvertedFormulaProfile)
+        XCTAssertNotNil(viewModel.filmModePrimaryResultSeconds)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
-        XCTAssertFalse(viewModel.canStartFilmCorrectedExposureTimer)
+        XCTAssertTrue(viewModel.canStartFilmCorrectedExposureTimer)
     }
 
     @MainActor

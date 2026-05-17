@@ -1973,6 +1973,20 @@ struct FilmModeDetailsPresenter {
             return [meteredText, stopSignalText]
         }
 
+        // Note-only entries (RETRO 80S / SUPERPAN 200 range-valued rows where the
+        // data sheet specifies the corrected exposure as a range like "1 to 2 sec")
+        // carry only a `.note(text:)` adjustment so the range never enters the
+        // formula as an exact fitting point. Surface the published note text
+        // alongside the metered exposure so the user still sees the source
+        // guidance for that row.
+        let noteText = adjustments.compactMap { adjustment -> String? in
+            guard case let .note(note) = adjustment else { return nil }
+            return note.text
+        }.first
+        if let noteText {
+            return [meteredText, noteText]
+        }
+
         return nil
     }
 

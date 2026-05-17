@@ -2017,8 +2017,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "rollei-rpx-100-official-table"
-          - name: "Official corrected-time table"
+          - id: "rollei-rpx-100-official-formula"
+          - name: "Official log-log formula fit through published corrected-time rows"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -2039,73 +2039,92 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No correction required from 1/1000 sec to 1 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 5 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 2.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(2.0)
-                              - some: 2.0
-                            - correctedSeconds: 3.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 5.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(5.0)
-                              - some: 5.0
-                            - correctedSeconds: 8.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 10.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(10.0)
-                              - some: 10.0
-                            - correctedSeconds: 25.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 20.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(20.0)
-                              - some: 20.0
-                            - correctedSeconds: 75.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 30.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(30.0)
-                              - some: 30.0
-                            - correctedSeconds: 150.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.000001, maximumSeconds: Optional(30.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 1.000001
+                    ▿ maximumSeconds: Optional(30.000001)
+                      - some: 30.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.4652
+                  ▿ coefficient: Optional(0.9248)
+                    - some: 0.9248
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 0.9248 × Tm^P")
+                    - some: "Tc = 0.9248 × Tm^P"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = 0.9248 × Tm^P, P ≈ 1.4652. Free log-log fit through Rollei\'s published 2/5/10/20/30 sec corrected-time rows. Rollei\'s published rows do not lie on a single power law, so residuals reach ~0.3 stop at the 2/5 sec rows; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 5 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 2.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(2.0)
+                        - some: 2.0
+                      - correctedSeconds: 3.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "2 sec → corrected 3 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 5.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(5.0)
+                        - some: 5.0
+                      - correctedSeconds: 8.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "5 sec → corrected 8 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 10.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(10.0)
+                        - some: 10.0
+                      - correctedSeconds: 25.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "10 sec → corrected 25 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 20.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(20.0)
+                        - some: 20.0
+                      - correctedSeconds: 75.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "20 sec → corrected 75 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 30.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(30.0)
+                        - some: 30.0
+                      - correctedSeconds: 150.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "30 sec → corrected 150 sec."
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-rpx-400"
@@ -2120,8 +2139,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "rollei-rpx-400-official-table"
-          - name: "Official corrected-time table"
+          - id: "rollei-rpx-400-official-formula"
+          - name: "Official log-log formula fit through published corrected-time rows"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -2142,73 +2161,92 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No correction required from 1/1000 sec to 1/2 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 5 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 1.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(1.0)
-                              - some: 1.0
-                            - correctedSeconds: 2.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 5.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(5.0)
-                              - some: 5.0
-                            - correctedSeconds: 10.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 10.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(10.0)
-                              - some: 10.0
-                            - correctedSeconds: 30.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 15.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(15.0)
-                              - some: 15.0
-                            - correctedSeconds: 55.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 20.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(20.0)
-                              - some: 20.0
-                            - correctedSeconds: 80.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 0.500001, maximumSeconds: Optional(20.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 0.500001
+                    ▿ maximumSeconds: Optional(20.000001)
+                      - some: 20.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.2404
+                  ▿ coefficient: Optional(1.7708)
+                    - some: 1.7708
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 1.7708 × Tm^P")
+                    - some: "Tc = 1.7708 × Tm^P"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = 1.7708 × Tm^P, P ≈ 1.2404. Free log-log fit through Rollei\'s published 1/5/10/15/20 sec corrected-time rows. Residuals reach ~0.4 stop at the 5 sec row where the published step is largest; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 20 sec continue on the same curve as numeric continuation outside the published source range."
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 5 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 1.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(1.0)
+                        - some: 1.0
+                      - correctedSeconds: 2.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "1 sec → corrected 2 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 5.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(5.0)
+                        - some: 5.0
+                      - correctedSeconds: 10.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "5 sec → corrected 10 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 10.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(10.0)
+                        - some: 10.0
+                      - correctedSeconds: 30.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "10 sec → corrected 30 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 15.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(15.0)
+                        - some: 15.0
+                      - correctedSeconds: 55.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "15 sec → corrected 55 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 20.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(20.0)
+                        - some: 20.0
+                      - correctedSeconds: 80.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "20 sec → corrected 80 sec."
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-retro-80s"
@@ -2223,8 +2261,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "rollei-retro-80s-official-table"
-          - name: "Official corrected-time table"
+          - id: "rollei-retro-80s-official-formula"
+          - name: "Official log-log formula fit through published quantified rows"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -2245,80 +2283,97 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No correction required from 1/1000 sec to 1/2 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 6 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 1.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.note
-                        ▿ note: PTimer.ReciprocityNote
-                          - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
-                    ▿ notes: 1 element
-                      - "1 sec → effective exposure 1 to 2 sec."
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 2.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.note
-                        ▿ note: PTimer.ReciprocityNote
-                          - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
-                    ▿ notes: 1 element
-                      - "2 sec → effective exposure 3 to 4 sec."
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 4.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(4.0)
-                              - some: 4.0
-                            - correctedSeconds: 8.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 8.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(8.0)
-                              - some: 8.0
-                            - correctedSeconds: 24.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 15.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(15.0)
-                              - some: 15.0
-                            - correctedSeconds: 60.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 30.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(30.0)
-                              - some: 30.0
-                            - correctedSeconds: 180.0
-                            - isApproximate: false
-                    - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 0.500001, maximumSeconds: Optional(30.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 0.500001
+                    ▿ maximumSeconds: Optional(30.000001)
+                      - some: 30.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.5361
+                  ▿ coefficient: Optional(0.9601)
+                    - some: 0.9601
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 0.9601 × Tm^P")
+                    - some: "Tc = 0.9601 × Tm^P"
+                - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Source data sheet expresses 1 sec and 2 sec corrected exposures as ranges; preserved as row notes rather than synthesised single values."
+                  - "Tc = 0.9601 × Tm^P, P ≈ 1.5361. Free log-log fit through Rollei\'s four published quantified corrected-time rows (4/8/15/30 sec). The 1 sec and 2 sec published rows give corrected exposure as ranges (1–2 sec and 3–4 sec) and are preserved as source-evidence notes — they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 6 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 1.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.note
+                  ▿ note: PTimer.ReciprocityNote
+                    - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
+              ▿ notes: 1 element
+                - "1 sec → effective exposure 1 to 2 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 2.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.note
+                  ▿ note: PTimer.ReciprocityNote
+                    - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
+              ▿ notes: 1 element
+                - "2 sec → effective exposure 3 to 4 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 4.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(4.0)
+                        - some: 4.0
+                      - correctedSeconds: 8.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "4 sec → corrected 8 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 8.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(8.0)
+                        - some: 8.0
+                      - correctedSeconds: 24.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "8 sec → corrected 24 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 15.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(15.0)
+                        - some: 15.0
+                      - correctedSeconds: 60.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "15 sec → corrected 60 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 30.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(30.0)
+                        - some: 30.0
+                      - correctedSeconds: 180.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "30 sec → corrected 180 sec."
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-superpan-200"
@@ -2333,8 +2388,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "rollei-superpan-200-official-table"
-          - name: "Official corrected-time table"
+          - id: "rollei-superpan-200-official-formula"
+          - name: "Official log-log formula fit through published quantified rows"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -2355,80 +2410,97 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No correction required from 1/1000 sec to 1/2 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 6 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 1.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.note
-                        ▿ note: PTimer.ReciprocityNote
-                          - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
-                    ▿ notes: 1 element
-                      - "1 sec → effective exposure 1 to 2 sec."
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 2.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.note
-                        ▿ note: PTimer.ReciprocityNote
-                          - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
-                    ▿ notes: 1 element
-                      - "2 sec → effective exposure 3 to 4 sec."
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 4.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(4.0)
-                              - some: 4.0
-                            - correctedSeconds: 8.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 8.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(8.0)
-                              - some: 8.0
-                            - correctedSeconds: 24.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 15.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(15.0)
-                              - some: 15.0
-                            - correctedSeconds: 60.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 30.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(30.0)
-                              - some: 30.0
-                            - correctedSeconds: 180.0
-                            - isApproximate: false
-                    - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 0.500001, maximumSeconds: Optional(30.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 0.500001
+                    ▿ maximumSeconds: Optional(30.000001)
+                      - some: 30.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.5361
+                  ▿ coefficient: Optional(0.9601)
+                    - some: 0.9601
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 0.9601 × Tm^P")
+                    - some: "Tc = 0.9601 × Tm^P"
+                - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Source data sheet expresses 1 sec and 2 sec corrected exposures as ranges; preserved as row notes rather than synthesised single values."
+                  - "Tc = 0.9601 × Tm^P, P ≈ 1.5361. Free log-log fit through Rollei\'s four published quantified corrected-time rows (4/8/15/30 sec); identical shape to RETRO 80S because Rollei publishes the same correction values for both films. The 1 sec and 2 sec published rows give corrected exposure as ranges (1–2 sec and 3–4 sec) and are preserved as source-evidence notes — they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 6 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 1.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.note
+                  ▿ note: PTimer.ReciprocityNote
+                    - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
+              ▿ notes: 1 element
+                - "1 sec → effective exposure 1 to 2 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 2.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.note
+                  ▿ note: PTimer.ReciprocityNote
+                    - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
+              ▿ notes: 1 element
+                - "2 sec → effective exposure 3 to 4 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 4.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(4.0)
+                        - some: 4.0
+                      - correctedSeconds: 8.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "4 sec → corrected 8 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 8.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(8.0)
+                        - some: 8.0
+                      - correctedSeconds: 24.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "8 sec → corrected 24 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 15.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(15.0)
+                        - some: 15.0
+                      - correctedSeconds: 60.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "15 sec → corrected 60 sec."
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 30.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(30.0)
+                        - some: 30.0
+                      - correctedSeconds: 180.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "30 sec → corrected 180 sec."
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "adox-chs-100-ii"

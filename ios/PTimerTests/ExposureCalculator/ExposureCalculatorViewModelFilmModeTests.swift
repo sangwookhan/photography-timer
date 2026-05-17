@@ -521,12 +521,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
     @MainActor
     func testFilmModeDetailsGraphShowsTableAnchorsAndCurrentPointForQuantifiedTableResult() throws {
-        // RPX 100 is still on the table-based path in this PR (the
-        // Rollei stocks convert in PTIMER-138). It exercises the
-        // table graph kind that converted Fujifilm and Kodak B/W
-        // profiles — and now FOMA — no longer use.
+        // CHS 100 II is still on the table-based path in this PR
+        // (the ADOX stocks convert in PTIMER-139). It exercises the
+        // table graph kind that converted Fujifilm, Kodak B/W, FOMA,
+        // and Rollei profiles no longer use.
         let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "RPX 100" })
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "CHS 100 II" })
 
         viewModel.baseShutter = 8
         viewModel.ndStop = 0
@@ -536,10 +536,10 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let graph = try XCTUnwrap(details.graph)
 
         XCTAssertEqual(graph.kind, .table)
-        XCTAssertEqual(graph.sourcePoints.count, 5)
+        XCTAssertEqual(graph.sourcePoints.count, 6)
         XCTAssertEqual(graph.sourcePoints.first?.meteredExposureSeconds ?? 0, 2, accuracy: 0.0001)
-        XCTAssertEqual(graph.sourcePoints.last?.meteredExposureSeconds ?? 0, 30, accuracy: 0.0001)
-        XCTAssertEqual(graph.currentPoint?.style, .estimated)
+        XCTAssertEqual(graph.sourcePoints.last?.meteredExposureSeconds ?? 0, 60, accuracy: 0.0001)
+        XCTAssertEqual(graph.currentPoint?.style, .exact)
         XCTAssertEqual(graph.currentPoint?.point.meteredExposureSeconds ?? 0, 8, accuracy: 0.0001)
         XCTAssertNotNil(graph.currentPoint?.point.correctedExposureSeconds)
         XCTAssertEqual(graph.caption, "Adjusted shutter vs corrected exposure from reference anchors")
@@ -549,15 +549,15 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
     @MainActor
     func testFilmModeDetailsGraphShowsExtrapolatedCurrentPointForExtendedTableResult() throws {
-        // RPX 100 is still on the table extrapolation path in this
-        // PR (the Rollei stocks convert in PTIMER-138). Above the
-        // 30 sec upper-published row the table-based current point
-        // marks as `.extrapolated`.
+        // CHS 100 II is still on the table extrapolation path in
+        // this PR (the ADOX stocks convert in PTIMER-139). Above
+        // the 60 sec upper-published row the table-based current
+        // point marks as `.extrapolated`.
         let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "RPX 100" })
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "CHS 100 II" })
 
         viewModel.baseShutter = 8
-        viewModel.ndStop = 4
+        viewModel.ndStop = 5
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
@@ -565,9 +565,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         XCTAssertEqual(graph.kind, .table)
         XCTAssertEqual(graph.currentPoint?.style, .extrapolated)
-        XCTAssertEqual(graph.currentPoint?.point.meteredExposureSeconds ?? 0, 128, accuracy: 0.0001)
+        XCTAssertEqual(graph.currentPoint?.point.meteredExposureSeconds ?? 0, 256, accuracy: 0.0001)
         XCTAssertNotNil(graph.currentPoint?.point.correctedExposureSeconds)
-        XCTAssertEqual(graph.supportedRangeUpperBoundSeconds ?? 0, 30, accuracy: 0.0001)
+        XCTAssertEqual(graph.supportedRangeUpperBoundSeconds ?? 0, 60, accuracy: 0.0001)
     }
 
     @MainActor
@@ -1534,25 +1534,33 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
     @MainActor
     func testFilmModeReciprocityStateVisiblyDistinguishesExactEstimatedAndExtrapolated() throws {
-        // RPX 100 still walks the table-based exact / estimated /
-        // extrapolated badge path in this PR (the Rollei stocks
-        // convert in PTIMER-138); converted formula profiles render
+        // CHS 100 II still walks the table-based exact / estimated
+        // / extrapolated badge path in this PR (the ADOX stocks
+        // convert in PTIMER-139); converted formula profiles render
         // different badges (Formula-derived / Beyond source range)
         // covered by the per-film converted profile tests.
+        //
+        // CHS 100 II's published rows align with the full-stop
+        // shutter ladder (2/4/8/15/30/60 sec), so the test needs an
+        // input scale that does not snap to full stops — otherwise
+        // every legal input lands on a row and the Estimated badge
+        // can never appear. The third-stop scale leaves base shutter
+        // values un-snapped so off-row inputs interpolate normally.
         let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "RPX 100" })
+        viewModel.scaleMode = .oneThirdStop // disables the full-stop snap so 5 sec stays 5 sec.
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "CHS 100 II" })
         viewModel.selectPresetFilm(film)
 
         viewModel.baseShutter = 2
         viewModel.ndStop = 0
         let exactState = try XCTUnwrap(viewModel.filmModeExposureResultState)
 
-        viewModel.baseShutter = 8
+        viewModel.baseShutter = 5
         viewModel.ndStop = 0
         let estimatedState = try XCTUnwrap(viewModel.filmModeExposureResultState)
 
         viewModel.baseShutter = 8
-        viewModel.ndStop = 4
+        viewModel.ndStop = 5
         let extrapolatedState = try XCTUnwrap(viewModel.filmModeExposureResultState)
 
         XCTAssertEqual(exactState.reciprocityState.badgeText, "Exact")
@@ -1603,12 +1611,12 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
     @MainActor
     func testCorrectedExposureNumericDisplayUsesRestoredTimeFormatting() throws {
-        // Use RPX 100 so the test covers the in-range formatter path
-        // on a still-table film in this PR (Rollei stocks convert in
-        // PTIMER-138); converted formula films prefix outside-guidance
-        // numeric values with "≈".
+        // Use CHS 100 II so the test covers the in-range formatter
+        // path on a still-table film in this PR (ADOX stocks
+        // convert in PTIMER-139); converted formula films prefix
+        // outside-guidance numeric values with "≈".
         let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "RPX 100" })
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "CHS 100 II" })
 
         viewModel.baseShutter = 30
         viewModel.ndStop = 0

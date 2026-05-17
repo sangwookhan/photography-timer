@@ -446,21 +446,21 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 2.2457, accuracy: 0.01)
     }
 
-    func testRolleiRangeRowsArePreservedAsNotesRatherThanInvented() throws {
+    func testRolleiRangeRowsArePreservedAsSourceEvidenceNotesRatherThanInvented() throws {
         let retro = try XCTUnwrap(film(named: "RETRO 80S"))
         let profile = retro.profiles[0]
-        let tableEntries = profile.rules.compactMap { rule -> [ReciprocityTableEntry]? in
-            if case let .table(table) = rule { return table.entries }
-            return nil
-        }.flatMap { $0 }
 
-        let oneSecondRow = tableEntries.first { entry in
-            if case let .exactSeconds(value) = entry.meteredExposure {
+        // After PTIMER-138 the published rows live as source
+        // evidence, not as table entries — but the range-valued
+        // 1 sec row must still preserve the "1 to 2 sec" range as
+        // a note rather than being flattened into a single value.
+        let oneSecondRow = profile.sourceEvidence.first { row in
+            if case let .exactSeconds(value) = row.meteredExposure {
                 return abs(value - 1) < 0.000001
             }
             return false
         }
-        let row = try XCTUnwrap(oneSecondRow, "Expected RETRO 80S to keep the 1 sec source row even when value is a range.")
+        let row = try XCTUnwrap(oneSecondRow, "Expected RETRO 80S to keep the 1 sec source row as evidence even when the published corrected value is a range.")
 
         let hasQuantifiedExposure = row.adjustments.contains { adjustment in
             if case let .exposure(exposure) = adjustment {
@@ -472,7 +472,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
         XCTAssertFalse(
             hasQuantifiedExposure,
-            "Range-valued source rows must not be flattened into a single corrected exposure value."
+            "Range-valued source rows must not be flattened into a single corrected exposure value, even after formula conversion."
         )
 
         let preservesNote = row.adjustments.contains { adjustment in
@@ -481,7 +481,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             }
             return false
         }
-        XCTAssertTrue(preservesNote, "Range source value '1 to 2 sec' must be preserved as a note adjustment.")
+        XCTAssertTrue(preservesNote, "Range source value '1 to 2 sec' must be preserved as a note adjustment in source evidence.")
     }
 
     func testAdoxChsTableProfileReturnsExactRow() throws {

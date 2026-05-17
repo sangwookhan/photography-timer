@@ -1016,24 +1016,25 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             "Source-less formula profiles must not be classified as converted."
         )
 
-        let fomapan100 = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Fomapan 100 Classic" }?.profiles.first
+        let portra400 = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Portra 400" }?.profiles.first
         )
         XCTAssertFalse(
-            fomapan100.isConvertedFormulaProfile,
-            "Table-based profiles without a formula rule must not be classified as converted."
+            portra400.isConvertedFormulaProfile,
+            "Threshold-only profiles without a formula rule must not be classified as converted."
         )
     }
 
     @MainActor
-    func testFomapan100TableProfileKeepsExistingWordingAndAxisTicks() throws {
-        // Fomapan 100 Classic still uses the table-based path; this
-        // pins that the converted-profile wording remains scoped to
-        // formula profiles with sourceEvidence, so unrelated table
-        // films do not silently inherit the new vocabulary.
+    func testRollei100TableProfileKeepsExistingWordingAndAxisTicks() throws {
+        // RPX 100 still uses the table-based path in this PR (the
+        // Rollei stocks convert in PTIMER-138). This pins that the
+        // converted-profile wording remains scoped to formula
+        // profiles with sourceEvidence, so unrelated table films do
+        // not silently inherit the new vocabulary.
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Fomapan 100 Classic" },
-            "Fomapan 100 Classic must remain in the launch catalog."
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "RPX 100" },
+            "RPX 100 must remain in the launch catalog."
         )
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
@@ -1060,7 +1061,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         )
 
         let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertEqual(graph.kind, .table, "Fomapan 100 Classic must keep the table graph path.")
+        XCTAssertEqual(graph.kind, .table, "RPX 100 must keep the table graph path.")
         XCTAssertNil(graph.scaleTier, "Table graphs must not be forced onto the formula tier policy.")
         XCTAssertFalse(graph.isBeyondVisibleRange)
 

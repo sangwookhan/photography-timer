@@ -2025,8 +2025,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-100-official-table",
-        "name": "Official multiplier table",
+        "id": "foma-fomapan-100-official-formula",
+        "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [
           {
@@ -2043,96 +2043,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 2
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 2,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 8
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 80,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 16
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1600,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 2.2457,
+                "equation": "Tc = 2.2457 \u00d7 Tm^P",
+                "exponent": 1.4515,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 2.2457 \u00d7 Tm^P, P \u2248 1.4515. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (\u00d72 / \u00d78 / \u00d716). The data sheet rows do not lie on a single power law, so the fit sits ~1/6 stop above the 1 sec and 100 sec rows and ~1/3 stop below the 10 sec row; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2142,7 +2069,99 @@
           "kind": "manufacturerPublished",
           "publisher": "FOMA BOHEMIA",
           "title": "FOMAPAN 100 CLASSIC \u2014 Technical sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 \u00d72 (corrected 2 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 8
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 \u00d78 (corrected 80 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 16
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1600,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 \u00d716 (corrected 1600 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2159,8 +2178,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-200-official-table",
-        "name": "Official multiplier table",
+        "id": "foma-fomapan-200-official-formula",
+        "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [
           {
@@ -2177,96 +2196,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 3
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 3,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 9
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 90,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 18
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1800,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 3.2107,
+                "equation": "Tc = 3.2107 \u00d7 Tm^P",
+                "exponent": 1.3891,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 3.2107 \u00d7 Tm^P, P \u2248 1.3891. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (\u00d73 / \u00d79 / \u00d718). Residuals stay within ~1/5 stop at every published row; the source rows stay visible as evidence so the fit is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2276,7 +2222,99 @@
           "kind": "manufacturerPublished",
           "publisher": "FOMA BOHEMIA",
           "title": "FOMAPAN 200 CREATIVE \u2014 Technical sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 \u00d73 (corrected 3 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 9
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 90,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 \u00d79 (corrected 90 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 18
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1800,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 \u00d718 (corrected 1800 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2293,8 +2331,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-400-official-table",
-        "name": "Official multiplier table",
+        "id": "foma-fomapan-400-official-formula",
+        "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [
           {
@@ -2311,96 +2349,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 1.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1.5,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 6
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 60,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 8
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 800,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.8022,
+                "equation": "Tc = 1.8022 \u00d7 Tm^P",
+                "exponent": 1.3635,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 1.8022 \u00d7 Tm^P, P \u2248 1.3635. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (\u00d71.5 / \u00d76 / \u00d78). FOMAPAN 400's published rows step \u00d71.5 \u2192 \u00d76 \u2192 \u00d78 \u2014 the 10 sec row sits roughly half a stop above the curve while the 1 and 100 sec rows sit roughly a quarter stop below; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2410,7 +2375,99 @@
           "kind": "manufacturerPublished",
           "publisher": "FOMA BOHEMIA",
           "title": "FOMAPAN 400 ACTION \u2014 Technical sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.5,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 \u00d71.5 (corrected 1.5 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 6
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 \u00d76 (corrected 60 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 8
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 800,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 \u00d78 (corrected 800 sec)."
+            ]
+          }
+        ]
       }
     ]
   },

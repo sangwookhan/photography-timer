@@ -1122,13 +1122,13 @@ final class ReciprocityCorrectionInvariantTests: XCTestCase {
         }
     }
 
-    func testFomaTableProfilePreservesPublishedSubSecondBehavior() throws {
-        // The Foma family ships table profiles whose published
-        // threshold covers sub-1s with No correction, and whose
-        // first table row starts at 1s. The default formula
-        // no-correction handoff must not shadow either of those —
-        // Foma's published behavior has to stay observable
-        // end-to-end.
+    func testFomaProfilePreservesPublishedSubSecondBehaviorAfterFormulaConversion() throws {
+        // The Foma family converts to formula-based prediction but
+        // keeps its published 'no correction' threshold band (1/1000
+        // sec to 1/2 sec). The default formula no-correction handoff
+        // must not shadow either the threshold band or the formula
+        // result at the published 1 sec anchor — Foma's published
+        // behavior has to stay observable end-to-end.
         let film = try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == "Fomapan 100 Classic" })
         )
@@ -1143,15 +1143,15 @@ final class ReciprocityCorrectionInvariantTests: XCTestCase {
         XCTAssertEqual(belowThreshold.metadata.basis, .officialThresholdNoCorrection)
         XCTAssertEqual(belowThreshold.correctedExposureSeconds ?? -1, 0.1, accuracy: 1e-6)
 
-        // First published table row at 1s: corrected exposure
-        // remains driven by the published multiplier-based table
-        // entry (factor 2 → corrected 2s), not by any synthesized
-        // default handoff.
+        // First published anchor at 1 sec: formula prediction sits
+        // close to the published row (×2 → 2 s) but no longer
+        // resurrects it as an exact-table point. The free log-log
+        // fit produces Tc ≈ 2.25 s at Tm = 1 s.
         let firstRow = evaluator.evaluate(
             profile: profile,
             meteredExposureSeconds: 1
         )
-        XCTAssertEqual(firstRow.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(firstRow.correctedExposureSeconds ?? 0, 2, accuracy: 1e-6)
+        XCTAssertEqual(firstRow.metadata.basis, .formulaDerived)
+        XCTAssertEqual(firstRow.correctedExposureSeconds ?? 0, 2.2457, accuracy: 0.01)
     }
 }

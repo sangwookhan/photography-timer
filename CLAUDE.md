@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Commands are run from the repository root. Cross-platform fixtures
 stay at the repo root under `shared/test-fixtures/`.
 
+### iOS
+
 ```bash
 # Run all tests
 cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
@@ -24,6 +26,28 @@ cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer
 If `iPhone 17` is unavailable, choose any available iPhone simulator from the destinations list.
 
 To run a single test class, add `-only-testing PTimerTests/<ClassName>` to the command.
+
+### Android
+
+```bash
+cd android && ./gradlew assembleDebug          # build debug APK
+cd android && ./gradlew test                   # unit tests
+cd android && ./gradlew lint                   # Android Lint
+cd android && ./gradlew installDebug           # install on device/emulator
+```
+
+Requires JDK 17 or newer (Android Studio's bundled JBR is
+sufficient; for CLI builds, point `JAVA_HOME` at a JDK 17+ install)
+and `ANDROID_HOME` pointing at the Android SDK (or
+`android/local.properties` with `sdk.dir=<path>`).
+`connectedAndroidTest` is not part of skeleton DoD.
+
+Prefer opening the repository root in Android Studio when reviewing
+Git history across both platforms. If you open `android/` directly
+and Git history is not visible, add the parent repository directory
+as a Git root from *Preferences/Settings → Version Control →
+Directory mappings*. Do not initialize a new Git repository inside
+`android/`, and do not commit `android/.idea/`.
 
 ## Architecture Overview
 

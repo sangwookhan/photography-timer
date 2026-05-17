@@ -58,17 +58,7 @@ final class SharedFixtureGoldenTests: XCTestCase {
 
     // MARK: - Fixture loading
 
-    private static var fixturesRoot: URL = {
-        // Walk up from this test file to the repo root, then descend
-        // into shared/test-fixtures. The xcrun test runner's working
-        // directory is unreliable, so resolve from #filePath instead.
-        var url = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // ExposureCalculator
-            .deletingLastPathComponent() // PTimerTests
-            .deletingLastPathComponent() // <repo root>
-        url.appendPathComponent("shared/test-fixtures", isDirectory: true)
-        return url
-    }()
+    private static let fixturesRoot: URL = SharedFixtureLocator.fixturesRoot()
 
     private func loadExposureGolden() throws -> ExposureGoldenFixture {
         let url = Self.fixturesRoot.appendingPathComponent("exposure-golden.json")

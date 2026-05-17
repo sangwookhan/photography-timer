@@ -49,17 +49,20 @@ user explicitly says otherwise.
 
 ## Repository Context
 
-- Product target: iPhone app
-- Stack: Swift, SwiftUI, Xcode project
-- Workspace entry point: `ios/PTimer.xcodeproj`
-- Main app scheme: `PTimer`
-- Test target: `ios/PTimerTests`
-- Current automated tests use `XCTest`
+- Primary product target: iPhone app
+- iOS stack: Swift, SwiftUI, Xcode project
+- iOS workspace entry point: `ios/PTimer.xcodeproj`
+- iOS main app scheme: `PTimer`
+- iOS test target: `ios/PTimerTests`
+- iOS automated tests use `XCTest`
+- Secondary platform: native Android skeleton (`android/`,
+  Kotlin + Jetpack Compose, Gradle). Android build entry point:
+  `android/build.gradle.kts`; app module: `android/app`.
 
-iOS sources live under `ios/`. Shared cross-platform fixtures live at
-`shared/test-fixtures/`. Existing product documents live under `docs/`.
-Operational workflow documents may live at repository root, `docs/tasks/`,
-and `.codex/`.
+iOS sources live under `ios/`. Android sources live under `android/`.
+Shared cross-platform fixtures live at `shared/test-fixtures/`.
+Existing product documents live under `docs/`. Operational workflow
+documents may live at repository root, `docs/tasks/`, and `.codex/`.
 
 ---
 
@@ -166,6 +169,35 @@ Guidance:
 
 If a simulator name differs locally, choose an available iPhone simulator from
 `xcodebuild -showdestinations`.
+
+---
+
+## Android Test and Verification Guidance
+
+The Android target is a skeleton; no PTimer features are ported.
+Builds and unit tests run from the repository root.
+
+Typical commands:
+
+```bash
+cd android && ./gradlew assembleDebug
+cd android && ./gradlew test
+cd android && ./gradlew lint
+```
+
+Prerequisites:
+
+- JDK 17 or newer. Android Studio's bundled JBR is sufficient. For
+  CLI builds, point `JAVA_HOME` at a JDK 17+ install.
+- Android SDK on `ANDROID_HOME` (or `android/local.properties` with
+  `sdk.dir=<path>`).
+
+Guidance:
+
+- Skeleton DoD covers `assembleDebug`, `test`, `lint`, and manual
+  launch on an emulator.
+- `connectedAndroidTest` is not part of skeleton DoD; gate it when
+  instrumented UI tests are introduced.
 
 ---
 

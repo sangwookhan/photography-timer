@@ -12,7 +12,8 @@ Activity widget.
 - Widget target: `ios/PTimerWidgets`
 - Test plan: `ios/PTimer.xctestplan`
 
-iOS sources live under `ios/`. Shared cross-platform test fixtures live at
+iOS sources live under `ios/`. A native Android skeleton lives under
+`android/`. Shared cross-platform test fixtures live at
 `shared/test-fixtures/`.
 
 ## Architecture summary
@@ -80,3 +81,38 @@ cd ios && swiftlint lint          # run from repository root
 Configuration lives in `ios/.swiftlint.yml`. Phase 0 baseline is
 intentionally relaxed; size and complexity thresholds are added in a
 later phase.
+
+## Android skeleton
+
+A minimal native Android project lives under `android/`. It builds
+independently and currently launches to a placeholder Compose screen
+only; no PTimer features are ported.
+
+### Prerequisites
+
+- JDK 17 or newer. Android Studio's bundled JBR is sufficient. For
+  CLI builds, point `JAVA_HOME` at a JDK 17+ install. The Gradle
+  wrapper handles Gradle itself.
+- Android SDK. Set `ANDROID_HOME` or create
+  `android/local.properties` with `sdk.dir=<path>`.
+
+### Build and test
+
+```bash
+cd android && ./gradlew assembleDebug          # build debug APK
+cd android && ./gradlew test                   # unit tests
+cd android && ./gradlew lint                   # Android Lint
+cd android && ./gradlew installDebug           # install on device/emulator
+```
+
+`connectedAndroidTest` requires a running device or emulator and is
+not part of the skeleton's required DoD.
+
+### Android Studio: opening the project
+
+Prefer opening the **repository root** in Android Studio when
+reviewing Git history across both platforms. If you open `android/`
+directly and Git history is not visible, add the parent repository
+directory as a Git root from *Preferences/Settings → Version
+Control → Directory mappings*. Do not initialize a new Git
+repository inside `android/`, and do not commit `android/.idea/`.

@@ -308,12 +308,13 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// pinned to `t3` and the view shows an overflow indicator instead
     /// of expanding the domain.
     let isBeyondVisibleRange: Bool
-    /// `true` when the current input (or its corrected exposure) sits
-    /// below the active tier's lower bound (1s for every tier). Sub-
-    /// second inputs would otherwise be drawn at the left edge of
-    /// the plot — looking as if they sat on the 1s axis — so the
-    /// view suppresses the marker and surfaces a below-visible-range
-    /// chip instead.
+    /// `true` when the current input (or its corrected exposure)
+    /// sits below the stable viewport lower bound. The viewport
+    /// itself already extends below 1 s so the no-correction band
+    /// renders as a visible region; this flag fires only for
+    /// inputs that fall below the viewport's leading edge
+    /// entirely, in which case the view suppresses the marker
+    /// and surfaces an outside-visible-range chip instead.
     let isBelowVisibleRange: Bool
     let xRange: ClosedRange<Double>
     let yRange: ClosedRange<Double>
@@ -375,6 +376,72 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
 
 struct FilmModeDetailsLegendState: Equatable {
     let lines: [String]
+}
+
+extension FilmModeDetailsGraphDisplayState {
+    /// User-visible legend chip labels in their render order. The
+    /// SwiftUI view derives its colored chips from this list so the
+    /// chip text exists in a testable, value-only layer instead of
+    /// living only in the view tree. Tests assert against this
+    /// directly without instantiating the view.
+    var legendChipLabels: [String] {
+        switch kind {
+        case .formula:
+            if usesCurrentInputGuideOnly {
+                return ["Calculation curve", "Current input"]
+            }
+            var items: [String] = ["Calculation curve", "Current result"]
+            if !sourceReferenceMarkers.isEmpty {
+                items.append("Source reference")
+            }
+            if noCorrectionRangeUpperBoundSeconds != nil {
+                items.append("No-correction range")
+            }
+            if notRecommendedBoundarySeconds != nil {
+                items.append("Not-recommended boundary")
+            }
+            if beyondSourceRangeStartSeconds != nil {
+                items.append("Beyond source range")
+            }
+            if isBeyondVisibleRange || isBelowVisibleRange {
+                items.append("Outside visible range")
+            }
+            return items
+        case .table:
+            var items: [String] = ["Reference"]
+            if usesCurrentInputGuideOnly {
+                items.append("Range limit")
+                items.append("Current input")
+                return items
+            }
+            if let currentPoint {
+                items.append(tableLegendChipLabel(for: currentPoint.style))
+            }
+            return items
+        }
+    }
+
+    private func tableLegendChipLabel(
+        for style: FilmModeDetailsGraphCurrentPointStyle
+    ) -> String {
+        switch style {
+        case .exact:
+            return "Exact"
+        case .estimated:
+            return "Estimated"
+        case .extrapolated:
+            // Converted formula profiles (formula + source evidence)
+            // surface beyond-source range using the same orange-
+            // triangle marker; the chip wording reflects that
+            // semantic.
+            let isConvertedFormulaProfile = kind == .formula && !sourceReferenceMarkers.isEmpty
+            return isConvertedFormulaProfile ? "Beyond source range" : "Extrapolated"
+        case .formulaDerived:
+            return "Current result"
+        case .noCorrection:
+            return "No correction"
+        }
+    }
 }
 
 struct FilmModeDetailsDisplayState: Equatable, Identifiable {

@@ -1939,7 +1939,7 @@
         "token" : "beyondOfficialQuantifiedRange"
       },
       {
-        "text" : "Outside manufacturer guidance — value extrapolated from the published formula curve.",
+        "text" : "Outside manufacturer guidance — value extrapolated from the published calculation curve.",
         "token" : "unsupportedByPolicy"
       }
     ],
@@ -1962,7 +1962,7 @@
         "token" : "beyondOfficialQuantifiedRange"
       },
       {
-        "text" : "Outside manufacturer guidance — value extrapolated from the published formula curve.",
+        "text" : "Outside manufacturer guidance — value extrapolated from the published calculation curve.",
         "token" : "unsupportedByPolicy"
       }
     ],
@@ -1985,7 +1985,7 @@
         "token" : "beyondOfficialQuantifiedRange"
       },
       {
-        "text" : "Outside manufacturer guidance — value extrapolated from the published formula curve.",
+        "text" : "Outside manufacturer guidance — value extrapolated from the published calculation curve.",
         "token" : "unsupportedByPolicy"
       }
     ],

@@ -1901,7 +1901,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             }
 
             let policyText = correctedExposureSeconds != nil
-                ? "Outside manufacturer guidance — value extrapolated from the published formula curve."
+                ? "Outside manufacturer guidance — value extrapolated from the published calculation curve."
                 : "This metered exposure is beyond the explicit formula policy boundary."
 
             return unsupported(

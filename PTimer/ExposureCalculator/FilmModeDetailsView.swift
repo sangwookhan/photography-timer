@@ -744,8 +744,10 @@ private struct FilmModeDetailsGraph: View {
                                 }
 
                                 // Shade the no-correction range so it
-                                // reads as policy-controlled, not as a
-                                // missing chunk of the formula curve.
+                                // reads as a policy-controlled band
+                                // (Tc = Tm identity through the zone),
+                                // distinct from the predicted formula
+                                // segment past the threshold.
                                 if let noCorrectionUpperBound = graph.noCorrectionRangeUpperBoundSeconds {
                                     noCorrectionRegion(
                                         endSeconds: noCorrectionUpperBound,
@@ -990,9 +992,19 @@ private struct FilmModeDetailsGraph: View {
 
     /// Light-green band covering the no-correction shutter range —
     /// e.g. Provia 100F's 0…128 s. Marks the policy zone where
-    /// adjusted shutter equals corrected exposure so the user reads
-    /// the area under no-correction guidance, not as a missing portion
-    /// of the formula curve.
+    /// adjusted shutter equals corrected exposure (Tc = Tm) so the
+    /// user reads the area under no-correction guidance, distinct
+    /// from the predicted formula segment past the threshold.
+    ///
+    /// Log-scale graph cannot plot 0 seconds directly. The
+    /// no-correction band is intentionally drawn from the visual
+    /// leading edge of the plot to represent 0 through the
+    /// no-correction threshold, while internal coordinates use
+    /// the graph's positive lower bound. The fill rectangle
+    /// starts at pixel x = 0 (the plot's leading edge) regardless
+    /// of `xRange.lowerBound`, so the band visually reads as
+    /// "from 0 to threshold" without exposing the positive
+    /// lower-bound value as a user-visible no-correction start.
     private func noCorrectionRegion(
         endSeconds: Double,
         in size: CGSize
@@ -1352,7 +1364,7 @@ private struct FilmModeDetailsGraph: View {
         let sourceDescription: String
         switch graph.kind {
         case .formula:
-            sourceDescription = "Shows formula curve and current point"
+            sourceDescription = "Shows calculation curve and current point"
         case .table:
             sourceDescription = "Shows neutral reference anchors and current point"
         }
@@ -1366,7 +1378,7 @@ private struct FilmModeDetailsGraph: View {
             case .extrapolated:
                 return "Current point extrapolated outside manufacturer guidance"
             case .formulaDerived:
-                return "Current point on formula curve"
+                return "Current point on calculation curve"
             case .noCorrection:
                 return "Current input in no-correction range"
             }
@@ -1375,78 +1387,63 @@ private struct FilmModeDetailsGraph: View {
         return "\(graph.caption). \(sourceDescription). \(pointDescription)."
     }
 
+    /// Renders the legend chips. The label text is owned by the
+    /// display state (`legendChipLabels`); this method only maps
+    /// each user-visible label to its accompanying SF Symbol and
+    /// accent color, so the wording is testable in the value
+    /// layer instead of living inside the SwiftUI tree.
     private var graphLegendItems: [(symbol: String, color: Color, text: String)] {
-        switch graph.kind {
-        case .formula:
-            if graph.usesCurrentInputGuideOnly {
-                return [
-                    ("line.horizontal.3", .accentColor, "Formula curve"),
-                    ("line.diagonal", .red, "Current input")
-                ]
-            }
-            var items: [(symbol: String, color: Color, text: String)] = [
-                ("line.horizontal.3", .accentColor, "Formula curve"),
-                ("circle.fill", .blue, "Current result")
-            ]
-            if !graph.sourceReferenceMarkers.isEmpty {
-                items.append(("circle", .green, "Source reference"))
-            }
-            if graph.noCorrectionRangeUpperBoundSeconds != nil {
-                items.append(("square.fill", .green.opacity(0.5), "No-correction range"))
-            }
-            if graph.notRecommendedBoundarySeconds != nil {
-                items.append(("minus", .red, "Not-recommended boundary"))
-            }
-            if graph.beyondSourceRangeStartSeconds != nil {
-                items.append(("square.fill", .pink.opacity(0.5), "Beyond source range"))
-            }
-            if graph.isBeyondVisibleRange || graph.isBelowVisibleRange {
-                items.append(("triangle.fill", .orange, "Outside visible range"))
-            }
-            return items
-        case .table:
-            var items: [(symbol: String, color: Color, text: String)] = [
-                ("circle", .secondary, "Reference")
-            ]
-
-            if graph.usesCurrentInputGuideOnly {
-                items.append(("square.fill", .green.opacity(0.5), "Range limit"))
-                items.append(("line.diagonal", .red, "Current input"))
-                return items
-            }
-
-            if let currentPoint = graph.currentPoint {
-                items.append(currentPointLegendItem(for: currentPoint.style))
-            }
-
-            return items
+        graph.legendChipLabels.map { label in
+            let symbolAndColor = symbolAndColor(forLegendLabel: label)
+            return (symbolAndColor.symbol, symbolAndColor.color, label)
         }
     }
 
-    private func currentPointLegendItem(
-        for style: FilmModeDetailsGraphCurrentPointStyle
-    ) -> (symbol: String, color: Color, text: String) {
-        switch style {
-        case .exact:
-            return ("circle.fill", .green, "Exact")
-        case .estimated:
-            return ("diamond.fill", .blue, "Estimated")
-        case .extrapolated:
-            // Converted formula profiles (formula + source evidence)
-            // present the same orange triangle marker but read as
-            // beyond the manufacturer source range. Non-converted
-            // table profiles keep the legacy "Extrapolated" label so
-            // their wording is unchanged.
-            let isConvertedFormulaProfile = graph.kind == .formula
-                && !graph.sourceReferenceMarkers.isEmpty
-            let label = isConvertedFormulaProfile ? "Beyond source range" : "Extrapolated"
-            return ("triangle.fill", .orange, label)
-        case .formulaDerived:
-            return ("circle.fill", .accentColor, "Current result")
-        case .noCorrection:
-            return ("circle", .green, "No correction")
+    private func symbolAndColor(
+        forLegendLabel label: String
+    ) -> (symbol: String, color: Color) {
+        switch label {
+        case "Calculation curve":
+            return ("line.horizontal.3", .accentColor)
+        case "Current result":
+            // The accent-colored ring is used by the table path's
+            // formulaDerived marker; the formula path uses the
+            // blue dot. Disambiguate using the graph kind.
+            return graph.kind == .formula
+                ? ("circle.fill", .blue)
+                : ("circle.fill", .accentColor)
+        case "Current input":
+            return ("line.diagonal", .red)
+        case "Source reference":
+            return ("circle", .green)
+        case "No-correction range":
+            return ("square.fill", .green.opacity(0.5))
+        case "Not-recommended boundary":
+            return ("minus", .red)
+        case "Beyond source range":
+            // Same orange-triangle visual whether surfaced as a
+            // formula-graph region or as a converted-formula table
+            // current-point chip.
+            return ("triangle.fill", .orange)
+        case "Outside visible range":
+            return ("triangle.fill", .orange)
+        case "Reference":
+            return ("circle", .secondary)
+        case "Range limit":
+            return ("square.fill", .green.opacity(0.5))
+        case "Exact":
+            return ("circle.fill", .green)
+        case "Estimated":
+            return ("diamond.fill", .blue)
+        case "Extrapolated":
+            return ("triangle.fill", .orange)
+        case "No correction":
+            return ("circle", .green)
+        default:
+            return ("circle", .secondary)
         }
     }
+
 
     private var graphExplanationSymbol: String {
         if graph.usesCurrentInputGuideOnly {

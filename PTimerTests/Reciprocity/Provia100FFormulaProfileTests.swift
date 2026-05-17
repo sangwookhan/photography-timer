@@ -422,8 +422,14 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         let displayState = try makeDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.scaleTier, .t1, "240 s plus a corrected exposure of ~302 s must stay inside the 1 h tier.")
-        XCTAssertEqual(graph.xRange, 1...3_600)
-        XCTAssertEqual(graph.yRange, 1...3_600)
+        // Viewport lower bound is profile-stable (one decade below
+        // 1 s for Provia 100F's wide threshold) so the same frame
+        // covers every normal-tier input. Upper bound stays tier-
+        // driven.
+        XCTAssertEqual(graph.xRange.lowerBound, 0.01, accuracy: 1e-9)
+        XCTAssertEqual(graph.xRange.upperBound, 3_600, accuracy: 1e-9)
+        XCTAssertEqual(graph.yRange.lowerBound, 0.01, accuracy: 1e-9)
+        XCTAssertEqual(graph.yRange.upperBound, 3_600, accuracy: 1e-9)
         XCTAssertFalse(graph.isBeyondVisibleRange)
     }
 
@@ -447,8 +453,13 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         let displayState = try makeDisplayState(meteredExposureSeconds: 500_000)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.scaleTier, .t3, "Inputs past T3.upperBound must stay pinned to T3.")
-        XCTAssertEqual(graph.xRange, 1...360_000, "xRange must be capped at T3 even for very large inputs.")
-        XCTAssertEqual(graph.yRange, 1...360_000, "yRange must be capped at T3 even for very large inputs.")
+        // T3 caps the upper bound; the profile-stable lower bound
+        // is unchanged from the T1 frame so the no-correction band
+        // stays visible even when long inputs bump the upper tier.
+        XCTAssertEqual(graph.xRange.lowerBound, 0.01, accuracy: 1e-9)
+        XCTAssertEqual(graph.xRange.upperBound, 360_000, accuracy: 1e-9, "xRange upper must be capped at T3 even for very large inputs.")
+        XCTAssertEqual(graph.yRange.lowerBound, 0.01, accuracy: 1e-9)
+        XCTAssertEqual(graph.yRange.upperBound, 360_000, accuracy: 1e-9, "yRange upper must be capped at T3 even for very large inputs.")
         XCTAssertTrue(graph.isBeyondVisibleRange, "isBeyondVisibleRange must trip for current values past T3.")
     }
 
@@ -479,16 +490,27 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FAxisTicksAreTierDerived() throws {
+    func testProvia100FAxisTicksExtendTierTicksWithSubSecondLabels() throws {
+        // Tier ticks anchor the axis from 1 s upward. With the
+        // stable sub-second viewport the leading edge sits below
+        // 1 s, so the axis prepends a sub-second tick (e.g.
+        // "1/10s") to the tier's ticks. The user-visible labels
+        // therefore extend the tier set; they no longer match it
+        // exactly.
         let displayState = try makeDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         let tier = try XCTUnwrap(graph.scaleTier)
-        XCTAssertEqual(graph.xAxisTicks.map(\.label), tier.axisTicks.map(\.label))
-        XCTAssertEqual(graph.yAxisTicks.map(\.label), tier.axisTicks.map(\.label))
-        XCTAssertTrue(
-            graph.xAxisTicks.map(\.label).contains("1h"),
-            "T1 axis must contain the 1h label."
-        )
+
+        let xLabels = graph.xAxisTicks.map(\.label)
+        let tierLabels = tier.axisTicks.map(\.label)
+        XCTAssertTrue(xLabels.contains("1h"),
+                      "T1 axis must contain the 1h label.")
+        for tierLabel in tierLabels {
+            XCTAssertTrue(xLabels.contains(tierLabel),
+                          "Tier-derived label '\(tierLabel)' must remain in the rendered axis tick set.")
+        }
+        XCTAssertGreaterThan(xLabels.count, tierLabels.count,
+                             "Axis tick set must extend below 1 s when the viewport leading edge is sub-second.")
     }
 
     // MARK: - Source-range presentation
@@ -608,25 +630,31 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(graph.scaleTier, .t1)
     }
 
-    // MARK: - Non-converted table profile regression
-
-    // MARK: - Below-visible-range (< 1 s)
+    // MARK: - Sub-second no-correction visibility
 
     @MainActor
-    func testProvia100FSubSecondInputTripsBelowVisibleRangeAndSuppressesMarker() throws {
-        // 1/30 s metered: well below the T1 lower bound (1 s).
-        // The graph must stay anchored to its tier domain and not
-        // park the marker at the 1 s axis edge pretending to be a
-        // legitimate value.
+    func testProvia100FSubSecondInputSitsInsideVisibleNoCorrectionBand() throws {
+        // 1/30 s metered is inside Provia 100F's published
+        // no-correction band (0.00025 … 128 s). The stable
+        // viewport extends below 1 s so the no-correction state
+        // is visible end-to-end — the marker sits at its real
+        // position on the identity line instead of being hidden as
+        // off-graph.
         let displayState = try makeDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertTrue(
+        XCTAssertFalse(
             graph.isBelowVisibleRange,
-            "A 1/30 s input must trip the below-visible-range flag so the view can suppress the on-plot marker."
+            "Sub-1 s no-correction inputs must sit inside the visible plot, not below it."
         )
-        XCTAssertEqual(graph.scaleTier, .t1, "Below-visible-range inputs still pin to a tier — the lowest one (T1).")
+        XCTAssertEqual(graph.scaleTier, .t1, "Tier selection is unchanged — the lower-bound is profile-stable, not tier-driven.")
         XCTAssertFalse(graph.isBeyondVisibleRange)
-        XCTAssertEqual(graph.xRange, 1...3_600)
+        XCTAssertLessThan(
+            graph.xRange.lowerBound,
+            1.0,
+            "Viewport must extend below 1 s so the no-correction region is visible."
+        )
+        XCTAssertEqual(graph.xRange.upperBound, 3_600,
+                       "Upper bound stays anchored to the tier so the calculation curve domain reads at its existing visual proportions.")
     }
 
     @MainActor
@@ -640,15 +668,44 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FFormulaCurveSamplesStayAtOrAboveOneSecond() throws {
+    func testProvia100FCalculationCurveStartsAtViewportLowerBoundAsIdentitySegment() throws {
+        // The calculation curve now includes an identity segment
+        // (Tc = Tm) through the no-correction range so the path is
+        // continuous from the viewport's leading edge through the
+        // formula segment. Samples must therefore extend down to
+        // the profile-stable lower bound while every identity
+        // sample sits on the y = x line.
         let displayState = try makeDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
         let minSample = try XCTUnwrap(graph.sourcePoints.map(\.meteredExposureSeconds).min())
-        XCTAssertGreaterThanOrEqual(
+        XCTAssertEqual(
             minSample,
-            FilmModeDetailsGraphScaleTier.t1.lowerBoundSeconds,
-            "Curve samples must never sit below the active tier's lower bound."
+            graph.xRange.lowerBound,
+            accuracy: 1e-6,
+            "Calculation curve must begin at the viewport's leading edge so the no-correction zone is not a visual gap."
         )
+
+        // Every sample strictly inside the no-correction threshold
+        // runs along the identity line — verifies the curve does
+        // not visually gap-jump through the band. The formula
+        // segment's first sample at threshold + ε is excluded; the
+        // catalog's coefficient form lands a few hundredths of a
+        // second off identity at the seam, which is the formula's
+        // intended kink (the curve lifts above identity going into
+        // the formula domain).
+        guard let threshold = graph.noCorrectionRangeUpperBoundSeconds else {
+            return XCTFail("Provia 100F must surface a no-correction upper bound.")
+        }
+        let identitySamples = graph.sourcePoints.filter { $0.meteredExposureSeconds <= threshold }
+        XCTAssertFalse(identitySamples.isEmpty, "Identity segment must produce at least one sample.")
+        for point in identitySamples {
+            XCTAssertEqual(
+                point.correctedExposureSeconds,
+                point.meteredExposureSeconds,
+                accuracy: 1e-6,
+                "Identity-segment samples must produce corrected == metered through the no-correction zone."
+            )
+        }
     }
 
     // MARK: - Layout
@@ -780,13 +837,18 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FBelowVisibleStatusStaysOnBasis() throws {
-        // 1/30 s metered is below the T1 lower bound but sits
-        // inside Provia 100F's threshold no-correction band. The
-        // basis-derived status wins over the visible-range flag.
+    func testProvia100FSubSecondInputStatusReadsAsNoCorrection() throws {
+        // 1/30 s metered sits inside Provia 100F's threshold
+        // no-correction band. The detail status reads the basis-
+        // derived "No correction", not a viewport-state string —
+        // the viewport-state machinery is independent of the
+        // calculation status.
         let displayState = try makeDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertTrue(graph.isBelowVisibleRange)
+        XCTAssertFalse(
+            graph.isBelowVisibleRange,
+            "Stable viewport: sub-1 s inputs sit inside the visible plot."
+        )
         XCTAssertEqual(displayState.currentResult.statusText, "No correction")
     }
 
@@ -926,10 +988,16 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FBelowVisibleSuppressesInRangeCurrentMarker() throws {
+    func testProvia100FSubSecondInputKeepsCurrentMarkerVisibleInsideViewport() throws {
+        // The stable viewport extends below 1 s so the marker for
+        // sub-1 s no-correction inputs sits at its real position
+        // on the identity line, not at the 1 s axis edge.
         let displayState = try makeDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertTrue(graph.isBelowVisibleRange)
+        XCTAssertFalse(graph.isBelowVisibleRange)
+        let currentPoint = try XCTUnwrap(graph.currentPoint)
+        XCTAssertEqual(currentPoint.style, .noCorrection)
+        XCTAssertLessThan(graph.xRange.lowerBound, currentPoint.point.meteredExposureSeconds)
     }
 
     // MARK: - Centralized converted-profile classification
@@ -1112,29 +1180,42 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     /// the threshold upper bound so the region left of 128 s reads as
     /// policy-controlled rather than as a formula prediction.
     @MainActor
-    func testProvia100FFormulaCurveDoesNotExtendIntoNoCorrectionRange() throws {
+    func testProvia100FFormulaSegmentBeyondThresholdLeavesIdentityForPredictedCurve() throws {
+        // Through the no-correction zone the calculation curve is
+        // the Tc = Tm identity line. Past Provia 100F's 128 s
+        // threshold the curve must switch to the formula segment
+        // — for at least one sample beyond 128 s the corrected
+        // value rises above the identity line (formula exponent
+        // > 1 → corrected > metered).
         let displayState = try makeDisplayState(meteredExposureSeconds: 60)
         let graph = try XCTUnwrap(displayState.graph)
 
-        let minimumSampledMetered = try XCTUnwrap(
-            graph.sourcePoints.map(\.meteredExposureSeconds).min(),
-            "Formula curve must produce at least one source sample."
+        let pastThreshold = graph.sourcePoints.first(where: { $0.meteredExposureSeconds > 128 + 1e-6 })
+        let predictedSample = try XCTUnwrap(
+            pastThreshold,
+            "Calculation curve must include at least one sample beyond Provia 100F's 128 s threshold."
         )
-        XCTAssertGreaterThanOrEqual(
-            minimumSampledMetered,
-            128,
-            "Formula curve sampling must start at or above Provia 100F's 128 s threshold; got \(minimumSampledMetered) s."
+        XCTAssertGreaterThan(
+            predictedSample.correctedExposureSeconds,
+            predictedSample.meteredExposureSeconds,
+            "Formula segment past the threshold must produce corrected > metered (formula curve lifts off the identity line)."
         )
     }
 
     /// The no-correction caption must not describe the point as
-    /// sitting on the active formula curve. It must call out the
-    /// no-correction range explicitly.
+    /// sitting on the active calculation curve — that wording is
+    /// reserved for the predicted formula segment. The caption
+    /// must call out the no-correction range explicitly so the
+    /// user reads the state as policy-driven, not curve-driven.
     @MainActor
-    func testProvia100FNoCorrectionGraphCaptionDoesNotReferenceFormulaCurve() throws {
+    func testProvia100FNoCorrectionGraphCaptionReferencesNoCorrectionRangeNotCalculationCurve() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 60)
         let graph = try XCTUnwrap(displayState.graph)
 
+        XCTAssertFalse(
+            graph.caption.lowercased().contains("calculation curve"),
+            "No-correction graph caption must not describe the point as being on the active calculation curve; got: \(graph.caption)"
+        )
         XCTAssertFalse(
             graph.caption.lowercased().contains("formula curve"),
             "No-correction graph caption must not describe the point as being on the active formula curve; got: \(graph.caption)"

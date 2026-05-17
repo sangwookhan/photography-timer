@@ -266,7 +266,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(sourcesSection.rows.last?.destinationURL, nil)
         XCTAssertEqual(details.graph?.currentPoint?.style, .formulaDerived)
         XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure on the active formula curve")
-        XCTAssertEqual(details.graph?.title, "Reference Graph")
+        XCTAssertEqual(details.graph?.title, "Reciprocity Graph")
     }
 
     @MainActor
@@ -705,8 +705,8 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
         XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
         XCTAssertTrue(
-            details.subtitle?.contains("Unofficial guidance") == true,
-            "Authority appears in the subtitle now: \(details.subtitle ?? "<nil>")"
+            details.subtitle?.contains("Unofficial practical") == true,
+            "Details subtitle must reuse the same 'Unofficial practical' label as the main film row so the surfaces agree: \(details.subtitle ?? "<nil>")"
         )
         XCTAssertNil(details.sections.first(where: { $0.title == "Sources" }),
                      "Unofficial profile with no verified source metadata must not show Sources section.")
@@ -803,8 +803,8 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
         XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
         XCTAssertTrue(
-            details.subtitle?.contains("Unofficial guidance") == true,
-            "Authority is surfaced in the subtitle: \(details.subtitle ?? "<nil>")"
+            details.subtitle?.contains("Unofficial practical") == true,
+            "Details subtitle must reuse the same 'Unofficial practical' label as the main film row: \(details.subtitle ?? "<nil>")"
         )
         XCTAssertNil(details.sections.first(where: { $0.title == "Sources" }),
                      "Unofficial profile with no verified source must not show Sources section.")
@@ -883,6 +883,226 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             viewModel.filmModeDetailsDisplayState,
             "Unofficial Portra 400 must produce a film details display state."
         )
+    }
+
+    // MARK: - PTIMER-143 — Normalize Film Details for unofficial reciprocity profiles
+
+    @MainActor
+    func testFilmModeDetailsUnofficialPortra400SubtitleMatchesMainRowAuthorityLabel() throws {
+        // The main film row already labels unofficial Portra 400 as
+        // "Unofficial practical" (via `FilmSelectionModel.filmRowAuthorityLabel`).
+        // The Details subtitle must reuse the same wording so the user
+        // does not read one label on the main row and a different label
+        // for the same selected profile inside the sheet.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
+            "Unofficial Portra 400 selector entry must exist."
+        )
+
+        viewModel.baseShutter = 10
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let mainRowLabel = try XCTUnwrap(
+            viewModel.filmSelectionDisplayState.secondaryText,
+            "Unofficial Portra 400 must show a main-row authority label."
+        )
+        XCTAssertEqual(mainRowLabel, "Unofficial practical")
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let subtitle = try XCTUnwrap(details.subtitle)
+        XCTAssertTrue(
+            subtitle.contains(mainRowLabel),
+            "Details subtitle '\(subtitle)' must contain the same authority label as the main row '\(mainRowLabel)'."
+        )
+        XCTAssertFalse(
+            subtitle.contains("Official"),
+            "Details subtitle for the unofficial profile must not surface any 'Official' wording: '\(subtitle)'."
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsUnofficialPortra400SurfacesAuthorityCaveatNote() throws {
+        // The unofficial Portra 400 profile carries an explicit
+        // authority caveat in its profile-level notes
+        // ("Unofficial practical approximation. Not a Kodak-published profile.").
+        // That caveat must be visible in the Details sheet so the user
+        // can recognize the lower-authority status before trusting the
+        // predicted corrected exposure.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 10
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let detailTexts = collectDisplayedDetailsText(details)
+        XCTAssertTrue(
+            detailTexts.contains(where: { $0.contains("Not a Kodak-published profile") }),
+            "Details must surface the unofficial authority caveat. Collected texts: \(detailTexts)"
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsUnofficialPortra400DoesNotUseOfficialSourceWording() throws {
+        // Authority-leak guard: the unofficial profile path must not
+        // borrow wording that exists only for manufacturer-published
+        // (converted formula) profiles. "Beyond source range",
+        // "Reference-backed formula prediction", "manufacturer source
+        // range", and the "Source reference" / "Guidance boundary"
+        // sections all imply a published Kodak source-range, which the
+        // unofficial profile does not have.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 30
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        let forbiddenWording = [
+            "Beyond source range",
+            "Reference-backed formula prediction",
+            "manufacturer source range",
+            "manufacturer-supported boundary",
+            "published source range",
+            "published reference"
+        ]
+        let allText = collectDisplayedDetailsText(details).joined(separator: "\n")
+        for fragment in forbiddenWording {
+            XCTAssertFalse(
+                allText.contains(fragment),
+                "Unofficial Portra 400 Details must not use '\(fragment)' wording (would imply a manufacturer-published source). Collected text:\n\(allText)"
+            )
+        }
+
+        // Section-title guard: the source-evidence section titles are
+        // reserved for converted formula profiles that carry published
+        // source rows. The unofficial profile carries no `sourceEvidence`
+        // and must produce neither title.
+        let sectionTitles = details.sections.map(\.title)
+        XCTAssertFalse(
+            sectionTitles.contains("Source reference"),
+            "Unofficial profile must not render a 'Source reference' section: \(sectionTitles)"
+        )
+        XCTAssertFalse(
+            sectionTitles.contains("Guidance boundary"),
+            "Unofficial profile must not render a 'Guidance boundary' section: \(sectionTitles)"
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsOfficialPortra400KeepsOfficialLimitedGuidanceBeyondThreshold() throws {
+        // The official Portra 400 profile must remain the default
+        // official limited-guidance profile and must not expose any
+        // quantified prediction beyond the published 1 s threshold.
+        let viewModel = makeViewModel()
+        let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
+
+        viewModel.baseShutter = 8       // metered exposure well beyond the 1 s no-correction threshold
+        viewModel.ndStop = 0
+        viewModel.selectPresetFilm(officialFilm)
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        let subtitle = try XCTUnwrap(details.subtitle)
+        XCTAssertTrue(
+            subtitle.contains("Official guidance"),
+            "Official Portra 400 subtitle must keep its 'Official guidance' label: \(subtitle)"
+        )
+        XCTAssertEqual(details.summary.badgeText, "No quantified prediction")
+
+        let binding = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+        XCTAssertNil(
+            binding.policyResult.correctedExposureSeconds,
+            "Official Portra 400 must not produce a quantified corrected exposure beyond the official threshold."
+        )
+    }
+
+    @MainActor
+    func testFilmModeDetailsConvertedFormulaProfilesStillShowSourceRangeWordingBeyondSupportedBound() throws {
+        // Regression guard for the converted formula profiles
+        // (Provia 100F, Tri-X 400, T-MAX 100, T-MAX 400, Velvia 50,
+        // Velvia 100, Acros II): an input beyond their supported range
+        // must still produce "Beyond source range" wording, which is
+        // the converted-formula-profile vocabulary established by
+        // PTIMER-128 / PTIMER-129. The unofficial-profile changes
+        // must not regress this.
+        let convertedFormulaStockNames = [
+            "Provia 100F",
+            "Tri-X 400",
+            "T-MAX 100",
+            "T-MAX 400",
+            "Velvia 50",
+            "Velvia 100",
+            "Acros II"
+        ]
+        for stockName in convertedFormulaStockNames {
+            let viewModel = makeViewModel()
+            // A missing catalog entry is a real regression — a
+            // silent `continue` would hide a converted formula
+            // profile that disappeared from the launch catalog. The
+            // assertion fails the test instead so PTIMER-134 /
+            // PTIMER-135 coverage stays honest.
+            let film = try XCTUnwrap(
+                viewModel.availablePresetFilms.first(where: { $0.canonicalStockName == stockName }),
+                "Converted formula profile '\(stockName)' must remain in the launch catalog."
+            )
+            viewModel.baseShutter = 4_000     // pushed past every converted formula's supported bound
+            viewModel.ndStop = 0
+            viewModel.selectPresetFilm(film)
+
+            let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState, "Missing details for \(stockName)")
+            XCTAssertEqual(
+                details.summary.badgeText,
+                "Beyond source range",
+                "Converted formula profile '\(stockName)' must still surface 'Beyond source range' wording past its supported bound."
+            )
+        }
+    }
+
+    /// Collects every user-visible text fragment from the Details
+    /// display state so the assertions above can scan for forbidden /
+    /// required wording without coupling to a single field.
+    @MainActor
+    private func collectDisplayedDetailsText(_ details: FilmModeDetailsDisplayState) -> [String] {
+        var texts: [String] = []
+        texts.append(details.title)
+        if let subtitle = details.subtitle { texts.append(subtitle) }
+        texts.append(details.summary.badgeText)
+        texts.append(details.summary.summaryText)
+        if let detail = details.summary.detailText { texts.append(detail) }
+        texts.append(details.currentResult.statusText)
+        texts.append(details.currentResult.adjustedShutter.title)
+        texts.append(details.currentResult.adjustedShutter.valueText)
+        if let detail = details.currentResult.adjustedShutter.detailText { texts.append(detail) }
+        texts.append(details.currentResult.correctedExposure.title)
+        texts.append(details.currentResult.correctedExposure.valueText)
+        if let detail = details.currentResult.correctedExposure.detailText { texts.append(detail) }
+        for section in details.sections {
+            texts.append(section.title)
+            for row in section.rows {
+                texts.append(row.title)
+                texts.append(row.value)
+            }
+        }
+        if let graph = details.graph {
+            texts.append(graph.title)
+            texts.append(graph.caption)
+            if let note = graph.unsupportedExplanation { texts.append(note) }
+            texts.append(contentsOf: graph.descriptionLines)
+            if let formula = graph.formulaDisplayText { texts.append(formula) }
+        }
+        if let legend = details.legend {
+            texts.append(contentsOf: legend.lines)
+        }
+        return texts.filter { !$0.isEmpty }
     }
 
     @MainActor

@@ -53,14 +53,18 @@ struct FilmModeDetailsPresenter {
     private func subtitleAuthorityLabel(
         for authority: ReciprocityAuthority
     ) -> String? {
+        // Reuse the same authority wording the main film row already
+        // produces so the user never sees one label on the row and a
+        // different label for the same profile inside the Details
+        // sheet. Details adds the "User-defined" fallback that the
+        // main row deliberately suppresses.
+        if let alignedLabel = FilmSelectionModel.filmRowAuthorityLabel(forAuthority: authority) {
+            return alignedLabel
+        }
         switch authority {
-        case .official:
-            return "Official guidance"
-        case .unofficial:
-            return "Unofficial guidance"
         case .userDefined:
             return "User-defined"
-        case .unknown:
+        case .official, .unofficial, .unknown:
             return nil
         }
     }
@@ -127,6 +131,17 @@ struct FilmModeDetailsPresenter {
     private func filmModeDetailsSummaryDetailText(
         for bindingState: FilmModeReciprocityBindingState
     ) -> String? {
+        // Unofficial profiles must lead with their authority caveat —
+        // the user has to recognize "Not a Kodak-published profile"
+        // before trusting the prediction. The caveat takes precedence
+        // over the per-state copy below so a formula-derived numeric
+        // result does not read like manufacturer guidance just because
+        // the calculation produced a value.
+        if bindingState.profile.source.authority == .unofficial,
+           let caveat = unofficialProfileAuthorityCaveat(for: bindingState.profile) {
+            return caveat
+        }
+
         switch bindingState.presentation.category {
         case .unsupported:
             if bindingState.policyResult.correctedExposureSeconds != nil {
@@ -141,6 +156,23 @@ struct FilmModeDetailsPresenter {
         case .exact, .estimated, .extrapolated:
             return nil
         }
+    }
+
+    /// First non-empty profile-level note for an unofficial-authority
+    /// profile (e.g. Portra 400 unofficial's "Unofficial practical
+    /// approximation. Not a Kodak-published profile."). Used as the
+    /// Details summary detail line so the lower-authority warning is
+    /// visible right under the badge without depending on the
+    /// calculation state.
+    private func unofficialProfileAuthorityCaveat(
+        for profile: ReciprocityProfile
+    ) -> String? {
+        for note in profile.notes {
+            if let normalized = normalizedDetailText(note) {
+                return normalized
+            }
+        }
+        return nil
     }
 
     func reciprocityStateDisplayState(
@@ -290,20 +322,25 @@ struct FilmModeDetailsPresenter {
     /// block. Reuses the Main badge wording so the same calculation
     /// state never reads differently across surfaces.
     ///
-    /// For converted formula profiles (Provia 100F today), the
-    /// visible-range flags are treated as graph affordances only —
-    /// the orange edge triangle and the graph note communicate that
-    /// the current value sits outside the visible domain, while the
-    /// status text stays anchored to the calculation basis (e.g.
-    /// "Beyond source range"). Non-converted table profiles still
-    /// surface the visible-range state as status text so users get
-    /// at least some hint when the marker isn't drawn at its real
-    /// position.
+    /// Status describes the calculation/policy state only. The
+    /// visible-graph-range condition is a viewport affordance — the
+    /// orange edge triangle and the graph description line already
+    /// communicate that the current value sits outside the visible
+    /// domain. For every formula-backed profile (converted formula
+    /// profiles like Provia 100F *and* unofficial practical formula
+    /// profiles like Portra 400 unofficial), the status text stays
+    /// anchored to the calculation basis (e.g. "Formula-derived",
+    /// "Beyond source range") so an unofficial-formula result is not
+    /// silently relabeled as a viewport state when its corrected
+    /// exposure overflows the graph's t3 ceiling. Non-formula (i.e.
+    /// table) profiles still surface the visible-range state as
+    /// status text so users get at least some hint when the marker
+    /// isn't drawn at its real position.
     private func reciprocityStateStatusText(
         for bindingState: FilmModeReciprocityBindingState,
         graph: FilmModeDetailsGraphDisplayState?
     ) -> String {
-        if !bindingState.profile.isConvertedFormulaProfile {
+        if !profileUsesFormula(bindingState.profile) {
             if graph?.isBeyondVisibleRange == true {
                 return "Beyond visible graph range"
             }
@@ -789,7 +826,11 @@ struct FilmModeDetailsPresenter {
 
         return FilmModeDetailsGraphDisplayState(
             kind: .formula,
-            title: "Reference Graph",
+            // Neutral title that reads sensibly for every formula
+            // profile — converted formula profiles carry source
+            // reference markers, but unofficial-practical formula
+            // profiles do not. "Reciprocity Graph" works for both.
+            title: "Reciprocity Graph",
             sourcePoints: sourcePoints,
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
@@ -1113,7 +1154,7 @@ struct FilmModeDetailsPresenter {
 
         return FilmModeDetailsGraphDisplayState(
             kind: .table,
-            title: "Reference Graph",
+            title: "Reciprocity Graph",
             sourcePoints: sourcePoints,
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,

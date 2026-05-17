@@ -433,6 +433,8 @@ private struct FilmModeDetailsCurrentResultBlock: View {
             }
 
             statusLine
+
+            summaryDetailLine
         }
         .padding(16)
         .background(
@@ -443,6 +445,24 @@ private struct FilmModeDetailsCurrentResultBlock: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         )
+    }
+
+    /// Authority/policy caveat carried in `summary.detailText`. Placed
+    /// directly under the Status line so the user reads it as part of
+    /// the same summary card — never below the graph. For unofficial
+    /// practical formula profiles this is the
+    /// "Not a Kodak-published profile" note that must be visible
+    /// before the user trusts the corrected exposure.
+    @ViewBuilder
+    private var summaryDetailLine: some View {
+        if let detailText = summary.detailText, !detailText.isEmpty {
+            Text(detailText)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("film-mode-details-summary-detail")
+        }
     }
 
     /// Compact "Status: …" line driven by

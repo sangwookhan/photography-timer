@@ -53,14 +53,18 @@ struct FilmModeDetailsPresenter {
     private func subtitleAuthorityLabel(
         for authority: ReciprocityAuthority
     ) -> String? {
+        // Reuse the same authority wording the main film row already
+        // produces so the user never sees one label on the row and a
+        // different label for the same profile inside the Details
+        // sheet. Details adds the "User-defined" fallback that the
+        // main row deliberately suppresses.
+        if let alignedLabel = FilmSelectionModel.filmRowAuthorityLabel(forAuthority: authority) {
+            return alignedLabel
+        }
         switch authority {
-        case .official:
-            return "Official guidance"
-        case .unofficial:
-            return "Unofficial guidance"
         case .userDefined:
             return "User-defined"
-        case .unknown:
+        case .official, .unofficial, .unknown:
             return nil
         }
     }
@@ -127,13 +131,24 @@ struct FilmModeDetailsPresenter {
     private func filmModeDetailsSummaryDetailText(
         for bindingState: FilmModeReciprocityBindingState
     ) -> String? {
+        // Unofficial profiles must lead with their authority caveat —
+        // the user has to recognize "Not a Kodak-published profile"
+        // before trusting the prediction. The caveat takes precedence
+        // over the per-state copy below so a formula-derived numeric
+        // result does not read like manufacturer guidance just because
+        // the calculation produced a value.
+        if bindingState.profile.source.authority == .unofficial,
+           let caveat = unofficialProfileAuthorityCaveat(for: bindingState.profile) {
+            return caveat
+        }
+
         switch bindingState.presentation.category {
         case .unsupported:
             if bindingState.policyResult.correctedExposureSeconds != nil {
                 if bindingState.profile.isConvertedFormulaProfile {
                     return "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
                 }
-                return "Current input is outside manufacturer guidance. The corrected value is extrapolated from the formula curve."
+                return "Current input is outside manufacturer guidance. The corrected value is extrapolated from the calculation curve."
             }
             return "Current input is outside the supported range and no quantified corrected point is available."
         case .advisoryOnly:
@@ -141,6 +156,23 @@ struct FilmModeDetailsPresenter {
         case .exact, .estimated, .extrapolated:
             return nil
         }
+    }
+
+    /// First non-empty profile-level note for an unofficial-authority
+    /// profile (e.g. Portra 400 unofficial's "Unofficial practical
+    /// approximation. Not a Kodak-published profile."). Used as the
+    /// Details summary detail line so the lower-authority warning is
+    /// visible right under the badge without depending on the
+    /// calculation state.
+    private func unofficialProfileAuthorityCaveat(
+        for profile: ReciprocityProfile
+    ) -> String? {
+        for note in profile.notes {
+            if let normalized = normalizedDetailText(note) {
+                return normalized
+            }
+        }
+        return nil
     }
 
     func reciprocityStateDisplayState(
@@ -290,20 +322,25 @@ struct FilmModeDetailsPresenter {
     /// block. Reuses the Main badge wording so the same calculation
     /// state never reads differently across surfaces.
     ///
-    /// For converted formula profiles (Provia 100F today), the
-    /// visible-range flags are treated as graph affordances only —
-    /// the orange edge triangle and the graph note communicate that
-    /// the current value sits outside the visible domain, while the
-    /// status text stays anchored to the calculation basis (e.g.
-    /// "Beyond source range"). Non-converted table profiles still
-    /// surface the visible-range state as status text so users get
-    /// at least some hint when the marker isn't drawn at its real
-    /// position.
+    /// Status describes the calculation/policy state only. The
+    /// visible-graph-range condition is a viewport affordance — the
+    /// orange edge triangle and the graph description line already
+    /// communicate that the current value sits outside the visible
+    /// domain. For every formula-backed profile (converted formula
+    /// profiles like Provia 100F *and* unofficial practical formula
+    /// profiles like Portra 400 unofficial), the status text stays
+    /// anchored to the calculation basis (e.g. "Formula-derived",
+    /// "Beyond source range") so an unofficial-formula result is not
+    /// silently relabeled as a viewport state when its corrected
+    /// exposure overflows the graph's t3 ceiling. Non-formula (i.e.
+    /// table) profiles still surface the visible-range state as
+    /// status text so users get at least some hint when the marker
+    /// isn't drawn at its real position.
     private func reciprocityStateStatusText(
         for bindingState: FilmModeReciprocityBindingState,
         graph: FilmModeDetailsGraphDisplayState?
     ) -> String {
-        if !bindingState.profile.isConvertedFormulaProfile {
+        if !profileUsesFormula(bindingState.profile) {
             if graph?.isBeyondVisibleRange == true {
                 return "Beyond visible graph range"
             }
@@ -716,12 +753,14 @@ struct FilmModeDetailsPresenter {
         currentPoint: FilmModeDetailsGraphCurrentPoint?,
         input: FilmModeDetailsPresenterInput
     ) -> FilmModeDetailsGraphDisplayState? {
-        // The formula curve is the same reference regardless of where
-        // the current input lands: no-correction range, supported
-        // formula range, or formula-extrapolated outside guidance.
-        // The graph stays visible whenever a graphable formula
-        // exists; the current-point marker style and the shaded
-        // regions separate the three states.
+        // The calculation curve (identity segment in the
+        // no-correction zone + formula segment past the threshold)
+        // is the same reference regardless of where the current
+        // input lands. The graph stays visible whenever a
+        // graphable formula exists; the current-point marker style
+        // and the shaded regions separate the three states
+        // (no-correction, formula-derived, formula-extrapolated
+        // outside guidance).
         guard let formulaRule = bindingState.profile.rules.compactMap({ rule -> FormulaReciprocityRule? in
             guard case let .formula(formulaRule) = rule else {
                 return nil
@@ -747,26 +786,40 @@ struct FilmModeDetailsPresenter {
             notRecommendedBoundarySeconds: notRecommendedBoundarySeconds
         )
         let tier = tierSelection.tier
-        let isBelowVisibleRange = isCurrentInputBelowTier(
-            tier: tier,
-            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
-            currentPoint: currentPoint
+
+        let supportedUpperBoundSeconds = formulaRule.meteredRange?.maximumSeconds
+        let noCorrectionRangeUpperBoundSeconds = effectiveNoCorrectionUpperBoundSeconds(
+            for: bindingState
         )
 
-        let sourcePoints = formulaGraphSourcePoints(
+        // Profile-stable viewport: same profile + same scale tier
+        // always produces the same graph frame so the user sees
+        // only the current-result marker move while sweeping the
+        // input.
+        let stableLowerBoundSeconds = formulaGraphStableLowerBoundSeconds
+
+        // Source path = identity segment (Tc = Tm) through the
+        // no-correction zone + formula segment past the threshold.
+        // The two segments connect at the threshold and read as a
+        // single calculation curve, so the green-band region is
+        // not a visible gap in the curve.
+        let sourcePoints = calculationCurveSourcePoints(
             for: formulaRule,
             profile: bindingState.profile,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
-            tierUpperBoundSeconds: tier.upperBoundSeconds
+            tierUpperBoundSeconds: tier.upperBoundSeconds,
+            viewportLowerBoundSeconds: stableLowerBoundSeconds,
+            noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds
         )
         guard sourcePoints.count >= 2 else {
             return nil
         }
 
-        let supportedUpperBoundSeconds = formulaRule.meteredRange?.maximumSeconds
-        let noCorrectionRangeUpperBoundSeconds = profileThresholdUpperBounds(in: bindingState.profile)
-            .filter { $0 > 0 }
-            .max()
+        let isBelowVisibleRange = isCurrentInputBelowVisibleLowerBound(
+            viewportLowerBoundSeconds: stableLowerBoundSeconds,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint
+        )
 
         let descriptionLines = formulaGraphDescriptionLines(
             for: bindingState,
@@ -789,7 +842,11 @@ struct FilmModeDetailsPresenter {
 
         return FilmModeDetailsGraphDisplayState(
             kind: .formula,
-            title: "Reference Graph",
+            // Neutral title that reads sensibly for every formula
+            // profile — converted formula profiles carry source
+            // reference markers, but unofficial-practical formula
+            // profiles do not. "Reciprocity Graph" works for both.
+            title: "Reciprocity Graph",
             sourcePoints: sourcePoints,
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
@@ -801,8 +858,14 @@ struct FilmModeDetailsPresenter {
             unsupportedExplanation: graphUnsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
-            xAxisTicks: tierAxisTicks(for: tier),
-            yAxisTicks: tierAxisTicks(for: tier),
+            xAxisTicks: formulaGraphAxisTicks(
+                tier: tier,
+                viewportLowerBoundSeconds: stableLowerBoundSeconds
+            ),
+            yAxisTicks: formulaGraphAxisTicks(
+                tier: tier,
+                viewportLowerBoundSeconds: stableLowerBoundSeconds
+            ),
             supportedRangeUpperBoundSeconds: supportedUpperBoundSeconds,
             unsupportedRegionStartSeconds: unsupportedRegionStartSeconds(
                 supportedUpperBoundSeconds: supportedUpperBoundSeconds,
@@ -818,24 +881,91 @@ struct FilmModeDetailsPresenter {
             scaleTier: tier,
             isBeyondVisibleRange: tierSelection.isBeyondVisibleRange,
             isBelowVisibleRange: isBelowVisibleRange,
-            xRange: tier.range,
-            yRange: tier.range
+            xRange: stableLowerBoundSeconds...tier.upperBoundSeconds,
+            yRange: stableLowerBoundSeconds...tier.upperBoundSeconds
         )
     }
 
-    /// `true` when the current input would draw at the plot's left
-    /// edge instead of its real position because at least one of its
-    /// coordinates is below the active tier's lower bound (1 s).
-    /// Triggered by no-correction inputs faster than 1 s (e.g. a
-    /// 1/30 s metered exposure with corrected == metered) so the
-    /// view can skip the marker rather than letting it impersonate
-    /// a 1 s reading.
-    private func isCurrentInputBelowTier(
+    /// Single shared lower bound for every formula-graph viewport.
+    /// The value is profile-independent and input-independent so
+    /// the same scale tier always produces the same graph frame —
+    /// only the current-result marker moves as the user sweeps the
+    /// input. The positive constant is required because a log
+    /// scale cannot encode `0 s` directly; the no-correction green
+    /// band still reads as starting at visual `0` because the band
+    /// is drawn from the plot's leading edge (see
+    /// `FilmModeDetailsGraph.noCorrectionRegion`). The chosen
+    /// value sits one decade below 1 s so the green band always
+    /// has visible width regardless of the profile's threshold.
+    private var formulaGraphStableLowerBoundSeconds: Double { 0.01 }
+
+    /// Axis ticks for the formula graph. Tier ticks anchor 1 s and
+    /// above; sub-second labels are prepended only when they sit
+    /// strictly above the viewport lower bound so the axis never
+    /// exposes the lower-bound value itself as a user-visible
+    /// no-correction start (visual `0` is communicated through
+    /// the band drawing, not through an axis tick).
+    private func formulaGraphAxisTicks(
         tier: FilmModeDetailsGraphScaleTier,
+        viewportLowerBoundSeconds: Double
+    ) -> [FilmModeDetailsGraphAxisTick] {
+        let tierTicks = tier.axisTicks
+        guard viewportLowerBoundSeconds < tier.lowerBoundSeconds else {
+            return tierTicks
+        }
+        let subSecondCandidates: [FilmModeDetailsGraphAxisTick] = [
+            FilmModeDetailsGraphAxisTick(value: 0.01, label: "1/100s"),
+            FilmModeDetailsGraphAxisTick(value: 0.1, label: "1/10s")
+        ]
+        let extended = subSecondCandidates.filter { $0.value > viewportLowerBoundSeconds }
+        return extended + tierTicks
+    }
+
+    /// Effective no-correction upper bound used by the formula
+    /// graph overlay. Combines explicit threshold rules with the
+    /// policy's default formula no-correction handoff (1 s) so
+    /// formula-only profiles like Portra 400 unofficial still show
+    /// a visible no-correction band on the graph instead of
+    /// implying no policy structure exists below 1 s.
+    private func effectiveNoCorrectionUpperBoundSeconds(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> Double? {
+        let explicitMax = profileThresholdUpperBounds(in: bindingState.profile)
+            .filter { $0 > 0 }
+            .max()
+        let formulaOnly = profileUsesFormula(bindingState.profile)
+            && profileThresholdUpperBounds(in: bindingState.profile).isEmpty
+        let synthesizedDefault: Double? = formulaOnly ? policyDefaultFormulaNoCorrectionUpperBoundSeconds : nil
+        switch (explicitMax, synthesizedDefault) {
+        case let (explicit?, default_?):
+            return max(explicit, default_)
+        case let (explicit?, nil):
+            return explicit
+        case let (nil, default_?):
+            return default_
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    /// Mirrors the policy evaluator's default formula no-correction
+    /// upper bound so the graph overlay agrees with the calculation
+    /// result. Kept as a single literal in both places (the policy
+    /// evaluator owns the authoritative constant); a contract test
+    /// in the policy suite ties the two so they cannot drift apart.
+    private var policyDefaultFormulaNoCorrectionUpperBoundSeconds: Double { 1.0 }
+
+    /// `true` when the current input would draw at the plot's left
+    /// edge instead of its real position because at least one of
+    /// its coordinates is below the graph's stable viewport lower
+    /// bound. Anything inside the viewport renders at its real
+    /// position regardless of where it falls relative to 1 s.
+    private func isCurrentInputBelowVisibleLowerBound(
+        viewportLowerBoundSeconds: Double,
         currentMeteredExposureSeconds: Double,
         currentPoint: FilmModeDetailsGraphCurrentPoint?
     ) -> Bool {
-        let lower = tier.lowerBoundSeconds
+        let lower = viewportLowerBoundSeconds
         if currentMeteredExposureSeconds > 0,
            currentMeteredExposureSeconds < lower {
             return true
@@ -1076,10 +1206,10 @@ struct FilmModeDetailsPresenter {
 
         if bindingState.presentation.category == .unsupported,
            bindingState.policyResult.correctedExposureSeconds != nil {
-            return "Formula curve extrapolated past the manufacturer-supported boundary"
+            return "Calculation curve extrapolated past the manufacturer-supported boundary"
         }
 
-        return "Adjusted shutter vs corrected exposure on the active formula curve"
+        return "Adjusted shutter vs corrected exposure on the active calculation curve"
     }
 
     private func tableDetailsGraphDisplayState(
@@ -1113,7 +1243,7 @@ struct FilmModeDetailsPresenter {
 
         return FilmModeDetailsGraphDisplayState(
             kind: .table,
-            title: "Reference Graph",
+            title: "Reciprocity Graph",
             sourcePoints: sourcePoints,
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
@@ -1170,9 +1300,10 @@ struct FilmModeDetailsPresenter {
         case .exact:
             style = .exact
         case .estimated:
-            // Formula-derived results map to .estimated category. Use
-            // the formula-specific marker so the legend shows "on
-            // formula curve" rather than the table-estimation diamond.
+            // Formula-derived results map to .estimated category.
+            // Use the formula-specific marker so the legend renders
+            // the formula-derived chip instead of the table-
+            // estimation diamond.
             style = bindingState.policyResult.metadata.basis == .formulaDerived
                 ? .formulaDerived
                 : .estimated
@@ -1196,7 +1327,88 @@ struct FilmModeDetailsPresenter {
         )
     }
 
-    private func formulaGraphSourcePoints(
+    /// Source path drawn by the formula graph: identity (Tc = Tm)
+    /// inside the no-correction zone, then the formula curve past
+    /// the no-correction upper bound. The two segments join at
+    /// the threshold so the curve does not appear to cut off at
+    /// the edge of the green band — the green band reads as the
+    /// policy zone *covered* by the identity portion of the same
+    /// curve, not as a missing chunk of the formula prediction.
+    ///
+    /// Identity segment runs from the viewport's effective lower
+    /// bound to the no-correction upper bound. Formula segment
+    /// runs from the formula rule's domain up to the canonical
+    /// upper sample. The threshold seam point appears at most
+    /// once (the formula's first sample is anchored at the
+    /// threshold so its (Tm, Tc) equals (threshold, threshold)
+    /// for every catalog profile).
+    private func calculationCurveSourcePoints(
+        for rule: FormulaReciprocityRule,
+        profile: ReciprocityProfile,
+        currentMeteredExposureSeconds: Double,
+        tierUpperBoundSeconds: Double,
+        viewportLowerBoundSeconds: Double,
+        noCorrectionRangeUpperBoundSeconds: Double?
+    ) -> [FilmModeDetailsGraphPoint] {
+        let formulaPoints = formulaSegmentSourcePoints(
+            for: rule,
+            profile: profile,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            tierUpperBoundSeconds: tierUpperBoundSeconds
+        )
+
+        let identityPoints = identitySegmentSourcePoints(
+            viewportLowerBoundSeconds: viewportLowerBoundSeconds,
+            noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds
+        )
+
+        // If the identity segment's last sample lands on the same
+        // point as the formula segment's first sample (the
+        // threshold seam), drop the duplicate so the stroked path
+        // does not double-back over a single x.
+        guard let lastIdentity = identityPoints.last,
+              let firstFormula = formulaPoints.first else {
+            return identityPoints + formulaPoints
+        }
+        let isSamePoint = abs(lastIdentity.meteredExposureSeconds - firstFormula.meteredExposureSeconds) < 1e-6
+            && abs(lastIdentity.correctedExposureSeconds - firstFormula.correctedExposureSeconds) < 1e-6
+        if isSamePoint {
+            return identityPoints + formulaPoints.dropFirst()
+        }
+        return identityPoints + formulaPoints
+    }
+
+    /// Identity (Tc = Tm) samples for the no-correction segment of
+    /// the calculation curve. Returns an empty array when the
+    /// profile has no no-correction zone or when the zone has no
+    /// visible width inside the active viewport.
+    private func identitySegmentSourcePoints(
+        viewportLowerBoundSeconds: Double,
+        noCorrectionRangeUpperBoundSeconds: Double?
+    ) -> [FilmModeDetailsGraphPoint] {
+        guard let upper = noCorrectionRangeUpperBoundSeconds,
+              upper.isFinite,
+              upper > 0,
+              viewportLowerBoundSeconds > 0,
+              viewportLowerBoundSeconds < upper else {
+            return []
+        }
+        let sampleCount = 6
+        return (0..<sampleCount).map { index in
+            let progress = Double(index) / Double(sampleCount - 1)
+            let metered = logInterpolatedValue(
+                minimum: viewportLowerBoundSeconds,
+                maximum: upper,
+                progress: progress
+            )
+            return FilmModeDetailsGraphPoint(
+                meteredExposureSeconds: metered,
+                correctedExposureSeconds: metered
+            )
+        }
+    }
+
+    private func formulaSegmentSourcePoints(
         for rule: FormulaReciprocityRule,
         profile: ReciprocityProfile,
         currentMeteredExposureSeconds: Double,
@@ -1424,7 +1636,7 @@ struct FilmModeDetailsPresenter {
             if bindingState.profile.isConvertedFormulaProfile {
                 return "Current input is beyond the manufacturer source range. The plotted value is a formula prediction past the published reference and should be verified."
             }
-            return "Current input is outside manufacturer guidance. The plotted value is extrapolated from the formula curve and should be verified."
+            return "Current input is outside manufacturer guidance. The plotted value is extrapolated from the calculation curve and should be verified."
         }
 
         return "Current input is outside the supported range. No quantified corrected point is available."

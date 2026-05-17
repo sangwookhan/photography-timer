@@ -220,8 +220,20 @@ final class FilmSelectionModel: ObservableObject {
     /// Short authority label for the main Film row subtitle.
     /// Returns nil for userDefined/unknown so only official/unofficial
     /// films carry a visible qualifier.
-    static func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
-        switch profile?.source.authority {
+    nonisolated static func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
+        filmRowAuthorityLabel(forAuthority: profile?.source.authority)
+    }
+
+    /// Authority-only variant so other surfaces (the Details subtitle)
+    /// can produce the exact same wording without round-tripping
+    /// through a synthesized `ReciprocityProfile`. Pure value
+    /// transform — declared `nonisolated` so the non-MainActor
+    /// presenter can read it without crossing the actor boundary.
+    /// Uses a distinct argument label (`forAuthority:`) so a
+    /// `nil`-literal call site is not ambiguous with the profile
+    /// overload above.
+    nonisolated static func filmRowAuthorityLabel(forAuthority authority: ReciprocityAuthority?) -> String? {
+        switch authority {
         case .official: return "Official guidance"
         case .unofficial: return "Unofficial practical"
         case .userDefined, .unknown, nil: return nil

@@ -885,6 +885,104 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         )
     }
 
+    // MARK: - PTIMER-143 — Sub-second No correction for formula-only profiles
+
+    @MainActor
+    func testFilmModePortra400UnofficialSubSecondReturnsNoCorrectionAndPreservesCaveat() throws {
+        // Portra 400 unofficial practical has only a formula rule
+        // (Tc = Tm^1.34) with no `meteredRange` minimum and no
+        // companion threshold rule. Without the policy-level default
+        // no-correction handoff, an adjusted shutter of ~1/30 s would
+        // produce a corrected exposure shorter than the adjusted
+        // shutter — a reciprocity correction can never shorten the
+        // exposure. The result must read as "No correction" while
+        // keeping the unofficial-authority caveat visible.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
+            "Unofficial Portra 400 selector entry must exist."
+        )
+
+        viewModel.baseShutter = 1.0 / 30.0   // 0.033 sec, well below 1s
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let binding = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+        XCTAssertEqual(
+            binding.policyResult.metadata.basis,
+            .officialThresholdNoCorrection,
+            "Sub-1s metered exposure on a formula-only profile must default to No correction."
+        )
+
+        let exposure = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let corrected = try XCTUnwrap(exposure.correctedExposure.correctedExposureSeconds)
+        XCTAssertEqual(
+            corrected,
+            exposure.adjustedShutterSeconds,
+            accuracy: 1e-6,
+            "corrected exposure must equal adjusted shutter when policy returns No correction."
+        )
+        XCTAssertGreaterThanOrEqual(
+            corrected,
+            exposure.adjustedShutterSeconds - 1e-6,
+            "corrected exposure must never be shorter than adjusted shutter."
+        )
+
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+        XCTAssertEqual(details.summary.badgeText, "No correction")
+        XCTAssertEqual(details.currentResult.statusText, "No correction",
+                       "Status is the calculation/policy state, not the graph viewport state.")
+
+        // Caveat remains visible under Status.
+        XCTAssertEqual(
+            details.summary.detailText,
+            "Unofficial practical approximation. Not a Kodak-published profile.",
+            "Unofficial caveat must remain visible regardless of the sub-1s No correction handoff."
+        )
+
+        // Graph does not imply official Kodak source evidence.
+        XCTAssertFalse(
+            details.sections.contains { $0.title == "Source reference" },
+            "Unofficial profile must not show a 'Source reference' section."
+        )
+        XCTAssertFalse(
+            details.sections.contains { $0.title == "Guidance boundary" },
+            "Unofficial profile must not show a 'Guidance boundary' section."
+        )
+        XCTAssertFalse(
+            details.sections.contains { $0.title == "Sources" },
+            "Unofficial profile with no publisher/citation must not show a 'Sources' section."
+        )
+        XCTAssertEqual(
+            details.graph?.sourceReferenceMarkers.count ?? 0,
+            0,
+            "Unofficial profile must not render source-reference markers on the graph."
+        )
+        XCTAssertNil(
+            details.graph?.notRecommendedBoundarySeconds,
+            "Unofficial profile must not render a manufacturer not-recommended boundary."
+        )
+    }
+
+    @MainActor
+    func testFilmModePortra400UnofficialAboveOneSecondStillProducesFormulaPrediction() throws {
+        // Sanity guard: the default no-correction handoff applies
+        // strictly below 1s. Inputs at or above 1s flow through the
+        // formula rule unchanged, preserving the prior PTIMER-143
+        // behavior for the unofficial profile.
+        let viewModel = makeViewModel()
+        let unofficialEntry = try XCTUnwrap(
+            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
+        )
+
+        viewModel.baseShutter = 10
+        viewModel.ndStop = 0
+        viewModel.selectEntry(unofficialEntry)
+
+        let binding = try XCTUnwrap(viewModel.filmReciprocityBindingState)
+        XCTAssertEqual(binding.policyResult.metadata.basis, .formulaDerived)
+    }
+
     // MARK: - PTIMER-143 — Normalize Film Details for unofficial reciprocity profiles
 
     @MainActor

@@ -940,10 +940,38 @@ private extension ReciprocityResult {
 struct ReciprocityCalculationPolicyEvaluator {
     private let comparisonTolerance = 0.000_001
 
+    /// Default upper bound (in seconds) for the synthesized no-correction
+    /// handoff applied to formula-only profiles that lack an explicit
+    /// threshold rule and an explicit `meteredRange.minimumSeconds`.
+    ///
+    /// Practical long-exposure formulas (e.g. `Tc = Tm^P` curve fits)
+    /// are only valid above their published domain. Applying such a
+    /// formula to a sub-1s metered exposure produces a corrected time
+    /// shorter than the adjusted shutter, which violates the
+    /// fundamental reciprocity invariant: a reciprocity correction
+    /// can never shorten the exposure. The catalog convention for
+    /// the long-exposure films that ship with PTimer is that
+    /// reciprocity correction starts at 1 sec — every official
+    /// converted formula profile (Provia 100F, T-MAX 100/400,
+    /// Tri-X 400, Acros II, Velvia 50/100, Ilford HP5 Plus, Delta
+    /// 100/400/3200, Pan F Plus, FP4 Plus, XP2 Super) carries an
+    /// explicit `threshold.noCorrectionRange: 0…1s` companion to its
+    /// formula rule, so this default does not change those results.
+    /// It activates for profiles that omit both — today, the
+    /// `UnofficialPracticalProfiles` registry's Portra 400 entry.
+    ///
+    /// Profiles that publish explicit sub-1s correction (e.g. a
+    /// formula with `meteredRange.minimumSeconds < 1` or a table
+    /// entry below 1s) opt out of the default; their published data
+    /// takes precedence.
+    private let defaultFormulaNoCorrectionUpperBoundSeconds: Double = 1.0
+
     /// Evaluation order is part of the policy contract:
     /// exact table rows first, then threshold-only no-correction guidance,
-    /// then quantified table estimation, then advisory-only continuation,
-    /// and finally unsupported.
+    /// then the default formula no-correction handoff for formula-only
+    /// profiles below their practical domain, then quantified table
+    /// estimation, then formula extrapolation, then advisory-only
+    /// continuation, and finally unsupported.
     func evaluate(
         profile: ReciprocityProfile,
         meteredExposureSeconds: Double
@@ -1011,6 +1039,24 @@ struct ReciprocityCalculationPolicyEvaluator {
             ) {
                 return result
             }
+        }
+
+        // Default no-correction handoff for formula profiles that
+        // lack an explicit threshold rule and an explicit
+        // sub-1s formula domain. Without this step, a practical
+        // long-exposure formula (e.g. `Tc = Tm^1.34`) applied to a
+        // sub-1s metered exposure would return a corrected time
+        // shorter than the adjusted shutter — a reciprocity
+        // correction can never shorten the exposure. The check runs
+        // after table estimation so explicit sub-1s table coverage
+        // (e.g. a Foma-style profile with a table entry below 1s)
+        // continues to take precedence.
+        if let result = evaluateDefaultFormulaNoCorrection(
+            selection: selector,
+            meteredExposureSeconds: meteredExposureSeconds,
+            assembler: assembler
+        ) {
+            return result
         }
 
         if let result = evaluateFormulaResult(
@@ -1176,6 +1222,46 @@ struct ReciprocityCalculationPolicyEvaluator {
             ),
             assembler: assembler,
             estimator: estimator
+        )
+    }
+
+    /// Synthesizes a no-correction handoff for formula-only profiles
+    /// whose practical formula domain starts at 1s (the catalog's
+    /// long-exposure convention) but which do not carry an explicit
+    /// threshold rule covering sub-1s metered exposures. Returns nil
+    /// when the profile has no formula rule, when the metered exposure
+    /// is at or above the default upper bound, or when at least one
+    /// formula rule opts into pre-default-bound correction by
+    /// declaring `meteredRange.minimumSeconds` below the default.
+    private func evaluateDefaultFormulaNoCorrection(
+        selection: Selection,
+        meteredExposureSeconds: Double,
+        assembler: ResultAssembler
+    ) -> ReciprocityResult? {
+        let defaultUpperBound = defaultFormulaNoCorrectionUpperBoundSeconds
+        guard meteredExposureSeconds < defaultUpperBound,
+              meteredExposureSeconds > 0 else {
+            return nil
+        }
+        guard !selection.formulaRules.isEmpty else {
+            return nil
+        }
+        // If any formula rule explicitly opts into pre-default-bound
+        // correction (e.g. `meteredRange.minimumSeconds = 0.5`), the
+        // profile is publishing sub-1s data; honor that instead of
+        // overriding it with the default no-correction handoff.
+        let anyFormulaOptsIntoSubDefaultCorrection = selection.formulaRules.contains { rule in
+            guard let minimum = rule.meteredRange?.minimumSeconds else {
+                return false
+            }
+            return minimum < defaultUpperBound
+        }
+        guard !anyFormulaOptsIntoSubDefaultCorrection else {
+            return nil
+        }
+        return assembler.defaultFormulaNoCorrection(
+            meteredExposureSeconds: meteredExposureSeconds,
+            defaultUpperBoundSeconds: defaultUpperBound
         )
     }
 
@@ -1601,6 +1687,33 @@ private extension ReciprocityCalculationPolicyEvaluator {
                     ReciprocityPolicyNote(
                         token: .thresholdGuidanceOnly,
                         text: noteText
+                    )
+                ] + sourceAuthorityNotes
+            )
+        }
+
+        /// Synthesizes a no-correction result for a formula-only
+        /// profile below the evaluator's default formula domain.
+        /// Mirrors `thresholdNoCorrection` (same basis, identity
+        /// corrected exposure) so downstream display code reads the
+        /// same shape — "No correction" badge, identity current
+        /// point on the graph — without needing to special-case a
+        /// synthesized handoff. The note text records that the
+        /// no-correction handoff was inferred from the absence of
+        /// an explicit sub-default-bound rule rather than read off a
+        /// published threshold.
+        func defaultFormulaNoCorrection(
+            meteredExposureSeconds: Double,
+            defaultUpperBoundSeconds: Double
+        ) -> ReciprocityResult {
+            let boundaryText = formatBoundarySeconds(defaultUpperBoundSeconds)
+            return .thresholdNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .thresholdGuidanceOnly,
+                        text: "Reciprocity correction is not applied below the practical formula domain (default \(boundaryText))."
                     )
                 ] + sourceAuthorityNotes
             )

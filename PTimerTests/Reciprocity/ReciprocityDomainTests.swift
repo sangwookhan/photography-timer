@@ -847,4 +847,135 @@ final class Portra400SecondaryProfileTests: XCTestCase {
         XCTAssertEqual(result.metadata.basis, .formulaDerived)
         XCTAssertNotEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
     }
+
+    func testPortra400UnofficialSubSecondReturnsNoCorrectionInsteadOfFormulaPrediction() {
+        // The Portra 400 unofficial practical profile carries only a
+        // formula rule (Tc = Tm^1.34) with no `meteredRange` minimum
+        // and no companion threshold rule. Without the policy-level
+        // default no-correction handoff, applying the long-exposure
+        // formula to a sub-1s metered exposure would yield a
+        // corrected time shorter than the adjusted shutter — a
+        // reciprocity correction can never shorten the exposure.
+        let result = evaluator.evaluate(
+            profile: UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
+            meteredExposureSeconds: 1.0 / 30.0     // 0.033s, well below 1s
+        )
+
+        XCTAssertEqual(
+            result.metadata.basis,
+            .officialThresholdNoCorrection,
+            "Sub-1s metered exposures on a formula-only profile must default to No correction, not formula prediction."
+        )
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? -1,
+            1.0 / 30.0,
+            accuracy: 1e-6,
+            "No correction means corrected exposure equals metered exposure."
+        )
+    }
+
+    func testPortra400UnofficialAtExactlyOneSecondStillUsesFormulaPrediction() {
+        // The default no-correction handoff is exclusive at the
+        // upper bound so a metered exposure of exactly 1s still
+        // flows through the formula rule (continuous behavior at
+        // the handoff point: 1^1.34 = 1, so corrected == metered
+        // here too, but the basis stays `.formulaDerived`).
+        let result = evaluator.evaluate(
+            profile: UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
+            meteredExposureSeconds: 1.0
+        )
+
+        XCTAssertEqual(result.metadata.basis, .formulaDerived)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1.0, accuracy: 1e-6)
+    }
+}
+
+/// Policy-level coverage for the default formula no-correction
+/// handoff added to `ReciprocityCalculationPolicyEvaluator`. The
+/// behavior is film-agnostic — these tests synthesize minimal
+/// profiles so the policy does not silently couple to specific
+/// catalog films.
+final class ReciprocityPolicyDefaultFormulaNoCorrectionTests: XCTestCase {
+    private let evaluator = ReciprocityCalculationPolicyEvaluator()
+
+    func testFormulaOnlyProfileBelowDefaultBoundReturnsNoCorrection() {
+        let profile = ReciprocityProfile(
+            id: "test-formula-only",
+            name: "Test formula-only",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                publisher: "Test"
+            ),
+            rules: [
+                .formula(FormulaReciprocityRule(
+                    formula: ReciprocityFormula(kind: .exponentPower, exponent: 1.5)
+                ))
+            ]
+        )
+
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.correctedExposureSeconds ?? -1, 0.5, accuracy: 1e-6)
+    }
+
+    func testFormulaWithExplicitSubDefaultMinimumKeepsFormulaPrediction() {
+        // A profile that publishes an explicit pre-1s formula
+        // domain opts into sub-1s correction; the default
+        // no-correction handoff must not override it.
+        let profile = ReciprocityProfile(
+            id: "test-formula-pre-one-second",
+            name: "Test formula starting before 1s",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerPublished,
+                authority: .official,
+                publisher: "Test"
+            ),
+            rules: [
+                .formula(FormulaReciprocityRule(
+                    meteredRange: ReciprocityTimeRange(minimumSeconds: 0.1),
+                    formula: ReciprocityFormula(kind: .exponentPower, exponent: 1.5)
+                ))
+            ]
+        )
+
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+
+        XCTAssertEqual(
+            result.metadata.basis,
+            .formulaDerived,
+            "A profile publishing an explicit pre-default-bound formula domain must keep its formula prediction below 1s."
+        )
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            pow(0.5, 1.5),
+            accuracy: 1e-6
+        )
+    }
+
+    func testProfileWithoutAnyFormulaRuleDoesNotInheritDefaultNoCorrection() {
+        // The default handoff only applies to profiles carrying a
+        // formula rule. Pure threshold/advisory profiles continue to
+        // follow their existing rule pipeline — unsupported when no
+        // rule covers the metered exposure.
+        let profile = ReciprocityProfile(
+            id: "test-no-formula",
+            name: "Test no formula",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                publisher: "Test"
+            ),
+            rules: []
+        )
+
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+
+        XCTAssertNotEqual(
+            result.metadata.basis,
+            .officialThresholdNoCorrection,
+            "Profiles without a formula rule must not inherit the default formula no-correction handoff."
+        )
+    }
 }

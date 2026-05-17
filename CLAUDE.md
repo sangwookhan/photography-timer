@@ -4,18 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build and Test Commands
 
+Commands are run from the repository root. Cross-platform fixtures
+stay at the repo root under `shared/test-fixtures/`.
+
 ```bash
 # Run all tests
-xcodebuild -project PTimer.xcodeproj -scheme PTimer \
+cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 
 # Run tests without a test plan (same scheme, ad-hoc)
-xcodebuild -project PTimer.xcodeproj -scheme PTimer \
+cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 
 # List available simulator destinations
-xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer
+cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer
 ```
 
 If `iPhone 17` is unavailable, choose any available iPhone simulator from the destinations list.
@@ -112,7 +115,7 @@ single-rooted.
 
 ### Spec precedence
 
-When code under `PTimer/` disagrees with a spec under `docs/specs/`,
+When code under `ios/PTimer/` disagrees with a spec under `docs/specs/`,
 treat it as either a bug or a spec drift, not as a license to ignore
 the spec.
 
@@ -165,12 +168,13 @@ from code.
 
 ### Linting
 
-A baseline `.swiftlint.yml` lives at the repo root. The Phase 0 baseline
+A baseline `.swiftlint.yml` lives under `ios/`. The Phase 0 baseline
 is intentionally relaxed to avoid churn; size and complexity thresholds
-may be tightened as the codebase evolves. Run locally:
+may be tightened as the codebase evolves. Run locally from the
+repository root:
 
 ```bash
-swiftlint lint
+cd ios && swiftlint lint
 ```
 
 CI integration is deferred until the platform decision (Bitbucket

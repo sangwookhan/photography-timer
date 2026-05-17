@@ -7,7 +7,7 @@
 name = "PTimer"
 primary_platform = "ios"
 stack = ["swift", "swiftui", "xcode"]
-task_spec_path = "Docs/tasks"
+task_spec_path = "docs/tasks"
 review_guide_path = "code_review.md"
 agents_guide_path = "AGENTS.md"
 
@@ -28,8 +28,8 @@ require_risk_summary_in_final_report = true
 default_scheme = "PTimer"
 default_test_plan = "PTimer"
 preferred_destination = "platform=iOS Simulator,name=iPhone 17"
-full_test_command = "xcodebuild -project PTimer.xcodeproj -scheme PTimer -testPlan PTimer -destination 'platform=iOS Simulator,name=iPhone 17' test"
-destination_discovery_command = "xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer"
+full_test_command = "cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer -testPlan PTimer -destination 'platform=iOS Simulator,name=iPhone 17' test"
+destination_discovery_command = "cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer"
 notes = [
   "Choose a currently available iPhone simulator if the preferred destination is unavailable.",
   "Documentation-only changes normally do not require app test execution."

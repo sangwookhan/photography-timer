@@ -22,6 +22,7 @@
 		A0000000000000000000011A /* RecordReplaySpies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RecordReplaySpies.swift */; };
 		A0000000000000000000011C /* RecordReplayHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011B /* RecordReplayHarness.swift */; };
 		A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */; };
+		A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000401 /* SharedFixtureLocator.swift */; };
 		A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ExposureCalculatorViewModel.swift */; };
 		A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */; };
 		A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */; };
@@ -179,6 +180,7 @@
 		A00000000000000000000119 /* RecordReplaySpies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplaySpies.swift; sourceTree = "<group>"; };
 		A0000000000000000000011B /* RecordReplayHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayHarness.swift; sourceTree = "<group>"; };
 		A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayBaselineSmokeTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000401 /* SharedFixtureLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureLocator.swift; sourceTree = "<group>"; };
 		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000019 /* ExposureCalculatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTests.swift; sourceTree = "<group>"; };
@@ -263,7 +265,7 @@
 		A0000000000000000000015B /* ExposureScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000161 /* OneThirdStopExposureModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneThirdStopExposureModeTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000163 /* ExposureScaleModeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleModeUITests.swift; sourceTree = "<group>"; };
-		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = docs; sourceTree = "<group>"; };
+		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../docs; sourceTree = "<group>"; };
 		A00000000000000000000201 /* CameraSlotIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotIdentity.swift; sourceTree = "<group>"; };
 		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
 		A00000000000000000000205 /* CameraSlotPageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPageState.swift; sourceTree = "<group>"; };
@@ -502,6 +504,7 @@
 				A000000000000000000000CD /* Timers */,
 				A00000000000000000000113 /* Snapshots */,
 				A00000000000000000000114 /* RecordReplay */,
+				A00000000000000000000402 /* Support */,
 			);
 			path = PTimerTests;
 			sourceTree = "<group>";
@@ -525,6 +528,14 @@
 				A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */,
 			);
 			path = RecordReplay;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000402 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000401 /* SharedFixtureLocator.swift */,
+			);
+			path = Support;
 			sourceTree = "<group>";
 		};
 		A000000000000000000000CB /* App */ = {
@@ -814,6 +825,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */,
 				A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */,
 				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 				A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */,

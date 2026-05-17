@@ -82,27 +82,12 @@ final class ReciprocityResultLegacyShapeBaselineTests: XCTestCase {
         return try JSONDecoder().decode(FixtureRoot.self, from: data).cases
     }
 
-    /// Resolves `shared/test-fixtures/reciprocity-golden.json` from
-    /// the repository root by walking up from this file's directory.
-    /// Mirrors `DisplayStateSnapshot.locateSnapshotsRoot`'s strategy
-    /// so the harness works regardless of build directory layout.
+    /// Resolves `shared/test-fixtures/reciprocity-golden.json` via
+    /// `SharedFixtureLocator`, which walks up from this file's directory
+    /// until it finds the repository-root `shared/test-fixtures/`.
     private static func fixtureURL(file: StaticString = #filePath) -> URL {
-        let testFileURL = URL(fileURLWithPath: "\(file)")
-        var current = testFileURL.deletingLastPathComponent()
-        while current.pathComponents.count > 1 {
-            if current.lastPathComponent == "PTimerTests" {
-                return current
-                    .deletingLastPathComponent()
-                    .appendingPathComponent("shared", isDirectory: true)
-                    .appendingPathComponent("test-fixtures", isDirectory: true)
-                    .appendingPathComponent("reciprocity-golden.json")
-            }
-            current = current.deletingLastPathComponent()
-        }
-        // Fallback: relative to test file's directory.
-        return testFileURL
-            .deletingLastPathComponent()
-            .appendingPathComponent("../../shared/test-fixtures/reciprocity-golden.json")
+        SharedFixtureLocator.fixturesRoot(file: file)
+            .appendingPathComponent("reciprocity-golden.json")
     }
 
     // MARK: - Profile resolution

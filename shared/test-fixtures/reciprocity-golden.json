@@ -1,10 +1,10 @@
 {
   "_meta": {
     "generatedFrom": [
-      "PTimerTests/Reciprocity/ReciprocityCalculationPolicyTests.swift",
-      "PTimerTests/ExposureCalculator/ExposureCalculatorViewModelFilmModeTests.swift",
+      "ios/PTimerTests/Reciprocity/ReciprocityCalculationPolicyTests.swift",
+      "ios/PTimerTests/ExposureCalculator/ExposureCalculatorViewModelFilmModeTests.swift",
       "Docs/Sources/wiki/05_reciprocity/15138817_PTIMER_Reciprocity_Validation_Samples.md",
-      "PTimer/Resources/LaunchPresetFilmCatalog.json"
+      "ios/PTimer/Resources/LaunchPresetFilmCatalog.json"
     ],
     "version": "1.0.0",
     "description": "Golden input/output pairs for reciprocity correction calculations. Values are derived from existing test assertions, wiki validation samples, and the bundled launch preset catalog."

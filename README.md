@@ -7,10 +7,13 @@ Activity widget.
 ## Stack
 
 - Swift / SwiftUI
-- Xcode project (`PTimer.xcodeproj`)
-- Test target: `PTimerTests`
-- Widget target: `PTimerWidgets`
-- Test plan: `PTimer.xctestplan`
+- Xcode project (`ios/PTimer.xcodeproj`)
+- Test target: `ios/PTimerTests`
+- Widget target: `ios/PTimerWidgets`
+- Test plan: `ios/PTimer.xctestplan`
+
+iOS sources live under `ios/`. Shared cross-platform test fixtures live at
+`shared/test-fixtures/`.
 
 ## Architecture summary
 
@@ -51,28 +54,29 @@ spec is a bug or a spec drift to be reconciled.
 
 ## Getting started
 
-1. Open `PTimer.xcodeproj` in Xcode.
+1. Open `ios/PTimer.xcodeproj` in Xcode.
 2. Select an iPhone Simulator.
 3. Build and run the `PTimer` scheme.
 
 ### Running tests
 
 ```bash
-xcodebuild -project PTimer.xcodeproj -scheme PTimer \
+cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
 If `iPhone 17` is unavailable, choose any available iPhone simulator
-listed by `xcodebuild -showdestinations -project PTimer.xcodeproj
+listed by `cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj
 -scheme PTimer`.
 
 ### Linting (local)
 
 ```bash
-brew install swiftlint   # one-time
-swiftlint lint           # from repo root
+brew install swiftlint            # one-time
+cd ios && swiftlint lint          # run from repository root
 ```
 
-Configuration lives in `.swiftlint.yml`. Phase 0 baseline is intentionally
-relaxed; size and complexity thresholds are added in a later phase.
+Configuration lives in `ios/.swiftlint.yml`. Phase 0 baseline is
+intentionally relaxed; size and complexity thresholds are added in a
+later phase.

@@ -28,8 +28,8 @@ PTIMER 구조 개선 작업이 다음을 만족하도록 보장:
 **목적**: PR 단위로 build/test/lint 회귀 차단
 
 **무엇을**:
-- Xcode build (`xcodebuild test`) 통과
-- 모든 단위 테스트 통과 (`PTimer.xctestplan`)
+- Xcode build (`cd ios && xcodebuild test`) 통과
+- 모든 단위 테스트 통과 (`ios/PTimer.xctestplan`)
 - SwiftLint warning/error 0
 - Coverage 비-회귀 (after coverage gating is introduced: 이전 대비 −1% 이내)
 
@@ -82,8 +82,8 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 |---|---|---|---|
 | F1 | Production code shall not import `XCTestRuntime` | after the test-runtime coupling is removed | SwiftLint regex rule |
 | F2 | Production code shall not reference `isRunningTests` | after the test-runtime coupling is removed | SwiftLint regex rule |
-| F3 | `PTimer/Reciprocity/*` shall not import UIKit/SwiftUI | 도메인 순수성 | SwiftLint imports rule |
-| F4 | `PTimer/Reciprocity/*` and `PTimer/ExposureCalculator/ExposureCalculator.swift` shall import only `Foundation` | 보호 영역 | SwiftSyntax 검사 |
+| F3 | `ios/PTimer/Reciprocity/*` shall not import UIKit/SwiftUI | 도메인 순수성 | SwiftLint imports rule |
+| F4 | `ios/PTimer/Reciprocity/*` and `ios/PTimer/ExposureCalculator/ExposureCalculator.swift` shall import only `Foundation` | 보호 영역 | SwiftSyntax 검사 |
 | F5 | ViewModel/Models shall not directly instantiate concrete domain evaluators (use protocol) | after model-boundary enforcement is introduced | SwiftSyntax 검사 |
 | F6 | Any source file shall not exceed 1,000 lines | after layer-size and decomposition enforcement is introduced | SwiftLint `file_length` |
 | F7 | Any function shall not exceed 50 lines / CC 10 | after function/file-size enforcement is introduced | SwiftLint `function_body_length`/`cyclomatic_complexity` |
@@ -111,8 +111,8 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 #### (a) Snapshot 자동
 
 현재 자동 snapshot은 in-house display-state snapshot이다. 위치:
-`PTimerTests/Snapshots/`, baseline:
-`PTimerTests/__Snapshots__/<TestClass>/<name>.txt`.
+`ios/PTimerTests/Snapshots/`, baseline:
+`ios/PTimerTests/__Snapshots__/<TestClass>/<name>.txt`.
 
 이 helper는 SwiftUI 픽셀 비교가 아니라 ViewModel/Presenter/Mapper가
 emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
@@ -177,12 +177,12 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 
 | 도구 | 무엇 |
 |---|---|
-| Xcode test, `PTimer.xctestplan` | L1 |
-| `PTimerTests/` XCTest suite | L1 (테스트 데이터) |
+| Xcode test, `ios/PTimer.xctestplan` | L1 |
+| `ios/PTimerTests/` XCTest suite | L1 (테스트 데이터) |
 | `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md` | L4 매뉴얼 스모크 발판 |
 | `Storing` 페어 | DI 발판, L3 fitness 일부 |
-| `PTimerTests/Snapshots/` | L2/L4 display-state snapshot |
-| `PTimerTests/RecordReplay/` | L2 event-sequence record-replay |
+| `ios/PTimerTests/Snapshots/` | L2/L4 display-state snapshot |
+| `ios/PTimerTests/RecordReplay/` | L2 event-sequence record-replay |
 
 ### 추가 필요
 
@@ -242,11 +242,11 @@ Reciprocity Result enum 도입 시:
 ### Step 1. main에서 baseline 기록
 
 현재 record-replay 인프라 위치:
-`PTimerTests/RecordReplay/`, baseline 위치:
-`PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`.
+`ios/PTimerTests/RecordReplay/`, baseline 위치:
+`ios/PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`.
 
 ```bash
-RECORD_REPLAY=1 xcodebuild test \
+cd ios && RECORD_REPLAY=1 xcodebuild test \
   -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' \
@@ -268,7 +268,7 @@ baseline은 git에 커밋 (재현성·리뷰 가능성).
 ### Step 3. branch에서 baseline 재생
 
 ```bash
-xcodebuild test \
+cd ios && xcodebuild test \
   -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' \
@@ -282,7 +282,7 @@ xcodebuild test \
 
 PR 본문 §5 양식에:
 - `L2 — Semantic equivalence: record-replay`
-- `evidence: PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
+- `evidence: ios/PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
   + diff 결과 캡처
 
 ### Record-replay 인프라 비용
@@ -298,11 +298,11 @@ Record-replay 인프라는 timer types, presenter, coordinator, ViewModel 분할
 실제 인프라는 XCTest + display-state snapshot 패턴을 재사용한다. CLI 플래그
 대신 환경변수로 재기록 모드를 토글한다.
 
-- 위치: `PTimerTests/RecordReplay/` (Trace/Baseline/Spies/Harness + smoke test)
-- baseline: `PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
-- 재기록: `RECORD_REPLAY=1 xcodebuild test ... -only-testing:PTimerTests/<TestClass>` → fail (의도 commit 강제) → env 없이 재실행으로 verify
+- 위치: `ios/PTimerTests/RecordReplay/` (Trace/Baseline/Spies/Harness + smoke test)
+- baseline: `ios/PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
+- 재기록: `cd ios && RECORD_REPLAY=1 xcodebuild test ... -only-testing:PTimerTests/<TestClass>` → fail (의도 commit 강제) → env 없이 재실행으로 verify
 - fixture(`shared/test-fixtures/reciprocity-golden.json`)는 Reciprocity Result enum 입출력 페어를 이미 커버하므로 record-replay는 추가 baseline 없이도 시작 가능하다. record-replay는 **이벤트 시퀀스**(LockScreen exposer 호출 순서, persistence save/clear, notification schedule/cancel)를 lock하는 데 집중한다.
-- 자세한 사용법은 `PTimerTests/RecordReplay/README.md`.
+- 자세한 사용법은 `ios/PTimerTests/RecordReplay/README.md`.
 
 본 인프라는 텍스트 trace + on-disk diff로 semantic equivalence
 evidence를 남기며, display-state snapshot과 라이프사이클을 통일해 학습 비용을

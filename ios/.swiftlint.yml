@@ -7,7 +7,7 @@
 # Install:
 #   brew install swiftlint
 # Run:
-#   swiftlint lint --strict   # from repo root
+#   cd ios && swiftlint lint
 
 # Paths SwiftLint shall not scan
 excluded:
@@ -16,7 +16,6 @@ excluded:
   - .build
   - .swiftpm
   - PTimer.xcodeproj
-  - docs
   - PTimerWidgets/_PreviewAssets   # if exists; harmless if absent
 
 # Disabled rules — relaxed to avoid churn on existing code.

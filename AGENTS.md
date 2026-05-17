@@ -51,12 +51,13 @@ user explicitly says otherwise.
 
 - Product target: iPhone app
 - Stack: Swift, SwiftUI, Xcode project
-- Workspace entry point: `PTimer.xcodeproj`
+- Workspace entry point: `ios/PTimer.xcodeproj`
 - Main app scheme: `PTimer`
-- Test target: `PTimerTests`
+- Test target: `ios/PTimerTests`
 - Current automated tests use `XCTest`
 
-Existing product documents live under `docs/`.
+iOS sources live under `ios/`. Shared cross-platform fixtures live at
+`shared/test-fixtures/`. Existing product documents live under `docs/`.
 Operational workflow documents may live at repository root, `docs/tasks/`,
 and `.codex/`.
 
@@ -142,15 +143,15 @@ Avoid:
 
 Prefer verification that matches the changed layer.
 
-Typical commands:
+Typical commands, run from the repository root:
 
 ```bash
-xcodebuild -project PTimer.xcodeproj -scheme PTimer \
+cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
 ```bash
-xcodebuild -project PTimer.xcodeproj -scheme PTimer \
+cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```

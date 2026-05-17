@@ -971,13 +971,36 @@ struct ReciprocityCalculationPolicyEvaluator {
     /// then the default formula no-correction handoff for formula-only
     /// profiles below their practical domain, then quantified table
     /// estimation, then formula extrapolation, then advisory-only
-    /// continuation, and finally unsupported.
+    /// continuation, and finally unsupported. The result is then
+    /// passed through `clampToCorrectionInvariant` so the public
+    /// guarantee `corrected >= adjusted` holds for every rule path,
+    /// not only for the default-handoff case.
     func evaluate(
         profile: ReciprocityProfile,
         meteredExposureSeconds: Double
     ) -> ReciprocityResult {
         let sourceAuthorityImpact = mapSourceAuthorityImpact(from: profile.source)
         let assembler = ResultAssembler(sourceAuthorityImpact: sourceAuthorityImpact)
+        let rawResult = evaluateRuleSelection(
+            profile: profile,
+            meteredExposureSeconds: meteredExposureSeconds,
+            assembler: assembler
+        )
+        return clampToCorrectionInvariant(
+            result: rawResult,
+            meteredExposureSeconds: meteredExposureSeconds,
+            assembler: assembler
+        )
+    }
+
+    /// Rule-pipeline body, separated so the public `evaluate` can
+    /// post-process the produced result through the correction
+    /// invariant clamp without duplicating the pipeline.
+    private func evaluateRuleSelection(
+        profile: ReciprocityProfile,
+        meteredExposureSeconds: Double,
+        assembler: ResultAssembler
+    ) -> ReciprocityResult {
         let selector = Selection(
             tableSelectors: profile.rules.compactMap {
                 guard case let .table(tableRule) = $0 else {
@@ -1222,6 +1245,45 @@ struct ReciprocityCalculationPolicyEvaluator {
             ),
             assembler: assembler,
             estimator: estimator
+        )
+    }
+
+    /// Tolerance for the correction invariant comparison. Floating-
+    /// point identity cases (formula at exactly Tm=1 with P≈1) can
+    /// land microscopically below the metered value; treating those
+    /// as violations would falsely clamp valid formula prediction.
+    private let correctionInvariantTolerance: Double = 1e-6
+
+    /// Universal correction invariant: a reciprocity correction must
+    /// never shorten the adjusted shutter. When the rule-pipeline
+    /// produces a quantified `corrected < metered` result the value
+    /// is reclassified as a no-correction handoff, regardless of the
+    /// pathway that produced it (formula-derived, formula-
+    /// extrapolated unsupported, table interpolation/extrapolation,
+    /// or a custom rule). This is the global safety net on top of
+    /// `evaluateDefaultFormulaNoCorrection`'s narrower domain check.
+    ///
+    /// Results without a numeric corrected exposure (advisory-only
+    /// and value-less unsupported) pass through untouched — there is
+    /// no value to compare against.
+    private func clampToCorrectionInvariant(
+        result: ReciprocityResult,
+        meteredExposureSeconds: Double,
+        assembler: ResultAssembler
+    ) -> ReciprocityResult {
+        guard meteredExposureSeconds > 0,
+              meteredExposureSeconds.isFinite else {
+            return result
+        }
+        guard let corrected = result.correctedExposureSeconds,
+              corrected.isFinite else {
+            return result
+        }
+        guard corrected < meteredExposureSeconds - correctionInvariantTolerance else {
+            return result
+        }
+        return assembler.invariantClampedNoCorrection(
+            meteredExposureSeconds: meteredExposureSeconds
         )
     }
 
@@ -1714,6 +1776,27 @@ private extension ReciprocityCalculationPolicyEvaluator {
                     ReciprocityPolicyNote(
                         token: .thresholdGuidanceOnly,
                         text: "Reciprocity correction is not applied below the practical formula domain (default \(boundaryText))."
+                    )
+                ] + sourceAuthorityNotes
+            )
+        }
+
+        /// Universal-invariant fallback: a quantified result whose
+        /// corrected exposure would be shorter than the adjusted
+        /// shutter is reclassified to no-correction (corrected
+        /// equals metered). Reuses the threshold-no-correction
+        /// basis so downstream rendering is consistent with the
+        /// other no-correction pathways.
+        func invariantClampedNoCorrection(
+            meteredExposureSeconds: Double
+        ) -> ReciprocityResult {
+            .thresholdNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .thresholdGuidanceOnly,
+                        text: "Reciprocity correction cannot shorten the adjusted shutter. Treating as No correction."
                     )
                 ] + sourceAuthorityNotes
             )

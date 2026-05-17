@@ -923,10 +923,53 @@ final class ReciprocityPolicyDefaultFormulaNoCorrectionTests: XCTestCase {
     func testFormulaWithExplicitSubDefaultMinimumKeepsFormulaPrediction() {
         // A profile that publishes an explicit pre-1s formula
         // domain opts into sub-1s correction; the default
-        // no-correction handoff must not override it.
+        // no-correction handoff must not override it. The exponent
+        // here is < 1 so the formula produces a corrected time that
+        // satisfies the global `corrected >= adjusted` invariant —
+        // the goal of this test is to verify the default-handoff
+        // opt-out, not the invariant clamp. The shortening case is
+        // covered by `testInvariantClampsCorrectedShorterThanMeteredEvenForExplicitOptInProfiles`.
         let profile = ReciprocityProfile(
             id: "test-formula-pre-one-second",
             name: "Test formula starting before 1s",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerPublished,
+                authority: .official,
+                publisher: "Test"
+            ),
+            rules: [
+                .formula(FormulaReciprocityRule(
+                    meteredRange: ReciprocityTimeRange(minimumSeconds: 0.1),
+                    formula: ReciprocityFormula(kind: .exponentPower, exponent: 0.5)
+                ))
+            ]
+        )
+
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+
+        XCTAssertEqual(
+            result.metadata.basis,
+            .formulaDerived,
+            "A profile publishing an explicit pre-default-bound formula domain must keep its formula prediction below 1s."
+        )
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? 0,
+            pow(0.5, 0.5),
+            accuracy: 1e-6
+        )
+    }
+
+    func testInvariantClampsCorrectedShorterThanMeteredEvenForExplicitOptInProfiles() {
+        // A profile that explicitly opts into sub-1s correction
+        // still has to produce a corrected time at least as long
+        // as the metered exposure. When a formula would otherwise
+        // shorten the exposure (e.g. P > 1 below 1s on an
+        // opt-in profile), the policy reclassifies the result to
+        // no-correction so the global invariant holds even past
+        // the default-handoff opt-in.
+        let profile = ReciprocityProfile(
+            id: "test-formula-shortens-below-one-second",
+            name: "Test shortening formula",
             source: ReciprocitySourceProvenance(
                 kind: .manufacturerPublished,
                 authority: .official,
@@ -944,14 +987,10 @@ final class ReciprocityPolicyDefaultFormulaNoCorrectionTests: XCTestCase {
 
         XCTAssertEqual(
             result.metadata.basis,
-            .formulaDerived,
-            "A profile publishing an explicit pre-default-bound formula domain must keep its formula prediction below 1s."
+            .officialThresholdNoCorrection,
+            "A would-be-shortening corrected exposure must reclassify as no-correction so the invariant holds."
         )
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            pow(0.5, 1.5),
-            accuracy: 1e-6
-        )
+        XCTAssertEqual(result.correctedExposureSeconds ?? -1, 0.5, accuracy: 1e-6)
     }
 
     func testProfileWithoutAnyFormulaRuleDoesNotInheritDefaultNoCorrection() {
@@ -977,5 +1016,142 @@ final class ReciprocityPolicyDefaultFormulaNoCorrectionTests: XCTestCase {
             .officialThresholdNoCorrection,
             "Profiles without a formula rule must not inherit the default formula no-correction handoff."
         )
+    }
+}
+
+/// Catalog-wide regression coverage for the global invariant
+/// `corrected exposure >= adjusted shutter`. Walks every preset
+/// profile across a representative metered-exposure range and
+/// fails if any pathway (table, formula, formula-extrapolated
+/// unsupported) produces a corrected time shorter than the
+/// metered value. The unofficial practical registry is included
+/// alongside the launch catalog so unofficial profiles are not
+/// excluded from the invariant.
+final class ReciprocityCorrectionInvariantTests: XCTestCase {
+    private let evaluator = ReciprocityCalculationPolicyEvaluator()
+
+    /// Representative metered exposures spanning sub-1s through
+    /// long exposures past every catalog formula's published
+    /// upper bound. The catalog convention is that the
+    /// reciprocity correction starts at 1s; sub-1s samples
+    /// exercise the default no-correction handoff while long
+    /// values exercise the formula-extrapolation pathway for
+    /// converted profiles.
+    private let representativeMeteredExposuresSeconds: [Double] = [
+        0.001, 0.01, 0.033, 0.1, 0.5,
+        1.0, 1.5, 2, 4, 10, 30, 60, 120, 240, 480, 1_000, 4_000, 10_000
+    ]
+
+    func testCatalogPresetProfilesNeverProduceShortenedCorrectedExposure() throws {
+        XCTAssertFalse(
+            LaunchPresetFilmCatalog.films.isEmpty,
+            "Launch catalog must load at least one film for the invariant suite to be meaningful."
+        )
+
+        for film in LaunchPresetFilmCatalog.films {
+            for profile in film.profiles {
+                for metered in representativeMeteredExposuresSeconds {
+                    let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+                    if let corrected = result.correctedExposureSeconds {
+                        XCTAssertGreaterThanOrEqual(
+                            corrected + 1e-6,
+                            metered,
+                            "Invariant violated for \(film.canonicalStockName) / \(profile.id) at \(metered)s: corrected=\(corrected)"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    func testUnofficialPracticalRegistryProfilesNeverProduceShortenedCorrectedExposure() {
+        let unofficialEntries: [(String, ReciprocityProfile)] = [
+            ("Portra 400 unofficial practical", UnofficialPracticalProfiles.kodakPortra400UnofficialPractical)
+        ]
+
+        for (label, profile) in unofficialEntries {
+            for metered in representativeMeteredExposuresSeconds {
+                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+                if let corrected = result.correctedExposureSeconds {
+                    XCTAssertGreaterThanOrEqual(
+                        corrected + 1e-6,
+                        metered,
+                        "Invariant violated for \(label) at \(metered)s: corrected=\(corrected)"
+                    )
+                }
+            }
+        }
+    }
+
+    /// Spot-check the films named in the PTIMER-143 spec so a
+    /// regression in any of them surfaces as a focused failure,
+    /// not just inside the broader catalog walk.
+    func testNamedFormulaAndConvertedProfilesSatisfyInvariantAcrossWideMeteredRange() throws {
+        let namedFilms = [
+            "Portra 400",
+            "T-MAX 100",
+            "T-MAX 400",
+            "Tri-X 400",
+            "Provia 100F",
+            "HP5 Plus",
+            "Acros II",
+            "Velvia 50",
+            "Velvia 100",
+            "Fomapan 100 Classic",
+            "Fomapan 200 Creative",
+            "Fomapan 400 Action"
+        ]
+
+        for name in namedFilms {
+            let film = try XCTUnwrap(
+                LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == name }),
+                "\(name) must remain in the launch catalog for invariant regression coverage."
+            )
+            for profile in film.profiles {
+                for metered in representativeMeteredExposuresSeconds {
+                    let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+                    if let corrected = result.correctedExposureSeconds {
+                        XCTAssertGreaterThanOrEqual(
+                            corrected + 1e-6,
+                            metered,
+                            "Invariant violated for \(name) at \(metered)s: corrected=\(corrected)"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    func testFomaTableProfilePreservesPublishedSubSecondBehavior() throws {
+        // The Foma family ships table profiles whose published
+        // threshold covers sub-1s with No correction, and whose
+        // first table row starts at 1s. The default formula
+        // no-correction handoff must not shadow either of those —
+        // Foma's published behavior has to stay observable
+        // end-to-end.
+        let film = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == "Fomapan 100 Classic" })
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+
+        // Sub-threshold: published 'no correction' threshold drives
+        // the basis. Corrected equals metered (identity).
+        let belowThreshold = evaluator.evaluate(
+            profile: profile,
+            meteredExposureSeconds: 0.1
+        )
+        XCTAssertEqual(belowThreshold.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(belowThreshold.correctedExposureSeconds ?? -1, 0.1, accuracy: 1e-6)
+
+        // First published table row at 1s: corrected exposure
+        // remains driven by the published multiplier-based table
+        // entry (factor 2 → corrected 2s), not by any synthesized
+        // default handoff.
+        let firstRow = evaluator.evaluate(
+            profile: profile,
+            meteredExposureSeconds: 1
+        )
+        XCTAssertEqual(firstRow.metadata.basis, .exactTablePoint)
+        XCTAssertEqual(firstRow.correctedExposureSeconds ?? 0, 2, accuracy: 1e-6)
     }
 }

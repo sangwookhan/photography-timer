@@ -195,10 +195,10 @@ Watch for:
 
 When relevant, reviewers should also confirm:
 
-- the command used to test is appropriate for `PTimer.xcodeproj`
+- the command used to test is appropriate for `ios/PTimer.xcodeproj`
 - the `PTimer` scheme or `PTimer` test plan was used intentionally
 - simulator destination choice is documented when needed
-- changed tests live in the expected `PTimerTests/...` area
+- changed tests live in the expected `ios/PTimerTests/...` area
 
 ---
 

@@ -223,7 +223,7 @@ is a load-time error rather than a soft-warn.
 
 ### 1.9 Widgets
 
-Directory: `PTimerWidgets/` (separate target).
+Directory: `ios/PTimerWidgets/` (separate target).
 
 `LockScreenTimerTargetWidget.swift` renders the lock-screen timer
 widget. The widget is read-only; user input on the widget is out of
@@ -327,7 +327,7 @@ introduced for the same role shall reuse them.
 
 ## 5. Tests mirror this structure
 
-Test files under `PTimerTests/` mirror the source layout:
+Test files under `ios/PTimerTests/` mirror the source layout:
 
 - `ExposureCalculator/` — calculation accuracy, ViewModel state, film
   catalog loading, feature-model unit tests
@@ -352,7 +352,7 @@ discipline. The full taxonomy lives in
 `docs/verification/Strategy.md` §2 L3 (rules F1–F12).
 
 - Production code shall not detect whether it is running under tests
-  (`XCTestRuntime` / `isRunningTests` are forbidden in `PTimer/`).
+  (`XCTestRuntime` / `isRunningTests` are forbidden in `ios/PTimer/`).
 - The `ExposureCalculatorViewModel` facade shall not import
   `ActivityKit`; lock-screen concerns belong in
   `LockScreenTimerCoordinator`.

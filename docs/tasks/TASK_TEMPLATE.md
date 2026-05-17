@@ -106,7 +106,7 @@ This should guide implementation, not prescribe exact code.
 ### Suggested Commands
 
 ```bash
-xcodebuild -project PTimer.xcodeproj -scheme PTimer \
+cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 

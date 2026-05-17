@@ -2,8 +2,8 @@
   "_meta": {
     "generatedFrom": [
       "docs/specs/DomainSchema.md",
-      "PTimerTests/ExposureCalculator/LaunchPresetFilmCatalogTests.swift",
-      "PTimer/Resources/LaunchPresetFilmCatalog.json"
+      "ios/PTimerTests/ExposureCalculator/LaunchPresetFilmCatalogTests.swift",
+      "ios/PTimer/Resources/LaunchPresetFilmCatalog.json"
     ],
     "version": "2.0.0",
     "description": "Validation cases for the bundled launch preset film catalog. Reflects the PTIMER-103 launch-ready scope (34 current-official still-film identities) defined by the PTIMER-86 preset dataset policy outcome on Confluence wiki 13172737."

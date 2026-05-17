@@ -25,15 +25,15 @@ baseline 위치: `PTimerTests/__Snapshots__/<TestClass>/<name>.txt`
 3. **의도적 갱신**: `SNAPSHOT_RECORD=1` 환경변수로 실행 → 모든 매치 케이스가 baseline을 다시 쓰고 fail. 두 번째 (env 없이) 실행으로 verification.
 
 ```bash
-# Re-record after deliberate change
-SNAPSHOT_RECORD=1 xcodebuild test \
+# Re-record after deliberate change (run from repository root)
+cd ios && SNAPSHOT_RECORD=1 xcodebuild test \
   -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' \
   -only-testing:PTimerTests/DisplayStateSnapshotTests
 
 # Verify (no env)
-xcodebuild test ... -only-testing:PTimerTests/DisplayStateSnapshotTests
+cd ios && xcodebuild test ... -only-testing:PTimerTests/DisplayStateSnapshotTests
 ```
 
 ## 베이스라인을 commit해야 하는가

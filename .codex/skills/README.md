@@ -46,7 +46,7 @@ recommended structure.
 - execute prepared task specs faithfully
 - keep scope tight
 - report changed files, tests, and remaining risks
-- align with `Docs/tasks/TASK_TEMPLATE.md`
+- align with `docs/tasks/TASK_TEMPLATE.md`
 
 ### `code-review`
 

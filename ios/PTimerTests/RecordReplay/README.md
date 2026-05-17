@@ -35,14 +35,14 @@ and B6 (`shared/test-fixtures/`), not a replacement.
    덮어쓰고 fail. 두 번째 실행(env 없이)으로 verify.
 
 ```bash
-# Re-record after deliberate change
-RECORD_REPLAY=1 xcodebuild test \
+# Re-record after deliberate change (run from repository root)
+cd ios && RECORD_REPLAY=1 xcodebuild test \
   -project PTimer.xcodeproj -scheme PTimer \
   -destination 'platform=iOS Simulator,id=1D7DAD65-A280-4114-A928-585CAEE969E9' \
   -only-testing:PTimerTests/RecordReplayBaselineSmokeTests
 
 # Verify (no env)
-xcodebuild test ... -only-testing:PTimerTests/RecordReplayBaselineSmokeTests
+cd ios && xcodebuild test ... -only-testing:PTimerTests/RecordReplayBaselineSmokeTests
 ```
 
 Baseline 위치: `PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`.

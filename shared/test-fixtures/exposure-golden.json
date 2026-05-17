@@ -1,9 +1,9 @@
 {
   "_meta": {
     "generatedFrom": [
-      "PTimerTests/ExposureCalculator/ExposureCalculatorTests.swift",
-      "PTimerTests/ExposureCalculator/ExposureCalculationAccuracyTests.swift",
-      "PTimer/ExposureCalculator/ExposureCalculator.swift"
+      "ios/PTimerTests/ExposureCalculator/ExposureCalculatorTests.swift",
+      "ios/PTimerTests/ExposureCalculator/ExposureCalculationAccuracyTests.swift",
+      "ios/PTimer/ExposureCalculator/ExposureCalculator.swift"
     ],
     "version": "1.0.0",
     "description": "Golden input/output pairs for ND exposure calculations. The calculator uses snap-to-full-stop logic: results at or below 30s snap to the nearest camera full-stop value; results between 30s and 64s snap to the nearest of {30, 64}; results above 64s snap to the nearest power of two."

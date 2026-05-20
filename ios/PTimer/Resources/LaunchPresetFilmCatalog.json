@@ -3174,8 +3174,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "adox-chs-100-ii-official-table",
-        "name": "Official multiplier table",
+        "id": "adox-chs-100-ii-official-formula",
+        "name": "Official log-log formula fit through published 2/4/8/15 sec rows",
         "notes": [],
         "rules": [
           {
@@ -3192,190 +3192,155 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 1.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 3,
-                          "meteredSeconds": 2
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 2,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 2
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 8,
-                          "meteredSeconds": 4
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 4,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 2.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 20,
-                          "meteredSeconds": 8
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 8,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 3
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 45,
-                          "meteredSeconds": 15
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 15,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 4
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 120,
-                          "meteredSeconds": 30
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 30,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 6.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 390,
-                          "meteredSeconds": 60
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 60,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.2102,
+                "equation": "Tc = 1.2102 \u00d7 Tm^P",
+                "exponent": 1.3423,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 15.000001,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = 1.2102 \u00d7 Tm^P, P \u2248 1.3423. Log-log fit through the four published multiplier rows in ADOX's 2024 CHS 100 II technical sheet (2 / 4 / 8 / 15 sec). The sheet does not publish reciprocity rows past 15 sec; inputs above 15 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
           "authority": "official",
-          "citation": "CHS 100 II technical sheet",
+          "citation": "ADOX CHS 100 II technical sheet (11 July 2024)",
           "confidence": "high",
           "kind": "manufacturerPublished",
           "publisher": "ADOX",
-          "title": "ADOX CHS 100 II \u2014 Technical information"
-        }
+          "title": "ADOX CHS 100 II S/W Film \u2014 Technische Beschreibung, 11. Juli 2024"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec \u2192 \u00d71.5 (corrected 3 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec \u2192 \u00d72 (corrected 8 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec \u2192 \u00d72.5 (corrected 20 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 45,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec \u2192 \u00d73 (corrected 45 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -3392,71 +3357,41 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "adox-cms-20-ii-official-table",
-        "name": "Official short and long exposure guidance",
-        "notes": [
-          "ADOX CMS 20 II reports the same +1/2 stop addition at both ends of the no-correction band (1/1000 sec and 1 sec) per the published guidance."
-        ],
+        "id": "adox-cms-20-ii-official-formula",
+        "name": "Official log-log formula anchored to 1 s and 10 s reference points",
+        "notes": [],
         "rules": [
           {
             "kind": "threshold",
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 0.1,
+                "maximumSeconds": 1,
                 "minimumSeconds": 0.001
               },
               "notes": [
-                "Regular speed / no correction required from 1/1000 sec to 1/10 sec."
+                "No correction required from 1/1000 sec to 1 sec."
               ]
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 0.001,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "At 1/1000 sec, the data sheet specifies adding +1/2 stop in addition to the no-correction band."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "At 1 sec, add +1/2 stop."
-                  ]
-                }
-              ],
-              "notes": []
+            "kind": "formula",
+            "formula": {
+              "additionalAdjustments": [],
+              "extrapolateBeyondMaximum": false,
+              "formula": {
+                "coefficient": 1.4142136,
+                "equation": "Tc = 1.4142 \u00d7 Tm^P",
+                "exponent": 1.150515,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = 1.4142 \u00d7 Tm^P, P \u2248 1.150515. Log-log fit through ADOX's published anchors at 1 sec (+1/2 stop) and 10 sec (+1 stop). 100 sec is published as 'Not recommended' \u2014 inputs at or above 100 sec are unsupported and no corrected exposure is calculated."
+              ]
             }
           }
         ],
@@ -3467,7 +3402,107 @@
           "kind": "manufacturerPublished",
           "publisher": "ADOX",
           "title": "ADOX CMS 20 II \u2014 Technical information"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "isSourceEvidenceOnly": true,
+            "meteredExposure": {
+              "exactSeconds": 0.001,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1/1000 sec \u2192 +1/2 stop. Preserved as published evidence only; the calculation path stays no-correction across the entire sub-1 sec band."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.4142136,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 +1/2 stop (\u22481.4 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +1 stop (20 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "100 sec is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
       }
     ]
   }

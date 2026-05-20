@@ -52,6 +52,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.33."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -109,6 +110,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.26."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -166,6 +168,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.26."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -223,6 +226,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.41."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -280,6 +284,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.33."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -338,6 +343,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.31."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -395,6 +401,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.31."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -451,6 +458,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.43."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -507,6 +515,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.25."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -564,6 +573,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.26."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -621,6 +631,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.26."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -678,6 +689,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Exponent P = 1.3."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -737,6 +749,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 2.0137 × Tm^P, P ≈ 1.3891. Free log-log least squares fit through Kodak\'s published corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to ≈ 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
@@ -761,6 +774,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "1 sec → +1 stop, corrected 2 sec, develop -10%."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -782,6 +796,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "10 sec → +2 stops, corrected 50 sec, develop -20%."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
@@ -803,6 +818,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "100 sec → +3 stops, corrected 1200 sec, develop -30%."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-tmax-100"
@@ -859,6 +875,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 0.1 × (Tm / 0.1)^P, P ≈ 1.0966. Threshold-anchored constrained log-log fit through the 1/10 sec no-correction boundary and Kodak\'s published 10 sec → 15 sec / 100 sec → 200 sec corrected-time rows. The 1 sec +1/3 stop row is preserved as source evidence (stop delta only — Kodak publishes no corrected time at 1 sec, so the catalog does not synthesize one) and does not act as a fitting point; the 1/10,000 sec short-exposure guidance is preserved as a profile note and deliberately excluded from the long-exposure curve. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           ▿ notes: 2 elements
             - "Source data sheet states no exposure adjustment is required from 1/1,000 sec to 1/10 sec."
             - "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity formula deliberately excludes that short-exposure anchor — it is preserved as a profile-level note only."
@@ -874,6 +891,7 @@
                       - stopDelta: 0.3333333333333333
               ▿ notes: 1 element
                 - "1 sec → +1/3 stop. Source publishes only the stop delta; the derived corrected time (≈ 1.26 sec) tracks the formula curve within ~1/80 stop, so this row is kept as source evidence rather than a fitting point."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -891,6 +909,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → +1/2 stop, corrected 15 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
@@ -908,6 +927,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "100 sec → +1 stop, corrected 200 sec."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-tmax-400"
@@ -964,6 +984,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = Tm^P, P ≈ 1.2261. Threshold-anchored constrained log-log fit through the 1 sec no-correction boundary and Kodak\'s published 10 sec → 15 sec / 100 sec → 300 sec corrected-time rows. Kodak rounds the published corrected times for practical use, so the curve sits ~1/6 stop above the 10 sec row and ~1/12 stop below the 100 sec row; the markers stay visible as source evidence so users can verify the deviation. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 2 elements
@@ -984,6 +1005,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → +1/2 stop, corrected 15 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
@@ -1001,6 +1023,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "100 sec → +1 1/2 stops, corrected 300 sec."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-ektar-100"
@@ -1369,6 +1392,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = √2 × Tm (constant +1/2 stop). Encodes Fujifilm\'s published 120–1000 sec range guidance verbatim. Above 1000 sec the same +1/2 stop continues as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 1 element
@@ -1385,6 +1409,7 @@
                       - stopDelta: 0.5
               ▿ notes: 1 element
                 - "120 to 1000 sec → +1/2 stop."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-velvia-50"
@@ -1441,6 +1466,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = Tm^P, P ≈ 1.1821. Threshold-anchored constrained log-log fit through Fujifilm\'s published 4/8/16/32 sec source references. 64 sec is not recommended."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 5 elements
@@ -1458,6 +1484,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "4 sec → +1/3 stop, 5M."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
@@ -1472,6 +1499,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "8 sec → +1/2 stop, 7.5M."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 16.0
@@ -1486,6 +1514,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "16 sec → +2/3 stop, 10M."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 32.0
@@ -1500,6 +1529,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "32 sec → +1 stop, 12.5M."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 64.0
@@ -1509,6 +1539,7 @@
                     - severity: PTimer.ReciprocityWarningSeverity.notRecommended
                     - message: "64 sec is not recommended."
               - notes: 0 elements
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-velvia-100"
@@ -1564,6 +1595,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 60 × (Tm / 60)^P, P ≈ 1.2667. Threshold-anchored constrained log-log fit through the 60 s no-correction boundary and Fujifilm\'s published 2-min (+1/3 stop) and 4-min (+1/2 stop) references. Inputs above 240 sec extrapolate the same curve outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 2 elements
@@ -1581,6 +1613,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "2 min → +1/3 stop, 2.5M."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 240.0
@@ -1595,6 +1628,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "4 min → +1/2 stop, 2.5M."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-provia-100f"
@@ -1650,6 +1684,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 128 × (Tm / 128)^P, P ≈ 1.3676. Anchored to Fujifilm\'s published 4-min (240 s) +1/3-stop reference. 8 min is not recommended."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 2 elements
@@ -1667,6 +1702,7 @@
                     - note: nil
               ▿ notes: 1 element
                 - "4 min → +1/3 stop, 2.5G."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 480.0
@@ -1676,6 +1712,7 @@
                     - severity: PTimer.ReciprocityWarningSeverity.notRecommended
                     - message: "8 min is not recommended."
               - notes: 0 elements
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "foma-fomapan-100"
@@ -1731,6 +1768,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 2.2457 × Tm^P, P ≈ 1.4515. Free log-log fit through FOMA BOHEMIA\'s published multiplier rows at 1/10/100 sec (×2 / ×8 / ×16). The data sheet rows do not lie on a single power law, so the fit sits ~1/6 stop above the 1 sec and 100 sec rows and ~1/3 stop below the 10 sec row; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
@@ -1751,6 +1789,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "1 sec → ×2 (corrected 2 sec)."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -1768,6 +1807,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → ×8 (corrected 80 sec)."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
@@ -1785,6 +1825,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "100 sec → ×16 (corrected 1600 sec)."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "foma-fomapan-200"
@@ -1840,6 +1881,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 3.2107 × Tm^P, P ≈ 1.3891. Free log-log fit through FOMA BOHEMIA\'s published multiplier rows at 1/10/100 sec (×3 / ×9 / ×18). Residuals stay within ~1/5 stop at every published row; the source rows stay visible as evidence so the fit is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
@@ -1860,6 +1902,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "1 sec → ×3 (corrected 3 sec)."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -1877,6 +1920,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → ×9 (corrected 90 sec)."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
@@ -1894,6 +1938,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "100 sec → ×18 (corrected 1800 sec)."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "foma-fomapan-400"
@@ -1949,6 +1994,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 1.8022 × Tm^P, P ≈ 1.3635. Free log-log fit through FOMA BOHEMIA\'s published multiplier rows at 1/10/100 sec (×1.5 / ×6 / ×8). FOMAPAN 400\'s published rows step ×1.5 → ×6 → ×8 — the 10 sec row sits roughly half a stop above the curve while the 1 and 100 sec rows sit roughly a quarter stop below; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
@@ -1969,6 +2015,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "1 sec → ×1.5 (corrected 1.5 sec)."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -1986,6 +2033,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → ×6 (corrected 60 sec)."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
@@ -2003,6 +2051,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "100 sec → ×8 (corrected 800 sec)."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-rpx-100"
@@ -2057,6 +2106,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 0.9248 × Tm^P, P ≈ 1.4652. Free log-log fit through Rollei\'s published 2/5/10/20/30 sec corrected-time rows. Rollei\'s published rows do not lie on a single power law, so residuals reach ~0.3 stop at the 2/5 sec rows; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 5 elements
@@ -2073,6 +2123,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "2 sec → corrected 3 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 5.0
@@ -2086,6 +2137,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "5 sec → corrected 8 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -2099,6 +2151,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → corrected 25 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 20.0
@@ -2112,6 +2165,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "20 sec → corrected 75 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 30.0
@@ -2125,6 +2179,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "30 sec → corrected 150 sec."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-rpx-400"
@@ -2179,6 +2234,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 1.7708 × Tm^P, P ≈ 1.2404. Free log-log fit through Rollei\'s published 1/5/10/15/20 sec corrected-time rows. Residuals reach ~0.4 stop at the 5 sec row where the published step is largest; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 20 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 5 elements
@@ -2195,6 +2251,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "1 sec → corrected 2 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 5.0
@@ -2208,6 +2265,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "5 sec → corrected 10 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
@@ -2221,6 +2279,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "10 sec → corrected 30 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
@@ -2234,6 +2293,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "15 sec → corrected 55 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 20.0
@@ -2247,6 +2307,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "20 sec → corrected 80 sec."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-retro-80s"
@@ -2301,6 +2362,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 0.9601 × Tm^P, P ≈ 1.5361. Free log-log fit through Rollei\'s four published quantified corrected-time rows (4/8/15/30 sec). The 1 sec and 2 sec published rows give corrected exposure as ranges (1–2 sec and 3–4 sec) and are preserved as source-evidence notes — they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 6 elements
@@ -2313,6 +2375,7 @@
                     - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "1 sec → effective exposure 1 to 2 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 2.0
@@ -2322,6 +2385,7 @@
                     - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "2 sec → effective exposure 3 to 4 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 4.0
@@ -2335,6 +2399,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "4 sec → corrected 8 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
@@ -2348,6 +2413,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "8 sec → corrected 24 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
@@ -2361,6 +2427,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "15 sec → corrected 60 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 30.0
@@ -2374,6 +2441,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "30 sec → corrected 180 sec."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-superpan-200"
@@ -2428,6 +2496,7 @@
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
                   - "Tc = 0.9601 × Tm^P, P ≈ 1.5361. Free log-log fit through Rollei\'s four published quantified corrected-time rows (4/8/15/30 sec); identical shape to RETRO 80S because Rollei publishes the same correction values for both films. The 1 sec and 2 sec published rows give corrected exposure as ranges (1–2 sec and 3–4 sec) and are preserved as source-evidence notes — they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 6 elements
@@ -2440,6 +2509,7 @@
                     - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "1 sec → effective exposure 1 to 2 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 2.0
@@ -2449,6 +2519,7 @@
                     - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "2 sec → effective exposure 3 to 4 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 4.0
@@ -2462,6 +2533,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "4 sec → corrected 8 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
@@ -2475,6 +2547,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "8 sec → corrected 24 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
@@ -2488,6 +2561,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "15 sec → corrected 60 sec."
+              - isSourceEvidenceOnly: false
             ▿ PTimer.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 30.0
@@ -2501,6 +2575,7 @@
                       - isApproximate: false
               ▿ notes: 1 element
                 - "30 sec → corrected 180 sec."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "adox-chs-100-ii"
@@ -2516,17 +2591,17 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "adox-chs-100-ii-official-table"
-          - name: "Official multiplier table"
+          - id: "adox-chs-100-ii-official-formula"
+          - name: "Official log-log formula fit through published 2/4/8/15 sec rows"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
             - confidence: PTimer.ReciprocityConfidence.high
             - publisher: "ADOX"
-            ▿ title: Optional("ADOX CHS 100 II — Technical information")
-              - some: "ADOX CHS 100 II — Technical information"
-            ▿ citation: Optional("CHS 100 II technical sheet")
-              - some: "CHS 100 II technical sheet"
+            ▿ title: Optional("ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024")
+              - some: "ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024"
+            ▿ citation: Optional("ADOX CHS 100 II technical sheet (11 July 2024)")
+              - some: "ADOX CHS 100 II technical sheet (11 July 2024)"
             - sourceVersion: nil
           ▿ rules: 2 elements
             ▿ PTimer.ReciprocityRule.threshold
@@ -2538,109 +2613,100 @@
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No correction required for exposures up to 1 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 6 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 2.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                          ▿ multiplier: PTimer.MultiplierAdjustment
-                            - factor: 1.5
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(2.0)
-                              - some: 2.0
-                            - correctedSeconds: 3.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 4.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                          ▿ multiplier: PTimer.MultiplierAdjustment
-                            - factor: 2.0
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(4.0)
-                              - some: 4.0
-                            - correctedSeconds: 8.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 8.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                          ▿ multiplier: PTimer.MultiplierAdjustment
-                            - factor: 2.5
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(8.0)
-                              - some: 8.0
-                            - correctedSeconds: 20.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 15.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                          ▿ multiplier: PTimer.MultiplierAdjustment
-                            - factor: 3.0
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(15.0)
-                              - some: 15.0
-                            - correctedSeconds: 45.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 30.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                          ▿ multiplier: PTimer.MultiplierAdjustment
-                            - factor: 4.0
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(30.0)
-                              - some: 30.0
-                            - correctedSeconds: 120.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 60.0
-                    ▿ adjustments: 2 elements
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                          ▿ multiplier: PTimer.MultiplierAdjustment
-                            - factor: 6.5
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                          ▿ correctedTime: PTimer.CorrectedTimeMapping
-                            ▿ meteredSeconds: Optional(60.0)
-                              - some: 60.0
-                            - correctedSeconds: 390.0
-                            - isApproximate: false
-                    - notes: 0 elements
-                - notes: 0 elements
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.000001, maximumSeconds: Optional(15.000001)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 1.000001
+                    ▿ maximumSeconds: Optional(15.000001)
+                      - some: 15.000001
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.3423
+                  ▿ coefficient: Optional(1.2102)
+                    - some: 1.2102
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 1.2102 × Tm^P")
+                    - some: "Tc = 1.2102 × Tm^P"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = 1.2102 × Tm^P, P ≈ 1.3423. Log-log fit through the four published multiplier rows in ADOX\'s 2024 CHS 100 II technical sheet (2 / 4 / 8 / 15 sec). The sheet does not publish reciprocity rows past 15 sec; inputs above 15 sec continue on the same curve as numeric continuation outside the published source range."
+                - extrapolateBeyondMaximum: true
           - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 4 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 2.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimer.MultiplierAdjustment
+                      - factor: 1.5
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(2.0)
+                        - some: 2.0
+                      - correctedSeconds: 3.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "2 sec → ×1.5 (corrected 3 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 4.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimer.MultiplierAdjustment
+                      - factor: 2.0
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(4.0)
+                        - some: 4.0
+                      - correctedSeconds: 8.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "4 sec → ×2 (corrected 8 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 8.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimer.MultiplierAdjustment
+                      - factor: 2.5
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(8.0)
+                        - some: 8.0
+                      - correctedSeconds: 20.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "8 sec → ×2.5 (corrected 20 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 15.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimer.MultiplierAdjustment
+                      - factor: 3.0
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(15.0)
+                        - some: 15.0
+                      - correctedSeconds: 45.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "15 sec → ×3 (corrected 45 sec)."
+              - isSourceEvidenceOnly: false
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "adox-cms-20-ii"
@@ -2656,8 +2722,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "adox-cms-20-ii-official-table"
-          - name: "Official short and long exposure guidance"
+          - id: "adox-cms-20-ii-official-formula"
+          - name: "Official log-log formula anchored to 1 s and 10 s reference points"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -2673,37 +2739,88 @@
               ▿ threshold: PTimer.ThresholdReciprocityRule
                 ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
                   - minimumSeconds: 0.001
-                  ▿ maximumSeconds: Optional(0.1)
-                    - some: 0.1
+                  ▿ maximumSeconds: Optional(1.0)
+                    - some: 1.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Regular speed / no correction required from 1/1000 sec to 1/10 sec."
-            ▿ PTimer.ReciprocityRule.table
-              ▿ table: PTimer.TableReciprocityRule
-                ▿ entries: 2 elements
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 0.001
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.5
-                    ▿ notes: 1 element
-                      - "At 1/1000 sec, the data sheet specifies adding +1/2 stop in addition to the no-correction band."
-                  ▿ PTimer.ReciprocityTableEntry
-                    ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
-                      - exactSeconds: 1.0
-                    ▿ adjustments: 1 element
-                      ▿ PTimer.ReciprocityAdjustment.exposure
-                        ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                          ▿ stopDelta: PTimer.StopDeltaAdjustment
-                            - stopDelta: 0.5
-                    ▿ notes: 1 element
-                      - "At 1 sec, add +1/2 stop."
-                - notes: 0 elements
-          ▿ notes: 1 element
-            - "ADOX CMS 20 II reports the same +1/2 stop addition at both ends of the no-correction band (1/1000 sec and 1 sec) per the published guidance."
+                  - "No correction required from 1/1000 sec to 1 sec."
+            ▿ PTimer.ReciprocityRule.formula
+              ▿ formula: PTimer.FormulaReciprocityRule
+                ▿ meteredRange: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.000001, maximumSeconds: Optional(100.0)))
+                  ▿ some: PTimer.ReciprocityTimeRange
+                    - minimumSeconds: 1.000001
+                    ▿ maximumSeconds: Optional(100.0)
+                      - some: 100.0
+                ▿ formula: PTimer.ReciprocityFormula
+                  - kind: PTimer.ReciprocityFormulaKind.exponentPower
+                  - exponent: 1.150515
+                  ▿ coefficient: Optional(1.4142136)
+                    - some: 1.4142136
+                  - offsetSeconds: nil
+                  ▿ equation: Optional("Tc = 1.4142 × Tm^P")
+                    - some: "Tc = 1.4142 × Tm^P"
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Tc = 1.4142 × Tm^P, P ≈ 1.150515. Log-log fit through ADOX\'s published anchors at 1 sec (+1/2 stop) and 10 sec (+1 stop). 100 sec is published as \'Not recommended\' — inputs at or above 100 sec are unsupported and no corrected exposure is calculated."
+                - extrapolateBeyondMaximum: false
+          - notes: 0 elements
           - userMetadata: nil
-          - sourceEvidence: 0 elements
+          ▿ sourceEvidence: 4 elements
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 0.001
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.5
+              ▿ notes: 1 element
+                - "1/1000 sec → +1/2 stop. Preserved as published evidence only; the calculation path stays no-correction across the entire sub-1 sec band."
+              - isSourceEvidenceOnly: true
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 1.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 0.5
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(1.0)
+                        - some: 1.0
+                      - correctedSeconds: 1.4142136
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "1 sec → +1/2 stop (≈1.4 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 10.0
+              ▿ adjustments: 2 elements
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                      - stopDelta: 1.0
+                ▿ PTimer.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(10.0)
+                        - some: 10.0
+                      - correctedSeconds: 20.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "10 sec → +1 stop (20 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimer.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 100.0
+              ▿ adjustments: 1 element
+                ▿ PTimer.ReciprocityAdjustment.warning
+                  ▿ warning: PTimer.ReciprocityWarning
+                    - severity: PTimer.ReciprocityWarningSeverity.notRecommended
+                    - message: "100 sec is not recommended."
+              - notes: 0 elements
+              - isSourceEvidenceOnly: false
       - userMetadata: nil

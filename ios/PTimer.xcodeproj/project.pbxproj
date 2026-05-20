@@ -102,6 +102,11 @@
 		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
 		A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaFormulaProfileTests.swift */; };
 		A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000255 /* RolleiFormulaProfileTests.swift */; };
+		A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000257 /* AdoxFormulaProfileTests.swift */; };
+		A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */; };
+		A0000000000000000000025A /* AdoxChs100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */; };
+		A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025D /* SourceReferenceRowSorting.swift */; };
+		A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */; };
 		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
 		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
 		A00000000000000000000158 /* ExposureScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000159 /* ExposureScale.swift */; };
@@ -263,6 +268,11 @@
 		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000253 /* FomaFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000255 /* RolleiFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolleiFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000257 /* AdoxFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmDetailsGraphKindInvariantTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxChs100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000025D /* SourceReferenceRowSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSorting.swift; sourceTree = "<group>"; };
+		A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSortingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000159 /* ExposureScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScale.swift; sourceTree = "<group>"; };
@@ -435,6 +445,7 @@
 				A000000000000000000000F5 /* FilmSelectionDisplayState.swift */,
 				A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */,
 				A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */,
+				A0000000000000000000025D /* SourceReferenceRowSorting.swift */,
 			);
 			path = FilmContext;
 			sourceTree = "<group>";
@@ -605,6 +616,10 @@
 				A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */,
 				A00000000000000000000253 /* FomaFormulaProfileTests.swift */,
 				A00000000000000000000255 /* RolleiFormulaProfileTests.swift */,
+				A00000000000000000000257 /* AdoxFormulaProfileTests.swift */,
+				A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */,
+				A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */,
+				A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */,
 				A00000000000000000000243 /* FormulaProfileTestSupport.swift */,
 				A0000000000000000000011F /* ReciprocityResultLegacyShapeBaselineTests.swift */,
 				A00000000000000000000121 /* ReciprocityResultCodableTests.swift */,
@@ -799,6 +814,7 @@
 				A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */,
 				A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */,
 				A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */,
+				A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */,
 				A00000000000000000000123 /* WorkspaceCoordinator.swift in Sources */,
 				A00000000000000000000125 /* CalculatorModel.swift in Sources */,
 				A00000000000000000000130 /* ReciprocityModel.swift in Sources */,
@@ -871,6 +887,10 @@
 				A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */,
 				A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */,
 				A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */,
+				A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */,
+				A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */,
+				A0000000000000000000025A /* AdoxChs100FormulaProfileTests.swift in Sources */,
+				A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */,
 				A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */,
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
 				A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */,

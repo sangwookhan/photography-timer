@@ -484,18 +484,6 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertTrue(preservesNote, "Range source value '1 to 2 sec' must be preserved as a note adjustment in source evidence.")
     }
 
-    func testAdoxChsTableProfileReturnsExactRow() throws {
-        let chs = try XCTUnwrap(film(named: "CHS 100 II"))
-        let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: chs.profiles[0], meteredExposureSeconds: 30)
-
-        guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified ADOX table result, got \(result).")
-        }
-        XCTAssertEqual(payload.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(payload.correctedExposureSeconds, 120, accuracy: 0.000001)
-    }
-
     func testEktachromeE100PreservesFiltrationGuidance() throws {
         let e100 = try XCTUnwrap(film(named: "Ektachrome E100"))
         let advisoryRule = e100.profiles[0].rules.compactMap { rule -> AdvisoryReciprocityRule? in

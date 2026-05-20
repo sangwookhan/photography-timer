@@ -1026,55 +1026,6 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testAdoxChs100IITableProfileKeepsExistingWordingAndAxisTicks() throws {
-        // CHS 100 II still uses the table-based path in this PR
-        // (the ADOX stocks convert in PTIMER-139). This pins that
-        // the converted-profile wording remains scoped to formula
-        // profiles with sourceEvidence, so unrelated table films do
-        // not silently inherit the new vocabulary.
-        let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CHS 100 II" },
-            "CHS 100 II must remain in the launch catalog."
-        )
-        let profile = try XCTUnwrap(film.profiles.first)
-        let model = ReciprocityModel()
-        let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: 8)
-        let bindingState = FilmModeReciprocityBindingState(
-            film: film,
-            profile: profile,
-            policyResult: policyResult,
-            presentation: policyResult.confidencePresentation
-        )
-        let displayState = try XCTUnwrap(
-            model.makeDetailsDisplayState(
-                input: FilmModeDetailsPresenterInput(
-                    bindingState: bindingState,
-                    calculationResult: .success(
-                        ExposureCalculationResult(baseShutterSeconds: 8, stop: 0, resultShutterSeconds: 8)
-                    ),
-                    filmModeExposureResultState: nil,
-                    formatDuration: { String(format: "%.1fs", $0) },
-                    formatDurationCoarse: { String(format: "%.1fs", $0) },
-                    formatAxisDuration: { "\($0)s" }
-                )
-            )
-        )
-
-        let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertEqual(graph.kind, .table, "CHS 100 II must keep the table graph path.")
-        XCTAssertNil(graph.scaleTier, "Table graphs must not be forced onto the formula tier policy.")
-        XCTAssertFalse(graph.isBeyondVisibleRange)
-
-        // Non-converted table profiles must not pick up the
-        // source-range wording — that vocabulary is scoped to
-        // converted formula profiles with sourceEvidence.
-        XCTAssertFalse(
-            displayState.summary.summaryText.lowercased().contains("source range"),
-            "Non-converted table profiles must not pick up source-range wording; got: \(displayState.summary.summaryText)"
-        )
-    }
-
-    @MainActor
     func testHP5PlusFormulaGraphCarriesNoSourceReferenceArtifacts() throws {
         let film = try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "HP5 Plus" },

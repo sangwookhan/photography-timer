@@ -1334,12 +1334,17 @@ struct ReciprocityCalculationPolicyEvaluator {
     ) -> ReciprocityResult? {
         guard let formulaRule = selection.formulaRule(for: meteredExposureSeconds) else {
             if let boundedFormulaRule = selection.firstFormulaRuleExceeded(by: meteredExposureSeconds) {
-                let extrapolatedSeconds = formulaCorrectedExposureSeconds(
-                    for: boundedFormulaRule.formula,
-                    meteredExposureSeconds: meteredExposureSeconds
-                ).flatMap { value -> Double? in
-                    guard value.isFinite, value > 0 else { return nil }
-                    return value
+                let extrapolatedSeconds: Double?
+                if boundedFormulaRule.extrapolateBeyondMaximum {
+                    extrapolatedSeconds = formulaCorrectedExposureSeconds(
+                        for: boundedFormulaRule.formula,
+                        meteredExposureSeconds: meteredExposureSeconds
+                    ).flatMap { value -> Double? in
+                        guard value.isFinite, value > 0 else { return nil }
+                        return value
+                    }
+                } else {
+                    extrapolatedSeconds = nil
                 }
 
                 return assembler.unsupportedFormulaExtrapolation(

@@ -109,21 +109,33 @@ struct ReciprocitySourceEvidenceRow: Codable, Equatable {
     let meteredExposure: MeteredExposureSelector
     let adjustments: [ReciprocityAdjustment]
     let notes: [String]
+    /// `true` for rows preserved as published reference only — the
+    /// renderer omits the row from formula-graph fitting markers and
+    /// prefixes it with `*` in the Source reference table so the user
+    /// can tell it is not used as a calculation anchor. Used by ADOX
+    /// CMS 20 II for its 1/1000 s +1/2 stop guidance row, which is
+    /// preserved as published evidence but does not participate in
+    /// the formula fit (the calculation path stays no-correction
+    /// across the entire sub-1 s band).
+    let isSourceEvidenceOnly: Bool
 
     init(
         meteredExposure: MeteredExposureSelector,
         adjustments: [ReciprocityAdjustment],
-        notes: [String] = []
+        notes: [String] = [],
+        isSourceEvidenceOnly: Bool = false
     ) {
         self.meteredExposure = meteredExposure
         self.adjustments = adjustments
         self.notes = notes
+        self.isSourceEvidenceOnly = isSourceEvidenceOnly
     }
 
     private enum CodingKeys: String, CodingKey {
         case meteredExposure
         case adjustments
         case notes
+        case isSourceEvidenceOnly
     }
 
     init(from decoder: Decoder) throws {
@@ -131,6 +143,7 @@ struct ReciprocitySourceEvidenceRow: Codable, Equatable {
         self.meteredExposure = try container.decode(MeteredExposureSelector.self, forKey: .meteredExposure)
         self.adjustments = try container.decode([ReciprocityAdjustment].self, forKey: .adjustments)
         self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+        self.isSourceEvidenceOnly = try container.decodeIfPresent(Bool.self, forKey: .isSourceEvidenceOnly) ?? false
     }
 }
 
@@ -289,17 +302,53 @@ struct FormulaReciprocityRule: Codable, Equatable {
     let formula: ReciprocityFormula
     let additionalAdjustments: [ReciprocityAdjustment]
     let notes: [String]
+    /// `true` (default) when the formula can still produce a numeric
+    /// value past its `meteredRange.maximumSeconds`; the result is
+    /// reclassified as unsupported but carries the formula-extrapolated
+    /// corrected exposure for actionable display.
+    ///
+    /// `false` when the manufacturer publishes the upper bound as a
+    /// hard stop signal — exceeding it returns an unsupported result
+    /// with no corrected exposure value, regardless of whether the
+    /// formula itself could still compute one. ADOX CMS 20 II uses
+    /// this for its `>= 100 s` "Not recommended" boundary.
+    let extrapolateBeyondMaximum: Bool
 
     init(
         meteredRange: ReciprocityTimeRange? = nil,
         formula: ReciprocityFormula,
         additionalAdjustments: [ReciprocityAdjustment] = [],
-        notes: [String] = []
+        notes: [String] = [],
+        extrapolateBeyondMaximum: Bool = true
     ) {
         self.meteredRange = meteredRange
         self.formula = formula
         self.additionalAdjustments = additionalAdjustments
         self.notes = notes
+        self.extrapolateBeyondMaximum = extrapolateBeyondMaximum
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case meteredRange
+        case formula
+        case additionalAdjustments
+        case notes
+        case extrapolateBeyondMaximum
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.meteredRange = try container.decodeIfPresent(ReciprocityTimeRange.self, forKey: .meteredRange)
+        self.formula = try container.decode(ReciprocityFormula.self, forKey: .formula)
+        self.additionalAdjustments = try container.decodeIfPresent(
+            [ReciprocityAdjustment].self,
+            forKey: .additionalAdjustments
+        ) ?? []
+        self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+        self.extrapolateBeyondMaximum = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .extrapolateBeyondMaximum
+        ) ?? true
     }
 }
 

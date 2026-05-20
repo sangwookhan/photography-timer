@@ -1016,60 +1016,12 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             "Source-less formula profiles must not be classified as converted."
         )
 
-        let fomapan100 = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Fomapan 100 Classic" }?.profiles.first
+        let portra400 = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Portra 400" }?.profiles.first
         )
         XCTAssertFalse(
-            fomapan100.isConvertedFormulaProfile,
-            "Table-based profiles without a formula rule must not be classified as converted."
-        )
-    }
-
-    @MainActor
-    func testFomapan100TableProfileKeepsExistingWordingAndAxisTicks() throws {
-        // Fomapan 100 Classic still uses the table-based path; this
-        // pins that the converted-profile wording remains scoped to
-        // formula profiles with sourceEvidence, so unrelated table
-        // films do not silently inherit the new vocabulary.
-        let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Fomapan 100 Classic" },
-            "Fomapan 100 Classic must remain in the launch catalog."
-        )
-        let profile = try XCTUnwrap(film.profiles.first)
-        let model = ReciprocityModel()
-        let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: 5)
-        let bindingState = FilmModeReciprocityBindingState(
-            film: film,
-            profile: profile,
-            policyResult: policyResult,
-            presentation: policyResult.confidencePresentation
-        )
-        let displayState = try XCTUnwrap(
-            model.makeDetailsDisplayState(
-                input: FilmModeDetailsPresenterInput(
-                    bindingState: bindingState,
-                    calculationResult: .success(
-                        ExposureCalculationResult(baseShutterSeconds: 5, stop: 0, resultShutterSeconds: 5)
-                    ),
-                    filmModeExposureResultState: nil,
-                    formatDuration: { String(format: "%.1fs", $0) },
-                    formatDurationCoarse: { String(format: "%.1fs", $0) },
-                    formatAxisDuration: { "\($0)s" }
-                )
-            )
-        )
-
-        let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertEqual(graph.kind, .table, "Fomapan 100 Classic must keep the table graph path.")
-        XCTAssertNil(graph.scaleTier, "Table graphs must not be forced onto the formula tier policy.")
-        XCTAssertFalse(graph.isBeyondVisibleRange)
-
-        // Non-converted table profiles must not pick up the
-        // source-range wording — that vocabulary is scoped to
-        // converted formula profiles with sourceEvidence.
-        XCTAssertFalse(
-            displayState.summary.summaryText.lowercased().contains("source range"),
-            "Non-converted table profiles must not pick up source-range wording; got: \(displayState.summary.summaryText)"
+            portra400.isConvertedFormulaProfile,
+            "Threshold-only profiles without a formula rule must not be classified as converted."
         )
     }
 

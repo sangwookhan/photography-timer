@@ -432,22 +432,38 @@ struct FilmModeDetailsPresenter {
             return []
         }
 
-        var referenceLines: [[String]] = []
+        // Source reference rows are ordered by `SourceReferenceRowSortKey`
+        // — ascending metered-exposure start value, then semantic row
+        // kind (`pointAnchor` before `range` before `note`), then
+        // catalog declaration order. The rule is shared rather than
+        // CMS-specific; the CMS 20 II case where the 1/1000 s point
+        // anchor shares a sortValue with the 1/1000 s … 1 s no-correction
+        // band is one application of the kind-priority tiebreak, not
+        // a CMS-only branch.
+        var orderedLines: [PresenterReferenceRow] = []
         var boundaryLines: [[String]] = []
+        var hasEvidenceOnlyRows = false
 
         for rule in bindingState.profile.rules {
             if case let .threshold(thresholdRule) = rule {
-                referenceLines.append(
-                    sourceReferenceThresholdColumns(
-                        for: thresholdRule,
-                        formatDuration: input.formatDuration
+                orderedLines.append(
+                    PresenterReferenceRow(
+                        key: SourceReferenceRowSortKey(
+                            sortValue: thresholdRule.noCorrectionRange.minimumSeconds,
+                            kind: .range,
+                            catalogOffset: orderedLines.count
+                        ),
+                        columns: sourceReferenceThresholdColumns(
+                            for: thresholdRule,
+                            formatDuration: input.formatDuration
+                        )
                     )
                 )
             }
         }
 
         for evidenceRow in evidence {
-            guard let columns = compactReferenceColumns(
+            guard var columns = compactReferenceColumns(
                 meteredExposure: evidenceRow.meteredExposure,
                 adjustments: evidenceRow.adjustments,
                 input: input
@@ -457,19 +473,50 @@ struct FilmModeDetailsPresenter {
             if sourceEvidenceRowIsGuidanceBoundary(evidenceRow) {
                 boundaryLines.append(columns)
             } else {
-                referenceLines.append(columns)
+                if evidenceRow.isSourceEvidenceOnly {
+                    columns.append(sourceEvidenceOnlyMarker)
+                    hasEvidenceOnlyRows = true
+                }
+                let sortValue: Double
+                let kind: SourceReferenceRowKind
+                switch evidenceRow.meteredExposure {
+                case let .exactSeconds(seconds):
+                    sortValue = seconds
+                    kind = .pointAnchor
+                case let .range(range):
+                    sortValue = range.minimumSeconds
+                    kind = .range
+                }
+                orderedLines.append(
+                    PresenterReferenceRow(
+                        key: SourceReferenceRowSortKey(
+                            sortValue: sortValue,
+                            kind: kind,
+                            catalogOffset: orderedLines.count
+                        ),
+                        columns: columns
+                    )
+                )
             }
         }
 
+        let referenceLines = orderedLines
+            .sorted { $0.key < $1.key }
+            .map(\.columns)
+
         var sections: [FilmModeDetailsSectionState] = []
         if !referenceLines.isEmpty {
+            var value = formattedReferenceBlock(from: referenceLines)
+            if hasEvidenceOnlyRows {
+                value += "\n\n\(sourceEvidenceOnlyFootnoteText)"
+            }
             sections.append(
                 FilmModeDetailsSectionState(
                     title: "Source reference",
                     rows: [
                         FilmModeDetailsRowState(
                             title: "",
-                            value: formattedReferenceBlock(from: referenceLines),
+                            value: value,
                             style: .referenceBlock
                         )
                     ]
@@ -491,6 +538,29 @@ struct FilmModeDetailsPresenter {
             )
         }
         return sections
+    }
+
+    /// Internal carrier used while sorting Source reference rows.
+    /// Pairs the rendered columns with their `SourceReferenceRowSortKey`
+    /// so the sort is driven by semantic row type (`pointAnchor`,
+    /// `range`, …) instead of by label text or column width.
+    private struct PresenterReferenceRow {
+        let key: SourceReferenceRowSortKey
+        let columns: [String]
+    }
+
+    /// Marker appended as a final column to a Source reference row
+    /// whose origin is `isSourceEvidenceOnly` — i.e. preserved as
+    /// published evidence but not used as a calculation anchor.
+    private var sourceEvidenceOnlyMarker: String { "*" }
+
+    /// Footnote rendered below the Source reference block when at
+    /// least one row carries the `*` marker. Worded for ADOX CMS 20
+    /// II's 1/1000 sec evidence row: the manufacturer publishes it
+    /// as +1/2 stop, but the calculation path stays no-correction
+    /// across the entire sub-1 sec band.
+    private var sourceEvidenceOnlyFootnoteText: String {
+        "* Source evidence only. Not used as a fitting point; the calculation path stays no-correction across the sub-1s band."
     }
 
     private func sourceEvidenceRowIsGuidanceBoundary(
@@ -1060,7 +1130,8 @@ struct FilmModeDetailsPresenter {
         profile.sourceEvidence.compactMap { row -> FilmModeDetailsGraphSourceReference? in
             guard case let .exactSeconds(meteredExposureSeconds) = row.meteredExposure,
                   meteredExposureSeconds > 0,
-                  !sourceEvidenceRowIsGuidanceBoundary(row) else {
+                  !sourceEvidenceRowIsGuidanceBoundary(row),
+                  !row.isSourceEvidenceOnly else {
                 return nil
             }
             guard let correctedExposureSeconds = sourceEvidenceCorrectedExposureSeconds(
@@ -1971,6 +2042,20 @@ struct FilmModeDetailsPresenter {
         // see WHICH metered exposure the source flags.
         if let stopSignalText {
             return [meteredText, stopSignalText]
+        }
+
+        // Note-only entries (RETRO 80S / SUPERPAN 200 range-valued rows where the
+        // data sheet specifies the corrected exposure as a range like "1 to 2 sec")
+        // carry only a `.note(text:)` adjustment so the range never enters the
+        // formula as an exact fitting point. Surface the published note text
+        // alongside the metered exposure so the user still sees the source
+        // guidance for that row.
+        let noteText = adjustments.compactMap { adjustment -> String? in
+            guard case let .note(note) = adjustment else { return nil }
+            return note.text
+        }.first
+        if let noteText {
+            return [meteredText, noteText]
         }
 
         return nil

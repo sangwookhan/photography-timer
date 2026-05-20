@@ -2025,8 +2025,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-100-official-table",
-        "name": "Official multiplier table",
+        "id": "foma-fomapan-100-official-formula",
+        "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [
           {
@@ -2043,96 +2043,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 2
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 2,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 8
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 80,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 16
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1600,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 2.2457,
+                "equation": "Tc = 2.2457 \u00d7 Tm^P",
+                "exponent": 1.4515,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 2.2457 \u00d7 Tm^P, P \u2248 1.4515. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (\u00d72 / \u00d78 / \u00d716). The data sheet rows do not lie on a single power law, so the fit sits ~1/6 stop above the 1 sec and 100 sec rows and ~1/3 stop below the 10 sec row; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2142,7 +2069,99 @@
           "kind": "manufacturerPublished",
           "publisher": "FOMA BOHEMIA",
           "title": "FOMAPAN 100 CLASSIC \u2014 Technical sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 \u00d72 (corrected 2 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 8
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 \u00d78 (corrected 80 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 16
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1600,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 \u00d716 (corrected 1600 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2159,8 +2178,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-200-official-table",
-        "name": "Official multiplier table",
+        "id": "foma-fomapan-200-official-formula",
+        "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [
           {
@@ -2177,96 +2196,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 3
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 3,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 9
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 90,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 18
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1800,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 3.2107,
+                "equation": "Tc = 3.2107 \u00d7 Tm^P",
+                "exponent": 1.3891,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 3.2107 \u00d7 Tm^P, P \u2248 1.3891. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (\u00d73 / \u00d79 / \u00d718). Residuals stay within ~1/5 stop at every published row; the source rows stay visible as evidence so the fit is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2276,7 +2222,99 @@
           "kind": "manufacturerPublished",
           "publisher": "FOMA BOHEMIA",
           "title": "FOMAPAN 200 CREATIVE \u2014 Technical sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 \u00d73 (corrected 3 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 9
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 90,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 \u00d79 (corrected 90 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 18
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1800,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 \u00d718 (corrected 1800 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2293,8 +2331,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-400-official-table",
-        "name": "Official multiplier table",
+        "id": "foma-fomapan-400-official-formula",
+        "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [
           {
@@ -2311,96 +2349,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 1.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 1.5,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 6
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 60,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 8
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 800,
-                          "meteredSeconds": 100
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 100,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.8022,
+                "equation": "Tc = 1.8022 \u00d7 Tm^P",
+                "exponent": 1.3635,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 1.8022 \u00d7 Tm^P, P \u2248 1.3635. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (\u00d71.5 / \u00d76 / \u00d78). FOMAPAN 400's published rows step \u00d71.5 \u2192 \u00d76 \u2192 \u00d78 \u2014 the 10 sec row sits roughly half a stop above the curve while the 1 and 100 sec rows sit roughly a quarter stop below; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2410,7 +2375,99 @@
           "kind": "manufacturerPublished",
           "publisher": "FOMA BOHEMIA",
           "title": "FOMAPAN 400 ACTION \u2014 Technical sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.5,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 \u00d71.5 (corrected 1.5 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 6
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 \u00d76 (corrected 60 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 8
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 800,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec \u2192 \u00d78 (corrected 800 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2425,8 +2482,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "rollei-rpx-100-official-table",
-        "name": "Official corrected-time table",
+        "id": "rollei-rpx-100-official-formula",
+        "name": "Official log-log formula fit through published corrected-time rows",
         "notes": [],
         "rules": [
           {
@@ -2443,107 +2500,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 3,
-                          "meteredSeconds": 2
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 2,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 8,
-                          "meteredSeconds": 5
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 5,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 25,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 75,
-                          "meteredSeconds": 20
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 20,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 150,
-                          "meteredSeconds": 30
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 30,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 0.9248,
+                "equation": "Tc = 0.9248 \u00d7 Tm^P",
+                "exponent": 1.4652,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 30.000001,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = 0.9248 \u00d7 Tm^P, P \u2248 1.4652. Free log-log fit through Rollei's published 2/5/10/20/30 sec corrected-time rows. Rollei's published rows do not lie on a single power law, so residuals reach ~0.3 stop at the 2/5 sec rows; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2553,7 +2526,114 @@
           "kind": "manufacturerPublished",
           "publisher": "Rollei",
           "title": "Rollei RPX 100 \u2014 Data sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec \u2192 corrected 3 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec \u2192 corrected 8 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 25,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 corrected 25 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 75,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec \u2192 corrected 75 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 150,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec \u2192 corrected 150 sec."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2568,8 +2648,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "rollei-rpx-400-official-table",
-        "name": "Official corrected-time table",
+        "id": "rollei-rpx-400-official-formula",
+        "name": "Official log-log formula fit through published corrected-time rows",
         "notes": [],
         "rules": [
           {
@@ -2586,107 +2666,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 2,
-                          "meteredSeconds": 1
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 10,
-                          "meteredSeconds": 5
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 5,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 30,
-                          "meteredSeconds": 10
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 10,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 55,
-                          "meteredSeconds": 15
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 15,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 80,
-                          "meteredSeconds": 20
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 20,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.7708,
+                "equation": "Tc = 1.7708 \u00d7 Tm^P",
+                "exponent": 1.2404,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 20.000001,
+                "minimumSeconds": 0.500001
+              },
+              "notes": [
+                "Tc = 1.7708 \u00d7 Tm^P, P \u2248 1.2404. Free log-log fit through Rollei's published 1/5/10/15/20 sec corrected-time rows. Residuals reach ~0.4 stop at the 5 sec row where the published step is largest; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 20 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2696,7 +2692,114 @@
           "kind": "manufacturerPublished",
           "publisher": "Rollei",
           "title": "Rollei RPX 400 \u2014 Data sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 corrected 2 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 10,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec \u2192 corrected 10 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 30,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 corrected 30 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 55,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec \u2192 corrected 55 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec \u2192 corrected 80 sec."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2711,8 +2814,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "rollei-retro-80s-official-table",
-        "name": "Official corrected-time table",
+        "id": "rollei-retro-80s-official-formula",
+        "name": "Official log-log formula fit through published quantified rows",
         "notes": [],
         "rules": [
           {
@@ -2729,124 +2832,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "kind": "note",
-                      "note": {
-                        "text": "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
-                      }
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "1 sec \u2192 effective exposure 1 to 2 sec."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "kind": "note",
-                      "note": {
-                        "text": "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
-                      }
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 2,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "2 sec \u2192 effective exposure 3 to 4 sec."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 8,
-                          "meteredSeconds": 4
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 4,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 24,
-                          "meteredSeconds": 8
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 8,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 60,
-                          "meteredSeconds": 15
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 15,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 180,
-                          "meteredSeconds": 30
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 30,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 0.9601,
+                "equation": "Tc = 0.9601 \u00d7 Tm^P",
+                "exponent": 1.5361,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 30.000001,
+                "minimumSeconds": 0.500001
+              },
               "notes": [
-                "Source data sheet expresses 1 sec and 2 sec corrected exposures as ranges; preserved as row notes rather than synthesised single values."
+                "Tc = 0.9601 \u00d7 Tm^P, P \u2248 1.5361. Free log-log fit through Rollei's four published quantified corrected-time rows (4/8/15/30 sec). The 1 sec and 2 sec published rows give corrected exposure as ranges (1\u20132 sec and 3\u20134 sec) and are preserved as source-evidence notes \u2014 they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
               ]
-            }
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -2856,7 +2858,127 @@
           "kind": "manufacturerPublished",
           "publisher": "Rollei",
           "title": "Rollei RETRO 80S \u2014 Data sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 effective exposure 1 to 2 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec \u2192 effective exposure 3 to 4 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec \u2192 corrected 8 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 24,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec \u2192 corrected 24 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec \u2192 corrected 60 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 180,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec \u2192 corrected 180 sec."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -2871,8 +2993,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "rollei-superpan-200-official-table",
-        "name": "Official corrected-time table",
+        "id": "rollei-superpan-200-official-formula",
+        "name": "Official log-log formula fit through published quantified rows",
         "notes": [],
         "rules": [
           {
@@ -2889,124 +3011,23 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "kind": "note",
-                      "note": {
-                        "text": "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
-                      }
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "1 sec \u2192 effective exposure 1 to 2 sec."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "kind": "note",
-                      "note": {
-                        "text": "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
-                      }
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 2,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "2 sec \u2192 effective exposure 3 to 4 sec."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 8,
-                          "meteredSeconds": 4
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 4,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 24,
-                          "meteredSeconds": 8
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 8,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 60,
-                          "meteredSeconds": 15
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 15,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 180,
-                          "meteredSeconds": 30
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 30,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 0.9601,
+                "equation": "Tc = 0.9601 \u00d7 Tm^P",
+                "exponent": 1.5361,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 30.000001,
+                "minimumSeconds": 0.500001
+              },
               "notes": [
-                "Source data sheet expresses 1 sec and 2 sec corrected exposures as ranges; preserved as row notes rather than synthesised single values."
+                "Tc = 0.9601 \u00d7 Tm^P, P \u2248 1.5361. Free log-log fit through Rollei's four published quantified corrected-time rows (4/8/15/30 sec); identical shape to RETRO 80S because Rollei publishes the same correction values for both films. The 1 sec and 2 sec published rows give corrected exposure as ranges (1\u20132 sec and 3\u20134 sec) and are preserved as source-evidence notes \u2014 they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
               ]
-            }
+            },
+            "kind": "formula"
           }
         ],
         "source": {
@@ -3016,7 +3037,127 @@
           "kind": "manufacturerPublished",
           "publisher": "Rollei",
           "title": "Rollei SUPERPAN 200 \u2014 Data sheet"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 effective exposure 1 to 2 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec \u2192 effective exposure 3 to 4 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec \u2192 corrected 8 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 24,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec \u2192 corrected 24 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec \u2192 corrected 60 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 180,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec \u2192 corrected 180 sec."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -3033,8 +3174,8 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "adox-chs-100-ii-official-table",
-        "name": "Official multiplier table",
+        "id": "adox-chs-100-ii-official-formula",
+        "name": "Official log-log formula fit through published 2/4/8/15 sec rows",
         "notes": [],
         "rules": [
           {
@@ -3051,190 +3192,155 @@
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 1.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 3,
-                          "meteredSeconds": 2
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 2,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 2
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 8,
-                          "meteredSeconds": 4
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 4,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 2.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 20,
-                          "meteredSeconds": 8
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 8,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 3
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 45,
-                          "meteredSeconds": 15
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 15,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 4
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 120,
-                          "meteredSeconds": 30
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 30,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "multiplier",
-                        "multiplier": {
-                          "factor": 6.5
-                        }
-                      },
-                      "kind": "exposure"
-                    },
-                    {
-                      "exposure": {
-                        "correctedTime": {
-                          "correctedSeconds": 390,
-                          "meteredSeconds": 60
-                        },
-                        "kind": "correctedTime"
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 60,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": []
-                }
-              ],
-              "notes": []
-            }
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficient": 1.2102,
+                "equation": "Tc = 1.2102 \u00d7 Tm^P",
+                "exponent": 1.3423,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 15.000001,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = 1.2102 \u00d7 Tm^P, P \u2248 1.3423. Log-log fit through the four published multiplier rows in ADOX's 2024 CHS 100 II technical sheet (2 / 4 / 8 / 15 sec). The sheet does not publish reciprocity rows past 15 sec; inputs above 15 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
           }
         ],
         "source": {
           "authority": "official",
-          "citation": "CHS 100 II technical sheet",
+          "citation": "ADOX CHS 100 II technical sheet (11 July 2024)",
           "confidence": "high",
           "kind": "manufacturerPublished",
           "publisher": "ADOX",
-          "title": "ADOX CHS 100 II \u2014 Technical information"
-        }
+          "title": "ADOX CHS 100 II S/W Film \u2014 Technische Beschreibung, 11. Juli 2024"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec \u2192 \u00d71.5 (corrected 3 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec \u2192 \u00d72 (corrected 8 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec \u2192 \u00d72.5 (corrected 20 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 45,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec \u2192 \u00d73 (corrected 45 sec)."
+            ]
+          }
+        ]
       }
     ]
   },
@@ -3251,71 +3357,41 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "adox-cms-20-ii-official-table",
-        "name": "Official short and long exposure guidance",
-        "notes": [
-          "ADOX CMS 20 II reports the same +1/2 stop addition at both ends of the no-correction band (1/1000 sec and 1 sec) per the published guidance."
-        ],
+        "id": "adox-cms-20-ii-official-formula",
+        "name": "Official log-log formula anchored to 1 s and 10 s reference points",
+        "notes": [],
         "rules": [
           {
             "kind": "threshold",
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 0.1,
+                "maximumSeconds": 1,
                 "minimumSeconds": 0.001
               },
               "notes": [
-                "Regular speed / no correction required from 1/1000 sec to 1/10 sec."
+                "No correction required from 1/1000 sec to 1 sec."
               ]
             }
           },
           {
-            "kind": "table",
-            "table": {
-              "entries": [
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 0.001,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "At 1/1000 sec, the data sheet specifies adding +1/2 stop in addition to the no-correction band."
-                  ]
-                },
-                {
-                  "adjustments": [
-                    {
-                      "exposure": {
-                        "kind": "stopDelta",
-                        "stopDelta": {
-                          "stopDelta": 0.5
-                        }
-                      },
-                      "kind": "exposure"
-                    }
-                  ],
-                  "meteredExposure": {
-                    "exactSeconds": 1,
-                    "kind": "exactSeconds"
-                  },
-                  "notes": [
-                    "At 1 sec, add +1/2 stop."
-                  ]
-                }
-              ],
-              "notes": []
+            "kind": "formula",
+            "formula": {
+              "additionalAdjustments": [],
+              "extrapolateBeyondMaximum": false,
+              "formula": {
+                "coefficient": 1.4142136,
+                "equation": "Tc = 1.4142 \u00d7 Tm^P",
+                "exponent": 1.150515,
+                "kind": "exponentPower"
+              },
+              "meteredRange": {
+                "maximumSeconds": 100,
+                "minimumSeconds": 1.000001
+              },
+              "notes": [
+                "Tc = 1.4142 \u00d7 Tm^P, P \u2248 1.150515. Log-log fit through ADOX's published anchors at 1 sec (+1/2 stop) and 10 sec (+1 stop). 100 sec is published as 'Not recommended' \u2014 inputs at or above 100 sec are unsupported and no corrected exposure is calculated."
+              ]
             }
           }
         ],
@@ -3326,7 +3402,107 @@
           "kind": "manufacturerPublished",
           "publisher": "ADOX",
           "title": "ADOX CMS 20 II \u2014 Technical information"
-        }
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "isSourceEvidenceOnly": true,
+            "meteredExposure": {
+              "exactSeconds": 0.001,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1/1000 sec \u2192 +1/2 stop. Preserved as published evidence only; the calculation path stays no-correction across the entire sub-1 sec band."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.4142136,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec \u2192 +1/2 stop (\u22481.4 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec \u2192 +1 stop (20 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "100 sec is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
       }
     ]
   }

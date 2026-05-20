@@ -428,33 +428,39 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.metadata.basis, .unsupportedOutOfPolicyRange)
     }
 
-    func testFomapanMultiplierRowReturnsCorrectedTime() throws {
+    func testFomapanFormulaPredictionTracksPublishedMultiplierRow() throws {
+        // Fomapan 100 Classic is formula-backed; the calculation
+        // path no longer returns the published 1 sec multiplier row
+        // as an exact-table point. The formula is anchored to a free
+        // log-log fit through the published rows so the prediction
+        // sits within ~1/6 stop of the 1 sec row.
         let fomapan = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: fomapan.profiles[0], meteredExposureSeconds: 1)
 
         guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified multiplier result, got \(result).")
+            return XCTFail("Expected quantified formula result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 0.000001)
+        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
+        // 2.2457 × 1^1.4515 = 2.2457; published row corrected = 2.
+        XCTAssertEqual(payload.correctedExposureSeconds, 2.2457, accuracy: 0.01)
     }
 
-    func testRolleiRangeRowsArePreservedAsNotesRatherThanInvented() throws {
+    func testRolleiRangeRowsArePreservedAsSourceEvidenceNotesRatherThanInvented() throws {
         let retro = try XCTUnwrap(film(named: "RETRO 80S"))
         let profile = retro.profiles[0]
-        let tableEntries = profile.rules.compactMap { rule -> [ReciprocityTableEntry]? in
-            if case let .table(table) = rule { return table.entries }
-            return nil
-        }.flatMap { $0 }
 
-        let oneSecondRow = tableEntries.first { entry in
-            if case let .exactSeconds(value) = entry.meteredExposure {
+        // After PTIMER-138 the published rows live as source
+        // evidence, not as table entries — but the range-valued
+        // 1 sec row must still preserve the "1 to 2 sec" range as
+        // a note rather than being flattened into a single value.
+        let oneSecondRow = profile.sourceEvidence.first { row in
+            if case let .exactSeconds(value) = row.meteredExposure {
                 return abs(value - 1) < 0.000001
             }
             return false
         }
-        let row = try XCTUnwrap(oneSecondRow, "Expected RETRO 80S to keep the 1 sec source row even when value is a range.")
+        let row = try XCTUnwrap(oneSecondRow, "Expected RETRO 80S to keep the 1 sec source row as evidence even when the published corrected value is a range.")
 
         let hasQuantifiedExposure = row.adjustments.contains { adjustment in
             if case let .exposure(exposure) = adjustment {
@@ -466,7 +472,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
         XCTAssertFalse(
             hasQuantifiedExposure,
-            "Range-valued source rows must not be flattened into a single corrected exposure value."
+            "Range-valued source rows must not be flattened into a single corrected exposure value, even after formula conversion."
         )
 
         let preservesNote = row.adjustments.contains { adjustment in
@@ -475,19 +481,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             }
             return false
         }
-        XCTAssertTrue(preservesNote, "Range source value '1 to 2 sec' must be preserved as a note adjustment.")
-    }
-
-    func testAdoxChsTableProfileReturnsExactRow() throws {
-        let chs = try XCTUnwrap(film(named: "CHS 100 II"))
-        let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: chs.profiles[0], meteredExposureSeconds: 30)
-
-        guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified ADOX table result, got \(result).")
-        }
-        XCTAssertEqual(payload.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(payload.correctedExposureSeconds, 120, accuracy: 0.000001)
+        XCTAssertTrue(preservesNote, "Range source value '1 to 2 sec' must be preserved as a note adjustment in source evidence.")
     }
 
     func testEktachromeE100PreservesFiltrationGuidance() throws {

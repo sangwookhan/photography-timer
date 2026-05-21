@@ -20,68 +20,41 @@ final class TargetShutterModelTests: XCTestCase {
         XCTAssertTrue(model.isActive)
     }
 
+    /// Every non-finite-positive input — zero, negative, NaN,
+    /// infinity, nil — rejects identically: the model returns to (or
+    /// stays in) the inactive state and `targetSeconds` is nil. The
+    /// check runs from a fresh model and from a model that previously
+    /// held a valid target, so the predicate is exercised in both
+    /// arrange-states.
     @MainActor
-    func testSetTargetRejectsZero() {
-        let model = TargetShutterModel()
+    func testSetTargetRejectsEveryNonFinitePositiveInput() {
+        let invalidInputs: [(label: String, value: Double?)] = [
+            ("zero", 0),
+            ("negative", -5),
+            ("NaN", .nan),
+            ("positive infinity", .infinity),
+            ("nil", nil),
+        ]
+        for arrange in ["fresh model", "model holding a prior valid target"] {
+            for (label, value) in invalidInputs {
+                let model = TargetShutterModel()
+                if arrange == "model holding a prior valid target" {
+                    model.setTarget(120)
+                    XCTAssertTrue(model.isActive, "Arrange step failed for \(label).")
+                }
 
-        model.setTarget(0)
+                model.setTarget(value)
 
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertFalse(model.isActive)
-    }
-
-    @MainActor
-    func testSetTargetRejectsNegativeValue() {
-        let model = TargetShutterModel()
-
-        model.setTarget(-5)
-
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertFalse(model.isActive)
-    }
-
-    @MainActor
-    func testSetTargetRejectsNaN() {
-        let model = TargetShutterModel()
-
-        model.setTarget(.nan)
-
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertFalse(model.isActive)
-    }
-
-    @MainActor
-    func testSetTargetRejectsInfinity() {
-        let model = TargetShutterModel()
-
-        model.setTarget(.infinity)
-
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertFalse(model.isActive)
-    }
-
-    @MainActor
-    func testSetTargetWithNilClearsTarget() {
-        let model = TargetShutterModel()
-        model.setTarget(120)
-        XCTAssertTrue(model.isActive)
-
-        model.setTarget(nil)
-
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertFalse(model.isActive)
-    }
-
-    @MainActor
-    func testInvalidValueOverPriorValidValueClearsTarget() {
-        let model = TargetShutterModel()
-        model.setTarget(120)
-        XCTAssertTrue(model.isActive)
-
-        model.setTarget(0)
-
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertFalse(model.isActive)
+                XCTAssertNil(
+                    model.targetSeconds,
+                    "[\(arrange) / input=\(label)] rejected input must leave targetSeconds nil."
+                )
+                XCTAssertFalse(
+                    model.isActive,
+                    "[\(arrange) / input=\(label)] rejected input must leave the model inactive."
+                )
+            }
+        }
     }
 
     @MainActor
@@ -155,25 +128,36 @@ final class TargetShutterModelTests: XCTestCase {
                        "Clear must not erase the last positive value the photographer set")
     }
 
+    /// Last-used memory is preserved across every rejecting input
+    /// path. The user set a positive target before; whatever invalid
+    /// input arrives later must not erase that memory. Same rejection
+    /// matrix as `testSetTargetRejectsEveryNonFinitePositiveInput`.
     @MainActor
-    func testInvalidSetTargetDoesNotEraseLastUsed() {
-        let model = TargetShutterModel()
-        model.setTarget(180)
+    func testInvalidSetTargetDoesNotEraseLastUsedMemory() {
+        let invalidInputs: [(label: String, value: Double?)] = [
+            ("zero", 0),
+            ("negative", -1),
+            ("NaN", .nan),
+            ("positive infinity", .infinity),
+            ("nil", nil),
+        ]
+        for (label, value) in invalidInputs {
+            let model = TargetShutterModel()
+            model.setTarget(420)
+            XCTAssertEqual(model.lastUsedTargetSeconds ?? 0, 420, accuracy: 0.0001)
 
-        model.setTarget(0)
+            model.setTarget(value)
 
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertEqual(model.lastUsedTargetSeconds ?? 0, 180, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testNilSetTargetDoesNotEraseLastUsed() {
-        let model = TargetShutterModel()
-        model.setTarget(420)
-
-        model.setTarget(nil)
-
-        XCTAssertNil(model.targetSeconds)
-        XCTAssertEqual(model.lastUsedTargetSeconds ?? 0, 420, accuracy: 0.0001)
+            XCTAssertNil(
+                model.targetSeconds,
+                "[input=\(label)] rejected input must leave targetSeconds nil."
+            )
+            XCTAssertEqual(
+                model.lastUsedTargetSeconds ?? 0,
+                420,
+                accuracy: 0.0001,
+                "[input=\(label)] rejected input must not erase last-used memory."
+            )
+        }
     }
 }

@@ -528,159 +528,133 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(decoded.hasCalculatedExposureTime, true)
     }
 
-    func testDecodingRejectsContradictoryCalculatedExposureFlag() throws {
-        let json = """
-        {
-          "meteredExposureSeconds": 10,
-          "correctedExposureSeconds": 50,
-          "hasCalculatedExposureTime": false,
-          "metadata": {
-            "basis": "exactTablePoint",
-            "sourceAuthorityImpact": "currentOfficial",
-            "rangeStatus": "withinStatedRange",
-            "warningLevel": "none",
-            "notes": [],
-            "referencedRows": null
-          }
+    /// Table-driven rejection contract for the legacy `ReciprocityResult`
+    /// 7-field shape. Each row pins one shape-vs-basis contradiction that
+    /// must surface as `DecodingError.dataCorrupted` carrying a substring
+    /// that names the offending invariant. Each row reads as
+    /// "this combination of fields is invalid; the decoder must flag it
+    /// with this message fragment."
+    func testDecodingRejectsContradictoryLegacyShapePayloads() {
+        struct Rejection {
+            let label: String
+            let json: String
+            let expectedMessageFragment: String
         }
-        """
+        let rejections: [Rejection] = [
+            Rejection(
+                label: "calculated flag false while a corrected value is present",
+                json: """
+                {
+                  "meteredExposureSeconds": 10,
+                  "correctedExposureSeconds": 50,
+                  "hasCalculatedExposureTime": false,
+                  "metadata": {
+                    "basis": "exactTablePoint",
+                    "sourceAuthorityImpact": "currentOfficial",
+                    "rangeStatus": "withinStatedRange",
+                    "warningLevel": "none",
+                    "notes": [],
+                    "referencedRows": null
+                  }
+                }
+                """,
+                expectedMessageFragment: "hasCalculatedExposureTime"
+            ),
+            Rejection(
+                label: "exact-table-point basis paired with an estimation family",
+                json: """
+                {
+                  "meteredExposureSeconds": 10,
+                  "correctedExposureSeconds": 50,
+                  "hasCalculatedExposureTime": true,
+                  "metadata": {
+                    "basis": "exactTablePoint",
+                    "sourceAuthorityImpact": "currentOfficial",
+                    "rangeStatus": "withinStatedRange",
+                    "warningLevel": "none",
+                    "estimationFamily": "logLog",
+                    "notes": [],
+                    "referencedRows": null
+                  }
+                }
+                """,
+                expectedMessageFragment: "must not carry an estimation family"
+            ),
+            Rejection(
+                label: "interpolated basis missing the estimation family",
+                json: """
+                {
+                  "meteredExposureSeconds": 5,
+                  "correctedExposureSeconds": 15,
+                  "hasCalculatedExposureTime": true,
+                  "metadata": {
+                    "basis": "interpolatedWithinTable",
+                    "sourceAuthorityImpact": "currentOfficial",
+                    "rangeStatus": "withinInterpretedRange",
+                    "warningLevel": "note",
+                    "notes": [],
+                    "referencedRows": null
+                  }
+                }
+                """,
+                expectedMessageFragment: "must carry an estimation family"
+            ),
+            Rejection(
+                label: "no-correction threshold returning a corrected != metered value",
+                json: """
+                {
+                  "meteredExposureSeconds": 0.5,
+                  "correctedExposureSeconds": 0.75,
+                  "hasCalculatedExposureTime": true,
+                  "metadata": {
+                    "basis": "officialThresholdNoCorrection",
+                    "sourceAuthorityImpact": "currentOfficial",
+                    "rangeStatus": "withinStatedRange",
+                    "warningLevel": "none",
+                    "notes": [],
+                    "referencedRows": null
+                  }
+                }
+                """,
+                expectedMessageFragment: "corrected exposure equal to metered exposure"
+            ),
+            Rejection(
+                label: "advisory-only basis carrying a corrected exposure",
+                json: """
+                {
+                  "meteredExposureSeconds": 4,
+                  "correctedExposureSeconds": 8,
+                  "hasCalculatedExposureTime": true,
+                  "metadata": {
+                    "basis": "advisoryOnlyBeyondOfficialRange",
+                    "sourceAuthorityImpact": "currentOfficial",
+                    "rangeStatus": "beyondLastRepresentativePoint",
+                    "warningLevel": "note",
+                    "notes": [],
+                    "referencedRows": null
+                  }
+                }
+                """,
+                expectedMessageFragment: "must not return a corrected exposure time"
+            ),
+        ]
 
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ReciprocityResult.self,
-                from: Data(json.utf8)
-            )
-        ) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                return XCTFail("Expected dataCorrupted error, got \(error)")
+        for rejection in rejections {
+            XCTAssertThrowsError(
+                try JSONDecoder().decode(
+                    ReciprocityResult.self,
+                    from: Data(rejection.json.utf8)
+                ),
+                "[\(rejection.label)] decoder must reject the payload."
+            ) { error in
+                guard case let DecodingError.dataCorrupted(context) = error else {
+                    return XCTFail("[\(rejection.label)] expected DecodingError.dataCorrupted, got \(error)")
+                }
+                XCTAssertTrue(
+                    context.debugDescription.contains(rejection.expectedMessageFragment),
+                    "[\(rejection.label)] expected message to contain '\(rejection.expectedMessageFragment)', got: \(context.debugDescription)"
+                )
             }
-
-            XCTAssertTrue(context.debugDescription.contains("hasCalculatedExposureTime"))
-        }
-    }
-
-    func testDecodingRejectsExactTablePointWithEstimationFamily() {
-        let json = """
-        {
-          "meteredExposureSeconds": 10,
-          "correctedExposureSeconds": 50,
-          "hasCalculatedExposureTime": true,
-          "metadata": {
-            "basis": "exactTablePoint",
-            "sourceAuthorityImpact": "currentOfficial",
-            "rangeStatus": "withinStatedRange",
-            "warningLevel": "none",
-            "estimationFamily": "logLog",
-            "notes": [],
-            "referencedRows": null
-          }
-        }
-        """
-
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ReciprocityResult.self,
-                from: Data(json.utf8)
-            )
-        ) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                return XCTFail("Expected dataCorrupted error, got \(error)")
-            }
-
-            XCTAssertTrue(context.debugDescription.contains("must not carry an estimation family"))
-        }
-    }
-
-    func testDecodingRejectsInterpolatedResultWithoutEstimationFamily() {
-        let json = """
-        {
-          "meteredExposureSeconds": 5,
-          "correctedExposureSeconds": 15,
-          "hasCalculatedExposureTime": true,
-          "metadata": {
-            "basis": "interpolatedWithinTable",
-            "sourceAuthorityImpact": "currentOfficial",
-            "rangeStatus": "withinInterpretedRange",
-            "warningLevel": "note",
-            "notes": [],
-            "referencedRows": null
-          }
-        }
-        """
-
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ReciprocityResult.self,
-                from: Data(json.utf8)
-            )
-        ) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                return XCTFail("Expected dataCorrupted error, got \(error)")
-            }
-
-            XCTAssertTrue(context.debugDescription.contains("must carry an estimation family"))
-        }
-    }
-
-    func testDecodingRejectsThresholdNoCorrectionWhenCorrectedExposureDiffersFromMetered() {
-        let json = """
-        {
-          "meteredExposureSeconds": 0.5,
-          "correctedExposureSeconds": 0.75,
-          "hasCalculatedExposureTime": true,
-          "metadata": {
-            "basis": "officialThresholdNoCorrection",
-            "sourceAuthorityImpact": "currentOfficial",
-            "rangeStatus": "withinStatedRange",
-            "warningLevel": "none",
-            "notes": [],
-            "referencedRows": null
-          }
-        }
-        """
-
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ReciprocityResult.self,
-                from: Data(json.utf8)
-            )
-        ) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                return XCTFail("Expected dataCorrupted error, got \(error)")
-            }
-
-            XCTAssertTrue(context.debugDescription.contains("corrected exposure equal to metered exposure"))
-        }
-    }
-
-    func testDecodingRejectsAdvisoryOnlyResultThatReturnsCorrectedExposure() {
-        let json = """
-        {
-          "meteredExposureSeconds": 4,
-          "correctedExposureSeconds": 8,
-          "hasCalculatedExposureTime": true,
-          "metadata": {
-            "basis": "advisoryOnlyBeyondOfficialRange",
-            "sourceAuthorityImpact": "currentOfficial",
-            "rangeStatus": "beyondLastRepresentativePoint",
-            "warningLevel": "note",
-            "notes": [],
-            "referencedRows": null
-          }
-        }
-        """
-
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ReciprocityResult.self,
-                from: Data(json.utf8)
-            )
-        ) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                return XCTFail("Expected dataCorrupted error, got \(error)")
-            }
-
-            XCTAssertTrue(context.debugDescription.contains("must not return a corrected exposure time"))
         }
     }
 

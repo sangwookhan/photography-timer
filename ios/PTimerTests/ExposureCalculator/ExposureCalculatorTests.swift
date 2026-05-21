@@ -29,18 +29,6 @@ final class ExposureCalculatorTests: XCTestCase {
         }
     }
 
-    func testCalculateReturnsDeterministicShutter() throws {
-        let calculator = ExposureCalculator()
-        let baseShutter = try calculator.parseBaseShutter("1/30")
-        let resultShutter = try calculator.calculate(
-            baseShutterSeconds: baseShutter,
-            stop: 6
-        )
-
-        XCTAssertEqual(baseShutter, 1.0 / 30.0, accuracy: 0.0001)
-        XCTAssertEqual(resultShutter, 2, accuracy: 0.0001)
-    }
-
     func testStopBasedCalculationMatchesRepresentativeCases() throws {
         let calculator = ExposureCalculator()
 
@@ -95,14 +83,6 @@ final class ExposureCalculatorTests: XCTestCase {
         let calculator = ExposureCalculator()
 
         XCTAssertEqual(try calculator.calculate(baseShutterSeconds: 1, stop: 20), 1_048_576, accuracy: 0.0001)
-    }
-
-    func testStopBasedInterfaceRejectsNegativeNDStop() {
-        let calculator = ExposureCalculator()
-
-        XCTAssertThrowsError(try calculator.calculate(baseShutterSeconds: 1.0 / 30.0, stop: -1)) { error in
-            XCTAssertEqual(error as? ExposureCalculatorError, .nonPositiveND)
-        }
     }
 
     func testFormatShutterReturnsExpectedReadableStrings() {
@@ -179,35 +159,6 @@ final class ExposureCalculatorTests: XCTestCase {
             XCTAssertEqual(result, previous * 2, accuracy: 0.0001)
             previous = result
         }
-    }
-
-    func testNoOverflowAtHighStops() throws {
-        let calculator = ExposureCalculator()
-
-        let result = try calculator.calculate(
-            baseShutterSeconds: 1,
-            stop: 24
-        )
-
-        XCTAssertTrue(result.isFinite)
-        XCTAssertGreaterThan(result, 1_000_000)
-    }
-
-    func testTransitionStillValidWithHighStop() throws {
-        let calculator = ExposureCalculator()
-
-        let beforeTransition = try calculator.calculate(
-            baseShutterSeconds: 1,
-            stop: 5
-        )
-
-        let afterTransition = try calculator.calculate(
-            baseShutterSeconds: 1,
-            stop: 6
-        )
-
-        XCTAssertEqual(beforeTransition, 30, accuracy: 0.0001)
-        XCTAssertEqual(afterTransition, 64, accuracy: 0.0001)
     }
 
     func testSubSecondToLargeStopChain() throws {

@@ -61,22 +61,24 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
         XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
 
-        // Every preset row carries an ISO secondary. Films that ship a
-        // registered unofficial practical profile (Portra 400 today) are
-        // surfaced as a second row whose primary text appends " · Unofficial"
-        // — the qualifier lives on the left because it describes the
-        // profile, not the ISO. Spot-check exemplars across batches without
-        // coupling to the full launch-catalog ordering.
+        // Every preset row carries an ISO secondary. Films with a
+        // registered unofficial practical profile (Portra 400 today)
+        // surface as a second row that shares the canonical name and
+        // ISO; `supportState` drives the unofficial badge. Spot-check
+        // exemplars without coupling to the full catalog ordering.
         let portraOfficial = viewModel.filmSelectorEntries.first { entry in
             entry.primaryText == "Portra 400" && entry.profileOverride == nil
         }
         let portraUnofficial = viewModel.filmSelectorEntries.first { entry in
-            entry.primaryText == "Portra 400 · Unofficial"
+            entry.film?.id == "kodak-portra-400" && entry.profileOverride != nil
         }
         XCTAssertNotNil(portraOfficial, "Portra 400 official row should exist.")
         XCTAssertEqual(portraOfficial?.secondaryText, "ISO 400")
-        XCTAssertNotNil(portraUnofficial, "Portra 400 unofficial row should exist with the · Unofficial suffix.")
+        XCTAssertEqual(portraOfficial?.supportState, .officialLimitedGuidance)
+        XCTAssertNotNil(portraUnofficial, "Portra 400 unofficial row should exist with a profile override.")
+        XCTAssertEqual(portraUnofficial?.primaryText, "Portra 400", "Unofficial row keeps the canonical name; the badge carries the qualifier.")
         XCTAssertEqual(portraUnofficial?.secondaryText, "ISO 400", "Unofficial row's right column is the ISO speed, not the qualifier.")
+        XCTAssertEqual(portraUnofficial?.supportState, .unofficialPractical)
         XCTAssertNotNil(portraUnofficial?.profileOverride, "Unofficial row carries a profile override so the model can apply it on selection.")
         XCTAssertNotEqual(
             portraOfficial?.id,

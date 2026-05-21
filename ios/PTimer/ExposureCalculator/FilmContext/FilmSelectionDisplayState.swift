@@ -7,6 +7,10 @@ struct FilmSelectorEntry: Equatable, Identifiable {
     let manufacturer: String?
     let film: FilmIdentity?
     let profileOverride: ReciprocityProfile?
+    /// Selector-facing support state. Drives the row's compact
+    /// indicator (icon or "Unofficial" badge) and the accessibility
+    /// label fragment.
+    let supportState: FilmSelectorSupportDisplayState
 
     init(
         id: String,
@@ -14,7 +18,8 @@ struct FilmSelectorEntry: Equatable, Identifiable {
         secondaryText: String? = nil,
         manufacturer: String? = nil,
         film: FilmIdentity? = nil,
-        profileOverride: ReciprocityProfile? = nil
+        profileOverride: ReciprocityProfile? = nil,
+        supportState: FilmSelectorSupportDisplayState = .none
     ) {
         self.id = id
         self.primaryText = primaryText
@@ -22,6 +27,7 @@ struct FilmSelectorEntry: Equatable, Identifiable {
         self.manufacturer = manufacturer
         self.film = film
         self.profileOverride = profileOverride
+        self.supportState = supportState
     }
 }
 

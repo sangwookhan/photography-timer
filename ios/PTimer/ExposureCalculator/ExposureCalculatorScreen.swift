@@ -1300,14 +1300,22 @@ private struct FilmSelectorSectionCard: View {
         Button {
             onSelectEntry(entry)
         } label: {
-            HStack(spacing: 12) {
-                Text(entry.primaryText)
-                    .font(.body.weight(isSelected(entry) ? .semibold : .regular))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .layoutPriority(0)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 10) {
+                // Keep the Unofficial badge next to the film name so it reads as profile identity.
+                HStack(spacing: 6) {
+                    Text(entry.primaryText)
+                        .font(.body.weight(isSelected(entry) ? .semibold : .regular))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    unofficialBadge(for: entry.supportState)
+                }
+                .layoutPriority(0)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Official support icon sits next to ISO; shape carries the support state.
+                officialSupportIcon(for: entry.supportState)
 
                 if let secondaryText = entry.secondaryText {
                     Text(secondaryText)
@@ -1325,7 +1333,76 @@ private struct FilmSelectorSectionCard: View {
         }
         .buttonStyle(.plain)
         .id(entry.id)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel(for: entry))
+        .accessibilityAddTraits(isSelected(entry) ? .isSelected : [])
         .accessibilityIdentifier("film-selector-entry-\(entry.id)")
+    }
+
+    /// Compact SF Symbol for the three official support states.
+    /// Primary-opacity tint keeps the glyph legible on the
+    /// `.ultraThinMaterial` popover; shape, not color, carries the
+    /// meaning. The row's combined `accessibilityLabel` already
+    /// announces the full support meaning, so the glyph stays hidden
+    /// from VoiceOver. Returns `EmptyView` for `unofficialPractical`
+    /// (whose indicator is the badge next to the film name) and
+    /// `.none`.
+    @ViewBuilder
+    private func officialSupportIcon(for state: FilmSelectorSupportDisplayState) -> some View {
+        if let icon = state.iconSystemName {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .imageScale(.medium)
+                .foregroundStyle(Color.primary.opacity(0.78))
+                .accessibilityHidden(true)
+        } else {
+            EmptyView()
+        }
+    }
+
+    /// Visible "UNOFFICIAL" pill rendered next to the film name so it
+    /// reads as part of the film/profile identity. The uppercase word
+    /// is the primary discriminator; the capsule fill + thin border
+    /// is supplementary. Hidden from VoiceOver because the row's
+    /// `accessibilityLabel` carries "Unofficial practical estimate".
+    /// Returns `EmptyView` for every other state.
+    @ViewBuilder
+    private func unofficialBadge(for state: FilmSelectorSupportDisplayState) -> some View {
+        if let badge = state.unofficialBadgeText {
+            Text(badge)
+                .font(.caption2.weight(.bold))
+                .textCase(.uppercase)
+                .tracking(0.5)
+                .foregroundStyle(Color.primary.opacity(0.85))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color.primary.opacity(0.12))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Color.primary.opacity(0.28), lineWidth: 0.5)
+                )
+                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityHidden(true)
+        } else {
+            EmptyView()
+        }
+    }
+
+    /// Compose one row-level accessibility label because the visual
+    /// row uses split indicators (badge next to the name, icon next
+    /// to the ISO). Reads "name, ISO, support meaning".
+    private func accessibilityLabel(for entry: FilmSelectorEntry) -> String {
+        var parts: [String] = [entry.primaryText]
+        if let secondary = entry.secondaryText {
+            parts.append(secondary)
+        }
+        if let supportLabel = entry.supportState.accessibilityLabel {
+            parts.append(supportLabel)
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func isSelected(_ entry: FilmSelectorEntry) -> Bool {

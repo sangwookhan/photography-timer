@@ -67,6 +67,8 @@
 		A000000000000000000000F2 /* ExposureCalculatorWorkingContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */; };
 		A000000000000000000000F4 /* PersistentCalculatorContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F3 /* PersistentCalculatorContext.swift */; };
 		A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F5 /* FilmSelectionDisplayState.swift */; };
+		A00000000000000000000261 /* FilmSelectorSupportPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */; };
+		A00000000000000000000263 /* FilmSelectorSupportPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */; };
 		A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */; };
 		A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */; };
 		A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */; };
@@ -228,6 +230,8 @@
 		A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorWorkingContext.swift; sourceTree = "<group>"; };
 		A000000000000000000000F3 /* PersistentCalculatorContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCalculatorContext.swift; sourceTree = "<group>"; };
 		A000000000000000000000F5 /* FilmSelectionDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionDisplayState.swift; sourceTree = "<group>"; };
+		A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenterTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeResultDisplayStates.swift; sourceTree = "<group>"; };
 		A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsDisplayStates.swift; sourceTree = "<group>"; };
 		A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogTests.swift; sourceTree = "<group>"; };
@@ -443,6 +447,7 @@
 				A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */,
 				A000000000000000000000F3 /* PersistentCalculatorContext.swift */,
 				A000000000000000000000F5 /* FilmSelectionDisplayState.swift */,
+				A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */,
 				A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */,
 				A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */,
 				A0000000000000000000025D /* SourceReferenceRowSorting.swift */,
@@ -571,6 +576,7 @@
 				A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */,
 				A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */,
 				A000000000000000000000B8 /* ExposureCalculatorViewModelFilmModeTests.swift */,
+				A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */,
 				A000000000000000000000BE /* ExposureCalculatorViewModelTimerIntegrationTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */,
@@ -812,6 +818,7 @@
 				A000000000000000000000F2 /* ExposureCalculatorWorkingContext.swift in Sources */,
 				A000000000000000000000F4 /* PersistentCalculatorContext.swift in Sources */,
 				A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */,
+				A00000000000000000000261 /* FilmSelectorSupportPresenter.swift in Sources */,
 				A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */,
 				A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */,
 				A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */,
@@ -860,6 +867,7 @@
 				A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */,
 				A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */,
 				A000000000000000000000B7 /* ExposureCalculatorViewModelFilmModeTests.swift in Sources */,
+				A00000000000000000000263 /* FilmSelectorSupportPresenterTests.swift in Sources */,
 				A000000000000000000000BD /* ExposureCalculatorViewModelTimerIntegrationTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
 				A000000000000000000000CF /* ExposureCalculatorViewModelScenePhaseTests.swift in Sources */,

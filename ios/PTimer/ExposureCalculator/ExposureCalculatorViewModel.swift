@@ -412,21 +412,27 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 primaryText: film.canonicalStockName,
                 secondaryText: FilmSelectionModel.filmRowISOText(for: film),
                 manufacturer: film.manufacturer,
-                film: film
+                film: film,
+                supportState: FilmSelectorSupportPresenter.makeSupportState(
+                    for: film,
+                    profileOverride: nil
+                )
             ))
 
             if let unofficialProfile = UnofficialPracticalProfiles.profile(forFilmID: film.id) {
-                // The "Unofficial" qualifier describes the profile, not the
-                // ISO speed, so it lives on the left of the row alongside
-                // the canonical stock name. The right column stays an ISO
-                // value to match every other row's grid.
+                // Unofficial variant shares the canonical name; `supportState`
+                // drives the visible UNOFFICIAL badge next to the name.
                 entries.append(FilmSelectorEntry(
                     id: unofficialProfile.id,
-                    primaryText: "\(film.canonicalStockName) · Unofficial",
+                    primaryText: film.canonicalStockName,
                     secondaryText: FilmSelectionModel.filmRowISOText(for: film),
                     manufacturer: film.manufacturer,
                     film: film,
-                    profileOverride: unofficialProfile
+                    profileOverride: unofficialProfile,
+                    supportState: FilmSelectorSupportPresenter.makeSupportState(
+                        for: film,
+                        profileOverride: unofficialProfile
+                    )
                 ))
             }
         }

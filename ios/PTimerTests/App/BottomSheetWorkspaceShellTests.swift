@@ -349,59 +349,125 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(pausedItem?.statusLabel, "Paused")
     }
 
-    func testCompactProgressUsesSixtySecondLayerForShortRunningTimer() {
-        let snapshot = makeSnapshot(from: [secondsScaleTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
+    /// Table-driven compact-progress contract. One row per duration
+    /// scale (seconds, sixty-four-seconds, eight-minute,
+    /// thirty-four-minute, multi-hour) that exercises the layer
+    /// selection policy: how many layers are visible, which layers
+    /// are nil, and the expected fraction on each visible layer at
+    /// the timer's current "remaining" point.
+    func testCompactProgressLayerSelectionForRepresentativeDurationScales() throws {
+        for expectation in makeCompactProgressLayerExpectations() {
+            let snapshot = makeSnapshot(from: [expectation.timer])
+            let item = tryUnwrapCompactItem(from: snapshot)
 
-        XCTAssertEqual(item.visibleLayerCount, 1)
-        XCTAssertNil(item.originalScaleLayer)
-        XCTAssertNil(item.sixtyMinuteLayer)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 25.0 / 60.0, accuracy: 0.001)
+            XCTAssertEqual(
+                item.visibleLayerCount,
+                expectation.visibleLayerCount,
+                "[\(expectation.label)] visibleLayerCount mismatch"
+            )
+            try assertOriginalScaleLayer(matches: expectation, on: item)
+            try assertSixtyMinuteLayer(matches: expectation, on: item)
+            XCTAssertEqual(
+                item.sixtySecondLayer.fraction,
+                expectation.expectedSixtySecondFraction,
+                accuracy: 0.001,
+                "[\(expectation.label)] sixtySecondLayer.fraction mismatch"
+            )
+        }
     }
 
-    func testCompactProgressUsesSixtyMinuteAndSixtySecondLayersForSixtyFourSecondTimer() throws {
-        let snapshot = makeSnapshot(from: [minuteScaleTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.originalScaleLayer)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 54.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 54.0 / 60.0, accuracy: 0.001)
+    private struct CompactProgressLayerExpectation {
+        let label: String
+        let timer: RunningTimerItem
+        let visibleLayerCount: Int
+        let expectedOriginalScaleFraction: Double?
+        let expectedSixtyMinuteFraction: Double?
+        let expectedSixtySecondFraction: Double
     }
 
-    func testCompactProgressUsesSixtyMinuteAndSixtySecondLayersForEightMinuteTimer() throws {
-        let snapshot = makeSnapshot(from: [eightMinuteScaleTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.originalScaleLayer)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 478.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 58.0 / 60.0, accuracy: 0.001)
+    private func makeCompactProgressLayerExpectations() -> [CompactProgressLayerExpectation] {
+        [
+            CompactProgressLayerExpectation(
+                label: "short (seconds scale)",
+                timer: secondsScaleTimer(),
+                visibleLayerCount: 1,
+                expectedOriginalScaleFraction: nil,
+                expectedSixtyMinuteFraction: nil,
+                expectedSixtySecondFraction: 25.0 / 60.0
+            ),
+            CompactProgressLayerExpectation(
+                label: "64-second (sixty-second + sixty-minute)",
+                timer: minuteScaleTimer(),
+                visibleLayerCount: 2,
+                expectedOriginalScaleFraction: nil,
+                expectedSixtyMinuteFraction: 54.0 / 3600.0,
+                expectedSixtySecondFraction: 54.0 / 60.0
+            ),
+            CompactProgressLayerExpectation(
+                label: "eight-minute",
+                timer: eightMinuteScaleTimer(),
+                visibleLayerCount: 2,
+                expectedOriginalScaleFraction: nil,
+                expectedSixtyMinuteFraction: 478.0 / 3600.0,
+                expectedSixtySecondFraction: 58.0 / 60.0
+            ),
+            CompactProgressLayerExpectation(
+                label: "thirty-four-minute",
+                timer: thirtyFourMinuteScaleTimer(),
+                visibleLayerCount: 2,
+                expectedOriginalScaleFraction: nil,
+                expectedSixtyMinuteFraction: 2048.0 / 3600.0,
+                expectedSixtySecondFraction: 8.0 / 60.0
+            ),
+            CompactProgressLayerExpectation(
+                label: "long-running (original-scale + minute + second)",
+                timer: hourScaleTimer(),
+                visibleLayerCount: 3,
+                expectedOriginalScaleFraction: 2.0 / 24.0,
+                expectedSixtyMinuteFraction: 1.0,
+                expectedSixtySecondFraction: 1.0
+            ),
+        ]
     }
 
-    func testCompactProgressUsesSixtyMinuteAndSixtySecondLayersForThirtyFourMinuteTimer() throws {
-        let snapshot = makeSnapshot(from: [thirtyFourMinuteScaleTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.originalScaleLayer)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 2048.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 8.0 / 60.0, accuracy: 0.001)
+    private func assertOriginalScaleLayer(
+        matches expectation: CompactProgressLayerExpectation,
+        on item: BottomSheetCompactItem
+    ) throws {
+        guard let expectedFraction = expectation.expectedOriginalScaleFraction else {
+            XCTAssertNil(item.originalScaleLayer, "[\(expectation.label)] expected no original-scale layer")
+            return
+        }
+        let layer = try XCTUnwrap(
+            item.originalScaleLayer,
+            "[\(expectation.label)] expected an original-scale layer"
+        )
+        XCTAssertEqual(
+            layer.fraction,
+            expectedFraction,
+            accuracy: 0.001,
+            "[\(expectation.label)] originalScaleLayer.fraction mismatch"
+        )
     }
 
-    func testCompactProgressUsesOriginalScaleSixtyMinuteAndSixtySecondLayersForLongRunningTimer() throws {
-        let snapshot = makeSnapshot(from: [hourScaleTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let originalScaleLayer = try XCTUnwrap(item.originalScaleLayer)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 3)
-        XCTAssertEqual(originalScaleLayer.fraction, 2.0 / 24.0, accuracy: 0.001)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 1.0, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 1.0, accuracy: 0.001)
+    private func assertSixtyMinuteLayer(
+        matches expectation: CompactProgressLayerExpectation,
+        on item: BottomSheetCompactItem
+    ) throws {
+        guard let expectedFraction = expectation.expectedSixtyMinuteFraction else {
+            XCTAssertNil(item.sixtyMinuteLayer, "[\(expectation.label)] expected no 60-minute layer")
+            return
+        }
+        let layer = try XCTUnwrap(
+            item.sixtyMinuteLayer,
+            "[\(expectation.label)] expected a 60-minute layer"
+        )
+        XCTAssertEqual(
+            layer.fraction,
+            expectedFraction,
+            accuracy: 0.001,
+            "[\(expectation.label)] sixtyMinuteLayer.fraction mismatch"
+        )
     }
 
     func testCompactVisibleLayerCountPolicyBoundaries() {

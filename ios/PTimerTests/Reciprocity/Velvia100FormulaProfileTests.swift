@@ -16,16 +16,7 @@ final class Velvia100FormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    // MARK: - Threshold range (≤ 60 s)
-
-    func testVelvia100BelowThresholdReturnsOfficialNoCorrection() throws {
-        let profile = try velvia100Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 30)
-
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 30, accuracy: 1e-6)
-    }
+    // MARK: - Threshold boundary (inclusive at 60 s)
 
     func testVelvia100AtThresholdBoundaryReturnsOfficialNoCorrection() throws {
         let profile = try velvia100Profile()
@@ -148,20 +139,6 @@ final class Velvia100FormulaProfileTests: XCTestCase {
         }
     }
 
-    func testVelvia100CalculationRulesDoNotContainPublishedTableEntries() throws {
-        let profile = try velvia100Profile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("Velvia 100 must no longer carry a table rule — those entries are source evidence only.")
-            }
-        }
-    }
-
-    func testVelvia100IsConvertedFormulaProfile() throws {
-        let profile = try velvia100Profile()
-        XCTAssertTrue(profile.isConvertedFormulaProfile)
-    }
-
     // MARK: - UI surfacing
 
     @MainActor
@@ -195,12 +172,9 @@ final class Velvia100FormulaProfileTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testVelvia100SupportedRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 120)
-        XCTAssertEqual(displayState.summary.summaryText, "Reference-backed formula prediction")
-    }
-
+    /// 240 s is Velvia 100's published reference row; the summary
+    /// must read as source-backed at this exact value and never tip
+    /// into "Beyond source range".
     @MainActor
     func testVelvia100At240SecondsSummaryStaysReferenceBacked() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 240)
@@ -209,12 +183,6 @@ final class Velvia100FormulaProfileTests: XCTestCase {
             "Reference-backed formula prediction",
             "240 s is a Fujifilm-published reference; the summary must read as source-backed, not Beyond source range."
         )
-    }
-
-    @MainActor
-    func testVelvia100Above240SecondsSummaryUsesBeyondSourceRangeWording() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        XCTAssertEqual(displayState.summary.summaryText, "Beyond source range")
     }
 
     // MARK: - Helpers

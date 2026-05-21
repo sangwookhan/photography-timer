@@ -21,21 +21,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    // MARK: - Threshold range (< 120 s)
-
-    func testAcrosIIBelowThresholdReturnsOfficialNoCorrection() throws {
-        let profile = try acrosIIProfile()
-        for metered in [1.0, 30.0, 60.0, 119.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "Metered \(metered) s sits below Fujifilm's 120 s correction threshold and must read as no correction."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, metered, accuracy: 1e-6)
-        }
-    }
+    // MARK: - Threshold boundary (exclusive at 120 s)
 
     func testAcrosIIBoundaryAt120SecondsAppliesHalfStopFormulaNotNoCorrection() throws {
         // Fujifilm's published guidance: no correction below 120 sec,
@@ -154,20 +140,6 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         XCTAssertEqual(stopDelta ?? 0, 0.5, accuracy: 1e-6)
     }
 
-    func testAcrosIICalculationRulesDoNotContainPublishedTableEntries() throws {
-        let profile = try acrosIIProfile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("Acros II must no longer carry a table rule — its range guidance lives on the formula rule plus source evidence.")
-            }
-        }
-    }
-
-    func testAcrosIIIsConvertedFormulaProfile() throws {
-        let profile = try acrosIIProfile()
-        XCTAssertTrue(profile.isConvertedFormulaProfile)
-    }
-
     // MARK: - UI surfacing
 
     @MainActor
@@ -258,21 +230,12 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         )
     }
 
+    /// Past 1000 s Acros II's numeric continuation must surface
+    /// "source range" wording on both the detail copy and the graph
+    /// explanation, so the value never reads as manufacturer-supported.
     @MainActor
-    func testAcrosIIInsideRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 500)
-        XCTAssertEqual(displayState.summary.summaryText, "Reference-backed formula prediction")
-    }
-
-    @MainActor
-    func testAcrosIIAbove1000SecondsUsesBeyondSourceRangeWordingNotManufacturerSupported() throws {
+    func testAcrosIIAbove1000SecondsDetailAndExplanationSurfaceSourceRangeWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 2000)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Beyond source range",
-            "Above 1000 s the summary must make clear the value is outside the official source-backed range."
-        )
-
         let detail = try XCTUnwrap(displayState.summary.detailText)
         XCTAssertTrue(
             detail.lowercased().contains("source range"),

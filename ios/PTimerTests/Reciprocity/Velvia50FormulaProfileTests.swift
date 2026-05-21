@@ -17,16 +17,7 @@ final class Velvia50FormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    // MARK: - Threshold range (≤ 1 s)
-
-    func testVelvia50BelowThresholdReturnsOfficialNoCorrection() throws {
-        let profile = try velvia50Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
-
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 0.5, accuracy: 1e-6)
-    }
+    // MARK: - Threshold boundary (inclusive at 1 s)
 
     func testVelvia50AtThresholdBoundaryReturnsOfficialNoCorrection() throws {
         let profile = try velvia50Profile()
@@ -141,20 +132,6 @@ final class Velvia50FormulaProfileTests: XCTestCase {
         XCTAssertEqual(warningSeverity, .notRecommended, "64 s row must carry the not-recommended warning.")
     }
 
-    func testVelvia50CalculationRulesDoNotContainPublishedTableEntries() throws {
-        let profile = try velvia50Profile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("Velvia 50 must no longer carry a table rule — those entries are source evidence only.")
-            }
-        }
-    }
-
-    func testVelvia50IsConvertedFormulaProfile() throws {
-        let profile = try velvia50Profile()
-        XCTAssertTrue(profile.isConvertedFormulaProfile)
-    }
-
     // MARK: - UI surfacing
 
     @MainActor
@@ -210,17 +187,13 @@ final class Velvia50FormulaProfileTests: XCTestCase {
         }
     }
 
+    /// Detail copy past the not-recommended boundary surfaces
+    /// "source range" without the "Extrapolated" label — Velvia 50's
+    /// numeric continuation is explicitly outside Fujifilm's
+    /// supported range, not an extrapolation of a recommended table.
     @MainActor
-    func testVelvia50SupportedRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 16)
-        XCTAssertEqual(displayState.summary.summaryText, "Reference-backed formula prediction")
-    }
-
-    @MainActor
-    func testVelvia50BeyondSourceRangeUsesSourceRangeWordingNotExtrapolated() throws {
+    func testVelvia50BeyondSourceRangeDetailAvoidsExtrapolatedWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 100)
-        XCTAssertEqual(displayState.summary.summaryText, "Beyond source range")
-
         let detail = try XCTUnwrap(displayState.summary.detailText)
         XCTAssertFalse(detail.lowercased().contains("extrapolated"))
         XCTAssertTrue(detail.lowercased().contains("source range"))

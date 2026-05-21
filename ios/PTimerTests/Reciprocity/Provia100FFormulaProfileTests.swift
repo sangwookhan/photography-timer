@@ -22,16 +22,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    // MARK: - Threshold range (≤ 128 s)
-
-    func testProvia100FBelowThresholdReturnsOfficialNoCorrection() throws {
-        let profile = try proviaProfile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 64)
-
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 64, accuracy: 1e-6)
-    }
+    // MARK: - Threshold boundary (inclusive at 128 s)
 
     func testProvia100FAtThresholdBoundaryReturnsOfficialNoCorrection() throws {
         let profile = try proviaProfile()
@@ -515,24 +506,14 @@ final class Provia100FFormulaProfileTests: XCTestCase {
 
     // MARK: - Source-range presentation
 
+    /// Past the 480 s boundary Provia 100F's numeric extrapolation
+    /// must never read as "Extrapolated" — both the detail copy and
+    /// the graph explanation must call out the source range
+    /// explicitly so the user reads the value as outside Fujifilm's
+    /// supported range, not as a recommended extrapolation.
     @MainActor
-    func testProvia100FSupportedRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 240)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Reference-backed formula prediction",
-            "Converted formula profiles must surface reference-backed wording in the supported formula range."
-        )
-    }
-
-    @MainActor
-    func testProvia100FBeyondSourceRangeUsesSourceRangeWordingNotExtrapolated() throws {
+    func testProvia100FBeyondSourceRangeDetailAndExplanationUseSourceRangeNotExtrapolatedWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 600)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Beyond source range",
-            "Provia 100F outside supported guidance must not use Extrapolated wording."
-        )
         let detail = try XCTUnwrap(displayState.summary.detailText)
         XCTAssertFalse(
             detail.lowercased().contains("extrapolated"),

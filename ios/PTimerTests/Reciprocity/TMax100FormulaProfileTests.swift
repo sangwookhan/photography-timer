@@ -28,16 +28,19 @@ final class TMax100FormulaProfileTests: XCTestCase {
     private let expectedAnchor: Double = 0.1
     private let expectedExponent: Double = 1.0966
 
-    // MARK: - Threshold range (1/1000 sec to 1/10 sec)
+    // MARK: - Threshold band edges (1/1000 sec … 1/10 sec, inclusive)
 
-    func testTMax100InsideThresholdBandReturnsOfficialNoCorrection() throws {
+    func testTMax100AtThresholdBandBoundariesReturnsOfficialNoCorrection() throws {
         let profile = try tmax100Profile()
-        for metered in [0.001, 0.01, 0.05, 0.1] {
+        // Lower edge (1/1000 sec, the published bottom of the band)
+        // and upper edge (1/10 sec, inclusive — the formula picks up
+        // strictly above 1/10 sec).
+        for metered in [0.001, 0.1] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
                 .officialThresholdNoCorrection,
-                "Metered \(metered) sec sits inside Kodak's 1/1000 sec–1/10 sec no-correction band."
+                "T-MAX 100 at \(metered) sec must read as no-correction at the band edge."
             )
             let corrected = try XCTUnwrap(result.correctedExposureSeconds)
             XCTAssertEqual(corrected, metered, accuracy: 1e-6)
@@ -220,20 +223,6 @@ final class TMax100FormulaProfileTests: XCTestCase {
         XCTAssertEqual(hundredSecCorrected, 200)
     }
 
-    func testTMax100CalculationRulesDoNotContainPublishedTableEntries() throws {
-        let profile = try tmax100Profile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("T-MAX 100 must no longer carry a table rule — those entries are source evidence only.")
-            }
-        }
-    }
-
-    func testTMax100IsConvertedFormulaProfile() throws {
-        let profile = try tmax100Profile()
-        XCTAssertTrue(profile.isConvertedFormulaProfile)
-    }
-
     // MARK: - UI surfacing
 
     @MainActor
@@ -293,16 +282,12 @@ final class TMax100FormulaProfileTests: XCTestCase {
         XCTAssertEqual(beyondStart, 100.000001, accuracy: 1e-3)
     }
 
+    /// Past 100 sec the graph note must surface "source range"
+    /// wording so the user reads the value as outside Kodak's
+    /// supported range.
     @MainActor
-    func testTMax100InsideRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 10)
-        XCTAssertEqual(displayState.summary.summaryText, "Reference-backed formula prediction")
-    }
-
-    @MainActor
-    func testTMax100Above100SecondsUsesBeyondSourceRangeWording() throws {
+    func testTMax100Above100SecondsGraphExplanationSurfacesSourceRangeWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        XCTAssertEqual(displayState.summary.summaryText, "Beyond source range")
         let graph = try XCTUnwrap(displayState.graph)
         let explanation = try XCTUnwrap(graph.unsupportedExplanation)
         XCTAssertTrue(

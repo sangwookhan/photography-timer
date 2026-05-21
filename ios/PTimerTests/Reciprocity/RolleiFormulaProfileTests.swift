@@ -110,25 +110,6 @@ final class RolleiFormulaProfileTests: XCTestCase {
 
     private var allFits: [RolleiFit] { [rpx100, rpx400, retro80s, superpan200] }
 
-    // MARK: - Threshold band
-
-    func testRolleiProfilesBelowThresholdReturnOfficialNoCorrection() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            // A representative sub-threshold value strictly inside
-            // each profile's no-correction band.
-            let sample = fit.thresholdMaximumSeconds * 0.5
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: sample)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "\(fit.canonicalStockName) at \(sample) s must read as no correction inside the published threshold band."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, sample, accuracy: 1e-6)
-        }
-    }
-
     // MARK: - Formula range — quantified rows are source-backed predictions
 
     func testRolleiProfilesQuantifiedPublishedRowsAreFormulaDerived() throws {
@@ -309,27 +290,6 @@ final class RolleiFormulaProfileTests: XCTestCase {
         }
     }
 
-    func testRolleiProfilesCalculationRulesDoNotContainPublishedTableEntries() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            for rule in profile.rules {
-                if case .table = rule {
-                    XCTFail("\(fit.canonicalStockName) must no longer carry a table rule — its published rows live as source evidence only.")
-                }
-            }
-        }
-    }
-
-    func testRolleiProfilesAreClassifiedAsConvertedFormulaProfiles() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            XCTAssertTrue(
-                profile.isConvertedFormulaProfile,
-                "\(fit.canonicalStockName) carries a formula rule plus Rollei-published source evidence and must be flagged as a converted formula profile."
-            )
-        }
-    }
-
     func testRolleiProfilesKeepOfficialManufacturerPublishedSource() throws {
         for fit in allFits {
             let profile = try profile(for: fit)
@@ -437,36 +397,6 @@ final class RolleiFormulaProfileTests: XCTestCase {
                 "\(fit.canonicalStockName) graph must shade the region above the published \(fit.formulaUpperBoundSeconds) s upper row."
             )
             XCTAssertEqual(beyondStart, fit.formulaUpperBoundSeconds + 1e-6, accuracy: 1e-3)
-        }
-    }
-
-    @MainActor
-    func testRolleiProfilesInsideRangeUseReferenceBackedSummary() throws {
-        for fit in allFits {
-            let displayState = try makeDisplayState(
-                film: fit.canonicalStockName,
-                meteredExposureSeconds: fit.quantifiedRows[fit.quantifiedRows.count / 2].metered
-            )
-            XCTAssertEqual(
-                displayState.summary.summaryText,
-                "Reference-backed formula prediction",
-                "\(fit.canonicalStockName) inside the published range must use the reference-backed summary text."
-            )
-        }
-    }
-
-    @MainActor
-    func testRolleiProfilesAboveUpperPublishedRowUseBeyondSourceRangeWording() throws {
-        for fit in allFits {
-            let displayState = try makeDisplayState(
-                film: fit.canonicalStockName,
-                meteredExposureSeconds: fit.formulaUpperBoundSeconds * 4
-            )
-            XCTAssertEqual(
-                displayState.summary.summaryText,
-                "Beyond source range",
-                "\(fit.canonicalStockName) above the upper published row must surface beyond-source-range wording."
-            )
         }
     }
 

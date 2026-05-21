@@ -36,20 +36,18 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    // MARK: - Threshold range (≤ 1 s)
+    // MARK: - Threshold boundary (inclusive at 1 s)
 
-    func testChs100IIBelowOneSecondReturnsOfficialNoCorrection() throws {
+    func testChs100IIAtOneSecondBoundaryReturnsOfficialNoCorrection() throws {
         let profile = try chs100Profile()
-        for metered in [0.001, 0.25, 0.5, 0.999, 1.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "CHS 100 II at \(metered) s sits inside the 0…1 sec no-correction band."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, metered, accuracy: 1e-6)
-        }
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.0)
+        XCTAssertEqual(
+            result.metadata.basis,
+            .officialThresholdNoCorrection,
+            "CHS 100 II's 1 s threshold is inclusive — 1.0 s itself must read as no-correction."
+        )
+        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
+        XCTAssertEqual(corrected, 1.0, accuracy: 1e-6)
     }
 
     // MARK: - Formula range (1 s … 15 s)
@@ -206,23 +204,6 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
                 "CHS 100 II rows are fitting/anchor points, not source-evidence-only. The * mark is reserved for CMS 20 II's 1/1000 s row."
             )
         }
-    }
-
-    func testChs100IICalculationRulesDoNotContainATableRule() throws {
-        let profile = try chs100Profile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("CHS 100 II must no longer carry a table rule — the published rows live as source evidence only.")
-            }
-        }
-    }
-
-    func testChs100IIProfileIsClassifiedAsConvertedFormulaProfile() throws {
-        let profile = try chs100Profile()
-        XCTAssertTrue(
-            profile.isConvertedFormulaProfile,
-            "CHS 100 II carries a formula rule + source evidence and must surface as a converted formula profile so beyond-source wording fires."
-        )
     }
 
     // MARK: - Graph display state

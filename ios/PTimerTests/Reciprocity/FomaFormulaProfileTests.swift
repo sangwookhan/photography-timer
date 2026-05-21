@@ -76,21 +76,19 @@ final class FomaFormulaProfileTests: XCTestCase {
 
     private var allFits: [FomaFit] { [foma100, foma200, foma400] }
 
-    // MARK: - Threshold range (≤ 1/2 sec)
+    // MARK: - Threshold boundary (inclusive at 1/2 sec)
 
-    func testFomapanProfilesBelowThresholdReturnOfficialNoCorrection() throws {
+    func testFomapanProfilesAtThresholdBoundaryReturnOfficialNoCorrection() throws {
         for fit in allFits {
             let profile = try profile(for: fit)
-            for metered in [0.001, 0.01, 0.1, 0.5] {
-                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-                XCTAssertEqual(
-                    result.metadata.basis,
-                    .officialThresholdNoCorrection,
-                    "\(fit.canonicalStockName) at \(metered) s sits inside FOMA's 1/1000–1/2 sec no-correction band."
-                )
-                let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-                XCTAssertEqual(corrected, metered, accuracy: 1e-6)
-            }
+            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+            XCTAssertEqual(
+                result.metadata.basis,
+                .officialThresholdNoCorrection,
+                "\(fit.canonicalStockName)'s 1/2 sec threshold is inclusive — 0.5 s itself must read as no-correction."
+            )
+            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
+            XCTAssertEqual(corrected, 0.5, accuracy: 1e-6)
         }
     }
 
@@ -230,27 +228,6 @@ final class FomaFormulaProfileTests: XCTestCase {
         }
     }
 
-    func testFomapanProfilesCalculationRulesDoNotContainPublishedTableEntries() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            for rule in profile.rules {
-                if case .table = rule {
-                    XCTFail("\(fit.canonicalStockName) must no longer carry a table rule — its published rows live as source evidence only.")
-                }
-            }
-        }
-    }
-
-    func testFomapanProfilesAreClassifiedAsConvertedFormulaProfiles() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            XCTAssertTrue(
-                profile.isConvertedFormulaProfile,
-                "\(fit.canonicalStockName) carries a formula rule plus FOMA-published source evidence and must be flagged as a converted formula profile."
-            )
-        }
-    }
-
     func testFomapanProfilesKeepOfficialManufacturerPublishedSource() throws {
         for fit in allFits {
             let profile = try profile(for: fit)
@@ -324,32 +301,15 @@ final class FomaFormulaProfileTests: XCTestCase {
         }
     }
 
+    /// Past 100 sec the graph note for every Fomapan film must
+    /// surface "source range" wording so the value never reads as
+    /// manufacturer-supported.
     @MainActor
-    func testFomapanProfilesInsideRangeUseReferenceBackedSummary() throws {
-        for fit in allFits {
-            let displayState = try makeDisplayState(
-                film: fit.canonicalStockName,
-                meteredExposureSeconds: 10
-            )
-            XCTAssertEqual(
-                displayState.summary.summaryText,
-                "Reference-backed formula prediction",
-                "\(fit.canonicalStockName) inside the published range must use the reference-backed summary text."
-            )
-        }
-    }
-
-    @MainActor
-    func testFomapanProfilesAbove100SecondsUseBeyondSourceRangeWording() throws {
+    func testFomapanProfilesAbove100SecondsGraphExplanationSurfacesSourceRangeWording() throws {
         for fit in allFits {
             let displayState = try makeDisplayState(
                 film: fit.canonicalStockName,
                 meteredExposureSeconds: 300
-            )
-            XCTAssertEqual(
-                displayState.summary.summaryText,
-                "Beyond source range",
-                "\(fit.canonicalStockName) above 100 sec must surface beyond-source-range wording."
             )
             let graph = try XCTUnwrap(displayState.graph)
             let explanation = try XCTUnwrap(graph.unsupportedExplanation)

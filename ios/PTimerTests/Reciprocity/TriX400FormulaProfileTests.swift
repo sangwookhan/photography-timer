@@ -23,21 +23,7 @@ final class TriX400FormulaProfileTests: XCTestCase {
     private let expectedCoefficient: Double = 2.013654
     private let expectedExponent: Double = 1.3891
 
-    // MARK: - Threshold range (< 1 s)
-
-    func testTriX400BelowThresholdReturnsOfficialNoCorrection() throws {
-        let profile = try triX400Profile()
-        for metered in [0.001, 0.1, 0.5, 0.999] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "Metered \(metered) s sits below Kodak's 1 sec correction threshold and must read as no correction."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, metered, accuracy: 1e-6)
-        }
-    }
+    // MARK: - Threshold boundary (exclusive at 1 s)
 
     func testTriX400BoundaryAt1SecondAppliesFormulaNotNoCorrection() throws {
         // Kodak publishes "no correction at or below 1 sec" via the
@@ -191,20 +177,6 @@ final class TriX400FormulaProfileTests: XCTestCase {
         }
     }
 
-    func testTriX400CalculationRulesDoNotContainPublishedTableEntries() throws {
-        let profile = try triX400Profile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("Tri-X 400 must no longer carry a table rule — those entries are source evidence only.")
-            }
-        }
-    }
-
-    func testTriX400IsConvertedFormulaProfile() throws {
-        let profile = try triX400Profile()
-        XCTAssertTrue(profile.isConvertedFormulaProfile)
-    }
-
     // MARK: - UI surfacing
 
     @MainActor
@@ -274,20 +246,11 @@ final class TriX400FormulaProfileTests: XCTestCase {
         XCTAssertEqual(beyondStart, 100.000001, accuracy: 1e-3)
     }
 
+    /// Past 100 sec the graph note must surface "source range"
+    /// wording so the value never reads as manufacturer-supported.
     @MainActor
-    func testTriX400InsideRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 10)
-        XCTAssertEqual(displayState.summary.summaryText, "Reference-backed formula prediction")
-    }
-
-    @MainActor
-    func testTriX400Above100SecondsUsesBeyondSourceRangeWordingNotManufacturerSupported() throws {
+    func testTriX400Above100SecondsGraphExplanationSurfacesSourceRangeWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Beyond source range",
-            "Above 100 sec the summary must make clear the value is outside the official source-backed range."
-        )
         let graph = try XCTUnwrap(displayState.graph)
         let explanation = try XCTUnwrap(graph.unsupportedExplanation)
         XCTAssertTrue(

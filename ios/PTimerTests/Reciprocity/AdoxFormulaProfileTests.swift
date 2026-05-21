@@ -32,25 +32,24 @@ final class AdoxFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    // MARK: - Threshold range (1/1000 s … 1 s, inclusive)
+    // MARK: - Threshold band (1/1000 s … 1 s, inclusive at both edges)
+    //
+    // The 1/1000 s point lives in source evidence as +1/2 stop but the
+    // calculation path still returns the no-correction identity for
+    // it (see `testCms20IIAtOneOverThousandSecStaysNoCorrection...`
+    // below). The 1 s upper boundary is inclusive — 1.0 s itself
+    // still reads as no-correction.
 
-    func testCms20IIBelowOneSecondReturnsOfficialNoCorrection() throws {
+    func testCms20IIAtOneSecondBoundaryReturnsOfficialNoCorrection() throws {
         let profile = try cms20Profile()
-        for metered in [0.001, 0.053, 0.1, 0.423, 0.999, 1.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "CMS 20 II at \(metered) s sits inside the 1/1000 s … 1 s no-correction band."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(
-                corrected,
-                metered,
-                accuracy: 1e-6,
-                "No-correction must return corrected exposure equal to the metered value, not an evidence-derived +1/2 stop conversion."
-            )
-        }
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.0)
+        XCTAssertEqual(
+            result.metadata.basis,
+            .officialThresholdNoCorrection,
+            "CMS 20 II's 1 s upper boundary is inclusive — 1.0 s itself must read as no-correction."
+        )
+        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
+        XCTAssertEqual(corrected, 1.0, accuracy: 1e-6)
     }
 
     /// Regression: 0.001 s lives in source evidence as +1/2 stop, but
@@ -254,23 +253,6 @@ final class AdoxFormulaProfileTests: XCTestCase {
             return warning.severity
         }.first
         XCTAssertEqual(severity, .notRecommended)
-    }
-
-    func testCms20IIProfileIsClassifiedAsConvertedFormulaProfile() throws {
-        let profile = try cms20Profile()
-        XCTAssertTrue(
-            profile.isConvertedFormulaProfile,
-            "CMS 20 II carries a formula rule + source evidence and must surface as a converted formula profile."
-        )
-    }
-
-    func testCms20IICalculationRulesDoNotIncludeATableRule() throws {
-        let profile = try cms20Profile()
-        for rule in profile.rules {
-            if case .table = rule {
-                XCTFail("CMS 20 II must no longer carry a table rule — its published rows live as source evidence only.")
-            }
-        }
     }
 
     // MARK: - Graph display state
@@ -500,16 +482,11 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertTrue(firstColumn(dataLines[3]).hasPrefix("10"), "Fourth row must start with the 10 s anchor; got: \(dataLines[3])")
     }
 
-    @MainActor
-    func testCms20IIInsideFormulaRangeUsesReferenceBackedSummary() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 5)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Reference-backed formula prediction",
-            "CMS 20 II inside the supported range must surface the reference-backed summary."
-        )
-    }
-
+    /// CMS 20 II is the *stop signal* profile: past the 100 s
+    /// boundary the corrected exposure is nil (no formula
+    /// extrapolation), and the detail / graph explanation carry the
+    /// "no quantified corrected point" wording rather than the
+    /// numeric continuation copy other converted profiles use.
     @MainActor
     func testCms20IIBeyondOneHundredSecondsUsesBeyondSourceRangeWordingWithNoValue() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 200)

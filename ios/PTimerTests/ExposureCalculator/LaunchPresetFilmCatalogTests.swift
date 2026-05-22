@@ -296,7 +296,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
     }
 
-    func testKodakTriX400FormulaExtrapolatesBeyond100SecondsAsUnsupportedNumeric() throws {
+    func testKodakTriX400FormulaPredictsBeyond100SecondsAsUnsupportedNumeric() throws {
         // Tri-X 400 is now formula-based; inputs above the published
         // 100 sec upper anchor land on the same curve as a numeric
         // continuation outside the published source range
@@ -307,7 +307,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             .evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1500)
 
         guard case let .unsupported(payload) = result else {
-            return XCTFail("Expected unsupported (formula-extrapolated) result past Tri-X 400's published range, got \(result).")
+            return XCTFail("Expected unsupported (formula prediction outside the source range) result past Tri-X 400's published range, got \(result).")
         }
         XCTAssertEqual(payload.metadata.basis, .unsupportedOutOfPolicyRange)
         XCTAssertNotNil(payload.correctedExposureSeconds)

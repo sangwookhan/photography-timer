@@ -111,6 +111,12 @@
 		A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025D /* SourceReferenceRowSorting.swift */; };
 		A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */; };
 		A00000000000000000000600 /* ConvertedFormulaProfileTemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */; };
+		A00000000000000000000700 /* ReciprocityDetailsVocabularyPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */; };
+		A00000000000000000000702 /* FilmModeDetailsLegendPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */; };
+		A00000000000000000000704 /* FilmModeDetailsReferencePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */; };
+		A00000000000000000000706 /* FilmModeDetailsGraphPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */; };
+		A00000000000000000000708 /* ReciprocitySourceEvidenceClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */; };
+		A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */; };
 		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
 		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
 		A00000000000000000000158 /* ExposureScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000159 /* ExposureScale.swift */; };
@@ -281,6 +287,12 @@
 		A0000000000000000000025D /* SourceReferenceRowSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSorting.swift; sourceTree = "<group>"; };
 		A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSortingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvertedFormulaProfileTemplateTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsLegendPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsReferencePresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySourceEvidenceClassifier.swift; sourceTree = "<group>"; };
+		A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000159 /* ExposureScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScale.swift; sourceTree = "<group>"; };
@@ -455,6 +467,11 @@
 				A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */,
 				A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */,
 				A0000000000000000000025D /* SourceReferenceRowSorting.swift */,
+				A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */,
+				A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */,
+				A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */,
+				A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */,
+				A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */,
 			);
 			path = FilmContext;
 			sourceTree = "<group>";
@@ -587,6 +604,7 @@
 				A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */,
 				A00000000000000000000501 /* LaunchPresetFilmCatalogShapeTests.swift */,
 				A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */,
+				A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */,
 				A00000000000000000000129 /* CalculatorModelTests.swift */,
 				A00000000000000000000133 /* ReciprocityModelTests.swift */,
 				A00000000000000000000137 /* TimerWorkspaceModelTests.swift */,
@@ -828,6 +846,11 @@
 				A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */,
 				A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */,
 				A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */,
+				A00000000000000000000708 /* ReciprocitySourceEvidenceClassifier.swift in Sources */,
+				A00000000000000000000700 /* ReciprocityDetailsVocabularyPresenter.swift in Sources */,
+				A00000000000000000000702 /* FilmModeDetailsLegendPresenter.swift in Sources */,
+				A00000000000000000000704 /* FilmModeDetailsReferencePresenter.swift in Sources */,
+				A00000000000000000000706 /* FilmModeDetailsGraphPresenter.swift in Sources */,
 				A00000000000000000000123 /* WorkspaceCoordinator.swift in Sources */,
 				A00000000000000000000125 /* CalculatorModel.swift in Sources */,
 				A00000000000000000000130 /* ReciprocityModel.swift in Sources */,
@@ -910,6 +933,7 @@
 				A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */,
 				A00000000000000000000500 /* LaunchPresetFilmCatalogShapeTests.swift in Sources */,
 				A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */,
+				A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */,
 				A00000000000000000000128 /* CalculatorModelTests.swift in Sources */,
 				A00000000000000000000132 /* ReciprocityModelTests.swift in Sources */,
 				A00000000000000000000136 /* TimerWorkspaceModelTests.swift in Sources */,

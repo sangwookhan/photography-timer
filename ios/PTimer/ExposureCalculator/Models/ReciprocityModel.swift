@@ -274,10 +274,11 @@ final class ReciprocityModel {
     /// Pure transform: given the current binding state (or nil), produce
     /// the timer-action state for the corrected-exposure Start Timer
     /// button. A non-nil corrected exposure with a positive value
-    /// enables the timer — including the formula-extrapolated unsupported
-    /// path, where the action state additionally flags itself as
-    /// outside manufacturer guidance so the button can render with a
-    /// warning treatment without losing the start affordance.
+    /// enables the timer — including the unsupported path that carries
+    /// a formula prediction outside the source range, where the action
+    /// state additionally flags itself as outside manufacturer guidance
+    /// so the button can render with a warning treatment without losing
+    /// the start affordance.
     func correctedExposureActionState(
         for bindingState: FilmModeReciprocityBindingState?
     ) -> FilmModeTimerActionState {
@@ -300,7 +301,7 @@ final class ReciprocityModel {
             if isConvertedFormulaProfile {
                 outsideGuidanceHint = "Starts a timer using a formula prediction beyond the manufacturer source range"
             } else {
-                outsideGuidanceHint = "Starts a timer using a formula-extrapolated corrected exposure outside manufacturer guidance"
+                outsideGuidanceHint = "Starts a timer using a formula prediction outside the supported range"
             }
             let hint = isOutsideManufacturerGuidance
                 ? outsideGuidanceHint

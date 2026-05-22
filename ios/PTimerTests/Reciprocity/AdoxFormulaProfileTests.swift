@@ -161,7 +161,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
             )
             XCTAssertNil(
                 result.correctedExposureSeconds,
-                "CMS 20 II must never extrapolate past 100 s; \(metered) s must return no corrected exposure."
+                "CMS 20 II must never produce a formula prediction past 100 s; \(metered) s must return no corrected exposure."
             )
         }
     }
@@ -191,7 +191,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertEqual(range.maximumSeconds ?? 0, 100, accuracy: 1e-6)
         XCTAssertFalse(
             formulaRule.extrapolateBeyondMaximum,
-            "CMS 20 II must opt out of formula extrapolation past the 100 s stop signal."
+            "CMS 20 II must opt out of formula prediction past the 100 s stop signal."
         )
     }
 
@@ -483,10 +483,10 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     /// CMS 20 II is the *stop signal* profile: past the 100 s
-    /// boundary the corrected exposure is nil (no formula
-    /// extrapolation), and the detail / graph explanation carry the
-    /// "no quantified corrected point" wording rather than the
-    /// numeric continuation copy other converted profiles use.
+    /// boundary the corrected exposure is nil (no formula prediction
+    /// outside the source range), and the detail / graph explanation
+    /// carry the "no quantified corrected point" wording rather than
+    /// the numeric continuation copy other converted profiles use.
     @MainActor
     func testCms20IIBeyondOneHundredSecondsUsesBeyondSourceRangeWordingWithNoValue() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 200)

@@ -16,10 +16,11 @@ import XCTest
 /// currently ships one converted formula profile per film, and the
 /// catalog-coverage guard below pins that mapping). A regression in
 /// converted-profile defaults (e.g. `isConvertedFormulaProfile`,
-/// the "Reference-backed formula prediction" wording, or "Beyond
-/// source range" wording above the upper bound) therefore fails
-/// once with a clear "X is the offending film" message instead of
-/// producing N nearly-identical failures across per-film files.
+/// the formula-derived summary wording inside the source range, or
+/// "Beyond source range" wording above the upper bound) therefore
+/// fails once with a clear "X is the offending film" message
+/// instead of producing N nearly-identical failures across per-film
+/// files.
 final class ConvertedFormulaProfileTemplateTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
@@ -186,8 +187,8 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
 
     /// Every converted formula profile carries a formula rule plus
     /// source evidence and must surface as a converted formula
-    /// profile so the presenter routes it through the
-    /// reference-backed wording branch.
+    /// profile so the presenter routes it through the converted
+    /// formula presentation branch.
     func testEveryConvertedProfileIsFlaggedAsConvertedFormula() throws {
         for testCase in Self.allCases {
             let profile = try FormulaProfileTestSupport.profile(for: testCase.canonicalStockName)
@@ -249,12 +250,12 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
 
     // MARK: - Presenter wording templates
 
-    /// Inside the source-backed formula range the summary surface
-    /// uses the converted-profile "Reference-backed formula
-    /// prediction" wording — never the source-less formula profile
-    /// wording.
+    /// Inside the source-backed formula range every converted
+    /// profile reads as a formula-derived correction — never the
+    /// "Beyond source range" wording reserved for past-upper-bound
+    /// inputs.
     @MainActor
-    func testEveryConvertedProfileInsideRangeSummaryIsReferenceBacked() throws {
+    func testEveryConvertedProfileInsideRangeSummaryReadsAsFormulaDerived() throws {
         for testCase in Self.allCases {
             let displayState = try FormulaProfileTestSupport.makeDisplayState(
                 film: testCase.canonicalStockName,
@@ -262,8 +263,8 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
             )
             XCTAssertEqual(
                 displayState.summary.summaryText,
-                "Reference-backed formula prediction",
-                "\(testCase.canonicalStockName) inside the source-backed range must surface the reference-backed summary."
+                "Formula-based correction on the active curve",
+                "\(testCase.canonicalStockName) inside the source-backed range must surface the formula-derived summary."
             )
         }
     }

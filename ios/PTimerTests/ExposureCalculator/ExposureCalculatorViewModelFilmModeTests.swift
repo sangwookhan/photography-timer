@@ -212,7 +212,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         XCTAssertEqual(details.title, "Reciprocity Details")
         XCTAssertEqual(details.summary.badgeText, "Formula-derived")
-        XCTAssertEqual(details.summary.summaryText, "Reference-backed formula prediction")
+        XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "8s")
@@ -259,7 +259,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             100s    +3 stops · 1200s       Dev -30%
             """,
         ])
-        XCTAssertEqual(details.summary.summaryText, "Reference-backed formula prediction")
+        XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
         // Sources are now an unlabeled list (one row per item); the
         // legacy Reference / Citation sub-labels are gone.
         XCTAssertEqual(sourcesSection.rows.map(\.title), ["", ""])
@@ -548,7 +548,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         // Velvia 50's 64 s row is the formula's not-recommended
         // boundary. The result is unsupported-with-numeric (formula
-        // extrapolated past the source range), so the current-point
+        // prediction outside the source range), so the current-point
         // marker plots at its real (64 s, ~120 s) position instead
         // of collapsing to an x-only guide.
         XCTAssertEqual(details.summary.badgeText, "Beyond source range")
@@ -1274,10 +1274,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         // Authority-leak guard: the unofficial profile path must not
         // borrow wording that exists only for manufacturer-published
         // (converted formula) profiles. "Beyond source range",
-        // "Reference-backed formula prediction", "manufacturer source
-        // range", and the "Source reference" / "Guidance boundary"
-        // sections all imply a published Kodak source-range, which the
-        // unofficial profile does not have.
+        // "manufacturer source range", and the "Source reference" /
+        // "Guidance boundary" sections all imply a published Kodak
+        // source-range, which the unofficial profile does not have.
         let viewModel = makeViewModel()
         let unofficialEntry = try XCTUnwrap(
             viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
@@ -1291,7 +1290,6 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
 
         let forbiddenWording = [
             "Beyond source range",
-            "Reference-backed formula prediction",
             "manufacturer source range",
             "manufacturer-supported boundary",
             "published source range",

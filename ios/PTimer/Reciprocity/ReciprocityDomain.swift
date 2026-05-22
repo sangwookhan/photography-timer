@@ -296,8 +296,8 @@ struct FormulaReciprocityRule: Codable, Equatable {
     let notes: [String]
     /// `true` (default) when the formula can still produce a numeric
     /// value past its `meteredRange.maximumSeconds`; the result is
-    /// reclassified as unsupported but carries the formula-extrapolated
-    /// corrected exposure for actionable display.
+    /// reclassified as unsupported but carries the formula prediction
+    /// outside the source range as an actionable corrected exposure.
     ///
     /// `false` when the manufacturer publishes the upper bound as a
     /// hard stop signal — exceeding it returns an unsupported result

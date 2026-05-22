@@ -12,9 +12,9 @@ import XCTest
 ///   calculation rule.
 /// - At and beyond 480 s — the manufacturer's "not recommended"
 ///   boundary — the basis is `.unsupportedOutOfPolicyRange` and the
-///   result still carries the formula-extrapolated numeric corrected
-///   exposure (visibly marked outside manufacturer guidance). 480 s
-///   is never used as a formula fitting point.
+///   result still carries a numeric formula prediction outside the
+///   source range (visibly marked outside manufacturer guidance).
+///   480 s is never used as a formula fitting point.
 /// - The 240 s (+1/3 stop, 2.5G) row and the 480 s not-recommended row
 ///   stay visible as source evidence so users can verify the formula
 ///   prediction against the manufacturer's published reference points.
@@ -86,9 +86,9 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         )
     }
 
-    // MARK: - Unsupported boundary (≥ 480 s) with formula extrapolation
+    // MARK: - Unsupported boundary (≥ 480 s) with formula prediction outside source range
 
-    func testProvia100FAt480SecondsIsUnsupportedWithFormulaExtrapolation() throws {
+    func testProvia100FAt480SecondsIsUnsupportedWithFormulaPredictionOutsideSourceRange() throws {
         let profile = try proviaProfile()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 480)
 
@@ -99,13 +99,13 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         // Tc = 128 × (480 / 128)^1.3676 = 128 × 3.75^1.3676 ≈ 781 s.
         let corrected = try XCTUnwrap(
             result.correctedExposureSeconds,
-            "480 s must carry a formula-extrapolated corrected exposure, not nil."
+            "480 s must carry a numeric formula prediction outside the source range, not nil."
         )
         let expected = 128.0 * pow(480.0 / 128.0, 1.3676)
         XCTAssertEqual(corrected, expected, accuracy: 1.5)
     }
 
-    func testProvia100FBeyond480SecondsExtrapolatesFromFormulaAndStaysUnsupported() throws {
+    func testProvia100FBeyond480SecondsProducesFormulaPredictionAndStaysUnsupported() throws {
         let profile = try proviaProfile()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 500)
 
@@ -117,7 +117,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
 
         let corrected = try XCTUnwrap(
             result.correctedExposureSeconds,
-            "Formula must keep producing a numeric extrapolation past the manufacturer boundary."
+            "Formula must keep producing a numeric prediction past the manufacturer boundary."
         )
         let expected = 128.0 * pow(500.0 / 128.0, 1.3676)
         XCTAssertEqual(corrected, expected, accuracy: 1.5)
@@ -513,11 +513,11 @@ final class Provia100FFormulaProfileTests: XCTestCase {
 
     // MARK: - Source-range presentation
 
-    /// Past the 480 s boundary Provia 100F's numeric extrapolation
-    /// must never read as "Extrapolated" — both the detail copy and
-    /// the graph explanation must call out the source range
+    /// Past the 480 s boundary Provia 100F's numeric formula
+    /// prediction must never read as "Extrapolated" — both the detail
+    /// copy and the graph explanation must call out the source range
     /// explicitly so the user reads the value as outside Fujifilm's
-    /// supported range, not as a recommended extrapolation.
+    /// supported range. Negative guard for the table-era label.
     @MainActor
     func testProvia100FBeyondSourceRangeDetailAndExplanationUseSourceRangeNotExtrapolatedWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 600)
@@ -1167,9 +1167,9 @@ final class Provia100FFormulaProfileTests: XCTestCase {
     }
 
     /// At unsupported inputs that still produce a numeric formula
-    /// extrapolation, the Details graph plots the current point on
-    /// the formula curve with the `.beyondSourceRange` style, not the
-    /// "x-position only" red guide.
+    /// prediction outside the source range, the Details graph plots
+    /// the current point on the formula curve with the
+    /// `.beyondSourceRange` style, not the "x-position only" red guide.
     @MainActor
     func testProvia100FUnsupportedNumericInputRendersBeyondSourceRangeCurrentPoint() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 600)
@@ -1180,17 +1180,18 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         )
         XCTAssertFalse(
             graph.usesCurrentInputGuideOnly,
-            "A formula-extrapolated unsupported numeric must plot a real current point, not a guide line."
+            "A numeric formula prediction outside the source range must plot a real current point, not a guide line."
         )
         let currentPoint = try XCTUnwrap(graph.currentPoint)
         XCTAssertEqual(currentPoint.style, .beyondSourceRange)
         XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 600, accuracy: 1e-6)
     }
 
-    /// The corrected-exposure card surfaces the formula-extrapolated
-    /// value at unsupported inputs, and the timer-action state flags
-    /// itself as outside manufacturer guidance so the play button can
-    /// render with a warning-oriented treatment.
+    /// The corrected-exposure card surfaces the formula prediction
+    /// outside the source range at unsupported inputs, and the
+    /// timer-action state flags itself as outside manufacturer
+    /// guidance so the play button can render with a warning-oriented
+    /// treatment.
     @MainActor
     func testProvia100FUnsupportedNumericEnablesCorrectedExposurePlayButton() throws {
         let film = try proviaFilm()
@@ -1208,11 +1209,11 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(correctedDisplay.kind, .quantified)
         XCTAssertTrue(
             correctedDisplay.usesNumericExposure,
-            "Numeric extrapolation must flow into the quantified display kind so the corrected card shows the value."
+            "Numeric formula prediction must flow into the quantified display kind so the corrected card shows the value."
         )
         XCTAssertTrue(
             correctedDisplay.primaryText.hasPrefix("≈"),
-            "Numeric extrapolation must be marked approximate; got: \(correctedDisplay.primaryText)"
+            "Numeric formula prediction must be marked approximate; got: \(correctedDisplay.primaryText)"
         )
         XCTAssertFalse(
             correctedDisplay.primaryText.hasPrefix("≈≈"),
@@ -1224,7 +1225,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(correctedDisplay.secondaryText, "")
 
         let action = model.correctedExposureActionState(for: bindingState)
-        XCTAssertTrue(action.canStartTimer, "Numeric extrapolation must enable the play button.")
+        XCTAssertTrue(action.canStartTimer, "Numeric formula prediction must enable the play button.")
         XCTAssertEqual(action.targetSeconds, policyResult.correctedExposureSeconds)
         XCTAssertTrue(
             action.isOutsideManufacturerGuidance,

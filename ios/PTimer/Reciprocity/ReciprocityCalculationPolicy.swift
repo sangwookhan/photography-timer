@@ -95,7 +95,8 @@ struct ReciprocityResultMetadata: Codable, Equatable {
 /// type system:
 /// - `quantified` always carries a non-Optional `correctedExposureSeconds`.
 /// - `limitedGuidance` and `unsupported` lack the field entirely
-///   (unsupported may optionally carry a formula-extrapolated value).
+///   (unsupported may optionally carry a formula prediction outside
+///   the source range).
 enum ReciprocityResult: Equatable {
     case quantified(QuantifiedPayload)
     case limitedGuidance(LimitedGuidancePayload)
@@ -144,9 +145,10 @@ enum ReciprocityResult: Equatable {
 
     struct UnsupportedPayload: Equatable {
         let meteredExposureSeconds: Double
-        /// Optional formula-extrapolated corrected exposure seconds. Present
-        /// only when a formula-backed profile can still produce a numeric
-        /// value beyond the manufacturer-supported boundary; absent for
+        /// Optional formula prediction (outside the source range) in
+        /// corrected-exposure seconds. Present only when a formula-backed
+        /// profile can still produce a numeric value beyond the
+        /// manufacturer-supported boundary; absent for
         /// threshold-only or limited-guidance-only unsupported results. The
         /// presenter must mark numeric values as approximate / outside
         /// manufacturer guidance — they are calculation-derived, never
@@ -207,8 +209,9 @@ extension ReciprocityResult {
 
     /// Convenience accessor matching the legacy struct field. Returns
     /// the quantified case's corrected exposure, the unsupported case's
-    /// optional formula-extrapolated value when present, or `nil` for
-    /// limited-guidance and value-less unsupported results.
+    /// optional formula prediction outside the source range when
+    /// present, or `nil` for limited-guidance and value-less unsupported
+    /// results.
     var correctedExposureSeconds: Double? {
         switch self {
         case let .quantified(payload):
@@ -235,7 +238,7 @@ extension ReciprocityResult {
     /// Convenience flag matching the legacy struct field. True when a
     /// numeric corrected exposure was returned — either from a quantified
     /// path, or from a formula-backed unsupported payload that carries a
-    /// formula-extrapolated value.
+    /// formula prediction outside the source range.
     var hasCalculatedExposureTime: Bool {
         switch self {
         case .quantified:
@@ -768,9 +771,9 @@ struct ReciprocityCalculationPolicyEvaluator {
     ) -> ReciprocityResult? {
         guard let formulaRule = selection.formulaRule(for: meteredExposureSeconds) else {
             if let boundedFormulaRule = selection.firstFormulaRuleExceeded(by: meteredExposureSeconds) {
-                let extrapolatedSeconds: Double?
+                let predictedSeconds: Double?
                 if boundedFormulaRule.extrapolateBeyondMaximum {
-                    extrapolatedSeconds = formulaCorrectedExposureSeconds(
+                    predictedSeconds = formulaCorrectedExposureSeconds(
                         for: boundedFormulaRule.formula,
                         meteredExposureSeconds: meteredExposureSeconds
                     ).flatMap { value -> Double? in
@@ -778,12 +781,12 @@ struct ReciprocityCalculationPolicyEvaluator {
                         return value
                     }
                 } else {
-                    extrapolatedSeconds = nil
+                    predictedSeconds = nil
                 }
 
-                return assembler.unsupportedFormulaExtrapolation(
+                return assembler.unsupportedFormulaOutsideSourceRange(
                     meteredExposureSeconds: meteredExposureSeconds,
-                    correctedExposureSeconds: extrapolatedSeconds,
+                    correctedExposureSeconds: predictedSeconds,
                     formulaRule: boundedFormulaRule
                 )
             }
@@ -871,8 +874,8 @@ private extension ReciprocityCalculationPolicyEvaluator {
         /// is treated as **exclusive** here so it can serve as the
         /// manufacturer's not-recommended boundary marker: at the
         /// boundary the result must already be reported as outside
-        /// supported guidance even if the formula can still compute a
-        /// numeric extrapolation. Lower bounds remain inclusive so
+        /// supported guidance even if the formula can still produce a
+        /// numeric prediction. Lower bounds remain inclusive so the
         /// threshold ↔ formula handoff at the no-correction boundary
         /// stays seamless.
         func formulaRule(for meteredExposureSeconds: Double) -> FormulaReciprocityRule? {
@@ -891,9 +894,10 @@ private extension ReciprocityCalculationPolicyEvaluator {
         }
 
         /// First formula rule whose supported boundary the metered
-        /// exposure has reached or exceeded. Drives the formula-
-        /// extrapolated unsupported path: the formula can still compute
-        /// a value, but the result is presented as outside manufacturer
+        /// exposure has reached or exceeded. Drives the unsupported path
+        /// for a formula prediction outside the source range: the
+        /// formula can still compute a value, but the result is
+        /// presented as outside manufacturer
         /// guidance.
         func firstFormulaRuleExceeded(by meteredExposureSeconds: Double) -> FormulaReciprocityRule? {
             formulaRules.first {
@@ -1028,10 +1032,10 @@ private extension ReciprocityCalculationPolicyEvaluator {
             )
         }
 
-        /// Returns an unsupported result whose corrected exposure is
-        /// formula-extrapolated past the manufacturer-supported boundary
-        /// (or `nil` when the formula cannot produce a finite value).
-        func unsupportedFormulaExtrapolation(
+        /// Returns an unsupported result whose corrected exposure is a
+        /// formula prediction outside the manufacturer-supported source
+        /// range (or `nil` when the formula cannot produce a finite value).
+        func unsupportedFormulaOutsideSourceRange(
             meteredExposureSeconds: Double,
             correctedExposureSeconds: Double?,
             formulaRule: FormulaReciprocityRule
@@ -1044,7 +1048,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
             }
 
             let policyText = correctedExposureSeconds != nil
-                ? "Outside manufacturer guidance — value extrapolated from the published calculation curve."
+                ? "Outside manufacturer guidance — value is a formula prediction outside the supported range."
                 : "This metered exposure is beyond the explicit formula policy boundary."
 
             return unsupported(

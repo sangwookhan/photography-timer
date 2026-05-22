@@ -106,7 +106,7 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
         )
         XCTAssertTrue(
             formulaRule.extrapolateBeyondMaximum,
-            "CHS 100 II must keep the default formula extrapolation past 15 sec so 'Beyond source range' surfaces a numeric continuation, not an Unavailable value."
+            "CHS 100 II must keep the default formula prediction past 15 sec so 'Beyond source range' surfaces a numeric continuation, not an Unavailable value."
         )
     }
 

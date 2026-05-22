@@ -39,9 +39,9 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     /// future case addition does not invalidate older snapshots.
     let exposureSourceRaw: String?
     /// Captured-at-start flag: true when the timer was started from a
-    /// formula-extrapolated corrected exposure outside manufacturer
-    /// guidance. Optional so older snapshots decode unchanged; the
-    /// default decoded value is `false`.
+    /// formula prediction outside the supported range. Optional so
+    /// older snapshots decode unchanged; the default decoded value is
+    /// `false`.
     let isOutsideManufacturerGuidance: Bool?
 
     init(

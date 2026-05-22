@@ -961,8 +961,8 @@ private struct FilmModeDetailsGraph: View {
             .position(x: max(x, 0) / 2, y: size.height / 2)
     }
 
-    /// Persistent pink band marking the metered-exposure region
-    /// where the formula extrapolates past the published manufacturer
+    /// Persistent pink band marking the metered-exposure region where
+    /// the formula prediction sits outside the published manufacturer
     /// source range. Shown for converted formula profiles regardless
     /// of where the current input lands, so the user can always see
     /// which portion of the curve is past the published reference.

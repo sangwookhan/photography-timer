@@ -184,7 +184,7 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 - **FR-2.2** 측광 노출과 활성 profile이 주어지면, 시스템은 결과를 정확히 세 form 중 하나 — *quantified*, *limited-guidance*, *unsupported* — 로 분류하며, 한 결과가 둘 이상 form을 동시에 표현하는 것을 허용하지 않는다. (시나리오 2)
 - **FR-2.3** *quantified* 결과는 보정 노출값, 사용자가 한눈에 읽을 수 있는 status 배지, 그리고 사용자가 상세 화면에서 공식 표현과 제조사 reference 점을 볼 수 있는 출처 정보를 포함한다. (시나리오 2)
 - **FR-2.4** *limited-guidance* 결과는 보정 숫자 대신 차분한 안내 텍스트를 제시. 데이터가 뒷받침하지 않을 때 시스템은 보정 숫자를 근거 없이 만들어내지 않는다. (시나리오 2 경계)
-- **FR-2.5** numeric continuation 없는 *unsupported* 결과는 안내 노트를 제시하고, 보정 노출 행의 Start Timer affordance를 비활성화 — 이유를 설명하는 accessibility hint 동반. Formula-extrapolated numeric continuation을 동반하는 *unsupported* 결과 (공식이 supported boundary 너머에서 값을 계속 산출하는 경우)는 warning-tone 배지와 함께 값을 surface 하며 Start Timer affordance를 활성 유지. (시나리오 2 경계)
+- **FR-2.5** numeric continuation 없는 *unsupported* 결과는 안내 노트를 제시하고, 보정 노출 행의 Start Timer affordance를 비활성화 — 이유를 설명하는 accessibility hint 동반. Supported range 외부의 formula prediction을 numeric continuation으로 동반하는 *unsupported* 결과 (공식이 source-range boundary 너머에서 값을 계속 산출하는 경우)는 warning-tone 배지와 함께 값을 surface 하며 Start Timer affordance를 활성 유지. (시나리오 2 경계)
 - **FR-2.6** Reciprocity 평가는 결정적 — 같은 profile과 측광값은 항상 같은 결과 form, 보정값, status 표시를 산출한다. (NFR-D.1)
 - **FR-2.7** 사용자는 calculator와 화면을 다투는 inline 드롭다운이 아닌, 별도의 dismissible 표면을 통해 필름 선택에 도달. (시나리오 2)
 - **FR-2.8** Reciprocity 커버리지는 *정량 공식*이 있는 필름으로 한정되지 않는다. threshold-only / limited-guidance 출판 가이드는 일차 지원 범위로 다루며 (보조 대체이 아님), 도메인은 향후 비공식 / 사용자 정의 entry를 위한 capacity를 예약한다. (시나리오 2 경계; FR-2.2 보완)

@@ -73,7 +73,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
         XCTAssertTrue(
             result.hasCalculatedExposureTime,
-            "Bounded formula past its supported range carries a numeric extrapolation."
+            "Bounded formula past its supported range carries a numeric formula prediction."
         )
         XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(601.0, 1.31), accuracy: 1.0)
         XCTAssertEqual(
@@ -282,9 +282,10 @@ enum ReciprocityPolicyScenarioFactory {
     }
 
     /// Formula profile whose `meteredRange.maximumSeconds = 600`
-    /// triggers the formula-extrapolated unsupported path: past the
-    /// boundary the result is reclassified as `unsupported` but the
-    /// formula still produces a numeric extrapolation.
+    /// triggers the unsupported path for a formula prediction outside
+    /// the source range: past the boundary the result is reclassified
+    /// as `unsupported` but the formula still produces a numeric
+    /// prediction.
     static func formulaBoundedProfile() -> ReciprocityProfile {
         ReciprocityProfile(
             id: "bounded-formula-profile",

@@ -120,7 +120,7 @@ Indicates a closed-form correction.
 - **meteredRange** — optional [time range](#8-reciprocity-time-range) constraining the formula's domain. Open-ended `meteredRange` shall mean "applies wherever the calculation policy reaches the formula step".
 - **formula** — the only defined formula form is the **exponent power** form: `T_c = coefficient × T_m^exponent + offsetSeconds` (`coefficient` defaults to `1`, `offsetSeconds` defaults to `0`). The structure shall include the source's published equation string for transparency.
 - **additionalAdjustments** — array of supplementary adjustments (e.g. development-time hints) that the calculation does not consume.
-- **extrapolateBeyondMaximum** — boolean (default `true`). When `true`, the formula keeps producing a numeric value past `meteredRange.maximumSeconds` and the result is reclassified as `unsupportedOutOfPolicyRange` carrying that numeric extrapolation. When `false`, the upper bound is a manufacturer-published hard stop signal: the result is `unsupportedOutOfPolicyRange` with no corrected exposure value at all (ADOX CMS 20 II's `≥ 100 s` "Not recommended" boundary uses this).
+- **extrapolateBeyondMaximum** — boolean (default `true`). When `true`, the formula keeps producing a numeric value past `meteredRange.maximumSeconds` and the result is reclassified as `unsupportedOutOfPolicyRange` carrying that numeric continuation as a formula prediction outside the supported range. When `false`, the upper bound is a manufacturer-published hard stop signal: the result is `unsupportedOutOfPolicyRange` with no corrected exposure value at all (ADOX CMS 20 II's `≥ 100 s` "Not recommended" boundary uses this).
 - **notes** — array of free-form notes.
 
 Manufacturer reference points associated with a formula profile (e.g. Provia 100F's published `240 s +1/3 stop` row) live on the profile's `sourceEvidence` array (§3.1, §3.3), not as data on the formula rule itself.
@@ -147,7 +147,7 @@ A result is one of three mutually exclusive forms:
 
 - **Quantified** — a corrected exposure was produced. Carries the metadata block (see below) plus a `correctedExposure` payload (a reciprocity time value in seconds).
 - **Limited-guidance** — the manufacturer publishes only qualitative guidance for this region; no corrected exposure is produced. Carries the metadata block; no `correctedExposure` field.
-- **Unsupported** — the metered exposure is outside the profile's supported range. Carries the metadata block; an optional `correctedExposure` field is present only when a formula-backed profile produced a numeric extrapolation past its supported boundary, in which case the presenter marks the value as outside manufacturer guidance.
+- **Unsupported** — the metered exposure is outside the profile's supported range. Carries the metadata block; an optional `correctedExposure` field is present only when a formula-backed profile produced a formula prediction outside the supported range, in which case the presenter marks the value as outside manufacturer guidance.
 
 The metadata block carried by every form contains:
 
@@ -360,7 +360,7 @@ The domain shall **not**:
 2. Promote source-evidence rows (§3.3) into calculation anchors. The calculation policy reads only threshold, formula, and limited-guidance rules; source-evidence is display-only reference data.
 3. Synthesize provenance fields to fill gaps. Missing optional fields stay absent.
 4. Mix repackaged-brand identities with original-manufacturer identities under one entry. Repackaging is a `brandLabel` annotation on the original identity, not a parallel record.
-5. Allow a calculation result that claims a corrected exposure without carrying the value, or carries a corrected-exposure value without claiming one (with the single allowed exception of `unsupportedOutOfPolicyRange` carrying a formula-extrapolated numeric continuation past a supported boundary). The contradictory pairings are unrepresentable by the result's form.
+5. Allow a calculation result that claims a corrected exposure without carrying the value, or carries a corrected-exposure value without claiming one (with the single allowed exception of `unsupportedOutOfPolicyRange` carrying a formula prediction outside the supported range as a numeric continuation past the source-range boundary). The contradictory pairings are unrepresentable by the result's form.
 6. Allow a launch preset profile to carry user metadata.
 7. Ignore catalog validation. A failing catalog is a load-time error, not a soft-warn.
 8. Collapse multiple official profiles for one film into one record. (Wiki 15138817 reserves multi-profile support; in launch, only one profile is shipped per identity.)

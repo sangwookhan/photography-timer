@@ -16,4 +16,4 @@
           ▿ PTimer.ReciprocityPolicyNote
             ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.unsupportedByPolicy)
               - some: PTimer.ReciprocityPolicyNoteToken.unsupportedByPolicy
-            - text: "Outside manufacturer guidance — value extrapolated from the published calculation curve."
+            - text: "Outside manufacturer guidance — value is a formula prediction outside the supported range."

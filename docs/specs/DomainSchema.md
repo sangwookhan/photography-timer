@@ -29,6 +29,7 @@ Calculation results (the output of evaluating a profile against a metered exposu
   - `unknown` — present for forward-compatible decoding only; never written.
 - **canonicalStockName** — non-empty, unique within the catalog. The display-default name for the film. Examples: `"Kodak TRI-X 400"`, `"ILFORD HP5 Plus"`.
 - **manufacturer** — original manufacturer string when known. Repackaged brand labels (a film sold under different labels) shall not appear here; they go in `brandLabel`.
+- **iso** — positive integer; the film's box-speed ISO. Required on every identity.
 - **productionStatus** — one of `current`, `discontinued`, `unknown`. Launch dataset entries shall have `current`.
 - **profiles** — array of [reciprocity profiles](#3-reciprocity-profile). The launch dataset shall contain exactly one entry per identity.
 
@@ -73,7 +74,7 @@ A profile may carry display-only manufacturer reference points alongside its cal
 
 Each row carries:
 
-- **meteredExposure** — a [metered exposure selector](#8-metered-exposure-selector); the metered value the manufacturer published a reference for.
+- **meteredExposure** — a [metered exposure selector](#9-metered-exposure-selector); the metered value the manufacturer published a reference for.
 - **adjustments** — array of [exposure adjustments](#10-exposure-adjustment) describing the published reference (corrected time, stop delta, color-filter recommendation, etc.).
 - **notes** — array of free-form notes.
 - **isSourceEvidenceOnly** — optional boolean (default `false`). When `true`, the row is preserved as published evidence but the presentation layer omits it from formula-fitting markers and prefixes it with a footnote marker (`*`) so users can tell it is not a calculation anchor. Used by ADOX CMS 20 II's `1/1000 s +1/2 stop` reference, where the manufacturer publishes a sub-1s point but the calculation path stays no-correction across the whole sub-1s band.
@@ -287,11 +288,12 @@ A bundled launch catalog shall pass these checks before the runtime accepts it.
 3. Every identity has a non-empty `canonicalStockName`, unique across the catalog.
 4. Every identity has `kind = "preset"`.
 5. Every identity has `productionStatus = "current"`.
-6. Every identity has exactly **one** profile.
-7. Every profile's source has `kind = "manufacturerPublished"`.
-8. Every profile's source has `authority = "official"`.
-9. Every profile has at least one rule, and every rule decodes to a known variant (no `unknown` `kind` values).
-10. Every profile matches one of the two allowed launch shapes (§13): the rule set carries a threshold rule, and either (a) a formula rule with no limited-guidance rule, or (b) a limited-guidance rule with no formula rule and an empty `sourceEvidence` array. A bare threshold rule, a bare formula rule, or any other combination is rejected.
+6. Every identity has a positive `iso` (box-speed ISO).
+7. Every identity has exactly **one** profile.
+8. Every profile's source has `kind = "manufacturerPublished"`.
+9. Every profile's source has `authority = "official"`.
+10. Every profile has at least one rule, and every rule decodes to a known variant (no `unknown` `kind` values).
+11. Every profile matches one of the two allowed launch shapes (§13): the rule set carries a threshold rule, and either (a) a formula rule with no limited-guidance rule, or (b) a limited-guidance rule with no formula rule and an empty `sourceEvidence` array. A bare threshold rule, a bare formula rule, or any other combination is rejected.
 
 A catalog that fails any of these checks shall produce a clear decode diagnostic and shall not be loaded.
 

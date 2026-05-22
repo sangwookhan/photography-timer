@@ -148,8 +148,8 @@ Directory: `Timers/`.
 Directory: `ExposureCalculator/FilmContext/`.
 
 - `ActiveExposureCalculatorContext` — transient film-selection state.
-- `PersistentExposureCalculatorContextSnapshot` /
-  `UserDefaultsExposureCalculatorContextPersistenceStore` — persists
+- `PersistentCalculatorContextSnapshot` /
+  `UserDefaultsCalculatorContextStore` — persists
   selected film plus calculator inputs across relaunches.
 
 All persistence stores follow a `*Storing` protocol pair pattern with a
@@ -198,9 +198,9 @@ camera-slot identity that gets stamped on a timer flows into
 without slot identity decode unchanged.
 
 Multi-slot persistence: every slot's calculator snapshot is saved to
-`UserDefaultsCameraSlotSessionPersistenceStore` under a dedicated
+`UserDefaultsCameraSlotSessionStore` under a dedicated
 key. On first launch after upgrade, the legacy single-context store
-(`UserDefaultsExposureCalculatorContextPersistenceStore`) is read by
+(`UserDefaultsCalculatorContextStore`) is read by
 the ViewModel's restore path; once any state mutation happens, the
 new session snapshot becomes the source of truth and the legacy key
 is ignored.
@@ -257,7 +257,7 @@ maintain a parallel copy.
 | Per-slot persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
-| Calculator context persistence | `UserDefaultsExposureCalculatorContextPersistenceStore` |
+| Calculator context persistence | `UserDefaultsCalculatorContextStore` |
 | Local notifications for completion | `TimerCompletionNotificationScheduler` |
 
 Display state (the structs consumed by SwiftUI views) is *computed*
@@ -335,7 +335,7 @@ Test files under `ios/PTimerTests/` mirror the source layout:
   (`CalculatorModelTests`, `ReciprocityModelTests`,
   `TimerWorkspaceModelTests`, `FilmSelectionModelTests`,
   `CameraSlotSessionModelTests`), and the slot-routing facade tests
-  (`ExposureCalculatorViewModelCameraSlotsTests`).
+  (`CalculatorViewModelCameraSlotsTests`).
 - `Reciprocity/` — policy evaluation, confidence mapping.
 - `Timers/` — TimerManager lifecycle, time formatting.
 - `App/` — workspace shell behavior.

@@ -38,7 +38,7 @@ There is no explicit "Digital / Film" toggle. Workflow is determined entirely by
 - **Digital workflow** — no film selected. The Output Shutter (after ND only) is the final shooting value. Reciprocity is inactive.
 - **Film workflow** — a film is selected. The reciprocity-corrected exposure ("Corrected Exposure") becomes the primary shooting value; the ND-adjusted shutter is intermediate.
 
-The Corrected Exposure row shall remain visible in all film-workflow states, including states where it carries non-quantified guidance. (See §4 for what "non-quantified" means.)
+The Corrected Exposure row shall remain visible in all film-workflow states, including states where it carries non-quantified guidance. (See §3.3 for what "non-quantified" means.)
 
 ### 1.4 Exposure scale mode
 

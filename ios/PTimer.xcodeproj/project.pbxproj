@@ -89,6 +89,11 @@
 		A00000000000000000000146 /* RunningTimerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000144 /* RunningTimerItem.swift */; };
 		A00000000000000000000147 /* TimerMetadataPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000145 /* TimerMetadataPersistence.swift */; };
 		A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000148 /* FilmModeDetailsView.swift */; };
+		A00000000000000000000801 /* FilmModeDetailsGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000800 /* FilmModeDetailsGraphView.swift */; };
+		A00000000000000000000803 /* FilmModeDetailsGraphRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */; };
+		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
+		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
+		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
 		A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014A /* WheelPickerContinuousObserver.swift */; };
 		A0000000000000000000014D /* ViewModelDisplayStateBaselineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */; };
 		A0000000000000000000014F /* SharedFixtureGoldenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014E /* SharedFixtureGoldenTests.swift */; };
@@ -265,6 +270,11 @@
 		A00000000000000000000144 /* RunningTimerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerItem.swift; sourceTree = "<group>"; };
 		A00000000000000000000145 /* TimerMetadataPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerMetadataPersistence.swift; sourceTree = "<group>"; };
 		A00000000000000000000148 /* FilmModeDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsView.swift; sourceTree = "<group>"; };
+		A00000000000000000000800 /* FilmModeDetailsGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphView.swift; sourceTree = "<group>"; };
+		A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphRendering.swift; sourceTree = "<group>"; };
+		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
+		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
+		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
 		A0000000000000000000014A /* WheelPickerContinuousObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelPickerContinuousObserver.swift; sourceTree = "<group>"; };
 		A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDisplayStateBaselineTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000014E /* SharedFixtureGoldenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureGoldenTests.swift; sourceTree = "<group>"; };
@@ -408,10 +418,15 @@
 				A00000000000000000000212 /* CalculatorDefaults.swift */,
 				A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */,
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
+				A00000000000000000000814 /* ExposureCalculatorResultViews.swift */,
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
 				A00000000000000000000159 /* ExposureScale.swift */,
 				A00000000000000000000107 /* FilmModeDetailsPresenter.swift */,
 				A00000000000000000000148 /* FilmModeDetailsView.swift */,
+				A00000000000000000000800 /* FilmModeDetailsGraphView.swift */,
+				A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */,
+				A00000000000000000000812 /* FilmSelectorOverlayView.swift */,
+				A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
 				A00000000000000000000209 /* CameraSlot */,
 				A000000000000000000000F0 /* FilmContext */,
@@ -859,6 +874,11 @@
 				A00000000000000000000146 /* RunningTimerItem.swift in Sources */,
 				A00000000000000000000147 /* TimerMetadataPersistence.swift in Sources */,
 				A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */,
+				A00000000000000000000801 /* FilmModeDetailsGraphView.swift in Sources */,
+				A00000000000000000000803 /* FilmModeDetailsGraphRendering.swift in Sources */,
+				A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */,
+				A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */,
+				A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */,
 				A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */,
 				A00000000000000000000202 /* CameraSlotIdentity.swift in Sources */,
 				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,

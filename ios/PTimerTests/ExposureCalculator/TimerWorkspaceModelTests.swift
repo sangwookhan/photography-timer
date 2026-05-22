@@ -2,7 +2,7 @@ import XCTest
 @testable import PTimer
 
 /// Direct unit tests for `TimerWorkspaceModel`. These cover the timer
-/// slice in isolation; `ExposureCalculatorViewModelTimerIntegrationTests`
+/// slice in isolation; `CalculatorTimerIntegrationTests`
 /// covers the same behavior end-to-end through the view-model facade.
 final class TimerWorkspaceModelTests: XCTestCase {
 
@@ -407,7 +407,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testRestorePersistedMetadataPopulatesNamesAndOrdering() {
         let timerID = UUID()
-        let snapshot = PersistentTimerMetadataCollectionSnapshot(
+        let snapshot = PersistentTimerMetadataCollection(
             nextTimerOrder: 7,
             timers: [
                 PersistentTimerMetadataSnapshot(
@@ -415,7 +415,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
                     order: 5,
                     name: "Restored - 30s",
                     basisSummary: "Restored basis"
-                )
+                ),
             ]
         )
         let store = SpyTimerMetadataPersistenceStore(initialSnapshot: snapshot)
@@ -476,19 +476,19 @@ final class TimerWorkspaceModelTests: XCTestCase {
 // MARK: - Test doubles
 
 private final class SpyTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
-    private var loadedSnapshot: PersistentTimerMetadataCollectionSnapshot?
-    private(set) var savedSnapshots: [PersistentTimerMetadataCollectionSnapshot] = []
+    private var loadedSnapshot: PersistentTimerMetadataCollection?
+    private(set) var savedSnapshots: [PersistentTimerMetadataCollection] = []
     private(set) var clearCount: Int = 0
 
-    init(initialSnapshot: PersistentTimerMetadataCollectionSnapshot? = nil) {
+    init(initialSnapshot: PersistentTimerMetadataCollection? = nil) {
         self.loadedSnapshot = initialSnapshot
     }
 
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
+    func loadSnapshot() -> PersistentTimerMetadataCollection? {
         loadedSnapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection) {
         savedSnapshots.append(snapshot)
     }
 

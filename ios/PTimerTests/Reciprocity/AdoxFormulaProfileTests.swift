@@ -86,10 +86,10 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 20, accuracy: 0.05)
     }
 
-    func testCms20IIBetweenAnchorsReturnsFormulaInterpolatedValue() throws {
-        // 1.7 s and 6.8 s sit between the 1 s and 10 s anchors. The
-        // log-log formula should produce a corrected exposure between
-        // 1.414 s (at 1 s) and 20 s (at 10 s).
+    func testCms20IIBetweenAnchorsReturnsFormulaDerivedValue() throws {
+        // 1.7 s and 6.8 s sit between the 1 s and 10 s source-evidence
+        // anchors. The closed-form formula should produce a corrected
+        // exposure between 1.414 s (at 1 s) and 20 s (at 10 s).
         let profile = try cms20Profile()
         for (metered, expected) in [
             (1.7, 2.604),

@@ -199,15 +199,21 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
     }
 
     /// After conversion the published rows live as `sourceEvidence`
-    /// only — no `.table` rule may remain in `profile.rules`.
-    func testEveryConvertedProfileHasNoLegacyTableRule() throws {
+    /// only — the catalog ships with formula + threshold rules only.
+    /// `LaunchPresetFilmCatalogShapeTests` enforces the no-table-rule
+    /// invariant at the structural level for every launch preset; this
+    /// per-profile check is folded in there.
+    func testEveryConvertedProfileCarriesAFormulaRule() throws {
         for testCase in Self.allCases {
             let profile = try FormulaProfileTestSupport.profile(for: testCase.canonicalStockName)
-            for rule in profile.rules {
-                if case .table = rule {
-                    XCTFail("\(testCase.canonicalStockName) must no longer carry a table rule — published rows live as source evidence only.")
-                }
+            let hasFormula = profile.rules.contains { rule in
+                if case .formula = rule { return true }
+                return false
             }
+            XCTAssertTrue(
+                hasFormula,
+                "\(testCase.canonicalStockName) must carry a formula rule after the PTIMER-128 conversion."
+            )
         }
     }
 
@@ -246,7 +252,7 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
     /// Inside the source-backed formula range the summary surface
     /// uses the converted-profile "Reference-backed formula
     /// prediction" wording — never the source-less formula profile
-    /// wording and never the table-graph wording.
+    /// wording.
     @MainActor
     func testEveryConvertedProfileInsideRangeSummaryIsReferenceBacked() throws {
         for testCase in Self.allCases {

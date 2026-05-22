@@ -1,383 +1,19 @@
 import XCTest
 @testable import PTimer
 
+/// Exercises every surviving evaluator path for the formula /
+/// threshold / limited-guidance rule set. Table-rule tests were
+/// removed with PTIMER-140; the catalog shape guard in
+/// `LaunchPresetFilmCatalogShapeTests` makes sure no future preset
+/// can reintroduce a table rule.
 final class ReciprocityCalculationPolicyTests: XCTestCase {
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    func testTriXExactTablePointIsEvaluatorBacked() throws {
+    // MARK: - Threshold no-correction
+
+    func testThresholdRangeReturnsNoCorrectionBasis() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 10
-        )
-
-        XCTAssertEqual(result.meteredExposureSeconds, 10, accuracy: 0.0001)
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 50, accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
-        XCTAssertEqual(result.metadata.warningLevel, .none)
-        XCTAssertNil(result.metadata.estimationFamily)
-        XCTAssertEqual(result.metadata.notes.map(\.token), [.exactManufacturerTablePoint])
-        XCTAssertEqual(result.metadata.referencedRows?.count, 1)
-        XCTAssertEqual(result.metadata.referencedRows?.first?.role, .exactMatch)
-        XCTAssertEqual(try result.metadata.referencedRows?.map(exactSeconds), [10])
-    }
-
-    func testTriXBelowOneSecondRemainsUnsupportedWithoutThresholdGuidance() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 0.5
-        )
-
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondPolicyLimit)
-        XCTAssertNil(result.metadata.referencedRows)
-    }
-
-    func testTriXAtOneSecondDoesNotBecomeUnsupported() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 1
-        )
-
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-    }
-
-    func testTriXInterpolationUsesLogLogEvaluatorMathAndOriginalBounds() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 5
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .interpolatedWithinTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .logLog)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinInterpretedRange)
-        XCTAssertEqual(result.metadata.warningLevel, .note)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            logLogEstimate(
-                meteredExposureSeconds: 5,
-                lowerMeteredSeconds: 1,
-                lowerCorrectedSeconds: 2,
-                upperMeteredSeconds: 10,
-                upperCorrectedSeconds: 50
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(referencedRows.map(\.role), [.lowerBound, .upperBound])
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [1, 10])
-        XCTAssertFalse(try referencedRows.map(exactSeconds).contains(5))
-    }
-
-    func testTriXExtrapolationUsesLogLogEvaluatorMathWithinPolicyLimit() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 300
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .logLog)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
-        XCTAssertEqual(result.metadata.warningLevel, .caution)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            logLogEstimate(
-                meteredExposureSeconds: 300,
-                lowerMeteredSeconds: 10,
-                lowerCorrectedSeconds: 50,
-                upperMeteredSeconds: 100,
-                upperCorrectedSeconds: 1_200
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [10, 100])
-        XCTAssertFalse(try referencedRows.map(exactSeconds).contains(300))
-    }
-
-    func testTriXLongerExtrapolationRemainsQuantifiedWithinExtendedPolicyLimit() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 1_000
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .logLog)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
-        XCTAssertEqual(result.metadata.warningLevel, .caution)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            logLogEstimate(
-                meteredExposureSeconds: 1_000,
-                lowerMeteredSeconds: 10,
-                lowerCorrectedSeconds: 50,
-                upperMeteredSeconds: 100,
-                upperCorrectedSeconds: 1_200
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [10, 100])
-        XCTAssertFalse(try referencedRows.map(exactSeconds).contains(1_000))
-    }
-
-    func testTriXVeryLongExtrapolationRemainsQuantifiedWithoutGenericUpperBoundary() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 10_000
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
-        XCTAssertEqual(result.metadata.warningLevel, .caution)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            logLogEstimate(
-                meteredExposureSeconds: 10_000,
-                lowerMeteredSeconds: 10,
-                lowerCorrectedSeconds: 50,
-                upperMeteredSeconds: 100,
-                upperCorrectedSeconds: 1_200
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
-        XCTAssertEqual(result.metadata.notes.map(\.token), [.estimatedFromRepresentativeRows, .beyondRepresentativeTablePoint])
-    }
-
-    func testVelviaInterpolationUsesStopSpaceEvaluatorMath() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 12
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .interpolatedWithinTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinInterpretedRange)
-        XCTAssertEqual(result.metadata.warningLevel, .note)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            stopSpaceEstimate(
-                meteredExposureSeconds: 12,
-                lowerMeteredSeconds: 8,
-                lowerStopDelta: 0.5,
-                upperMeteredSeconds: 16,
-                upperStopDelta: 2.0 / 3.0
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [8, 16])
-        XCTAssertEqual(referencedRows.map(\.annotationSummary), ["7.5M", "10M"])
-    }
-
-    func testMismatchedQuantifiedFamiliesDoNotAssembleEstimatedResult() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityProfile(
-                id: "mixed-estimation-families",
-                name: "Mixed estimation families",
-                source: ReciprocitySourceProvenance(
-                    kind: .manufacturerPublished,
-                    authority: .official,
-                    confidence: .high,
-                    publisher: "Test"
-                ),
-                rules: [
-                    .table(
-                        TableReciprocityRule(
-                            entries: [
-                                ReciprocityTableEntry(
-                                    meteredExposure: .exactSeconds(1),
-                                    adjustments: [
-                                        .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 2)))
-                                    ]
-                                ),
-                                ReciprocityTableEntry(
-                                    meteredExposure: .exactSeconds(10),
-                                    adjustments: [
-                                        .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2)))
-                                    ]
-                                )
-                            ]
-                        )
-                    )
-                ]
-            ),
-            meteredExposureSeconds: 5
-        )
-
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertNil(result.metadata.estimationFamily)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.notes.map(\.token), [.unsupportedByPolicy])
-    }
-
-    func testVelviaExplicitStopSignalOverridesAtExactBoundary() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 64
-        )
-
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondPolicyLimit)
-        XCTAssertEqual(result.metadata.warningLevel, .strongWarning)
-        XCTAssertEqual(
-            result.metadata.notes.map(\.token),
-            [.explicitManufacturerStopSignal, .unsupportedByPolicy]
-        )
-        XCTAssertEqual(result.metadata.referencedRows?.map(\.role), [.stopSignal])
-    }
-
-    func testVelviaStopSignalAlsoOverridesBeyondBoundary() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 80
-        )
-
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertEqual(result.metadata.warningLevel, .strongWarning)
-        XCTAssertEqual(result.metadata.referencedRows?.map(\.role), [.stopSignal])
-    }
-
-    // MARK: - Velvia 50 threshold-to-table transition range
-
-    func testVelviaAtOneSecondReturnsThresholdNoCorrection() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 1
-        )
-
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1, accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
-        XCTAssertNil(result.metadata.referencedRows)
-    }
-
-    func testVelviaAtTwoSecondsReturnsExtrapolatedNotUnsupported() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 2
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            stopSpaceEstimate(
-                meteredExposureSeconds: 2,
-                lowerMeteredSeconds: 4,
-                lowerStopDelta: 1.0 / 3.0,
-                upperMeteredSeconds: 8,
-                upperStopDelta: 0.5
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [4, 8])
-        XCTAssertEqual(referencedRows.map(\.role), [.representativeAnchor, .representativeAnchor])
-    }
-
-    func testVelviaAtFourSecondsRemainsExactTablePoint() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 4
-        )
-
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 4 * pow(2.0, 1.0 / 3.0), accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-    }
-
-    func testVelviaAtEightSecondsRemainsExactTablePoint() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 8
-        )
-
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 8 * pow(2.0, 0.5), accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-    }
-
-    func testVelviaAtFifteenSecondsRemainsInterpolatedWithinTable() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 15
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .interpolatedWithinTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            stopSpaceEstimate(
-                meteredExposureSeconds: 15,
-                lowerMeteredSeconds: 8,
-                lowerStopDelta: 0.5,
-                upperMeteredSeconds: 16,
-                upperStopDelta: 2.0 / 3.0
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [8, 16])
-    }
-
-    func testVelviaAtSixtySecondsRemainsExtrapolatedBelowStopSignal() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 60
-        )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
-
-        XCTAssertEqual(result.metadata.basis, .extrapolatedBeyondTable)
-        XCTAssertEqual(result.metadata.estimationFamily, .stopSpace)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            stopSpaceEstimate(
-                meteredExposureSeconds: 60,
-                lowerMeteredSeconds: 16,
-                lowerStopDelta: 2.0 / 3.0,
-                upperMeteredSeconds: 32,
-                upperStopDelta: 1.0
-            ),
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [16, 32])
-    }
-
-    func testTableOnlyProfileBelowFirstEntryWithoutThresholdRemainsUnsupported() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 0.5
-        )
-
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-    }
-
-    func testPortraThresholdNoCorrectionRemainsNonQuantifiedContinuationBoundary() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
+            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
             meteredExposureSeconds: 0.5
         )
 
@@ -387,457 +23,235 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
         XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
         XCTAssertEqual(result.metadata.warningLevel, .none)
-        XCTAssertEqual(result.metadata.notes.map(\.token), [.thresholdGuidanceOnly])
-        XCTAssertNil(result.metadata.referencedRows)
+        XCTAssertEqual(result.metadata.notes.first?.token, .thresholdGuidanceOnly)
     }
 
-    func testPortraAdvisoryOnlyBeyondOfficialRangeDoesNotFabricateCorrectedTime() {
+    func testThresholdHandoffWithFormulaUsesNoCorrectionBasis() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
-            meteredExposureSeconds: 4
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            meteredExposureSeconds: 0.5
         )
 
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .advisoryOnlyBeyondOfficialRange)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
-        XCTAssertEqual(result.metadata.warningLevel, .note)
-        XCTAssertEqual(
-            result.metadata.notes.map(\.token),
-            [.advisoryContinuationOnly, .beyondOfficialQuantifiedRange]
-        )
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
     }
 
-    func testHP5FormulaProfileRemainsQuantifiedAtLongMeteredExposureWithoutExplicitUpperBoundary() {
+    // MARK: - Formula-derived
+
+    func testFormulaProfileWithinSupportedRangeIsFormulaDerived() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            meteredExposureSeconds: 100
+        )
+
+        XCTAssertEqual(result.metadata.basis, .formulaDerived)
+        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
+        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(100, 1.31), accuracy: 0.0001)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+    }
+
+    func testFormulaProfileWithoutExplicitMaxRemainsQuantifiedAtVeryLongInputs() {
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
             meteredExposureSeconds: 8_192
         )
 
         XCTAssertEqual(result.metadata.basis, .formulaDerived)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
         XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(8_192, 1.31), accuracy: 0.0001)
-        XCTAssertNotEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
     }
 
-    func testFormulaProfileBecomesUnsupportedOnlyWhenExplicitUpperBoundaryExists() {
+    // MARK: - Formula past its supported boundary
+
+    func testFormulaProfileBecomesUnsupportedPastSupportedRange() {
         let result = evaluator.evaluate(
-            profile: ReciprocityProfile(
-                id: "bounded-formula-profile",
-                name: "Bounded formula",
-                source: ReciprocitySourceProvenance(
-                    kind: .manufacturerPublished,
-                    authority: .official,
-                    confidence: .high,
-                    publisher: "Test Publisher"
-                ),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 600),
-                            formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P"),
-                            notes: ["Exponent P = 1.31."]
-                        )
-                    )
-                ]
-            ),
+            profile: ReciprocityPolicyScenarioFactory.formulaBoundedProfile(),
             meteredExposureSeconds: 601
         )
 
         XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        // An explicit upper boundary flips the basis to unsupported,
-        // but the formula keeps producing a numeric extrapolation
-        // past the boundary so the result stays actionable.
         XCTAssertTrue(
             result.hasCalculatedExposureTime,
             "Bounded formula past its supported range carries a numeric extrapolation."
         )
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            pow(601.0, 1.31),
-            accuracy: 1.0
-        )
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(601.0, 1.31), accuracy: 1.0)
         XCTAssertEqual(
             result.metadata.notes.map(\.token),
             [.beyondOfficialQuantifiedRange, .unsupportedByPolicy]
         )
     }
 
-    func testAgfapanArchivalOfficialExactResultCarriesArchivalMetadata() throws {
+    func testFormulaProfileWithHardStopReturnsUnsupportedWithoutCorrectedValue() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.agfaArchivalProfile(),
-            meteredExposureSeconds: 10
+            profile: ReciprocityPolicyScenarioFactory.formulaHardStopProfile(),
+            meteredExposureSeconds: 150
         )
-        let referencedRows = try XCTUnwrap(result.metadata.referencedRows)
 
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 40, accuracy: 0.0001)
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .archivalOfficial)
-        XCTAssertEqual(result.metadata.rangeStatus, .withinStatedRange)
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertNil(result.correctedExposureSeconds)
+    }
+
+    // MARK: - Limited guidance
+
+    func testLimitedGuidanceBeyondThresholdReturnsNoQuantifiedPrediction() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            meteredExposureSeconds: 4
+        )
+
+        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
+        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
+        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
         XCTAssertEqual(result.metadata.warningLevel, .note)
         XCTAssertEqual(
             result.metadata.notes.map(\.token),
-            [.exactManufacturerTablePoint, .archivalOfficialSource]
+            [.limitedGuidanceContinuationOnly, .beyondOfficialQuantifiedRange]
         )
-        XCTAssertEqual(try referencedRows.map(exactSeconds), [10])
     }
 
-    func testUnofficialSecondaryProfileMapsSourceAuthorityImpact() {
+    // MARK: - Unsupported
+
+    func testProfileWithNoApplicableRuleIsUnsupported() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraSecondaryProfile(),
-            meteredExposureSeconds: 2
-        )
-
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 3, accuracy: 0.0001)
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .unofficialSecondary)
-        XCTAssertEqual(result.metadata.warningLevel, .caution)
-        XCTAssertEqual(
-            result.metadata.notes.map(\.token),
-            [.exactManufacturerTablePoint, .unofficialSecondarySource]
-        )
-    }
-
-    func testUserDefinedProfileMapsSourceAuthorityImpact() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.customUserDefinedProfile(),
-            meteredExposureSeconds: 1
-        )
-
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1.5, accuracy: 0.0001)
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .userDefined)
-        XCTAssertEqual(result.metadata.warningLevel, .caution)
-        XCTAssertEqual(
-            result.metadata.notes.map(\.token),
-            [.exactManufacturerTablePoint, .userDefinedSource]
-        )
-    }
-
-    func testPolicyResultRoundTripPreservesMetadataShape() throws {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 5
-        )
-
-        let data = try JSONEncoder().encode(result)
-        let decoded = try JSONDecoder().decode(ReciprocityResult.self, from: data)
-
-        XCTAssertEqual(decoded, result)
-        XCTAssertEqual(decoded.hasCalculatedExposureTime, true)
-    }
-
-    /// Table-driven rejection contract for the legacy `ReciprocityResult`
-    /// 7-field shape. Each row pins one shape-vs-basis contradiction that
-    /// must surface as `DecodingError.dataCorrupted` carrying a substring
-    /// that names the offending invariant. Each row reads as
-    /// "this combination of fields is invalid; the decoder must flag it
-    /// with this message fragment."
-    func testDecodingRejectsContradictoryLegacyShapePayloads() {
-        struct Rejection {
-            let label: String
-            let json: String
-            let expectedMessageFragment: String
-        }
-        let rejections: [Rejection] = [
-            Rejection(
-                label: "calculated flag false while a corrected value is present",
-                json: """
-                {
-                  "meteredExposureSeconds": 10,
-                  "correctedExposureSeconds": 50,
-                  "hasCalculatedExposureTime": false,
-                  "metadata": {
-                    "basis": "exactTablePoint",
-                    "sourceAuthorityImpact": "currentOfficial",
-                    "rangeStatus": "withinStatedRange",
-                    "warningLevel": "none",
-                    "notes": [],
-                    "referencedRows": null
-                  }
-                }
-                """,
-                expectedMessageFragment: "hasCalculatedExposureTime"
-            ),
-            Rejection(
-                label: "exact-table-point basis paired with an estimation family",
-                json: """
-                {
-                  "meteredExposureSeconds": 10,
-                  "correctedExposureSeconds": 50,
-                  "hasCalculatedExposureTime": true,
-                  "metadata": {
-                    "basis": "exactTablePoint",
-                    "sourceAuthorityImpact": "currentOfficial",
-                    "rangeStatus": "withinStatedRange",
-                    "warningLevel": "none",
-                    "estimationFamily": "logLog",
-                    "notes": [],
-                    "referencedRows": null
-                  }
-                }
-                """,
-                expectedMessageFragment: "must not carry an estimation family"
-            ),
-            Rejection(
-                label: "interpolated basis missing the estimation family",
-                json: """
-                {
-                  "meteredExposureSeconds": 5,
-                  "correctedExposureSeconds": 15,
-                  "hasCalculatedExposureTime": true,
-                  "metadata": {
-                    "basis": "interpolatedWithinTable",
-                    "sourceAuthorityImpact": "currentOfficial",
-                    "rangeStatus": "withinInterpretedRange",
-                    "warningLevel": "note",
-                    "notes": [],
-                    "referencedRows": null
-                  }
-                }
-                """,
-                expectedMessageFragment: "must carry an estimation family"
-            ),
-            Rejection(
-                label: "no-correction threshold returning a corrected != metered value",
-                json: """
-                {
-                  "meteredExposureSeconds": 0.5,
-                  "correctedExposureSeconds": 0.75,
-                  "hasCalculatedExposureTime": true,
-                  "metadata": {
-                    "basis": "officialThresholdNoCorrection",
-                    "sourceAuthorityImpact": "currentOfficial",
-                    "rangeStatus": "withinStatedRange",
-                    "warningLevel": "none",
-                    "notes": [],
-                    "referencedRows": null
-                  }
-                }
-                """,
-                expectedMessageFragment: "corrected exposure equal to metered exposure"
-            ),
-            Rejection(
-                label: "advisory-only basis carrying a corrected exposure",
-                json: """
-                {
-                  "meteredExposureSeconds": 4,
-                  "correctedExposureSeconds": 8,
-                  "hasCalculatedExposureTime": true,
-                  "metadata": {
-                    "basis": "advisoryOnlyBeyondOfficialRange",
-                    "sourceAuthorityImpact": "currentOfficial",
-                    "rangeStatus": "beyondLastRepresentativePoint",
-                    "warningLevel": "note",
-                    "notes": [],
-                    "referencedRows": null
-                  }
-                }
-                """,
-                expectedMessageFragment: "must not return a corrected exposure time"
-            ),
-        ]
-
-        for rejection in rejections {
-            XCTAssertThrowsError(
-                try JSONDecoder().decode(
-                    ReciprocityResult.self,
-                    from: Data(rejection.json.utf8)
+            profile: ReciprocityProfile(
+                id: "empty-profile",
+                name: "Empty profile",
+                source: ReciprocitySourceProvenance(
+                    kind: .manufacturerPublished,
+                    authority: .official,
+                    confidence: .high,
+                    publisher: "Test"
                 ),
-                "[\(rejection.label)] decoder must reject the payload."
-            ) { error in
-                guard case let DecodingError.dataCorrupted(context) = error else {
-                    return XCTFail("[\(rejection.label)] expected DecodingError.dataCorrupted, got \(error)")
-                }
-                XCTAssertTrue(
-                    context.debugDescription.contains(rejection.expectedMessageFragment),
-                    "[\(rejection.label)] expected message to contain '\(rejection.expectedMessageFragment)', got: \(context.debugDescription)"
-                )
-            }
-        }
-    }
-
-    func testDecodingAllowsUnsupportedResultThatReturnsCorrectedExposure() throws {
-        // Unsupported results may carry a formula-extrapolated
-        // numeric corrected exposure. Legacy-shape input that includes
-        // the corrected value must round-trip to the unsupported case
-        // with the value preserved. Older snapshots that omit the
-        // field decode unchanged (covered by legacy-shape baseline).
-        let json = """
-        {
-          "meteredExposureSeconds": 1000,
-          "correctedExposureSeconds": 1200,
-          "hasCalculatedExposureTime": true,
-          "metadata": {
-            "basis": "unsupportedOutOfPolicyRange",
-            "sourceAuthorityImpact": "currentOfficial",
-            "rangeStatus": "beyondPolicyLimit",
-            "warningLevel": "strongWarning",
-            "notes": [],
-            "referencedRows": null
-          }
-        }
-        """
-
-        let decoded = try JSONDecoder().decode(
-            ReciprocityResult.self,
-            from: Data(json.utf8)
+                rules: []
+            ),
+            meteredExposureSeconds: 10
         )
 
-        XCTAssertEqual(decoded.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertEqual(decoded.correctedExposureSeconds, 1200)
-        XCTAssertTrue(decoded.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertFalse(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.metadata.notes.first?.token, .unsupportedByPolicy)
     }
 
-    private func exactSeconds(_ row: ReciprocityTableRowReference) throws -> Double {
-        guard case let .exactSeconds(value) = row.meteredExposure else {
-            throw NSError(domain: "ReciprocityCalculationPolicyTests", code: 1)
-        }
+    // MARK: - Authority impact
 
-        return value
+    func testArchivalOfficialProfilePropagatesAuthorityImpact() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .archivalOfficial),
+            meteredExposureSeconds: 100
+        )
+
+        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .archivalOfficial)
+        XCTAssertEqual(result.metadata.notes.last?.token, .archivalOfficialSource)
     }
 
-    private func logLogEstimate(
-        meteredExposureSeconds: Double,
-        lowerMeteredSeconds: Double,
-        lowerCorrectedSeconds: Double,
-        upperMeteredSeconds: Double,
-        upperCorrectedSeconds: Double
-    ) -> Double {
-        let slope = log(upperCorrectedSeconds / lowerCorrectedSeconds)
-            / log(upperMeteredSeconds / lowerMeteredSeconds)
-        return lowerCorrectedSeconds * pow(meteredExposureSeconds / lowerMeteredSeconds, slope)
+    func testUnofficialSecondaryProfilePropagatesAuthorityImpact() {
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .unofficialSecondary),
+            meteredExposureSeconds: 100
+        )
+
+        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .unofficialSecondary)
+        XCTAssertEqual(result.metadata.notes.last?.token, .unofficialSecondarySource)
+        XCTAssertEqual(result.metadata.warningLevel, .caution)
     }
 
-    private func stopSpaceEstimate(
-        meteredExposureSeconds: Double,
-        lowerMeteredSeconds: Double,
-        lowerStopDelta: Double,
-        upperMeteredSeconds: Double,
-        upperStopDelta: Double
-    ) -> Double {
-        let intervalStops = log2(upperMeteredSeconds / lowerMeteredSeconds)
-        let progressStops = log2(meteredExposureSeconds / lowerMeteredSeconds)
-        let interpolatedStopDelta = lowerStopDelta
-            + ((upperStopDelta - lowerStopDelta) * (progressStops / intervalStops))
-        return meteredExposureSeconds * pow(2.0, interpolatedStopDelta)
+    // MARK: - Default formula no-correction handoff
+
+    func testFormulaOnlyProfileBelowOneSecondReturnsNoCorrection() {
+        let profile = ReciprocityProfile(
+            id: "unofficial-portra-400",
+            name: "Unofficial practical",
+            source: ReciprocitySourceProvenance(
+                kind: .thirdPartyPublication,
+                authority: .unofficial,
+                confidence: .low,
+                publisher: ""
+            ),
+            rules: [
+                .formula(FormulaReciprocityRule(formula: ReciprocityFormula(exponent: 1.34)))
+            ]
+        )
+
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
+    }
+
+    // MARK: - Correction invariant
+
+    func testCorrectedNeverShorterThanMetered() {
+        // Synthetic formula with sub-unit exponent: `Tc = Tm^0.5` —
+        // produces corrected values shorter than metered for inputs
+        // above 1 s (e.g. 2 → √2 ≈ 1.414). The clamp must reclassify
+        // those inputs to threshold no-correction so a reciprocity
+        // correction can never shorten the adjusted shutter.
+        let profile = ReciprocityProfile(
+            id: "shorter-corrected-formula",
+            name: "Synthetic",
+            source: ReciprocitySourceProvenance(
+                kind: .manufacturerPublished,
+                authority: .official,
+                confidence: .high,
+                publisher: "Test"
+            ),
+            rules: [
+                .formula(FormulaReciprocityRule(
+                    meteredRange: ReciprocityTimeRange(minimumSeconds: 1),
+                    formula: ReciprocityFormula(exponent: 0.5)
+                )),
+            ]
+        )
+
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 2)
+
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 2, accuracy: 0.0001)
     }
 }
 
 enum ReciprocityPolicyScenarioFactory {
-    static func triXProfile() -> ReciprocityProfile {
+    /// HP5+-shaped formula profile (Tc = Tm^1.31 above 1s). Used as
+    /// the canonical formula profile for tests that don't care about
+    /// the manufacturer. Authority maps from the policy
+    /// authority-impact enum so a single scenario can stand in for
+    /// archival/secondary/user-defined variants.
+    static func hp5FormulaProfile(
+        authority: ReciprocitySourceAuthorityImpact = .currentOfficial
+    ) -> ReciprocityProfile {
         ReciprocityProfile(
-            id: "kodak-tri-x-official-table",
-            name: "Official table",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerPublished,
-                authority: .official,
-                confidence: .high,
-                publisher: "Kodak",
-                title: "Reciprocity data",
-                citation: "Data sheet"
-            ),
-            rules: [
-                .table(
-                    TableReciprocityRule(
-                        entries: [
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(1),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                    .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 2))),
-                                    .development(DevelopmentAdjustment(instruction: "-10% development", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(10),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2))),
-                                    .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 10, correctedSeconds: 50))),
-                                    .development(DevelopmentAdjustment(instruction: "-20% development", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(100),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 3))),
-                                    .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 100, correctedSeconds: 1_200))),
-                                    .development(DevelopmentAdjustment(instruction: "-30% development", note: nil))
-                                ]
-                            )
-                        ]
-                    )
-                )
-            ]
-        )
-    }
-
-    static func velviaProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "fujifilm-velvia-official-table",
-            name: "Official table and color guidance",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerPublished,
-                authority: .official,
-                confidence: .high,
-                publisher: "Fujifilm",
-                title: "Long exposure guide"
-            ),
+            id: "ilford-hp5-plus-official-formula",
+            name: "Official formula",
+            source: provenance(for: authority, publisher: "Ilford Photo"),
             rules: [
                 .threshold(
                     ThresholdReciprocityRule(
-                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 1.0 / 4000.0, maximumSeconds: 1)
+                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1),
+                        notes: ["No compensation required at 1 second or less."]
                     )
                 ),
-                .table(
-                    TableReciprocityRule(
-                        entries: [
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(4),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1.0 / 3.0))),
-                                    .colorFilter(ColorFilterRecommendation(filterName: "5M", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(8),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0.5))),
-                                    .colorFilter(ColorFilterRecommendation(filterName: "7.5M", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(16),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2.0 / 3.0))),
-                                    .colorFilter(ColorFilterRecommendation(filterName: "10M", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(32),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                    .colorFilter(ColorFilterRecommendation(filterName: "12.5M", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(64),
-                                adjustments: [
-                                    .warning(ReciprocityWarning(
-                                        severity: .notRecommended,
-                                        message: "64 sec is not recommended."
-                                    ))
-                                ]
-                            )
-                        ]
+                .formula(
+                    FormulaReciprocityRule(
+                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001),
+                        formula: ReciprocityFormula(
+                            exponent: 1.31,
+                            equation: "Tc = Tm^P"
+                        ),
+                        notes: ["Exponent P = 1.31."]
                     )
-                )
+                ),
             ]
         )
     }
 
-    static func portraOfficialProfile() -> ReciprocityProfile {
+    /// Threshold + limited-guidance profile shape used by Kodak
+    /// color negatives (Portra / Ektar / Gold).
+    static func portraLimitedGuidanceProfile() -> ReciprocityProfile {
         ReciprocityProfile(
             id: "kodak-portra-official-threshold",
             name: "Official threshold guidance",
@@ -855,342 +269,102 @@ enum ReciprocityPolicyScenarioFactory {
                         notes: ["No correction required in the official range."]
                     )
                 ),
-                .advisory(
-                    AdvisoryReciprocityRule(
+                .limitedGuidance(
+                    LimitedGuidanceReciprocityRule(
                         appliesWhenMetered: ReciprocityTimeRange(minimumSeconds: 1),
                         adjustments: [
-                            .note(ReciprocityNote(text: "Longer exposures: test under your conditions."))
+                            .note(ReciprocityNote(text: "Longer exposures: test under your conditions.")),
                         ]
-                    )
-                )
-            ]
-        )
-    }
-
-    static func portraSecondaryProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "kodak-portra-secondary-table",
-            name: "Secondary reference table",
-            source: ReciprocitySourceProvenance(
-                kind: .thirdPartyPublication,
-                authority: .unofficial,
-                confidence: .medium,
-                publisher: "Independent reciprocity notes",
-                title: "Field-tested secondary profile"
-            ),
-            rules: [
-                .table(
-                    TableReciprocityRule(
-                        entries: [
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(2),
-                                adjustments: [
-                                    .exposure(.multiplier(MultiplierAdjustment(factor: 1.5)))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(8),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0.5)))
-                                ]
-                            )
-                        ]
-                    )
-                )
-            ]
-        )
-    }
-
-    static func agfaArchivalProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "agfa-archival-official",
-            name: "Archival official profile",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerArchive,
-                authority: .official,
-                confidence: .medium,
-                publisher: "Agfa archive",
-                title: "Archived reciprocity data",
-                sourceVersion: "legacy"
-            ),
-            rules: [
-                .table(
-                    TableReciprocityRule(
-                        entries: [
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(1),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                    .development(DevelopmentAdjustment(instruction: "-10% development", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(10),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2))),
-                                    .development(DevelopmentAdjustment(instruction: "-25% development", note: nil))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(100),
-                                adjustments: [
-                                    .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 3))),
-                                    .development(DevelopmentAdjustment(instruction: "-35% development", note: nil))
-                                ]
-                            )
-                        ]
-                    )
-                )
-            ]
-        )
-    }
-
-    static func hp5FormulaProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "ilford-hp5-plus-official-formula",
-            name: "Official formula",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerPublished,
-                authority: .official,
-                confidence: .high,
-                publisher: "Ilford Photo",
-                title: "Reciprocity characteristics",
-                citation: "Technical information sheet",
-                sourceVersion: "2026"
-            ),
-            rules: [
-                .threshold(
-                    ThresholdReciprocityRule(
-                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1),
-                        notes: ["No compensation required at 1 second or less."]
                     )
                 ),
-                .formula(
-                    FormulaReciprocityRule(
-                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001),
-                        formula: ReciprocityFormula(
-                            exponent: 1.31,
-                            equation: "Tc = Tm^P"
-                        ),
-                        notes: ["Exponent P = 1.31."]
-                    )
-                )
             ]
         )
     }
 
-    static func customUserDefinedProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "custom-user-profile",
-            name: "User-defined table",
-            source: ReciprocitySourceProvenance(
-                kind: .userDefined,
-                authority: .userDefined,
-                confidence: .unknown,
-                publisher: "Local User"
-            ),
-            rules: [
-                .table(
-                    TableReciprocityRule(
-                        entries: [
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(1),
-                                adjustments: [
-                                    .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 1.5)))
-                                ]
-                            ),
-                            ReciprocityTableEntry(
-                                meteredExposure: .range(ReciprocityTimeRange(minimumSeconds: 5, maximumSeconds: 10)),
-                                adjustments: [
-                                    .exposure(.multiplier(MultiplierAdjustment(factor: 1.8))),
-                                    .note(ReciprocityNote(text: "User-entered estimate."))
-                                ]
-                            )
-                        ]
-                    )
-                )
-            ]
-        )
-    }
-
-    /// Synthetic formula profile with an explicit upper boundary so the
-    /// `unsupportedFormulaBoundary` evaluator branch can be reached without
-    /// modifying any catalog film. Mirrors the HP5 shape (exponent 1.31)
-    /// but caps `meteredRange` at 30s.
+    /// Formula profile whose `meteredRange.maximumSeconds = 600`
+    /// triggers the formula-extrapolated unsupported path: past the
+    /// boundary the result is reclassified as `unsupported` but the
+    /// formula still produces a numeric extrapolation.
     static func formulaBoundedProfile() -> ReciprocityProfile {
         ReciprocityProfile(
-            id: "synthetic-formula-bounded-30s",
-            name: "Bounded formula profile",
+            id: "bounded-formula-profile",
+            name: "Bounded formula",
             source: ReciprocitySourceProvenance(
                 kind: .manufacturerPublished,
                 authority: .official,
                 confidence: .high,
-                publisher: "Synthetic Vendor",
-                title: "Bounded reciprocity formula"
+                publisher: "Test Publisher"
             ),
             rules: [
-                .threshold(
-                    ThresholdReciprocityRule(
-                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
-                    )
-                ),
                 .formula(
                     FormulaReciprocityRule(
-                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001, maximumSeconds: 30),
-                        formula: ReciprocityFormula(
-                            exponent: 1.31,
-                            equation: "Tc = Tm^P"
-                        ),
-                        notes: ["Exponent P = 1.31 within bounded range."]
+                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 600),
+                        formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P")
                     )
-                )
+                ),
             ]
         )
     }
 
-    /// Variant of `triXProfile` with archival-official source. Used to
-    /// exercise the warning-level matrix on quantified table paths.
-    static func triXArchivalProfile() -> ReciprocityProfile {
+    /// Formula profile whose `extrapolateBeyondMaximum = false` makes
+    /// the manufacturer maximum a hard stop signal: past the boundary
+    /// the result is unsupported with no corrected exposure (ADOX
+    /// CMS 20 II's `>= 100 s` boundary uses this shape).
+    static func formulaHardStopProfile() -> ReciprocityProfile {
         ReciprocityProfile(
-            id: "synthetic-tri-x-archival",
-            name: "Archival Tri-X variant",
+            id: "hard-stop-formula-profile",
+            name: "Hard-stop formula",
             source: ReciprocitySourceProvenance(
-                kind: .manufacturerArchive,
+                kind: .manufacturerPublished,
                 authority: .official,
-                confidence: .medium,
-                publisher: "Kodak archive",
-                title: "Archived Tri-X reciprocity",
-                sourceVersion: "legacy"
+                confidence: .high,
+                publisher: "Test Publisher"
             ),
-            rules: triXProfile().rules
+            rules: [
+                .formula(
+                    FormulaReciprocityRule(
+                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 100),
+                        formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P"),
+                        extrapolateBeyondMaximum: false
+                    )
+                ),
+            ]
         )
     }
 
-    /// Variant of `triXProfile` with unofficial-secondary source.
-    static func triXSecondaryProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-tri-x-secondary",
-            name: "Secondary Tri-X variant",
-            source: ReciprocitySourceProvenance(
+    private static func provenance(
+        for authority: ReciprocitySourceAuthorityImpact,
+        publisher: String
+    ) -> ReciprocitySourceProvenance {
+        switch authority {
+        case .currentOfficial:
+            return ReciprocitySourceProvenance(
+                kind: .manufacturerPublished,
+                authority: .official,
+                confidence: .high,
+                publisher: publisher
+            )
+        case .archivalOfficial:
+            return ReciprocitySourceProvenance(
+                kind: .manufacturerArchive,
+                authority: .official,
+                confidence: .medium,
+                publisher: publisher
+            )
+        case .unofficialSecondary:
+            return ReciprocitySourceProvenance(
                 kind: .thirdPartyPublication,
                 authority: .unofficial,
-                confidence: .medium,
-                publisher: "Independent reciprocity notes"
-            ),
-            rules: triXProfile().rules
-        )
-    }
-
-    /// Variant of `triXProfile` with user-defined source.
-    static func triXUserDefinedProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-tri-x-user-defined",
-            name: "User-defined Tri-X variant",
-            source: ReciprocitySourceProvenance(
+                confidence: .low,
+                publisher: publisher
+            )
+        case .userDefined:
+            return ReciprocitySourceProvenance(
                 kind: .userDefined,
                 authority: .userDefined,
                 confidence: .unknown,
-                publisher: "Local User"
-            ),
-            rules: triXProfile().rules
-        )
-    }
-
-    /// Variant of `hp5FormulaProfile` with archival source. Used to
-    /// exercise the warning-level matrix on the `formulaDerived` branch.
-    static func hp5ArchivalFormulaProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-hp5-archival",
-            name: "Archival HP5 formula",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerArchive,
-                authority: .official,
-                confidence: .medium,
-                publisher: "Ilford archive",
-                title: "Archived reciprocity",
-                sourceVersion: "legacy"
-            ),
-            rules: hp5FormulaProfile().rules
-        )
-    }
-
-    /// Variant of `hp5FormulaProfile` with user-defined source.
-    static func hp5UserDefinedFormulaProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-hp5-user-defined",
-            name: "User-defined HP5 formula",
-            source: ReciprocitySourceProvenance(
-                kind: .userDefined,
-                authority: .userDefined,
-                confidence: .unknown,
-                publisher: "Local User"
-            ),
-            rules: hp5FormulaProfile().rules
-        )
-    }
-
-    /// Variant of `velviaProfile` with archival source so stop-signal
-    /// extrapolation can be re-exercised under a non-current authority.
-    static func velviaArchivalProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-velvia-archival",
-            name: "Archival Velvia variant",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerArchive,
-                authority: .official,
-                confidence: .medium,
-                publisher: "Fujifilm archive",
-                title: "Archived long exposure guide",
-                sourceVersion: "legacy"
-            ),
-            rules: velviaProfile().rules
-        )
-    }
-
-    /// Variant of `portraOfficialProfile` with archival source so the
-    /// advisory-only branch can be exercised across authorities.
-    static func portraArchivalAdvisoryProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-portra-archival-advisory",
-            name: "Archival Portra advisory",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerArchive,
-                authority: .official,
-                confidence: .medium,
-                publisher: "Kodak archive",
-                title: "Archived advisory"
-            ),
-            rules: portraOfficialProfile().rules
-        )
-    }
-
-    /// Variant of `portraOfficialProfile` with secondary source.
-    static func portraSecondaryAdvisoryProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-portra-secondary-advisory",
-            name: "Secondary Portra advisory",
-            source: ReciprocitySourceProvenance(
-                kind: .thirdPartyPublication,
-                authority: .unofficial,
-                confidence: .medium,
-                publisher: "Independent reciprocity notes"
-            ),
-            rules: portraOfficialProfile().rules
-        )
-    }
-
-    /// Variant of `portraOfficialProfile` with user-defined source.
-    static func portraUserDefinedAdvisoryProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "synthetic-portra-user-defined-advisory",
-            name: "User-defined Portra advisory",
-            source: ReciprocitySourceProvenance(
-                kind: .userDefined,
-                authority: .userDefined,
-                confidence: .unknown,
-                publisher: "Local User"
-            ),
-            rules: portraOfficialProfile().rules
-        )
+                publisher: publisher
+            )
+        }
     }
 }

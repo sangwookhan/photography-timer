@@ -8,15 +8,15 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     func testBundledLaunchPresetFilmCatalogLoadsSuccessfully() throws {
         let films = try LaunchPresetFilmCatalogLoader().loadBundledCatalog()
-        XCTAssertEqual(films.count, LaunchPresetFilmCatalogTests.expectedLaunchScopeCount)
-        XCTAssertEqual(films.map(\.canonicalStockName), LaunchPresetFilmCatalogTests.expectedCanonicalStockOrder)
+        XCTAssertEqual(films.count, LaunchCatalogExpectations.scopeCount)
+        XCTAssertEqual(films.map(\.canonicalStockName), LaunchCatalogExpectations.canonicalStockOrder)
     }
 
     func testBundledLaunchPresetFilmCatalogPreservesExpectedSelectorOrdering() {
-        XCTAssertEqual(LaunchPresetFilmCatalog.films.count, LaunchPresetFilmCatalogTests.expectedLaunchScopeCount)
+        XCTAssertEqual(LaunchPresetFilmCatalog.films.count, LaunchCatalogExpectations.scopeCount)
         XCTAssertEqual(
             LaunchPresetFilmCatalog.films.map(\.canonicalStockName),
-            LaunchPresetFilmCatalogTests.expectedCanonicalStockOrder
+            LaunchCatalogExpectations.canonicalStockOrder
         )
     }
 
@@ -203,20 +203,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     // MARK: - Source provenance preservation
 
     func testLaunchCatalogPreservesPublisherAndCitationsForBatchExemplars() throws {
-        let exemplars: [(canonical: String, publisherFragment: String, citationContains: String?)] = [
-            ("HP5 Plus", "Ilford", "Technical information sheet"),
-            ("Tri-X 400", "Kodak", "F-4017"),
-            ("T-MAX 100", "Kodak", "F-4016"),
-            ("Portra 400", "Kodak", "E-4050"),
-            ("Velvia 50", "Fujifilm", nil),
-            ("Acros II", "Fujifilm", nil),
-            ("Fomapan 100 Classic", "FOMA", nil),
-            ("RPX 100", "Rollei", "RPX 100 data sheet"),
-            ("CHS 100 II", "ADOX", nil),
-            ("Ektachrome E100", "Kodak", "E-4000"),
-        ]
-
-        for exemplar in exemplars {
+        for exemplar in SourceExemplarExpectation.batchExemplars {
             let film = try XCTUnwrap(
                 LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == exemplar.canonical }),
                 "Missing exemplar film '\(exemplar.canonical)'."
@@ -326,59 +313,6 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
-    func testLaunchCatalogTableAnchorsAreFamilyConsistent() throws {
-        // Structural invariant guarding against the T-MAX 100 class of
-        // mapping bug. A table profile whose quantified anchors disagree
-        // on estimation family makes
-        // ReciprocityCalculationPolicyEvaluator.Estimation.estimate return
-        // nil for any bracketed metered value, silently routing
-        // user-visible exposures into the unsupported branch even though
-        // the source data sheet covers them. Catch that at fixture-load
-        // time so future catalog edits cannot reintroduce it.
-        for film in LaunchPresetFilmCatalog.films {
-            for profile in film.profiles {
-                for rule in profile.rules {
-                    guard case let .table(table) = rule else { continue }
-                    let families: Set<ReciprocityTableEstimationFamily> = Set(
-                        table.entries.compactMap(estimationFamily(for:))
-                    )
-                    XCTAssertLessThanOrEqual(
-                        families.count,
-                        1,
-                        "\(film.canonicalStockName): table mixes estimation families \(families). Add correctedTime (or the matching family) to every quantified row so the policy can interpolate."
-                    )
-                }
-            }
-        }
-    }
-
-    private func estimationFamily(for entry: ReciprocityTableEntry) -> ReciprocityTableEstimationFamily? {
-        // Mirrors TableSelector.quantifiedPoint's family selection without
-        // depending on the private type: stop-signal rows are excluded;
-        // a row with correctedTime is logLog; a row with only stopDelta /
-        // multiplier is stopSpace; everything else is non-quantified.
-        var hasCorrectedTime = false
-        var hasStopOrMultiplier = false
-        var isStopSignal = false
-        for adjustment in entry.adjustments {
-            switch adjustment {
-            case let .exposure(exposureAdjustment):
-                switch exposureAdjustment {
-                case .correctedTime: hasCorrectedTime = true
-                case .stopDelta, .multiplier: hasStopOrMultiplier = true
-                }
-            case let .warning(warning) where warning.severity == .notRecommended:
-                isStopSignal = true
-            default:
-                continue
-            }
-        }
-        if isStopSignal { return nil }
-        if hasCorrectedTime { return .logLog }
-        if hasStopOrMultiplier { return .stopSpace }
-        return nil
-    }
-
     func testKodakTriXFormulaProfileTracksPublished1SecondRow() throws {
         // Tri-X 400 is now formula-based; the published 1 sec row
         // (+1 stop, corrected 2 sec) is preserved as source evidence
@@ -394,15 +328,15 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 0.05)
     }
 
-    func testKodakColorNegativeAdvisoryBeyondThreshold() throws {
+    func testKodakColorNegativeLimitedGuidanceBeyondThreshold() throws {
         let portra = try XCTUnwrap(film(named: "Portra 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: portra.profiles[0], meteredExposureSeconds: 30)
 
-        guard case let .advisoryOnly(payload) = result else {
-            return XCTFail("Expected advisory-only result, got \(result).")
+        guard case let .limitedGuidance(payload) = result else {
+            return XCTFail("Expected limited-guidance result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .advisoryOnlyBeyondOfficialRange)
+        XCTAssertEqual(payload.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
     }
 
     func testKodakColorNegativeNoCorrectionInOfficialRange() throws {
@@ -486,19 +420,25 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     func testEktachromeE100PreservesFiltrationGuidance() throws {
         let e100 = try XCTUnwrap(film(named: "Ektachrome E100"))
-        let advisoryRule = e100.profiles[0].rules.compactMap { rule -> AdvisoryReciprocityRule? in
-            if case let .advisory(advisory) = rule { return advisory }
+        let limitedGuidanceRule = e100.profiles[0].rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
+            if case let .limitedGuidance(rule) = rule { return rule }
             return nil
         }.first
-        let advisory = try XCTUnwrap(advisoryRule, "Ektachrome E100 should carry an advisory rule for the 120 sec filtration guidance.")
+        let rule = try XCTUnwrap(
+            limitedGuidanceRule,
+            "Ektachrome E100 should carry a limited-guidance rule for the 120 sec filtration guidance."
+        )
 
-        let preservesFiltration = advisory.adjustments.contains { adjustment in
+        let preservesFiltration = rule.adjustments.contains { adjustment in
             if case let .colorFilter(filter) = adjustment {
                 return filter.filterName == "CC10R"
             }
             return false
         }
-        XCTAssertTrue(preservesFiltration, "Ektachrome E100 advisory must preserve the published CC10R filtration guidance.")
+        XCTAssertTrue(
+            preservesFiltration,
+            "Ektachrome E100 limited-guidance rule must preserve the published CC10R filtration guidance."
+        )
     }
 
     // MARK: - Loader failure paths (existing coverage retained)
@@ -627,25 +567,6 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private static let expectedLaunchScopeCount = 34
-
-    private static let expectedCanonicalStockOrder: [String] = [
-        // Batch 1 — ILFORD / HARMAN
-        "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
-        "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
-        "Kentmere 100", "Kentmere 200", "Kentmere 400",
-        // Batch 2 — Kodak
-        "Tri-X 400", "T-MAX 100", "T-MAX 400",
-        "Ektar 100", "Portra 160", "Portra 400",
-        "Gold 200", "Ultra Max 400", "Ektachrome E100",
-        // Batch 3 — Fujifilm + FOMA
-        "Acros II", "Velvia 50", "Velvia 100", "Provia 100F",
-        "Fomapan 100 Classic", "Fomapan 200 Creative", "Fomapan 400 Action",
-        // Batch 4 — Rollei + ADOX
-        "RPX 100", "RPX 400", "RETRO 80S", "SUPERPAN 200",
-        "CHS 100 II", "CMS 20 II",
-    ]
-
     private func film(named canonicalStockName: String) -> FilmIdentity? {
         LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName }
     }
@@ -699,4 +620,50 @@ private func XCTAssertThrowsErrorAndReturn<T>(
     } catch {
         return error
     }
+}
+
+/// Static expectations for the bundled launch catalog. Lives at file
+/// scope so the test class body stays under the SwiftLint
+/// `type_body_length` threshold.
+private enum LaunchCatalogExpectations {
+    static let scopeCount = 34
+
+    static let canonicalStockOrder: [String] = [
+        // Batch 1 — ILFORD / HARMAN
+        "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
+        "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
+        "Kentmere 100", "Kentmere 200", "Kentmere 400",
+        // Batch 2 — Kodak
+        "Tri-X 400", "T-MAX 100", "T-MAX 400",
+        "Ektar 100", "Portra 160", "Portra 400",
+        "Gold 200", "Ultra Max 400", "Ektachrome E100",
+        // Batch 3 — Fujifilm + FOMA
+        "Acros II", "Velvia 50", "Velvia 100", "Provia 100F",
+        "Fomapan 100 Classic", "Fomapan 200 Creative", "Fomapan 400 Action",
+        // Batch 4 — Rollei + ADOX
+        "RPX 100", "RPX 400", "RETRO 80S", "SUPERPAN 200",
+        "CHS 100 II", "CMS 20 II",
+    ]
+}
+
+/// Source-provenance exemplar pinned by
+/// `testLaunchCatalogPreservesPublisherAndCitationsForBatchExemplars`.
+/// Replaces a 3-tuple to satisfy SwiftLint's `large_tuple` rule.
+private struct SourceExemplarExpectation {
+    let canonical: String
+    let publisherFragment: String
+    let citationContains: String?
+
+    static let batchExemplars: [SourceExemplarExpectation] = [
+        .init(canonical: "HP5 Plus", publisherFragment: "Ilford", citationContains: "Technical information sheet"),
+        .init(canonical: "Tri-X 400", publisherFragment: "Kodak", citationContains: "F-4017"),
+        .init(canonical: "T-MAX 100", publisherFragment: "Kodak", citationContains: "F-4016"),
+        .init(canonical: "Portra 400", publisherFragment: "Kodak", citationContains: "E-4050"),
+        .init(canonical: "Velvia 50", publisherFragment: "Fujifilm", citationContains: nil),
+        .init(canonical: "Acros II", publisherFragment: "Fujifilm", citationContains: nil),
+        .init(canonical: "Fomapan 100 Classic", publisherFragment: "FOMA", citationContains: nil),
+        .init(canonical: "RPX 100", publisherFragment: "Rollei", citationContains: "RPX 100 data sheet"),
+        .init(canonical: "CHS 100 II", publisherFragment: "ADOX", citationContains: nil),
+        .init(canonical: "Ektachrome E100", publisherFragment: "Kodak", citationContains: "E-4000"),
+    ]
 }

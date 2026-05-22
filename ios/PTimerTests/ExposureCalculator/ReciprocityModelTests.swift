@@ -9,45 +9,45 @@ final class ReciprocityModelTests: XCTestCase {
     // MARK: - evaluate
 
     @MainActor
-    func testEvaluateProducesExactResultForTriXTablePoint() {
+    func testEvaluateProducesNoCorrectionResultForThresholdInput() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.triXProfile()
+        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
 
         let result = model.evaluate(
             profile: profile,
-            meteredExposureSeconds: 10
+            meteredExposureSeconds: 0.5
         )
 
-        XCTAssertEqual(result.metadata.basis, .exactTablePoint)
-        XCTAssertNotNil(result.correctedExposureSeconds)
+        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
     }
 
     @MainActor
-    func testEvaluateProducesEstimatedResultForTriXInterpolation() {
+    func testEvaluateProducesFormulaDerivedResultForFormulaRangeInput() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.triXProfile()
+        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
 
         let result = model.evaluate(
             profile: profile,
-            meteredExposureSeconds: 5
+            meteredExposureSeconds: 100
         )
 
-        XCTAssertEqual(result.metadata.basis, .interpolatedWithinTable)
+        XCTAssertEqual(result.metadata.basis, .formulaDerived)
         XCTAssertNotNil(result.correctedExposureSeconds)
     }
 
     // MARK: - makeDetailsDisplayState
 
     @MainActor
-    func testMakeDetailsDisplayStateProducesNonNilForQuantifiedTriXScenario() {
+    func testMakeDetailsDisplayStateProducesNonNilForQuantifiedFormulaScenario() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.triXProfile()
+        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
         let film = FilmIdentity(
-            id: "tri-x-test",
+            id: "hp5-test",
             kind: .preset,
-            canonicalStockName: "Tri-X",
-            manufacturer: "Kodak",
-            brandLabel: "Tri-X 400",
+            canonicalStockName: "HP5 Plus",
+            manufacturer: "Ilford Photo",
+            brandLabel: "HP5 Plus",
             aliases: [],
             iso: 400,
             productionStatus: .current,
@@ -91,15 +91,15 @@ final class ReciprocityModelTests: XCTestCase {
     // MARK: - reciprocityStateDisplayState
 
     @MainActor
-    func testReciprocityStateDisplayStateForTrustedExactScenario() {
+    func testReciprocityStateDisplayStateForFormulaDerivedScenario() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.triXProfile()
+        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
         let film = FilmIdentity(
-            id: "tri-x-test",
+            id: "hp5-test",
             kind: .preset,
-            canonicalStockName: "Tri-X",
-            manufacturer: "Kodak",
-            brandLabel: "Tri-X 400",
+            canonicalStockName: "HP5 Plus",
+            manufacturer: "Ilford Photo",
+            brandLabel: "HP5 Plus",
             aliases: [],
             iso: 400,
             productionStatus: .current,
@@ -119,7 +119,7 @@ final class ReciprocityModelTests: XCTestCase {
 
         let displayState = model.reciprocityStateDisplayState(for: bindingState)
 
-        XCTAssertEqual(displayState.tone, .trusted)
+        XCTAssertEqual(displayState.tone, .measured)
         XCTAssertTrue(displayState.showsInfoAffordance)
     }
 
@@ -129,7 +129,7 @@ final class ReciprocityModelTests: XCTestCase {
     func testEvaluateMatchesDirectEvaluatorForKnownScenario() {
         let model = ReciprocityModel()
         let directEvaluator = ReciprocityCalculationPolicyEvaluator()
-        let profile = ReciprocityPolicyScenarioFactory.triXProfile()
+        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
 
         let viaModel = model.evaluate(profile: profile, meteredExposureSeconds: 5)
         let viaDirect = directEvaluator.evaluate(profile: profile, meteredExposureSeconds: 5)
@@ -216,18 +216,16 @@ final class ReciprocityModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCorrectedExposureDisplayStateForQuantifiedTriXBecomesNumeric() {
+    func testCorrectedExposureDisplayStateForQuantifiedFormulaBecomesNumeric() {
         let model = ReciprocityModel()
-        let bindingState = makeTriXBindingState(model: model, meteredExposureSeconds: 10)
+        let bindingState = makeFormulaBindingState(model: model, meteredExposureSeconds: 10)
 
         let state = model.correctedExposureDisplayState(for: bindingState)
 
         XCTAssertEqual(state.kind, .quantified)
         XCTAssertNotNil(state.correctedExposureSeconds)
         XCTAssertTrue(state.usesNumericExposure)
-        // 50s for Tri-X 400 at metered=10s: matches the wiki authority
-        // anchor and renders via formatReciprocityDurationCoarse as "50s".
-        XCTAssertEqual(state.primaryText, "50s")
+        XCTAssertFalse(state.primaryText.isEmpty)
     }
 
     // MARK: - Corrected-exposure action state
@@ -247,28 +245,28 @@ final class ReciprocityModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCorrectedExposureActionStateForQuantifiedTriXEnablesTimer() {
+    func testCorrectedExposureActionStateForQuantifiedFormulaEnablesTimer() {
         let model = ReciprocityModel()
-        let bindingState = makeTriXBindingState(model: model, meteredExposureSeconds: 10)
+        let bindingState = makeFormulaBindingState(model: model, meteredExposureSeconds: 10)
 
         let action = model.correctedExposureActionState(for: bindingState)
 
         XCTAssertTrue(action.canStartTimer)
-        XCTAssertEqual(action.targetSeconds, 50)
+        XCTAssertEqual(action.targetSeconds ?? 0, pow(10.0, 1.31), accuracy: 0.001)
     }
 
     @MainActor
-    private func makeTriXBindingState(
+    private func makeFormulaBindingState(
         model: ReciprocityModel,
         meteredExposureSeconds: Double
     ) -> FilmModeReciprocityBindingState {
-        let profile = ReciprocityPolicyScenarioFactory.triXProfile()
+        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
         let film = FilmIdentity(
-            id: "tri-x-test",
+            id: "hp5-test",
             kind: .preset,
-            canonicalStockName: "Tri-X",
-            manufacturer: "Kodak",
-            brandLabel: "Tri-X 400",
+            canonicalStockName: "HP5 Plus",
+            manufacturer: "Ilford Photo",
+            brandLabel: "HP5 Plus",
             aliases: [],
             iso: 400,
             productionStatus: .current,

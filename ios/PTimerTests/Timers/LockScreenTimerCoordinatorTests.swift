@@ -4,7 +4,7 @@ import XCTest
 /// Direct tests for `LockScreenTimerCoordinator`.
 ///
 /// Wider integration via the ViewModel lives in
-/// `ExposureCalculatorViewModelTimerIntegrationTests`. These tests
+/// `CalculatorTimerIntegrationTests`. These tests
 /// exercise the coordinator alone: representative selection, sync
 /// idempotence, and exposer call recording. They are faster and
 /// pinpoint coordinator regressions without the ViewModel surface.

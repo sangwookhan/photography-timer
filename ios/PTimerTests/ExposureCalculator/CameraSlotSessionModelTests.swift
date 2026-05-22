@@ -5,7 +5,7 @@ import XCTest
 /// holds only the slot-switching state (active id + inactive
 /// snapshots); slot-aware behavior end-to-end through the ViewModel
 /// facade is covered separately by
-/// `ExposureCalculatorViewModelCameraSlotsTests`.
+/// `CalculatorViewModelCameraSlotsTests`.
 final class CameraSlotSessionModelTests: XCTestCase {
 
     @MainActor
@@ -116,7 +116,7 @@ final class CameraSlotSessionModelTests: XCTestCase {
         let model = CameraSlotSessionModel(
             initialCustomDisplayNames: [
                 .camera1: "Hasselblad 500CM",
-                .camera2: "Mamiya 7"
+                .camera2: "Mamiya 7",
             ]
         )
 
@@ -314,7 +314,7 @@ final class CameraSlotSessionModelTests: XCTestCase {
         // persisted snapshot does not re-assert.
         model.restoreCustomDisplayNames([
             .camera2: "Mamiya 7",
-            .camera4: "Pentax 67"
+            .camera4: "Pentax 67",
         ])
 
         XCTAssertNil(model.customDisplayNames[.camera1])
@@ -329,7 +329,7 @@ final class CameraSlotSessionModelTests: XCTestCase {
         model.restoreCustomDisplayNames([
             .camera1: "  Leica M6  ",
             .camera2: "   ",
-            .camera3: ""
+            .camera3: "",
         ])
 
         XCTAssertEqual(model.customDisplayNames[.camera1], "Leica M6")
@@ -361,7 +361,7 @@ final class CameraSlotSessionModelTests: XCTestCase {
         model.restoreInactiveSnapshots([
             .camera1: camera1Snapshot,
             .camera2: activeShouldBeFiltered,
-            .camera3: camera3Snapshot
+            .camera3: camera3Snapshot,
         ])
 
         XCTAssertEqual(model.snapshot(forInactiveSlot: .camera1), camera1Snapshot)

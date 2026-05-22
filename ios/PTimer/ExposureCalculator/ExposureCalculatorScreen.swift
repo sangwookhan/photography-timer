@@ -1739,7 +1739,7 @@ private struct FilmModeReciprocityStateRow: View {
             return Color(.systemBlue)
         case .caution:
             return Color(.systemOrange)
-        case .advisory:
+        case .limitedGuidance:
             return Color(.systemBrown)
         case .unsupported:
             return Color(.systemRed)
@@ -1754,7 +1754,7 @@ private struct FilmModeReciprocityStateRow: View {
             return Color(.systemBlue).opacity(0.14)
         case .caution:
             return Color(.systemOrange).opacity(0.16)
-        case .advisory:
+        case .limitedGuidance:
             return Color(.systemBrown).opacity(0.14)
         case .unsupported:
             return Color(.systemRed).opacity(0.14)
@@ -1829,7 +1829,7 @@ private struct CorrectedExposureDisplayBlock: View {
         switch kind {
         case .quantified:
             return style.correctedExposurePrimaryFont
-        case .advisory, .unsupported, .noFilmSelected:
+        case .limitedGuidance, .unsupported, .noFilmSelected:
             return .headline.weight(.semibold)
         }
     }
@@ -1838,7 +1838,7 @@ private struct CorrectedExposureDisplayBlock: View {
         switch kind {
         case .quantified:
             return .primary
-        case .advisory:
+        case .limitedGuidance:
             return Color(.systemOrange)
         case .unsupported:
             return Color(.systemRed)
@@ -2072,7 +2072,6 @@ private struct TimerActionView: View {
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
-
 
 /// Boundary for the running-timer preview rail. Hairline top edge
 /// and a barely-perceptible fill mark the rail as a preview surface

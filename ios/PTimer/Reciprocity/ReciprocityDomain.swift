@@ -50,9 +50,9 @@ struct ReciprocityProfile: Codable, Equatable {
     let userMetadata: UserEditableMetadata?
     /// Published manufacturer reference points the user can verify
     /// against. Display-only — the calculation policy evaluator does
-    /// not consume this field, so source evidence cannot hijack the
-    /// calculation basis back to an exact table point even when the
-    /// profile's active calculation is formula-based.
+    /// not consume this field, so source-evidence rows cannot enter
+    /// the calculation as table anchors even when the profile keeps a
+    /// manufacturer reference table on display.
     let sourceEvidence: [ReciprocitySourceEvidenceRow]
 
     init(
@@ -100,18 +100,17 @@ struct ReciprocityProfile: Codable, Equatable {
 
 /// Display-only source-evidence row carried by a `ReciprocityProfile`.
 ///
-/// Mirrors `ReciprocityTableEntry`'s shape but is kept as a separate
-/// type so the calculation policy never reads it as a calculation
-/// table row. The presenter renders these rows so the user can verify
-/// formula-based predictions against the manufacturer's published
-/// reference points.
+/// Carries a manufacturer-published reference point that the presenter
+/// renders so users can verify formula-based predictions against the
+/// published data. The calculation policy never consumes these rows,
+/// so source evidence cannot enter the calculation as a table anchor.
 struct ReciprocitySourceEvidenceRow: Codable, Equatable {
     let meteredExposure: MeteredExposureSelector
     let adjustments: [ReciprocityAdjustment]
     let notes: [String]
     /// `true` for rows preserved as published reference only — the
     /// renderer omits the row from formula-graph fitting markers and
-    /// prefixes it with `*` in the Source reference table so the user
+    /// prefixes it with `*` in the Source reference block so the user
     /// can tell it is not used as a calculation anchor. Used by ADOX
     /// CMS 20 II for its 1/1000 s +1/2 stop guidance row, which is
     /// preserved as published evidence but does not participate in
@@ -150,11 +149,11 @@ struct ReciprocitySourceEvidenceRow: Codable, Equatable {
 extension ReciprocityProfile {
     /// `true` when the profile mixes a formula rule with at least
     /// one manufacturer-published source-evidence row. Such profiles
-    /// were converted from a table-based calculation to formula
-    /// prediction while preserving the published reference, which
-    /// lets presentation surfaces swap "Extrapolated" wording for
-    /// source-range language without affecting source-less formula
-    /// profiles (HP5 Plus etc.).
+    /// were converted from a manufacturer reference table to a formula
+    /// prediction while preserving the published reference, which lets
+    /// presentation surfaces use "Beyond source range" language for
+    /// inputs past the published reference without affecting
+    /// source-less formula profiles (HP5 Plus etc.).
     var isConvertedFormulaProfile: Bool {
         let hasFormulaRule = rules.contains { rule in
             if case .formula = rule { return true }
@@ -217,8 +216,7 @@ enum ReciprocityConfidence: String, Codable, Equatable {
 enum ReciprocityRule: Codable, Equatable {
     case threshold(ThresholdReciprocityRule)
     case formula(FormulaReciprocityRule)
-    case table(TableReciprocityRule)
-    case advisory(AdvisoryReciprocityRule)
+    case limitedGuidance(LimitedGuidanceReciprocityRule)
 
     var kind: ReciprocityRuleKind {
         switch self {
@@ -226,10 +224,8 @@ enum ReciprocityRule: Codable, Equatable {
             return .threshold
         case .formula:
             return .formula
-        case .table:
-            return .table
-        case .advisory:
-            return .advisory
+        case .limitedGuidance:
+            return .limitedGuidance
         }
     }
 
@@ -237,8 +233,7 @@ enum ReciprocityRule: Codable, Equatable {
         case kind
         case threshold
         case formula
-        case table
-        case advisory
+        case limitedGuidance
     }
 
     init(from decoder: Decoder) throws {
@@ -250,10 +245,10 @@ enum ReciprocityRule: Codable, Equatable {
             self = .threshold(try container.decode(ThresholdReciprocityRule.self, forKey: .threshold))
         case .formula:
             self = .formula(try container.decode(FormulaReciprocityRule.self, forKey: .formula))
-        case .table:
-            self = .table(try container.decode(TableReciprocityRule.self, forKey: .table))
-        case .advisory:
-            self = .advisory(try container.decode(AdvisoryReciprocityRule.self, forKey: .advisory))
+        case .limitedGuidance:
+            self = .limitedGuidance(
+                try container.decode(LimitedGuidanceReciprocityRule.self, forKey: .limitedGuidance)
+            )
         }
     }
 
@@ -266,10 +261,8 @@ enum ReciprocityRule: Codable, Equatable {
             try container.encode(rule, forKey: .threshold)
         case let .formula(rule):
             try container.encode(rule, forKey: .formula)
-        case let .table(rule):
-            try container.encode(rule, forKey: .table)
-        case let .advisory(rule):
-            try container.encode(rule, forKey: .advisory)
+        case let .limitedGuidance(rule):
+            try container.encode(rule, forKey: .limitedGuidance)
         }
     }
 }
@@ -277,8 +270,7 @@ enum ReciprocityRule: Codable, Equatable {
 enum ReciprocityRuleKind: String, Codable, Equatable {
     case threshold
     case formula
-    case table
-    case advisory
+    case limitedGuidance
 }
 
 struct ThresholdReciprocityRule: Codable, Equatable {
@@ -352,20 +344,12 @@ struct FormulaReciprocityRule: Codable, Equatable {
     }
 }
 
-struct TableReciprocityRule: Codable, Equatable {
-    let entries: [ReciprocityTableEntry]
-    let notes: [String]
-
-    init(
-        entries: [ReciprocityTableEntry],
-        notes: [String] = []
-    ) {
-        self.entries = entries
-        self.notes = notes
-    }
-}
-
-struct AdvisoryReciprocityRule: Codable, Equatable {
+/// Limited-guidance rule used by official-source profiles that publish
+/// only qualitative guidance past a no-correction threshold (e.g.
+/// Kodak Portra / Ektar / Ektachrome). The rule never yields a
+/// quantified corrected exposure; presentation surfaces the result as
+/// "No quantified prediction".
+struct LimitedGuidanceReciprocityRule: Codable, Equatable {
     let appliesWhenMetered: ReciprocityTimeRange?
     let adjustments: [ReciprocityAdjustment]
     let notes: [String]
@@ -419,22 +403,6 @@ struct ReciprocityFormula: Codable, Equatable {
 
 enum ReciprocityFormulaKind: String, Codable, Equatable {
     case exponentPower
-}
-
-struct ReciprocityTableEntry: Codable, Equatable {
-    let meteredExposure: MeteredExposureSelector
-    let adjustments: [ReciprocityAdjustment]
-    let notes: [String]
-
-    init(
-        meteredExposure: MeteredExposureSelector,
-        adjustments: [ReciprocityAdjustment],
-        notes: [String] = []
-    ) {
-        self.meteredExposure = meteredExposure
-        self.adjustments = adjustments
-        self.notes = notes
-    }
 }
 
 enum MeteredExposureSelector: Codable, Equatable {
@@ -683,6 +651,12 @@ enum UnofficialPracticalProfiles {
         }
     }
 
+    // `publisher` is the documented "source pending verification" marker
+    // (DomainSchema §4): supplementary unofficial profiles whose source
+    // has not yet been verified leave `publisher` empty so the
+    // presenter does not surface a Sources section that would imply an
+    // external citation. The unofficial-authority subtitle plus the
+    // caveat note carry the user-facing disclosure.
     static let kodakPortra400UnofficialPractical = ReciprocityProfile(
         id: "kodak-portra-400-unofficial-practical",
         name: "Unofficial practical approximation",
@@ -702,11 +676,11 @@ enum UnofficialPracticalProfiles {
                     exponent: 1.34,
                     equation: "Tc = Tm^P"
                 )
-            ))
+            )),
         ],
         notes: [
             "Unofficial practical approximation. Not a Kodak-published profile.",
-            "Formula: Tc = Tm^1.34. Source pending verification."
+            "Formula: Tc = Tm^1.34. Source pending verification.",
         ]
     )
 }

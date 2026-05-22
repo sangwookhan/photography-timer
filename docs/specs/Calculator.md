@@ -38,7 +38,7 @@ There is no explicit "Digital / Film" toggle. Workflow is determined entirely by
 - **Digital workflow** — no film selected. The Output Shutter (after ND only) is the final shooting value. Reciprocity is inactive.
 - **Film workflow** — a film is selected. The reciprocity-corrected exposure ("Corrected Exposure") becomes the primary shooting value; the ND-adjusted shutter is intermediate.
 
-The Corrected Exposure row shall remain visible in all film-workflow states, including states where it carries non-quantified guidance. (See §4 for what "non-quantified" means.)
+The Corrected Exposure row shall remain visible in all film-workflow states, including states where it carries non-quantified guidance. (See §3.3 for what "non-quantified" means.)
 
 ### 1.4 Exposure scale mode
 
@@ -140,88 +140,72 @@ When a film is selected, the system shall apply the film's reciprocity profile t
 
 The reciprocity computation shall preserve a clean layer split:
 
-- **Domain layer** holds the manufacturer-published table or formula plus full provenance. It shall not encode any interpolation policy.
-- **Calculation policy layer** consumes domain data plus a metered exposure, applies an interpolation/extrapolation strategy (see §3.3), and produces a structured result with explicit metadata.
-- **Presentation layer** consumes the result metadata and renders confidence cues, notes, and warnings. It shall not invent numbers and it shall not flatten metadata distinctions (e.g. "estimated" must not be displayed as "exact").
+- **Domain layer** holds the manufacturer-published threshold, formula, and limited-guidance rules plus full provenance, and (display-only) source-evidence rows. It shall not encode any calculation policy.
+- **Calculation policy layer** consumes domain data plus a metered exposure and produces a structured result with explicit metadata. Source-evidence rows are display-only and are intentionally invisible to the policy layer.
+- **Presentation layer** consumes the result metadata and renders status / badge text, confidence cues, notes, and warnings. It shall not invent numbers and it shall not flatten metadata distinctions.
 
 ### 3.2 Evaluation order
 
 For a metered exposure `t`, the policy layer shall evaluate the film's profile in the following order. Each step either produces a result and stops, or falls through.
 
-1. **Exact table point** — if `t` matches a quantified table row exactly, return the row's corrected value with basis = `exact_table_point`.
-2. **Threshold no-correction** — if the profile defines a no-correction threshold and `t` lies inside it, return `corrected = t` (no shift) with basis = `official_threshold_no_correction`.
-3. **Manufacturer stop signal** — if the profile contains a stop signal at or below `t` whose severity is "not-recommended", short-circuit to advisory-only / unsupported (per the signal's policy). The signal overrides any later step.
-4. **Table interpolation / extrapolation** — if `t` falls between or beyond quantified table rows and the policy allows, compute via the appropriate estimation family (see §3.3) and return with basis = `interpolated_within_table` or `extrapolated_beyond_table`.
-5. **Formula** — if the profile defines an exponent formula `T_c = T_m^P` (or equivalent), apply it and return with basis = `formula_derived`. Formula evaluation shall run before generic "unsupported" fallback so films with formulas remain quantified at long exposures.
-6. **Advisory / unsupported fallback** — if the metered exposure is beyond every supported region of the profile, return without a numeric corrected value: basis = `advisory_only_beyond_official_range` or `unsupported_out_of_policy_range` per the policy.
+1. **Threshold no-correction** — if the profile defines a no-correction threshold and `t` lies inside it, return `corrected = t` with basis = `officialThresholdNoCorrection`.
+2. **Default formula no-correction handoff** — if `t < 1 s` and the profile has a formula rule that does not opt into sub-1s correction (its `meteredRange.minimumSeconds` is absent or `≥ 1 s`), synthesize a no-correction result with `corrected = t` and basis = `officialThresholdNoCorrection`. This keeps `Tc = Tm^P`-style practical formulas from producing `corrected < metered` at sub-1s metered values that lie below the formula's practical domain.
+3. **Formula** — if the profile defines a formula rule whose `meteredRange` contains `t`, evaluate the formula and return with basis = `formulaDerived`. When the formula declares an explicit `meteredRange.maximumSeconds` and `t` is at or beyond it, return `unsupportedOutOfPolicyRange`; if `extrapolateBeyondMaximum` is `true` the result carries the formula's numeric continuation past the boundary (rendered as outside manufacturer guidance), if `false` the result has no corrected exposure value at all.
+4. **Limited guidance** — if the profile defines a limited-guidance rule whose `appliesWhenMetered` covers `t` (or is open-ended), return `limitedGuidanceNoQuantifiedPrediction`. No numeric corrected exposure.
+5. **Unsupported fallback** — if no rule applies, return `unsupportedOutOfPolicyRange` with no corrected exposure.
 
-### 3.3 Estimation family selection
+After the rule pipeline, the universal **correction invariant** runs: a result whose corrected exposure would be shorter than the metered value is reclassified to `officialThresholdNoCorrection`. A reciprocity correction can never shorten the adjusted shutter; this clamp catches edge cases where a formula's domain bleeds across the no-correction boundary regardless of which rule produced the value.
 
-When the policy needs to interpolate or extrapolate:
-
-- A profile whose adjustments are expressed as **corrected times** shall use **log-log** interpolation.
-- A profile whose adjustments are expressed as **stop deltas** or **multipliers** shall use **stop-space** interpolation.
-
-Estimation families shall not be mixed inside a single film's evaluation.
-
-### 3.4 Threshold-to-table downward extrapolation
-
-When a profile has a no-correction threshold whose maximum is below the first quantified table row (creating a gap between the threshold and the table), the policy shall, for metered values inside the gap, derive an extrapolated corrected value using the **first two quantified table points** as anchors. No synthetic table rows shall be created; the result is reported as `extrapolated_beyond_table` with both anchor rows recorded in `usedReferencePoints`. The downward extrapolation requires at least two quantified points to anchor; if only one is available, the result falls through to advisory-only.
-
-### 3.5 Result shape and metadata
+### 3.3 Result shape and metadata
 
 Every reciprocity evaluation produces a result that takes one of three mutually-exclusive forms:
 
-- **Quantified** — a numeric corrected exposure is returned. The result carries the metered exposure, the corrected exposure (always present), and the metadata block described below.
-- **Advisory-only** — no numeric corrected exposure can be returned, but the system still reports an explanation and confidence cues. The result carries the metered exposure and the metadata block; no corrected exposure is present.
-- **Unsupported** — the metered exposure is outside the policy-supported range. The result carries the metered exposure and the metadata block; no corrected exposure is present.
+- **Quantified** — a numeric corrected exposure is returned. The result carries the metered exposure, the corrected exposure, and the metadata block described below. Basis is `officialThresholdNoCorrection` or `formulaDerived`.
+- **Limited-guidance** — no numeric corrected exposure can be returned, but the system reports the metered exposure and the metadata block. Basis is `limitedGuidanceNoQuantifiedPrediction`. The presentation layer renders calm guidance text in place of a number.
+- **Unsupported** — the metered exposure is outside the policy-supported range. The result carries the metered exposure and the metadata block. Basis is `unsupportedOutOfPolicyRange`. An optional corrected exposure is present only when a formula-backed profile produced a numeric continuation past its supported boundary; the presenter marks such values as outside manufacturer guidance.
 
-A result form and its calculation basis are bound together: `quantified` corresponds to `exact_table_point`, `interpolated_within_table`, `extrapolated_beyond_table`, `official_threshold_no_correction`, or `formula_derived`; `advisory_only_beyond_official_range` corresponds to `advisoryOnly`; `unsupported_out_of_policy_range` corresponds to `unsupported`. The pairing is structural — it is enforced at compile time rather than checked at runtime, so a result can never claim a numeric corrected value while omitting one (or vice versa).
+The pairing of form and basis is structural — it is enforced at compile time rather than checked at runtime, so a result can never claim a numeric corrected value while omitting one (with the single allowed exception of the formula-extrapolated unsupported case above).
 
 The metadata block, present in all three forms, carries:
 
-- `calculationBasis` — one of: `exact_table_point`, `interpolated_within_table`, `extrapolated_beyond_table`, `official_threshold_no_correction`, `advisory_only_beyond_official_range`, `unsupported_out_of_policy_range`, `formula_derived`.
-- `sourceAuthorityImpact` — derived from the profile provenance (manufacturer-published / field-tested / anecdotal).
-- `rangeStatus` — within / extrapolated / threshold-only / beyond-guidance.
-- `warningLevel` — none / caution / advisory / not-recommended.
-- `supportingNotes` — human-readable text describing the result.
-- `usedReferencePoints` — which table rows or formula coefficients informed the result.
+- `calculationBasis` — one of: `officialThresholdNoCorrection`, `formulaDerived`, `limitedGuidanceNoQuantifiedPrediction`, `unsupportedOutOfPolicyRange`.
+- `sourceAuthorityImpact` — derived from the profile provenance (current official / archival official / unofficial secondary / user-defined).
+- `rangeStatus` — `withinStatedRange`, `beyondLastRepresentativePoint`, or `beyondPolicyLimit`.
+- `warningLevel` — `none`, `note`, `caution`, or `strongWarning`.
+- `notes` — array of token-tagged human-readable strings.
 
-The persistence layer shall accept both the flat-field layout (metered, corrected, an explicit returned-time flag, and the metadata block) and the three-form layout on decode; the encoder writes the three-form layout. (See [DomainSchema Spec](DomainSchema.md) §6.)
+### 3.4 Reference data presentation
 
-### 3.6 Reference data presentation
+The reference panel surfaces the source data attached to a profile. Its presentation rules are about preserving source facts, not about calculation:
 
-The reference panel surfaces the source data used by a profile. Its presentation rules are about preserving source facts, not about calculation:
-
-- A table row that carries both a stop correction (or multiplier) and an adjusted/corrected time shall surface both. A formatter that picks one value and drops the other hides published source information from the user.
+- A source-evidence row that carries both a stop correction (or multiplier) and an adjusted/corrected time shall surface both. A formatter that picks one value and drops the other hides published source information from the user.
 - The compact column for a row shall combine the two facts in a single cell when both exist (e.g. `+0.5 stops · 15s`). When only one form is published, that form is shown alone.
-- A corrected-time value that the catalog stores as `isApproximate` (i.e. a rounded display of an irrational conversion, typically a fractional-stop derivation `metered × 2^stopDelta`) shall be visually distinguished — for example with a leading "≈" — so the user can tell rounded values from published or exactly-converted ones at a glance. Multiplier-derived corrected times (`metered × multiplier`) are exact arithmetic and are not marked.
-- Development-time hints and color-filter suggestions stay as separate cells / notes rather than being folded into the calculation column. They are documentation, not calculation inputs.
-- The reference panel shall not introduce new calculation policy. It is a presentation contract over data the calculation policy already consumes.
-- PTIMER-88 adds a secondary-guidance formatter in the presentation layer only.
-- The formatter preserves stored notation exactly (for example `5M`, `7.5M`, `2.5G`, `CC10R`, `-10% development`) and does not normalize text.
-- It maps guidance into separate categories: color correction, development adjustment, warning, and note.
-- Exposure-time output remains the primary calculator result; these rows are secondary guidance only.
+- A corrected-time value that the catalog stores as `isApproximate` (a rounded display of an irrational conversion, typically a fractional-stop derivation `metered × 2^stopDelta`) shall be visually distinguished — for example with a leading "≈" — so users can tell rounded values from published or exactly-converted ones at a glance. Multiplier-derived corrected times (`metered × multiplier`) are exact arithmetic and are not marked.
+- Source-evidence rows marked `isSourceEvidenceOnly` are preserved as published evidence but rendered with a `*` footnote marker so users can tell the row is not used as a formula-fitting anchor (ADOX CMS 20 II's sub-1s reference is the canonical case).
+- Development-time hints and color-filter suggestions stay as separate cells / notes rather than being folded into the corrected-exposure column. They are documentation, not calculation inputs.
+- The reference panel shall not introduce new calculation policy. It is a presentation contract over data the calculation policy already consumes (threshold + limited-guidance rules) or intentionally ignores (source-evidence rows).
+- The PTIMER-88 secondary-guidance formatter lives in the presentation layer only. It preserves stored notation exactly (for example `5M`, `7.5M`, `2.5G`, `CC10R`, `-10% development`) and maps guidance into separate categories: color correction, development adjustment, warning, and note. Exposure-time output remains the primary calculator result; these rows are secondary guidance only.
 
-### 3.7 Confidence presentation
+### 3.5 Confidence presentation
 
-The presentation layer shall map each result to one of five confidence categories:
+The presentation layer maps each result to one of four confidence categories:
 
-- **Exact** — basis = `exact_table_point` or `formula_derived` with a directly published coefficient.
-- **Estimated** — basis = `interpolated_within_table`.
-- **Extrapolated** — basis = `extrapolated_beyond_table`. Extrapolated and estimated shall be presented as distinct categories; extrapolated shall carry a stronger low-confidence signal.
-- **Advisory-only** — basis = `advisory_only_beyond_official_range` or threshold no-correction beyond the threshold band. The UI shall show calm explanatory text in place of a number; it shall not fabricate a value.
-- **Unsupported** — basis = `unsupported_out_of_policy_range`. Same rule: no fabricated number.
+- **No correction** — basis = `officialThresholdNoCorrection`. The corrected exposure equals the metered exposure. User-facing label: `No correction`.
+- **Formula-derived** — basis = `formulaDerived`. The result is anchored on the active calculation curve. User-facing label: `Formula-derived`.
+- **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. The UI shall show calm explanatory text in place of a number; it shall not fabricate a value.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on whether a formula-extrapolated numeric is available: `Beyond source range` for converted formula profiles (formula rule with sourceEvidence) outside the published source range, otherwise `Outside guidance` for a numeric continuation, or `No corrected value` when no value at all is available.
 
-### 3.8 Target Shutter comparison (optional, post-reciprocity)
+The category and badge wording shall not surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary status / badge text on launch preset reciprocity presentation; those terms encoded the legacy table model and are not part of the current vocabulary.
 
-Target Shutter is an optional workflow that compares a photographer-supplied target duration against the calculator's current result. It is layered on top of the calculation policy (§2) and the reciprocity policy (§3.1–§3.7); enabling, disabling, or editing the target shall not feed back into either policy or alter any committed result.
+### 3.6 Target Shutter comparison (optional, post-reciprocity)
+
+Target Shutter is an optional workflow that compares a photographer-supplied target duration against the calculator's current result. It is layered on top of the calculation policy (§2) and the reciprocity policy (§3.1–§3.5); enabling, disabling, or editing the target shall not feed back into either policy or alter any committed result.
 
 **Comparison basis.** Selection is determined by workflow:
 
 - **Non-film workflow** — the comparison value is the Adjusted Shutter.
 - **Film workflow with a quantified corrected exposure** — the comparison value is the Corrected Exposure.
-- **Film workflow without a quantified corrected exposure** (advisory-only or unsupported, §3.5) — no comparison value is available.
+- **Film workflow without a quantified corrected exposure** (limited-guidance or unsupported, §3.3) — no comparison value is available.
 
 **Stop-difference reporting.** When a comparison value is available, the system shall report the stop difference between the target duration and the comparison value. The displayed stop difference is rounded to the app's stop-display granularity. Differences that round to zero are presented as a *match* form rather than as a signed zero. The system shall not fabricate a stop difference when no comparison value is available; in that case the row surfaces a calm unavailable indicator while the target itself remains visible.
 
@@ -233,7 +217,7 @@ Target Shutter is an optional workflow that compares a photographer-supplied tar
 
 ## 4. Timer integration
 
-A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.8). The system shall not start a timer from a non-quantified reciprocity result: when the corrected exposure is advisory-only or unsupported, the Film-mode timer-start affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
+A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.6). The system shall not start a timer from a limited-guidance corrected exposure: when the result is `limitedGuidanceNoQuantifiedPrediction`, or `unsupportedOutOfPolicyRange` without a numeric continuation, the Film-mode corrected-exposure timer affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. A formula-extrapolated unsupported numeric (when the formula keeps producing a value past its supported boundary) does enable the timer with a warning treatment so the user can still commit to the predicted value. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
 
 A timer's metadata shall be a snapshot of the calculation result at creation time. Subsequent changes to the calculator inputs shall not mutate any already-created timer. A timer's exposure source remains distinguishable across its lifetime — a Target-Shutter timer remains a Target-Shutter timer regardless of later input changes. (See [Timer Spec](Timer.md) §1.4.)
 
@@ -241,7 +225,7 @@ A timer's metadata shall be a snapshot of the calculation result at creation tim
 
 ## 5. Restoration across relaunches
 
-The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, ND value, and Target Shutter duration (§3.8) when set — shall be persisted and restored on relaunch in both digital and film workflows. The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
+The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, ND value, and Target Shutter duration (§3.6) when set — shall be persisted and restored on relaunch in both digital and film workflows. The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
 
 A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the **shipping one-third-stop scale** (§1.4) with the integer ND value treated as a whole-stop count on the new ladder. The shipping ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop value remains valid without rewriting it. A snapshot written by a release that predates the multi-slot session shall similarly continue to restore correctly: the legacy single-context shape is read at first launch after upgrade and the next save writes the multi-slot session shape (see [DomainSchema Spec](DomainSchema.md) §7.4.1).
 
@@ -251,15 +235,16 @@ A snapshot written by an older release that predates the exposure scale token (o
 
 The system shall **not**:
 
-1. Fabricate a numeric corrected value when the result is advisory-only or unsupported.
-2. Encode interpolation or extrapolation policy inside the domain model. (Domain stores manufacturer data verbatim; policy is its own layer.)
-3. Mix estimation families (e.g. apply log-log to a stop-delta profile, or vice versa).
-4. Ignore a manufacturer "not-recommended" stop signal in favor of generic extrapolation.
+1. Fabricate a numeric corrected value when the result is limited-guidance, or unsupported without a formula-extrapolated continuation. Formula-extrapolated unsupported numerics are permitted and presented as outside manufacturer guidance.
+2. Encode calculation policy inside the domain model. (Domain stores manufacturer data verbatim; policy is its own layer.)
+3. Promote source-evidence rows (display reference data) into calculation anchors.
+4. Allow a reciprocity correction to shorten the adjusted shutter. Any rule path that would yield `corrected < metered` is reclassified to `officialThresholdNoCorrection` (§3.2 correction invariant).
 5. Round a calculated value at or above 1 s. (Rounded notation is permitted only sub-second.)
 6. Allow calculator input changes to mutate already-created timer metadata.
-7. Start a timer from a non-quantified corrected exposure.
+7. Start a timer from a limited-guidance corrected exposure, or from an unsupported result with no numeric continuation.
 8. Fabricate a Target Shutter stop difference when the active workflow has no quantified comparison value. The row shall surface a calm unavailable indicator instead.
-9. Present a signed-zero Target Shutter stop difference; differences that round to zero shall collapse to the *match* form (§3.8).
+9. Present a signed-zero Target Shutter stop difference; differences that round to zero shall collapse to the *match* form (§3.6).
+10. Surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary user-facing status / badge wording on launch preset reciprocity presentation.
 
 ---
 
@@ -269,11 +254,10 @@ These are unresolved or partially specified. They are recorded so the system doe
 
 - **Aperture and ISO** as exposure variables are intent-level (wiki 3964929) but not part of the current release. The Fixed/Derived state machine, the multi-variable linkage rules, and the reverse calculation across more than one variable are deferred.
 - **Multi-derived ceiling above two.** Wiki 3964929 reserves the option to extend; no decision is recorded.
-- **Per-data-shape policy selection.** Wiki 15761409 notes that not every profile shape may want log-log; some may want stop-space. Current code applies §3.3 uniformly. A per-profile override mechanism is undecided.
-- **Extrapolation caps.** Quantified table extrapolation continues until a manufacturer stop signal blocks it; in the absence of a stop signal there is no upper bound. (Open: whether an implicit ceiling should exist for profiles lacking a stop signal.)
-- **User-defined film schema.** Wiki 15138817 lists this as a validation requirement; the data model and UX are not specified.
+- **Formula extrapolation caps.** A formula with `meteredRange.maximumSeconds` produces a numeric continuation past the boundary when `extrapolateBeyondMaximum = true` (the launch default). Whether a profile-independent ceiling should cap how far that continuation extends is open.
+- **User-defined film schema.** Wiki 15138817 lists this as a validation requirement; the data model and UX are not specified. A future custom-table input is also outside the launch preset scope and would need its own feature design.
 - **Multi-profile films.** Some films may have multiple official profiles (different developers, push/pull). Selection rules are not yet defined; the current launch policy ships one primary profile per film identity.
-- **Color and development guidance.** Profiles record these (e.g. Velvia 50 "M color correction", Tri-X dev-time adjustments) but the spec does not yet define how the calculator surfaces them.
+- **First-class color / development policy.** Profiles record these as source-evidence adjustments (e.g. Velvia 50 `5M`, Tri-X 400 `-10% development`) but the spec does not yet define how the calculator promotes them beyond display.
 
 ---
 
@@ -287,7 +271,7 @@ trace the published research that informed it.
 - 3964929 — 계산 엔진 규칙 (variables, fixed/derived state, ND policy, reciprocity application flow)
 - 7438337 — 노출 스톱 스케일 관행 조사 (rounded-notation vs exact-value separation)
 - 13172737 — Reciprocity Film Research List (launch scope, method keys, provenance rules)
-- 15237121 — Reciprocity Table Calculation Policy Notes (separation of domain / policy / presentation)
-- 15761409 — Reciprocity Table Interpolation and Calculation Policy Draft (responsibility split, metadata, policy direction)
+- 15237121 — Reciprocity Table Calculation Policy Notes (historical: documented the table-interpolation policy superseded by PTIMER-128 / PTIMER-140's formula-based prediction model)
+- 15761409 — Reciprocity Table Interpolation and Calculation Policy Draft (historical: same status as 15237121)
 - 15138817 — Reciprocity Validation Samples (minimum validation matrix, example profiles)
 - 16482307 — Film Selection and Reciprocity Calculator UI (workflow direction, state semantics)

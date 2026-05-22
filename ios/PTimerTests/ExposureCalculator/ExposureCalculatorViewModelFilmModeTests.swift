@@ -340,7 +340,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsShowManufacturerNoDataForAdvisoryOnlyResult() throws {
+    func testFilmModeDetailsShowManufacturerNoDataForLimitedGuidanceResult() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
@@ -358,7 +358,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(details.summary.badgeText, "No quantified prediction")
         XCTAssertEqual(details.summary.summaryText, "Beyond published no-correction range")
         // Every case shares the same comparison-card layout now,
-        // including this advisory-only path.
+        // including this limited-guidance path.
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "15s")
         XCTAssertEqual(details.currentResult.correctedExposure.valueText, resultState.correctedExposure.primaryText)
@@ -519,7 +519,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsGraphOmitsCurrentPlotForAdvisoryOnlyResult() throws {
+    func testFilmModeDetailsGraphOmitsCurrentPlotForLimitedGuidanceResult() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
@@ -1168,11 +1168,16 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let viewModel = makeViewModel()
         viewModel.ndStop = 0
 
-        let formulaGraphFilmCases: [(name: String, baseShutter: Double, selectsUnofficial: Bool)] = [
-            ("Provia 100F", 60, false),
-            ("T-MAX 100", 30, false),
-            ("HP5 Plus", 30, false),
-            ("Portra 400", 10, true)
+        struct FormulaGraphFilmCase {
+            let name: String
+            let baseShutter: Double
+            let selectsUnofficial: Bool
+        }
+        let formulaGraphFilmCases: [FormulaGraphFilmCase] = [
+            .init(name: "Provia 100F", baseShutter: 60, selectsUnofficial: false),
+            .init(name: "T-MAX 100", baseShutter: 30, selectsUnofficial: false),
+            .init(name: "HP5 Plus", baseShutter: 30, selectsUnofficial: false),
+            .init(name: "Portra 400", baseShutter: 10, selectsUnofficial: true),
         ]
         for caseInfo in formulaGraphFilmCases {
             if caseInfo.selectsUnofficial {
@@ -1290,7 +1295,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             "manufacturer source range",
             "manufacturer-supported boundary",
             "published source range",
-            "published reference"
+            "published reference",
         ]
         let allText = collectDisplayedDetailsText(details).joined(separator: "\n")
         for fragment in forbiddenWording {
@@ -1358,7 +1363,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             "T-MAX 400",
             "Velvia 50",
             "Velvia 100",
-            "Acros II"
+            "Acros II",
         ]
         for stockName in convertedFormulaStockNames {
             let viewModel = makeViewModel()
@@ -1709,7 +1714,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeAdvisoryOnlyResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
+    func testFilmModeLimitedGuidanceResultKeepsCorrectedExposureRowStateWithoutNumericValue() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
@@ -1720,10 +1725,10 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 15, accuracy: 0.0001)
         XCTAssertEqual(resultState.reciprocityState.badgeText, "No quantified prediction")
-        XCTAssertEqual(resultState.reciprocityState.tone, .advisory)
+        XCTAssertEqual(resultState.reciprocityState.tone, .limitedGuidance)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 15, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
-        XCTAssertEqual(resultState.correctedExposure.kind, .advisory)
+        XCTAssertEqual(resultState.correctedExposure.kind, .limitedGuidance)
         XCTAssertNil(resultState.correctedExposure.correctedExposureSeconds)
         XCTAssertNil(resultState.correctedExposureAction.targetSeconds)
         XCTAssertFalse(resultState.correctedExposureAction.canStartTimer)
@@ -1737,7 +1742,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertFalse(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)
-        XCTAssertEqual(bindingState.policyResult.metadata.basis, .advisoryOnlyBeyondOfficialRange)
+        XCTAssertEqual(bindingState.policyResult.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
         XCTAssertNil(viewModel.filmModePrimaryResultSeconds)
         XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
         XCTAssertFalse(viewModel.canStartFilmCorrectedExposureTimer)
@@ -1919,9 +1924,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
                                     equation: nil
                                 )
                             )
-                        )
+                        ),
                     ]
-                )
+                ),
             ],
             userMetadata: nil
         )
@@ -1973,9 +1978,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
                                     maximumSeconds: 1
                                 )
                             )
-                        )
+                        ),
                     ]
-                )
+                ),
             ],
             userMetadata: nil
         )
@@ -2011,9 +2016,9 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
                                     maximumSeconds: 4
                                 )
                             )
-                        )
+                        ),
                     ]
-                )
+                ),
             ],
             userMetadata: nil
         )

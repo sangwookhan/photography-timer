@@ -163,11 +163,16 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
 
     func testChs100IISourceEvidenceRowsKeepMultiplierAndCorrectedTime() throws {
         let profile = try chs100Profile()
-        let expected: [(metered: Double, multiplier: Double, corrected: Double)] = [
-            (2, 1.5, 3),
-            (4, 2, 8),
-            (8, 2.5, 20),
-            (15, 3, 45),
+        struct EvidenceExpectation {
+            let metered: Double
+            let multiplier: Double
+            let corrected: Double
+        }
+        let expected: [EvidenceExpectation] = [
+            .init(metered: 2, multiplier: 1.5, corrected: 3),
+            .init(metered: 4, multiplier: 2, corrected: 8),
+            .init(metered: 8, multiplier: 2.5, corrected: 20),
+            .init(metered: 15, multiplier: 3, corrected: 45),
         ]
         for entry in expected {
             let row = try XCTUnwrap(profile.sourceEvidence.first { row in
@@ -332,8 +337,8 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
             XCTAssertEqual(graph.kind, .formula, "Beyond-source CHS inputs must keep the formula Detail graph.")
             XCTAssertEqual(
                 graph.currentPoint?.style,
-                .extrapolated,
-                "Beyond-source CHS marker must use the extrapolated style, not the Exact table-anchor style."
+                .beyondSourceRange,
+                "Beyond-source CHS marker must use the beyond-source-range style."
             )
             let explanation = try XCTUnwrap(graph.unsupportedExplanation)
             XCTAssertTrue(

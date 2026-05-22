@@ -23,7 +23,7 @@ A photographer who shoots long exposures with ND filters. Works on a tripod, oft
 
 ### 1.2 Film photographer with reciprocity correction (specialization)
 
-The same photographer when shooting film stocks whose reciprocity behavior departs from the metered value. Needs the metered exposure to be corrected against the active film's published reciprocity data, not just a generic "stops" calculation. Different film stocks have different correction curves; some have only a manufacturer threshold, some publish a table, some publish only an advisory.
+The same photographer when shooting film stocks whose reciprocity behavior departs from the metered value. Needs the metered exposure to be corrected against the active film's published reciprocity data, not just a generic "stops" calculation. Different film stocks have different correction curves; some have only a manufacturer threshold, some publish a quantified formula (with optional manufacturer reference points), some publish only qualitative long-exposure guidance.
 
 ### 1.3 Multi-camera photographer (specialization)
 
@@ -74,10 +74,10 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 6. (Optional) Open the reciprocity details sheet to see the supporting data — Profile / Formula or Reference / Graph / Sources sections, in that order, with a stable initial detent.
 
 **Boundary conditions.**
-- The Corrected Exposure row is *always visible* in film workflow — the layout shape does not change as the user pans through metered values that switch the result between *quantified*, *advisory-only*, and *unsupported* outcomes.
-- A *quantified* corrected exposure surfaces a numeric primary line plus a confidence badge. The confidence category is one of *exact*, *estimated* (interpolated within the published table), *extrapolated* (beyond the published range), or *trusted threshold* (no correction needed below the manufacturer's threshold).
-- An *advisory-only* result surfaces calm explanatory text in place of a number. The app never fabricates a numeric corrected value when the data does not support one.
-- An *unsupported* result surfaces a guidance note. The Start Timer button on the corrected row is disabled with an explanatory accessibility hint.
+- The Corrected Exposure row is *always visible* in film workflow — the layout shape does not change as the user pans through metered values that switch the result between *quantified*, *limited-guidance*, and *unsupported* outcomes.
+- A *quantified* corrected exposure surfaces a numeric primary line plus a status badge. The status category is one of *No correction* (inside the manufacturer's no-correction threshold), *Formula-derived* (on the active calculation curve), or *Beyond source range* / *Outside guidance* (the formula keeps producing a numeric continuation past the manufacturer's supported boundary; the badge carries a warning tone).
+- A *limited-guidance* result surfaces calm explanatory text in place of a number. The app never fabricates a numeric corrected value when the data does not support one.
+- An *unsupported* result with no numeric continuation surfaces a guidance note. The Start Timer button on the corrected row is disabled with an explanatory accessibility hint.
 - The base shutter ladder, the ND ladder, and the result-reporting rules are identical to Scenario 1. Film selection does not change the calculator's exposure scale.
 
 ### Scenario 3 — Run a long-exposure timer
@@ -184,14 +184,14 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.2 Reciprocity
 
-- **FR-2.1** The system shall present a curated set of preset films at launch, each with at least one published reciprocity profile. The launch catalog shall be sourced from current official manufacturer documentation, shall include both fully quantified (formula or table) and threshold-only / advisory-only entries, and shall preserve published guidance — threshold ranges, advisory continuations, stop-signal rows, development-time hints, and color-filter suggestions — in a form the user can drill into. (Scenario 2)
-- **FR-2.2** Given a metered exposure and an active profile, the system shall classify the result into exactly one of three forms — *quantified*, *advisory-only*, or *unsupported* — and shall not allow a result that represents more than one form at once. (Scenario 2)
-- **FR-2.3** A *quantified* result shall carry a corrected exposure value, a confidence indication that the user can read at a glance, and provenance the user can drill into to see the underlying table rows or formula. (Scenario 2)
-- **FR-2.4** An *advisory-only* result shall present calm guidance text instead of a corrected number. The system shall not fabricate a numeric corrected value when the underlying data does not support one. (Scenario 2 boundary)
-- **FR-2.5** An *unsupported* result shall present a category-specific guidance note and shall disable the Start Timer affordance on the corrected-exposure row, with an accessibility hint explaining why. (Scenario 2 boundary)
-- **FR-2.6** Reciprocity evaluation shall be deterministic — the same profile and metered value shall always produce the same result form, corrected value, and confidence indication. (NFR-D.1)
+- **FR-2.1** The system shall present a curated set of preset films at launch, each with exactly one published reciprocity profile. The launch catalog shall be sourced from current official manufacturer documentation and shall cover both quantified formula profiles (with optional manufacturer source-evidence rows) and limited-guidance profiles whose long-exposure section is qualitative only. It shall preserve published guidance — threshold ranges, color-filter recommendations, development-time hints, and stop-signal boundaries — in a form the user can drill into. (Scenario 2)
+- **FR-2.2** Given a metered exposure and an active profile, the system shall classify the result into exactly one of three forms — *quantified*, *limited-guidance*, or *unsupported* — and shall not allow a result that represents more than one form at once. (Scenario 2)
+- **FR-2.3** A *quantified* result shall carry a corrected exposure value, a status badge the user can read at a glance, and provenance the user can drill into to see the formula expression and any manufacturer reference points. (Scenario 2)
+- **FR-2.4** A *limited-guidance* result shall present calm guidance text instead of a corrected number. The system shall not fabricate a numeric corrected value when the underlying data does not support one. (Scenario 2 boundary)
+- **FR-2.5** An *unsupported* result with no numeric continuation shall present a guidance note and shall disable the Start Timer affordance on the corrected-exposure row, with an accessibility hint explaining why. An *unsupported* result with a formula-extrapolated numeric continuation (when the formula keeps producing a value past its supported boundary) shall surface the value with a warning-toned badge and shall keep the Start Timer affordance enabled. (Scenario 2 boundary)
+- **FR-2.6** Reciprocity evaluation shall be deterministic — the same profile and metered value shall always produce the same result form, corrected value, and status indication. (NFR-D.1)
 - **FR-2.7** The user shall reach the film selection through a dedicated, dismissible surface rather than an inline dropdown that competes with the calculator for screen room. (Scenario 2)
-- **FR-2.8** Reciprocity coverage shall not be limited to films with a fully quantified curve. Threshold-only and advisory-only published guidance are first-class scope rather than lesser fallbacks, and the domain shall reserve capacity for future unofficial or user-defined entries. (Scenario 2 boundary; complements FR-2.2)
+- **FR-2.8** Reciprocity coverage shall not be limited to films with a quantified formula. Threshold-only and limited-guidance published guidance are first-class scope rather than lesser fallbacks, and the domain shall reserve capacity for future unofficial or user-defined entries. (Scenario 2 boundary; complements FR-2.2)
 
 ### 3.3 Timer lifecycle
 
@@ -265,7 +265,7 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 4.2 Type safety
 
-- **NFR-T.1** Illegal state combinations shall be unrepresentable. A reciprocity result cannot simultaneously be quantified and advisory; a timer cannot simultaneously be running and paused. Where the language supports it, this is enforced at compile time.
+- **NFR-T.1** Illegal state combinations shall be unrepresentable. A reciprocity result cannot simultaneously be quantified and limited-guidance; a timer cannot simultaneously be running and paused. Where the language supports it, this is enforced at compile time.
 - **NFR-T.2** Once an integrity invariant has been raised from a runtime check to a structural one, code patterns that would silently lower it back to a runtime check shall be blocked from re-entering the codebase. The mechanism (lint, code review, type-system feature) is a downstream choice; the obligation is that the regression cannot land unnoticed.
 
 ### 4.3 Architectural fitness

@@ -15,7 +15,7 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
             (7, 4.0),
             (8, 8.0),
             (9, 15.0),
-            (10, 30.0)
+            (10, 30.0),
         ]
 
         for testCase in cases {
@@ -202,7 +202,7 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
             (1.0, 6),
             (1.0, 10),
             (1.0, 20),
-            (1.0 / 8.0, 10)
+            (1.0 / 8.0, 10),
         ]
 
         for testCase in cases {

@@ -2,63 +2,28 @@ import XCTest
 @testable import PTimer
 
 /// Baseline snapshot tests covering display-state outputs. These lock
-/// the *serialized form* of
-/// the display states so an internal restructure cannot silently
-/// alter what views render.
+/// the *serialized form* of the display states so an internal
+/// restructure cannot silently alter what views render.
 ///
-/// Inputs are drawn from `ReciprocityPolicyScenarioFactory` and
-/// `LaunchPresetFilmCatalog`. The same inputs appear in unit
-/// tests, so any disagreement between snapshot and unit-test
-/// assertion is visible.
+/// PTIMER-140 removed the table calculation path. Snapshot inputs
+/// now exercise threshold no-correction, formula-derived, formula
+/// extrapolation past supported range, and limited-guidance paths
+/// across the surviving scenario factory.
 @MainActor
 final class DisplayStateSnapshotTests: XCTestCase {
 
     // MARK: - Reciprocity policy results
 
-    /// Tri-X 400 exact table point at metered=10s. Locks the full
-    /// `ReciprocityResult` shape including metadata.
-    func testTriXExactTablePointSnapshot() {
+    func testThresholdNoCorrectionSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 10
-        )
-        DisplayStateSnapshot.assert(result, named: "trix-exact-10s")
-    }
-
-    /// Tri-X log-log interpolation between table anchors. Most
-    /// arithmetic-heavy quantified path.
-    func testTriXInterpolatedSnapshot() {
-        let evaluator = ReciprocityCalculationPolicyEvaluator()
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 7
-        )
-        DisplayStateSnapshot.assert(result, named: "trix-interpolated-7s")
-    }
-
-    /// Tri-X extrapolation beyond the last table anchor.
-    func testTriXExtrapolatedSnapshot() {
-        let evaluator = ReciprocityCalculationPolicyEvaluator()
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 1_500
-        )
-        DisplayStateSnapshot.assert(result, named: "trix-extrapolated-1500s")
-    }
-
-    /// Velvia threshold no-correction range.
-    func testVelviaThresholdNoCorrectionSnapshot() {
-        let evaluator = ReciprocityCalculationPolicyEvaluator()
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
             meteredExposureSeconds: 0.5
         )
-        DisplayStateSnapshot.assert(result, named: "velvia-threshold-0p5s")
+        DisplayStateSnapshot.assert(result, named: "hp5-threshold-0p5s")
     }
 
-    /// HP5+ formula-derived correction.
-    func testHP5FormulaDerivedSnapshot() {
+    func testFormulaDerivedSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(
             profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
@@ -67,14 +32,22 @@ final class DisplayStateSnapshotTests: XCTestCase {
         DisplayStateSnapshot.assert(result, named: "hp5-formula-100s")
     }
 
-    /// Portra advisory-only path.
-    func testPortraAdvisoryOnlySnapshot() {
+    func testLimitedGuidanceSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
+            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
             meteredExposureSeconds: 4
         )
-        DisplayStateSnapshot.assert(result, named: "portra-advisory-4s")
+        DisplayStateSnapshot.assert(result, named: "portra-limited-guidance-4s")
+    }
+
+    func testFormulaBeyondSourceRangeUnsupportedSnapshot() {
+        let evaluator = ReciprocityCalculationPolicyEvaluator()
+        let result = evaluator.evaluate(
+            profile: ReciprocityPolicyScenarioFactory.formulaBoundedProfile(),
+            meteredExposureSeconds: 1_500
+        )
+        DisplayStateSnapshot.assert(result, named: "formula-beyond-source-range-unsupported-1500s")
     }
 
     // MARK: - Launch catalog
@@ -90,25 +63,23 @@ final class DisplayStateSnapshotTests: XCTestCase {
 
     // MARK: - Confidence presentation
 
-    /// Trusted exact-match confidence presentation.
-    func testTrustedExactConfidencePresentationSnapshot() {
+    func testTrustedNoCorrectionConfidencePresentationSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let mapper = ReciprocityConfidencePresentationMapper()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 10
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            meteredExposureSeconds: 0.5
         )
-        DisplayStateSnapshot.assert(mapper.map(result: result), named: "confidence-trusted-exact")
+        DisplayStateSnapshot.assert(mapper.map(result: result), named: "confidence-trusted-no-correction")
     }
 
-    /// Caution-tier extrapolation presentation.
-    func testCautionExtrapolatedConfidencePresentationSnapshot() {
+    func testUnsupportedBeyondSourceRangeConfidencePresentationSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let mapper = ReciprocityConfidencePresentationMapper()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
+            profile: ReciprocityPolicyScenarioFactory.formulaBoundedProfile(),
             meteredExposureSeconds: 1_500
         )
-        DisplayStateSnapshot.assert(mapper.map(result: result), named: "confidence-extrapolated")
+        DisplayStateSnapshot.assert(mapper.map(result: result), named: "confidence-unsupported-beyond-source-range")
     }
 }

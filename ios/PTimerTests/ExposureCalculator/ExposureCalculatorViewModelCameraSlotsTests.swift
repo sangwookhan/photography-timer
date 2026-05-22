@@ -6,7 +6,7 @@ import XCTest
 /// (films, exposure inputs, reciprocity result) and the camera-slot
 /// metadata that flows through `TimerWorkspaceModel.startTimer`.
 @MainActor
-final class ExposureCalculatorViewModelCameraSlotsTests: XCTestCase {
+final class CalculatorViewModelCameraSlotsTests: XCTestCase {
 
     // MARK: - Slot independence: workflow + film
 
@@ -571,7 +571,7 @@ final class ExposureCalculatorViewModelCameraSlotsTests: XCTestCase {
     func testRelaunchRestoresPersistedActiveSlot() throws {
         let store = InMemoryContextStore()
         store.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 60.0,
                 ndStop: 4,
@@ -765,7 +765,7 @@ final class ExposureCalculatorViewModelCameraSlotsTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeViewModel(
-        contextStore: ExposureCalculatorContextPersistenceStoring = NoOpExposureCalculatorContextPersistenceStore()
+        contextStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore()
     ) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
@@ -781,7 +781,7 @@ final class ExposureCalculatorViewModelCameraSlotsTests: XCTestCase {
     ) throws -> TimeInterval {
         guard case .success(let result) = viewModel.calculationResult else {
             XCTFail("Expected a successful calculation result", file: file, line: line)
-            throw NSError(domain: "ExposureCalculatorViewModelCameraSlotsTests", code: 0)
+            throw NSError(domain: "CalculatorViewModelCameraSlotsTests", code: 0)
         }
         return result.resultShutterSeconds
     }
@@ -790,14 +790,14 @@ final class ExposureCalculatorViewModelCameraSlotsTests: XCTestCase {
 /// Test double that mirrors the production persistence store but
 /// keeps the snapshot in memory so tests can preload (`saveSnapshot`)
 /// and inspect (`snapshot`) without touching `UserDefaults`.
-private final class InMemoryContextStore: ExposureCalculatorContextPersistenceStoring {
-    private(set) var snapshot: PersistentExposureCalculatorContextSnapshot?
+private final class InMemoryContextStore: ExposureCalculatorContextStoring {
+    private(set) var snapshot: PersistentCalculatorContextSnapshot?
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         snapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         self.snapshot = snapshot
     }
 

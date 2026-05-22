@@ -49,7 +49,7 @@ PTIMER 구조 개선 작업이 다음을 만족하도록 보장:
 
 #### (a) Spec-driven property test
 
-spec의 각 invariant를 직접 property test로 변환. 예: Calculator Spec §3.2의 평가 순서 6단계를 `(metered, profile)` 조합 1만 케이스에 대해 변경 전/후 동일 결과 반환을 검증.
+spec의 각 invariant를 직접 property test로 변환. 예: Calculator Spec §3.2의 평가 순서 5단계를 `(metered, profile)` 조합 1만 케이스에 대해 변경 전/후 동일 결과 반환을 검증.
 
 도구: 표준 XCTest. 외부 라이브러리 불필요. 필요 시
 fixture-driven 테스트 또는 deterministic snapshot helper를 추가한다.
@@ -155,8 +155,8 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 | Calculator | §2.2 | ND 범위 [0, 30] | 코드 상수 grep |
 | Calculator | §2.3 | 19개 셔터 값 | 코드 배열 비교 |
 | Calculator | §2.4 | 30s 경계 분기 | 분기 조건 grep |
-| Calculator | §3.2 | 평가 순서 6단계 | evaluator switch case 비교 |
-| Calculator | §3.3 | log-log vs stop-space 선택 | 분기 grep |
+| Calculator | §3.2 | 평가 순서 5단계 + correction-invariant clamp | evaluator switch case + clampToCorrectionInvariant 비교 |
+| Calculator | §3.3 | Result form (quantified/limited/unsupported) | ReciprocityResult enum 카운트 |
 | Timer | §2.2 | 100ms tick | timer interval 상수 |
 | Timer | §3.1 | 영속성 키 (deletable on empty) | UserDefaults 키 grep + 빈 컬렉션 핸들링 |
 | Timer | §3.2 | "stopped"/"paused" 둘 다 디코드 | decoder 분기 |
@@ -165,7 +165,8 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 | UI | §3.1 | 2-detent (medium 없음) | detent enum 카운트 |
 | UI | §3.2 | 92pt up / 64pt down | drag threshold 상수 |
 | UI | §3.5 | 3-layer progress | 코드 layer 카운트 |
-| DomainSchema | §11 | 9개 검증 규칙 | catalog validator 코드 |
+| DomainSchema | §12 | 11개 catalog 검증 규칙 (positive ISO + shape allow-list 포함) | LaunchPresetFilmCatalogLoader.validateLaunchCatalog + validateProfileShape |
+| DomainSchema | §13 | 2-shape launch allow-list + §13.3 unofficial 분리 | LaunchPresetFilmCatalogShapeTests + UnofficialPracticalProfilesShapeTests |
 
 **도구**: 일부 grep, 일부 AST. **첫 audit은 매뉴얼**, 이후 자동화 가능 항목 점진 추가.
 
@@ -301,7 +302,7 @@ Record-replay 인프라는 timer types, presenter, coordinator, ViewModel 분할
 - 위치: `ios/PTimerTests/RecordReplay/` (Trace/Baseline/Spies/Harness + smoke test)
 - baseline: `ios/PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`
 - 재기록: `cd ios && RECORD_REPLAY=1 xcodebuild test ... -only-testing:PTimerTests/<TestClass>` → fail (의도 commit 강제) → env 없이 재실행으로 verify
-- fixture(`shared/test-fixtures/reciprocity-golden.json`)는 Reciprocity Result enum 입출력 페어를 이미 커버하므로 record-replay는 추가 baseline 없이도 시작 가능하다. record-replay는 **이벤트 시퀀스**(LockScreen exposer 호출 순서, persistence save/clear, notification schedule/cancel)를 lock하는 데 집중한다.
+- record-replay는 **이벤트 시퀀스**(LockScreen exposer 호출 순서, persistence save/clear, notification schedule/cancel)를 lock하는 데 집중한다 — 단순 input/output 페어 baseline은 별도 unit/snapshot 테스트가 이미 커버한다.
 - 자세한 사용법은 `ios/PTimerTests/RecordReplay/README.md`.
 
 본 인프라는 텍스트 trace + on-disk diff로 semantic equivalence

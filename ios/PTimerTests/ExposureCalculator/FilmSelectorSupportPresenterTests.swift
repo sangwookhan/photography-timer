@@ -82,37 +82,6 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
         )
     }
 
-    func testTableRuleProfileIsQuantifiedPrediction() {
-        let tableProfile = ReciprocityProfile(
-            id: "table-rule-profile",
-            name: "Table-rule official",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerPublished,
-                authority: .official,
-                publisher: "Test"
-            ),
-            rules: [
-                .table(
-                    TableReciprocityRule(
-                        entries: [
-                            ReciprocityTableEntry(
-                                meteredExposure: .exactSeconds(1),
-                                adjustments: []
-                            ),
-                        ]
-                    )
-                ),
-            ]
-        )
-        let film = syntheticFilm(profiles: [tableProfile])
-
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialQuantifiedPrediction,
-            "Official authority with a table rule must classify as quantified prediction, parallel to formula-backed profiles."
-        )
-    }
-
     // MARK: - Official limited guidance
 
     func testPortra400OfficialIsLimitedGuidance() throws {
@@ -166,7 +135,7 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
         XCTAssertEqual(
             FilmSelectorSupportPresenter.makeSupportState(for: film),
             .noQuantifiedPrediction,
-            "Official authority with neither formula/table nor advisory rules maps to the disabled / prohibited indicator state."
+            "Official authority with neither formula nor limited-guidance rules maps to the disabled / prohibited indicator state."
         )
     }
 

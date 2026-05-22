@@ -116,24 +116,24 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     }
 }
 
-struct PersistentTimerMetadataCollectionSnapshot: Codable, Equatable {
+struct PersistentTimerMetadataCollection: Codable, Equatable {
     let nextTimerOrder: Int
     let timers: [PersistentTimerMetadataSnapshot]
 }
 
 protocol TimerMetadataPersistenceStoring {
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot?
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot)
+    func loadSnapshot() -> PersistentTimerMetadataCollection?
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection)
     func clearSnapshot()
 }
 
 struct NoOpTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? { nil }
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {}
+    func loadSnapshot() -> PersistentTimerMetadataCollection? { nil }
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection) {}
     func clearSnapshot() {}
 }
 
-struct UserDefaultsTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
+struct UserDefaultsTimerMetadataStore: TimerMetadataPersistenceStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
     private let encoder = JSONEncoder()
@@ -147,15 +147,15 @@ struct UserDefaultsTimerMetadataPersistenceStore: TimerMetadataPersistenceStorin
         self.snapshotKey = snapshotKey
     }
 
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
+    func loadSnapshot() -> PersistentTimerMetadataCollection? {
         guard let data = userDefaults.data(forKey: snapshotKey) else {
             return nil
         }
 
-        return try? decoder.decode(PersistentTimerMetadataCollectionSnapshot.self, from: data)
+        return try? decoder.decode(PersistentTimerMetadataCollection.self, from: data)
     }
 
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection) {
         guard let data = try? encoder.encode(snapshot) else {
             return
         }

@@ -10,7 +10,7 @@ struct ViewModelDependencies {
     /// active-slot writer in `FilmSelectionModel.persistContext` keeps
     /// using it so older app versions reading the legacy key still
     /// see a sensible single-camera context.
-    let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
+    let contextPersistenceStore: ExposureCalculatorContextStoring
     /// New multi-slot session store. Source of truth for camera-slot
     /// state across launches.
     let cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring
@@ -31,9 +31,9 @@ enum ViewModelDependencyFactory {
                 persistenceStore: UserDefaultsTimerPersistenceStore()
             ),
             presetFilms: LaunchPresetFilmCatalog.films,
-            contextPersistenceStore: UserDefaultsExposureCalculatorContextPersistenceStore(),
-            cameraSlotSessionPersistenceStore: UserDefaultsCameraSlotSessionPersistenceStore(),
-            metadataPersistenceStore: UserDefaultsTimerMetadataPersistenceStore(),
+            contextPersistenceStore: UserDefaultsCalculatorContextStore(),
+            cameraSlotSessionPersistenceStore: UserDefaultsCameraSlotSessionStore(),
+            metadataPersistenceStore: UserDefaultsTimerMetadataStore(),
             lockScreenTargetExposer: ActivityKitLockScreenTimerTargetExposer()
         )
     }
@@ -43,7 +43,7 @@ enum ViewModelDependencyFactory {
             calculator: ExposureCalculator(),
             timerManager: TimerManager(),
             presetFilms: LaunchPresetFilmCatalog.films,
-            contextPersistenceStore: NoOpExposureCalculatorContextPersistenceStore(),
+            contextPersistenceStore: NoOpCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: NoOpCameraSlotSessionPersistenceStore(),
             metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),
             lockScreenTargetExposer: NoOpLockScreenTimerTargetExposer()

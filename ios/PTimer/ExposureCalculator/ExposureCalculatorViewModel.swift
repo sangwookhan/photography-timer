@@ -255,7 +255,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculator: ExposureCalculator,
         timerManager: TimerManager,
         presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
-        contextPersistenceStore: ExposureCalculatorContextPersistenceStoring = NoOpExposureCalculatorContextPersistenceStore(),
+        contextPersistenceStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore(),
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring = NoOpCameraSlotSessionPersistenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
@@ -469,7 +469,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         // Group the remaining entries by manufacturer, preserving the
         // sort order that `filmSelectorEntries` already established.
-        var currentManufacturer: String? = nil
+        var currentManufacturer: String?
         var currentEntries: [FilmSelectorEntry] = []
         for entry in entries.dropFirst(leading.count) {
             if entry.manufacturer != currentManufacturer {
@@ -1224,8 +1224,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
     private var targetShutterComparisonSource: TargetShutterPresenter.ComparisonSource {
         if isFilmWorkflowActive {
             // Film mode: compare against the quantified corrected
-            // exposure when present. Advisory / unsupported / calc
-            // failure paths return `unavailable` so the UI never
+            // exposure when present. Limited-guidance / unsupported /
+            // calc failure paths return `unavailable` so the UI never
             // silently compares against the intermediate Adjusted
             // Shutter value.
             if let filmModeExposureResultState,
@@ -1598,7 +1598,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
         var segments = [
             baseSummary,
-            "Adjusted \(adjustedShutter)"
+            "Adjusted \(adjustedShutter)",
         ]
 
         if let film = selectedPresetFilm {

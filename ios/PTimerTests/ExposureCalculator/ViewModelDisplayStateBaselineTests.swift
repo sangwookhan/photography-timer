@@ -34,51 +34,37 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
 
     // MARK: - Film mode
 
-    /// Tri-X 400 selected with metered=1/4s, ND 0. Locks the film
-    /// workflow's full cross-cutting surface for an exact-table-point
-    /// reciprocity scenario.
-    func testFilmModeTriXExactTablePointBaseline() throws {
+    /// Tri-X 400 selected at metered=1s. Tri-X is formula-backed; the
+    /// scenario locks the film-workflow cross-cutting surface for a
+    /// formula-derived result at the threshold boundary.
+    func testFilmModeTriXFormulaBaseline() throws {
         let viewModel = makeViewModel()
-        // Pin the reserved full-stop scale so the snap-style result
-        // (1s exact table point) lands on the same Tri-X anchor the
-        // baseline was recorded against. The shipping default scale
-        // is one-third-stop; this test covers the legacy/regression
-        // surface explicitly.
         viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
             viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
         )
         viewModel.selectPresetFilm(film)
 
-        // Tri-X 1s entry → corrected 2s. baseShutter set to 1s.
         viewModel.baseShutter = 1.0
         viewModel.ndStop = 0
 
         DisplayStateSnapshot.assert(
             ViewModelCrossCuttingDump(viewModel: viewModel),
-            named: "film-mode-trix-exact-table"
+            named: "film-mode-trix-formula-1s"
         )
     }
 
     /// Tri-X with ND applied — corrected exposure derived from the
     /// adjusted shutter, not the metered base. Locks the ND × film
-    /// composition path.
+    /// composition path through the formula calculation curve.
     func testFilmModeTriXWithNDStopBaseline() throws {
         let viewModel = makeViewModel()
-        // Pin the reserved full-stop scale: with snap on, 1/30 + 6
-        // stops → 2.0s, the exact table anchor that the recorded
-        // baseline points at. Without snap (shipping default) the
-        // intermediate value drifts to 2.133s and the reciprocity
-        // confidence shifts.
         viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
             viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
         )
         viewModel.selectPresetFilm(film)
 
-        // baseShutter 1/30 + ND 6 → adjusted ~ 2s; reciprocity table
-        // covers this with an interpolated/extrapolated quantified
-        // result depending on dataset.
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 6
 
@@ -88,16 +74,11 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
         )
     }
 
-    /// Portra 400 advisory-only profile — locks the non-quantified
-    /// branch where `correctedExposure` carries an advisory message
-    /// rather than a numeric value.
-    func testFilmModePortraAdvisoryBaseline() throws {
+    /// Portra 400 limited-guidance profile — locks the non-quantified
+    /// branch where `correctedExposure` carries a limited-guidance
+    /// message rather than a numeric value.
+    func testFilmModePortraLimitedGuidanceBaseline() throws {
         let viewModel = makeViewModel()
-        // Pin the reserved full-stop scale so the metered exposure
-        // aligns with the Portra advisory anchor the baseline was
-        // recorded against (snap is no-op for whole-second metered,
-        // but the consistency keeps this baseline aligned with the
-        // other film-mode baselines in the suite).
         viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
             viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }
@@ -109,7 +90,7 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
 
         DisplayStateSnapshot.assert(
             ViewModelCrossCuttingDump(viewModel: viewModel),
-            named: "film-mode-portra-advisory"
+            named: "film-mode-portra-limited-guidance"
         )
     }
 

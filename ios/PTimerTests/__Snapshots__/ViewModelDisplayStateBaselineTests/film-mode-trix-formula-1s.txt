@@ -130,14 +130,14 @@
       - selectedProfileOverride: nil
     - isFilmWorkflowActive: true
     - canResetFilmModeWorkingContext: true
-    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "formulaDerived", correctedExposureSeconds: Optional(2.013654), presentationCategory: "estimated", presentationBadgeStyle: "measured"))
+    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "formulaDerived", correctedExposureSeconds: Optional(2.013654), presentationCategory: "formulaDerived", presentationBadgeStyle: "measured"))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump
         - filmStockName: "Tri-X 400"
         - profileAuthority: "official"
         - policyResultBasis: "formulaDerived"
         ▿ correctedExposureSeconds: Optional(2.013654)
           - some: 2.013654
-        - presentationCategory: "estimated"
+        - presentationCategory: "formulaDerived"
         - presentationBadgeStyle: "measured"
     ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 1.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(2.013654), correctedPrimary: "2s", correctedSecondary: "", correctedExposureCanStart: true))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump

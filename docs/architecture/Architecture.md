@@ -94,7 +94,7 @@ Directory: `ExposureCalculator/Models/`. Plus
   `cameraSlotCustomDisplayNames` so SwiftUI surfaces redraw without
   a slot switch.
 - **`TargetShutterModel`** — the active slot's optional Target
-  Shutter duration ([Calculator Spec](../specs/Calculator.md) §3.8)
+  Shutter duration ([Calculator Spec](../specs/Calculator.md) §3.6)
   plus an in-session last-used memory. Per-slot persistence lives on
   the snapshot layer (`CameraSlotCalculatorSnapshot.targetShutterSeconds`);
   the session-global last-used memory is **not** wired into the
@@ -122,8 +122,9 @@ into details display state — no lifecycle, no async dependency.
   a `ReciprocityConfidencePresentation` used for badge styling and
   text display.
 - `ReciprocityDomain.swift` — all domain value types: `FilmIdentity`,
-  `ReciprocityProfile`, rule variants (`threshold`, `formula`, `table`,
-  `advisory`), and adjustment types. Fully `Codable`.
+  `ReciprocityProfile`, rule variants (`threshold`, `formula`,
+  `limitedGuidance`), `ReciprocitySourceEvidenceRow`, and adjustment
+  types. Fully `Codable`.
 
 This layer is platform-neutral and pure-function-flavored. It does not
 import UIKit/SwiftUI and (per fitness rule) shall continue not to.
@@ -147,8 +148,8 @@ Directory: `Timers/`.
 Directory: `ExposureCalculator/FilmContext/`.
 
 - `ActiveExposureCalculatorContext` — transient film-selection state.
-- `PersistentExposureCalculatorContextSnapshot` /
-  `UserDefaultsExposureCalculatorContextPersistenceStore` — persists
+- `PersistentCalculatorContextSnapshot` /
+  `UserDefaultsCalculatorContextStore` — persists
   selected film plus calculator inputs across relaunches.
 
 All persistence stores follow a `*Storing` protocol pair pattern with a
@@ -197,9 +198,9 @@ camera-slot identity that gets stamped on a timer flows into
 without slot identity decode unchanged.
 
 Multi-slot persistence: every slot's calculator snapshot is saved to
-`UserDefaultsCameraSlotSessionPersistenceStore` under a dedicated
+`UserDefaultsCameraSlotSessionStore` under a dedicated
 key. On first launch after upgrade, the legacy single-context store
-(`UserDefaultsExposureCalculatorContextPersistenceStore`) is read by
+(`UserDefaultsCalculatorContextStore`) is read by
 the ViewModel's restore path; once any state mutation happens, the
 new session snapshot becomes the source of truth and the legacy key
 is ignored.
@@ -218,7 +219,7 @@ Files: `PresetFilmCatalog.swift`,
 
 Preset films load from the bundled JSON at launch via
 `LaunchPresetFilmCatalog`. Catalog validation (see
-`docs/specs/DomainSchema.md` §11) runs at load time; a failing catalog
+`docs/specs/DomainSchema.md` §12) runs at load time; a failing catalog
 is a load-time error rather than a soft-warn.
 
 ### 1.9 Widgets
@@ -256,7 +257,7 @@ maintain a parallel copy.
 | Per-slot persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
-| Calculator context persistence | `UserDefaultsExposureCalculatorContextPersistenceStore` |
+| Calculator context persistence | `UserDefaultsCalculatorContextStore` |
 | Local notifications for completion | `TimerCompletionNotificationScheduler` |
 
 Display state (the structs consumed by SwiftUI views) is *computed*
@@ -334,7 +335,7 @@ Test files under `ios/PTimerTests/` mirror the source layout:
   (`CalculatorModelTests`, `ReciprocityModelTests`,
   `TimerWorkspaceModelTests`, `FilmSelectionModelTests`,
   `CameraSlotSessionModelTests`), and the slot-routing facade tests
-  (`ExposureCalculatorViewModelCameraSlotsTests`).
+  (`CalculatorViewModelCameraSlotsTests`).
 - `Reciprocity/` — policy evaluation, confidence mapping.
 - `Timers/` — TimerManager lifecycle, time formatting.
 - `App/` — workspace shell behavior.

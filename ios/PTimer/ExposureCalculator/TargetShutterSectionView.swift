@@ -73,7 +73,9 @@ struct TargetShutterSectionView: View {
     }
 
     private var inactiveRow: some View {
-        Button(action: { inputSheetVisible = true }) {
+        Button {
+            inputSheetVisible = true
+        } label: {
             HStack(spacing: 12) {
                 Text("Target Shutter")
                     .font(.subheadline.weight(.semibold))
@@ -120,7 +122,9 @@ struct TargetShutterSectionView: View {
         // edit Button's combined accessibility label so blind users
         // still get the same information.
         HStack(spacing: 12) {
-            Button(action: { inputSheetVisible = true }) {
+            Button {
+                inputSheetVisible = true
+            } label: {
                 HStack(spacing: 10) {
                     Text("Target Shutter")
                         .font(.subheadline.weight(.semibold))
@@ -377,7 +381,7 @@ struct TargetShutterInputSheet: View {
         1, 2, 4, 8, 15, 30,        // seconds
         60, 120, 240, 480,          // 1m, 2m, 4m, 8m
         900, 1800,                  // 15m, 30m
-        3600, 7200, 14_400, 28_800  // 1h, 2h, 4h, 8h
+        3600, 7200, 14_400, 28_800,  // 1h, 2h, 4h, 8h
     ]
 
     /// Default initial duration when the photographer has neither a

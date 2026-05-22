@@ -14,7 +14,7 @@ import UIKit
 
 /// Stable initial detent for the Reciprocity Details bottom sheet.
 /// Using a single named constant ensures every profile type (official,
-/// unofficial, formula, table, advisory) presents the sheet at the
+/// unofficial, formula, limited-guidance) presents the sheet at the
 /// same initial height.
 private let reciprocityDetailsInitialDetent: PresentationDetent = .fraction(0.85)
 
@@ -56,7 +56,7 @@ struct FilmModeDetailsSheet: View {
 
                     if let graph = details.graph {
                         FilmModeDetailsGraph(graph: graph)
-                    } else if details.summary.tone != .advisory {
+                    } else if details.summary.tone != .limitedGuidance {
                         FilmModeDetailsGraphUnavailableNote()
                     }
 
@@ -165,8 +165,8 @@ struct FilmModeDetailsSheet: View {
     /// Sections that describe manufacturer source evidence. Placed
     /// directly under the reference graph so the user can read each
     /// plotted element (source reference, guidance boundary, or the
-    /// table reference for non-converted profiles) without scrolling
-    /// past the profile metadata first.
+    /// limited-guidance "Reference" block) without scrolling past
+    /// the profile metadata first.
     private func isEvidenceSection(_ section: FilmModeDetailsSectionState) -> Bool {
         switch section.title {
         case "Source reference", "Guidance boundary", "Reference":
@@ -252,7 +252,7 @@ private struct FilmModeDetailsStickySummary: View {
             return Color.blue.opacity(0.14)
         case .caution:
             return Color.orange.opacity(0.16)
-        case .advisory:
+        case .limitedGuidance:
             return Color.yellow.opacity(0.18)
         case .unsupported:
             return Color.red.opacity(0.14)
@@ -267,7 +267,7 @@ private struct FilmModeDetailsStickySummary: View {
             return .blue
         case .caution:
             return .orange
-        case .advisory:
+        case .limitedGuidance:
             return .yellow.opacity(0.9)
         case .unsupported:
             return .red
@@ -367,7 +367,7 @@ private struct FilmModeDetailsSummary: View {
             return Color.blue.opacity(0.14)
         case .caution:
             return Color.orange.opacity(0.16)
-        case .advisory:
+        case .limitedGuidance:
             return Color.yellow.opacity(0.18)
         case .unsupported:
             return Color.red.opacity(0.14)
@@ -382,7 +382,7 @@ private struct FilmModeDetailsSummary: View {
             return .blue
         case .caution:
             return .orange
-        case .advisory:
+        case .limitedGuidance:
             return .yellow.opacity(0.9)
         case .unsupported:
             return .red
@@ -501,7 +501,7 @@ private struct FilmModeDetailsCurrentResultBlock: View {
             return .blue
         case .caution:
             return .orange
-        case .advisory:
+        case .limitedGuidance:
             return .yellow.opacity(0.9)
         case .unsupported:
             return .red
@@ -516,7 +516,7 @@ private struct FilmModeDetailsCurrentResultBlock: View {
         }
 
         switch summary.tone {
-        case .unsupported, .advisory:
+        case .unsupported, .limitedGuidance:
             return .orange
         case .trusted, .measured, .caution:
             return .primary
@@ -579,8 +579,14 @@ private struct FilmModeDetailsLegendChip: View {
     }
 }
 
+struct FilmModeDetailsLegendFlowItem: Equatable {
+    let symbol: String
+    let color: Color
+    let text: String
+}
+
 private struct FilmModeDetailsLegendFlow: View {
-    let items: [(symbol: String, color: Color, text: String)]
+    let items: [FilmModeDetailsLegendFlowItem]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -598,13 +604,13 @@ private struct FilmModeDetailsLegendFlow: View {
         }
     }
 
-    private var rows: [[(symbol: String, color: Color, text: String)]] {
+    private var rows: [[FilmModeDetailsLegendFlowItem]] {
         guard !items.isEmpty else {
             return []
         }
 
-        var result: [[(symbol: String, color: Color, text: String)]] = []
-        var currentRow: [(symbol: String, color: Color, text: String)] = []
+        var result: [[FilmModeDetailsLegendFlowItem]] = []
+        var currentRow: [FilmModeDetailsLegendFlowItem] = []
 
         for item in items {
             if currentRow.count == 2 {
@@ -786,9 +792,9 @@ private struct FilmModeDetailsGraph: View {
 
                                 sourcePath(in: plotSize)
                                     .stroke(
-                                        graph.kind == .formula ? Color.accentColor.opacity(0.9) : Color.secondary.opacity(0.82),
+                                        Color.accentColor.opacity(0.9),
                                         style: StrokeStyle(
-                                            lineWidth: graph.kind == .formula ? 2.4 : 1.8,
+                                            lineWidth: 2.4,
                                             lineCap: .round,
                                             lineJoin: .round
                                         )
@@ -831,11 +837,6 @@ private struct FilmModeDetailsGraph: View {
                                         in: plotSize
                                     )
                                     .padding(plotInset)
-                                }
-
-                                if graph.kind == .table {
-                                    tableAnchorMarkers(in: plotSize)
-                                        .padding(plotInset)
                                 }
 
                                 if !graph.sourceReferenceMarkers.isEmpty {
@@ -1034,22 +1035,6 @@ private struct FilmModeDetailsGraph: View {
         .stroke(Color.green.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [2, 3]))
     }
 
-    @ViewBuilder
-    private func tableAnchorMarkers(in size: CGSize) -> some View {
-        ZStack {
-            ForEach(Array(graph.sourcePoints.enumerated()), id: \.offset) { _, point in
-                Circle()
-                    .fill(Color(.systemBackground))
-                    .frame(width: 8, height: 8)
-                    .overlay {
-                        Circle()
-                            .stroke(Color.secondary.opacity(0.8), lineWidth: 1.5)
-                    }
-                    .position(plottedPoint(for: point, in: size))
-            }
-        }
-    }
-
     /// Small open green rings (with attached labels) drawn over the
     /// formula curve for each manufacturer source-reference point.
     /// The ring is roughly half the size of the current-result blue
@@ -1157,18 +1142,7 @@ private struct FilmModeDetailsGraph: View {
         for currentPoint: FilmModeDetailsGraphCurrentPoint,
         in size: CGSize
     ) -> some View {
-        if graph.kind == .table,
-           currentPoint.style == .extrapolated,
-           let lastSourcePoint = graph.sourcePoints.last {
-            Path { path in
-                path.move(to: plottedPoint(for: lastSourcePoint, in: size))
-                path.addLine(to: plottedPoint(for: currentPoint.point, in: size))
-            }
-            .stroke(
-                Color.orange.opacity(0.7),
-                style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [5, 4])
-            )
-        }
+        EmptyView()
     }
 
     private func currentInputGuideOnly(
@@ -1191,79 +1165,26 @@ private struct FilmModeDetailsGraph: View {
         }
     }
 
-    @ViewBuilder
+    /// Every in-range current result on the formula graph is a filled
+    /// blue dot regardless of policy basis (no-correction,
+    /// formula-derived, beyond-source-range). The status line, region
+    /// shading, and source-reference markers carry the state-specific
+    /// meaning; the current marker stays one consistent shape so it
+    /// never reads as a source reference.
     private func currentPointMarker(
         for currentPoint: FilmModeDetailsGraphCurrentPoint,
         in size: CGSize
     ) -> some View {
         let plotted = plottedPoint(for: currentPoint.point, in: size)
 
-        switch graph.kind {
-        case .formula:
-            // Every in-range current result on a formula graph is a
-            // filled blue dot regardless of policy basis (exact,
-            // estimated, formula-derived, no-correction, extrapolated).
-            // The status line, region shading, and source-reference
-            // marker carry the state-specific meaning; the current
-            // marker stays one consistent shape so it never reads
-            // as a source reference.
-            Circle()
-                .fill(Color.blue)
-                .frame(width: 13, height: 13)
-                .overlay {
-                    Circle()
-                        .stroke(Color(.systemBackground), lineWidth: 2)
-                }
-                .position(plotted)
-        case .table:
-            tableCurrentPointMarker(for: currentPoint, plotted: plotted)
-        }
-    }
-
-    /// Legacy per-policy marker styling preserved for non-converted
-    /// table profiles. Formula graphs route to the blue-dot rule
-    /// above.
-    @ViewBuilder
-    private func tableCurrentPointMarker(
-        for currentPoint: FilmModeDetailsGraphCurrentPoint,
-        plotted: CGPoint
-    ) -> some View {
-        switch currentPoint.style {
-        case .exact:
-            Circle()
-                .fill(Color.green)
-                .frame(width: 14, height: 14)
-                .overlay { Circle().stroke(Color(.systemBackground), lineWidth: 2) }
-                .position(plotted)
-        case .estimated:
-            Diamond()
-                .fill(Color.blue)
-                .frame(width: 15, height: 15)
-                .overlay { Diamond().stroke(Color.blue.opacity(0.25), lineWidth: 5) }
-                .overlay { Diamond().stroke(Color(.systemBackground), lineWidth: 2) }
-                .position(plotted)
-        case .extrapolated:
-            Triangle()
-                .fill(Color.orange)
-                .frame(width: 16, height: 15)
-                .overlay { Triangle().stroke(Color(.systemBackground), lineWidth: 2) }
-                .position(plotted)
-        case .formulaDerived:
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 15, height: 15)
-                .overlay { Circle().stroke(Color(.systemBackground), lineWidth: 2) }
-                .overlay { Circle().stroke(Color.accentColor.opacity(0.3), lineWidth: 5) }
-                .position(plotted)
-        case .noCorrection:
-            Circle()
-                .stroke(Color.green, lineWidth: 2)
-                .frame(width: 14, height: 14)
-                .background(
-                    Circle().fill(Color(.systemBackground)).frame(width: 14, height: 14)
-                )
-                .position(plotted)
-        }
+        return Circle()
+            .fill(Color.blue)
+            .frame(width: 13, height: 13)
+            .overlay {
+                Circle()
+                    .stroke(Color(.systemBackground), lineWidth: 2)
+            }
+            .position(plotted)
     }
 
     /// Edge-anchored orange triangle that signals the current
@@ -1352,33 +1273,18 @@ private struct FilmModeDetailsGraph: View {
     }
 
     private var graphAccessibilityLabel: String {
-        switch graph.kind {
-        case .formula:
-            return "Reciprocity formula graph"
-        case .table:
-            return "Reciprocity reference table graph"
-        }
+        "Reciprocity formula graph"
     }
 
     private var graphAccessibilityValue: String {
-        let sourceDescription: String
-        switch graph.kind {
-        case .formula:
-            sourceDescription = "Shows calculation curve and current point"
-        case .table:
-            sourceDescription = "Shows neutral reference anchors and current point"
-        }
+        let sourceDescription = "Shows calculation curve and current point"
 
         let pointDescription = graph.currentPoint.map {
             switch $0.style {
-            case .exact:
-                return "Current point exact"
-            case .estimated:
-                return "Current point estimated"
-            case .extrapolated:
-                return "Current point extrapolated outside manufacturer guidance"
             case .formulaDerived:
                 return "Current point on calculation curve"
+            case .beyondSourceRange:
+                return "Current point beyond manufacturer source range"
             case .noCorrection:
                 return "Current input in no-correction range"
             }
@@ -1392,10 +1298,14 @@ private struct FilmModeDetailsGraph: View {
     /// each user-visible label to its accompanying SF Symbol and
     /// accent color, so the wording is testable in the value
     /// layer instead of living inside the SwiftUI tree.
-    private var graphLegendItems: [(symbol: String, color: Color, text: String)] {
+    private var graphLegendItems: [FilmModeDetailsLegendFlowItem] {
         graph.legendChipLabels.map { label in
             let symbolAndColor = symbolAndColor(forLegendLabel: label)
-            return (symbolAndColor.symbol, symbolAndColor.color, label)
+            return FilmModeDetailsLegendFlowItem(
+                symbol: symbolAndColor.symbol,
+                color: symbolAndColor.color,
+                text: label
+            )
         }
     }
 
@@ -1406,12 +1316,7 @@ private struct FilmModeDetailsGraph: View {
         case "Calculation curve":
             return ("line.horizontal.3", .accentColor)
         case "Current result":
-            // The accent-colored ring is used by the table path's
-            // formulaDerived marker; the formula path uses the
-            // blue dot. Disambiguate using the graph kind.
-            return graph.kind == .formula
-                ? ("circle.fill", .blue)
-                : ("circle.fill", .accentColor)
+            return ("circle.fill", .blue)
         case "Current input":
             return ("line.diagonal", .red)
         case "Source reference":
@@ -1421,29 +1326,13 @@ private struct FilmModeDetailsGraph: View {
         case "Not-recommended boundary":
             return ("minus", .red)
         case "Beyond source range":
-            // Same orange-triangle visual whether surfaced as a
-            // formula-graph region or as a converted-formula table
-            // current-point chip.
             return ("triangle.fill", .orange)
         case "Outside visible range":
             return ("triangle.fill", .orange)
-        case "Reference":
-            return ("circle", .secondary)
-        case "Range limit":
-            return ("square.fill", .green.opacity(0.5))
-        case "Exact":
-            return ("circle.fill", .green)
-        case "Estimated":
-            return ("diamond.fill", .blue)
-        case "Extrapolated":
-            return ("triangle.fill", .orange)
-        case "No correction":
-            return ("circle", .green)
         default:
             return ("circle", .secondary)
         }
     }
-
 
     private var graphExplanationSymbol: String {
         if graph.usesCurrentInputGuideOnly {
@@ -1455,14 +1344,10 @@ private struct FilmModeDetailsGraph: View {
         }
 
         switch graph.currentPoint?.style {
-        case .exact:
-            return "checkmark.circle"
-        case .estimated:
-            return "slider.horizontal.below.square.and.square.filled"
-        case .extrapolated:
-            return "arrow.up.forward.circle"
         case .formulaDerived:
             return "function"
+        case .beyondSourceRange:
+            return "arrow.up.forward.circle"
         case .noCorrection:
             return "checkmark.circle"
         case .none:
@@ -1480,11 +1365,11 @@ private struct FilmModeDetailsGraph: View {
         }
 
         switch graph.currentPoint?.style {
-        case .exact, .noCorrection:
+        case .noCorrection:
             return .green
-        case .estimated, .formulaDerived:
+        case .formulaDerived:
             return .blue
-        case .extrapolated:
+        case .beyondSourceRange:
             return .orange
         case .none:
             return .secondary
@@ -1495,32 +1380,14 @@ private struct FilmModeDetailsGraph: View {
         if shouldRenderDescriptionLines {
             return graph.descriptionLines.joined(separator: "\n")
         }
-        if graph.kind == .formula {
-            // Formula graphs route every state-specific note through
-            // `descriptionLines`; if that list is empty, the curve
-            // and legend already convey enough — no caption needed.
-            return ""
-        }
-        if let unsupportedExplanation = graph.unsupportedExplanation {
-            return unsupportedExplanation
-        }
-        return graph.caption
+        // Formula graphs route every state-specific note through
+        // `descriptionLines`; if that list is empty, the curve and
+        // legend already convey enough — no caption needed.
+        return ""
     }
 
     private var shouldRenderDescriptionLines: Bool {
         !graph.descriptionLines.isEmpty
-    }
-}
-
-private struct Diamond: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path { path in
-            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-            path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
-            path.closeSubpath()
-        }
     }
 }
 

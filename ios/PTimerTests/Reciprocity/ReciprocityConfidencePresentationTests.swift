@@ -5,103 +5,68 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
     private let mapper = ReciprocityConfidencePresentationMapper()
 
-    func testTriXExactTablePointMapsToTrustedExactPresentation() {
+    // MARK: - No-correction (threshold-derived)
+
+    func testThresholdNoCorrectionMapsToTrustedNoCorrectionPresentation() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 10
+            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            meteredExposureSeconds: 0.5
         )
 
-        XCTAssertEqual(presentation.category, .exact)
-        XCTAssertEqual(presentation.resultKind, .exact)
+        XCTAssertEqual(presentation.category, .noCorrection)
+        XCTAssertEqual(presentation.resultKind, .noCorrection)
         XCTAssertEqual(presentation.level, .high)
         XCTAssertEqual(presentation.badgeStyle, .trusted)
         XCTAssertEqual(presentation.warningEmphasis, .none)
-        XCTAssertEqual(presentation.shortLabel, "Exact")
+        XCTAssertEqual(presentation.shortLabel, "No correction")
         XCTAssertTrue(presentation.returnsCalculatedExposureTime)
-        XCTAssertEqual(
-            presentation.explanationTokens,
-            [
-                .exactTablePoint,
-                .currentOfficialSource,
-                .withinStatedRange,
-                .calculatedExposureReturned
-            ]
-        )
+        XCTAssertTrue(presentation.explanationTokens.contains(.thresholdGuidanceOnly))
     }
 
-    func testTriXInterpolationMapsToEstimatedPresentation() {
+    // MARK: - Formula-derived
+
+    func testFormulaDerivedMapsToMeasuredFormulaDerivedPresentation() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 5
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            meteredExposureSeconds: 100
         )
 
-        XCTAssertEqual(presentation.category, .estimated)
-        XCTAssertEqual(presentation.resultKind, .estimated)
+        XCTAssertEqual(presentation.category, .formulaDerived)
+        XCTAssertEqual(presentation.resultKind, .formulaDerived)
         XCTAssertEqual(presentation.level, .medium)
         XCTAssertEqual(presentation.badgeStyle, .measured)
-        XCTAssertEqual(presentation.warningEmphasis, .note)
-        XCTAssertEqual(presentation.shortLabel, "Estimated")
-        XCTAssertTrue(presentation.explanationTokens.contains(.interpolatedEstimate))
-        XCTAssertTrue(presentation.explanationTokens.contains(.withinInterpretedRange))
-        XCTAssertTrue(presentation.explanationTokens.contains(.logLogEstimation))
-        XCTAssertEqual(
-            presentation.supportingNotes,
-            ["Interpolated between original representative table rows."]
-        )
-        XCTAssertEqual(
-            presentation.defaultExplanation,
-            "Interpolated between original representative table rows."
-        )
-    }
-
-    func testTriXExtrapolationMapsToLowerConfidenceExtrapolatedPresentation() {
-        let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 300
-        )
-
-        XCTAssertEqual(presentation.category, .extrapolated)
-        XCTAssertEqual(presentation.resultKind, .extrapolated)
-        XCTAssertEqual(presentation.level, .low)
-        XCTAssertEqual(presentation.badgeStyle, .caution)
-        XCTAssertEqual(presentation.warningEmphasis, .caution)
-        XCTAssertEqual(presentation.shortLabel, "Extrapolated")
-        XCTAssertNotEqual(presentation.category, .estimated)
-        XCTAssertNotEqual(presentation.resultKind, .estimated)
-        XCTAssertTrue(presentation.explanationTokens.contains(.extrapolatedEstimate))
-        XCTAssertTrue(presentation.explanationTokens.contains(.beyondRepresentativePoint))
-        XCTAssertTrue(presentation.explanationTokens.contains(.logLogEstimation))
-    }
-
-    func testTriXExtendedExtrapolationStillMapsToExtrapolatedPresentation() {
-        let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 1_000
-        )
-
-        XCTAssertEqual(presentation.category, .extrapolated)
-        XCTAssertEqual(presentation.resultKind, .extrapolated)
-        XCTAssertEqual(presentation.level, .low)
-        XCTAssertEqual(presentation.badgeStyle, .caution)
-        XCTAssertEqual(presentation.warningEmphasis, .caution)
-        XCTAssertEqual(presentation.shortLabel, "Extrapolated")
+        XCTAssertEqual(presentation.warningEmphasis, .none)
+        XCTAssertEqual(presentation.shortLabel, "Formula-derived")
         XCTAssertTrue(presentation.returnsCalculatedExposureTime)
-        XCTAssertTrue(presentation.explanationTokens.contains(.extrapolatedEstimate))
-        XCTAssertTrue(presentation.explanationTokens.contains(.beyondRepresentativePoint))
-        XCTAssertFalse(presentation.explanationTokens.contains(.beyondPolicyLimit))
-        XCTAssertEqual(
-            presentation.supportingNotes,
-            [
-                "Low-confidence result extrapolated from the original representative table rows.",
-                "Result extends beyond the last quantified representative point and should be verified with testing."
-            ]
-        )
+        XCTAssertTrue(presentation.explanationTokens.contains(.formulaDerived))
     }
 
-    func testVelviaStopSignalMapsToUnsupportedPresentation() {
+    // MARK: - Limited guidance
+
+    func testLimitedGuidanceMapsToLimitedGuidancePresentation() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.velviaProfile(),
-            meteredExposureSeconds: 64
+            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            meteredExposureSeconds: 4
+        )
+
+        XCTAssertEqual(presentation.category, .limitedGuidance)
+        XCTAssertEqual(presentation.resultKind, .limitedGuidance)
+        XCTAssertEqual(presentation.level, .none)
+        XCTAssertEqual(presentation.badgeStyle, .limitedGuidance)
+        XCTAssertEqual(presentation.warningEmphasis, .note)
+        XCTAssertEqual(presentation.shortLabel, "No quantified prediction")
+        XCTAssertFalse(presentation.returnsCalculatedExposureTime)
+        XCTAssertTrue(presentation.explanationTokens.contains(.limitedGuidanceContinuationOnly))
+        XCTAssertTrue(presentation.explanationTokens.contains(.officialRangeExceeded))
+        XCTAssertFalse(presentation.explanationTokens.contains(.unsupportedByPolicy))
+    }
+
+    // MARK: - Unsupported
+
+    func testBoundedFormulaPastSupportedRangeMapsToUnsupportedPresentation() {
+        let presentation = presentation(
+            profile: ReciprocityPolicyScenarioFactory.formulaBoundedProfile(),
+            meteredExposureSeconds: 601
         )
 
         XCTAssertEqual(presentation.category, .unsupported)
@@ -109,150 +74,50 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
         XCTAssertEqual(presentation.level, .none)
         XCTAssertEqual(presentation.badgeStyle, .unsupported)
         XCTAssertEqual(presentation.warningEmphasis, .strong)
-        XCTAssertEqual(presentation.shortLabel, "Unsupported")
-        XCTAssertFalse(presentation.returnsCalculatedExposureTime)
-        XCTAssertTrue(presentation.explanationTokens.contains(.explicitStopSignal))
+        XCTAssertEqual(presentation.shortLabel, "Outside guidance")
+        XCTAssertTrue(presentation.returnsCalculatedExposureTime)
         XCTAssertTrue(presentation.explanationTokens.contains(.unsupportedByPolicy))
         XCTAssertTrue(presentation.explanationTokens.contains(.beyondPolicyLimit))
     }
 
-    func testPortraThresholdNoCorrectionRemainsDistinctFromInterpolation() {
+    // MARK: - Authority impact
+
+    func testArchivalOfficialPropagatesShortLabelPrefixAndExplanationToken() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
-            meteredExposureSeconds: 0.5
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .archivalOfficial),
+            meteredExposureSeconds: 100
         )
 
-        XCTAssertEqual(presentation.category, .exact)
-        XCTAssertEqual(presentation.resultKind, .exact)
-        XCTAssertEqual(presentation.level, .high)
-        XCTAssertEqual(presentation.badgeStyle, .trusted)
-        XCTAssertEqual(presentation.warningEmphasis, .none)
-        XCTAssertEqual(presentation.shortLabel, "No correction")
-        XCTAssertTrue(presentation.explanationTokens.contains(.thresholdGuidanceOnly))
-        XCTAssertFalse(presentation.explanationTokens.contains(.interpolatedEstimate))
-    }
-
-    func testPortraAdvisoryOnlyDoesNotCollapseIntoUnsupported() {
-        let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
-            meteredExposureSeconds: 4
-        )
-
-        XCTAssertEqual(presentation.category, .advisoryOnly)
-        XCTAssertEqual(presentation.resultKind, .advisoryOnly)
-        XCTAssertEqual(presentation.level, .none)
-        XCTAssertEqual(presentation.badgeStyle, .advisory)
-        XCTAssertEqual(presentation.warningEmphasis, .note)
-        XCTAssertEqual(presentation.shortLabel, "Advisory")
-        XCTAssertFalse(presentation.returnsCalculatedExposureTime)
-        XCTAssertTrue(presentation.explanationTokens.contains(.advisoryContinuationOnly))
-        XCTAssertTrue(presentation.explanationTokens.contains(.officialRangeExceeded))
-        XCTAssertFalse(presentation.explanationTokens.contains(.unsupportedByPolicy))
-    }
-
-    func testFormulaDerivedResultRoutesThroughEstimatedPresentationFamily() {
-        let presentation = mapper.map(
-            result: .quantified(
-                ReciprocityResult.QuantifiedPayload(
-                    meteredExposureSeconds: 2,
-                    correctedExposureSeconds: 3.5,
-                    metadata: ReciprocityCalculationPolicyResultMetadata(
-                        basis: .formulaDerived,
-                        sourceAuthorityImpact: .currentOfficial,
-                        rangeStatus: .withinInterpretedRange,
-                        warningLevel: .none,
-                        notes: [
-                            ReciprocityPolicyNote(
-                                token: nil,
-                                text: "Calculated from a formula-backed reciprocity profile."
-                            )
-                        ]
-                    )
-                )
-            )
-        )
-
-        XCTAssertEqual(presentation.category, .estimated)
-        XCTAssertEqual(presentation.resultKind, .estimated)
+        XCTAssertEqual(presentation.shortLabel, "Archival formula")
         XCTAssertEqual(presentation.level, .medium)
-        XCTAssertEqual(presentation.badgeStyle, .measured)
-        XCTAssertEqual(presentation.shortLabel, "Calculated")
-        XCTAssertTrue(presentation.returnsCalculatedExposureTime)
-        XCTAssertTrue(presentation.explanationTokens.contains(.formulaDerived))
-        XCTAssertTrue(presentation.explanationTokens.contains(.withinInterpretedRange))
-        XCTAssertEqual(
-            presentation.defaultExplanation,
-            "Calculated from a formula-backed reciprocity profile."
-        )
-    }
-
-    func testArchivalOfficialExactRemainsDistinctFromCurrentOfficialExact() {
-        let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.agfaArchivalProfile(),
-            meteredExposureSeconds: 10
-        )
-
-        XCTAssertEqual(presentation.category, .exact)
-        XCTAssertEqual(presentation.level, .medium)
-        XCTAssertEqual(presentation.badgeStyle, .measured)
-        XCTAssertEqual(presentation.warningEmphasis, .note)
-        XCTAssertEqual(presentation.shortLabel, "Archival exact")
         XCTAssertTrue(presentation.explanationTokens.contains(.archivalOfficialSource))
     }
 
-    func testUnofficialSecondaryExactMapsMoreCautiouslyThanCurrentOfficial() {
+    func testUnofficialSecondaryPropagatesShortLabelPrefixAndExplanationToken() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.portraSecondaryProfile(),
-            meteredExposureSeconds: 2
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .unofficialSecondary),
+            meteredExposureSeconds: 100
         )
 
-        XCTAssertEqual(presentation.category, .exact)
+        XCTAssertEqual(presentation.shortLabel, "Secondary formula")
         XCTAssertEqual(presentation.level, .low)
         XCTAssertEqual(presentation.badgeStyle, .caution)
-        XCTAssertEqual(presentation.warningEmphasis, .caution)
-        XCTAssertEqual(presentation.shortLabel, "Secondary exact")
         XCTAssertTrue(presentation.explanationTokens.contains(.unofficialSecondarySource))
     }
 
-    func testUserDefinedExactMapsToMostCautiousCalculatedPresentation() {
+    func testUserDefinedPropagatesShortLabelPrefixAndExplanationToken() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.customUserDefinedProfile(),
-            meteredExposureSeconds: 1
+            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .userDefined),
+            meteredExposureSeconds: 100
         )
 
-        XCTAssertEqual(presentation.category, .exact)
+        XCTAssertEqual(presentation.shortLabel, "Custom formula")
         XCTAssertEqual(presentation.level, .veryLow)
         XCTAssertEqual(presentation.badgeStyle, .caution)
-        XCTAssertEqual(presentation.warningEmphasis, .caution)
-        XCTAssertEqual(presentation.shortLabel, "Custom exact")
         XCTAssertTrue(presentation.explanationTokens.contains(.userDefinedSource))
     }
 
-    func testCurrentArchivalUnofficialAndUserDefinedRemainDistinctAcrossLabelsAndTokens() {
-        let currentOfficial = presentation(
-            profile: ReciprocityPolicyScenarioFactory.triXProfile(),
-            meteredExposureSeconds: 10
-        )
-        let archival = presentation(
-            profile: ReciprocityPolicyScenarioFactory.agfaArchivalProfile(),
-            meteredExposureSeconds: 10
-        )
-        let unofficial = presentation(
-            profile: ReciprocityPolicyScenarioFactory.portraSecondaryProfile(),
-            meteredExposureSeconds: 2
-        )
-        let userDefined = presentation(
-            profile: ReciprocityPolicyScenarioFactory.customUserDefinedProfile(),
-            meteredExposureSeconds: 1
-        )
-
-        XCTAssertNotEqual(currentOfficial.shortLabel, archival.shortLabel)
-        XCTAssertNotEqual(archival.shortLabel, unofficial.shortLabel)
-        XCTAssertNotEqual(unofficial.shortLabel, userDefined.shortLabel)
-        XCTAssertTrue(archival.explanationTokens.contains(.archivalOfficialSource))
-        XCTAssertTrue(unofficial.explanationTokens.contains(.unofficialSecondarySource))
-        XCTAssertTrue(userDefined.explanationTokens.contains(.userDefinedSource))
-    }
+    // MARK: - Decoder validation
 
     func testDecodingRejectsContradictoryPresentationCategoryAndResultKind() {
         let json = """
@@ -261,8 +126,8 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
           "level": "none",
           "badgeStyle": "unsupported",
           "warningEmphasis": "strong",
-          "resultKind": "advisoryOnly",
-          "shortLabel": "Unsupported",
+          "resultKind": "limitedGuidance",
+          "shortLabel": "Outside guidance",
           "explanationTokens": ["unsupportedByPolicy", "noCalculatedExposureReturned"],
           "supportingNotes": [],
           "defaultExplanation": "Unsupported.",
@@ -287,15 +152,15 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
     func testDecodingRejectsPresentationThatClaimsCalculatedExposureWithoutOne() {
         let json = """
         {
-          "category": "advisoryOnly",
+          "category": "limitedGuidance",
           "level": "none",
-          "badgeStyle": "advisory",
+          "badgeStyle": "limitedGuidance",
           "warningEmphasis": "note",
-          "resultKind": "advisoryOnly",
-          "shortLabel": "Advisory",
-          "explanationTokens": ["advisoryContinuationOnly", "calculatedExposureReturned"],
+          "resultKind": "limitedGuidance",
+          "shortLabel": "No quantified prediction",
+          "explanationTokens": ["limitedGuidanceContinuationOnly", "calculatedExposureReturned"],
           "supportingNotes": [],
-          "defaultExplanation": "Advisory only.",
+          "defaultExplanation": "Limited guidance only.",
           "returnsCalculatedExposureTime": false
         }
         """
@@ -319,10 +184,10 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
         {
           "category": "unsupported",
           "level": "none",
-          "badgeStyle": "advisory",
+          "badgeStyle": "limitedGuidance",
           "warningEmphasis": "strong",
           "resultKind": "unsupported",
-          "shortLabel": "Unsupported",
+          "shortLabel": "Outside guidance",
           "explanationTokens": ["unsupportedByPolicy", "noCalculatedExposureReturned"],
           "supportingNotes": [],
           "defaultExplanation": "Unsupported.",

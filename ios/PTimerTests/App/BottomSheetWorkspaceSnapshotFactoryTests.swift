@@ -152,7 +152,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
             completedItems.map(\.timingText),
             [
                 "Completed 1970-01-01 02:45:40 · 1 min ago",
-                "Completed 1970-01-01 02:43:40 · 3 min ago"
+                "Completed 1970-01-01 02:43:40 · 3 min ago",
             ]
         )
     }
@@ -275,7 +275,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
             [
                 UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
                 UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
-                UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+                UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             ]
         )
     }
@@ -504,7 +504,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
                 pausedAt: nil,
                 status: .completed,
                 referenceDate: now
-            )
+            ),
         ]
     }
 

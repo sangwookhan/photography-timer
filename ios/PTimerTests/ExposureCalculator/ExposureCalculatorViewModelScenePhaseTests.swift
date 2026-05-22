@@ -1,7 +1,7 @@
 import XCTest
 @testable import PTimer
 
-final class ExposureCalculatorViewModelScenePhaseTests: XCTestCase {
+final class CalculatorViewModelScenePhaseTests: XCTestCase {
     @MainActor
     func testReconcileTimersAfterAppBecomesActivePublishesUpdatedTimerStateWithoutUserInteraction() throws {
         let startDate = Date(timeIntervalSince1970: 100)

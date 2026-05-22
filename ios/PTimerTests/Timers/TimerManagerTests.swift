@@ -115,7 +115,7 @@ final class TimerManagerTests: XCTestCase {
             TimerCompletionEvent(
                 timerID: id,
                 completionDate: startDate.addingTimeInterval(3)
-            )
+            ),
         ])
     }
 
@@ -137,7 +137,7 @@ final class TimerManagerTests: XCTestCase {
                 timerID: id,
                 endDate: startDate.addingTimeInterval(3),
                 status: .running
-            )
+            ),
         ])
     }
 
@@ -190,7 +190,7 @@ final class TimerManagerTests: XCTestCase {
                 timerID: id,
                 endDate: currentDate.addingTimeInterval(6),
                 status: .running
-            )
+            ),
         ])
         XCTAssertEqual(schedulerSpy.canceledTimerIDs, [id])
     }
@@ -395,7 +395,7 @@ final class TimerManagerTests: XCTestCase {
             TimerCompletionEvent(
                 timerID: secondID,
                 completionDate: startDate.addingTimeInterval(5)
-            )
+            ),
         ])
     }
 
@@ -1584,7 +1584,7 @@ final class TimerManagerTests: XCTestCase {
             TimerCompletionEvent(
                 timerID: id,
                 completionDate: currentDate
-            )
+            ),
         ])
     }
 
@@ -1727,7 +1727,7 @@ final class TimerManagerTests: XCTestCase {
                     pausedRemainingDuration: 6,
                     pausedAt: pausedAt,
                     completedAt: nil
-                )
+                ),
             ]
         )
 

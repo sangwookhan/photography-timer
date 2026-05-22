@@ -9,7 +9,7 @@ enum TargetShutterUnavailableReason: Equatable {
     /// duration. The UI affords enabling.
     case inactive
     /// Target is set, but the active workflow does not have a
-    /// comparison value (e.g. film advisory-only, unsupported
+    /// comparison value (e.g. film limited-guidance, unsupported
     /// reciprocity, or a calc failure). The UI shows a calm
     /// `Target comparison unavailable` state.
     case noComparisonAvailable
@@ -54,8 +54,8 @@ enum TargetShutterDisplayState: Equatable {
 struct TargetShutterAvailableState: Equatable {
     let targetSeconds: TimeInterval
     /// `nil` when the photographer set a target but no comparison
-    /// value exists for the active workflow (film advisory, etc.).
-    /// In that case `stopDifference` is also `nil` and the UI shows
+    /// value exists for the active workflow (film limited-guidance,
+    /// etc.). In that case `stopDifference` is also `nil` and the UI shows
     /// `Target comparison unavailable` while keeping the target
     /// visible. The model still reports `isActive == true`.
     let comparison: TargetShutterComparison?

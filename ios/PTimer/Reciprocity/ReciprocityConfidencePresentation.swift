@@ -1,10 +1,9 @@
 import Foundation
 
-enum ReciprocityConfidencePresentationCategory: String, Codable, Equatable {
-    case exact
-    case estimated
-    case extrapolated
-    case advisoryOnly
+enum ReciprocityConfidenceCategory: String, Codable, Equatable {
+    case noCorrection
+    case formulaDerived
+    case limitedGuidance
     case unsupported
 }
 
@@ -20,7 +19,7 @@ enum ReciprocityConfidenceBadgeStyle: String, Codable, Equatable {
     case trusted
     case measured
     case caution
-    case advisory
+    case limitedGuidance
     case unsupported
 }
 
@@ -32,17 +31,13 @@ enum ReciprocityConfidenceWarningEmphasis: String, Codable, Equatable {
 }
 
 enum ReciprocityConfidenceResultKind: String, Codable, Equatable {
-    case exact
-    case estimated
-    case extrapolated
-    case advisoryOnly
+    case noCorrection
+    case formulaDerived
+    case limitedGuidance
     case unsupported
 }
 
 enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
-    case exactTablePoint
-    case interpolatedEstimate
-    case extrapolatedEstimate
     case thresholdGuidanceOnly
     case formulaDerived
     case currentOfficialSource
@@ -50,30 +45,20 @@ enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
     case unofficialSecondarySource
     case userDefinedSource
     case withinStatedRange
-    case withinInterpretedRange
     case beyondRepresentativePoint
     case beyondPolicyLimit
-    case logLogEstimation
-    case stopSpaceEstimation
-    case advisoryContinuationOnly
+    case limitedGuidanceContinuationOnly
     case officialRangeExceeded
-    case explicitStopSignal
     case unsupportedByPolicy
     case calculatedExposureReturned
     case noCalculatedExposureReturned
 
     var defaultText: String {
         switch self {
-        case .exactTablePoint:
-            return "Matches an explicit source table point."
-        case .interpolatedEstimate:
-            return "Estimated between representative source rows."
-        case .extrapolatedEstimate:
-            return "Estimated beyond the last representative source point."
         case .thresholdGuidanceOnly:
             return "Uses threshold-only official no-correction guidance."
         case .formulaDerived:
-            return "Calculated from a profile formula rather than a source table point."
+            return "Calculated from a profile formula."
         case .currentOfficialSource:
             return "Based on current official source data."
         case .archivalOfficialSource:
@@ -84,22 +69,14 @@ enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
             return "Based on user-supplied reciprocity data."
         case .withinStatedRange:
             return "Falls within the source's stated range."
-        case .withinInterpretedRange:
-            return "Falls within the current interpreted calculation range."
         case .beyondRepresentativePoint:
-            return "Extends beyond the last representative table point."
+            return "Extends beyond the source's last published reference point."
         case .beyondPolicyLimit:
             return "Falls beyond the current policy limit."
-        case .logLogEstimation:
-            return "Uses log-log table estimation."
-        case .stopSpaceEstimation:
-            return "Uses stop-space table estimation."
-        case .advisoryContinuationOnly:
-            return "Only advisory continuation is available."
+        case .limitedGuidanceContinuationOnly:
+            return "Only limited guidance is available beyond the no-correction range."
         case .officialRangeExceeded:
             return "The official quantified range has been exceeded."
-        case .explicitStopSignal:
-            return "An explicit source stop signal blocks quantified continuation."
         case .unsupportedByPolicy:
             return "No supported calculation path is available for this result."
         case .calculatedExposureReturned:
@@ -111,7 +88,7 @@ enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
 }
 
 struct ReciprocityConfidencePresentation: Codable, Equatable {
-    let category: ReciprocityConfidencePresentationCategory
+    let category: ReciprocityConfidenceCategory
     let level: ReciprocityConfidenceLevel
     let badgeStyle: ReciprocityConfidenceBadgeStyle
     let warningEmphasis: ReciprocityConfidenceWarningEmphasis
@@ -133,7 +110,7 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
     let returnsCalculatedExposureTime: Bool
 
     init(
-        category: ReciprocityConfidencePresentationCategory,
+        category: ReciprocityConfidenceCategory,
         level: ReciprocityConfidenceLevel,
         badgeStyle: ReciprocityConfidenceBadgeStyle,
         warningEmphasis: ReciprocityConfidenceWarningEmphasis,
@@ -180,7 +157,7 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let category = try container.decode(ReciprocityConfidencePresentationCategory.self, forKey: .category)
+        let category = try container.decode(ReciprocityConfidenceCategory.self, forKey: .category)
         let level = try container.decode(ReciprocityConfidenceLevel.self, forKey: .level)
         let badgeStyle = try container.decode(ReciprocityConfidenceBadgeStyle.self, forKey: .badgeStyle)
         let warningEmphasis = try container.decode(ReciprocityConfidenceWarningEmphasis.self, forKey: .warningEmphasis)
@@ -221,7 +198,7 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
     }
 
     private static func validationError(
-        category: ReciprocityConfidencePresentationCategory,
+        category: ReciprocityConfidenceCategory,
         badgeStyle: ReciprocityConfidenceBadgeStyle,
         resultKind: ReciprocityConfidenceResultKind,
         explanationTokens: [ReciprocityConfidenceExplanationToken],
@@ -232,12 +209,12 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
         }
 
         switch category {
-        case .advisoryOnly:
+        case .limitedGuidance:
             guard badgeStyle != .unsupported else {
-                return "advisoryOnly presentation must remain distinct from unsupported styling."
+                return "limitedGuidance presentation must remain distinct from unsupported styling."
             }
             guard !returnsCalculatedExposureTime else {
-                return "advisoryOnly presentation must not imply a calculated exposure time."
+                return "limitedGuidance presentation must not imply a calculated exposure time."
             }
         case .unsupported:
             guard badgeStyle == .unsupported else {
@@ -248,7 +225,7 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
             // formula-backed profile may still hand back a numeric
             // corrected exposure; presenters mark such values as
             // approximate / outside guidance.
-        case .exact, .estimated, .extrapolated:
+        case .noCorrection, .formulaDerived:
             break
         }
 
@@ -264,17 +241,15 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
     }
 
     private static func expectedResultKind(
-        for category: ReciprocityConfidencePresentationCategory
+        for category: ReciprocityConfidenceCategory
     ) -> ReciprocityConfidenceResultKind {
         switch category {
-        case .exact:
-            return .exact
-        case .estimated:
-            return .estimated
-        case .extrapolated:
-            return .extrapolated
-        case .advisoryOnly:
-            return .advisoryOnly
+        case .noCorrection:
+            return .noCorrection
+        case .formulaDerived:
+            return .formulaDerived
+        case .limitedGuidance:
+            return .limitedGuidance
         case .unsupported:
             return .unsupported
         }
@@ -292,13 +267,13 @@ private extension ReciprocityConfidencePresentation {
         let returnsCalculatedExposureTime: Bool
     }
 
-    static func exact(payload: Payload) -> Self {
+    static func noCorrection(payload: Payload) -> Self {
         Self(
-            category: .exact,
+            category: .noCorrection,
             level: payload.level,
-            badgeStyle: badgeStyle(for: .exact, level: payload.level),
+            badgeStyle: badgeStyle(for: .noCorrection, level: payload.level),
             warningEmphasis: payload.warningEmphasis,
-            resultKind: .exact,
+            resultKind: .noCorrection,
             shortLabel: payload.shortLabel,
             explanationTokens: payload.explanationTokens,
             supportingNotes: payload.supportingNotes,
@@ -307,13 +282,13 @@ private extension ReciprocityConfidencePresentation {
         )
     }
 
-    static func estimated(payload: Payload) -> Self {
+    static func formulaDerived(payload: Payload) -> Self {
         Self(
-            category: .estimated,
+            category: .formulaDerived,
             level: payload.level,
-            badgeStyle: badgeStyle(for: .estimated, level: payload.level),
+            badgeStyle: badgeStyle(for: .formulaDerived, level: payload.level),
             warningEmphasis: payload.warningEmphasis,
-            resultKind: .estimated,
+            resultKind: .formulaDerived,
             shortLabel: payload.shortLabel,
             explanationTokens: payload.explanationTokens,
             supportingNotes: payload.supportingNotes,
@@ -322,28 +297,13 @@ private extension ReciprocityConfidencePresentation {
         )
     }
 
-    static func extrapolated(payload: Payload) -> Self {
+    static func limitedGuidance(payload: Payload) -> Self {
         Self(
-            category: .extrapolated,
-            level: payload.level,
-            badgeStyle: .caution,
-            warningEmphasis: payload.warningEmphasis,
-            resultKind: .extrapolated,
-            shortLabel: payload.shortLabel,
-            explanationTokens: payload.explanationTokens,
-            supportingNotes: payload.supportingNotes,
-            defaultExplanation: payload.defaultExplanation,
-            returnsCalculatedExposureTime: payload.returnsCalculatedExposureTime
-        )
-    }
-
-    static func advisoryOnly(payload: Payload) -> Self {
-        Self(
-            category: .advisoryOnly,
+            category: .limitedGuidance,
             level: .none,
-            badgeStyle: .advisory,
+            badgeStyle: .limitedGuidance,
             warningEmphasis: payload.warningEmphasis,
-            resultKind: .advisoryOnly,
+            resultKind: .limitedGuidance,
             shortLabel: payload.shortLabel,
             explanationTokens: payload.explanationTokens,
             supportingNotes: payload.supportingNotes,
@@ -368,24 +328,22 @@ private extension ReciprocityConfidencePresentation {
     }
 
     private static func badgeStyle(
-        for category: ReciprocityConfidencePresentationCategory,
+        for category: ReciprocityConfidenceCategory,
         level: ReciprocityConfidenceLevel
     ) -> ReciprocityConfidenceBadgeStyle {
         switch category {
         case .unsupported:
             return .unsupported
-        case .advisoryOnly:
-            return .advisory
-        case .extrapolated:
-            return .caution
-        case .estimated:
+        case .limitedGuidance:
+            return .limitedGuidance
+        case .formulaDerived:
             switch level {
             case .high, .medium:
                 return .measured
             case .low, .veryLow, .none:
                 return .caution
             }
-        case .exact:
+        case .noCorrection:
             switch level {
             case .high:
                 return .trusted
@@ -408,14 +366,12 @@ struct ReciprocityConfidencePresentationMapper {
         let payload = payload(for: result)
 
         switch result.metadata.basis {
-        case .exactTablePoint, .officialThresholdNoCorrection:
-            return .exact(payload: payload)
-        case .interpolatedWithinTable, .formulaDerived:
-            return .estimated(payload: payload)
-        case .extrapolatedBeyondTable:
-            return .extrapolated(payload: payload)
-        case .advisoryOnlyBeyondOfficialRange:
-            return .advisoryOnly(payload: payload)
+        case .officialThresholdNoCorrection:
+            return .noCorrection(payload: payload)
+        case .formulaDerived:
+            return .formulaDerived(payload: payload)
+        case .limitedGuidanceNoQuantifiedPrediction:
+            return .limitedGuidance(payload: payload)
         case .unsupportedOutOfPolicyRange:
             return .unsupported(payload: payload)
         }
@@ -454,7 +410,7 @@ struct ReciprocityConfidencePresentationMapper {
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
     ) -> ReciprocityConfidenceLevel {
         switch basis {
-        case .exactTablePoint, .officialThresholdNoCorrection, .formulaDerived:
+        case .officialThresholdNoCorrection, .formulaDerived:
             switch sourceAuthorityImpact {
             case .currentOfficial:
                 return basis == .formulaDerived ? .medium : .high
@@ -465,23 +421,7 @@ struct ReciprocityConfidencePresentationMapper {
             case .userDefined:
                 return .veryLow
             }
-        case .interpolatedWithinTable:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .medium
-            case .archivalOfficial:
-                return .low
-            case .unofficialSecondary, .userDefined:
-                return .veryLow
-            }
-        case .extrapolatedBeyondTable:
-            switch sourceAuthorityImpact {
-            case .currentOfficial:
-                return .low
-            case .archivalOfficial, .unofficialSecondary, .userDefined:
-                return .veryLow
-            }
-        case .advisoryOnlyBeyondOfficialRange:
+        case .limitedGuidanceNoQuantifiedPrediction:
             return .none
         case .unsupportedOutOfPolicyRange:
             return .none
@@ -521,20 +461,14 @@ struct ReciprocityConfidencePresentationMapper {
         }
 
         switch basis {
-        case .exactTablePoint:
-            return prefix.isEmpty ? "Exact" : "\(prefix)exact"
-        case .interpolatedWithinTable:
-            return prefix.isEmpty ? "Estimated" : "\(prefix)estimate"
-        case .extrapolatedBeyondTable:
-            return prefix.isEmpty ? "Extrapolated" : "\(prefix)extrapolation"
         case .officialThresholdNoCorrection:
-            return prefix.isEmpty ? "No correction" : "\(prefix)guidance"
-        case .advisoryOnlyBeyondOfficialRange:
-            return prefix.isEmpty ? "Advisory" : "\(prefix)advisory"
+            return prefix.isEmpty ? "No correction" : "\(prefix)no correction"
+        case .limitedGuidanceNoQuantifiedPrediction:
+            return prefix.isEmpty ? "No quantified prediction" : "\(prefix)limited guidance"
         case .unsupportedOutOfPolicyRange:
-            return "Unsupported"
+            return "Outside guidance"
         case .formulaDerived:
-            return prefix.isEmpty ? "Calculated" : "\(prefix)calculation"
+            return prefix.isEmpty ? "Formula-derived" : "\(prefix)formula"
         }
     }
 
@@ -557,7 +491,6 @@ struct ReciprocityConfidencePresentationMapper {
         appendBasisToken(from: result.metadata.basis, to: &tokens)
         appendSourceToken(from: result.metadata.sourceAuthorityImpact, to: &tokens)
         appendRangeToken(from: result.metadata.rangeStatus, to: &tokens)
-        appendEstimationFamilyToken(from: result.metadata.estimationFamily, to: &tokens)
 
         for note in result.metadata.notes {
             guard let mappedToken = explanationToken(from: note.token) else {
@@ -580,16 +513,10 @@ struct ReciprocityConfidencePresentationMapper {
         to tokens: inout [ReciprocityConfidenceExplanationToken]
     ) {
         switch basis {
-        case .exactTablePoint:
-            appendUnique(.exactTablePoint, to: &tokens)
-        case .interpolatedWithinTable:
-            appendUnique(.interpolatedEstimate, to: &tokens)
-        case .extrapolatedBeyondTable:
-            appendUnique(.extrapolatedEstimate, to: &tokens)
         case .officialThresholdNoCorrection:
             appendUnique(.thresholdGuidanceOnly, to: &tokens)
-        case .advisoryOnlyBeyondOfficialRange:
-            appendUnique(.advisoryContinuationOnly, to: &tokens)
+        case .limitedGuidanceNoQuantifiedPrediction:
+            appendUnique(.limitedGuidanceContinuationOnly, to: &tokens)
         case .unsupportedOutOfPolicyRange:
             appendUnique(.unsupportedByPolicy, to: &tokens)
         case .formulaDerived:
@@ -620,8 +547,6 @@ struct ReciprocityConfidencePresentationMapper {
         switch rangeStatus {
         case .withinStatedRange:
             appendUnique(.withinStatedRange, to: &tokens)
-        case .withinInterpretedRange:
-            appendUnique(.withinInterpretedRange, to: &tokens)
         case .beyondLastRepresentativePoint:
             appendUnique(.beyondRepresentativePoint, to: &tokens)
         case .beyondPolicyLimit:
@@ -629,38 +554,16 @@ struct ReciprocityConfidencePresentationMapper {
         }
     }
 
-    private func appendEstimationFamilyToken(
-        from estimationFamily: ReciprocityTableEstimationFamily?,
-        to tokens: inout [ReciprocityConfidenceExplanationToken]
-    ) {
-        switch estimationFamily {
-        case .logLog:
-            appendUnique(.logLogEstimation, to: &tokens)
-        case .stopSpace:
-            appendUnique(.stopSpaceEstimation, to: &tokens)
-        case .none:
-            break
-        }
-    }
-
     private func explanationToken(
         from policyToken: ReciprocityPolicyNoteToken?
     ) -> ReciprocityConfidenceExplanationToken? {
         switch policyToken {
-        case .estimatedFromRepresentativeRows:
-            return .interpolatedEstimate
-        case .exactManufacturerTablePoint:
-            return .exactTablePoint
         case .thresholdGuidanceOnly:
             return .thresholdGuidanceOnly
-        case .advisoryContinuationOnly:
-            return .advisoryContinuationOnly
-        case .explicitManufacturerStopSignal:
-            return .explicitStopSignal
+        case .limitedGuidanceContinuationOnly:
+            return .limitedGuidanceContinuationOnly
         case .beyondOfficialQuantifiedRange:
             return .officialRangeExceeded
-        case .beyondRepresentativeTablePoint:
-            return .beyondRepresentativePoint
         case .archivalOfficialSource:
             return .archivalOfficialSource
         case .unofficialSecondarySource:

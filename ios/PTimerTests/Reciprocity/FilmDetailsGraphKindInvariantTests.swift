@@ -3,37 +3,20 @@ import XCTest
 
 /// Catalog-wide invariant for the Film Details graph kind.
 ///
-/// PTIMER-139 introduced a per-film CMS 20 II conversion. The risk is
-/// that a future change accidentally silently demotes a formula
-/// profile to a table-preview graph (or vice versa) without surfacing
-/// in the per-film unit tests. This file pins the graph kind for
-/// every canonical stock in the launch catalog so any drift requires
-/// an explicit update here.
-///
-/// Rules of thumb:
-/// - Formula profiles render as `.formula` Detail graphs (calculation
-///   curve through the no-correction band, source-reference markers,
-///   optional manufacturer not-recommended boundary).
-/// - Pure table profiles (CHS 100 II today) render as `.table` Detail
-///   graphs.
-/// - Advisory-only / threshold-only profiles whose Detail graph
-///   cannot be plotted return no graph at all.
-///
-/// CMS 20 II MUST sit in the `.formula` bucket here. If a future
-/// commit pushes it into `.table` or removes its graph, this file is
-/// the test that catches it.
+/// Every launch-preset film must produce either a formula Detail
+/// graph or no graph at all (limited-guidance profiles never plot a
+/// calculation curve). PTIMER-140 removed the table graph kind so
+/// this file pins each stock to one of those two outcomes.
 @MainActor
 final class FilmDetailsGraphKindInvariantTests: XCTestCase {
 
     enum ExpectedGraphKind: Equatable, CustomStringConvertible {
         case formula
-        case table
         case absent
 
         var description: String {
             switch self {
             case .formula: return "formula"
-            case .table: return "table"
             case .absent: return "absent"
             }
         }
@@ -44,56 +27,62 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
     /// Adding a film: append it here with the expected kind. Removing
     /// a film: remove its entry. Converting a film from table to
     /// formula (or vice versa): update its entry.
-    private let expectations: [(stock: String, kind: ExpectedGraphKind, sampleMeteredSeconds: Double)] = [
+    private struct GraphKindExpectation {
+        let stock: String
+        let kind: ExpectedGraphKind
+        let sampleMeteredSeconds: Double
+    }
+
+    private let expectations: [GraphKindExpectation] = [
         // ADOX
-        ("CHS 100 II", .formula, 8),
-        ("CMS 20 II", .formula, 5),
+        .init(stock: "CHS 100 II", kind: .formula, sampleMeteredSeconds: 8),
+        .init(stock: "CMS 20 II", kind: .formula, sampleMeteredSeconds: 5),
 
         // Fujifilm
-        ("Acros II", .formula, 60),
-        ("Velvia 50", .formula, 30),
-        ("Velvia 100", .formula, 30),
-        ("Provia 100F", .formula, 240),
+        .init(stock: "Acros II", kind: .formula, sampleMeteredSeconds: 60),
+        .init(stock: "Velvia 50", kind: .formula, sampleMeteredSeconds: 30),
+        .init(stock: "Velvia 100", kind: .formula, sampleMeteredSeconds: 30),
+        .init(stock: "Provia 100F", kind: .formula, sampleMeteredSeconds: 240),
 
         // FOMA
-        ("Fomapan 100 Classic", .formula, 10),
-        ("Fomapan 200 Creative", .formula, 10),
-        ("Fomapan 400 Action", .formula, 10),
+        .init(stock: "Fomapan 100 Classic", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Fomapan 200 Creative", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Fomapan 400 Action", kind: .formula, sampleMeteredSeconds: 10),
 
         // Kodak — B/W formula films
-        ("Tri-X 400", .formula, 10),
-        ("T-MAX 100", .formula, 10),
-        ("T-MAX 400", .formula, 10),
+        .init(stock: "Tri-X 400", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "T-MAX 100", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "T-MAX 400", kind: .formula, sampleMeteredSeconds: 10),
 
-        // Kodak — color / slide threshold + advisory profiles (no
-        // formula curve and no quantified table; the Detail graph
-        // does not render for these films).
-        ("Ektachrome E100", .absent, 5),
-        ("Ektar 100", .absent, 0.5),
-        ("Gold 200", .absent, 0.5),
-        ("Portra 160", .absent, 0.5),
-        ("Portra 400", .absent, 0.5),
-        ("Ultra Max 400", .absent, 0.5),
+        // Kodak — color / slide threshold + limited-guidance profiles
+        // (no formula curve and no quantified continuation; the
+        // Detail graph does not render for these films).
+        .init(stock: "Ektachrome E100", kind: .absent, sampleMeteredSeconds: 5),
+        .init(stock: "Ektar 100", kind: .absent, sampleMeteredSeconds: 0.5),
+        .init(stock: "Gold 200", kind: .absent, sampleMeteredSeconds: 0.5),
+        .init(stock: "Portra 160", kind: .absent, sampleMeteredSeconds: 0.5),
+        .init(stock: "Portra 400", kind: .absent, sampleMeteredSeconds: 0.5),
+        .init(stock: "Ultra Max 400", kind: .absent, sampleMeteredSeconds: 0.5),
 
         // ILFORD / HARMAN
-        ("HP5 Plus", .formula, 10),
-        ("Pan F Plus", .formula, 10),
-        ("FP4 Plus", .formula, 10),
-        ("Delta 100", .formula, 10),
-        ("Delta 400", .formula, 10),
-        ("Delta 3200", .formula, 10),
-        ("XP2 Super", .formula, 10),
-        ("SFX 200", .formula, 10),
-        ("Ortho Plus", .formula, 10),
-        ("Kentmere 100", .formula, 10),
-        ("Kentmere 200", .formula, 10),
-        ("Kentmere 400", .formula, 10),
+        .init(stock: "HP5 Plus", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Pan F Plus", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "FP4 Plus", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Delta 100", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Delta 400", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Delta 3200", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "XP2 Super", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "SFX 200", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Ortho Plus", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Kentmere 100", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Kentmere 200", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Kentmere 400", kind: .formula, sampleMeteredSeconds: 10),
 
         // Rollei
-        ("RPX 100", .formula, 10),
-        ("RPX 400", .formula, 10),
-        ("RETRO 80S", .formula, 10),
-        ("SUPERPAN 200", .formula, 10),
+        .init(stock: "RPX 100", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "RPX 400", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "RETRO 80S", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "SUPERPAN 200", kind: .formula, sampleMeteredSeconds: 10),
     ]
 
     func testEveryCatalogStockHasAGraphKindExpectation() throws {
@@ -128,16 +117,6 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
                     graph.kind,
                     .formula,
                     "\(expectation.stock) must render as a formula Detail graph; got \(graph.kind)."
-                )
-            case .table:
-                let graph = try XCTUnwrap(
-                    displayState.graph,
-                    "\(expectation.stock) must render a Detail graph at \(expectation.sampleMeteredSeconds) s; got nil."
-                )
-                XCTAssertEqual(
-                    graph.kind,
-                    .table,
-                    "\(expectation.stock) must render as a table Detail graph; got \(graph.kind)."
                 )
             case .absent:
                 XCTAssertNil(

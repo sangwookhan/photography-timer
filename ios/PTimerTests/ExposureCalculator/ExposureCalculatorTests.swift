@@ -2,12 +2,20 @@ import XCTest
 @testable import PTimer
 
 final class ExposureCalculatorTests: XCTestCase {
+    private struct ExposureCase {
+        let base: String
+        let stop: Int
+        let expectedBase: Double
+        let expectedStop: Int
+        let expectedResult: Double
+    }
+
     func testCalculateRepresentativeExposureCases() throws {
         let calculator = ExposureCalculator()
-        let cases: [(base: String, stop: Int, expectedBase: Double, expectedStop: Int, expectedResult: Double)] = [
-            ("1/30", 6, 1.0 / 30.0, 6, 2),
-            ("1/125", 3, 1.0 / 125.0, 3, 1.0 / 15.0),
-            ("0.5", 10, 0.5, 10, 512)
+        let cases: [ExposureCase] = [
+            .init(base: "1/30", stop: 6, expectedBase: 1.0 / 30.0, expectedStop: 6, expectedResult: 2),
+            .init(base: "1/125", stop: 3, expectedBase: 1.0 / 125.0, expectedStop: 3, expectedResult: 1.0 / 15.0),
+            .init(base: "0.5", stop: 10, expectedBase: 0.5, expectedStop: 10, expectedResult: 512),
         ]
 
         for testCase in cases {

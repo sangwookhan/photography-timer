@@ -56,7 +56,7 @@ Every timer carries an **identity** — a small bundle of associations describin
 - *digital result* — non-film calculator (no film selected); timer started from the ND-adjusted output shutter.
 - *film-adjusted shutter* — film workflow; timer started from the Adjusted Shutter row.
 - *film-corrected exposure* — film workflow; timer started from the Corrected Exposure row.
-- *target shutter* — timer started from the photographer's Target Shutter duration. The target duration itself is the timer duration, independent of any comparison value's availability. Surfaces a distinct identity so a target-shutter timer remains distinguishable from adjusted and corrected timers across the timer's lifetime. (See [Requirements](../requirements/Requirements.md) §3.9 and [Calculator Spec](Calculator.md) §3.8.)
+- *target shutter* — timer started from the photographer's Target Shutter duration. The target duration itself is the timer duration, independent of any comparison value's availability. Surfaces a distinct identity so a target-shutter timer remains distinguishable from adjusted and corrected timers across the timer's lifetime. (See [Requirements](../requirements/Requirements.md) §3.9 and [Calculator Spec](Calculator.md) §3.6.)
 - *manual* — an external precomputed shutter supplied outside the calculator. A manual timer **does not** capture calculator identity: it carries no camera slot, no film descriptor, and no calculator-bound exposure source, and its presentation falls back to a generic *Manual timer* basis label rather than borrowing the active slot's identity. (FR-4.7)
 
 **Capture rule.** Identity capture happens once, at start time. The captured values are frozen on the timer; they are not re-derived from runtime state and they are not overwritten when the user later switches the active camera slot, renames a slot, swaps the active film, or re-picks a profile.
@@ -209,7 +209,7 @@ The system shall **not**:
 
 - **Completed timer retention.** Wiki 8847362 says completed may be limited to "recent items only"; no concrete retention threshold is decided.
 - **Selection model for multi-timer operations.** Wiki 9601025 deliberately defers a strong selection model. There is no spec for multi-select, batch actions, or cross-timer linking.
-- **Detent thresholds for the bottom sheet** (compact 98 pt + ND reserve 132 pt; large 560 pt; 92 pt up-drag and 64 pt down-drag) are documented in [UI Spec](UI.md) §4.
+- **Detent thresholds for the bottom sheet** (compact 98 pt + ND reserve 132 pt; large 560 pt; 92 pt up-drag and 64 pt down-drag) are documented in [UI Spec](UI.md) §3.1 / §3.2.
 - **Notification grouping and audio policy.** No spec defines whether multiple background completions within a short window should group, or whether the audio cue varies by timer kind.
 - **Live Activity test coverage.** Wiki 19103745 notes that ActivityKit and notification integration tests are missing. The lock-screen behavior is governed by the contract in §5 but not yet verified against system-level integration paths.
 - **Pause-during-completion race.** No explicit spec for "user pauses while the runtime is mid-completion-evaluation"; behavior emerges from the tick ordering. Worth clarifying.

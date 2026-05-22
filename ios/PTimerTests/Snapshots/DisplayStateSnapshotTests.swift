@@ -7,7 +7,7 @@ import XCTest
 ///
 /// PTIMER-140 removed the table calculation path. Snapshot inputs
 /// now exercise threshold no-correction, formula-derived, formula
-/// extrapolation past supported range, and limited-guidance paths
+/// prediction past the supported range, and limited-guidance paths
 /// across the surviving scenario factory.
 @MainActor
 final class DisplayStateSnapshotTests: XCTestCase {

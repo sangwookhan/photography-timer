@@ -150,7 +150,7 @@ Reciprocity 계산은 layer 분리를 깨끗하게 보존:
 
 1. **Threshold 무보정** — profile이 무보정 임계값을 정의하고 `t`가 그 안에 있으면 `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
 2. **Default formula 무보정 handoff** — `t < 1 s`이고 profile에 sub-1s 보정에 opt-in 하지 않는 formula rule이 있으면 (`meteredRange.minimumSeconds`가 부재 또는 `≥ 1 s`), `corrected = t` + basis = `officialThresholdNoCorrection`으로 무보정 결과 합성. 이는 `Tc = Tm^P` 스타일 실용 공식이 형식의 실용 도메인 아래 sub-1s 측광값에서 `corrected < metered`를 산출하지 않도록 막는다.
-3. **Formula** — profile이 `t`를 포함하는 `meteredRange`의 formula rule을 정의하면 공식을 평가해 basis = `formulaDerived` 반환. Formula가 명시적 `meteredRange.maximumSeconds`를 선언하고 `t`가 거기에 도달하거나 너머이면 `unsupportedOutOfPolicyRange` 반환; `extrapolateBeyondMaximum`이 `true`이면 결과는 공식의 numeric continuation을 carry (outside manufacturer guidance로 렌더), `false`이면 결과에 보정 노출 값 자체 부재.
+3. **Formula** — profile이 `t`를 포함하는 `meteredRange`의 formula rule을 정의하면 공식을 평가해 basis = `formulaDerived` 반환. Formula가 명시적 `meteredRange.maximumSeconds`를 선언하고 `t`가 거기에 도달하거나 너머이면 `unsupportedOutOfPolicyRange` 반환; `extrapolateBeyondMaximum`이 `true`이면 결과는 source-range boundary 너머의 formula prediction을 numeric continuation으로 carry (outside manufacturer guidance로 렌더), `false`이면 결과에 보정 노출 값 자체 부재.
 4. **Limited guidance** — profile이 `t`를 cover 하는 (또는 open-ended) `appliesWhenMetered`의 limited-guidance rule을 정의하면 `limitedGuidanceNoQuantifiedPrediction` 반환. 숫자 보정 노출 없음.
 5. **Unsupported 대체** — 어떤 rule도 적용되지 않으면 보정 노출 없이 `unsupportedOutOfPolicyRange` 반환.
 
@@ -164,7 +164,7 @@ Rule pipeline 후 보편 **correction invariant** 실행: corrected 노출이 me
 - **Limited-guidance** — 숫자 보정 노출은 반환 불가, 하지만 시스템은 측광 노출 + metadata block을 보고. Basis는 `limitedGuidanceNoQuantifiedPrediction`. Presentation layer는 숫자 대신 차분한 안내 텍스트를 렌더.
 - **Unsupported** — 측광 노출이 정책 지원 범위 외부. 결과는 측광 노출 + metadata block을 포함. Basis는 `unsupportedOutOfPolicyRange`. 공식 기반 profile이 supported boundary 너머에서 numeric continuation을 산출한 경우에만 옵션 보정 노출 존재; presenter가 outside manufacturer guidance로 mark.
 
-Form과 basis의 페어링은 *구조적* — 런타임 검사가 아닌 컴파일 타임에 강제. 따라서 결과가 숫자 보정값을 claim 하면서 그것을 omit 하는 것이 불가능 (위의 formula-extrapolated unsupported 단일 예외만 허용).
+Form과 basis의 페어링은 *구조적* — 런타임 검사가 아닌 컴파일 타임에 강제. 따라서 결과가 숫자 보정값을 claim 하면서 그것을 omit 하는 것이 불가능 (위의 source range 외부 formula prediction을 동반하는 unsupported 단일 예외만 허용).
 
 세 form 모두에 존재하는 metadata block은 포함:
 
@@ -193,7 +193,7 @@ Presentation layer는 각 결과를 다음 네 신뢰도 카테고리 중 하나
 - **No correction** — basis = `officialThresholdNoCorrection`. 보정 노출 = 측광 노출. User-facing label: `No correction`.
 - **Formula-derived** — basis = `formulaDerived`. 결과는 활성 계산 곡선에 anchor. User-facing label: `Formula-derived`.
 - **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. UI는 숫자 대신 차분한 설명 텍스트 표시; 근거 없는 값을 만들지 않는다.
-- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label은 formula-extrapolated numeric의 가용 여부에 따라: 출판된 source range 외부의 converted formula profile (sourceEvidence 포함 formula rule)이면 `Beyond source range`, 그 외 numeric continuation이면 `Outside guidance`, 값 자체가 없으면 `No corrected value`.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label은 supported range 외부의 formula prediction 가용 여부에 따라: 출판된 source range 외부의 converted formula profile (sourceEvidence 포함 formula rule)이면 `Beyond source range`, 그 외 numeric continuation이면 `Outside guidance`, 값 자체가 없으면 `No corrected value`.
 
 카테고리와 badge 문구는 launch preset reciprocity presentation에서 `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`를 primary status / badge 텍스트로 surface 하지 않는다 — 이 용어들은 legacy table 모델을 인코드 했으며 현 vocabulary에 포함되지 않는다.
 
@@ -217,7 +217,7 @@ Target Shutter는 사진가가 지정한 목표 duration을 calculator의 현재
 
 ## 4. Timer 통합
 
-Timer는 **Output Shutter** (digital workflow), **Corrected Exposure** (film workflow), 또는 **Target Shutter** (설정된 경우, §3.6)에서 생성. 시스템은 limited-guidance 보정 노출에서 timer를 시작하지 않는다 — 결과가 `limitedGuidanceNoQuantifiedPrediction`, 또는 numeric continuation 없는 `unsupportedOutOfPolicyRange` 일 때 Film 모드 corrected-exposure timer affordance는 비활성화되며, 사용자는 입력을 변경하거나 ND-조정된 셔터로 명시적으로 진행하도록 안내. Formula-extrapolated unsupported numeric (공식이 supported boundary 너머에서 값을 계속 산출하는 경우)은 warning treatment와 함께 timer를 활성화 — 사용자가 예측값을 commit 할 수 있게. Target Shutter에서 시작된 timer의 duration은 target 자체이며, 비교 값의 가용 여부와 무관.
+Timer는 **Output Shutter** (digital workflow), **Corrected Exposure** (film workflow), 또는 **Target Shutter** (설정된 경우, §3.6)에서 생성. 시스템은 limited-guidance 보정 노출에서 timer를 시작하지 않는다 — 결과가 `limitedGuidanceNoQuantifiedPrediction`, 또는 numeric continuation 없는 `unsupportedOutOfPolicyRange` 일 때 Film 모드 corrected-exposure timer affordance는 비활성화되며, 사용자는 입력을 변경하거나 ND-조정된 셔터로 명시적으로 진행하도록 안내. Supported range 외부의 formula prediction을 동반하는 unsupported numeric (공식이 source-range boundary 너머에서 값을 계속 산출하는 경우)은 warning treatment와 함께 timer를 활성화 — 사용자가 예측값을 commit 할 수 있게. Target Shutter에서 시작된 timer의 duration은 target 자체이며, 비교 값의 가용 여부와 무관.
 
 Timer의 metadata는 생성 시점의 계산 결과 snapshot. 후속 calculator 입력 변경은 이미 생성된 timer를 변경하지 않는다. Timer의 exposure source는 유지되는 동안 구별 유지된다 — Target Shutter timer는 후속 입력 변경에 무관하게 Target Shutter timer로 남는다. ([Timer Spec](Timer.md) §1.4 참조.)
 
@@ -235,7 +235,7 @@ Calculator의 working context — 선택된 필름 identity + **노출 scale 토
 
 시스템은 다음을 **하지 않는다**:
 
-1. 결과가 limited-guidance 일 때, 또는 formula-extrapolated continuation이 없는 unsupported 일 때 숫자 보정값을 근거 없이 만들어내기. Formula-extrapolated unsupported numeric은 허용되며 outside manufacturer guidance로 표시.
+1. 결과가 limited-guidance 일 때, 또는 numeric continuation 없는 unsupported 일 때 숫자 보정값을 근거 없이 만들어내기. Supported range 외부의 numeric formula prediction은 허용되며 outside manufacturer guidance로 표시.
 2. 도메인 모델 안에 계산 정책을 인코딩. (도메인은 제조사 데이터를 verbatim으로 저장; 정책은 자체 layer.)
 3. Source-evidence row (display reference 데이터)를 계산 anchor로 promote.
 4. Reciprocity 보정이 adjusted shutter를 줄이도록 허용. `corrected < metered`를 산출하는 어떤 rule path든 `officialThresholdNoCorrection`으로 reclassify (§3.2 correction invariant).
@@ -254,7 +254,7 @@ Calculator의 working context — 선택된 필름 identity + **노출 scale 토
 
 - **Aperture + ISO** 노출 변수는 intent-level (wiki 3964929) 이지만 현 release에 포함 안 됨. Fixed/Derived 상태 머신, 다중 변수 linkage 규칙, 한 변수 이상 가로지른 reverse 계산은 유보.
 - **두 개 위 multi-derived ceiling.** Wiki 3964929가 확장 옵션 예약 — 결정 기록 없음.
-- **Formula 외삽 cap.** `meteredRange.maximumSeconds`를 가진 공식은 `extrapolateBeyondMaximum = true` (launch default) 일 때 boundary 너머에서 numeric continuation을 산출. Profile-independent ceiling이 이 continuation을 얼마나 멀리 확장하도록 cap 할지는 open.
+- **Outside-source-range prediction cap.** `meteredRange.maximumSeconds`를 가진 공식은 `extrapolateBeyondMaximum = true` (launch default) 일 때 source-range boundary 너머에서 numeric continuation을 산출. Profile-independent ceiling이 이 prediction을 얼마나 멀리 확장하도록 cap 할지는 open.
 - **사용자 정의 필름 schema.** Wiki 15138817이 검증 요구사항으로 list — 데이터 모델과 UX는 명시 안 됨. 향후 custom table 입력도 launch preset scope 외부이며 자체 feature 설계가 필요하다.
 - **다중 profile 필름.** 일부 필름은 다중 official profile 가질 수 있음 (다른 현상액, push/pull). 선택 규칙은 아직 정의 안 됨; 현 launch 정책은 필름 identity 당 한 primary profile ship.
 - **First-class 컬러 / 현상 정책.** Profile이 이를 source-evidence adjustment로 기록 (예: Velvia 50 `5M`, Tri-X 400 `-10% development`) but spec은 calculator가 display 너머로 어떻게 promote 할지 아직 정의 안 됨.

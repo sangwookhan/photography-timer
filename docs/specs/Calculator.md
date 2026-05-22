@@ -150,7 +150,7 @@ For a metered exposure `t`, the policy layer shall evaluate the film's profile i
 
 1. **Threshold no-correction** — if the profile defines a no-correction threshold and `t` lies inside it, return `corrected = t` with basis = `officialThresholdNoCorrection`.
 2. **Default formula no-correction handoff** — if `t < 1 s` and the profile has a formula rule that does not opt into sub-1s correction (its `meteredRange.minimumSeconds` is absent or `≥ 1 s`), synthesize a no-correction result with `corrected = t` and basis = `officialThresholdNoCorrection`. This keeps `Tc = Tm^P`-style practical formulas from producing `corrected < metered` at sub-1s metered values that lie below the formula's practical domain.
-3. **Formula** — if the profile defines a formula rule whose `meteredRange` contains `t`, evaluate the formula and return with basis = `formulaDerived`. When the formula declares an explicit `meteredRange.maximumSeconds` and `t` is at or beyond it, return `unsupportedOutOfPolicyRange`; if `extrapolateBeyondMaximum` is `true` the result carries the formula's numeric continuation past the boundary (rendered as outside manufacturer guidance), if `false` the result has no corrected exposure value at all.
+3. **Formula** — if the profile defines a formula rule whose `meteredRange` contains `t`, evaluate the formula and return with basis = `formulaDerived`. When the formula declares an explicit `meteredRange.maximumSeconds` and `t` is at or beyond it, return `unsupportedOutOfPolicyRange`; if `extrapolateBeyondMaximum` is `true` the result carries a formula prediction outside the supported range as a numeric continuation past the source-range boundary (rendered as outside manufacturer guidance), if `false` the result has no corrected exposure value at all.
 4. **Limited guidance** — if the profile defines a limited-guidance rule whose `appliesWhenMetered` covers `t` (or is open-ended), return `limitedGuidanceNoQuantifiedPrediction`. No numeric corrected exposure.
 5. **Unsupported fallback** — if no rule applies, return `unsupportedOutOfPolicyRange` with no corrected exposure.
 
@@ -164,7 +164,7 @@ Every reciprocity evaluation produces a result that takes one of three mutually-
 - **Limited-guidance** — no numeric corrected exposure can be returned, but the system reports the metered exposure and the metadata block. Basis is `limitedGuidanceNoQuantifiedPrediction`. The presentation layer renders calm guidance text in place of a number.
 - **Unsupported** — the metered exposure is outside the policy-supported range. The result carries the metered exposure and the metadata block. Basis is `unsupportedOutOfPolicyRange`. An optional corrected exposure is present only when a formula-backed profile produced a numeric continuation past its supported boundary; the presenter marks such values as outside manufacturer guidance.
 
-The pairing of form and basis is structural — it is enforced at compile time rather than checked at runtime, so a result can never claim a numeric corrected value while omitting one (with the single allowed exception of the formula-extrapolated unsupported case above).
+The pairing of form and basis is structural — it is enforced at compile time rather than checked at runtime, so a result can never claim a numeric corrected value while omitting one (with the single allowed exception of the unsupported case above carrying a formula prediction outside the supported range).
 
 The metadata block, present in all three forms, carries:
 
@@ -193,7 +193,7 @@ The presentation layer maps each result to one of four confidence categories:
 - **No correction** — basis = `officialThresholdNoCorrection`. The corrected exposure equals the metered exposure. User-facing label: `No correction`.
 - **Formula-derived** — basis = `formulaDerived`. The result is anchored on the active calculation curve. User-facing label: `Formula-derived`.
 - **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. The UI shall show calm explanatory text in place of a number; it shall not fabricate a value.
-- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on whether a formula-extrapolated numeric is available: `Beyond source range` for converted formula profiles (formula rule with sourceEvidence) outside the published source range, otherwise `Outside guidance` for a numeric continuation, or `No corrected value` when no value at all is available.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on whether a numeric formula prediction outside the supported range is available: `Beyond source range` for converted formula profiles (formula rule with sourceEvidence) outside the published source range, otherwise `Outside guidance` for a numeric continuation, or `No corrected value` when no value at all is available.
 
 The category and badge wording shall not surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary status / badge text on launch preset reciprocity presentation; those terms encoded the legacy table model and are not part of the current vocabulary.
 
@@ -217,7 +217,7 @@ Target Shutter is an optional workflow that compares a photographer-supplied tar
 
 ## 4. Timer integration
 
-A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.6). The system shall not start a timer from a limited-guidance corrected exposure: when the result is `limitedGuidanceNoQuantifiedPrediction`, or `unsupportedOutOfPolicyRange` without a numeric continuation, the Film-mode corrected-exposure timer affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. A formula-extrapolated unsupported numeric (when the formula keeps producing a value past its supported boundary) does enable the timer with a warning treatment so the user can still commit to the predicted value. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
+A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.6). The system shall not start a timer from a limited-guidance corrected exposure: when the result is `limitedGuidanceNoQuantifiedPrediction`, or `unsupportedOutOfPolicyRange` without a numeric continuation, the Film-mode corrected-exposure timer affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. An unsupported result that carries a formula prediction outside the supported range (when the formula keeps producing a value past its source-range boundary) does enable the timer with a warning treatment so the user can still commit to the predicted value. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
 
 A timer's metadata shall be a snapshot of the calculation result at creation time. Subsequent changes to the calculator inputs shall not mutate any already-created timer. A timer's exposure source remains distinguishable across its lifetime — a Target-Shutter timer remains a Target-Shutter timer regardless of later input changes. (See [Timer Spec](Timer.md) §1.4.)
 
@@ -235,7 +235,7 @@ A snapshot written by an older release that predates the exposure scale token (o
 
 The system shall **not**:
 
-1. Fabricate a numeric corrected value when the result is limited-guidance, or unsupported without a formula-extrapolated continuation. Formula-extrapolated unsupported numerics are permitted and presented as outside manufacturer guidance.
+1. Fabricate a numeric corrected value when the result is limited-guidance, or unsupported without a numeric continuation from the formula. Numeric formula predictions outside the supported range are permitted and presented as outside manufacturer guidance.
 2. Encode calculation policy inside the domain model. (Domain stores manufacturer data verbatim; policy is its own layer.)
 3. Promote source-evidence rows (display reference data) into calculation anchors.
 4. Allow a reciprocity correction to shorten the adjusted shutter. Any rule path that would yield `corrected < metered` is reclassified to `officialThresholdNoCorrection` (§3.2 correction invariant).
@@ -254,7 +254,7 @@ These are unresolved or partially specified. They are recorded so the system doe
 
 - **Aperture and ISO** as exposure variables are intent-level (wiki 3964929) but not part of the current release. The Fixed/Derived state machine, the multi-variable linkage rules, and the reverse calculation across more than one variable are deferred.
 - **Multi-derived ceiling above two.** Wiki 3964929 reserves the option to extend; no decision is recorded.
-- **Formula extrapolation caps.** A formula with `meteredRange.maximumSeconds` produces a numeric continuation past the boundary when `extrapolateBeyondMaximum = true` (the launch default). Whether a profile-independent ceiling should cap how far that continuation extends is open.
+- **Outside-source-range prediction caps.** A formula with `meteredRange.maximumSeconds` produces a numeric continuation past the source-range boundary when `extrapolateBeyondMaximum = true` (the launch default). Whether a profile-independent ceiling should cap how far that prediction extends is open.
 - **User-defined film schema.** Wiki 15138817 lists this as a validation requirement; the data model and UX are not specified. A future custom-table input is also outside the launch preset scope and would need its own feature design.
 - **Multi-profile films.** Some films may have multiple official profiles (different developers, push/pull). Selection rules are not yet defined; the current launch policy ships one primary profile per film identity.
 - **First-class color / development policy.** Profiles record these as source-evidence adjustments (e.g. Velvia 50 `5M`, Tri-X 400 `-10% development`) but the spec does not yet define how the calculator promotes them beyond display.

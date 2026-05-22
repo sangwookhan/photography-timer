@@ -90,7 +90,7 @@ final class Velvia100FormulaProfileTests: XCTestCase {
         )
     }
 
-    // MARK: - Beyond source range (> 240 s) with formula extrapolation
+    // MARK: - Beyond source range (> 240 s) with formula prediction
 
     func testVelvia100Above240SecondsBecomesBeyondSourceNumericGuidance() throws {
         let profile = try velvia100Profile()
@@ -173,15 +173,15 @@ final class Velvia100FormulaProfileTests: XCTestCase {
     }
 
     /// 240 s is Velvia 100's published reference row; the summary
-    /// must read as source-backed at this exact value and never tip
-    /// into "Beyond source range".
+    /// must read as a formula-derived correction at this exact
+    /// value and never tip into "Beyond source range".
     @MainActor
-    func testVelvia100At240SecondsSummaryStaysReferenceBacked() throws {
+    func testVelvia100At240SecondsSummaryStaysFormulaDerived() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 240)
         XCTAssertEqual(
             displayState.summary.summaryText,
-            "Reference-backed formula prediction",
-            "240 s is a Fujifilm-published reference; the summary must read as source-backed, not Beyond source range."
+            "Formula-based correction on the active curve",
+            "240 s is a Fujifilm-published reference; the summary must read as formula-derived, not Beyond source range."
         )
     }
 

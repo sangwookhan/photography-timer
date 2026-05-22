@@ -42,9 +42,9 @@ struct RunningTimerItem: Identifiable, Equatable {
     /// fall back gracefully when absent.
     let exposureSource: ExposureTimerSource?
     /// Captured-at-start flag: true when the timer was started from a
-    /// formula-extrapolated corrected exposure outside manufacturer
-    /// guidance. Defaults to `false` for older snapshots and for the
-    /// supported quantified path.
+    /// formula prediction outside the supported source range. Defaults
+    /// to `false` for older snapshots and for the supported quantified
+    /// path.
     let isOutsideManufacturerGuidance: Bool
 
     init(

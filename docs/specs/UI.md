@@ -91,7 +91,7 @@ The result section displays the computed exposure:
 The Corrected Exposure row shall always be visible in film workflow. Its content is determined by the reciprocity result category:
 
 - **Quantified** (`No correction` or `Formula-derived`, per [Calculator Spec](Calculator.md) §3.5) — show the corrected time using the same time-display rules as the Adjusted Shutter, plus a status badge.
-- **Quantified with warning** (formula-extrapolated past the supported boundary; surfaces as `Beyond source range` for converted formula profiles or `Outside guidance` otherwise) — show the numeric value with a warning-toned badge so the user can tell the prediction is outside manufacturer guidance.
+- **Quantified with warning** (formula prediction outside the supported range; surfaces as `Beyond source range` for converted formula profiles or `Outside guidance` otherwise) — show the numeric value with a warning-toned badge so the user can tell the prediction is outside manufacturer guidance.
 - **Non-quantified** (`No quantified prediction` for limited-guidance results, or `No corrected value` when the unsupported case has no formula continuation) — show calm explanatory text in place of a number. The UI shall not fabricate a numeric value.
 
 A **reciprocity state badge** sits with the row to convey the result category at a glance. The badge wording shall match the vocabulary above; legacy table-era wording (`Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`) shall not appear on launch preset reciprocity presentation.

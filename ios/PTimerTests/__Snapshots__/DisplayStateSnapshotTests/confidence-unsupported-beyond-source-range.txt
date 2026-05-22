@@ -13,6 +13,6 @@
       - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
     ▿ supportingNotes: 2 elements
       - "Manufacturer guidance ends at 600 sec."
-      - "Outside manufacturer guidance — value extrapolated from the published calculation curve."
-    - defaultExplanation: "Manufacturer guidance ends at 600 sec. Outside manufacturer guidance — value extrapolated from the published calculation curve."
+      - "Outside manufacturer guidance — value is a formula prediction outside the supported range."
+    - defaultExplanation: "Manufacturer guidance ends at 600 sec. Outside manufacturer guidance — value is a formula prediction outside the supported range."
     - returnsCalculatedExposureTime: true

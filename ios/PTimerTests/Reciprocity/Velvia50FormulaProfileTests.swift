@@ -10,7 +10,7 @@ import XCTest
 ///   closely tracks them but the rows live as source evidence only.
 /// - 64 s is Fujifilm's published not-recommended boundary: the
 ///   basis is `.unsupportedOutOfPolicyRange` and the result still
-///   carries the formula-extrapolated numeric corrected exposure.
+///   carries a numeric formula prediction outside the source range.
 /// - All five published rows stay visible as `sourceEvidence`.
 /// - The 64 s row is never used as a formula fitting point.
 final class Velvia50FormulaProfileTests: XCTestCase {
@@ -69,22 +69,22 @@ final class Velvia50FormulaProfileTests: XCTestCase {
         )
     }
 
-    // MARK: - Not-recommended boundary (≥ 64 s) with formula extrapolation
+    // MARK: - Not-recommended boundary (≥ 64 s) with formula prediction outside source range
 
-    func testVelvia50At64SecondsIsUnsupportedWithFormulaExtrapolation() throws {
+    func testVelvia50At64SecondsIsUnsupportedWithFormulaPredictionOutsideSourceRange() throws {
         let profile = try velvia50Profile()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 64)
 
         XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
         let corrected = try XCTUnwrap(
             result.correctedExposureSeconds,
-            "64 s must carry a formula-extrapolated corrected exposure, not nil."
+            "64 s must carry a numeric formula prediction outside the source range, not nil."
         )
         let expected = pow(64.0, 1.1821)
         XCTAssertEqual(corrected, expected, accuracy: 0.5)
     }
 
-    func testVelvia50Beyond64SecondsExtrapolatesFromFormulaAndStaysUnsupported() throws {
+    func testVelvia50Beyond64SecondsProducesFormulaPredictionAndStaysUnsupported() throws {
         let profile = try velvia50Profile()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 90)
 
@@ -187,10 +187,10 @@ final class Velvia50FormulaProfileTests: XCTestCase {
         }
     }
 
-    /// Detail copy past the not-recommended boundary surfaces
-    /// "source range" without the "Extrapolated" label — Velvia 50's
-    /// numeric continuation is explicitly outside Fujifilm's
-    /// supported range.
+    /// Detail copy past the not-recommended boundary surfaces "source
+    /// range" without the "Extrapolated" label — Velvia 50's numeric
+    /// formula prediction is explicitly outside Fujifilm's supported
+    /// range. Negative guard for the table-era label.
     @MainActor
     func testVelvia50BeyondSourceRangeDetailAvoidsExtrapolatedWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 100)

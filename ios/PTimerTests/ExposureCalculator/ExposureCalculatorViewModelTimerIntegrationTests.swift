@@ -121,7 +121,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         // boundary. The formula still produces a numeric corrected
         // exposure past the published source range, so the
         // corrected-exposure timer affordance enables and stamps the
-        // timer with the formula-extrapolated duration.
+        // timer with the formula-predicted duration.
         let timerManager = TimerManager(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }

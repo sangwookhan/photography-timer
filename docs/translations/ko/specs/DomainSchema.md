@@ -159,7 +159,7 @@ Formula profile과 연관된 제조사 reference 점 (예: Provia 100F가 출판
 - **warningLevel** — `none`, `note`, `caution`, `strongWarning`.
 - **notes** — token-tagged 사람 읽기 문자열 배열.
 
-`correctedExposure`의 존재는 form (Quantified vs Limited-guidance vs Unsupported)으로 구조적 결정 — form이 보정 노출을 claim 하면서 payload가 없거나 (그 반대) 인 결과는 구성상 표현 불가능 (단 unsupported가 formula-extrapolated continuation을 동반하는 예외만 허용).
+`correctedExposure`의 존재는 form (Quantified vs Limited-guidance vs Unsupported)으로 구조적 결정 — form이 보정 노출을 claim 하면서 payload가 없거나 (그 반대) 인 결과는 구성상 표현 불가능 (단 unsupported가 source range 외부의 formula prediction을 numeric continuation으로 동반하는 예외만 허용).
 
 ---
 
@@ -358,7 +358,7 @@ Launch preset profile은 계산 table rule을 갖지 않는다. 도메인에 `.t
 2. Source-evidence row (§3.3)를 계산 anchor로 promote. 계산 정책은 threshold, formula, limited-guidance rule만 read — source-evidence는 display 전용 reference 데이터.
 3. 갭을 채우기 위해 provenance 필드 합성. 누락된 옵션 필드는 부재 유지.
 4. Repackaged 브랜드 identity와 원-제조사 identity를 한 entry 안에 mix. Repackaging은 원 identity에 대한 `brandLabel` annotation — 평행 record가 아님.
-5. 보정 노출을 claim 하면서 값을 포함하지 않거나, 보정 노출 값을 포함하면서 claim 하지 않는 계산 결과 허용 (단 `unsupportedOutOfPolicyRange`가 supported boundary 너머에서 formula-extrapolated numeric continuation을 동반하는 단일 허용 예외). 모순 페어링은 결과의 form으로 표현 불가능.
+5. 보정 노출을 claim 하면서 값을 포함하지 않거나, 보정 노출 값을 포함하면서 claim 하지 않는 계산 결과 허용 (단 `unsupportedOutOfPolicyRange`가 source-range boundary 너머에서 supported range 외부의 formula prediction을 numeric continuation으로 동반하는 단일 허용 예외). 모순 페어링은 결과의 form으로 표현 불가능.
 6. Launch preset profile이 사용자 metadata 포함 허용.
 7. 카탈로그 검증 무시. 실패하는 카탈로그는 load-time 에러 — soft-warn 아님.
 8. 한 필름의 다중 official profile을 한 record로 collapse. (Wiki 15138817이 multi-profile 지원 예약; launch 에서는 identity 당 한 profile만 ship.)

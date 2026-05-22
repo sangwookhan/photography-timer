@@ -266,8 +266,8 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// active profile carries one (e.g. Provia 100F's 128 s threshold).
     /// Drives the light-green no-correction shading and the threshold
     /// boundary guide in the formula graph so the user reads the
-    /// no-correction region as policy-derived rather than as an
-    /// extrapolation of the formula curve. `nil` for profiles without
+    /// no-correction region as policy-derived rather than as a formula
+    /// prediction outside the source range. `nil` for profiles without
     /// a threshold rule (HP5 Plus etc.).
     let noCorrectionRangeUpperBoundSeconds: Double?
     /// Open-ring markers (with adjacent labels) showing manufacturer
@@ -286,8 +286,8 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     let notRecommendedBoundarySeconds: Double?
     /// Metered-exposure x at which the manufacturer-published source
     /// range ends. Drives the persistent pink shading on converted
-    /// formula graphs (everything to the right is the formula's
-    /// extrapolation past the published reference). `nil` for
+    /// formula graphs (everything to the right is the formula
+    /// prediction outside the published source range). `nil` for
     /// profiles without a defined source range upper bound.
     let beyondSourceRangeStartSeconds: Double?
     /// User-facing formula expression rendered next to the graph

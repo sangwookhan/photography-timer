@@ -354,7 +354,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
 
         XCTAssertEqual(
             store.snapshot,
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: nil,
@@ -388,7 +388,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         // round-trips byte-for-byte.
         XCTAssertEqual(
             store.snapshot,
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: 6,
@@ -406,7 +406,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         // without `Double` drift.
         let store = InMemoryStore()
         store.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: nil,
@@ -435,7 +435,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         // field and produce a whole-stop NDStep so existing user data
         // continues to restore.
         store.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: 4
@@ -462,12 +462,12 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         // it through `JSONDecoder` directly. This confirms the
         // backward-compatible decode is real and not just a happy path
         // the in-memory store sets up for us.
-        let legacyJSON = """
+        let legacyJSON = Data("""
         {"selectedPresetFilmID":null,"baseShutterSeconds":1.0,"ndStop":4}
-        """.data(using: .utf8)!
+        """.utf8)
 
         let snapshot = try JSONDecoder().decode(
-            PersistentExposureCalculatorContextSnapshot.self,
+            PersistentCalculatorContextSnapshot.self,
             from: legacyJSON
         )
 
@@ -477,14 +477,14 @@ final class OneThirdStopExposureModeTests: XCTestCase {
     }
 }
 
-private final class InMemoryStore: ExposureCalculatorContextPersistenceStoring {
-    private(set) var snapshot: PersistentExposureCalculatorContextSnapshot?
+private final class InMemoryStore: ExposureCalculatorContextStoring {
+    private(set) var snapshot: PersistentCalculatorContextSnapshot?
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         snapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         self.snapshot = snapshot
     }
 
@@ -492,4 +492,3 @@ private final class InMemoryStore: ExposureCalculatorContextPersistenceStoring {
         snapshot = nil
     }
 }
-

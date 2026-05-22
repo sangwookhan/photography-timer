@@ -4,7 +4,7 @@ import XCTest
 /// Direct unit tests for `FilmSelectionModel`. These cover the
 /// film-selection slice in isolation;
 /// `ExposureCalculatorViewModelFilmModeTests` and
-/// `ExposureCalculatorViewModelContextPersistenceTests` cover the same
+/// `CalculatorContextPersistenceTests` cover the same
 /// behavior end-to-end through the view-model facade.
 final class FilmSelectionModelTests: XCTestCase {
 
@@ -36,7 +36,7 @@ final class FilmSelectionModelTests: XCTestCase {
         // bundles them with the selected film id.
         XCTAssertEqual(
             store.savedSnapshots.last,
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: film.id,
                 baseShutterSeconds: 1.0 / 15.0,
                 ndStop: 4
@@ -89,7 +89,7 @@ final class FilmSelectionModelTests: XCTestCase {
         let presetFilms = LaunchPresetFilmCatalog.films
         let film = try XCTUnwrap(presetFilms.first { $0.canonicalStockName == "Tri-X 400" })
         let store = SpyContextPersistenceStore(
-            initialSnapshot: PersistentExposureCalculatorContextSnapshot(
+            initialSnapshot: PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: film.id,
                 baseShutterSeconds: 1.0 / 15.0,
                 ndStop: 4
@@ -109,7 +109,7 @@ final class FilmSelectionModelTests: XCTestCase {
     @MainActor
     func testRestoreContextWithUnknownFilmIDClearsSnapshot() {
         let store = SpyContextPersistenceStore(
-            initialSnapshot: PersistentExposureCalculatorContextSnapshot(
+            initialSnapshot: PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: "missing-film-id",
                 baseShutterSeconds: 1,
                 ndStop: 4
@@ -176,20 +176,20 @@ final class FilmSelectionModelTests: XCTestCase {
 
 // MARK: - Test doubles
 
-private final class SpyContextPersistenceStore: ExposureCalculatorContextPersistenceStoring {
-    private var loadedSnapshot: PersistentExposureCalculatorContextSnapshot?
-    private(set) var savedSnapshots: [PersistentExposureCalculatorContextSnapshot] = []
+private final class SpyContextPersistenceStore: ExposureCalculatorContextStoring {
+    private var loadedSnapshot: PersistentCalculatorContextSnapshot?
+    private(set) var savedSnapshots: [PersistentCalculatorContextSnapshot] = []
     private(set) var clearCount: Int = 0
 
-    init(initialSnapshot: PersistentExposureCalculatorContextSnapshot? = nil) {
+    init(initialSnapshot: PersistentCalculatorContextSnapshot? = nil) {
         self.loadedSnapshot = initialSnapshot
     }
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         loadedSnapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         savedSnapshots.append(snapshot)
     }
 
@@ -202,7 +202,7 @@ private final class SpyContextPersistenceStore: ExposureCalculatorContextPersist
 @MainActor
 private func makeModel(
     presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
-    contextPersistenceStore: ExposureCalculatorContextPersistenceStoring = NoOpExposureCalculatorContextPersistenceStore(),
+    contextPersistenceStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore(),
     baseShutterSeconds: Double = 1.0 / 30.0,
     ndStop: Int = 0
 ) -> FilmSelectionModel {

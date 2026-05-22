@@ -1,7 +1,7 @@
 import XCTest
 @testable import PTimer
 
-final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
+final class CalculatorTimerIntegrationTests: XCTestCase {
     @MainActor
     func testFilmModeCorrectedExposureTimerUsesQuantifiedCorrectedResult() throws {
         let timerManager = TimerManager(
@@ -63,7 +63,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeAdvisoryOnlyDoesNotProvideCorrectedExposureTimerSource() throws {
+    func testFilmModeLimitedGuidanceDoesNotProvideCorrectedExposureTimerSource() throws {
         let timerManager = TimerManager(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
@@ -85,11 +85,11 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         XCTAssertTrue(viewModel.timers.isEmpty)
-        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .advisory)
+        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .limitedGuidance)
     }
 
     @MainActor
-    func testFilmModeAdjustedShutterTimerStartsForAdvisoryOnlyResult() throws {
+    func testFilmModeAdjustedShutterTimerStartsForLimitedGuidanceResult() throws {
         let timerManager = TimerManager(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
@@ -442,9 +442,9 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
                         timerID: timer.id,
                         timerName: timer.name,
                         endDate: try XCTUnwrap(timer.endDate)
-                    )
+                    ),
                 ]
-            )
+            ),
         ])
         XCTAssertEqual(exposer.currentTarget?.representativeEndDate, timer.endDate)
         XCTAssertEqual(exposer.clearCount, 0)
@@ -645,7 +645,7 @@ final class ExposureCalculatorViewModelTimerIntegrationTests: XCTestCase {
                     timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000022")!,
                     timerName: "2m timer",
                     endDate: Date(timeIntervalSince1970: 220)
-                )
+                ),
             ]
         )
 

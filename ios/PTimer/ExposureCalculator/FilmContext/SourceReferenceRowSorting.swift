@@ -61,12 +61,6 @@ struct SourceReferenceRowSortKey: Comparable {
     let kind: SourceReferenceRowKind
     let catalogOffset: Int
 
-    init(sortValue: Double, kind: SourceReferenceRowKind, catalogOffset: Int) {
-        self.sortValue = sortValue
-        self.kind = kind
-        self.catalogOffset = catalogOffset
-    }
-
     static func < (lhs: Self, rhs: Self) -> Bool {
         if lhs.sortValue != rhs.sortValue {
             return lhs.sortValue < rhs.sortValue

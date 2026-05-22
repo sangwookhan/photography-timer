@@ -243,7 +243,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
                     baseShutterSeconds: 1,
                     ndStop: 0,
                     targetShutterSeconds: -10
-                )
+                ),
             ]
         )
         let sessionStore = InMemorySessionStore()
@@ -268,7 +268,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
             makeViewModel().availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
         )
         legacyStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: film.id,
                 baseShutterSeconds: 1.0 / 60.0,
                 ndStop: 6,
@@ -323,7 +323,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
                         ndStop: 4,
                         ndStopThirds: nil,
                         exposureScaleMode: nil
-                    )
+                    ),
                 ]
             )
         )
@@ -453,7 +453,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
                         exposureScaleMode: nil
                         // Note: customDisplayName intentionally omitted
                         // so this exercises the pre-PTIMER-123 shape.
-                    )
+                    ),
                 ]
             )
         )
@@ -514,7 +514,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
 
     private func makeViewModel(
         sessionStore: CameraSlotSessionPersistenceStoring = NoOpCameraSlotSessionPersistenceStore(),
-        legacyStore: ExposureCalculatorContextPersistenceStoring = NoOpExposureCalculatorContextPersistenceStore()
+        legacyStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore()
     ) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
@@ -526,7 +526,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
 }
 
 /// Schema-version-aware in-memory session store. Mirrors the
-/// `UserDefaultsCameraSlotSessionPersistenceStore` semantics so the
+/// `UserDefaultsCameraSlotSessionStore` semantics so the
 /// load path under test rejects unknown schema versions even in
 /// tests.
 private final class InMemorySessionStore: CameraSlotSessionPersistenceStoring {
@@ -549,14 +549,14 @@ private final class InMemorySessionStore: CameraSlotSessionPersistenceStoring {
     }
 }
 
-private final class InMemoryContextStore: ExposureCalculatorContextPersistenceStoring {
-    private var stored: PersistentExposureCalculatorContextSnapshot?
+private final class InMemoryContextStore: ExposureCalculatorContextStoring {
+    private var stored: PersistentCalculatorContextSnapshot?
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         stored
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         stored = snapshot
     }
 

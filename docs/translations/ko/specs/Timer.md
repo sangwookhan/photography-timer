@@ -58,7 +58,7 @@ Timer가 생성될 때, calculator의 현재 결과가 timer의 metadata로 snap
 - *digital result* — non-film calculator (필름 미선택); ND-조정 출력 셔터에서 timer 시작.
 - *film-adjusted shutter* — film workflow; Adjusted Shutter 행에서 timer 시작.
 - *film-corrected exposure* — film workflow; Corrected Exposure 행에서 timer 시작.
-- *target shutter* — 사진가의 Target Shutter duration으로부터 시작된 timer. Target duration 자체가 timer duration이다; 비교 값의 가용 여부와 무관. Target-shutter timer는 lifetime 동안 adjusted timer 및 corrected timer와 구별되는 identity를 유지한다. ([Requirements](../../../requirements/Requirements.md) §3.9 + [Calculator Spec](Calculator.md) §3.8 참조.)
+- *target shutter* — 사진가의 Target Shutter duration으로부터 시작된 timer. Target duration 자체가 timer duration이다; 비교 값의 가용 여부와 무관. Target-shutter timer는 lifetime 동안 adjusted timer 및 corrected timer와 구별되는 identity를 유지한다. ([Requirements](../../../requirements/Requirements.md) §3.9 + [Calculator Spec](Calculator.md) §3.6 참조.)
 - *manual* — calculator 외부에서 공급된 사전 계산된 셔터값. Manual timer는 calculator 식별을 *capture하지 않는다* — 카메라 슬롯도, 필름 디스크립터도, calculator-bound 노출 source도 포함하지 않으며, 표시 계층은 활성 슬롯 식별을 빌리지 않고 generic *Manual timer* basis 라벨로 대체. (FR-4.7)
 
 **Capture 규칙.** 식별 capture는 *시작 시점에 한 번* 일어난다. Captured 값은 timer에 고정되며, runtime 상태로부터 다시 도출되지 않고, 사용자가 이후 활성 카메라 슬롯을 전환하거나, 슬롯을 rename하거나, 활성 필름을 바꾸거나, profile을 다시 선택하더라도 덮어쓰이지 않는다.
@@ -211,7 +211,7 @@ Compact / expanded 표면은 같은 정렬을 사용. 선택/포커스된 timer 
 
 - **완료 timer 보존.** Wiki 8847362가 completed는 "최근 항목만" 으로 제한될 수 있다고 명시. 구체적 보존 임계값은 결정 안 됨.
 - **다중 timer 작업의 selection 모델.** Wiki 9601025가 강한 selection 모델을 의도적으로 defer. 다중 선택, batch action, 또는 cross-timer 링킹 spec은 없음.
-- **Bottom sheet의 detent threshold** (compact 98 pt + ND 예약 132 pt; large 560 pt; 92 pt up-drag, 64 pt down-drag)는 [UI Spec](UI.md) §4에 문서화.
+- **Bottom sheet의 detent threshold** (compact 98 pt + ND 예약 132 pt; large 560 pt; 92 pt up-drag, 64 pt down-drag)는 [UI Spec](UI.md) §3.1 / §3.2에 문서화.
 - **Notification 그룹화 + audio 정책.** 짧은 시간 안 다중 백그라운드 완료가 group 되어야 하는지, audio cue가 timer 종류로 변하는지 정의 spec 없음.
 - **Live Activity 테스트 커버리지.** Wiki 19103745가 ActivityKit + notification 통합 테스트 누락 명시. 잠금 화면 동작은 §5의 contract으로 governed 되지만 시스템 레벨 통합 path에 대해 아직 검증 안 됨.
 - **Pause-during-completion race.** "사용자가 런타임 중 완료-evaluation 도중 pause" 에 대한 명시 spec 없음 — 동작은 tick ordering에서 emerge. 명료화 가치 있음.

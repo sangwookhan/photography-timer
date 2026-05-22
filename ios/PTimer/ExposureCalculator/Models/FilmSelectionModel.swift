@@ -24,7 +24,7 @@ final class FilmSelectionModel: ObservableObject {
 
     @Published private(set) var activeContext = ActiveExposureCalculatorContext()
 
-    private let contextPersistenceStore: ExposureCalculatorContextPersistenceStoring
+    private let contextPersistenceStore: ExposureCalculatorContextStoring
     private let currentBaseShutterSeconds: () -> Double
     private let currentNDStep: () -> NDStep
     private let currentScaleMode: () -> ExposureScaleMode
@@ -59,7 +59,7 @@ final class FilmSelectionModel: ObservableObject {
 
     init(
         presetFilms: [FilmIdentity],
-        contextPersistenceStore: ExposureCalculatorContextPersistenceStoring,
+        contextPersistenceStore: ExposureCalculatorContextStoring,
         currentBaseShutterSeconds: @escaping () -> Double,
         currentNDStep: @escaping () -> NDStep,
         currentScaleMode: @escaping () -> ExposureScaleMode = { .oneThirdStop },
@@ -182,7 +182,7 @@ final class FilmSelectionModel: ObservableObject {
         let ndStep = currentNDStep()
         let scaleMode = currentScaleMode()
         contextPersistenceStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: activeContext.selectedPresetFilm?.id,
                 baseShutterSeconds: currentBaseShutterSeconds(),
                 ndStop: ndStep.wholeStops,

@@ -15,18 +15,18 @@ enum FilmSelectorSupportDisplayState: Equatable {
     case none
 
     /// Official profile that publishes a quantified reciprocity
-    /// prediction (formula or table rule). The selector row shows a
-    /// compact graph-style icon.
+    /// prediction (formula rule). The selector row shows a compact
+    /// graph-style icon.
     case officialQuantifiedPrediction
 
-    /// Official profile whose long-exposure section is advisory-only
-    /// — published guidance exists but is not quantified. The
+    /// Official profile whose long-exposure section is qualitative
+    /// only — published guidance exists but is not quantified. The
     /// selector row shows an info-style icon distinct from the
     /// quantified-prediction one.
     case officialLimitedGuidance
 
     /// Official profile that publishes neither a quantified
-    /// prediction nor advisory guidance for long exposures. The row
+    /// prediction nor limited guidance for long exposures. The row
     /// shows a disabled / prohibited-style icon so the user can spot
     /// the lack of support before selecting.
     case noQuantifiedPrediction
@@ -124,10 +124,10 @@ enum FilmSelectorSupportPresenter {
         case .unofficial:
             return .unofficialPractical
         case .official:
-            if hasFormulaOrTableRule(profile) {
+            if hasFormulaRule(profile) {
                 return .officialQuantifiedPrediction
             }
-            if hasAdvisoryRule(profile) {
+            if hasLimitedGuidanceRule(profile) {
                 return .officialLimitedGuidance
             }
             return .noQuantifiedPrediction
@@ -136,22 +136,16 @@ enum FilmSelectorSupportPresenter {
         }
     }
 
-    private static func hasFormulaOrTableRule(_ profile: ReciprocityProfile) -> Bool {
+    private static func hasFormulaRule(_ profile: ReciprocityProfile) -> Bool {
         profile.rules.contains { rule in
-            switch rule {
-            case .formula, .table:
-                return true
-            case .threshold, .advisory:
-                return false
-            }
+            if case .formula = rule { return true }
+            return false
         }
     }
 
-    private static func hasAdvisoryRule(_ profile: ReciprocityProfile) -> Bool {
+    private static func hasLimitedGuidanceRule(_ profile: ReciprocityProfile) -> Bool {
         profile.rules.contains { rule in
-            if case .advisory = rule {
-                return true
-            }
+            if case .limitedGuidance = rule { return true }
             return false
         }
     }

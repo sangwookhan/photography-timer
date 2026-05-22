@@ -8,11 +8,11 @@ import XCTest
 /// representative slide / negative / black-and-white films.
 ///
 /// These tests intentionally do not duplicate notation-level coverage that
-/// already lives in `ReciprocitySecondaryGuidancePresentationTests`; they
+/// already lives in `SecondaryGuidancePresentationTests`; they
 /// only verify that the published catalog still carries the expected
 /// notation and that the formatter classifies it into the right category
 /// without rewriting its text.
-final class ReciprocitySecondaryGuidanceCatalogMappingTests: XCTestCase {
+final class SecondaryGuidanceCatalogMappingTests: XCTestCase {
 
     // MARK: - Velvia 50 (Fujifilm slide film)
 
@@ -145,10 +145,8 @@ final class ReciprocitySecondaryGuidanceCatalogMappingTests: XCTestCase {
             return threshold.adjustments
         case let .formula(formula):
             return formula.additionalAdjustments
-        case let .table(table):
-            return table.entries.flatMap(\.adjustments)
-        case let .advisory(advisory):
-            return advisory.adjustments
+        case let .limitedGuidance(rule):
+            return rule.adjustments
         }
     }
 }

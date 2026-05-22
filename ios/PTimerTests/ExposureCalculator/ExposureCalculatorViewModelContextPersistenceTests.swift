@@ -1,10 +1,10 @@
 import XCTest
 @testable import PTimer
 
-final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
+final class CalculatorContextPersistenceTests: XCTestCase {
     @MainActor
     func testSelectingPresetFilmPersistsWorkingContextValues() throws {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -21,7 +21,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
         XCTAssertEqual(
             contextStore.snapshot,
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: film.id,
                 baseShutterSeconds: 1.0 / 15.0,
                 ndStop: 4
@@ -31,7 +31,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testRelaunchRestoresValidFilmModeWorkingContextAndReciprocityBinding() throws {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         let initialViewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -41,9 +41,9 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
             contextPersistenceStore: contextStore
         )
         // Pin the legacy full-stop scale so the snap-to-full-stop result
-        // (1/15 + ND 4 → 1.0s) lands on Tri-X's exact 1s table anchor;
+        // (1/15 + ND 4 → 1.0s) lands at Tri-X's 1 s threshold seam;
         // the persisted scale token is restored on relaunch so the
-        // reciprocity confidence remains "Exact".
+        // reciprocity status remains "Formula-derived".
         initialViewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(initialViewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -74,7 +74,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testRelaunchWithoutStoredPresetFallsBackToNoFilmState() {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -93,9 +93,9 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testRelaunchWithInvalidStoredPresetIdentifierFallsBackSafely() {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         contextStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: "missing-preset-id",
                 baseShutterSeconds: 1,
                 ndStop: 4
@@ -120,9 +120,9 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testInvalidStoredPresetFallbackLeavesDigitalWorkflowUnaffected() throws {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         contextStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: "missing-preset-id",
                 baseShutterSeconds: 1,
                 ndStop: 4
@@ -159,7 +159,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testDigitalWorkingContextPersistsWithoutSelectedFilm() {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -173,7 +173,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
         XCTAssertEqual(
             contextStore.snapshot,
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1,
                 ndStop: 3
@@ -183,9 +183,9 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testRelaunchRestoresDigitalWorkingContextWithoutSelectedFilm() {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         contextStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1,
                 ndStop: 3
@@ -219,10 +219,10 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testRelaunchWithInvalidStoredNumericValuesFallsBackToDefaultCalculatorInputs() throws {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         let film = try XCTUnwrap(makeViewModel().availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
         contextStore.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: film.id,
                 baseShutterSeconds: 0.3,
                 ndStop: 99
@@ -242,7 +242,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
         XCTAssertEqual(viewModel.ndStop, 0)
         XCTAssertEqual(
             contextStore.snapshot,
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: film.id,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: 0
@@ -252,7 +252,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
 
     @MainActor
     func testResetFilmModeWorkingContextClearsSelectionInputsAndPersistedSnapshot() throws {
-        let contextStore = InMemoryExposureCalculatorContextPersistenceStore()
+        let contextStore = InMemoryCalculatorContextStore()
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -355,7 +355,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
                         pausedRemainingTime: nil,
                         pausedAt: nil,
                         status: .running
-                    )
+                    ),
                 ]
             )
         )
@@ -369,7 +369,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: timerManager,
-            metadataPersistenceStore: UserDefaultsTimerMetadataPersistenceStore(userDefaults: userDefaults)
+            metadataPersistenceStore: UserDefaultsTimerMetadataStore(userDefaults: userDefaults)
         )
         XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
         XCTAssertEqual(viewModel.timers.map(\.status), [.running])
@@ -392,7 +392,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
                         pausedRemainingTime: nil,
                         pausedAt: nil,
                         status: .running
-                    )
+                    ),
                 ]
             )
         )
@@ -421,7 +421,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
         let metadataStore = InMemoryTimerMetadataPersistenceStore()
         let orphanID = UUID()
         metadataStore.saveSnapshot(
-            PersistentTimerMetadataCollectionSnapshot(
+            PersistentTimerMetadataCollection(
                 nextTimerOrder: 7,
                 timers: [
                     PersistentTimerMetadataSnapshot(
@@ -429,7 +429,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
                         order: 6,
                         name: "Orphan",
                         basisSummary: "Manual timer"
-                    )
+                    ),
                 ]
             )
         )
@@ -464,14 +464,14 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
                         pausedRemainingTime: nil,
                         pausedAt: nil,
                         status: .running
-                    )
+                    ),
                 ]
             )
         )
 
         let metadataStore = InMemoryTimerMetadataPersistenceStore()
         metadataStore.saveSnapshot(
-            PersistentTimerMetadataCollectionSnapshot(
+            PersistentTimerMetadataCollection(
                 nextTimerOrder: 9,
                 timers: [
                     PersistentTimerMetadataSnapshot(
@@ -485,7 +485,7 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
                         order: 4,
                         name: "Orphan timer",
                         basisSummary: "Orphan summary"
-                    )
+                    ),
                 ]
             )
         )
@@ -544,14 +544,14 @@ final class ExposureCalculatorViewModelContextPersistenceTests: XCTestCase {
     }
 }
 
-private final class InMemoryExposureCalculatorContextPersistenceStore: ExposureCalculatorContextPersistenceStoring {
-    private(set) var snapshot: PersistentExposureCalculatorContextSnapshot?
+private final class InMemoryCalculatorContextStore: ExposureCalculatorContextStoring {
+    private(set) var snapshot: PersistentCalculatorContextSnapshot?
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         snapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         self.snapshot = snapshot
     }
 
@@ -561,13 +561,13 @@ private final class InMemoryExposureCalculatorContextPersistenceStore: ExposureC
 }
 
 private final class InMemoryTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {
-    private(set) var snapshot: PersistentTimerMetadataCollectionSnapshot?
+    private(set) var snapshot: PersistentTimerMetadataCollection?
 
-    func loadSnapshot() -> PersistentTimerMetadataCollectionSnapshot? {
+    func loadSnapshot() -> PersistentTimerMetadataCollection? {
         snapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollectionSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection) {
         self.snapshot = snapshot
     }
 

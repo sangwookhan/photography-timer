@@ -35,9 +35,9 @@ enum TargetShutterPresenter {
         case adjustedShutter(TimeInterval)
         /// Film workflow with a quantified corrected exposure.
         case correctedExposure(TimeInterval)
-        /// No comparison value is available (film advisory, unsupported,
-        /// or calc failure). Distinct from the inactive case so the
-        /// UI can keep the target visible.
+        /// No comparison value is available (film limited-guidance,
+        /// unsupported, or calc failure). Distinct from the inactive
+        /// case so the UI can keep the target visible.
         case unavailable
     }
 

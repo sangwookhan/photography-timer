@@ -1,19 +1,17 @@
-  ▿ PTimer.ReciprocityResult.advisoryOnly
-    ▿ advisoryOnly: PTimer.ReciprocityResult.AdvisoryOnlyPayload
+  ▿ PTimer.ReciprocityResult.limitedGuidance
+    ▿ limitedGuidance: PTimer.ReciprocityResult.LimitedGuidancePayload
       - meteredExposureSeconds: 4.0
-      ▿ metadata: PTimer.ReciprocityCalculationPolicyResultMetadata
-        - basis: PTimer.ReciprocityCalculationBasis.advisoryOnlyBeyondOfficialRange
+      ▿ metadata: PTimer.ReciprocityResultMetadata
+        - basis: PTimer.ReciprocityCalculationBasis.limitedGuidanceNoQuantifiedPrediction
         - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
         - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.beyondLastRepresentativePoint
         - warningLevel: PTimer.ReciprocityCalculationWarningLevel.note
-        - estimationFamily: nil
         ▿ notes: 2 elements
           ▿ PTimer.ReciprocityPolicyNote
-            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.advisoryContinuationOnly)
-              - some: PTimer.ReciprocityPolicyNoteToken.advisoryContinuationOnly
-            - text: "Only advisory continuation is available for this metered exposure."
+            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.limitedGuidanceContinuationOnly)
+              - some: PTimer.ReciprocityPolicyNoteToken.limitedGuidanceContinuationOnly
+            - text: "Only limited guidance is available for this metered exposure."
           ▿ PTimer.ReciprocityPolicyNote
             ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
               - some: PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
             - text: "Longer exposures: test under your conditions."
-        - referencedRows: nil

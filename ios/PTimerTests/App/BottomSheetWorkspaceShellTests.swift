@@ -970,7 +970,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         let runningOnly = makeSnapshot(from: [secondsScaleTimer()])
         let withCompleted = makeSnapshot(from: [
             secondsScaleTimer(),
-            sampleTimers().first { $0.status == .completed }!
+            sampleTimers().first { $0.status == .completed }!,
         ])
 
         let activeFromRunningOnly = runningOnly.sections.first { $0.isCompletedSection == false }
@@ -1011,7 +1011,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertGreaterThan(host.view.bounds.height, 0)
         XCTAssertGreaterThan(host.view.bounds.width, 0)
     }
-
 
     @MainActor
     func testFullScreenTimersWindowLoadsWithCloseButton() {
@@ -1097,7 +1096,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 pausedAt: nil,
                 status: .completed,
                 referenceDate: now
-            )
+            ),
         ]
     }
 

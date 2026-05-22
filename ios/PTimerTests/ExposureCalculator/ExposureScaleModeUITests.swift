@@ -255,7 +255,7 @@ final class ExposureScaleModeUITests: XCTestCase {
             "1s", "1/1.3", "1/1.6",
             "1/2", "1/2.5", "1/3",
             "1/4", "1/5", "1/6",
-            "1/8", "1/10"
+            "1/8", "1/10",
         ]
 
         // The 15s anchor is at the slow end; ladder indices ascend
@@ -400,7 +400,7 @@ final class ExposureScaleModeUITests: XCTestCase {
     func testRelaunchRestoresOneThirdStopModeAndFractionalNDFromSnapshot() {
         let store = InMemoryStore()
         store.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: nil,
@@ -433,7 +433,7 @@ final class ExposureScaleModeUITests: XCTestCase {
         // strict superset.
         let store = InMemoryStore()
         store.saveSnapshot(
-            PersistentExposureCalculatorContextSnapshot(
+            PersistentCalculatorContextSnapshot(
                 selectedPresetFilmID: nil,
                 baseShutterSeconds: 1.0 / 30.0,
                 ndStop: 4,
@@ -459,12 +459,12 @@ final class ExposureScaleModeUITests: XCTestCase {
         // Goes through the raw decoder so we are testing the schema
         // change end-to-end rather than relying on the in-memory store
         // to set up the right shape.
-        let legacyJSON = """
+        let legacyJSON = Data("""
         {"selectedPresetFilmID":null,"baseShutterSeconds":1.0,"ndStop":4}
-        """.data(using: .utf8)!
+        """.utf8)
 
         let snapshot = try JSONDecoder().decode(
-            PersistentExposureCalculatorContextSnapshot.self,
+            PersistentCalculatorContextSnapshot.self,
             from: legacyJSON
         )
 
@@ -553,14 +553,14 @@ final class ExposureScaleModeUITests: XCTestCase {
     }
 }
 
-private final class InMemoryStore: ExposureCalculatorContextPersistenceStoring {
-    private(set) var snapshot: PersistentExposureCalculatorContextSnapshot?
+private final class InMemoryStore: ExposureCalculatorContextStoring {
+    private(set) var snapshot: PersistentCalculatorContextSnapshot?
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         snapshot
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         self.snapshot = snapshot
     }
 

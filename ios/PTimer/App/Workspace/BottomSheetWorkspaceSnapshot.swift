@@ -214,7 +214,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
                 timers: completedTimers,
                 formatRemaining: formatRemaining,
                 timeContext: timeContext
-            )
+            ),
         ].compactMap { $0 }
     }
 
@@ -619,7 +619,7 @@ struct BottomSheetWorkspaceSnapshot: Equatable {
             ("m", 2_592_000),
             ("d", 86_400),
             ("h", 3_600),
-            ("m", 60)
+            ("m", 60),
         ]
 
         var remaining = roundedDown

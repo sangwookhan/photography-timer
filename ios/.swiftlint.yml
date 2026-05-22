@@ -91,7 +91,7 @@ custom_rules:
     # Excludes equality / comparison so `result.hasCalculatedExposureTime == true`
     # does not produce a false positive (the older `[:=]` regex did).
     regex: '\b(didReturnCalculatedTime|hasCalculatedExposureTime)\s*:'
-    message: "ReciprocityResult is now an enum. The didReturnCalculatedTime / hasCalculatedExposureTime + correctedExposureSeconds? pairing is forbidden as a stored field, struct constructor argument, or function parameter. Use case .quantified / .advisoryOnly / .unsupported."
+    message: "ReciprocityResult is now an enum. The didReturnCalculatedTime / hasCalculatedExposureTime + correctedExposureSeconds? pairing is forbidden as a stored field, struct constructor argument, or function parameter. Use case .quantified / .limitedGuidance / .unsupported."
     severity: error
     included: "PTimer/"
     excluded:

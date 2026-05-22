@@ -22,7 +22,7 @@ import Foundation
 /// Treat this type as legacy schema. New fields belong on
 /// `PersistentCameraSlotSessionSnapshot` /
 /// `PersistentCameraSlotCalculatorSnapshot`.
-struct PersistentExposureCalculatorContextSnapshot: Codable, Equatable {
+struct PersistentCalculatorContextSnapshot: Codable, Equatable {
     let selectedPresetFilmID: String?
     let baseShutterSeconds: Double?
     /// Whole-stop ND value, kept for byte-for-byte backward compat with
@@ -72,7 +72,7 @@ struct PersistentExposureCalculatorContextSnapshot: Codable, Equatable {
     }
 }
 
-extension PersistentExposureCalculatorContextSnapshot {
+extension PersistentCalculatorContextSnapshot {
     /// Reconstructs the persisted ND value as an `NDStep`, preferring
     /// the fractional-safe `ndStopThirds` field when present so a
     /// PTIMER-80 fractional snapshot decodes losslessly. Falls back to
@@ -104,19 +104,19 @@ extension PersistentExposureCalculatorContextSnapshot {
     }
 }
 
-protocol ExposureCalculatorContextPersistenceStoring {
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot?
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot)
+protocol ExposureCalculatorContextStoring {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot?
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot)
     func clearSnapshot()
 }
 
-struct NoOpExposureCalculatorContextPersistenceStore: ExposureCalculatorContextPersistenceStoring {
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? { nil }
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {}
+struct NoOpCalculatorContextStore: ExposureCalculatorContextStoring {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? { nil }
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {}
     func clearSnapshot() {}
 }
 
-struct UserDefaultsExposureCalculatorContextPersistenceStore: ExposureCalculatorContextPersistenceStoring {
+struct UserDefaultsCalculatorContextStore: ExposureCalculatorContextStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
     private let encoder = JSONEncoder()
@@ -130,15 +130,15 @@ struct UserDefaultsExposureCalculatorContextPersistenceStore: ExposureCalculator
         self.snapshotKey = snapshotKey
     }
 
-    func loadSnapshot() -> PersistentExposureCalculatorContextSnapshot? {
+    func loadSnapshot() -> PersistentCalculatorContextSnapshot? {
         guard let data = userDefaults.data(forKey: snapshotKey) else {
             return nil
         }
 
-        return try? decoder.decode(PersistentExposureCalculatorContextSnapshot.self, from: data)
+        return try? decoder.decode(PersistentCalculatorContextSnapshot.self, from: data)
     }
 
-    func saveSnapshot(_ snapshot: PersistentExposureCalculatorContextSnapshot) {
+    func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) {
         guard let data = try? encoder.encode(snapshot) else {
             return
         }

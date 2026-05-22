@@ -40,7 +40,6 @@ struct FilmModeDetailsSectionState: Equatable, Identifiable {
 
 enum FilmModeDetailsGraphKind: Equatable {
     case formula
-    case table
 }
 
 /// Stop-spaced / log-based scale tier for the formula reciprocity
@@ -90,7 +89,7 @@ enum FilmModeDetailsGraphScaleTier: Equatable {
                 FilmModeDetailsGraphAxisTick(value: 60, label: "1m"),
                 FilmModeDetailsGraphAxisTick(value: 240, label: "4m"),
                 FilmModeDetailsGraphAxisTick(value: 960, label: "16m"),
-                FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h")
+                FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h"),
             ]
         case .t2:
             return [
@@ -99,7 +98,7 @@ enum FilmModeDetailsGraphScaleTier: Equatable {
                 FilmModeDetailsGraphAxisTick(value: 60, label: "1m"),
                 FilmModeDetailsGraphAxisTick(value: 600, label: "10m"),
                 FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h"),
-                FilmModeDetailsGraphAxisTick(value: 36_000, label: "10h")
+                FilmModeDetailsGraphAxisTick(value: 36_000, label: "10h"),
             ]
         case .t3:
             return [
@@ -107,7 +106,7 @@ enum FilmModeDetailsGraphScaleTier: Equatable {
                 FilmModeDetailsGraphAxisTick(value: 60, label: "1m"),
                 FilmModeDetailsGraphAxisTick(value: 3_600, label: "1h"),
                 FilmModeDetailsGraphAxisTick(value: 36_000, label: "10h"),
-                FilmModeDetailsGraphAxisTick(value: 360_000, label: "100h")
+                FilmModeDetailsGraphAxisTick(value: 360_000, label: "100h"),
             ]
         }
     }
@@ -150,10 +149,13 @@ enum FilmModeDetailsGraphScalePolicy {
 }
 
 enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
-    case exact
-    case estimated
-    case extrapolated
+    /// Current result sits on the formula curve inside the
+    /// manufacturer-supported range.
     case formulaDerived
+    /// Current result extends past the manufacturer source range; the
+    /// formula still produces a value but the result reads as outside
+    /// guidance.
+    case beyondSourceRange
     /// Current input falls inside the no-correction threshold range.
     /// The plotted point sits on the identity line because adjusted
     /// shutter equals corrected exposure; the marker is intentionally
@@ -200,9 +202,8 @@ struct FilmModeDetailsSummaryState: Equatable {
 enum FilmModeDetailsCurrentResultLayout: Equatable {
     /// Single comparison-card layout used by every reciprocity
     /// state (no correction, formula-derived, beyond source range,
-    /// table-based exact/estimated/extrapolated, …). The legacy
-    /// `compactValue` / `compactPair` variants were removed so every
-    /// case reads the same shape: Adjusted / Corrected / Status.
+    /// limited guidance, unsupported). Every case reads the same
+    /// shape: Adjusted / Corrected / Status.
     case comparison
 }
 
@@ -291,7 +292,7 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     let beyondSourceRangeStartSeconds: Double?
     /// User-facing formula expression rendered next to the graph
     /// (e.g. "Tc = 128 × (Tm / 128)^1.3676") so the curve is read
-    /// alongside its equation. `nil` for table graphs.
+    /// alongside its equation.
     let formulaDisplayText: String?
     /// Descriptive bullet-style notes shown below the graph when the
     /// profile pairs a formula curve with manufacturer source-evidence
@@ -299,9 +300,7 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// extra needs to be called out, in which case the view falls back
     /// to the state-aware caption.
     let descriptionLines: [String]
-    /// Tier driving `xRange`, `yRange`, and the axis tick set for
-    /// formula graphs. `nil` for table graphs, which keep their
-    /// existing data-fitted ranges and tick selection.
+    /// Tier driving `xRange`, `yRange`, and the axis tick set.
     let scaleTier: FilmModeDetailsGraphScaleTier?
     /// `true` when the current input (or its corrected exposure)
     /// exceeds the `t3` upper bound, i.e. > 100h. The graph stays
@@ -385,62 +384,26 @@ extension FilmModeDetailsGraphDisplayState {
     /// living only in the view tree. Tests assert against this
     /// directly without instantiating the view.
     var legendChipLabels: [String] {
-        switch kind {
-        case .formula:
-            if usesCurrentInputGuideOnly {
-                return ["Calculation curve", "Current input"]
-            }
-            var items: [String] = ["Calculation curve", "Current result"]
-            if !sourceReferenceMarkers.isEmpty {
-                items.append("Source reference")
-            }
-            if noCorrectionRangeUpperBoundSeconds != nil {
-                items.append("No-correction range")
-            }
-            if notRecommendedBoundarySeconds != nil {
-                items.append("Not-recommended boundary")
-            }
-            if beyondSourceRangeStartSeconds != nil {
-                items.append("Beyond source range")
-            }
-            if isBeyondVisibleRange || isBelowVisibleRange {
-                items.append("Outside visible range")
-            }
-            return items
-        case .table:
-            var items: [String] = ["Reference"]
-            if usesCurrentInputGuideOnly {
-                items.append("Range limit")
-                items.append("Current input")
-                return items
-            }
-            if let currentPoint {
-                items.append(tableLegendChipLabel(for: currentPoint.style))
-            }
-            return items
+        if usesCurrentInputGuideOnly {
+            return ["Calculation curve", "Current input"]
         }
-    }
-
-    private func tableLegendChipLabel(
-        for style: FilmModeDetailsGraphCurrentPointStyle
-    ) -> String {
-        switch style {
-        case .exact:
-            return "Exact"
-        case .estimated:
-            return "Estimated"
-        case .extrapolated:
-            // Converted formula profiles (formula + source evidence)
-            // surface beyond-source range using the same orange-
-            // triangle marker; the chip wording reflects that
-            // semantic.
-            let isConvertedFormulaProfile = kind == .formula && !sourceReferenceMarkers.isEmpty
-            return isConvertedFormulaProfile ? "Beyond source range" : "Extrapolated"
-        case .formulaDerived:
-            return "Current result"
-        case .noCorrection:
-            return "No correction"
+        var items: [String] = ["Calculation curve", "Current result"]
+        if !sourceReferenceMarkers.isEmpty {
+            items.append("Source reference")
         }
+        if noCorrectionRangeUpperBoundSeconds != nil {
+            items.append("No-correction range")
+        }
+        if notRecommendedBoundarySeconds != nil {
+            items.append("Not-recommended boundary")
+        }
+        if beyondSourceRangeStartSeconds != nil {
+            items.append("Beyond source range")
+        }
+        if isBeyondVisibleRange || isBelowVisibleRange {
+            items.append("Outside visible range")
+        }
+        return items
     }
 }
 
@@ -485,7 +448,7 @@ struct FilmModeDetailsDisplayState: Equatable, Identifiable {
                 currentResult.adjustedShutter.valueText,
                 currentResult.correctedExposure.valueText,
                 graphID,
-                legend?.lines.joined(separator: "|") ?? "no-legend"
+                legend?.lines.joined(separator: "|") ?? "no-legend",
             ] + sections.map(\.id)
         ).joined(separator: "|")
     }

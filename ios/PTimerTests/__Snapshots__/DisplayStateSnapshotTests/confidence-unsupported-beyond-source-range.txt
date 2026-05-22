@@ -1,0 +1,18 @@
+  ▿ PTimer.ReciprocityConfidencePresentation
+    - category: PTimer.ReciprocityConfidenceCategory.unsupported
+    - level: PTimer.ReciprocityConfidenceLevel.none
+    - badgeStyle: PTimer.ReciprocityConfidenceBadgeStyle.unsupported
+    - warningEmphasis: PTimer.ReciprocityConfidenceWarningEmphasis.strong
+    - resultKind: PTimer.ReciprocityConfidenceResultKind.unsupported
+    - shortLabel: "Outside guidance"
+    ▿ explanationTokens: 5 elements
+      - PTimer.ReciprocityConfidenceExplanationToken.unsupportedByPolicy
+      - PTimer.ReciprocityConfidenceExplanationToken.currentOfficialSource
+      - PTimer.ReciprocityConfidenceExplanationToken.beyondPolicyLimit
+      - PTimer.ReciprocityConfidenceExplanationToken.officialRangeExceeded
+      - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
+    ▿ supportingNotes: 2 elements
+      - "Manufacturer guidance ends at 600 sec."
+      - "Outside manufacturer guidance — value extrapolated from the published calculation curve."
+    - defaultExplanation: "Manufacturer guidance ends at 600 sec. Outside manufacturer guidance — value extrapolated from the published calculation curve."
+    - returnsCalculatedExposureTime: true

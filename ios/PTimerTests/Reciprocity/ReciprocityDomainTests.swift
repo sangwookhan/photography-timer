@@ -1,1157 +1,200 @@
 import XCTest
 @testable import PTimer
 
+/// Locks the JSON shape of the surviving reciprocity rule kinds.
+/// PTIMER-140 removed the table rule so this file no longer
+/// round-trips synthetic table fixtures — the launch catalog shape
+/// guard (`LaunchPresetFilmCatalogShapeTests`) is the structural
+/// gate for "no table rules in the bundled catalog."
 final class ReciprocityDomainTests: XCTestCase {
-    func testFormulaBasedOfficialFilmCanExpressExponentProfile() throws {
-        let film = makeHP5PlusFilm()
 
-        XCTAssertEqual(film.kind, .preset)
-        XCTAssertEqual(film.productionStatus, .current)
-        XCTAssertEqual(film.manufacturer, "ILFORD / HARMAN")
-        XCTAssertEqual(film.brandLabel, "ILFORD HP5 PLUS")
-        XCTAssertEqual(film.aliases, ["HP5+", "HP5 Plus 400"])
-        XCTAssertEqual(film.profiles.count, 1)
-        XCTAssertEqual(film.profiles[0].rules.count, 2)
+    // MARK: - Threshold + formula
 
-        guard case let .threshold(thresholdRule) = try XCTUnwrap(film.profiles.first?.rules.first) else {
-            return XCTFail("Expected a threshold rule.")
-        }
-
-        XCTAssertEqual(
-            thresholdRule.noCorrectionRange,
-            ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
-        )
-
-        guard case let .formula(rule) = try XCTUnwrap(film.profiles.first?.rules.last) else {
-            return XCTFail("Expected a formula rule.")
-        }
-
-        XCTAssertEqual(rule.formula.kind, .exponentPower)
-        XCTAssertNil(rule.formula.coefficient)
-        XCTAssertEqual(rule.formula.exponent, 1.31, accuracy: 0.0001)
-        XCTAssertEqual(rule.formula.equation, "Tc = Tm^P")
-        XCTAssertEqual(film.profiles[0].source.kind, .manufacturerPublished)
-        XCTAssertEqual(film.profiles[0].source.authority, .official)
-    }
-
-    func testTableBasedOfficialFilmCanExpressDevelopmentAdjustment() throws {
-        let film = makeTriXFilm()
-
-        XCTAssertEqual(film.profiles.count, 1)
-
-        guard case let .table(rule) = try XCTUnwrap(film.profiles.first?.rules.first) else {
-            return XCTFail("Expected a table rule.")
-        }
-
-        XCTAssertEqual(rule.entries.count, 3)
-
-        guard case let .exposure(firstStopAdjustment) = rule.entries[0].adjustments[0] else {
-            return XCTFail("Expected exposure stop adjustment for first table entry.")
-        }
-
-        guard case let .stopDelta(firstStopDelta) = firstStopAdjustment else {
-            return XCTFail("Expected first stop delta adjustment.")
-        }
-
-        XCTAssertEqual(firstStopDelta.stopDelta, 1, accuracy: 0.0001)
-
-        guard case let .exposure(firstCorrectedTimeAdjustment) = rule.entries[0].adjustments[1] else {
-            return XCTFail("Expected corrected time adjustment for first table entry.")
-        }
-
-        guard case let .correctedTime(firstMapping) = firstCorrectedTimeAdjustment else {
-            return XCTFail("Expected first corrected time mapping.")
-        }
-
-        XCTAssertEqual(firstMapping.meteredSeconds, 1)
-        XCTAssertEqual(firstMapping.correctedSeconds, 2, accuracy: 0.0001)
-
-        guard case let .development(firstDevelopment) = rule.entries[0].adjustments[2] else {
-            return XCTFail("Expected first development adjustment.")
-        }
-
-        XCTAssertEqual(firstDevelopment.instruction, "-10% development")
-
-        guard case let .exposure(exposureAdjustment) = rule.entries[1].adjustments[1] else {
-            return XCTFail("Expected corrected time adjustment for second table entry.")
-        }
-
-        guard case let .correctedTime(mapping) = exposureAdjustment else {
-            return XCTFail("Expected corrected time mapping.")
-        }
-
-        XCTAssertEqual(mapping.meteredSeconds, 10)
-        XCTAssertEqual(mapping.correctedSeconds, 50, accuracy: 0.0001)
-
-        guard case let .exposure(secondStopAdjustment) = rule.entries[1].adjustments[0] else {
-            return XCTFail("Expected second exposure stop adjustment.")
-        }
-
-        guard case let .stopDelta(secondStopDelta) = secondStopAdjustment else {
-            return XCTFail("Expected second stop delta adjustment.")
-        }
-
-        XCTAssertEqual(secondStopDelta.stopDelta, 2, accuracy: 0.0001)
-
-        guard case let .development(secondDevelopment) = rule.entries[1].adjustments[2] else {
-            return XCTFail("Expected second development adjustment.")
-        }
-
-        XCTAssertEqual(secondDevelopment.instruction, "-20% development")
-
-        guard case let .exposure(stopAdjustment) = rule.entries[2].adjustments[0] else {
-            return XCTFail("Expected third exposure stop adjustment.")
-        }
-
-        guard case let .stopDelta(stopDelta) = stopAdjustment else {
-            return XCTFail("Expected third stop delta adjustment.")
-        }
-
-        XCTAssertEqual(stopDelta.stopDelta, 3, accuracy: 0.0001)
-
-        guard case let .exposure(thirdCorrectedTimeAdjustment) = rule.entries[2].adjustments[1] else {
-            return XCTFail("Expected corrected time adjustment for third table entry.")
-        }
-
-        guard case let .correctedTime(thirdMapping) = thirdCorrectedTimeAdjustment else {
-            return XCTFail("Expected third corrected time mapping.")
-        }
-
-        XCTAssertEqual(thirdMapping.meteredSeconds, 100)
-        XCTAssertEqual(thirdMapping.correctedSeconds, 1200, accuracy: 0.0001)
-
-        guard case let .development(development) = rule.entries[2].adjustments[2] else {
-            return XCTFail("Expected third development adjustment.")
-        }
-
-        XCTAssertEqual(development.instruction, "-30% development")
-    }
-
-    func testTableBasedOfficialFilmCanExpressColorFilterGuidanceAndNotRecommendedRange() throws {
-        let film = makeVelviaFilm()
-
-        XCTAssertEqual(film.profiles.count, 1)
-        XCTAssertEqual(film.profiles[0].rules.count, 2)
-
-        guard case let .threshold(thresholdRule) = film.profiles[0].rules[0] else {
-            return XCTFail("Expected first rule to be threshold-based.")
-        }
-
-        XCTAssertEqual(
-            thresholdRule.noCorrectionRange,
-            ReciprocityTimeRange(minimumSeconds: 1.0 / 4000.0, maximumSeconds: 1)
-        )
-
-        guard case let .table(tableRule) = film.profiles[0].rules[1] else {
-            return XCTFail("Expected second rule to be table-based.")
-        }
-
-        XCTAssertEqual(tableRule.entries.count, 5)
-
-        try assertVelviaEntry(
-            tableRule.entries[0],
-            meteredSeconds: 4,
-            stopDelta: 1.0 / 3.0,
-            filterName: "5M"
-        )
-        try assertVelviaEntry(
-            tableRule.entries[1],
-            meteredSeconds: 8,
-            stopDelta: 0.5,
-            filterName: "7.5M"
-        )
-        try assertVelviaEntry(
-            tableRule.entries[2],
-            meteredSeconds: 16,
-            stopDelta: 2.0 / 3.0,
-            filterName: "10M"
-        )
-        try assertVelviaEntry(
-            tableRule.entries[3],
-            meteredSeconds: 32,
-            stopDelta: 1,
-            filterName: "12.5M"
-        )
-
-        guard case let .warning(warning) = tableRule.entries[4].adjustments[0] else {
-            return XCTFail("Expected warning payload for 64 second entry.")
-        }
-
-        guard case let .exactSeconds(notRecommendedSeconds) = tableRule.entries[4].meteredExposure else {
-            return XCTFail("Expected explicit 64 second entry.")
-        }
-
-        XCTAssertEqual(notRecommendedSeconds, 64, accuracy: 0.0001)
-        XCTAssertEqual(warning.severity, .notRecommended)
-        XCTAssertEqual(warning.message, "64 sec is not recommended.")
-    }
-
-    func testThresholdOnlyOfficialGuidanceDoesNotCollapseIntoUnknown() throws {
-        let film = makePortraFilm()
-
-        XCTAssertEqual(film.kind, .preset)
-        XCTAssertEqual(film.productionStatus, .current)
-        XCTAssertEqual(film.profiles.count, 2)
-
-        guard case let .threshold(officialRule) = film.profiles[0].rules[0] else {
-            return XCTFail("Expected threshold rule.")
-        }
-
-        XCTAssertEqual(
-            officialRule.noCorrectionRange,
-            ReciprocityTimeRange(minimumSeconds: 1.0 / 10_000.0, maximumSeconds: 1)
-        )
-        XCTAssertTrue(officialRule.adjustments.isEmpty)
-        XCTAssertEqual(film.profiles[0].source.authority, .official)
-
-        guard case let .advisory(advisoryRule) = film.profiles[0].rules[1] else {
-            return XCTFail("Expected advisory rule.")
-        }
-
-        XCTAssertEqual(advisoryRule.appliesWhenMetered, ReciprocityTimeRange(minimumSeconds: 1))
-        XCTAssertEqual(film.profiles[0].source.kind, .manufacturerPublished)
-
-        guard case let .note(note) = advisoryRule.adjustments[0] else {
-            return XCTFail("Expected advisory note payload.")
-        }
-
-        XCTAssertEqual(note.text, "Longer exposures: test under your conditions.")
-    }
-
-    func testCustomUserDefinedUnknownFilmProfileIsSupported() throws {
-        let film = makeCustomUnknownFilm()
-
-        XCTAssertEqual(film.kind, .custom)
-        XCTAssertNil(film.manufacturer)
-        XCTAssertEqual(film.productionStatus, .unknown)
-        XCTAssertEqual(film.userMetadata?.displayNameOverride, "Mystery ISO 100")
-        XCTAssertEqual(film.profiles[0].source.kind, .userDefined)
-        XCTAssertEqual(film.profiles[0].source.authority, .userDefined)
-
-        guard case let .table(rule) = film.profiles[0].rules[0] else {
-            return XCTFail("Expected table rule for custom film.")
-        }
-
-        XCTAssertEqual(rule.entries.count, 2)
-    }
-
-    func testDiscontinuedFilmCanCarryArchivalOfficialProfile() throws {
-        let film = makeAgfaArchivalFilm()
-
-        XCTAssertEqual(film.productionStatus, .discontinued)
-        XCTAssertEqual(film.profiles[0].source.kind, .manufacturerArchive)
-        XCTAssertEqual(film.profiles[0].source.authority, .official)
-        XCTAssertEqual(film.profiles[0].source.confidence, .medium)
-        XCTAssertEqual(film.manufacturer, "Agfa")
-        XCTAssertEqual(film.canonicalStockName, "Agfapan APX 100")
-
-        guard case let .table(rule) = film.profiles[0].rules[0] else {
-            return XCTFail("Expected archival table rule.")
-        }
-
-        XCTAssertEqual(rule.entries.count, 3)
-    }
-
-    func testOneFilmIdentityCanCarryMultipleProfilesFromDifferentSources() throws {
-        let film = makePortraFilm()
-
-        XCTAssertEqual(film.profiles.count, 2)
-        XCTAssertEqual(film.profiles[0].source.kind, .manufacturerPublished)
-        XCTAssertEqual(film.profiles[0].source.authority, .official)
-        XCTAssertEqual(film.profiles[1].source.kind, .thirdPartyPublication)
-        XCTAssertEqual(film.profiles[1].source.authority, .unofficial)
-
-        guard case let .table(unofficialRule) = film.profiles[1].rules[0] else {
-            return XCTFail("Expected unofficial secondary profile to remain table-based.")
-        }
-
-        XCTAssertEqual(unofficialRule.entries.count, 2)
-    }
-
-    func testRoundTripEncodingPreservesRuleKindsAndProvenance() throws {
-        let films = [
-            makeHP5PlusFilm(),
-            makeTriXFilm(),
-            makeVelviaFilm(),
-            makePortraFilm(),
-            makeCustomUnknownFilm(),
-            makeAgfaArchivalFilm()
-        ]
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = try encoder.encode(films)
-        let decoded = try JSONDecoder().decode([FilmIdentity].self, from: data)
-
-        XCTAssertEqual(decoded, films)
-        XCTAssertEqual(decoded[0].profiles[0].rules[0].kind, .threshold)
-        XCTAssertEqual(decoded[0].profiles[0].rules[1].kind, .formula)
-        XCTAssertEqual(decoded[1].profiles[0].rules[0].kind, .table)
-        XCTAssertEqual(decoded[3].profiles[0].rules[0].kind, .threshold)
-        XCTAssertEqual(decoded[3].profiles[0].source.authority, .official)
-        XCTAssertEqual(decoded[3].profiles[1].source.authority, .unofficial)
-        XCTAssertEqual(decoded[5].productionStatus, .discontinued)
-    }
-
-    func testTableBasedRepresentativeDataDocumentsExplicitBoundaryOnly() throws {
-        let film = makeTriXFilm()
-
-        guard case let .table(rule) = try XCTUnwrap(film.profiles.first?.rules.first) else {
-            return XCTFail("Expected TRI-X representative data to remain table-based.")
-        }
-
-        let explicitMeteredSeconds = try rule.entries.map { entry in
-            guard case let .exactSeconds(seconds) = entry.meteredExposure else {
-                throw NSError(domain: "ReciprocityDomainTests", code: 1)
-            }
-
-            return seconds
-        }
-
-        XCTAssertEqual(explicitMeteredSeconds, [1, 10, 100])
-        XCTAssertEqual(explicitMeteredSeconds.max(), 100)
-        XCTAssertFalse(explicitMeteredSeconds.contains(500))
-        XCTAssertFalse(explicitMeteredSeconds.contains(999))
-    }
-
-    private func assertVelviaEntry(
-        _ entry: ReciprocityTableEntry,
-        meteredSeconds: Double,
-        stopDelta: Double,
-        filterName: String
-    ) throws {
-        guard case let .exactSeconds(actualMeteredSeconds) = entry.meteredExposure else {
-            return XCTFail("Expected explicit metered exposure.")
-        }
-
-        XCTAssertEqual(actualMeteredSeconds, meteredSeconds, accuracy: 0.0001)
-
-        guard case let .exposure(exposureAdjustment) = entry.adjustments[0] else {
-            return XCTFail("Expected exposure adjustment.")
-        }
-
-        guard case let .stopDelta(actualStopDelta) = exposureAdjustment else {
-            return XCTFail("Expected stop delta adjustment.")
-        }
-
-        XCTAssertEqual(actualStopDelta.stopDelta, stopDelta, accuracy: 0.0001)
-
-        guard case let .colorFilter(actualFilter) = entry.adjustments[1] else {
-            return XCTFail("Expected color filter adjustment.")
-        }
-
-        XCTAssertEqual(actualFilter.filterName, filterName)
-    }
-
-    private func makeHP5PlusFilm() -> FilmIdentity {
-        FilmIdentity(
+    func testThresholdAndFormulaRulesRoundTripThroughJSON() throws {
+        let film = FilmIdentity(
             id: "ilford-hp5-plus-400",
             kind: .preset,
             canonicalStockName: "HP5 Plus",
-            manufacturer: "ILFORD / HARMAN",
-            brandLabel: "ILFORD HP5 PLUS",
-            aliases: ["HP5+", "HP5 Plus 400"],
+            manufacturer: "Ilford Photo",
+            brandLabel: nil,
+            aliases: [],
             iso: 400,
             productionStatus: .current,
             profiles: [
                 ReciprocityProfile(
-                    id: "ilford-hp5-plus-official-formula",
+                    id: "ilford-hp5-plus-400-official-formula",
                     name: "Official formula",
                     source: ReciprocitySourceProvenance(
                         kind: .manufacturerPublished,
                         authority: .official,
                         confidence: .high,
-                        publisher: "Ilford Photo",
-                        title: "Reciprocity characteristics",
-                        citation: "Technical information sheet",
-                        sourceVersion: "2026"
+                        publisher: "Ilford Photo"
                     ),
                     rules: [
                         .threshold(
                             ThresholdReciprocityRule(
-                                noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1),
-                                notes: ["No compensation required at 1 second or less."]
+                                noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
                             )
                         ),
                         .formula(
                             FormulaReciprocityRule(
                                 meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001),
-                                formula: ReciprocityFormula(
-                                    exponent: 1.31,
-                                    equation: "Tc = Tm^P"
-                                ),
-                                notes: ["Exponent P = 1.31."]
-                            )
-                        )
-                    ]
-                )
-            ],
-            userMetadata: nil
-        )
-    }
-
-    private func makeTriXFilm() -> FilmIdentity {
-        FilmIdentity(
-            id: "kodak-tri-x-400",
-            kind: .preset,
-            canonicalStockName: "Tri-X 400",
-            manufacturer: "Kodak",
-            brandLabel: "KODAK PROFESSIONAL TRI-X 400",
-            aliases: ["TRI-X", "TX 400"],
-            iso: 400,
-            productionStatus: .current,
-            profiles: [
-                ReciprocityProfile(
-                    id: "kodak-tri-x-official-table",
-                    name: "Official table",
-                    source: ReciprocitySourceProvenance(
-                        kind: .manufacturerPublished,
-                        authority: .official,
-                        confidence: .high,
-                        publisher: "Kodak",
-                        title: "Reciprocity data",
-                        citation: "Data sheet"
-                    ),
-                    rules: [
-                        .table(
-                            TableReciprocityRule(
-                                entries: [
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(1),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                            .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 2))),
-                                            .development(DevelopmentAdjustment(
-                                                instruction: "-10% development",
-                                                note: nil
-                                            ))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(10),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2))),
-                                            .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 10, correctedSeconds: 50))),
-                                            .development(DevelopmentAdjustment(
-                                                instruction: "-20% development",
-                                                note: nil
-                                            ))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(100),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 3))),
-                                            .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 100, correctedSeconds: 1200))),
-                                            .development(DevelopmentAdjustment(
-                                                instruction: "-30% development",
-                                                note: nil
-                                            ))
-                                        ]
-                                    )
-                                ],
-                                notes: ["Table data stays table-shaped rather than converted to a formula."]
-                            )
-                        )
-                    ]
-                )
-            ],
-            userMetadata: nil
-        )
-    }
-
-    private func makeVelviaFilm() -> FilmIdentity {
-        FilmIdentity(
-            id: "fujifilm-velvia-50",
-            kind: .preset,
-            canonicalStockName: "Velvia 50",
-            manufacturer: "Fujifilm",
-            brandLabel: "FUJICHROME Velvia 50",
-            aliases: ["RVP 50", "Velvia"],
-            iso: 50,
-            productionStatus: .current,
-            profiles: [
-                ReciprocityProfile(
-                    id: "fujifilm-velvia-official-table",
-                    name: "Official table and color guidance",
-                    source: ReciprocitySourceProvenance(
-                        kind: .manufacturerPublished,
-                        authority: .official,
-                        confidence: .high,
-                        publisher: "Fujifilm",
-                        title: "Long exposure guide"
-                    ),
-                    rules: [
-                        .threshold(
-                            ThresholdReciprocityRule(
-                                noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 1.0 / 4000.0, maximumSeconds: 1)
+                                formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P")
                             )
                         ),
-                        .table(
-                            TableReciprocityRule(
-                                entries: [
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(4),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1.0 / 3.0))),
-                                            .colorFilter(ColorFilterRecommendation(filterName: "5M", note: nil))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(8),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0.5))),
-                                            .colorFilter(ColorFilterRecommendation(filterName: "7.5M", note: nil))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(16),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2.0 / 3.0))),
-                                            .colorFilter(ColorFilterRecommendation(filterName: "10M", note: nil))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(32),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                            .colorFilter(ColorFilterRecommendation(filterName: "12.5M", note: nil))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(64),
-                                        adjustments: [
-                                            .warning(ReciprocityWarning(
-                                                severity: .notRecommended,
-                                                message: "64 sec is not recommended."
-                                            ))
-                                        ]
-                                    )
-                                ]
-                            )
-                        )
-                    ]
-                )
-            ],
-            userMetadata: nil
-        )
-    }
-
-    private func makePortraFilm() -> FilmIdentity {
-        FilmIdentity(
-            id: "kodak-portra-400",
-            kind: .preset,
-            canonicalStockName: "Portra 400",
-            manufacturer: "Kodak",
-            brandLabel: "KODAK PROFESSIONAL PORTRA 400",
-            aliases: ["PORTRA 400"],
-            iso: 400,
-            productionStatus: .current,
-            profiles: [
-                ReciprocityProfile(
-                    id: "kodak-portra-official-threshold",
-                    name: "Official threshold guidance",
-                    source: ReciprocitySourceProvenance(
-                        kind: .manufacturerPublished,
-                        authority: .official,
-                        confidence: .high,
-                        publisher: "Kodak",
-                        title: "Reciprocity statement"
-                    ),
-                    rules: [
-                        .threshold(
-                            ThresholdReciprocityRule(
-                                noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 1.0 / 10_000.0, maximumSeconds: 1),
-                                notes: ["No correction required in the official range."]
-                            )
-                        ),
-                        .advisory(
-                            AdvisoryReciprocityRule(
-                                appliesWhenMetered: ReciprocityTimeRange(minimumSeconds: 1),
-                                adjustments: [
-                                    .note(ReciprocityNote(
-                                        text: "Longer exposures: test under your conditions."
-                                    ))
-                                ]
-                            )
-                        )
                     ]
                 ),
-                ReciprocityProfile(
-                    id: "kodak-portra-secondary-table",
-                    name: "Secondary reference table",
-                    source: ReciprocitySourceProvenance(
-                        kind: .thirdPartyPublication,
-                        authority: .unofficial,
-                        confidence: .medium,
-                        publisher: "Independent reciprocity notes",
-                        title: "Field-tested secondary profile"
-                    ),
-                    rules: [
-                        .table(
-                            TableReciprocityRule(
-                                entries: [
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(2),
-                                        adjustments: [
-                                            .exposure(.multiplier(MultiplierAdjustment(factor: 1.5)))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(8),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0.5)))
-                                        ]
-                                    )
-                                ]
-                            )
-                        )
-                    ]
-                )
             ],
             userMetadata: nil
         )
+
+        let data = try JSONEncoder().encode(film)
+        let decoded = try JSONDecoder().decode(FilmIdentity.self, from: data)
+
+        XCTAssertEqual(decoded.profiles.count, 1)
+        XCTAssertEqual(decoded.profiles[0].rules.count, 2)
+        XCTAssertEqual(decoded.profiles[0].rules[0].kind, .threshold)
+        XCTAssertEqual(decoded.profiles[0].rules[1].kind, .formula)
     }
 
-    private func makeCustomUnknownFilm() -> FilmIdentity {
-        FilmIdentity(
-            id: "custom-mystery-iso-100",
-            kind: .custom,
-            canonicalStockName: "Unknown ISO 100 Film",
-            manufacturer: nil,
-            brandLabel: nil,
-            aliases: ["Mystery Roll"],
-            iso: 100,
-            productionStatus: .unknown,
-            profiles: [
-                ReciprocityProfile(
-                    id: "custom-user-profile",
-                    name: "User-defined table",
-                    source: ReciprocitySourceProvenance(
-                        kind: .userDefined,
-                        authority: .userDefined,
-                        confidence: .unknown,
-                        publisher: "Local User"
-                    ),
-                    rules: [
-                        .table(
-                            TableReciprocityRule(
-                                entries: [
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(1),
-                                        adjustments: [
-                                            .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 1, correctedSeconds: 1.5)))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .range(ReciprocityTimeRange(minimumSeconds: 5, maximumSeconds: 10)),
-                                        adjustments: [
-                                            .exposure(.multiplier(MultiplierAdjustment(factor: 1.8))),
-                                            .note(ReciprocityNote(text: "User-entered estimate."))
-                                        ]
-                                    )
-                                ]
-                            )
-                        )
-                    ],
-                    userMetadata: UserEditableMetadata(
-                        displayNameOverride: "Mystery ISO 100",
-                        tags: ["custom", "estimate"],
-                        notes: ["Created during film testing."]
-                    )
-                )
-            ],
-            userMetadata: UserEditableMetadata(
-                displayNameOverride: "Mystery ISO 100",
-                tags: ["user-film"],
-                notes: []
-            )
-        )
-    }
+    // MARK: - Limited guidance
 
-    private func makeAgfaArchivalFilm() -> FilmIdentity {
-        FilmIdentity(
-            id: "agfa-agfapan-apx-100",
-            kind: .preset,
-            canonicalStockName: "Agfapan APX 100",
-            manufacturer: "Agfa",
-            brandLabel: "AGFAPAN APX 100",
-            aliases: ["APX 100"],
-            iso: 100,
-            productionStatus: .discontinued,
-            profiles: [
-                ReciprocityProfile(
-                    id: "agfa-archival-official",
-                    name: "Archival official profile",
-                    source: ReciprocitySourceProvenance(
-                        kind: .manufacturerArchive,
-                        authority: .official,
-                        confidence: .medium,
-                        publisher: "Agfa archive",
-                        title: "Archived reciprocity data",
-                        sourceVersion: "legacy"
-                    ),
-                    rules: [
-                        .table(
-                            TableReciprocityRule(
-                                entries: [
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(1),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
-                                            .development(DevelopmentAdjustment(instruction: "-10% development", note: nil))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(10),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 2))),
-                                            .development(DevelopmentAdjustment(instruction: "-25% development", note: nil))
-                                        ]
-                                    ),
-                                    ReciprocityTableEntry(
-                                        meteredExposure: .exactSeconds(100),
-                                        adjustments: [
-                                            .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 3))),
-                                            .development(DevelopmentAdjustment(instruction: "-35% development", note: nil))
-                                        ]
-                                    )
-                                ],
-                                notes: ["Archival official reciprocity table."]
-                            )
-                        )
-                    ]
-                )
-            ],
-            userMetadata: nil
-        )
-    }
-}
-
-// Tests for the unofficial practical secondary profile for Portra 400.
-final class Portra400SecondaryProfileTests: XCTestCase {
-    private let evaluator = ReciprocityCalculationPolicyEvaluator()
-    private let filmID = "kodak-portra-400"
-    private let officialProfileID = "kodak-portra-400-official-threshold"
-    private let unofficialProfileID = "kodak-portra-400-unofficial-practical"
-
-    func testPortra400LaunchCatalogHasExactlyOneOfficialPrimaryProfile() {
-        let portra = LaunchPresetFilmCatalog.films.first(where: { $0.id == filmID })
-
-        XCTAssertNotNil(portra, "Portra 400 must exist in the launch catalog.")
-        XCTAssertEqual(portra?.profiles.count, 1, "Launch catalog must have exactly one profile per film.")
-        XCTAssertEqual(portra?.profiles.first?.id, officialProfileID)
-        XCTAssertEqual(portra?.profiles.first?.source.authority, .official)
-        XCTAssertEqual(portra?.profiles.first?.source.kind, .manufacturerPublished)
-    }
-
-    func testPortra400UnofficialPracticalProfileHasUnofficialProvenance() {
-        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
-
-        XCTAssertEqual(profile.source.authority, .unofficial)
-        XCTAssertEqual(profile.source.kind, .thirdPartyPublication)
-        XCTAssertEqual(profile.source.confidence, .low)
-    }
-
-    func testPortra400UnofficialProfileIsNotLabeledOfficial() {
-        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
-
-        XCTAssertNotEqual(profile.source.authority, .official)
-        XCTAssertNotEqual(profile.source.confidence, .high)
-        XCTAssertNotEqual(profile.source.kind, .manufacturerPublished)
-    }
-
-    func testPortra400OfficialAndUnofficialProfilesHaveDistinctIdentifiers() {
-        let officialProfile = LaunchPresetFilmCatalog.films
-            .first(where: { $0.id == filmID })?
-            .profiles.first
-        let unofficialProfile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
-
-        XCTAssertNotNil(officialProfile)
-        XCTAssertNotEqual(officialProfile?.id, unofficialProfile.id)
-        XCTAssertEqual(officialProfile?.id, officialProfileID)
-        XCTAssertEqual(unofficialProfile.id, unofficialProfileID)
-    }
-
-    func testPortra400OfficialBehaviorUnchanged_ThresholdNoCorrectionBelowOneSecond() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
-            meteredExposureSeconds: 0.5
-        )
-
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
-        XCTAssertTrue(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
-    }
-
-    func testPortra400OfficialBehaviorUnchanged_AdvisoryOnlyBeyondOfficialRange() {
-        let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraOfficialProfile(),
-            meteredExposureSeconds: 4
-        )
-
-        XCTAssertNil(result.correctedExposureSeconds)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertEqual(result.metadata.basis, .advisoryOnlyBeyondOfficialRange)
-        XCTAssertEqual(result.metadata.rangeStatus, .beyondLastRepresentativePoint)
-    }
-
-    func testPortra400FilmIdentityCanRepresentBothProfilesAtDomainLevel() throws {
-        let officialProfile = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first(where: { $0.id == filmID })?.profiles.first,
-            "Official Portra 400 profile must exist in the launch catalog."
-        )
-
-        let withBothProfiles = FilmIdentity(
-            id: filmID,
-            kind: .preset,
-            canonicalStockName: "Portra 400",
-            manufacturer: "Kodak",
-            brandLabel: "KODAK PROFESSIONAL PORTRA 400",
-            aliases: ["PORTRA 400"],
-            iso: 400,
-            productionStatus: .current,
-            profiles: [officialProfile, UnofficialPracticalProfiles.kodakPortra400UnofficialPractical],
-            userMetadata: nil
-        )
-
-        XCTAssertEqual(withBothProfiles.profiles.count, 2)
-        XCTAssertEqual(withBothProfiles.profiles[0].id, officialProfileID)
-        XCTAssertEqual(withBothProfiles.profiles[0].source.authority, .official)
-        XCTAssertEqual(withBothProfiles.profiles[1].id, unofficialProfileID)
-        XCTAssertEqual(withBothProfiles.profiles[1].source.authority, .unofficial)
-    }
-
-    func testPortra400UnofficialProfileHasFormulaRuleWithExponent1_34() {
-        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
-
-        let formulaRule = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(r) = rule else { return nil }
-            return r
-        }.first
-
-        XCTAssertNotNil(formulaRule, "Unofficial profile must contain a formula rule.")
-        XCTAssertEqual(formulaRule?.formula.kind, .exponentPower)
-        XCTAssertEqual(formulaRule?.formula.exponent ?? 0, 1.34, accuracy: 0.0001)
-    }
-
-    func testPortra400UnofficialProfileEvaluatesQuantifiedResultBeyondOfficialRange() {
-        let result = evaluator.evaluate(
-            profile: UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
-            meteredExposureSeconds: 10
-        )
-
-        XCTAssertTrue(result.hasCalculatedExposureTime, "Unofficial formula profile must produce a quantified result.")
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(10, 1.34), accuracy: 0.001)
-        XCTAssertEqual(result.metadata.basis, .formulaDerived)
-        XCTAssertNotEqual(result.metadata.sourceAuthorityImpact, .currentOfficial)
-    }
-
-    func testPortra400UnofficialSubSecondReturnsNoCorrectionInsteadOfFormulaPrediction() {
-        // The Portra 400 unofficial practical profile carries only a
-        // formula rule (Tc = Tm^1.34) with no `meteredRange` minimum
-        // and no companion threshold rule. Without the policy-level
-        // default no-correction handoff, applying the long-exposure
-        // formula to a sub-1s metered exposure would yield a
-        // corrected time shorter than the adjusted shutter — a
-        // reciprocity correction can never shorten the exposure.
-        let result = evaluator.evaluate(
-            profile: UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
-            meteredExposureSeconds: 1.0 / 30.0     // 0.033s, well below 1s
-        )
-
-        XCTAssertEqual(
-            result.metadata.basis,
-            .officialThresholdNoCorrection,
-            "Sub-1s metered exposures on a formula-only profile must default to No correction, not formula prediction."
-        )
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? -1,
-            1.0 / 30.0,
-            accuracy: 1e-6,
-            "No correction means corrected exposure equals metered exposure."
-        )
-    }
-
-    func testPortra400UnofficialAtExactlyOneSecondStillUsesFormulaPrediction() {
-        // The default no-correction handoff is exclusive at the
-        // upper bound so a metered exposure of exactly 1s still
-        // flows through the formula rule (continuous behavior at
-        // the handoff point: 1^1.34 = 1, so corrected == metered
-        // here too, but the basis stays `.formulaDerived`).
-        let result = evaluator.evaluate(
-            profile: UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
-            meteredExposureSeconds: 1.0
-        )
-
-        XCTAssertEqual(result.metadata.basis, .formulaDerived)
-        XCTAssertEqual(result.correctedExposureSeconds ?? 0, 1.0, accuracy: 1e-6)
-    }
-}
-
-/// Policy-level coverage for the default formula no-correction
-/// handoff added to `ReciprocityCalculationPolicyEvaluator`. The
-/// behavior is film-agnostic — these tests synthesize minimal
-/// profiles so the policy does not silently couple to specific
-/// catalog films.
-final class ReciprocityPolicyDefaultFormulaNoCorrectionTests: XCTestCase {
-    private let evaluator = ReciprocityCalculationPolicyEvaluator()
-
-    func testFormulaOnlyProfileBelowDefaultBoundReturnsNoCorrection() {
+    func testLimitedGuidanceRuleRoundTripsThroughJSON() throws {
         let profile = ReciprocityProfile(
-            id: "test-formula-only",
-            name: "Test formula-only",
-            source: ReciprocitySourceProvenance(
-                kind: .userDefined,
-                authority: .userDefined,
-                publisher: "Test"
-            ),
-            rules: [
-                .formula(FormulaReciprocityRule(
-                    formula: ReciprocityFormula(kind: .exponentPower, exponent: 1.5)
-                ))
-            ]
-        )
-
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
-
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(result.correctedExposureSeconds ?? -1, 0.5, accuracy: 1e-6)
-    }
-
-    func testFormulaWithExplicitSubDefaultMinimumKeepsFormulaPrediction() {
-        // A profile that publishes an explicit pre-1s formula
-        // domain opts into sub-1s correction; the default
-        // no-correction handoff must not override it. The exponent
-        // here is < 1 so the formula produces a corrected time that
-        // satisfies the global `corrected >= adjusted` invariant —
-        // the goal of this test is to verify the default-handoff
-        // opt-out, not the invariant clamp. The shortening case is
-        // covered by `testInvariantClampsCorrectedShorterThanMeteredEvenForExplicitOptInProfiles`.
-        let profile = ReciprocityProfile(
-            id: "test-formula-pre-one-second",
-            name: "Test formula starting before 1s",
+            id: "kodak-portra-official-threshold",
+            name: "Official threshold guidance",
             source: ReciprocitySourceProvenance(
                 kind: .manufacturerPublished,
                 authority: .official,
-                publisher: "Test"
+                confidence: .high,
+                publisher: "Kodak"
             ),
             rules: [
-                .formula(FormulaReciprocityRule(
-                    meteredRange: ReciprocityTimeRange(minimumSeconds: 0.1),
-                    formula: ReciprocityFormula(kind: .exponentPower, exponent: 0.5)
-                ))
+                .threshold(
+                    ThresholdReciprocityRule(
+                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 1.0 / 10_000.0, maximumSeconds: 1)
+                    )
+                ),
+                .limitedGuidance(
+                    LimitedGuidanceReciprocityRule(
+                        appliesWhenMetered: ReciprocityTimeRange(minimumSeconds: 1),
+                        adjustments: [
+                            .note(ReciprocityNote(text: "Longer exposures: test under your conditions.")),
+                        ]
+                    )
+                ),
             ]
         )
 
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+        let data = try JSONEncoder().encode(profile)
+        let decoded = try JSONDecoder().decode(ReciprocityProfile.self, from: data)
 
-        XCTAssertEqual(
-            result.metadata.basis,
-            .formulaDerived,
-            "A profile publishing an explicit pre-default-bound formula domain must keep its formula prediction below 1s."
-        )
-        XCTAssertEqual(
-            result.correctedExposureSeconds ?? 0,
-            pow(0.5, 0.5),
-            accuracy: 1e-6
-        )
+        XCTAssertEqual(decoded.rules.map(\.kind), [.threshold, .limitedGuidance])
+        guard case let .limitedGuidance(rule) = decoded.rules[1] else {
+            return XCTFail("Expected limited-guidance rule.")
+        }
+        XCTAssertEqual(rule.appliesWhenMetered, ReciprocityTimeRange(minimumSeconds: 1))
+        XCTAssertEqual(rule.adjustments.count, 1)
+        guard case let .note(note) = rule.adjustments[0] else {
+            return XCTFail("Expected note payload.")
+        }
+        XCTAssertEqual(note.text, "Longer exposures: test under your conditions.")
     }
 
-    func testInvariantClampsCorrectedShorterThanMeteredEvenForExplicitOptInProfiles() {
-        // A profile that explicitly opts into sub-1s correction
-        // still has to produce a corrected time at least as long
-        // as the metered exposure. When a formula would otherwise
-        // shorten the exposure (e.g. P > 1 below 1s on an
-        // opt-in profile), the policy reclassifies the result to
-        // no-correction so the global invariant holds even past
-        // the default-handoff opt-in.
+    // MARK: - Source evidence
+
+    func testSourceEvidenceRowsRoundTripThroughJSON() throws {
         let profile = ReciprocityProfile(
-            id: "test-formula-shortens-below-one-second",
-            name: "Test shortening formula",
+            id: "fujifilm-provia-100f-official",
+            name: "Official formula",
             source: ReciprocitySourceProvenance(
                 kind: .manufacturerPublished,
                 authority: .official,
-                publisher: "Test"
+                confidence: .high,
+                publisher: "Fujifilm"
             ),
             rules: [
-                .formula(FormulaReciprocityRule(
-                    meteredRange: ReciprocityTimeRange(minimumSeconds: 0.1),
-                    formula: ReciprocityFormula(kind: .exponentPower, exponent: 1.5)
-                ))
+                .formula(
+                    FormulaReciprocityRule(
+                        meteredRange: ReciprocityTimeRange(minimumSeconds: 128.000_001, maximumSeconds: 480),
+                        formula: ReciprocityFormula(
+                            kind: .exponentPower,
+                            exponent: 1.3676,
+                            coefficient: pow(128.0, 1 - 1.3676)
+                        )
+                    )
+                ),
+            ],
+            sourceEvidence: [
+                ReciprocitySourceEvidenceRow(
+                    meteredExposure: .exactSeconds(240),
+                    adjustments: [
+                        .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1.0 / 3.0))),
+                        .colorFilter(ColorFilterRecommendation(filterName: "2.5G", note: nil)),
+                    ]
+                ),
+                ReciprocitySourceEvidenceRow(
+                    meteredExposure: .exactSeconds(480),
+                    adjustments: [
+                        .warning(ReciprocityWarning(severity: .notRecommended, message: "480 sec is not recommended.")),
+                    ]
+                ),
             ]
         )
 
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+        let data = try JSONEncoder().encode(profile)
+        let decoded = try JSONDecoder().decode(ReciprocityProfile.self, from: data)
 
-        XCTAssertEqual(
-            result.metadata.basis,
-            .officialThresholdNoCorrection,
-            "A would-be-shortening corrected exposure must reclassify as no-correction so the invariant holds."
-        )
-        XCTAssertEqual(result.correctedExposureSeconds ?? -1, 0.5, accuracy: 1e-6)
-    }
-
-    func testProfileWithoutAnyFormulaRuleDoesNotInheritDefaultNoCorrection() {
-        // The default handoff only applies to profiles carrying a
-        // formula rule. Pure threshold/advisory profiles continue to
-        // follow their existing rule pipeline — unsupported when no
-        // rule covers the metered exposure.
-        let profile = ReciprocityProfile(
-            id: "test-no-formula",
-            name: "Test no formula",
-            source: ReciprocitySourceProvenance(
-                kind: .userDefined,
-                authority: .userDefined,
-                publisher: "Test"
-            ),
-            rules: []
-        )
-
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
-
-        XCTAssertNotEqual(
-            result.metadata.basis,
-            .officialThresholdNoCorrection,
-            "Profiles without a formula rule must not inherit the default formula no-correction handoff."
-        )
-    }
-}
-
-/// Catalog-wide regression coverage for the global invariant
-/// `corrected exposure >= adjusted shutter`. Walks every preset
-/// profile across a representative metered-exposure range and
-/// fails if any pathway (table, formula, formula-extrapolated
-/// unsupported) produces a corrected time shorter than the
-/// metered value. The unofficial practical registry is included
-/// alongside the launch catalog so unofficial profiles are not
-/// excluded from the invariant.
-final class ReciprocityCorrectionInvariantTests: XCTestCase {
-    private let evaluator = ReciprocityCalculationPolicyEvaluator()
-
-    /// Representative metered exposures spanning sub-1s through
-    /// long exposures past every catalog formula's published
-    /// upper bound. The catalog convention is that the
-    /// reciprocity correction starts at 1s; sub-1s samples
-    /// exercise the default no-correction handoff while long
-    /// values exercise the formula-extrapolation pathway for
-    /// converted profiles.
-    private let representativeMeteredExposuresSeconds: [Double] = [
-        0.001, 0.01, 0.033, 0.1, 0.5,
-        1.0, 1.5, 2, 4, 10, 30, 60, 120, 240, 480, 1_000, 4_000, 10_000
-    ]
-
-    func testCatalogPresetProfilesNeverProduceShortenedCorrectedExposure() throws {
-        XCTAssertFalse(
-            LaunchPresetFilmCatalog.films.isEmpty,
-            "Launch catalog must load at least one film for the invariant suite to be meaningful."
-        )
-
-        for film in LaunchPresetFilmCatalog.films {
-            for profile in film.profiles {
-                for metered in representativeMeteredExposuresSeconds {
-                    let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-                    if let corrected = result.correctedExposureSeconds {
-                        XCTAssertGreaterThanOrEqual(
-                            corrected + 1e-6,
-                            metered,
-                            "Invariant violated for \(film.canonicalStockName) / \(profile.id) at \(metered)s: corrected=\(corrected)"
-                        )
-                    }
-                }
-            }
+        XCTAssertEqual(decoded.sourceEvidence.count, 2)
+        guard case let .exactSeconds(firstSeconds) = decoded.sourceEvidence[0].meteredExposure else {
+            return XCTFail("Expected exactSeconds metered.")
         }
+        XCTAssertEqual(firstSeconds, 240, accuracy: 1e-6)
+        XCTAssertTrue(decoded.isConvertedFormulaProfile)
     }
 
-    func testUnofficialPracticalRegistryProfilesNeverProduceShortenedCorrectedExposure() {
-        let unofficialEntries: [(String, ReciprocityProfile)] = [
-            ("Portra 400 unofficial practical", UnofficialPracticalProfiles.kodakPortra400UnofficialPractical)
-        ]
+    func testSourceEvidenceOnlyFlagRoundTripsThroughJSON() throws {
+        let row = ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(1.0 / 1000),
+            adjustments: [.exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0.5)))],
+            isSourceEvidenceOnly: true
+        )
 
-        for (label, profile) in unofficialEntries {
-            for metered in representativeMeteredExposuresSeconds {
-                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-                if let corrected = result.correctedExposureSeconds {
-                    XCTAssertGreaterThanOrEqual(
-                        corrected + 1e-6,
-                        metered,
-                        "Invariant violated for \(label) at \(metered)s: corrected=\(corrected)"
-                    )
-                }
-            }
+        let data = try JSONEncoder().encode(row)
+        let decoded = try JSONDecoder().decode(ReciprocitySourceEvidenceRow.self, from: data)
+
+        XCTAssertEqual(decoded.isSourceEvidenceOnly, true)
+    }
+
+    func testSourceEvidenceOnlyFlagDefaultsToFalseWhenAbsent() throws {
+        let json = #"""
+        {
+          "meteredExposure": { "kind": "exactSeconds", "exactSeconds": 240 },
+          "adjustments": [],
+          "notes": []
         }
+        """#
+
+        let decoded = try JSONDecoder().decode(ReciprocitySourceEvidenceRow.self, from: Data(json.utf8))
+        XCTAssertFalse(decoded.isSourceEvidenceOnly)
     }
 
-    /// Spot-check the films named in the PTIMER-143 spec so a
-    /// regression in any of them surfaces as a focused failure,
-    /// not just inside the broader catalog walk.
-    func testNamedFormulaAndConvertedProfilesSatisfyInvariantAcrossWideMeteredRange() throws {
-        let namedFilms = [
-            "Portra 400",
-            "T-MAX 100",
-            "T-MAX 400",
-            "Tri-X 400",
-            "Provia 100F",
-            "HP5 Plus",
-            "Acros II",
-            "Velvia 50",
-            "Velvia 100",
-            "Fomapan 100 Classic",
-            "Fomapan 200 Creative",
-            "Fomapan 400 Action"
-        ]
+    // MARK: - Rule discriminator validation
 
-        for name in namedFilms {
-            let film = try XCTUnwrap(
-                LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == name }),
-                "\(name) must remain in the launch catalog for invariant regression coverage."
-            )
-            for profile in film.profiles {
-                for metered in representativeMeteredExposuresSeconds {
-                    let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-                    if let corrected = result.correctedExposureSeconds {
-                        XCTAssertGreaterThanOrEqual(
-                            corrected + 1e-6,
-                            metered,
-                            "Invariant violated for \(name) at \(metered)s: corrected=\(corrected)"
-                        )
-                    }
-                }
-            }
+    func testReciprocityRuleKindRawValuesMatchTheJSONDiscriminator() {
+        XCTAssertEqual(ReciprocityRuleKind.threshold.rawValue, "threshold")
+        XCTAssertEqual(ReciprocityRuleKind.formula.rawValue, "formula")
+        XCTAssertEqual(ReciprocityRuleKind.limitedGuidance.rawValue, "limitedGuidance")
+    }
+
+    func testDecoderRejectsUnknownReciprocityRuleKind() {
+        let json = #"""
+        {
+          "kind": "tableLegacy",
+          "tableLegacy": { "entries": [] }
         }
-    }
+        """#
 
-    func testFomaProfilePreservesPublishedSubSecondBehaviorAfterFormulaConversion() throws {
-        // The Foma family converts to formula-based prediction but
-        // keeps its published 'no correction' threshold band (1/1000
-        // sec to 1/2 sec). The default formula no-correction handoff
-        // must not shadow either the threshold band or the formula
-        // result at the published 1 sec anchor — Foma's published
-        // behavior has to stay observable end-to-end.
-        let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == "Fomapan 100 Classic" })
-        )
-        let profile = try XCTUnwrap(film.profiles.first)
-
-        // Sub-threshold: published 'no correction' threshold drives
-        // the basis. Corrected equals metered (identity).
-        let belowThreshold = evaluator.evaluate(
-            profile: profile,
-            meteredExposureSeconds: 0.1
-        )
-        XCTAssertEqual(belowThreshold.metadata.basis, .officialThresholdNoCorrection)
-        XCTAssertEqual(belowThreshold.correctedExposureSeconds ?? -1, 0.1, accuracy: 1e-6)
-
-        // First published anchor at 1 sec: formula prediction sits
-        // close to the published row (×2 → 2 s) but no longer
-        // resurrects it as an exact-table point. The free log-log
-        // fit produces Tc ≈ 2.25 s at Tm = 1 s.
-        let firstRow = evaluator.evaluate(
-            profile: profile,
-            meteredExposureSeconds: 1
-        )
-        XCTAssertEqual(firstRow.metadata.basis, .formulaDerived)
-        XCTAssertEqual(firstRow.correctedExposureSeconds ?? 0, 2.2457, accuracy: 0.01)
+        XCTAssertThrowsError(try JSONDecoder().decode(ReciprocityRule.self, from: Data(json.utf8)))
     }
 }

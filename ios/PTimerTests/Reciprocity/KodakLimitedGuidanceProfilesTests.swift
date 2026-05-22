@@ -2,8 +2,8 @@ import XCTest
 @testable import PTimer
 
 /// Behavior contract for Kodak still-film profiles whose official
-/// guidance is limited to a no-correction threshold band plus an
-/// advisory note past that band.
+/// guidance is limited to a no-correction threshold band plus a
+/// qualitative note past that band.
 ///
 /// These profiles cover both color negative stocks (Ektar 100,
 /// Portra 160/400, Gold 200, Ultra Max 400) and the Ektachrome E100
@@ -11,14 +11,15 @@ import XCTest
 /// for them, so the calculation policy must:
 ///
 /// - Stay `officialThresholdNoCorrection` inside the official range.
-/// - Stay `advisoryOnlyBeyondOfficialRange` past the upper bound,
+/// - Stay `limitedGuidanceNoQuantifiedPrediction` past the upper bound,
 ///   with no fabricated corrected exposure.
-/// - Never carry a formula or table rule that could quietly produce
+/// - Never carry a formula rule that could quietly produce
 ///   a corrected time outside Kodak's published guidance.
 ///
 /// Ektachrome E100 additionally publishes a 120 sec CC10R filtration
-/// note. The catalog keeps it as advisory color-filter guidance so
-/// it never becomes a corrected-time anchor for a formula fit.
+/// note. The catalog keeps it as limited-guidance color-filter
+/// advice so it never becomes a corrected-time anchor for a formula
+/// fit.
 final class KodakLimitedGuidanceProfilesTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
@@ -39,16 +40,14 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
 
     // MARK: - Catalog shape
 
-    func testLimitedGuidanceProfilesDoNotCarryFormulaOrTableRules() throws {
+    func testLimitedGuidanceProfilesDoNotCarryFormulaRules() throws {
         for entry in limitedGuidanceProfiles {
             let profile = try profile(for: entry.canonicalStockName)
             for rule in profile.rules {
                 switch rule {
                 case .formula:
                     XCTFail("\(entry.canonicalStockName) must not ship with a formula rule — Kodak limited-guidance profiles stay out of the formula path.")
-                case .table:
-                    XCTFail("\(entry.canonicalStockName) must not ship with a table rule. Kodak does not publish quantified long-exposure data for this stock.")
-                case .threshold, .advisory:
+                case .threshold, .limitedGuidance:
                     continue
                 }
             }
@@ -106,17 +105,17 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
 
     // MARK: - Beyond the official threshold
 
-    func testLimitedGuidanceProfilesAreAdvisoryOnlyJustPastTheOfficialUpperBound() throws {
+    func testLimitedGuidanceProfilesLandOnLimitedGuidanceJustPastTheOfficialUpperBound() throws {
         for entry in limitedGuidanceProfiles {
             let profile = try profile(for: entry.canonicalStockName)
             // A small epsilon past the inclusive upper bound flips the
-            // policy from threshold-no-correction to advisory-only.
+            // policy from threshold-no-correction to limited guidance.
             let metered = entry.officialUpperBoundSeconds + 0.001
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
-                .advisoryOnlyBeyondOfficialRange,
-                "\(entry.canonicalStockName) at \(metered) sec must land on advisory-only; corresponds to no quantified prediction."
+                .limitedGuidanceNoQuantifiedPrediction,
+                "\(entry.canonicalStockName) at \(metered) sec must land on limited guidance with no quantified prediction."
             )
             XCTAssertNil(
                 result.correctedExposureSeconds,
@@ -126,15 +125,15 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
         }
     }
 
-    func testLimitedGuidanceProfilesStayAdvisoryOnlyFarPastTheUpperBound() throws {
+    func testLimitedGuidanceProfilesStayLimitedGuidanceFarPastTheUpperBound() throws {
         for entry in limitedGuidanceProfiles {
             let profile = try profile(for: entry.canonicalStockName)
             for metered in [entry.officialUpperBoundSeconds * 10, entry.officialUpperBoundSeconds * 60, entry.officialUpperBoundSeconds * 600] {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
                 XCTAssertEqual(
                     result.metadata.basis,
-                    .advisoryOnlyBeyondOfficialRange,
-                    "\(entry.canonicalStockName) at \(metered) sec must stay advisory-only — there is no quantified prediction to extend into."
+                    .limitedGuidanceNoQuantifiedPrediction,
+                    "\(entry.canonicalStockName) at \(metered) sec must stay limited-guidance — there is no quantified prediction to extend into."
                 )
                 XCTAssertNil(result.correctedExposureSeconds)
             }
@@ -143,22 +142,22 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
 
     // MARK: - Ektachrome E100 — 120s CC10R guidance
 
-    func testEktachromeE100AdvisoryPreservesCC10RColorFilterGuidance() throws {
+    func testEktachromeE100LimitedGuidancePreservesCC10RColorFilterGuidance() throws {
         let profile = try profile(for: "Ektachrome E100")
-        let advisoryRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> AdvisoryReciprocityRule? in
-                guard case let .advisory(advisory) = rule else { return nil }
-                return advisory
+        let limitedGuidanceRule = try XCTUnwrap(
+            profile.rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
+                guard case let .limitedGuidance(rule) = rule else { return nil }
+                return rule
             }.first,
-            "Ektachrome E100 must carry an advisory rule for the beyond-10-sec guidance."
+            "Ektachrome E100 must carry a limited-guidance rule for the beyond-10-sec guidance."
         )
 
-        let cc10R = advisoryRule.adjustments.compactMap { adjustment -> ColorFilterRecommendation? in
+        let cc10R = limitedGuidanceRule.adjustments.compactMap { adjustment -> ColorFilterRecommendation? in
             guard case let .colorFilter(filter) = adjustment else { return nil }
             return filter
         }.first
 
-        let filter = try XCTUnwrap(cc10R, "Ektachrome E100 advisory must carry the CC10R color-filter recommendation.")
+        let filter = try XCTUnwrap(cc10R, "Ektachrome E100 limited-guidance rule must carry the CC10R color-filter recommendation.")
         XCTAssertEqual(filter.filterName, "CC10R")
         let note = try XCTUnwrap(filter.note)
         XCTAssertTrue(
@@ -167,18 +166,18 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
         )
     }
 
-    func testEktachromeE100AdvisoryAdjustmentsAreNotCorrectedTimeAnchors() throws {
+    func testEktachromeE100LimitedGuidanceAdjustmentsAreNotCorrectedTimeAnchors() throws {
         let profile = try profile(for: "Ektachrome E100")
-        let advisoryRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> AdvisoryReciprocityRule? in
-                guard case let .advisory(advisory) = rule else { return nil }
-                return advisory
+        let limitedGuidanceRule = try XCTUnwrap(
+            profile.rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
+                guard case let .limitedGuidance(rule) = rule else { return nil }
+                return rule
             }.first
         )
         // The 120 sec CC10R guidance is filter advice, not a corrected-
         // time formula point. The catalog must not surface it as an
         // exposure adjustment that could anchor a future fit.
-        let hasExposureAdjustment = advisoryRule.adjustments.contains { adjustment in
+        let hasExposureAdjustment = limitedGuidanceRule.adjustments.contains { adjustment in
             if case .exposure = adjustment { return true }
             return false
         }
@@ -188,10 +187,10 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
         )
     }
 
-    func testEktachromeE100At120SecondsRemainsAdvisoryOnlyWithoutCorrectedExposure() throws {
+    func testEktachromeE100At120SecondsRemainsLimitedGuidanceWithoutCorrectedExposure() throws {
         let profile = try profile(for: "Ektachrome E100")
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 120)
-        XCTAssertEqual(result.metadata.basis, .advisoryOnlyBeyondOfficialRange)
+        XCTAssertEqual(result.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
         XCTAssertNil(
             result.correctedExposureSeconds,
             "Kodak's 120 sec CC10R note is filtration guidance, not a corrected-time anchor; the policy must not surface a numeric corrected exposure at 120 sec."

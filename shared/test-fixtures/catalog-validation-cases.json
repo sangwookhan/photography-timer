@@ -5,8 +5,8 @@
       "ios/PTimerTests/ExposureCalculator/LaunchPresetFilmCatalogTests.swift",
       "ios/PTimer/Resources/LaunchPresetFilmCatalog.json"
     ],
-    "version": "2.0.0",
-    "description": "Validation cases for the bundled launch preset film catalog. Reflects the PTIMER-103 launch-ready scope (34 current-official still-film identities) defined by the PTIMER-86 preset dataset policy outcome on Confluence wiki 13172737."
+    "version": "3.2.0",
+    "description": "Validation cases for the bundled launch preset film catalog. The launch catalog ships only official manufacturer profiles in one of two shapes: threshold + formula (with optional sourceEvidence) or threshold + limited-guidance. Unofficial practical profiles are bundled outside this catalog. No calculation table rules. User-facing reciprocity wording is constrained to No correction / Formula-derived / Beyond source range / No quantified prediction / Outside guidance; the legacy table-era vocabulary is forbidden."
   },
   "catalogExpectations": {
     "description": "Expected properties of the bundled launch catalog (PTIMER-103 launch-ready scope).",
@@ -93,7 +93,7 @@
     }
   },
   "launchCatalogValidationRules": {
-    "description": "Rules from DomainSchema.md section 11 that every launch catalog entry must pass",
+    "description": "Rules from DomainSchema.md §12 that every launch catalog entry must pass, plus the structural shape invariants enforced by LaunchPresetFilmCatalogShapeTests and the loader's validateProfileShape.",
     "rules": [
       {
         "id": "rule-1",
@@ -128,6 +128,12 @@
         "expectedValue": "current"
       },
       {
+        "id": "rule-5a",
+        "description": "Every identity has positive iso (box-speed ISO)",
+        "field": "iso",
+        "constraint": "> 0"
+      },
+      {
         "id": "rule-6",
         "description": "Every identity has exactly one profile",
         "field": "profiles",
@@ -152,99 +158,174 @@
         "description": "Every profile has at least one rule, and every rule decodes to a known variant",
         "field": "profiles[0].rules",
         "constraint": "array.count >= 1 && allKnownVariants"
+      },
+      {
+        "id": "rule-10",
+        "description": "No launch preset profile carries the legacy table rule kind. The domain no longer models a calculation table rule; future custom / user-defined table input is outside the launch preset scope.",
+        "field": "profiles[0].rules[*].kind",
+        "constraint": "noneEquals",
+        "forbiddenValue": "table"
+      },
+      {
+        "id": "rule-11",
+        "description": "Every launch preset profile matches one of the two allowed shapes: (a) official quantified formula (threshold + formula + optional sourceEvidence), (b) official limited guidance (threshold + limitedGuidance, no formula, empty sourceEvidence). Unofficial practical formula profiles are bundled outside the launch catalog file (DomainSchema §13.3) and are not validated by this rule.",
+        "field": "profiles[0]",
+        "constraint": "matchesAllowedShape",
+        "allowedShapes": [
+          "officialQuantifiedFormula",
+          "officialLimitedGuidance"
+        ]
+      },
+      {
+        "id": "rule-12",
+        "description": "User-facing reciprocity presentation on a launch preset never surfaces the legacy table-era vocabulary (Exact, Estimated, Interpolated, Extrapolated, Advisory) as primary status / badge text. Current vocabulary: No correction, Formula-derived, Beyond source range, No quantified prediction, Outside guidance.",
+        "field": "ReciprocityConfidencePresentation.shortLabel",
+        "constraint": "noneContains",
+        "forbiddenSubstrings": [
+          "Exact",
+          "Estimated",
+          "Interpolated",
+          "Extrapolated",
+          "Advisory"
+        ]
       }
     ]
   },
   "perFilmExpectations": [
     {
-      "filmId": "kodak-tri-x-400",
-      "canonicalStockName": "Tri-X 400",
-      "manufacturer": "Kodak",
-      "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
+      "filmId": "ilford-pan-f-plus-50",
+      "canonicalStockName": "Pan F Plus",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD PAN F PLUS",
       "aliases": [
-        "TRI-X",
-        "TX 400"
-      ],
-      "iso": 400,
-      "kind": "preset",
-      "productionStatus": "current",
-      "profileCount": 1,
-      "profileId": "kodak-tri-x-official-table",
-      "profileSourceKind": "manufacturerPublished",
-      "profileSourceAuthority": "official",
-      "profileSourceConfidence": "high",
-      "profileSourcePublisher": "Kodak",
-      "ruleKinds": [
-        "threshold",
-        "table"
-      ],
-      "tableEntryCount": 3,
-      "tableMeteredSecondsPoints": [
-        1,
-        10,
-        100
-      ],
-      "thresholdNoCorrectionMinSeconds": 0,
-      "thresholdNoCorrectionMaxSeconds": 1
-    },
-    {
-      "filmId": "kodak-portra-400",
-      "canonicalStockName": "Portra 400",
-      "manufacturer": "Kodak",
-      "brandLabel": "KODAK PROFESSIONAL PORTRA 400",
-      "aliases": [
-        "PORTRA 400"
-      ],
-      "iso": 400,
-      "kind": "preset",
-      "productionStatus": "current",
-      "profileCount": 1,
-      "profileId": "kodak-portra-400-official-threshold",
-      "profileSourceKind": "manufacturerPublished",
-      "profileSourceAuthority": "official",
-      "profileSourceConfidence": "high",
-      "profileSourcePublisher": "Kodak",
-      "ruleKinds": [
-        "threshold",
-        "advisory"
-      ],
-      "thresholdNoCorrectionMinSeconds": 0.0001,
-      "thresholdNoCorrectionMaxSeconds": 1
-    },
-    {
-      "filmId": "fujifilm-velvia-50",
-      "canonicalStockName": "Velvia 50",
-      "manufacturer": "Fujifilm",
-      "brandLabel": "FUJICHROME Velvia 50",
-      "aliases": [
-        "RVP 50",
-        "Velvia"
+        "Pan F+"
       ],
       "iso": 50,
       "kind": "preset",
       "productionStatus": "current",
       "profileCount": 1,
-      "profileId": "fujifilm-velvia-50-official-table",
+      "profileId": "ilford-pan-f-plus-50-official-formula",
       "profileSourceKind": "manufacturerPublished",
       "profileSourceAuthority": "official",
       "profileSourceConfidence": "high",
-      "profileSourcePublisher": "Fujifilm",
+      "profileSourcePublisher": "Ilford Photo",
       "ruleKinds": [
         "threshold",
-        "table"
+        "formula"
       ],
-      "tableEntryCount": 5,
-      "tableMeteredSecondsPoints": [
-        4,
-        8,
-        16,
-        32,
-        64
-      ],
-      "thresholdNoCorrectionMinSeconds": 0.00025,
+      "thresholdNoCorrectionMinSeconds": 0,
       "thresholdNoCorrectionMaxSeconds": 1,
-      "hasStopSignalEntry": true,
-      "stopSignalMeteredSeconds": 64
+      "formulaExponent": 1.33,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-fp4-plus-125",
+      "canonicalStockName": "FP4 Plus",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD FP4 PLUS",
+      "aliases": [
+        "FP4+"
+      ],
+      "iso": 125,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-fp4-plus-125-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.26,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-delta-100",
+      "canonicalStockName": "Delta 100",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD DELTA 100 PROFESSIONAL",
+      "aliases": [
+        "Delta 100 Pro"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-delta-100-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.26,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-delta-400",
+      "canonicalStockName": "Delta 400",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD DELTA 400 PROFESSIONAL",
+      "aliases": [
+        "Delta 400 Pro"
+      ],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-delta-400-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.41,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-delta-3200",
+      "canonicalStockName": "Delta 3200",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD DELTA 3200 PROFESSIONAL",
+      "aliases": [
+        "Delta 3200 Pro"
+      ],
+      "iso": 3200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-delta-3200-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.33,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
     },
     {
       "filmId": "ilford-hp5-plus-400",
@@ -275,96 +356,368 @@
       "formulaMinimumSeconds": 1.000001
     },
     {
-      "filmId": "foma-fomapan-100",
-      "canonicalStockName": "Fomapan 100 Classic",
-      "manufacturer": "FOMA BOHEMIA",
-      "brandLabel": "FOMAPAN 100 CLASSIC",
+      "filmId": "ilford-xp2-super-400",
+      "canonicalStockName": "XP2 Super",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD XP2 SUPER",
       "aliases": [
-        "Fomapan 100"
+        "XP2"
       ],
-      "iso": 100,
+      "iso": 400,
       "kind": "preset",
       "productionStatus": "current",
       "profileCount": 1,
-      "profileId": "foma-fomapan-100-official-table",
+      "profileId": "ilford-xp2-super-400-official-formula",
       "profileSourceKind": "manufacturerPublished",
       "profileSourceAuthority": "official",
       "profileSourceConfidence": "high",
-      "profileSourcePublisher": "FOMA BOHEMIA",
+      "profileSourcePublisher": "Ilford Photo",
       "ruleKinds": [
         "threshold",
-        "table"
-      ],
-      "tableEntryCount": 3,
-      "tableMeteredSecondsPoints": [
-        1,
-        10,
-        100
-      ],
-      "thresholdNoCorrectionMinSeconds": 0.001,
-      "thresholdNoCorrectionMaxSeconds": 0.5
-    },
-    {
-      "filmId": "adox-chs-100-ii",
-      "canonicalStockName": "CHS 100 II",
-      "manufacturer": "ADOX",
-      "brandLabel": "ADOX CHS 100 II",
-      "aliases": [
-        "CHS II 100"
-      ],
-      "iso": 100,
-      "kind": "preset",
-      "productionStatus": "current",
-      "profileCount": 1,
-      "profileId": "adox-chs-100-ii-official-table",
-      "profileSourceKind": "manufacturerPublished",
-      "profileSourceAuthority": "official",
-      "profileSourceConfidence": "high",
-      "profileSourcePublisher": "ADOX",
-      "ruleKinds": [
-        "threshold",
-        "table"
-      ],
-      "tableEntryCount": 6,
-      "tableMeteredSecondsPoints": [
-        2,
-        4,
-        8,
-        15,
-        30,
-        60
+        "formula"
       ],
       "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.31,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-sfx-200",
+      "canonicalStockName": "SFX 200",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD SFX 200",
+      "aliases": [],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-sfx-200-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.43,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-ortho-plus-80",
+      "canonicalStockName": "Ortho Plus",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "ILFORD ORTHO PLUS",
+      "aliases": [],
+      "iso": 80,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-ortho-plus-80-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.25,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-kentmere-pan-100",
+      "canonicalStockName": "Kentmere 100",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "KENTMERE PAN 100",
+      "aliases": [
+        "Kentmere Pan 100"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-kentmere-pan-100-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.26,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-kentmere-pan-200",
+      "canonicalStockName": "Kentmere 200",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "KENTMERE PAN 200",
+      "aliases": [
+        "Kentmere Pan 200"
+      ],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-kentmere-pan-200-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.26,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "ilford-kentmere-pan-400",
+      "canonicalStockName": "Kentmere 400",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "KENTMERE PAN 400",
+      "aliases": [
+        "Kentmere Pan 400"
+      ],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "ilford-kentmere-pan-400-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Ilford Photo",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.3,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001
+    },
+    {
+      "filmId": "kodak-tri-x-400",
+      "canonicalStockName": "Tri-X 400",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
+      "aliases": [
+        "TRI-X",
+        "TX 400"
+      ],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-tri-x-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 0.999999,
+      "formulaExponent": 1.3891,
+      "formulaEquation": "Tc = 2.0137 × Tm^P",
+      "formulaMinimumSeconds": 1,
+      "formulaMaximumSeconds": 100.000001
+    },
+    {
+      "filmId": "kodak-tmax-100",
+      "canonicalStockName": "T-MAX 100",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL T-MAX 100",
+      "aliases": [
+        "TMX",
+        "T-MAX 100"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-tmax-100-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.1,
+      "formulaExponent": 1.0966,
+      "formulaEquation": "Tc = 0.1 × (Tm / 0.1)^P",
+      "formulaMinimumSeconds": 0.100001,
+      "formulaMaximumSeconds": 100.000001
+    },
+    {
+      "filmId": "kodak-tmax-400",
+      "canonicalStockName": "T-MAX 400",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL T-MAX 400",
+      "aliases": [
+        "TMY-2",
+        "T-MAX 400"
+      ],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-tmax-400-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.0001,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.2261,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001,
+      "formulaMaximumSeconds": 100.000001
+    },
+    {
+      "filmId": "kodak-ektar-100",
+      "canonicalStockName": "Ektar 100",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL EKTAR 100",
+      "aliases": [
+        "EKTAR 100"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-ektar-100-official-threshold",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "limitedGuidance"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.0001,
       "thresholdNoCorrectionMaxSeconds": 1
     },
     {
-      "filmId": "rollei-rpx-100",
-      "canonicalStockName": "RPX 100",
-      "manufacturer": "Rollei",
-      "brandLabel": "Rollei RPX 100",
-      "aliases": [],
-      "iso": 100,
+      "filmId": "kodak-portra-160",
+      "canonicalStockName": "Portra 160",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL PORTRA 160",
+      "aliases": [
+        "PORTRA 160"
+      ],
+      "iso": 160,
       "kind": "preset",
       "productionStatus": "current",
       "profileCount": 1,
-      "profileId": "rollei-rpx-100-official-table",
+      "profileId": "kodak-portra-160-official-threshold",
       "profileSourceKind": "manufacturerPublished",
       "profileSourceAuthority": "official",
       "profileSourceConfidence": "high",
-      "profileSourcePublisher": "Rollei",
+      "profileSourcePublisher": "Kodak",
       "ruleKinds": [
         "threshold",
-        "table"
+        "limitedGuidance"
       ],
-      "tableEntryCount": 5,
-      "tableMeteredSecondsPoints": [
-        2,
-        5,
-        10,
-        20,
-        30
+      "thresholdNoCorrectionMinSeconds": 0.0001,
+      "thresholdNoCorrectionMaxSeconds": 1
+    },
+    {
+      "filmId": "kodak-portra-400",
+      "canonicalStockName": "Portra 400",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK PROFESSIONAL PORTRA 400",
+      "aliases": [
+        "PORTRA 400"
       ],
-      "thresholdNoCorrectionMinSeconds": 0.001,
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-portra-400-official-threshold",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "limitedGuidance"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.0001,
+      "thresholdNoCorrectionMaxSeconds": 1
+    },
+    {
+      "filmId": "kodak-gold-200",
+      "canonicalStockName": "Gold 200",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK GOLD 200",
+      "aliases": [
+        "GOLD 200"
+      ],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-gold-200-official-threshold",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "limitedGuidance"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.0001,
+      "thresholdNoCorrectionMaxSeconds": 1
+    },
+    {
+      "filmId": "kodak-ultra-max-400",
+      "canonicalStockName": "Ultra Max 400",
+      "manufacturer": "Kodak",
+      "brandLabel": "KODAK ULTRA MAX 400",
+      "aliases": [
+        "ULTRA MAX 400"
+      ],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "kodak-ultra-max-400-official-threshold",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Kodak",
+      "ruleKinds": [
+        "threshold",
+        "limitedGuidance"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.0001,
       "thresholdNoCorrectionMaxSeconds": 1
     },
     {
@@ -387,10 +740,369 @@
       "profileSourcePublisher": "Kodak",
       "ruleKinds": [
         "threshold",
-        "advisory"
+        "limitedGuidance"
       ],
       "thresholdNoCorrectionMinSeconds": 0.0001,
       "thresholdNoCorrectionMaxSeconds": 10
+    },
+    {
+      "filmId": "fujifilm-acros-ii",
+      "canonicalStockName": "Acros II",
+      "manufacturer": "Fujifilm",
+      "brandLabel": "FUJIFILM NEOPAN 100 ACROS II",
+      "aliases": [
+        "NEOPAN 100 ACROS II",
+        "Acros II"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "fujifilm-acros-ii-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Fujifilm",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 119.999999,
+      "formulaExponent": 1,
+      "formulaEquation": "Tc = √2 × Tm",
+      "formulaMinimumSeconds": 120,
+      "formulaMaximumSeconds": 1000.000001
+    },
+    {
+      "filmId": "fujifilm-velvia-50",
+      "canonicalStockName": "Velvia 50",
+      "manufacturer": "Fujifilm",
+      "brandLabel": "FUJICHROME Velvia 50",
+      "aliases": [
+        "RVP 50",
+        "Velvia"
+      ],
+      "iso": 50,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "fujifilm-velvia-50-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Fujifilm",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.00025,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.1821,
+      "formulaEquation": "Tc = Tm^P",
+      "formulaMinimumSeconds": 1.000001,
+      "formulaMaximumSeconds": 64
+    },
+    {
+      "filmId": "fujifilm-velvia-100",
+      "canonicalStockName": "Velvia 100",
+      "manufacturer": "Fujifilm",
+      "brandLabel": "FUJICHROME Velvia 100",
+      "aliases": [
+        "RVP 100"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "fujifilm-velvia-100-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Fujifilm",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.00025,
+      "thresholdNoCorrectionMaxSeconds": 60,
+      "formulaExponent": 1.2667,
+      "formulaEquation": "Tc = 60 × (Tm / 60)^P",
+      "formulaMinimumSeconds": 60.000001,
+      "formulaMaximumSeconds": 240.000001
+    },
+    {
+      "filmId": "fujifilm-provia-100f",
+      "canonicalStockName": "Provia 100F",
+      "manufacturer": "Fujifilm",
+      "brandLabel": "FUJICHROME PROVIA 100F PROFESSIONAL",
+      "aliases": [
+        "RDP III"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "fujifilm-provia-100f-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Fujifilm",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.00025,
+      "thresholdNoCorrectionMaxSeconds": 128,
+      "formulaExponent": 1.3676,
+      "formulaEquation": "Tc = 128 × (Tm / 128)^P",
+      "formulaMinimumSeconds": 128.000001,
+      "formulaMaximumSeconds": 480
+    },
+    {
+      "filmId": "foma-fomapan-100",
+      "canonicalStockName": "Fomapan 100 Classic",
+      "manufacturer": "FOMA BOHEMIA",
+      "brandLabel": "FOMAPAN 100 CLASSIC",
+      "aliases": [
+        "Fomapan 100"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "foma-fomapan-100-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "FOMA BOHEMIA",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.5,
+      "formulaExponent": 1.4515,
+      "formulaEquation": "Tc = 2.2457 × Tm^P",
+      "formulaMinimumSeconds": 0.500001,
+      "formulaMaximumSeconds": 100.000001
+    },
+    {
+      "filmId": "foma-fomapan-200",
+      "canonicalStockName": "Fomapan 200 Creative",
+      "manufacturer": "FOMA BOHEMIA",
+      "brandLabel": "FOMAPAN 200 CREATIVE",
+      "aliases": [
+        "Fomapan 200"
+      ],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "foma-fomapan-200-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "FOMA BOHEMIA",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.5,
+      "formulaExponent": 1.3891,
+      "formulaEquation": "Tc = 3.2107 × Tm^P",
+      "formulaMinimumSeconds": 0.500001,
+      "formulaMaximumSeconds": 100.000001
+    },
+    {
+      "filmId": "foma-fomapan-400",
+      "canonicalStockName": "Fomapan 400 Action",
+      "manufacturer": "FOMA BOHEMIA",
+      "brandLabel": "FOMAPAN 400 ACTION",
+      "aliases": [
+        "Fomapan 400"
+      ],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "foma-fomapan-400-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "FOMA BOHEMIA",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.5,
+      "formulaExponent": 1.3635,
+      "formulaEquation": "Tc = 1.8022 × Tm^P",
+      "formulaMinimumSeconds": 0.500001,
+      "formulaMaximumSeconds": 100.000001
+    },
+    {
+      "filmId": "rollei-rpx-100",
+      "canonicalStockName": "RPX 100",
+      "manufacturer": "Rollei",
+      "brandLabel": "Rollei RPX 100",
+      "aliases": [],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "rollei-rpx-100-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Rollei",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.4652,
+      "formulaEquation": "Tc = 0.9248 × Tm^P",
+      "formulaMinimumSeconds": 1.000001,
+      "formulaMaximumSeconds": 30.000001
+    },
+    {
+      "filmId": "rollei-rpx-400",
+      "canonicalStockName": "RPX 400",
+      "manufacturer": "Rollei",
+      "brandLabel": "Rollei RPX 400",
+      "aliases": [],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "rollei-rpx-400-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Rollei",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.5,
+      "formulaExponent": 1.2404,
+      "formulaEquation": "Tc = 1.7708 × Tm^P",
+      "formulaMinimumSeconds": 0.500001,
+      "formulaMaximumSeconds": 20.000001
+    },
+    {
+      "filmId": "rollei-retro-80s",
+      "canonicalStockName": "RETRO 80S",
+      "manufacturer": "Rollei",
+      "brandLabel": "Rollei RETRO 80S",
+      "aliases": [],
+      "iso": 80,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "rollei-retro-80s-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Rollei",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.5,
+      "formulaExponent": 1.5361,
+      "formulaEquation": "Tc = 0.9601 × Tm^P",
+      "formulaMinimumSeconds": 0.500001,
+      "formulaMaximumSeconds": 30.000001
+    },
+    {
+      "filmId": "rollei-superpan-200",
+      "canonicalStockName": "SUPERPAN 200",
+      "manufacturer": "Rollei",
+      "brandLabel": "Rollei SUPERPAN 200",
+      "aliases": [],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "rollei-superpan-200-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "Rollei",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 0.5,
+      "formulaExponent": 1.5361,
+      "formulaEquation": "Tc = 0.9601 × Tm^P",
+      "formulaMinimumSeconds": 0.500001,
+      "formulaMaximumSeconds": 30.000001
+    },
+    {
+      "filmId": "adox-chs-100-ii",
+      "canonicalStockName": "CHS 100 II",
+      "manufacturer": "ADOX",
+      "brandLabel": "ADOX CHS 100 II",
+      "aliases": [
+        "CHS II 100"
+      ],
+      "iso": 100,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "adox-chs-100-ii-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "ADOX",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.3423,
+      "formulaEquation": "Tc = 1.2102 × Tm^P",
+      "formulaMinimumSeconds": 1.000001,
+      "formulaMaximumSeconds": 15.000001
+    },
+    {
+      "filmId": "adox-cms-20-ii",
+      "canonicalStockName": "CMS 20 II",
+      "manufacturer": "ADOX",
+      "brandLabel": "ADOX CMS 20 II",
+      "aliases": [
+        "CMS II 20"
+      ],
+      "iso": 20,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profileCount": 1,
+      "profileId": "adox-cms-20-ii-official-formula",
+      "profileSourceKind": "manufacturerPublished",
+      "profileSourceAuthority": "official",
+      "profileSourceConfidence": "high",
+      "profileSourcePublisher": "ADOX",
+      "ruleKinds": [
+        "threshold",
+        "formula"
+      ],
+      "thresholdNoCorrectionMinSeconds": 0.001,
+      "thresholdNoCorrectionMaxSeconds": 1,
+      "formulaExponent": 1.150515,
+      "formulaEquation": "Tc = 1.4142 × Tm^P",
+      "formulaMinimumSeconds": 1.000001,
+      "formulaMaximumSeconds": 100,
+      "formulaTreatsMaximumAsHardStop": true
     }
   ],
   "rejectionCases": [

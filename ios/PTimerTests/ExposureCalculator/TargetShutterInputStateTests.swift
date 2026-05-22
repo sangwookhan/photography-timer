@@ -23,7 +23,7 @@ final class TargetShutterInputStateTests: XCTestCase {
         1, 2, 4, 8, 15, 30,
         60, 120, 240, 480,
         900, 1800,
-        3600, 7200, 14_400, 28_800
+        3600, 7200, 14_400, 28_800,
     ]
 
     // MARK: - Initial enabled / Off

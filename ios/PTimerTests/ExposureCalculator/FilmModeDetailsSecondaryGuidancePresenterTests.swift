@@ -2,7 +2,7 @@ import XCTest
 @testable import PTimer
 
 @MainActor
-final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
+final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
     // MARK: - Velvia 50
 
@@ -180,8 +180,8 @@ final class FilmModeDetailsSecondaryGuidancePresenterTests: XCTestCase {
 
         let devLines = lines.filter { $0.contains("Dev ") }
         XCTAssertEqual(devLines.count, 3)
-        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("1.0s")   && $0.contains("Dev -10%") }))
-        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("10.0s")  && $0.contains("Dev -20%") }))
+        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("1.0s") && $0.contains("Dev -10%") }))
+        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("10.0s") && $0.contains("Dev -20%") }))
         XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("100.0s") && $0.contains("Dev -30%") }))
 
         for line in lines {

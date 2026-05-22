@@ -198,8 +198,8 @@ final class ReciprocityModel {
     /// film is selected / calculation has no success result), produce
     /// the corrected-exposure card display state. Branches on the
     /// reciprocity result form: quantified produces a numeric primary
-    /// text via `formatReciprocityDurationCoarse`; advisory and
-    /// unsupported forms fall back to guidance text drawn from the
+    /// text via `formatReciprocityDurationCoarse`; limited-guidance
+    /// and unsupported forms fall back to guidance text drawn from the
     /// confidence presentation's supporting notes.
     func correctedExposureDisplayState(
         for bindingState: FilmModeReciprocityBindingState?
@@ -243,9 +243,9 @@ final class ReciprocityModel {
         }
 
         switch bindingState.presentation.category {
-        case .advisoryOnly:
+        case .limitedGuidance:
             return FilmModeCorrectedExposureDisplayState(
-                kind: .advisory,
+                kind: .limitedGuidance,
                 correctedExposureSeconds: nil,
                 primaryText: "No corrected value",
                 secondaryText: "No official quantified prediction is available for this metered exposure.",
@@ -259,10 +259,10 @@ final class ReciprocityModel {
                 secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
                 usesNumericExposure: false
             )
-        case .exact, .estimated, .extrapolated:
+        case .noCorrection, .formulaDerived:
             // A quantified path should have provided a corrected exposure.
             return FilmModeCorrectedExposureDisplayState(
-                kind: .advisory,
+                kind: .limitedGuidance,
                 correctedExposureSeconds: nil,
                 primaryText: "No quantified correction",
                 secondaryText: reciprocityGuidanceExplanation(for: bindingState.presentation),
@@ -317,11 +317,11 @@ final class ReciprocityModel {
 
         let disabledHint: String
         switch bindingState.presentation.category {
-        case .advisoryOnly:
+        case .limitedGuidance:
             disabledHint = "Timer unavailable because this corrected result is non-quantified"
         case .unsupported:
             disabledHint = "Timer unavailable because this corrected result is unsupported"
-        default:
+        case .noCorrection, .formulaDerived:
             disabledHint = "Timer unavailable because no quantified corrected exposure is available"
         }
 

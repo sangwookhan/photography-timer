@@ -17,7 +17,7 @@ Use when absence is a valid domain state, not an error condition.
 
 - `reconstructedStop(...)` returns `nil` when no stop value matches -- this is a normal "not found" result, not an error.
 - `loadSnapshot()` returns `nil` when no persisted data exists.
-- A policy result's quantified form carries a corrected exposure; the advisory-only and unsupported forms have no such field at all -- absence is encoded in the case rather than as `nil`. Consumers of the convenience `correctedExposureSeconds` accessor still observe `nil` for the non-quantified forms.
+- A policy result's quantified form carries a corrected exposure; the limited-guidance form has no such field at all and the unsupported form treats it as optional (carries a numeric continuation only when a formula keeps producing a value past its supported boundary). Absence is encoded in the case rather than as `nil`. Consumers of the convenience `correctedExposureSeconds` accessor still observe `nil` for the non-quantified forms (and for value-less unsupported results).
 - `selectedPresetFilm` is `nil` when the user has not chosen a film.
 
 ### `throws`

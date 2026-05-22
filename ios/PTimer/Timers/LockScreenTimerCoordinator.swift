@@ -102,9 +102,4 @@ final class LockScreenTimerCoordinator {
 private struct EligibleRunningTimer {
     let timer: RunningTimerItem
     let endDate: Date
-
-    init(timer: RunningTimerItem, endDate: Date) {
-        self.timer = timer
-        self.endDate = endDate
-    }
 }

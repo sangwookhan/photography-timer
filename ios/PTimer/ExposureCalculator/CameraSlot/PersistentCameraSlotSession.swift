@@ -45,7 +45,7 @@ struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     let selectedProfileID: String?
     let baseShutterSeconds: Double?
     /// Whole-stop ND value, kept for byte-for-byte parity with the
-    /// legacy `PersistentExposureCalculatorContextSnapshot.ndStop`.
+    /// legacy `PersistentCalculatorContextSnapshot.ndStop`.
     let ndStop: Int?
     /// Count of one-third-stop increments for a fractional ND value.
     /// Mirrors the legacy `ndStopThirds` field so a fractional snapshot
@@ -108,7 +108,7 @@ extension PersistentCameraSlotCalculatorSnapshot {
     /// Decodes the persisted scale mode, defaulting to the shipping
     /// `.oneThirdStop` scale when the field is absent or
     /// unrecognised. Mirrors
-    /// `PersistentExposureCalculatorContextSnapshot.restoredScaleMode`
+    /// `PersistentCalculatorContextSnapshot.restoredScaleMode`
     /// so callers do not have to learn two restore conventions.
     var restoredScaleMode: ExposureScaleMode {
         guard let raw = exposureScaleMode,
@@ -120,7 +120,7 @@ extension PersistentCameraSlotCalculatorSnapshot {
 }
 
 /// Persistence boundary for the camera-slot session. Decoupled from
-/// the legacy `ExposureCalculatorContextPersistenceStoring` because
+/// the legacy `ExposureCalculatorContextStoring` because
 /// the new schema captures all four slots, not just the active one;
 /// the legacy store is read once at first launch as a migration
 /// source and otherwise ignored.
@@ -142,7 +142,7 @@ struct NoOpCameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStorin
 /// the legacy single-context persistence and the new multi-slot
 /// session never share a key — prevents accidental cross-decode and
 /// lets the migration step inspect both stores side by side.
-struct UserDefaultsCameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring {
+struct UserDefaultsCameraSlotSessionStore: CameraSlotSessionPersistenceStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
     private let encoder = JSONEncoder()

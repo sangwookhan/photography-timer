@@ -140,74 +140,72 @@ ND 조정은 forward 또는 reverse로 실행:
 
 Reciprocity 계산은 layer 분리를 깨끗하게 보존:
 
-- **Domain layer**는 제조사 출판 표 또는 공식 + 완전한 provenance를 보유. 어떤 보간 정책도 인코딩하지 않는다.
-- **Calculation policy layer**는 도메인 데이터 + 측광 노출을 소비하고, 보간/외삽 전략 (§3.3 참조)을 적용해 명시적 metadata를 가진 구조화된 결과를 산출한다.
-- **Presentation layer**는 결과 metadata를 소비해 신뢰도 cue, note, 경고를 렌더. 숫자를 invent 하지 않으며 metadata 구분을 flatten 하지 않는다 (예: "estimated" 가 "exact" 로 표시되면 안 됨).
+- **Domain layer**는 제조사 출판 threshold + formula + limited-guidance rule + 완전한 provenance를 보유, 그리고 (display 전용) source-evidence row를 보유. 어떤 계산 정책도 인코딩하지 않는다.
+- **Calculation policy layer**는 도메인 데이터 + 측광 노출을 소비해 명시적 metadata를 가진 구조화된 결과를 산출한다. Source-evidence row는 display 전용이며 의도적으로 정책 layer에 invisible.
+- **Presentation layer**는 결과 metadata를 소비해 status / badge 텍스트, 신뢰도 cue, note, 경고를 렌더. 숫자를 invent 하지 않으며 metadata 구분을 flatten 하지 않는다.
 
 ### 3.2 평가 순서
 
 측광 노출 `t`에 대해, 정책 layer는 필름의 profile을 다음 순서로 평가. 각 단계는 결과를 산출하고 멈추거나 다음 단계로 넘어간다.
 
-1. **Exact 표 점** — `t`가 quantified 표 row와 정확히 일치하면 row의 보정값 + basis = `exact_table_point` 반환.
-2. **Threshold 무보정** — profile이 무보정 임계값을 정의하고 `t`가 그 안에 있으면 `corrected = t` (shift 없음) + basis = `official_threshold_no_correction` 반환.
-3. **제조사 stop signal** — profile이 `t` 이하에서 severity "not-recommended" 인 stop signal를 포함하면, advisory-only / unsupported로 short-circuit (signal의 정책에 따라). Signal은 후속 단계를 override.
-4. **표 보간 / 외삽** — `t`가 quantified 표 row 사이 또는 외부이고 정책이 허용하면, 적절한 estimation family (§3.3 참조)로 계산해 basis = `interpolated_within_table` 또는 `extrapolated_beyond_table` 반환.
-5. **Formula** — profile이 지수 공식 `T_c = T_m^P` (또는 등가)를 정의하면 적용해 basis = `formula_derived` 반환. Formula 평가는 generic "unsupported" 대체 전에 실행 — 공식을 가진 필름이 긴 노출에서도 quantified 유지되도록.
-6. **Advisory / unsupported 대체** — 측광 노출이 profile의 모든 지원 영역 너머이면 숫자 보정값 없이 반환: 정책에 따라 basis = `advisory_only_beyond_official_range` 또는 `unsupported_out_of_policy_range`.
+1. **Threshold 무보정** — profile이 무보정 임계값을 정의하고 `t`가 그 안에 있으면 `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
+2. **Default formula 무보정 handoff** — `t < 1 s`이고 profile에 sub-1s 보정에 opt-in 하지 않는 formula rule이 있으면 (`meteredRange.minimumSeconds`가 부재 또는 `≥ 1 s`), `corrected = t` + basis = `officialThresholdNoCorrection`으로 무보정 결과 합성. 이는 `Tc = Tm^P` 스타일 실용 공식이 형식의 실용 도메인 아래 sub-1s 측광값에서 `corrected < metered`를 산출하지 않도록 막는다.
+3. **Formula** — profile이 `t`를 포함하는 `meteredRange`의 formula rule을 정의하면 공식을 평가해 basis = `formulaDerived` 반환. Formula가 명시적 `meteredRange.maximumSeconds`를 선언하고 `t`가 거기에 도달하거나 너머이면 `unsupportedOutOfPolicyRange` 반환; `extrapolateBeyondMaximum`이 `true`이면 결과는 공식의 numeric continuation을 carry (outside manufacturer guidance로 렌더), `false`이면 결과에 보정 노출 값 자체 부재.
+4. **Limited guidance** — profile이 `t`를 cover 하는 (또는 open-ended) `appliesWhenMetered`의 limited-guidance rule을 정의하면 `limitedGuidanceNoQuantifiedPrediction` 반환. 숫자 보정 노출 없음.
+5. **Unsupported 대체** — 어떤 rule도 적용되지 않으면 보정 노출 없이 `unsupportedOutOfPolicyRange` 반환.
 
-### 3.3 Estimation family 선택
+Rule pipeline 후 보편 **correction invariant** 실행: corrected 노출이 metered보다 짧은 결과는 `officialThresholdNoCorrection`으로 reclassify. Reciprocity 보정은 adjusted shutter를 절대 줄일 수 없다 — 이 clamp는 formula의 도메인이 no-correction 경계 너머로 새는 edge case를, 어떤 rule이 값을 산출했든 catch.
 
-정책이 보간 또는 외삽이 필요할 때:
-
-- 조정이 **보정된 시간**으로 표현된 profile은 **log-log** 보간 사용.
-- 조정이 **stop delta** 또는 **multiplier**로 표현된 profile은 **stop-공간** 보간 사용.
-
-Estimation family는 단일 필름의 평가 안에서 mix 되지 않는다.
-
-### 3.4 Threshold-to-table 하향 외삽
-
-Profile의 무보정 임계값 최댓값이 첫 quantified 표 row보다 *아래* (임계값과 표 사이 갭 생성) 일 때, 정책은 갭 안의 측광값에 대해 **처음 두 quantified 표 점**을 anchor로 사용해 외삽된 보정값을 derive. 합성 표 row는 만들지 않으며, 결과는 두 anchor row가 `usedReferencePoints`에 기록된 채 `extrapolated_beyond_table`로 보고. 하향 외삽은 anchor에 적어도 두 quantified 점 필요 — 하나만 가능하면 결과는 advisory-only로 fall through.
-
-### 3.5 결과 형태 + metadata
+### 3.3 결과 형태 + metadata
 
 각 reciprocity 평가는 세 mutually-exclusive form 중 하나의 결과를 산출한다:
 
-- **Quantified** — 숫자 보정 노출이 반환. 결과는 측광 노출 + 보정 노출 (항상 존재) + 아래 metadata block을 포함한다.
-- **Advisory-only** — 숫자 보정 노출은 반환 불가, 하지만 시스템은 여전히 설명 + 신뢰도 cue를 보고. 결과는 측광 노출 + metadata block을 포함; 보정 노출은 없음.
-- **Unsupported** — 측광 노출이 정책 지원 범위 외부. 결과는 측광 노출 + metadata block을 포함; 보정 노출은 없음.
+- **Quantified** — 숫자 보정 노출이 반환. 결과는 측광 노출 + 보정 노출 + 아래 metadata block을 포함. Basis는 `officialThresholdNoCorrection` 또는 `formulaDerived`.
+- **Limited-guidance** — 숫자 보정 노출은 반환 불가, 하지만 시스템은 측광 노출 + metadata block을 보고. Basis는 `limitedGuidanceNoQuantifiedPrediction`. Presentation layer는 숫자 대신 차분한 안내 텍스트를 렌더.
+- **Unsupported** — 측광 노출이 정책 지원 범위 외부. 결과는 측광 노출 + metadata block을 포함. Basis는 `unsupportedOutOfPolicyRange`. 공식 기반 profile이 supported boundary 너머에서 numeric continuation을 산출한 경우에만 옵션 보정 노출 존재; presenter가 outside manufacturer guidance로 mark.
 
-결과 form과 calculation basis는 함께 묶임: `quantified` ↔ `exact_table_point`, `interpolated_within_table`, `extrapolated_beyond_table`, `official_threshold_no_correction`, 또는 `formula_derived`; `advisory_only_beyond_official_range` ↔ `advisoryOnly`; `unsupported_out_of_policy_range` ↔ `unsupported`. 이 페어링은 *구조적* — 런타임 검사가 아닌 컴파일 타임에 강제. 따라서 결과가 숫자 보정값을 claim 하면서 그것을 omit (또는 그 반대) 하는 것이 불가능.
+Form과 basis의 페어링은 *구조적* — 런타임 검사가 아닌 컴파일 타임에 강제. 따라서 결과가 숫자 보정값을 claim 하면서 그것을 omit 하는 것이 불가능 (위의 formula-extrapolated unsupported 단일 예외만 허용).
 
 세 form 모두에 존재하는 metadata block은 포함:
 
-- `calculationBasis` — 다음 중 하나: `exact_table_point`, `interpolated_within_table`, `extrapolated_beyond_table`, `official_threshold_no_correction`, `advisory_only_beyond_official_range`, `unsupported_out_of_policy_range`, `formula_derived`.
-- `sourceAuthorityImpact` — profile provenance (제조사 출판 / field-tested / anecdotal)에서 derive.
-- `rangeStatus` — within / extrapolated / threshold-only / beyond-guidance.
-- `warningLevel` — none / caution / advisory / not-recommended.
-- `supportingNotes` — 결과를 설명하는 사람-읽기 텍스트.
-- `usedReferencePoints` — 결과를 inform 한 표 row 또는 공식 계수.
+- `calculationBasis` — `officialThresholdNoCorrection`, `formulaDerived`, `limitedGuidanceNoQuantifiedPrediction`, `unsupportedOutOfPolicyRange` 중 하나.
+- `sourceAuthorityImpact` — profile provenance (current official / archival official / unofficial secondary / user-defined)에서 derive.
+- `rangeStatus` — `withinStatedRange`, `beyondLastRepresentativePoint`, `beyondPolicyLimit`.
+- `warningLevel` — `none`, `note`, `caution`, `strongWarning`.
+- `notes` — token-tagged 사람-읽기 문자열 배열.
 
-Persistence layer는 flat-field layout (측광, 보정, 명시적 returned-time 플래그, metadata block)과 three-form layout 둘 다 decode 시 받아들인다; encoder는 three-form layout으로 쓴다. ([DomainSchema Spec](DomainSchema.md) §6 참조.)
+### 3.4 Reference 데이터 presentation
 
-### 3.6 Confidence presentation
+Reference panel은 profile에 attach 된 source 데이터를 surface. 표현 규칙은 source 사실 보존에 관한 것 — 계산이 아니다:
 
-Presentation layer는 각 결과를 다음 다섯 신뢰도 카테고리 중 하나로 매핑:
+- 양쪽 form (stop / multiplier + adjusted/corrected time)을 carry 하는 source-evidence row는 둘 다 surface. 한 값을 골라 다른 것을 drop 하는 formatter는 published source 정보를 사용자에게서 숨긴다.
+- Row의 compact column은 둘 다 존재할 때 한 cell에 두 사실 결합 (예: `+0.5 stops · 15s`). 한 형태만 출판되면 그것만 표시.
+- 카탈로그가 `isApproximate`로 저장한 corrected-time 값 (비합리적 변환의 rounded display, 보통 fractional-stop derivation `metered × 2^stopDelta`)은 시각적으로 구분 — 예를 들어 leading `≈` — 사용자가 한눈에 published 또는 정확히 변환된 anchor와 rounded 것을 구별. Multiplier-derive corrected time (`metered × multiplier`)은 정확한 산술 — mark 되지 않음.
+- `isSourceEvidenceOnly`로 mark 된 source-evidence row는 published evidence로 보존되지만 `*` footnote marker로 렌더 — 사용자가 row가 formula-fitting anchor로 사용되지 않음을 인식 (ADOX CMS 20 II의 sub-1s reference가 canonical case).
+- 현상 시간 hint + 컬러 필터 권고는 보정 노출 column에 fold 되지 않고 별도 cell / note로 유지. 이들은 documentation이지 계산 입력 아님.
+- Reference panel은 새 계산 정책을 도입하지 않는다. 계산 정책이 이미 consume 하는 데이터 (threshold + limited-guidance rule) 또는 의도적으로 무시하는 데이터 (source-evidence row)에 대한 presentation contract.
+- PTIMER-88 보조 안내 formatter는 presentation layer 전용. 저장된 표기 정확히 보존 (예: `5M`, `7.5M`, `2.5G`, `CC10R`, `-10% development`) — 텍스트 normalize 안 함. 안내를 별도 카테고리로 매핑: 컬러 보정, 현상 조정, 경고, note. 노출 시간 출력은 primary calculator 결과 유지; 이 row는 보조 안내 전용.
 
-- **Exact** — basis = `exact_table_point` 또는 `formula_derived` (직접 출판된 계수).
-- **Estimated** — basis = `interpolated_within_table`.
-- **Extrapolated** — basis = `extrapolated_beyond_table`. extrapolated와 estimated는 별개의 카테고리로 표시; extrapolated는 더 강한 low-confidence 신호를 보인다.
-- **Advisory-only** — basis = `advisory_only_beyond_official_range` 또는 임계값 band 너머의 threshold 무보정. UI는 숫자 대신 차분한 설명 텍스트 표시; 근거 없는 값을 만들지 않는다.
-- **Unsupported** — basis = `unsupported_out_of_policy_range`. 같은 규칙: 근거 없이 만든 숫자는 없다.
+### 3.5 Confidence presentation
 
-### 3.8 Target Shutter 비교 (optional, post-reciprocity)
+Presentation layer는 각 결과를 다음 네 신뢰도 카테고리 중 하나로 매핑:
 
-Target Shutter는 사진가가 지정한 목표 duration을 calculator의 현재 결과와 비교하기 위한 optional workflow. 계산 정책 (§2)과 reciprocity 정책 (§3.1–§3.7) 위에 겹쳐 적용된다 — target의 enabling, disabling, editing은 두 정책 어느 쪽에도 되돌아가지 않으며 이미 확정된 결과를 변경하지 않는다.
+- **No correction** — basis = `officialThresholdNoCorrection`. 보정 노출 = 측광 노출. User-facing label: `No correction`.
+- **Formula-derived** — basis = `formulaDerived`. 결과는 활성 계산 곡선에 anchor. User-facing label: `Formula-derived`.
+- **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. UI는 숫자 대신 차분한 설명 텍스트 표시; 근거 없는 값을 만들지 않는다.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label은 formula-extrapolated numeric의 가용 여부에 따라: 출판된 source range 외부의 converted formula profile (sourceEvidence 포함 formula rule)이면 `Beyond source range`, 그 외 numeric continuation이면 `Outside guidance`, 값 자체가 없으면 `No corrected value`.
+
+카테고리와 badge 문구는 launch preset reciprocity presentation에서 `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`를 primary status / badge 텍스트로 surface 하지 않는다 — 이 용어들은 legacy table 모델을 인코드 했으며 현 vocabulary에 포함되지 않는다.
+
+### 3.6 Target Shutter 비교 (optional, post-reciprocity)
+
+Target Shutter는 사진가가 지정한 목표 duration을 calculator의 현재 결과와 비교하기 위한 optional workflow. 계산 정책 (§2)과 reciprocity 정책 (§3.1–§3.5) 위에 겹쳐 적용된다 — target의 enabling, disabling, editing은 두 정책 어느 쪽에도 되돌아가지 않으며 이미 확정된 결과를 변경하지 않는다.
 
 **비교 기준.** 비교 기준은 workflow에 따라 결정된다:
 
 - **Non-film workflow** — 비교 값은 Adjusted Shutter다.
 - **quantified 보정 노출이 있는 film workflow** — 비교 값은 Corrected Exposure다.
-- **quantified 보정 노출이 없는 film workflow** (advisory-only 또는 unsupported, §3.5) — 비교 값은 사용할 수 없다.
+- **quantified 보정 노출이 없는 film workflow** (limited-guidance 또는 unsupported, §3.3) — 비교 값은 사용할 수 없다.
 
 **Stop 차이 표시.** 비교 값이 존재할 때 시스템은 target duration과 비교 값 사이의 stop 차이를 표시한다. 표시되는 stop 차이는 앱의 stop 표시 단위로 반올림한다; 0으로 반올림되는 차이는 *match* 형태로 표시 (signed zero 대신). 비교 값이 없을 때 시스템은 근거 없는 stop 차이를 만들지 않으며, target은 그대로 표시된 채 행은 차분한 unavailable 표시를 한다.
 
@@ -219,7 +217,7 @@ Target Shutter는 사진가가 지정한 목표 duration을 calculator의 현재
 
 ## 4. Timer 통합
 
-Timer는 **Output Shutter** (digital workflow), **Corrected Exposure** (film workflow), 또는 **Target Shutter** (설정된 경우, §3.8)에서 생성. 시스템은 비-quantified reciprocity 결과에서 timer를 시작하지 않는다 — 보정 노출이 advisory-only 또는 unsupported 일 때 Film 모드 timer start affordance는 비활성화되며, 사용자는 입력을 변경하거나 ND-조정된 셔터로 명시적으로 진행하도록 안내. Target Shutter에서 시작된 timer의 duration은 target 자체이며, 비교 값의 가용 여부와 무관.
+Timer는 **Output Shutter** (digital workflow), **Corrected Exposure** (film workflow), 또는 **Target Shutter** (설정된 경우, §3.6)에서 생성. 시스템은 limited-guidance 보정 노출에서 timer를 시작하지 않는다 — 결과가 `limitedGuidanceNoQuantifiedPrediction`, 또는 numeric continuation 없는 `unsupportedOutOfPolicyRange` 일 때 Film 모드 corrected-exposure timer affordance는 비활성화되며, 사용자는 입력을 변경하거나 ND-조정된 셔터로 명시적으로 진행하도록 안내. Formula-extrapolated unsupported numeric (공식이 supported boundary 너머에서 값을 계속 산출하는 경우)은 warning treatment와 함께 timer를 활성화 — 사용자가 예측값을 commit 할 수 있게. Target Shutter에서 시작된 timer의 duration은 target 자체이며, 비교 값의 가용 여부와 무관.
 
 Timer의 metadata는 생성 시점의 계산 결과 snapshot. 후속 calculator 입력 변경은 이미 생성된 timer를 변경하지 않는다. Timer의 exposure source는 유지되는 동안 구별 유지된다 — Target Shutter timer는 후속 입력 변경에 무관하게 Target Shutter timer로 남는다. ([Timer Spec](Timer.md) §1.4 참조.)
 
@@ -227,7 +225,7 @@ Timer의 metadata는 생성 시점의 계산 결과 snapshot. 후속 calculator 
 
 ## 5. 재시작 가로지른 복원
 
-Calculator의 working context — 선택된 필름 identity + **노출 scale 토큰** (§1.4) + Base Shutter + ND 값 + 설정된 경우 Target Shutter duration (§3.8) — 는 digital + film 양 workflow에서 영속화 + 재시작 시 복원. Working context는 카메라 슬롯별로 종속 (§1.5) — 모든 슬롯의 상태와 활성 슬롯 id가 함께 보존되며, 다중 슬롯 세션의 on-disk 형태는 [DomainSchema Spec](DomainSchema.md) §7.4에 기술. 저장된 preset identity가 어떤 catalog entry로도 resolve 되지 않거나 활성 scale의 ladder에 대한 숫자 값 검증이 실패면, 시스템은 정의된 default로 안전하게 대체 (crash 또는 silent drift 아님).
+Calculator의 working context — 선택된 필름 identity + **노출 scale 토큰** (§1.4) + Base Shutter + ND 값 + 설정된 경우 Target Shutter duration (§3.6) — 는 digital + film 양 workflow에서 영속화 + 재시작 시 복원. Working context는 카메라 슬롯별로 종속 (§1.5) — 모든 슬롯의 상태와 활성 슬롯 id가 함께 보존되며, 다중 슬롯 세션의 on-disk 형태는 [DomainSchema Spec](DomainSchema.md) §7.4에 기술. 저장된 preset identity가 어떤 catalog entry로도 resolve 되지 않거나 활성 scale의 ladder에 대한 숫자 값 검증이 실패면, 시스템은 정의된 default로 안전하게 대체 (crash 또는 silent drift 아님).
 
 노출 scale 토큰 (또는 fractional ND) 등장 이전 release에서 작성된 snapshot도 정상 복원: 누락된 필드는 **출시 one-third-stop scale** (§1.4)로 resolve 되고, 정수 ND 값은 새 ladder의 whole-stop count로 처리됨. 출시 ladder는 legacy full-stop ladder의 strict superset 이므로 legacy whole-stop 값을 다시 쓸 필요 없이 유효한 ladder entry로 유지됨. 다중 슬롯 세션이 등장하기 이전 release에서 작성된 snapshot도 마찬가지로 정상 복원: 첫 launch 시 legacy 단일 컨텍스트 형태를 읽고, 이후 저장은 다중 슬롯 세션 형태로 작성된다 ([DomainSchema Spec](DomainSchema.md) §7.4.1 참조).
 
@@ -237,15 +235,16 @@ Calculator의 working context — 선택된 필름 identity + **노출 scale 토
 
 시스템은 다음을 **하지 않는다**:
 
-1. 결과가 advisory-only 또는 unsupported 일 때 숫자 보정값을 근거 없이 만들어내기.
-2. 도메인 모델 안에 보간 또는 외삽 정책을 인코딩. (도메인은 제조사 데이터를 verbatim으로 저장; 정책은 자체 layer.)
-3. Estimation family를 mix (예: stop-delta profile에 log-log 적용, 또는 그 반대).
-4. 제조사 "not-recommended" stop signal을 generic 외삽으로 무시.
+1. 결과가 limited-guidance 일 때, 또는 formula-extrapolated continuation이 없는 unsupported 일 때 숫자 보정값을 근거 없이 만들어내기. Formula-extrapolated unsupported numeric은 허용되며 outside manufacturer guidance로 표시.
+2. 도메인 모델 안에 계산 정책을 인코딩. (도메인은 제조사 데이터를 verbatim으로 저장; 정책은 자체 layer.)
+3. Source-evidence row (display reference 데이터)를 계산 anchor로 promote.
+4. Reciprocity 보정이 adjusted shutter를 줄이도록 허용. `corrected < metered`를 산출하는 어떤 rule path든 `officialThresholdNoCorrection`으로 reclassify (§3.2 correction invariant).
 5. 1 s 이상 계산값 round. (Round 표기는 sub-second 에서만 허용.)
 6. Calculator 입력 변경이 이미 생성된 timer의 metadata를 mutate.
-7. 비-quantified 보정 노출에서 timer 시작.
+7. Limited-guidance 보정 노출, 또는 numeric continuation 없는 unsupported 결과에서 timer 시작.
 8. 활성 workflow에 quantified 비교 값이 없을 때 Target Shutter stop 차이를 근거 없이 만들기. 행은 대신 차분한 unavailable 표시를 한다.
-9. Signed-zero Target Shutter stop 차이 표시; 0으로 반올림되는 차이는 *match* 형태로 collapse (§3.8).
+9. Signed-zero Target Shutter stop 차이 표시; 0으로 반올림되는 차이는 *match* 형태로 collapse (§3.6).
+10. Launch preset reciprocity presentation에서 `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`를 primary user-facing status / badge 문구로 surface.
 
 ---
 
@@ -255,11 +254,10 @@ Calculator의 working context — 선택된 필름 identity + **노출 scale 토
 
 - **Aperture + ISO** 노출 변수는 intent-level (wiki 3964929) 이지만 현 release에 포함 안 됨. Fixed/Derived 상태 머신, 다중 변수 linkage 규칙, 한 변수 이상 가로지른 reverse 계산은 유보.
 - **두 개 위 multi-derived ceiling.** Wiki 3964929가 확장 옵션 예약 — 결정 기록 없음.
-- **Per-data-shape 정책 선택.** Wiki 15761409가 모든 profile shape가 log-log를 원하지 않을 수 있다고 명시 — 어떤 것은 stop-공간 원할 수도. 현 코드는 §3.3을 일관 적용. Per-profile override 메커니즘은 결정 안 됨.
-- **외삽 cap.** Quantified table 외삽은 제조사 stop signal이 차단할 때까지 계속 — stop signal이 없는 profile에 implicit ceiling이 있어야 하는지는 미정 (open question).
-- **사용자 정의 필름 schema.** Wiki 15138817이 검증 요구사항으로 list — 데이터 모델과 UX는 명시 안 됨.
+- **Formula 외삽 cap.** `meteredRange.maximumSeconds`를 가진 공식은 `extrapolateBeyondMaximum = true` (launch default) 일 때 boundary 너머에서 numeric continuation을 산출. Profile-independent ceiling이 이 continuation을 얼마나 멀리 확장하도록 cap 할지는 open.
+- **사용자 정의 필름 schema.** Wiki 15138817이 검증 요구사항으로 list — 데이터 모델과 UX는 명시 안 됨. 향후 custom table 입력도 launch preset scope 외부이며 자체 feature 설계가 필요하다.
 - **다중 profile 필름.** 일부 필름은 다중 official profile 가질 수 있음 (다른 현상액, push/pull). 선택 규칙은 아직 정의 안 됨; 현 launch 정책은 필름 identity 당 한 primary profile ship.
-- **컬러 + 현상 안내.** Profile이 이를 기록 (예: Velvia 50 "M color correction", Tri-X dev-time 조정) but spec은 calculator가 이를 어떻게 표시하는지 아직 정의 안 됨.
+- **First-class 컬러 / 현상 정책.** Profile이 이를 source-evidence adjustment로 기록 (예: Velvia 50 `5M`, Tri-X 400 `-10% development`) but spec은 calculator가 display 너머로 어떻게 promote 할지 아직 정의 안 됨.
 
 ---
 
@@ -271,8 +269,8 @@ Calculator의 working context — 선택된 필름 identity + **노출 scale 토
 - 3964929 — 계산 엔진 규칙 (변수, fixed/derived 상태, ND 정책, reciprocity 적용 흐름)
 - 7438337 — 노출 스톱 스케일 관행 조사 (rounded-notation vs exact-value 분리)
 - 13172737 — Reciprocity Film Research List (launch scope, method keys, provenance 규칙)
-- 15237121 — Reciprocity Table Calculation Policy Notes (도메인 / 정책 / presentation 분리)
-- 15761409 — Reciprocity Table Interpolation and Calculation Policy Draft (책임 분리, metadata, 정책 방향)
+- 15237121 — Reciprocity Table Calculation Policy Notes (historical: PTIMER-128 / PTIMER-140의 공식 기반 prediction 모델로 대체된 table-interpolation 정책을 기록)
+- 15761409 — Reciprocity Table Interpolation and Calculation Policy Draft (historical: 15237121과 동일 상태)
 - 15138817 — Reciprocity Validation Samples (최소 검증 매트릭스, 예시 profile)
 - 16482307 — Film Selection and Reciprocity Calculator UI (workflow 방향, state semantics)
 

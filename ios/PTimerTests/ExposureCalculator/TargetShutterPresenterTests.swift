@@ -218,7 +218,7 @@ final class TargetShutterPresenterTests: XCTestCase {
     func testStopDifferenceNeverEmitsSignedZeroAcrossSnapZone() {
         let cases: [Double] = [
             -0.16, -0.12, -0.08, -0.04, -0.001,
-            0, 0.001, 0.04, 0.08, 0.12, 0.16
+            0, 0.001, 0.04, 0.08, 0.12, 0.16,
         ]
         for value in cases {
             let result = TargetShutterPresenter.formatStopDifference(value)

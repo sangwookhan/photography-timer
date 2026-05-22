@@ -1,7 +1,7 @@
 import XCTest
 @testable import PTimer
 
-final class ReciprocitySecondaryGuidancePresentationTests: XCTestCase {
+final class SecondaryGuidancePresentationTests: XCTestCase {
     func test5MFormatsAsNeutralColorCorrection() {
         let rows = ReciprocitySecondaryGuidanceFormatter.format([
             .colorFilter(ColorFilterRecommendation(filterName: "5M", note: nil))
@@ -89,7 +89,7 @@ final class ReciprocitySecondaryGuidancePresentationTests: XCTestCase {
             .colorFilter(ColorFilterRecommendation(filterName: "5M", note: nil)),
             .warning(ReciprocityWarning(severity: .notRecommended, message: "64 sec is not recommended.")),
             .development(DevelopmentAdjustment(instruction: "-10% development", note: nil)),
-            .note(ReciprocityNote(text: "test under your conditions"))
+            .note(ReciprocityNote(text: "test under your conditions")),
         ]
 
         let rows = ReciprocitySecondaryGuidanceFormatter.format(adjustments)

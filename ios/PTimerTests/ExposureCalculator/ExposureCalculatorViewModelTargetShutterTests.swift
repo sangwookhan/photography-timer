@@ -1,7 +1,7 @@
 import XCTest
 @testable import PTimer
 
-final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
+final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - State and display
 
     @MainActor
@@ -107,17 +107,17 @@ final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmWorkflowAdvisoryDoesNotFabricateStopDifference() throws {
+    func testFilmWorkflowLimitedGuidanceDoesNotFabricateStopDifference() throws {
         let viewModel = makeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
         viewModel.baseShutter = 15
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
 
-        // Portra 400 at 15s metered exposure is advisory-only — no quantified
-        // corrected exposure exists. The presenter must not silently fall
-        // through to the Adjusted Shutter value.
-        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .advisory)
+        // Portra 400 at 15s metered exposure is limited-guidance — no
+        // quantified corrected exposure exists. The presenter must not
+        // silently fall through to the Adjusted Shutter value.
+        XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .limitedGuidance)
 
         viewModel.setTargetShutter(60)
 
@@ -126,7 +126,7 @@ final class ExposureCalculatorViewModelTargetShutterTests: XCTestCase {
         }
 
         XCTAssertEqual(state.targetSeconds, 60)
-        XCTAssertNil(state.comparison, "Advisory-only film result must not produce a fabricated comparison")
+        XCTAssertNil(state.comparison, "Limited-guidance film result must not produce a fabricated comparison")
         XCTAssertNil(state.stopDifference)
     }
 

@@ -2,14 +2,14 @@ import XCTest
 @testable import PTimer
 
 /// Provia 100F is calculated by a constrained, threshold-anchored
-/// formula rather than an exact-match table row. These tests lock
-/// the invariants:
+/// formula. These tests lock the invariants:
 ///
 /// - Below the 128 s no-correction threshold, the threshold rule wins.
 /// - In (128, 480) the formula wins (basis == `.formulaDerived`).
 /// - 240 s — the manufacturer's published +1/3-stop reference point —
-///   produces a formula-derived corrected exposure of ≈302 s. It must
-///   not report `.exactTablePoint`.
+///   produces a formula-derived corrected exposure of ≈302 s. The
+///   reference is preserved as `sourceEvidence`, never as a
+///   calculation rule.
 /// - At and beyond 480 s — the manufacturer's "not recommended"
 ///   boundary — the basis is `.unsupportedOutOfPolicyRange` and the
 ///   result still carries the formula-extrapolated numeric corrected
@@ -42,7 +42,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(
             result.metadata.basis,
             .formulaDerived,
-            "240 s must be formula-derived, not exactTablePoint, even though the manufacturer published a +1/3 stop reference here."
+            "240 s must be formula-derived even though the manufacturer published a +1/3 stop reference here."
         )
 
         // Anchored to the published +1/3 stop reference (240 × 2^(1/3) ≈ 302.4 s).
@@ -193,22 +193,29 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(warningSeverity, .notRecommended)
     }
 
-    func testProvia100FCalculationRulesDoNotContain240SecondTableEntry() throws {
+    func testProvia100FRulesNeverContain240SecondAsCalculationAnchor() throws {
         let profile = try proviaProfile()
 
         for rule in profile.rules {
-            guard case let .table(tableRule) = rule else { continue }
-            for entry in tableRule.entries {
-                if case let .exactSeconds(seconds) = entry.meteredExposure {
-                    XCTAssertNotEqual(
-                        seconds,
-                        240,
-                        accuracy: 1e-6,
-                        "240 s must not exist as a calculation table row — it is source evidence only, otherwise the basis would regress to exactTablePoint."
-                    )
-                }
+            // Threshold and formula rules cannot anchor exact metered
+            // points — the manufacturer's 240 s row stays in
+            // sourceEvidence only.
+            switch rule {
+            case .threshold, .formula, .limitedGuidance:
+                continue
             }
         }
+
+        // The 240 s reference must live in sourceEvidence (display-only)
+        // so it cannot enter the calculation pipeline.
+        let evidenceMeteredSeconds: [Double] = profile.sourceEvidence.compactMap { row in
+            if case let .exactSeconds(seconds) = row.meteredExposure { return seconds }
+            return nil
+        }
+        XCTAssertTrue(
+            evidenceMeteredSeconds.contains(where: { abs($0 - 240) < 1e-6 }),
+            "240 s must be preserved as sourceEvidence so the manufacturer reference stays visible alongside the formula curve."
+        )
     }
 
     // MARK: - UI surfacing
@@ -755,7 +762,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         let cases: [(meter: Double, expectedStatus: String)] = [
             (60, "No correction"),
             (240, "Formula-derived"),
-            (600, "Beyond source range")
+            (600, "Beyond source range"),
         ]
         for (meter, expected) in cases {
             let displayState = try makeDisplayState(meteredExposureSeconds: meter)
@@ -840,7 +847,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         let cases: [(meter: Double, expected: String)] = [
             (60, "No correction"),
             (240, "Formula-derived"),
-            (600, "Beyond source range")
+            (600, "Beyond source range"),
         ]
         for (meter, expected) in cases {
             let displayState = try makeDisplayState(meteredExposureSeconds: meter)
@@ -1161,10 +1168,10 @@ final class Provia100FFormulaProfileTests: XCTestCase {
 
     /// At unsupported inputs that still produce a numeric formula
     /// extrapolation, the Details graph plots the current point on
-    /// the formula curve with the `.extrapolated` style, not the
+    /// the formula curve with the `.beyondSourceRange` style, not the
     /// "x-position only" red guide.
     @MainActor
-    func testProvia100FUnsupportedNumericInputRendersExtrapolatedCurrentPoint() throws {
+    func testProvia100FUnsupportedNumericInputRendersBeyondSourceRangeCurrentPoint() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 600)
 
         let graph = try XCTUnwrap(
@@ -1176,7 +1183,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             "A formula-extrapolated unsupported numeric must plot a real current point, not a guide line."
         )
         let currentPoint = try XCTUnwrap(graph.currentPoint)
-        XCTAssertEqual(currentPoint.style, .extrapolated)
+        XCTAssertEqual(currentPoint.style, .beyondSourceRange)
         XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 600, accuracy: 1e-6)
     }
 

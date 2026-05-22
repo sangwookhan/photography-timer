@@ -39,7 +39,7 @@ Above the variable section sits a film row that conveys current workflow mode:
 
 When a film is selected, the row shall also carry an **explicit profile-authority subtitle** matching the active reciprocity profile's authority: **"Official guidance"** for an official-authority profile, **"Unofficial practical"** for an unofficial-authority profile. The label shall be present in both cases — there is no implicit "missing label means official" interpretation.
 
-The launch dataset (per [DomainSchema Spec](DomainSchema.md) §11) ships only `authority = "official"` profiles, so the runtime selection is always one of those two labels in practice. Profiles with `userDefined` or `unknown` authority — neither of which exists in the launch dataset, and both of which are reserved for post-launch user-defined / non-launch flows — shall not surface a subtitle: their absence indicates the row is rendering an authority that has not yet been assigned a presentation contract, and the "always present" rule above does not extend to those cases.
+The launch dataset (per [DomainSchema Spec](DomainSchema.md) §13) ships only `authority = "official"` profiles, so the runtime selection is always one of those two labels in practice. Profiles with `userDefined` or `unknown` authority — neither of which exists in the launch dataset, and both of which are reserved for post-launch user-defined / non-launch flows — shall not surface a subtitle: their absence indicates the row is rendering an authority that has not yet been assigned a presentation contract, and the "always present" rule above does not extend to those cases.
 
 The "Clear" affordance shall remove the film selection without altering Base Shutter or ND. It shall not appear in the empty state.
 
@@ -90,10 +90,11 @@ The result section displays the computed exposure:
 
 The Corrected Exposure row shall always be visible in film workflow. Its content is determined by the reciprocity result category:
 
-- **Quantified** (exact / estimated / extrapolated / formula-derived) — show the corrected time using the same time-display rules as the Adjusted Shutter, plus a confidence badge whose category drives styling.
-- **Non-quantified** (advisory-only / unsupported) — show calm explanatory text in place of a number. The UI shall not fabricate a numeric value.
+- **Quantified** (`No correction` or `Formula-derived`, per [Calculator Spec](Calculator.md) §3.5) — show the corrected time using the same time-display rules as the Adjusted Shutter, plus a status badge.
+- **Quantified with warning** (formula-extrapolated past the supported boundary; surfaces as `Beyond source range` for converted formula profiles or `Outside guidance` otherwise) — show the numeric value with a warning-toned badge so the user can tell the prediction is outside manufacturer guidance.
+- **Non-quantified** (`No quantified prediction` for limited-guidance results, or `No corrected value` when the unsupported case has no formula continuation) — show calm explanatory text in place of a number. The UI shall not fabricate a numeric value.
 
-A **reciprocity state badge** sits with the row to convey confidence at a glance.
+A **reciprocity state badge** sits with the row to convey the result category at a glance. The badge wording shall match the vocabulary above; legacy table-era wording (`Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`) shall not appear on launch preset reciprocity presentation.
 
 ### 2.4 Time-display rules
 
@@ -122,7 +123,7 @@ Tapping Start Timer creates a new timer using the current calculation snapshot a
 
 ### 2.6 Reciprocity details surface
 
-A secondary affordance opens a **Reciprocity Details sheet** that shows reference data for the selected film: the active profile, formula or table reference data, a graph visualization, and the source list. The details sheet:
+A secondary affordance opens a **Reciprocity Details sheet** that shows reference data for the selected film: the active profile, the formula expression and any manufacturer source-evidence rows, a graph visualization, and the source list. The details sheet:
 
 - shall present the data using calm, secondary visual weight (not loud);
 - shall render formulas in math-style typography;
@@ -131,22 +132,22 @@ A secondary affordance opens a **Reciprocity Details sheet** that shows referenc
 **Section order**: the sheet shall present sections in this order so the user can verify the active profile basis *before* relying on the result graph:
 
 1. **Profile** — active profile name plus an **Authority row** (Official / Unofficial / etc.) shown for *all* profiles, not only ambiguous ones.
-2. **Formula / Reference data** — the active formula or table rows.
-3. **Graph** — the reference curve.
+2. **Reference data** — the active formula expression, plus any manufacturer source-evidence rows ("Source reference" / "Guidance boundary" sub-sections), or the no-correction threshold + limited-guidance directive for limited-guidance profiles.
+3. **Graph** — the calculation curve plus source-evidence markers.
 4. **Sources** — provenance (publisher, citation, sourceVersion).
 
-**Sheet height**: the sheet shall open at a stable initial height regardless of profile shape (official, unofficial, advisory-only, or table). The initial detent shall not vary with content.
+**Sheet height**: the sheet shall open at a stable initial height regardless of profile shape (official quantified formula, official limited guidance, unofficial practical formula). The initial detent shall not vary with content.
 
 **Graph axis**: the formula graph shall extend to a **canonical 120 s upper bound** regardless of the current input metered exposure, so the reference curve is visually stable across inputs.
 
 ### 2.7 Target Shutter row
 
-The Target Shutter row (see [Calculator Spec](Calculator.md) §3.8) is an optional, compact surface in the main shooting calculator. It does not replace the calculator's primary result hierarchy — Adjusted Shutter, Reciprocity status, and Corrected Exposure remain the photographer's primary read in film workflow, and the Output Shutter remains primary in digital workflow.
+The Target Shutter row (see [Calculator Spec](Calculator.md) §3.6) is an optional, compact surface in the main shooting calculator. It does not replace the calculator's primary result hierarchy — Adjusted Shutter, Reciprocity status, and Corrected Exposure remain the photographer's primary read in film workflow, and the Output Shutter remains primary in digital workflow.
 
 **Row states.** The row presents two states:
 
 - **Inactive** — a compact status row indicating no committed target. Tapping the row opens the input sheet.
-- **Active** — a compact row presenting the target duration, the stop difference against the active comparison value, and a timer-start affordance for the target. The comparison basis is not redisplayed on the row — it is determined by workflow per [Calculator Spec](Calculator.md) §3.8.
+- **Active** — a compact row presenting the target duration, the stop difference against the active comparison value, and a timer-start affordance for the target. The comparison basis is not redisplayed on the row — it is determined by workflow per [Calculator Spec](Calculator.md) §3.6.
 
 The main row shall not present a destructive `Clear` affordance or an enable/disable switch. Removal and disabling are owned by the input sheet so the main surface stays status/action oriented.
 
@@ -235,7 +236,7 @@ The sheet's affordances depend on selection state:
 
 A **Cancel** action exits the sheet without changing selection. A row tap **immediately applies the selection and dismisses the sheet** — no confirm step.
 
-The sheet does not include in-list edit, sort, or filter affordances; those are deferred. The launch dataset is small enough that scroll suffices. (See [DomainSchema Spec](DomainSchema.md) §8 for launch dataset scope.)
+The sheet does not include in-list edit, sort, or filter affordances; those are deferred. The launch dataset is small enough that scroll suffices. (See [DomainSchema Spec](DomainSchema.md) §13 for launch dataset scope.)
 
 ### 4.1.1 Manufacturer grouping
 
@@ -303,10 +304,10 @@ The UI shall **not**:
 ## 7. Drift and open questions
 
 - **Wheel picker snap behavior.** The wheel picker model implies snap-to-grid with live preview, but the precise interaction (swipe-momentum stop point, tap-to-set vs tap-to-cycle) is not pinned in spec.
-- **Film picker sort / search.** The current launch dataset is small (see [DomainSchema Spec](DomainSchema.md) §8) so a flat scrollable list is sufficient. As the dataset grows, sort and search will be needed; ordering policy is undecided.
+- **Film picker sort / search.** The current launch dataset is small (see [DomainSchema Spec](DomainSchema.md) §13) so a flat scrollable list is sufficient. As the dataset grows, sort and search will be needed; ordering policy is undecided.
 - **Animation feel.** Detent transitions and card animations use platform-default spring parameters; no human-readable feel statement is recorded. If the feel matters, it should be specified verbally ("soft, ~300 ms, no overshoot") rather than pinned to numeric stiffness/damping.
 - **Reciprocity details surface depth.** The graph component, axis ranges, and labeling rules are partially specified; a human-readable spec for axes, units, and edge cases is incomplete.
-- **Empty-state copy.** Calm guidance text strings for advisory-only / unsupported corrected exposure are not pinned in this spec; revisit when localization arrives.
+- **Empty-state copy.** Calm guidance text strings for limited-guidance / unsupported corrected exposure are not pinned in this spec; revisit when localization arrives.
 - **Selection model.** No multi-select, no batch action surface. Wiki 9601025 deliberately defers this; UI accordingly exposes nothing for it.
 - **Accessibility labels.** Row-specific accessibility labels exist for film-mode timer actions; a complete accessibility spec across the app is not present.
 - **Lock-screen widget detail.** Beyond the contract in §5, the widget's typography, color, and layout are platform-conventional; details are not pinned.

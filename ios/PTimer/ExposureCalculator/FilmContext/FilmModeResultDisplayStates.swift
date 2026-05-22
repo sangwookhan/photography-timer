@@ -4,7 +4,7 @@ enum FilmModeReciprocityStateTone: Equatable {
     case trusted
     case measured
     case caution
-    case advisory
+    case limitedGuidance
     case unsupported
 }
 
@@ -45,7 +45,7 @@ struct FilmModeTimerActionState: Equatable {
 
 enum FilmModeCorrectedExposureDisplayKind: Equatable {
     case quantified
-    case advisory
+    case limitedGuidance
     case unsupported
     case noFilmSelected
 }

@@ -289,7 +289,7 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
                 pausedAt: nil,
                 status: .completed,
                 referenceDate: now
-            )
+            ),
         ]
     }
 

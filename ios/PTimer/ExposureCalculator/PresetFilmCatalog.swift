@@ -126,6 +126,73 @@ struct LaunchPresetFilmCatalogLoader {
                   profile.source.authority == .official else {
                 throw LaunchPresetFilmCatalogLoaderError.invalidPrimaryProfileSource(filmID)
             }
+
+            try validateProfileShape(profile, filmID: filmID)
+        }
+    }
+
+    /// Enforces the post-PTIMER-140 allow-list at load time so a malformed
+    /// catalog cannot ship a rule combination the calculation policy no
+    /// longer supports. The bundled catalog is "official" everywhere
+    /// (the loader already rejects unofficial / user-defined sources
+    /// above), so this validator only enumerates the two official
+    /// shapes:
+    ///
+    /// - threshold + formula (no limited-guidance rule)
+    /// - threshold + limited-guidance (no formula rule)
+    ///
+    /// Any other combination — bare formula, bare limited-guidance,
+    /// formula + limited-guidance, an empty rule list — is rejected
+    /// with `.invalidRuleShape` so the failure surfaces as a load-time
+    /// error rather than a soft warning.
+    private func validateProfileShape(_ profile: ReciprocityProfile, filmID: String) throws {
+        guard !profile.rules.isEmpty else {
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "rule list is empty"
+            )
+        }
+
+        var hasThreshold = false
+        var hasFormula = false
+        var hasLimitedGuidance = false
+        for rule in profile.rules {
+            switch rule {
+            case .threshold:
+                hasThreshold = true
+            case .formula:
+                hasFormula = true
+            case .limitedGuidance:
+                hasLimitedGuidance = true
+            }
+        }
+
+        guard hasThreshold else {
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "missing threshold rule"
+            )
+        }
+
+        if hasFormula && hasLimitedGuidance {
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "formula and limited-guidance rules cannot coexist"
+            )
+        }
+
+        guard hasFormula || hasLimitedGuidance else {
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "threshold rule must be paired with either a formula or a limited-guidance rule"
+            )
+        }
+
+        if hasLimitedGuidance, !profile.sourceEvidence.isEmpty {
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "limited-guidance profiles cannot carry sourceEvidence rows"
+            )
         }
     }
 
@@ -175,6 +242,7 @@ enum LaunchPresetFilmCatalogLoaderError: Error, Equatable {
     case invalidPrimaryProfileCount(filmID: String, count: Int)
     case invalidPrimaryProfileSource(String)
     case invalidFilmISO(filmID: String, iso: Int)
+    case invalidRuleShape(filmID: String, reason: String)
 }
 
 extension LaunchPresetFilmCatalogLoaderError: LocalizedError {
@@ -206,6 +274,8 @@ extension LaunchPresetFilmCatalogLoaderError: LocalizedError {
             return "Bundled launch preset film catalog film '\(filmID)' does not use a current official manufacturer primary profile."
         case let .invalidFilmISO(filmID, iso):
             return "Bundled launch preset film catalog film '\(filmID)' has non-positive ISO \(iso); launch scope requires a positive box-speed ISO."
+        case let .invalidRuleShape(filmID, reason):
+            return "Bundled launch preset film catalog film '\(filmID)' has an unsupported reciprocity rule shape: \(reason)."
         }
     }
 }

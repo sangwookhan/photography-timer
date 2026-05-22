@@ -1,18 +1,18 @@
 import Foundation
 @testable import PTimer
 
-/// Trace-recording implementations of the collaborator protocols
-/// the ViewModel and TimerManager talk to. Each spy forwards the
-/// observed call (and a deterministic textual representation of its
-/// payload) into the supplied `RecordReplayRecorder`.
-///
-/// Spies do **not** add fake business behavior — when a protocol
-/// method has a non-trivial return type (e.g. `loadSnapshot()` →
-/// `PersistentTimerCollectionSnapshot?`), the spy returns `nil` /
-/// the empty default the corresponding `NoOp*` implementation would
-/// have returned. If a future scenario needs a primed return value,
-/// extend the spy explicitly rather than letting hidden defaults
-/// drift in.
+// Trace-recording implementations of the collaborator protocols
+// the ViewModel and TimerManager talk to. Each spy forwards the
+// observed call (and a deterministic textual representation of its
+// payload) into the supplied `RecordReplayRecorder`.
+//
+// Spies do **not** add fake business behavior — when a protocol
+// method has a non-trivial return type (e.g. `loadSnapshot()` →
+// `PersistentTimerCollectionSnapshot?`), the spy returns `nil` /
+// the empty default the corresponding `NoOp*` implementation would
+// have returned. If a future scenario needs a primed return value,
+// extend the spy explicitly rather than letting hidden defaults
+// drift in.
 
 // MARK: - Date rendering
 
@@ -64,7 +64,7 @@ final class RecordingLockScreenExposer: LockScreenTimerTargetExposing {
                     key: "representativeEndDate",
                     value: RecordReplayDateRendering.render(target.representativeEndDate, referenceDate: referenceDate)
                 ),
-                OrderedField(key: "scheduledTargets", value: scheduled)
+                OrderedField(key: "scheduledTargets", value: scheduled),
             ]
         )
     }
@@ -150,7 +150,7 @@ final class RecordingTimerCompletionScheduler: TimerCompletionNotificationSchedu
                 OrderedField(
                     key: "endDate",
                     value: RecordReplayDateRendering.render(timer.endDate, referenceDate: referenceDate)
-                )
+                ),
             ]
         )
     }

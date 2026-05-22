@@ -240,7 +240,7 @@ final class TimerWorkspaceModel: ObservableObject {
             return
         }
 
-        let snapshot = PersistentTimerMetadataCollectionSnapshot(
+        let snapshot = PersistentTimerMetadataCollection(
             nextTimerOrder: nextTimerOrder,
             timers: timerMetadata
                 .map { id, metadata in

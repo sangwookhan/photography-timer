@@ -37,7 +37,7 @@ final class Velvia50FormulaProfileTests: XCTestCase {
             XCTAssertEqual(
                 result.metadata.basis,
                 .formulaDerived,
-                "Metered \(metered) s must be formula-derived, not exactTablePoint, even at published source rows (4/8/16/32 s)."
+                "Metered \(metered) s must be formula-derived even at published source rows (4/8/16/32 s)."
             )
         }
     }
@@ -115,7 +115,7 @@ final class Velvia50FormulaProfileTests: XCTestCase {
                 guard case let .colorFilter(filter) = adjustment else { return nil }
                 return filter.filterName
             }.first
-            XCTAssertEqual(filterName, filtersByMetered[metered], "Color filter at \(metered) s must match the published table.")
+            XCTAssertEqual(filterName, filtersByMetered[metered], "Color filter at \(metered) s must match the published reference.")
 
             let hasStopDelta = row.adjustments.contains { adjustment in
                 if case .exposure(.stopDelta) = adjustment { return true }
@@ -190,7 +190,7 @@ final class Velvia50FormulaProfileTests: XCTestCase {
     /// Detail copy past the not-recommended boundary surfaces
     /// "source range" without the "Extrapolated" label — Velvia 50's
     /// numeric continuation is explicitly outside Fujifilm's
-    /// supported range, not an extrapolation of a recommended table.
+    /// supported range.
     @MainActor
     func testVelvia50BeyondSourceRangeDetailAvoidsExtrapolatedWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 100)

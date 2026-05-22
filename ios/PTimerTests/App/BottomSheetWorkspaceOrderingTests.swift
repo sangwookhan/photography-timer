@@ -50,7 +50,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
             [
                 UUID(uuidString: "ccccccc3-3333-3333-3333-333333333333")!,
                 UUID(uuidString: "bbbbbbb2-2222-2222-2222-222222222222")!,
-                UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!
+                UUID(uuidString: "aaaaaaa1-1111-1111-1111-111111111111")!,
             ]
         )
         XCTAssertEqual(before.compactItems.map(\.id), after.compactItems.map(\.id))
@@ -66,7 +66,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                 UUID(uuidString: "eeeeeee5-5555-5555-5555-555555555555")!,
                 UUID(uuidString: "ddddddd4-4444-4444-4444-444444444444")!,
                 UUID(uuidString: "fffffff6-6666-6666-6666-666666666666")!,
-                UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
+                UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
             ]
         )
         XCTAssertEqual(ordered.prefix(2).map(\.status), [.paused, .running])
@@ -236,7 +236,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                 pausedAt: nil,
                 status: .completed,
                 referenceDate: now
-            )
+            ),
         ]
     }
 
@@ -282,7 +282,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                 pausedAt: now.addingTimeInterval(-12),
                 status: .paused,
                 referenceDate: now
-            )
+            ),
         ]
     }
 
@@ -341,7 +341,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                 pausedAt: now.addingTimeInterval(-10),
                 status: .paused,
                 referenceDate: now
-            )
+            ),
         ]
     }
 

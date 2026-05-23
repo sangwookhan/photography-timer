@@ -134,6 +134,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         TimerStartComposer(formatShutter: calculator.formatShutter)
     }
 
+    /// Stateless projection helper for per-camera-slot page state.
+    /// Holds no model references; the ViewModel feeds it pre-computed
+    /// values from live models or stored snapshots.
+    private let cameraSlotPageStateBuilder = CameraSlotPageStateBuilder()
+
     /// Convenience init that builds the four child models from the
     /// dependency bundle. Used by `RecordReplayBaselineSmokeTests` and
     /// any future caller that already has a `ViewModelDependencies`
@@ -713,54 +718,35 @@ final class ExposureCalculatorViewModel: ObservableObject {
         let isActive = slotID == cameraSlotSessionModel.activeSlotID
         let identity = cameraSlotSessionModel.identity(for: slotID)
 
-        let baseShutter: Double
-        let ndStep: NDStep
-        let scaleMode: ExposureScaleMode
-        let film: FilmIdentity?
-        let profileOverride: ReciprocityProfile?
-        let targetSeconds: TimeInterval?
-
+        let inputs: CameraSlotPageStateBuilder.PageStateInputs
         if isActive {
-            baseShutter = calculatorModel.baseShutterSeconds
-            ndStep = calculatorModel.ndStep
-            scaleMode = calculatorModel.scaleMode
-            film = filmSelectionModel.selectedPresetFilm
-            profileOverride = filmSelectionModel.selectedProfileOverride
-            targetSeconds = targetShutterModel.targetSeconds
+            inputs = CameraSlotPageStateBuilder.PageStateInputs(
+                slotID: slotID,
+                cameraDisplayName: identity.displayName,
+                isActive: true,
+                baseShutter: calculatorModel.baseShutterSeconds,
+                ndStep: calculatorModel.ndStep,
+                scaleMode: calculatorModel.scaleMode,
+                selectedFilm: filmSelectionModel.selectedPresetFilm,
+                selectedProfileOverride: filmSelectionModel.selectedProfileOverride,
+                targetShutterSeconds: targetShutterModel.targetSeconds
+            )
         } else {
             let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) ?? .initial
-            baseShutter = snapshot.baseShutterSeconds
-            ndStep = snapshot.ndStep
-            scaleMode = snapshot.scaleMode
-            film = snapshot.selectedPresetFilm
-            profileOverride = snapshot.selectedProfileOverride
-            targetSeconds = snapshot.targetShutterSeconds
+            inputs = CameraSlotPageStateBuilder.PageStateInputs(
+                slotID: slotID,
+                cameraDisplayName: identity.displayName,
+                isActive: false,
+                baseShutter: snapshot.baseShutterSeconds,
+                ndStep: snapshot.ndStep,
+                scaleMode: snapshot.scaleMode,
+                selectedFilm: snapshot.selectedPresetFilm,
+                selectedProfileOverride: snapshot.selectedProfileOverride,
+                targetShutterSeconds: snapshot.targetShutterSeconds
+            )
         }
 
-        let filmDisplay: FilmSelectionDisplayState = {
-            guard let film else {
-                return FilmSelectionDisplayState(primaryText: "No film", secondaryText: nil)
-            }
-            let activeProfile = profileOverride ?? film.profiles.first
-            return FilmSelectionDisplayState(
-                primaryText: film.canonicalStockName,
-                secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile)
-            )
-        }()
-
-        return CameraSlotPageState(
-            slotID: slotID,
-            cameraDisplayName: identity.displayName,
-            baseShutter: baseShutter,
-            ndStep: ndStep,
-            scaleMode: scaleMode,
-            selectedFilm: film,
-            selectedProfileOverride: profileOverride,
-            filmSelectionDisplayState: filmDisplay,
-            isFilmWorkflowActive: film != nil,
-            isActive: isActive,
-            targetShutterSeconds: targetSeconds
-        )
+        return cameraSlotPageStateBuilder.pageState(inputs)
     }
 
     /// Calculator result for a given page state. The active slot
@@ -834,51 +820,24 @@ final class ExposureCalculatorViewModel: ObservableObject {
             for: bindingState
         )
 
-        return FilmModeExposureResultState(
-            adjustedShutterSeconds: result.resultShutterSeconds,
-            reciprocityState: reciprocityModel.reciprocityStateDisplayState(for: bindingState),
-            adjustedShutterAction: Self.inactiveTimerActionState(
-                targetSeconds: result.resultShutterSeconds,
-                accessibilityLabel: "Start timer from adjusted shutter"
-            ),
-            correctedExposure: reciprocityModel.correctedExposureDisplayState(
-                for: bindingState
-            ),
-            correctedExposureAction: Self.inactiveTimerActionState(
-                targetSeconds: liveCorrectedAction.targetSeconds,
-                accessibilityLabel: liveCorrectedAction.accessibilityLabel
+        return cameraSlotPageStateBuilder.inactiveFilmModeResult(
+            CameraSlotPageStateBuilder.InactiveFilmModeInputs(
+                adjustedShutterSeconds: result.resultShutterSeconds,
+                reciprocityState: reciprocityModel.reciprocityStateDisplayState(for: bindingState),
+                correctedExposure: reciprocityModel.correctedExposureDisplayState(for: bindingState),
+                liveCorrectedActionState: liveCorrectedAction
             )
         )
     }
 
-    /// Builds a disabled action state for an inactive page. Centralised
-    /// so both the adjusted and corrected actions emit the same
-    /// "page to this slot first" hint and the same `canStartTimer`
-    /// policy.
-    private static func inactiveTimerActionState(
-        targetSeconds: TimeInterval?,
-        accessibilityLabel: String
-    ) -> FilmModeTimerActionState {
-        FilmModeTimerActionState(
-            targetSeconds: targetSeconds,
-            canStartTimer: false,
-            accessibilityLabel: accessibilityLabel,
-            accessibilityHint: "Inactive camera slot — page to this slot to start a timer"
-        )
-    }
-
-    /// Picker shutter-step list for a given page's scale. Mirrors the
-    /// active-slot `pickerShutterStepSeconds` but parametrized by
-    /// the slot's stored scale mode so a future per-slot scale
-    /// preference does not silently render the wrong ladder.
+    /// Picker shutter-step list for a given page's scale.
     func pickerShutterStepSeconds(forPage pageState: CameraSlotPageState) -> [Double] {
-        ExposureScale.scale(for: pageState.scaleMode).shutterSteps.map(\.seconds)
+        cameraSlotPageStateBuilder.pickerShutterStepSeconds(forPage: pageState)
     }
 
-    /// Picker `NDStep` list for a given page's scale. Same reasoning
-    /// as `pickerShutterStepSeconds(forPage:)`.
+    /// Picker `NDStep` list for a given page's scale.
     func pickerNDSteps(forPage pageState: CameraSlotPageState) -> [NDStep] {
-        ExposureScale.scale(for: pageState.scaleMode).ndSteps
+        cameraSlotPageStateBuilder.pickerNDSteps(forPage: pageState)
     }
 
     /// Captures the active slot's current calculator/film state into a
@@ -1150,33 +1109,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
         return TargetShutterPresenter.makeDisplayState(
             targetSeconds: pageState.targetShutterSeconds,
-            comparisonSource: targetShutterComparisonSource(forPage: pageState)
+            comparisonSource: cameraSlotPageStateBuilder.targetShutterComparisonSource(
+                forPage: pageState,
+                filmModeResult: filmModeExposureResultState(forPage: pageState),
+                calculationResult: calculationResult(forPage: pageState)
+            )
         )
-    }
-
-    /// Per-page comparison source. Routes the inactive-page calc and
-    /// reciprocity bindings (computed from the slot's snapshot) into
-    /// the same digital-vs-film selector logic the active path uses.
-    private func targetShutterComparisonSource(
-        forPage pageState: CameraSlotPageState
-    ) -> TargetShutterPresenter.ComparisonSource {
-        if pageState.isFilmWorkflowActive {
-            if let resultState = filmModeExposureResultState(forPage: pageState),
-               resultState.hasQuantifiedCorrectedExposure,
-               let correctedSeconds = resultState.correctedExposure.correctedExposureSeconds,
-               correctedSeconds.isFinite,
-               correctedSeconds > 0 {
-                return .correctedExposure(correctedSeconds)
-            }
-            return .unavailable
-        }
-
-        guard case .success(let result) = calculationResult(forPage: pageState),
-              result.resultShutterSeconds.isFinite,
-              result.resultShutterSeconds > 0 else {
-            return .unavailable
-        }
-        return .adjustedShutter(result.resultShutterSeconds)
     }
 
     /// Comparison source the presenter uses when composing the Target

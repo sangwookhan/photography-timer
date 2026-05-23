@@ -97,9 +97,8 @@ struct FilmModeDetailsGraphPresenter {
         return nil
     }
 
-    /// Pre-computed values shared between the geometry builder and the
-    /// final display-state assembly. Lives next to the helper so the
-    /// graph constructor stays under the function-body-length limit.
+    /// Pre-computed values shared between the geometry builder and
+    /// the final display-state assembly.
     private struct FormulaGraphGeometry {
         let formulaRule: FormulaReciprocityRule
         let sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference]
@@ -216,7 +215,8 @@ struct FilmModeDetailsGraphPresenter {
         currentMeteredExposureSeconds: Double,
         currentPoint: FilmModeDetailsGraphCurrentPoint?
     ) -> FilmModeDetailsGraphDisplayState {
-        FilmModeDetailsGraphDisplayState(
+        let textPresenter = FilmModeDetailsGraphTextPresenter()
+        return FilmModeDetailsGraphDisplayState(
             kind: .formula,
             // Neutral title that reads sensibly for every formula
             // profile — converted formula profiles carry source
@@ -227,12 +227,11 @@ struct FilmModeDetailsGraphPresenter {
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             usesCurrentInputGuideOnly: geometry.usesCurrentInputGuideOnly,
-            caption: FilmModeDetailsGraphTextPresenter().caption(
+            caption: textPresenter.caption(
                 for: bindingState,
                 noCorrectionRangeUpperBoundSeconds: geometry.noCorrectionRangeUpperBoundSeconds
             ),
-            unsupportedExplanation: FilmModeDetailsGraphTextPresenter()
-                .unsupportedExplanation(for: bindingState),
+            unsupportedExplanation: textPresenter.unsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
             xAxisTicks: formulaGraphAxisTicks(
@@ -244,7 +243,7 @@ struct FilmModeDetailsGraphPresenter {
                 viewportLowerBoundSeconds: geometry.stableLowerBoundSeconds
             ),
             supportedRangeUpperBoundSeconds: geometry.supportedUpperBoundSeconds,
-            unsupportedRegionStartSeconds: FilmModeDetailsGraphTextPresenter().unsupportedRegionStartSeconds(
+            unsupportedRegionStartSeconds: textPresenter.unsupportedRegionStartSeconds(
                 supportedUpperBoundSeconds: geometry.supportedUpperBoundSeconds,
                 currentMeteredExposureSeconds: currentMeteredExposureSeconds,
                 isUnsupported: bindingState.presentation.category == .unsupported

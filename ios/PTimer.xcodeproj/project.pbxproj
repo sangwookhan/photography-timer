@@ -149,6 +149,8 @@
 		A00000000000000000000702 /* FilmModeDetailsLegendPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */; };
 		A00000000000000000000704 /* FilmModeDetailsReferencePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */; };
 		A00000000000000000000706 /* FilmModeDetailsGraphPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */; };
+		A00000000000000000000952 /* FormulaEquationFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000953 /* FormulaEquationFormatter.swift */; };
+		A00000000000000000000954 /* FilmModeDetailsGraphCurveSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */; };
 		A00000000000000000000708 /* ReciprocitySourceEvidenceClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */; };
 		A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */; };
 		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
@@ -360,6 +362,8 @@
 		A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsLegendPresenter.swift; sourceTree = "<group>"; };
 		A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsReferencePresenter.swift; sourceTree = "<group>"; };
 		A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000953 /* FormulaEquationFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaEquationFormatter.swift; sourceTree = "<group>"; };
+		A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphCurveSampler.swift; sourceTree = "<group>"; };
 		A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySourceEvidenceClassifier.swift; sourceTree = "<group>"; };
 		A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
@@ -550,6 +554,8 @@
 				A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */,
 				A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */,
 				A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */,
+				A00000000000000000000953 /* FormulaEquationFormatter.swift */,
+				A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */,
 			);
 			path = FilmContext;
 			sourceTree = "<group>";
@@ -959,6 +965,8 @@
 				A00000000000000000000702 /* FilmModeDetailsLegendPresenter.swift in Sources */,
 				A00000000000000000000704 /* FilmModeDetailsReferencePresenter.swift in Sources */,
 				A00000000000000000000706 /* FilmModeDetailsGraphPresenter.swift in Sources */,
+				A00000000000000000000952 /* FormulaEquationFormatter.swift in Sources */,
+				A00000000000000000000954 /* FilmModeDetailsGraphCurveSampler.swift in Sources */,
 				A00000000000000000000123 /* WorkspaceCoordinator.swift in Sources */,
 				A00000000000000000000125 /* CalculatorModel.swift in Sources */,
 				A00000000000000000000130 /* ReciprocityModel.swift in Sources */,

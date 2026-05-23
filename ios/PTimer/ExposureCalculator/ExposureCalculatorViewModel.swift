@@ -1393,101 +1393,64 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func restorePersistedCalculatorContext() {
+        let planBuilder = CalculatorContextRestorePlanBuilder()
+        let plan: CalculatorContextRestorePlanBuilder.RestorePlan
+
         // Prefer the new multi-slot session snapshot when present.
-        if let session = sessionPersistence?.loadSession() {
-            applyRestoredSession(session)
-            return
-        }
-
-        // No session snapshot — fall back to the legacy single-
-        // context restore path. This covers (a) first launch after
+        // No session snapshot falls back to the legacy single-
+        // context restore path — covers (a) first launch after
         // upgrade from a session-unaware build and (b) test setups
-        // that wire the legacy store directly. The legacy path
-        // sanitises out-of-range stored values; the next persist
-        // writes the new session snapshot so subsequent launches
-        // skip this branch.
-        guard let restored = filmSelectionModel.restoreContext() else {
+        // that wire the legacy store directly.
+        if let session = sessionPersistence?.loadSession() {
+            plan = planBuilder.plan(from: session)
+        } else if let restored = filmSelectionModel.restoreContext() {
+            plan = planBuilder.plan(fromLegacy: restored)
+        } else {
             return
         }
 
-        if let restoredSlotID = restored.activeCameraSlotID {
-            cameraSlotSessionModel.restoreActiveSlot(to: restoredSlotID)
-        }
-
-        if restored.hadInvalidFilmReference {
-            return
-        }
-
-        applyLegacyRestoredCalcInputs(
-            baseShutterSeconds: restored.baseShutterSeconds,
-            ndStep: restored.ndStep,
-            scaleMode: restored.scaleMode
-        )
-        persistCalculatorContext()
+        applyRestorePlan(plan)
     }
 
-    /// Applies a session restored via the persistence controller.
-    /// The active slot's snapshot becomes the live calc/film state;
-    /// every other restored slot is loaded into the session model's
-    /// inactive map so each TabView page comes back to the values
-    /// the photographer left it with.
-    ///
-    /// **Order matters.** `applyCameraSlotSnapshot` runs a deferred
+    /// Applies a planned restore. **Side-effect order matters** on
+    /// the session branch: `applyCameraSlotSnapshot` runs a deferred
     /// `persistCalculatorContext()` at its end, which reads
     /// `cameraSlotSessionModel.currentInactiveSnapshots()` to write
-    /// the full session. If we applied the active snapshot before
-    /// loading the inactive map, the trailing persist would
+    /// the full session. If the active snapshot is applied before
+    /// the inactive map is loaded, the trailing persist would
     /// overwrite a valid 4-slot session with active-only state and
     /// silently destroy the photographer's other three slots on the
     /// first relaunch. Restore the inactive map first so the persist
     /// captures the full session.
-    private func applyRestoredSession(
-        _ session: CameraSlotSessionPersistenceController.RestoredSession
+    private func applyRestorePlan(
+        _ plan: CalculatorContextRestorePlanBuilder.RestorePlan
     ) {
-        cameraSlotSessionModel.restoreActiveSlot(to: session.activeSlotID)
+        switch plan.source {
+        case let .session(sessionPlan):
+            cameraSlotSessionModel.restoreActiveSlot(to: sessionPlan.activeSlotID)
+            cameraSlotSessionModel.restoreInactiveSnapshots(sessionPlan.inactiveSnapshots)
+            cameraSlotSessionModel.restoreCustomDisplayNames(sessionPlan.customDisplayNames)
+            applyCameraSlotSnapshot(sessionPlan.activeSlotSnapshot)
 
-        var snapshotsBySlotID = session.snapshotsBySlotID
-        let activeSnapshot = snapshotsBySlotID.removeValue(forKey: session.activeSlotID)
-            ?? .initial
-
-        // Bulk-load inactive snapshots BEFORE applying the active
-        // snapshot — see method doc above for the persist-ordering
-        // rationale.
-        cameraSlotSessionModel.restoreInactiveSnapshots(snapshotsBySlotID)
-
-        // Restore photographer-supplied custom names before the
-        // trailing persist inside `applyCameraSlotSnapshot` so the
-        // first re-write of the session snapshot captures both calc
-        // state and labels.
-        cameraSlotSessionModel.restoreCustomDisplayNames(session.customDisplayNames)
-
-        // Apply the active slot's snapshot to the live models. Reuse
-        // `applyCameraSlotSnapshot` so the same Combine wrapper rules
-        // (live-preview clear, scale-then-inputs ordering, single
-        // persist) cover both slot-switch and restore. The trailing
-        // persist now captures active + inactive together.
-        applyCameraSlotSnapshot(activeSnapshot)
-    }
-
-    /// Legacy fallback applier for the case where the session
-    /// controller is absent (test setup that wires the legacy store
-    /// directly). Mirrors the pre-session restore behavior.
-    private func applyLegacyRestoredCalcInputs(
-        baseShutterSeconds: Double?,
-        ndStep restoredNDStep: NDStep?,
-        scaleMode restoredScaleMode: ExposureScaleMode
-    ) {
-        scaleMode = restoredScaleMode
-        baseShutter = sanitizedRestoredBaseShutter(from: baseShutterSeconds, mode: restoredScaleMode)
-            ?? defaultFilmModeBaseShutter
-        if let sanitized = sanitizedRestoredNDStep(from: restoredNDStep) {
-            if let wholeStops = sanitized.wholeStops {
-                ndStop = wholeStops
-            } else {
-                ndStep = sanitized
+        case let .legacy(legacy):
+            if let restoredSlotID = legacy.activeCameraSlotID {
+                cameraSlotSessionModel.restoreActiveSlot(to: restoredSlotID)
             }
-        } else {
-            ndStop = defaultFilmModeNDStop
+            guard !legacy.hadInvalidFilmReference else {
+                return
+            }
+            scaleMode = legacy.scaleMode
+            baseShutter = legacy.baseShutterSeconds ?? defaultFilmModeBaseShutter
+            if let sanitized = legacy.ndStep {
+                if let wholeStops = sanitized.wholeStops {
+                    ndStop = wholeStops
+                } else {
+                    ndStep = sanitized
+                }
+            } else {
+                ndStop = defaultFilmModeNDStop
+            }
+            persistCalculatorContext()
         }
     }
 
@@ -1515,39 +1478,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
             inactiveSnapshots: cameraSlotSessionModel.currentInactiveSnapshots(),
             customDisplayNames: cameraSlotSessionModel.customDisplayNames
         )
-    }
-
-    private func sanitizedRestoredBaseShutter(
-        from storedValue: Double?,
-        mode: ExposureScaleMode = .oneThirdStop
-    ) -> Double? {
-        guard let storedValue else {
-            return nil
-        }
-
-        // Match the stored value against the active scale's shutter
-        // ladder so a one-third-stop value (e.g., `(1/30) · 2^(1/3)`)
-        // round-trips after a relaunch in 1/3-stop mode.
-        return ExposureScale.scale(for: mode).shutterSteps.first {
-            abs($0.seconds - storedValue) <= ExposureCalculator.stabilityEpsilon
-        }?.seconds
-    }
-
-    private func sanitizedRestoredNDStep(from storedValue: NDStep?) -> NDStep? {
-        guard let storedValue else {
-            return nil
-        }
-
-        // Reject anything outside the 0…30 stop range supported by the
-        // shipping picker; PTIMER-79 already documented this guardrail
-        // for whole-stop values, and one-third-stop values inherit the
-        // same envelope.
-        guard storedValue.stops >= -ExposureCalculator.stabilityEpsilon,
-              storedValue.stops <= Double(ExposureScale.maximumWholeNDStops) + ExposureCalculator.stabilityEpsilon else {
-            return nil
-        }
-
-        return storedValue
     }
 
     private static let dateTimeFormatter: DateFormatter = {

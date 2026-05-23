@@ -33,6 +33,7 @@
 		A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ExposureCalculatorViewModel.swift */; };
 		A00000000000000000000940 /* TimerStartComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000941 /* TimerStartComposer.swift */; };
 		A00000000000000000000942 /* CameraSlotPageStateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */; };
+		A00000000000000000000944 /* CalculatorContextRestorePlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */; };
 		A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */; };
 		A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */; };
 		A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */; };
@@ -242,6 +243,7 @@
 		A00000000000000000000019 /* ExposureCalculatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000941 /* TimerStartComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStartComposer.swift; sourceTree = "<group>"; };
 		A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPageStateBuilder.swift; sourceTree = "<group>"; };
+		A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorContextRestorePlanBuilder.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculationAccuracyTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTests.swift; sourceTree = "<group>"; };
@@ -478,6 +480,7 @@
 				A00000000000000000000019 /* ExposureCalculatorViewModel.swift */,
 				A00000000000000000000941 /* TimerStartComposer.swift */,
 				A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */,
+				A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */,
 				A00000000000000000000159 /* ExposureScale.swift */,
 				A00000000000000000000107 /* FilmModeDetailsPresenter.swift */,
 				A00000000000000000000148 /* FilmModeDetailsView.swift */,
@@ -925,6 +928,7 @@
 				A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */,
 				A00000000000000000000940 /* TimerStartComposer.swift in Sources */,
 				A00000000000000000000942 /* CameraSlotPageStateBuilder.swift in Sources */,
+				A00000000000000000000944 /* CalculatorContextRestorePlanBuilder.swift in Sources */,
 				A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */,
 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,
 				A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */,

@@ -83,7 +83,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
     }
 
     /// Two-relaunch regression. The bug being fenced: on first
-    /// relaunch, `applyRestoredSession` used to apply the active
+    /// relaunch, the restore path used to apply the active
     /// snapshot before loading the inactive map, and the trailing
     /// `persistCalculatorContext()` inside the snapshot apply read
     /// the (still empty) inactive map and overwrote the persisted

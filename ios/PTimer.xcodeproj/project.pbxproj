@@ -124,6 +124,7 @@
 		A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */; };
 		A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */; };
 		A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */; };
+		A00000000000000000000950 /* FilmModeDetailsGraphPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */; };
 		A00000000000000000000928 /* Provia100FFormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */; };
 		A0000000000000000000092A /* Provia100FScalePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092B /* Provia100FScalePolicyTests.swift */; };
 		A0000000000000000000092C /* Provia100FPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* Provia100FPresentationTests.swift */; };
@@ -334,6 +335,7 @@
 		A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidanceCatalogMappingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTestSupport.swift; sourceTree = "<group>"; };
 		A0000000000000000000092B /* Provia100FScalePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FScalePolicyTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092D /* Provia100FPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FPresentationTests.swift; sourceTree = "<group>"; };
@@ -726,6 +728,7 @@
 				A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */,
 				A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */,
 				A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */,
+				A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */,
 				A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */,
 				A0000000000000000000092B /* Provia100FScalePolicyTests.swift */,
 				A0000000000000000000092D /* Provia100FPresentationTests.swift */,
@@ -1044,6 +1047,7 @@
 				A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */,
 				A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */,
 				A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */,
+				A00000000000000000000950 /* FilmModeDetailsGraphPresenterTests.swift in Sources */,
 				A00000000000000000000928 /* Provia100FFormulaProfileTestSupport.swift in Sources */,
 				A0000000000000000000092A /* Provia100FScalePolicyTests.swift in Sources */,
 				A0000000000000000000092C /* Provia100FPresentationTests.swift in Sources */,

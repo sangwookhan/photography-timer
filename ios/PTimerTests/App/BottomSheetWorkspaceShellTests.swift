@@ -140,8 +140,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testCompactCardTapOnActiveTimerFocusesActiveSectionWithHighlight() {
         let store = BottomSheetWorkspaceStateStore()
-        let timer = secondsScaleTimer()
-        let snapshot = makeSnapshot(from: [timer])
+        let timer = bottomSheetSecondsScaleTimer()
+        let snapshot = makeBottomSheetSnapshot(from: [timer])
 
         ExposureCalculatorScreen.handleCompactCardTap(
             id: timer.id,
@@ -156,8 +156,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testCompactCardTapOnPausedTimerFocusesActiveSectionWithHighlight() {
         let store = BottomSheetWorkspaceStateStore()
-        let pausedTimer = pausedProgressTimer()
-        let snapshot = makeSnapshot(from: [pausedTimer])
+        let pausedTimer = bottomSheetPausedProgressTimer()
+        let snapshot = makeBottomSheetSnapshot(from: [pausedTimer])
 
         ExposureCalculatorScreen.handleCompactCardTap(
             id: pausedTimer.id,
@@ -176,8 +176,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testCompactCardTapOnCompletedTimerFocusesRecentlyCompletedSection() {
         let store = BottomSheetWorkspaceStateStore()
-        let completedTimer = sampleTimers().first { $0.status == .completed }!
-        let snapshot = makeSnapshot(from: [completedTimer])
+        let completedTimer = bottomSheetSampleTimers().first { $0.status == .completed }!
+        let snapshot = makeBottomSheetSnapshot(from: [completedTimer])
 
         ExposureCalculatorScreen.handleCompactCardTap(
             id: completedTimer.id,
@@ -200,9 +200,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testCompactCardTapInMixedSnapshotRoutesByStatus() {
         let store = BottomSheetWorkspaceStateStore()
-        let active = secondsScaleTimer()
-        let completed = sampleTimers().first { $0.status == .completed }!
-        let snapshot = makeSnapshot(from: [active, completed])
+        let active = bottomSheetSecondsScaleTimer()
+        let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
+        let snapshot = makeBottomSheetSnapshot(from: [active, completed])
 
         ExposureCalculatorScreen.handleCompactCardTap(
             id: active.id,
@@ -223,8 +223,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testOverflowTapRoutesToCompletedSectionWhenOnlyCompletedRemain() {
         let store = BottomSheetWorkspaceStateStore()
-        let completed = sampleTimers().first { $0.status == .completed }!
-        let snapshot = makeSnapshot(from: [completed])
+        let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
+        let snapshot = makeBottomSheetSnapshot(from: [completed])
 
         ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
 
@@ -235,8 +235,8 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testOverflowTapRoutesToActiveSectionWhenAnyActiveTimerRemains() {
         let store = BottomSheetWorkspaceStateStore()
-        let active = secondsScaleTimer()
-        let snapshot = makeSnapshot(from: [active])
+        let active = bottomSheetSecondsScaleTimer()
+        let snapshot = makeBottomSheetSnapshot(from: [active])
 
         ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
 
@@ -247,9 +247,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     @MainActor
     func testOverflowTapInMixedSnapshotPrefersActiveSection() {
         let store = BottomSheetWorkspaceStateStore()
-        let active = secondsScaleTimer()
-        let completed = sampleTimers().first { $0.status == .completed }!
-        let snapshot = makeSnapshot(from: [active, completed])
+        let active = bottomSheetSecondsScaleTimer()
+        let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
+        let snapshot = makeBottomSheetSnapshot(from: [active, completed])
 
         ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
 
@@ -275,658 +275,25 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertEqual(BottomSheetWorkspaceCopy.title, "Timers")
     }
 
-    // MARK: - Compact card geometry (still drives screen-level strip)
-
-    func testCompactDockUsesSymmetricEighteenPointViewportInsets() {
-        let insets = BottomSheetCompactDockMetrics.contentInsets
-
-        XCTAssertEqual(insets.leading, 18)
-        XCTAssertEqual(insets.trailing, 18)
-        XCTAssertEqual(insets.leading, insets.trailing)
-        XCTAssertEqual(insets.top, 1)
-        XCTAssertEqual(insets.bottom, 1)
-        XCTAssertGreaterThan(BottomSheetCompactDockMetrics.viewportCornerRadius, 0)
-        XCTAssertEqual(
-            BottomSheetCompactDockMetrics.viewportHeight,
-            BottomSheetCompactDockMetrics.timerCardHeight + insets.top + insets.bottom
-        )
-    }
-
-    func testCompactDockConfigurationUsesHorizontalScrolling() {
-        XCTAssertTrue(BottomSheetCompactDockMetrics.scrollsHorizontally)
-    }
-
-    func testCompactCardHeightAccommodatesWorstCaseLayoutBudget() {
-        let statusHeaderHeight: CGFloat = 22
-        let primaryRemainingMinHeight: CGFloat = 34
-        let tertiaryOrFilmSlotHeight: CGFloat = 15
-        let decorativeTimelineMinHeight: CGFloat = 9
-        let identityBadgeHeight: CGFloat = 13
-        let verticalPadding: CGFloat = 9 + 12
-
-        let requiredHeight = statusHeaderHeight
-            + primaryRemainingMinHeight
-            + tertiaryOrFilmSlotHeight
-            + decorativeTimelineMinHeight
-            + identityBadgeHeight
-            + verticalPadding
-
-        XCTAssertGreaterThanOrEqual(
-            BottomSheetCompactDockMetrics.timerCardHeight,
-            requiredHeight,
-            "timerCardHeight must fit the worst-case compact card content " +
-            "without bottom clipping (PTIMER-124)."
-        )
-    }
-
-    func testCompactDockOverflowCaseUsesSameSymmetricInsetModel() {
-        let totalHorizontalInset = BottomSheetCompactDockMetrics.contentInsets.leading
-            + BottomSheetCompactDockMetrics.contentInsets.trailing
-        let widthWithoutOverflow = totalHorizontalInset
-            + (BottomSheetCompactDockMetrics.timerCardWidth * 3)
-            + (BottomSheetCompactDockMetrics.cardSpacing * 2)
-        let widthWithOverflow = totalHorizontalInset
-            + (BottomSheetCompactDockMetrics.timerCardWidth * 3)
-            + BottomSheetCompactDockMetrics.overflowCardWidth
-            + (BottomSheetCompactDockMetrics.cardSpacing * 3)
-
-        XCTAssertEqual(totalHorizontalInset, 36)
-        XCTAssertGreaterThan(widthWithOverflow, widthWithoutOverflow)
-        XCTAssertEqual(
-            widthWithOverflow - widthWithoutOverflow,
-            BottomSheetCompactDockMetrics.overflowCardWidth + BottomSheetCompactDockMetrics.cardSpacing
-        )
-    }
-
-    // MARK: - Snapshot factory: paused / completed presentation
-
-    func testVisiblePausedCopyUsesPausedPresentationLabel() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let pausedItem = snapshot.sections
-            .flatMap(\.items)
-            .first { $0.status == .paused }
-
-        XCTAssertEqual(pausedItem?.statusLabel, "Paused")
-    }
-
-    /// Table-driven compact-progress contract. One row per duration
-    /// scale (seconds, sixty-four-seconds, eight-minute,
-    /// thirty-four-minute, multi-hour) that exercises the layer
-    /// selection policy: how many layers are visible, which layers
-    /// are nil, and the expected fraction on each visible layer at
-    /// the timer's current "remaining" point.
-    func testCompactProgressLayerSelectionForRepresentativeDurationScales() throws {
-        for expectation in makeCompactProgressLayerExpectations() {
-            let snapshot = makeSnapshot(from: [expectation.timer])
-            let item = tryUnwrapCompactItem(from: snapshot)
-
-            XCTAssertEqual(
-                item.visibleLayerCount,
-                expectation.visibleLayerCount,
-                "[\(expectation.label)] visibleLayerCount mismatch"
-            )
-            try assertOriginalScaleLayer(matches: expectation, on: item)
-            try assertSixtyMinuteLayer(matches: expectation, on: item)
-            XCTAssertEqual(
-                item.sixtySecondLayer.fraction,
-                expectation.expectedSixtySecondFraction,
-                accuracy: 0.001,
-                "[\(expectation.label)] sixtySecondLayer.fraction mismatch"
-            )
-        }
-    }
-
-    private struct CompactProgressLayerExpectation {
-        let label: String
-        let timer: RunningTimerItem
-        let visibleLayerCount: Int
-        let expectedOriginalScaleFraction: Double?
-        let expectedSixtyMinuteFraction: Double?
-        let expectedSixtySecondFraction: Double
-    }
-
-    private func makeCompactProgressLayerExpectations() -> [CompactProgressLayerExpectation] {
-        [
-            CompactProgressLayerExpectation(
-                label: "short (seconds scale)",
-                timer: secondsScaleTimer(),
-                visibleLayerCount: 1,
-                expectedOriginalScaleFraction: nil,
-                expectedSixtyMinuteFraction: nil,
-                expectedSixtySecondFraction: 25.0 / 60.0
-            ),
-            CompactProgressLayerExpectation(
-                label: "64-second (sixty-second + sixty-minute)",
-                timer: minuteScaleTimer(),
-                visibleLayerCount: 2,
-                expectedOriginalScaleFraction: nil,
-                expectedSixtyMinuteFraction: 54.0 / 3600.0,
-                expectedSixtySecondFraction: 54.0 / 60.0
-            ),
-            CompactProgressLayerExpectation(
-                label: "eight-minute",
-                timer: eightMinuteScaleTimer(),
-                visibleLayerCount: 2,
-                expectedOriginalScaleFraction: nil,
-                expectedSixtyMinuteFraction: 478.0 / 3600.0,
-                expectedSixtySecondFraction: 58.0 / 60.0
-            ),
-            CompactProgressLayerExpectation(
-                label: "thirty-four-minute",
-                timer: thirtyFourMinuteScaleTimer(),
-                visibleLayerCount: 2,
-                expectedOriginalScaleFraction: nil,
-                expectedSixtyMinuteFraction: 2048.0 / 3600.0,
-                expectedSixtySecondFraction: 8.0 / 60.0
-            ),
-            CompactProgressLayerExpectation(
-                label: "long-running (original-scale + minute + second)",
-                timer: hourScaleTimer(),
-                visibleLayerCount: 3,
-                expectedOriginalScaleFraction: 2.0 / 24.0,
-                expectedSixtyMinuteFraction: 1.0,
-                expectedSixtySecondFraction: 1.0
-            ),
-        ]
-    }
-
-    private func assertOriginalScaleLayer(
-        matches expectation: CompactProgressLayerExpectation,
-        on item: BottomSheetCompactItem
-    ) throws {
-        guard let expectedFraction = expectation.expectedOriginalScaleFraction else {
-            XCTAssertNil(item.originalScaleLayer, "[\(expectation.label)] expected no original-scale layer")
-            return
-        }
-        let layer = try XCTUnwrap(
-            item.originalScaleLayer,
-            "[\(expectation.label)] expected an original-scale layer"
-        )
-        XCTAssertEqual(
-            layer.fraction,
-            expectedFraction,
-            accuracy: 0.001,
-            "[\(expectation.label)] originalScaleLayer.fraction mismatch"
-        )
-    }
-
-    private func assertSixtyMinuteLayer(
-        matches expectation: CompactProgressLayerExpectation,
-        on item: BottomSheetCompactItem
-    ) throws {
-        guard let expectedFraction = expectation.expectedSixtyMinuteFraction else {
-            XCTAssertNil(item.sixtyMinuteLayer, "[\(expectation.label)] expected no 60-minute layer")
-            return
-        }
-        let layer = try XCTUnwrap(
-            item.sixtyMinuteLayer,
-            "[\(expectation.label)] expected a 60-minute layer"
-        )
-        XCTAssertEqual(
-            layer.fraction,
-            expectedFraction,
-            accuracy: 0.001,
-            "[\(expectation.label)] sixtyMinuteLayer.fraction mismatch"
-        )
-    }
-
-    func testCompactVisibleLayerCountPolicyBoundaries() {
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-
-        let timer59 = RunningTimerItem(
-            id: UUID(), order: 1, name: "59s", basisSummary: "", duration: 59,
-            startDate: now, endDate: now.addingTimeInterval(59),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
-        )
-        let item59 = BottomSheetWorkspaceSnapshot.make(
-            from: [timer59],
-            formatRemaining: { _ in "" },
-            timeContext: { _ in nil },
-            compactCompletedSupplementaryText: { _ in nil }
-        ).compactItems[0]
-        XCTAssertEqual(item59.visibleLayerCount, 1)
-
-        let timer60 = RunningTimerItem(
-            id: UUID(), order: 1, name: "60s", basisSummary: "", duration: 60,
-            startDate: now, endDate: now.addingTimeInterval(60),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
-        )
-        let item60 = BottomSheetWorkspaceSnapshot.make(
-            from: [timer60],
-            formatRemaining: { _ in "" },
-            timeContext: { _ in nil },
-            compactCompletedSupplementaryText: { _ in nil }
-        ).compactItems[0]
-        XCTAssertEqual(item60.visibleLayerCount, 2)
-
-        let timer3599 = RunningTimerItem(
-            id: UUID(), order: 1, name: "3599s", basisSummary: "", duration: 3599,
-            startDate: now, endDate: now.addingTimeInterval(3599),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
-        )
-        let item3599 = BottomSheetWorkspaceSnapshot.make(
-            from: [timer3599],
-            formatRemaining: { _ in "" },
-            timeContext: { _ in nil },
-            compactCompletedSupplementaryText: { _ in nil }
-        ).compactItems[0]
-        XCTAssertEqual(item3599.visibleLayerCount, 2)
-
-        let timer3600 = RunningTimerItem(
-            id: UUID(), order: 1, name: "3600s", basisSummary: "", duration: 3600,
-            startDate: now, endDate: now.addingTimeInterval(3600),
-            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
-        )
-        let item3600 = BottomSheetWorkspaceSnapshot.make(
-            from: [timer3600],
-            formatRemaining: { _ in "" },
-            timeContext: { _ in nil },
-            compactCompletedSupplementaryText: { _ in nil }
-        ).compactItems[0]
-        XCTAssertEqual(item3600.visibleLayerCount, 3)
-    }
-
-    func testCompactProgressUsesExactFractionsForComplexRemainingTimes() throws {
-        let now = Date(timeIntervalSince1970: 10_000)
-        let timer = RunningTimerItem(
-            id: UUID(),
-            order: 1,
-            name: "Complex Timer",
-            basisSummary: "...",
-            duration: 120,
-            startDate: now.addingTimeInterval(-35),
-            endDate: now.addingTimeInterval(85),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-
-        let snapshot = makeSnapshot(from: [timer])
-        let item = tryUnwrapCompactItem(from: snapshot)
-
-        XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 25.0 / 60.0, accuracy: 0.001)
-    }
-
-    func testCompactProgressStaysFrozenForPausedTimer() throws {
-        let snapshot = makeSnapshot(from: [pausedProgressTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.originalScaleLayer)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 45.0 / 3600.0, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 45.0 / 60.0, accuracy: 0.001)
-    }
-
-    func testCompactProgressSettlesAtCompleteForCompletedTimer() throws {
-        let snapshot = makeSnapshot(from: [completedProgressTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 2)
-        XCTAssertNil(item.originalScaleLayer)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 0, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 0, accuracy: 0.001)
-    }
-
-    func testCompactProgressClampsOriginalScaleLayerForMultiDayTimer() throws {
-        let snapshot = makeSnapshot(from: [longDurationTimer()])
-        let item = tryUnwrapCompactItem(from: snapshot)
-        let originalScaleLayer = try XCTUnwrap(item.originalScaleLayer)
-        let sixtyMinuteLayer = try XCTUnwrap(item.sixtyMinuteLayer)
-
-        XCTAssertEqual(item.visibleLayerCount, 3)
-        XCTAssertEqual(originalScaleLayer.fraction, 1, accuracy: 0.001)
-        XCTAssertEqual(sixtyMinuteLayer.fraction, 1, accuracy: 0.001)
-        XCTAssertEqual(item.sixtySecondLayer.fraction, 1, accuracy: 0.001)
-    }
-
-    func testCompletedCompactCardPrioritizesExpiredStateAndRelativeTime() {
-        let completedTimer = sampleTimers().first { $0.status == .completed }!
-        let snapshot = makeSnapshot(from: [completedTimer])
-
-        XCTAssertEqual(snapshot.compactItems.count, 1)
-        XCTAssertEqual(snapshot.compactItems[0].identityCue.markerText, "T3")
-        XCTAssertEqual(snapshot.compactItems[0].primaryRemainingText, "Done")
-        XCTAssertEqual(snapshot.compactItems[0].secondaryTotalText, "45s")
-        XCTAssertEqual(snapshot.compactItems[0].tertiaryStatusText, "just now")
-        XCTAssertFalse(snapshot.compactItems[0].showsDecorativeTimeline)
-        XCTAssertNotEqual(snapshot.compactItems[0].primaryRemainingText, "0s")
-        XCTAssertFalse((snapshot.compactItems[0].tertiaryStatusText ?? "").contains("0s"))
-    }
-
-    func testCompletedCompactCardUsesShortHourAndDayRelativeCopyWithoutLongAgo() {
-        let now = Date(timeIntervalSince1970: 20_000)
-        let oneHourCompleted = RunningTimerItem(
-            id: UUID(uuidString: "90909090-1111-2222-3333-444444444444")!,
-            order: 8,
-            name: "One Hour Completed",
-            basisSummary: "",
-            duration: 30,
-            startDate: now.addingTimeInterval(-3_700),
-            endDate: now.addingTimeInterval(-3_600),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed,
-            referenceDate: now
-        )
-        let oneDayCompleted = RunningTimerItem(
-            id: UUID(uuidString: "91919191-1111-2222-3333-444444444444")!,
-            order: 9,
-            name: "One Day Completed",
-            basisSummary: "",
-            duration: 256,
-            startDate: now.addingTimeInterval(-86_500),
-            endDate: now.addingTimeInterval(-86_400),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed,
-            referenceDate: now
-        )
-
-        let snapshot = makeSnapshot(from: [oneHourCompleted, oneDayCompleted])
-
-        XCTAssertEqual(snapshot.compactItems.map(\.primaryRemainingText), ["Done", "Done"])
-        XCTAssertEqual(snapshot.compactItems.map(\.secondaryTotalText), ["30s", "04:16"])
-        XCTAssertEqual(snapshot.compactItems.map(\.tertiaryStatusText), ["1h ago", "1d ago"])
-        XCTAssertFalse(snapshot.compactItems.compactMap(\.tertiaryStatusText).contains("long ago"))
-    }
-
-    func testLargeItemsKeepTotalDurationAsSingleSecondaryValue() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let runningItem = snapshot.sections
-            .flatMap(\.items)
-            .first { $0.id == UUID(uuidString: "22222222-2222-2222-2222-222222222222")! }
-
-        XCTAssertEqual(runningItem?.identityCue.markerText, "T1")
-        XCTAssertEqual(runningItem?.remainingText, "00:25")
-        XCTAssertEqual(runningItem?.totalDurationText, "02:00")
-        XCTAssertEqual(runningItem?.timingText, "Ends soon")
-        XCTAssertEqual(runningItem?.contextText, "Base 1/30s · 6 stops")
-    }
-
-    func testLargeItemsHideTopLineWhenNameOnlyRepeatsDurationOrContext() {
-        let snapshot = makeSnapshot(from: [redundantLargePresentationTimer()])
-        let item = snapshot.sections
-            .flatMap(\.items)
-            .first
-
-        XCTAssertNil(item?.title)
-        XCTAssertEqual(item?.totalDurationText, "02:00")
-        XCTAssertEqual(item?.contextText, "Base 1/30s · 6 stops")
-    }
-
-    func testCompletedLargeItemUsesSimplerPresentation() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let completedItem = snapshot.sections[1].items.first
-
-        XCTAssertEqual(completedItem?.identityCue.markerText, "T3")
-        XCTAssertEqual(completedItem?.remainingText, "Done")
-        XCTAssertEqual(completedItem?.totalDurationText, "00:45")
-        XCTAssertEqual(completedItem?.timingText, "Completed recently")
-        XCTAssertEqual(completedItem?.contextText, "Base 1/15s · 8 stops")
-    }
-
-    func testCompletedLargeItemDoesNotUseZeroSecondsAsPrimaryText() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let completedItem = snapshot.sections[1].items.first
-
-        XCTAssertEqual(completedItem?.remainingText, "Done")
-        XCTAssertNotEqual(completedItem?.remainingText, "0s")
-    }
-
     // MARK: - PTIMER-126: hasTimers gating
 
     /// `hasTimerPresentation` is the screen-level gate that decides
     /// whether the timer strip and Timers chrome render at all. When
     /// no timers exist, every timer-related surface is hidden.
     func testHasTimerPresentationFalseWhenSnapshotIsEmpty() {
-        let emptySnapshot = makeSnapshot(from: [])
+        let emptySnapshot = makeBottomSheetSnapshot(from: [])
 
         XCTAssertFalse(ExposureCalculatorScreen.hasTimerPresentation(in: emptySnapshot))
     }
 
     func testHasTimerPresentationTrueWhenAnyTimerExists() {
-        let runningSnapshot = makeSnapshot(from: [secondsScaleTimer()])
-        let completedOnlySnapshot = makeSnapshot(
-            from: [sampleTimers().first { $0.status == .completed }!]
+        let runningSnapshot = makeBottomSheetSnapshot(from: [bottomSheetSecondsScaleTimer()])
+        let completedOnlySnapshot = makeBottomSheetSnapshot(
+            from: [bottomSheetSampleTimers().first { $0.status == .completed }!]
         )
 
         XCTAssertTrue(ExposureCalculatorScreen.hasTimerPresentation(in: runningSnapshot))
         XCTAssertTrue(ExposureCalculatorScreen.hasTimerPresentation(in: completedOnlySnapshot))
-    }
-
-    // MARK: - Rail-stable reservation invariants
-
-    /// Workspace budget does not vary with timer presence — the
-    /// rail's footprint is reserved unconditionally.
-    func testWorkspaceBudgetIsTimerPresenceIndependent() {
-        let workspaceArea: CGFloat = 751
-
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: workspaceArea
-        )
-        let expected = workspaceArea
-            - ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-            - ExposureWorkspaceLayoutMetrics.timerStripHeight
-            - ExposureWorkspaceLayoutMetrics.pageMarkerToStripGap
-            - ExposureWorkspaceLayoutMetrics.pageMarkerHeight
-            - ExposureWorkspaceLayoutMetrics.workspaceMarkerGap
-
-        XCTAssertEqual(budget, expected)
-    }
-
-    /// Budget is a pure subtraction from the workspace area.
-    func testWorkspaceBudgetIsLinearInWorkspaceArea() {
-        let small = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: 700
-        )
-        let large = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: 800
-        )
-
-        XCTAssertEqual(large - small, 100)
-    }
-
-    /// Marker sits above the rail's reserved band.
-    func testPageMarkerOffsetSitsAboveReservedRailBand() {
-        let expected = ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-            + ExposureWorkspaceLayoutMetrics.timerStripHeight
-            + ExposureWorkspaceLayoutMetrics.pageMarkerToStripGap
-
-        XCTAssertEqual(
-            ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(),
-            expected
-        )
-    }
-
-    /// Marker offset is stable across repeated calls.
-    func testPageMarkerOffsetIsStable() {
-        let offsets = (0..<8).map { _ in
-            ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
-        }
-
-        XCTAssertEqual(Set(offsets).count, 1)
-    }
-
-    func testTimerStripBottomOffsetMeasuresFromTrimmedBottomEdge() {
-        XCTAssertEqual(
-            ExposureWorkspaceLayoutMetrics.timerStripBottomOffset(),
-            ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-        )
-    }
-
-    /// Rail band matches the compact card viewport height exactly.
-    func testTimerRailHeightMatchesCompactCardViewport() {
-        XCTAssertEqual(
-            ExposureWorkspaceLayoutMetrics.timerStripHeight,
-            BottomSheetCompactDockMetrics.viewportHeight
-        )
-    }
-
-    /// Workspace + marker gap + marker + marker-to-rail gap + rail
-    /// + rail margin partitions the trimmed area without gap or
-    /// overlap, and adding both safe areas equals the device
-    /// screen height.
-    func testWorkspaceMarkerRailPartitionsTrimmedRegionExactly() {
-        let topSafeArea: CGFloat = 59
-        let bottomSafeArea: CGFloat = 34
-        let workspaceArea: CGFloat = 844 - topSafeArea - bottomSafeArea
-
-        let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: workspaceArea
-        )
-
-        let trimmedTotal = workspaceHeight
-            + ExposureWorkspaceLayoutMetrics.workspaceMarkerGap
-            + ExposureWorkspaceLayoutMetrics.pageMarkerHeight
-            + ExposureWorkspaceLayoutMetrics.pageMarkerToStripGap
-            + ExposureWorkspaceLayoutMetrics.timerStripHeight
-            + ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-
-        XCTAssertEqual(trimmedTotal, workspaceArea)
-        XCTAssertEqual(trimmedTotal + topSafeArea + bottomSafeArea, 844)
-    }
-
-    /// Marker top edge sits exactly `workspaceMarkerGap` below the
-    /// workspace bottom — neither overlapping nor floating away.
-    func testPageMarkerSitsBelowWorkspaceNotInsideIt() {
-        let workspaceArea: CGFloat = 751
-        let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: workspaceArea
-        )
-        let markerBottomFromTop = workspaceArea
-            - ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
-        let markerTopFromTop = markerBottomFromTop
-            - ExposureWorkspaceLayoutMetrics.pageMarkerHeight
-
-        XCTAssertGreaterThanOrEqual(markerBottomFromTop, workspaceHeight)
-        XCTAssertEqual(
-            markerTopFromTop,
-            workspaceHeight + ExposureWorkspaceLayoutMetrics.workspaceMarkerGap
-        )
-    }
-
-    // MARK: - Device viewport sanity
-
-    /// iPhone 17 budget falls into the compact tier — not regular.
-    func testIPhone17FallsIntoCompactTier() {
-        let area: CGFloat = 844 - 59 - 34
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: area
-        )
-        let regularFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .regular)
-        let compactFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .compact)
-
-        XCTAssertGreaterThanOrEqual(budget, compactFloor)
-        XCTAssertLessThan(budget, regularFloor)
-    }
-
-    func testIPhone17ViewportFitsDenseWorkspace() {
-        let area: CGFloat = 844 - 59 - 34
-        let dense = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .dense)
-
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: area
-        )
-
-        XCTAssertGreaterThanOrEqual(budget, dense)
-    }
-
-    /// Compact-tier intrinsic for the worst case (film result
-    /// hierarchy + Target Shutter active + Reset row) fits within
-    /// the compact floor plus the page Spacer's slack.
-    func testCompactTierIntrinsicFitsWorstCaseInsideCompactFloor() {
-        let style = ExposureWorkspaceMainLayoutStyle.compact
-        let intrinsic = Self.estimatedPageIntrinsicHeight(
-            style: style,
-            includesFilmResultHierarchy: true,
-            includesTargetShutterRow: true,
-            includesResetRow: true
-        )
-        let compactFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .compact)
-
-        XCTAssertLessThanOrEqual(
-            intrinsic,
-            compactFloor + style.resultFlowSpacerMinLength
-        )
-    }
-
-    /// Worst-case page intrinsic fits the iPhone 17 budget after
-    /// rail reservation.
-    @MainActor
-    func testWorstCasePageIntrinsicFitsIPhone17Budget() {
-        let area: CGFloat = 844 - 59 - 34
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: area
-        )
-        let style = ExposureWorkspaceMainLayoutStyle.compact
-        let intrinsic = Self.estimatedPageIntrinsicHeight(
-            style: style,
-            includesFilmResultHierarchy: true,
-            includesTargetShutterRow: true,
-            includesResetRow: true
-        )
-        let pagePadding = style.topPadding + style.bottomPadding
-
-        XCTAssertGreaterThanOrEqual(
-            budget,
-            intrinsic + pagePadding,
-            "Worst-case page intrinsic (film + Target Shutter active + Reset row) must fit the iPhone 17 workspace budget."
-        )
-    }
-
-    /// Estimated page-VStack intrinsic height derived from style
-    /// constants. Mirrors `CameraSlotCalculatorPage`'s section
-    /// stack so changes to style values propagate without
-    /// re-deriving magic numbers.
-    private static func estimatedPageIntrinsicHeight(
-        style: ExposureWorkspaceMainLayoutStyle,
-        includesFilmResultHierarchy: Bool,
-        includesTargetShutterRow: Bool,
-        includesResetRow: Bool
-    ) -> CGFloat {
-        // HeaderView card: title line + film selector row + optional
-        // reset row + inter-row spacings + outer card padding.
-        let titleApprox: CGFloat = 30
-        let filmRowApprox: CGFloat = 75
-        let resetRowContribution: CGFloat = includesResetRow
-            ? (18 + style.headerContentSpacing)
-            : 0
-        let headerInner = titleApprox
-            + style.headerContentSpacing
-            + filmRowApprox
-            + resetRowContribution
-        let headerCard = headerInner + 2 * style.sectionCardPadding
-
-        // VariableSectionView: label + label spacing + picker + outer
-        // card padding.
-        let variableLabelApprox: CGFloat = 17
-        let variableInner = variableLabelApprox
-            + style.pickerLabelSpacing
-            + style.pickerHeight
-        let variableCard = variableInner + 2 * style.sectionCardPadding
-
-        // ResultSectionView: film mode uses the filmResultCardMinHeight
-        // floor (already includes resultBlockPadding); digital mode
-        // sizes to its single result row plus that padding.
-        let resultInnerBlock: CGFloat = includesFilmResultHierarchy
-            ? style.filmResultCardMinHeight
-            : (50 + 2 * style.resultBlockPadding)
-        let resultCard = resultInnerBlock + 2 * style.sectionCardPadding
-
-        // TargetShutterSectionView active row: HStack height ≈
-        // max(label line, timer-action button) + outer card padding.
-        let targetRowApprox: CGFloat = includesTargetShutterRow
-            ? (max(17, style.timerActionSize + 4))
-            : 0
-        let targetCard = includesTargetShutterRow
-            ? (targetRowApprox + 2 * style.sectionCardPadding)
-            : 0
-
-        return headerCard + variableCard + resultCard + targetCard
     }
 
     // MARK: - PTIMER-126: Section-scoped Clear placement
@@ -936,7 +303,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     /// check against incoming sections actually matches what the
     /// factory produced.
     func testSectionTitleConstantsAreUsedByFactory() {
-        let snapshot = makeSnapshot(from: sampleTimers())
+        let snapshot = makeBottomSheetSnapshot(from: bottomSheetSampleTimers())
 
         XCTAssertEqual(
             snapshot.sections.first?.title,
@@ -952,7 +319,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     /// `Clear` affordance. Confirms it is true exactly for the
     /// completed section and false elsewhere.
     func testIsCompletedSectionFlagsCompletedSectionOnly() {
-        let snapshot = makeSnapshot(from: sampleTimers())
+        let snapshot = makeBottomSheetSnapshot(from: bottomSheetSampleTimers())
         let active = snapshot.sections.first { $0.title == TimerWorkspaceSection.activeTitle }
         let completed = snapshot.sections.first { $0.title == TimerWorkspaceSection.completedTitle }
 
@@ -967,10 +334,10 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     /// invariant; the view-layer consequence is that the Active list
     /// stays put when timers complete.
     func testActiveSectionIdentityIsStableAcrossCompletedSectionAppearance() {
-        let runningOnly = makeSnapshot(from: [secondsScaleTimer()])
-        let withCompleted = makeSnapshot(from: [
-            secondsScaleTimer(),
-            sampleTimers().first { $0.status == .completed }!,
+        let runningOnly = makeBottomSheetSnapshot(from: [bottomSheetSecondsScaleTimer()])
+        let withCompleted = makeBottomSheetSnapshot(from: [
+            bottomSheetSecondsScaleTimer(),
+            bottomSheetSampleTimers().first { $0.status == .completed }!,
         ])
 
         let activeFromRunningOnly = runningOnly.sections.first { $0.isCompletedSection == false }
@@ -990,7 +357,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     /// surface a completed section at all — there is nothing for
     /// the view's `isCompletedSection` branch to attach `Clear` to.
     func testCompletedSectionAbsentWhenNoCompletedTimersExist() {
-        let snapshot = makeSnapshot(from: [secondsScaleTimer()])
+        let snapshot = makeBottomSheetSnapshot(from: [bottomSheetSecondsScaleTimer()])
 
         XCTAssertFalse(snapshot.sections.contains { $0.isCompletedSection })
         XCTAssertEqual(snapshot.completedCount, 0)
@@ -1014,7 +381,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
 
     @MainActor
     func testFullScreenTimersWindowLoadsWithCloseButton() {
-        let snapshot = makeSnapshot(from: sampleTimers())
+        let snapshot = makeBottomSheetSnapshot(from: bottomSheetSampleTimers())
         let host = UIHostingController(
             rootView: FullScreenTimersWindow(
                 snapshot: snapshot,
@@ -1037,282 +404,5 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         // through the UIKit bridge is flaky, so we instead verify
         // the structural smoke (renders, snapshot has data).
         XCTAssertFalse(snapshot.sections.isEmpty)
-    }
-
-    // MARK: - Test fixtures
-
-    private func sampleTimers() -> [RunningTimerItem] {
-        let now = Date(timeIntervalSince1970: 1_000)
-
-        return [
-            RunningTimerItem(
-                id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
-                order: 3,
-                name: "Completed Latest",
-                basisSummary: "Base 1/15s · 8 stops",
-                duration: 45,
-                startDate: now.addingTimeInterval(-45),
-                endDate: now.addingTimeInterval(-5),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .completed,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
-                order: 1,
-                name: "Running Soon",
-                basisSummary: "Base 1/30s · 6 stops",
-                duration: 120,
-                startDate: now,
-                endDate: now.addingTimeInterval(25),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
-                order: 2,
-                name: "Paused Hold",
-                basisSummary: "Base 1/60s · 10 stops",
-                duration: 180,
-                startDate: now.addingTimeInterval(-20),
-                endDate: now.addingTimeInterval(160),
-                pausedRemainingTime: 55,
-                pausedAt: now.addingTimeInterval(-15),
-                status: .paused,
-                referenceDate: now
-            ),
-            RunningTimerItem(
-                id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
-                order: 4,
-                name: "Completed Earlier",
-                basisSummary: "Base 1/4s · 4 stops",
-                duration: 30,
-                startDate: now.addingTimeInterval(-60),
-                endDate: now.addingTimeInterval(-20),
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .completed,
-                referenceDate: now
-            ),
-        ]
-    }
-
-    private func longDurationTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 1_000)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,
-            order: 5,
-            name: "Very Long Timer Name That Exceeds Compact Width",
-            basisSummary: "Base 1/2s · 18 stops",
-            duration: 367_200,
-            startDate: now,
-            endDate: now.addingTimeInterval(367_200),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func secondsScaleTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 4_000)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "12121212-1212-1212-1212-121212121212")!,
-            order: 7,
-            name: "Seconds Scale",
-            basisSummary: "Base 1/15s · 3 stops",
-            duration: 30,
-            startDate: now.addingTimeInterval(-5),
-            endDate: now.addingTimeInterval(25),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func minuteScaleTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 5_000)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "23232323-2323-2323-2323-232323232323")!,
-            order: 8,
-            name: "Minute Scale",
-            basisSummary: "Base 1/30s · 5 stops",
-            duration: 64,
-            startDate: now.addingTimeInterval(-10),
-            endDate: now.addingTimeInterval(54),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func eightMinuteScaleTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 5_500)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "28282828-2828-2828-2828-282828282828")!,
-            order: 12,
-            name: "Eight Minute Scale",
-            basisSummary: "Base 1/30s · 6 stops",
-            duration: 480,
-            startDate: now.addingTimeInterval(-2),
-            endDate: now.addingTimeInterval(478),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func thirtyFourMinuteScaleTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 5_800)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "38383838-3838-3838-3838-383838383838")!,
-            order: 13,
-            name: "Thirty Four Minute Scale",
-            basisSummary: "Base 1/60s · 7 stops",
-            duration: 2_048,
-            startDate: now,
-            endDate: now.addingTimeInterval(2_048),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func hourScaleTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 6_000)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "34343434-3434-3434-3434-343434343434")!,
-            order: 9,
-            name: "Hour Scale",
-            basisSummary: "Base 1/60s · 7 stops",
-            duration: 7_200,
-            startDate: now,
-            endDate: now.addingTimeInterval(7_200),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func pausedProgressTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 7_000)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "45454545-4545-4545-4545-454545454545")!,
-            order: 10,
-            name: "Paused Progress",
-            basisSummary: "Base 1/8s · 4 stops",
-            duration: 120,
-            startDate: now.addingTimeInterval(-80),
-            endDate: now.addingTimeInterval(60),
-            pausedRemainingTime: 45,
-            pausedAt: now.addingTimeInterval(-10),
-            status: .paused,
-            referenceDate: now
-        )
-    }
-
-    private func completedProgressTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 8_000)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "56565656-5656-5656-5656-565656565656")!,
-            order: 11,
-            name: "Completed Progress",
-            basisSummary: "Base 1/4s · 2 stops",
-            duration: 75,
-            startDate: now.addingTimeInterval(-90),
-            endDate: now.addingTimeInterval(-15),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .completed,
-            referenceDate: now
-        )
-    }
-
-    private func redundantLargePresentationTimer() -> RunningTimerItem {
-        let now = Date(timeIntervalSince1970: 1_500)
-
-        return RunningTimerItem(
-            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
-            order: 6,
-            name: "6 stops - 02:00",
-            basisSummary: "Base 1/30s · 6 stops",
-            duration: 120,
-            startDate: now,
-            endDate: now.addingTimeInterval(25),
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running,
-            referenceDate: now
-        )
-    }
-
-    private func makeSnapshot(from timers: [RunningTimerItem]) -> BottomSheetWorkspaceSnapshot {
-        let completedRelativeTimeFormatter = CompletedRelativeTimeFormatter()
-
-        return BottomSheetWorkspaceSnapshot.make(
-            from: timers,
-            formatRemaining: { seconds in
-                let remaining = Int(seconds.rounded(.down))
-                if remaining >= 3_600 {
-                    let hours = remaining / 3_600
-                    let minutes = (remaining % 3_600) / 60
-                    let secs = remaining % 60
-                    return String(format: "%02d:%02d:%02d", hours, minutes, secs)
-                }
-                let minutes = remaining / 60
-                let secs = remaining % 60
-                return String(format: "%02d:%02d", minutes, secs)
-            },
-            timeContext: { timer in
-                switch timer.status {
-                case .running:
-                    return "Ends soon"
-                case .paused:
-                    return "Paused recently"
-                case .completed:
-                    return "Completed recently"
-                }
-            },
-            compactCompletedSupplementaryText: { timer in
-                switch timer.status {
-                case .completed:
-                    guard let completionDate = timer.completedAt else {
-                        return "--"
-                    }
-
-                    return completedRelativeTimeFormatter.compactString(
-                        from: completionDate,
-                        relativeTo: timer.referenceDate
-                    )
-                case .running, .paused:
-                    return nil
-                }
-            }
-        )
-    }
-
-    private func tryUnwrapCompactItem(from snapshot: BottomSheetWorkspaceSnapshot) -> BottomSheetCompactItem {
-        guard let item = snapshot.compactItems.first else {
-            XCTFail("Expected a compact item in snapshot")
-            fatalError("Missing compact item")
-        }
-
-        return item
     }
 }

@@ -575,19 +575,3 @@ private final class InMemoryTimerMetadataPersistenceStore: TimerMetadataPersiste
         snapshot = nil
     }
 }
-
-private final class InMemoryTimerPersistenceStore: TimerPersistenceStoring {
-    private(set) var snapshot: PersistentTimerCollectionSnapshot?
-
-    func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
-        snapshot
-    }
-
-    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
-        self.snapshot = snapshot
-    }
-
-    func clearSnapshot() {
-        snapshot = nil
-    }
-}

@@ -2,13 +2,18 @@ import Foundation
 
 /// Pure presenter for the Film Details reciprocity graph.
 ///
-/// Owns every aspect of the formula graph that does not belong with
-/// the table of source references or with the per-state wording:
-/// curve sampling, viewport / scale-tier selection, current-marker
-/// placement, source-evidence markers, the not-recommended boundary,
-/// the persistent beyond-source-range shading, the formula equation
-/// text, axis ticks, and the state-aware caption / description /
-/// unsupported explanation.
+/// Owns the formula graph's final display-state assembly: viewport
+/// / scale-tier selection, geometry orchestration, current-marker
+/// placement, and axis ticks. Pure-value helpers under
+/// `FilmContext/` provide the inputs:
+///
+///   * `FilmModeDetailsGraphCurveSampler` — calculation curve points.
+///   * `FormulaEquationFormatter` — user-facing equation text.
+///   * `FilmModeDetailsGraphEvidencePresenter` —
+///     source-reference markers and the not-recommended boundary.
+///   * `FilmModeDetailsGraphTextPresenter` — caption, unsupported
+///     explanation, description lines, beyond-source-range start,
+///     unsupported-region start.
 ///
 /// Returns `nil` for profiles that cannot render a formula graph
 /// (Kodak limited-guidance profiles). Returning `nil` is the same
@@ -119,11 +124,12 @@ struct FilmModeDetailsGraphPresenter {
         currentPoint: FilmModeDetailsGraphCurrentPoint?,
         formatDuration: (Double) -> String
     ) -> FormulaGraphGeometry? {
-        let sourceReferenceMarkers = formulaGraphSourceReferenceMarkers(
+        let sourceEvidencePresenter = FilmModeDetailsGraphEvidencePresenter()
+        let sourceReferenceMarkers = sourceEvidencePresenter.markers(
             for: bindingState.profile,
             formatDuration: formatDuration
         )
-        let notRecommendedBoundarySeconds = formulaGraphNotRecommendedBoundarySeconds(
+        let notRecommendedBoundarySeconds = sourceEvidencePresenter.notRecommendedBoundarySeconds(
             for: bindingState.profile
         )
 
@@ -166,13 +172,14 @@ struct FilmModeDetailsGraphPresenter {
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             currentPoint: currentPoint
         )
-        let descriptionLines = formulaGraphDescriptionLines(
+        let textPresenter = FilmModeDetailsGraphTextPresenter()
+        let descriptionLines = textPresenter.descriptionLines(
             for: bindingState,
             isBeyondVisibleRange: tierSelection.isBeyondVisibleRange,
             isBelowVisibleRange: isBelowVisibleRange
         )
         let formulaDisplayText = FormulaEquationFormatter.userFacingText(for: formulaRule.formula)
-        let beyondSourceRangeStartSeconds = formulaGraphBeyondSourceRangeStartSeconds(
+        let beyondSourceRangeStartSeconds = textPresenter.beyondSourceRangeStartSeconds(
             profile: bindingState.profile,
             supportedUpperBoundSeconds: supportedUpperBoundSeconds
         )
@@ -220,11 +227,12 @@ struct FilmModeDetailsGraphPresenter {
             currentPoint: currentPoint,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             usesCurrentInputGuideOnly: geometry.usesCurrentInputGuideOnly,
-            caption: formulaGraphCaption(
+            caption: FilmModeDetailsGraphTextPresenter().caption(
                 for: bindingState,
                 noCorrectionRangeUpperBoundSeconds: geometry.noCorrectionRangeUpperBoundSeconds
             ),
-            unsupportedExplanation: graphUnsupportedExplanation(for: bindingState),
+            unsupportedExplanation: FilmModeDetailsGraphTextPresenter()
+                .unsupportedExplanation(for: bindingState),
             xAxisLabel: "Adjusted shutter",
             yAxisLabel: "Corrected exposure",
             xAxisTicks: formulaGraphAxisTicks(
@@ -236,7 +244,7 @@ struct FilmModeDetailsGraphPresenter {
                 viewportLowerBoundSeconds: geometry.stableLowerBoundSeconds
             ),
             supportedRangeUpperBoundSeconds: geometry.supportedUpperBoundSeconds,
-            unsupportedRegionStartSeconds: unsupportedRegionStartSeconds(
+            unsupportedRegionStartSeconds: FilmModeDetailsGraphTextPresenter().unsupportedRegionStartSeconds(
                 supportedUpperBoundSeconds: geometry.supportedUpperBoundSeconds,
                 currentMeteredExposureSeconds: currentMeteredExposureSeconds,
                 isUnsupported: bindingState.presentation.category == .unsupported
@@ -405,214 +413,6 @@ struct FilmModeDetailsGraphPresenter {
                 maxPlottedSeconds: maxValue
             )
         )
-    }
-
-    // MARK: - Source-reference markers and boundary
-
-    /// Produces open-ring markers for manufacturer source-evidence
-    /// rows that publish a quantified exposure adjustment (e.g.
-    /// Provia 100F's 240 s +1/3 stop reference). Rows whose only
-    /// adjustment is a `notRecommended` warning are intentionally
-    /// excluded so a stop-signal boundary never reads as a formula
-    /// fitting point. Each marker carries an adjacent text label
-    /// (e.g. "240s") so the user reads the published metered value
-    /// directly off the graph.
-    private func formulaGraphSourceReferenceMarkers(
-        for profile: ReciprocityProfile,
-        formatDuration: (Double) -> String
-    ) -> [FilmModeDetailsGraphSourceReference] {
-        profile.sourceEvidence.compactMap { row -> FilmModeDetailsGraphSourceReference? in
-            guard case let .exactSeconds(meteredExposureSeconds) = row.meteredExposure,
-                  meteredExposureSeconds > 0,
-                  !ReciprocitySourceEvidenceClassifier.isGuidanceBoundary(row),
-                  !row.isSourceEvidenceOnly else {
-                return nil
-            }
-            guard let correctedExposureSeconds = sourceEvidenceCorrectedExposureSeconds(
-                meteredExposureSeconds: meteredExposureSeconds,
-                adjustments: row.adjustments
-            ), correctedExposureSeconds > 0 else {
-                return nil
-            }
-            return FilmModeDetailsGraphSourceReference(
-                point: FilmModeDetailsGraphPoint(
-                    meteredExposureSeconds: meteredExposureSeconds,
-                    correctedExposureSeconds: correctedExposureSeconds
-                ),
-                label: sourceReferenceMarkerLabel(
-                    meteredExposureSeconds: meteredExposureSeconds,
-                    formatDuration: formatDuration
-                )
-            )
-        }
-    }
-
-    /// Marker label for a source-reference point. Prefers the bare
-    /// "{seconds}s" form for whole-second values so Provia 100F's
-    /// 240 s reference reads as "240s" on the graph; falls back to
-    /// the standard duration formatter for fractional values.
-    private func sourceReferenceMarkerLabel(
-        meteredExposureSeconds: Double,
-        formatDuration: (Double) -> String
-    ) -> String {
-        let rounded = meteredExposureSeconds.rounded()
-        if abs(meteredExposureSeconds - rounded) < 1e-6, rounded > 0, rounded < 1e9 {
-            return "\(Int(rounded))s"
-        }
-        return formatDuration(meteredExposureSeconds)
-    }
-
-    private func formulaGraphNotRecommendedBoundarySeconds(
-        for profile: ReciprocityProfile
-    ) -> Double? {
-        for row in profile.sourceEvidence {
-            guard case let .exactSeconds(seconds) = row.meteredExposure,
-                  seconds > 0,
-                  ReciprocitySourceEvidenceClassifier.isGuidanceBoundary(row) else {
-                continue
-            }
-            return seconds
-        }
-        return nil
-    }
-
-    private func sourceEvidenceCorrectedExposureSeconds(
-        meteredExposureSeconds: Double,
-        adjustments: [ReciprocityAdjustment]
-    ) -> Double? {
-        // Prefer the published correctedTime when the row carries
-        // both forms: Kodak (and several other manufacturers) publish
-        // the stop delta as a rounded quick-reference alongside a
-        // separately-published corrected time, and those two values
-        // can disagree by up to a third of a stop (e.g. Tri-X 400's
-        // 10 sec row publishes "+2 stops" and "50 sec" even though
-        // +2 stops literally derives to 40 sec). Returning the
-        // stop-delta derivation here would plot the source-reference
-        // marker at the wrong y-coordinate.
-        var stopAdjustment: StopDeltaAdjustment?
-        var multiplierAdjustment: MultiplierAdjustment?
-        for adjustment in adjustments {
-            guard case let .exposure(exposureAdjustment) = adjustment else {
-                continue
-            }
-            switch exposureAdjustment {
-            case .correctedTime(let mapping):
-                return mapping.correctedSeconds
-            case .stopDelta(let value):
-                if stopAdjustment == nil { stopAdjustment = value }
-            case .multiplier(let value):
-                if multiplierAdjustment == nil { multiplierAdjustment = value }
-            }
-        }
-        if let stopAdjustment {
-            return meteredExposureSeconds * pow(2, stopAdjustment.stopDelta)
-        }
-        if let multiplierAdjustment {
-            return meteredExposureSeconds * multiplierAdjustment.factor
-        }
-        return nil
-    }
-
-    // MARK: - State-aware text
-
-    /// Returns at most one short, state-aware note for the formula
-    /// graph. The marker/region legend already names each visible
-    /// element, so the note is reserved for the cases that need a
-    /// brief sentence: outside the visible range, and the formula
-    /// prediction outside the published source range.
-    private func formulaGraphDescriptionLines(
-        for bindingState: FilmModeReciprocityBindingState,
-        isBeyondVisibleRange: Bool,
-        isBelowVisibleRange: Bool
-    ) -> [String] {
-        if isBeyondVisibleRange {
-            return ["Current result is beyond the visible graph range."]
-        }
-        if isBelowVisibleRange {
-            return ["Current result is below the visible graph range."]
-        }
-        if bindingState.presentation.category == .unsupported,
-           bindingState.profile.isConvertedFormulaProfile {
-            return ["Formula-derived result outside published source range."]
-        }
-        return []
-    }
-
-    /// Metered-exposure x at which the published manufacturer source
-    /// range ends for a converted formula profile. Drives the
-    /// persistent pink shading on the formula graph so the user can
-    /// always see which region of the curve is the formula prediction
-    /// outside the published source range.
-    private func formulaGraphBeyondSourceRangeStartSeconds(
-        profile: ReciprocityProfile,
-        supportedUpperBoundSeconds: Double?
-    ) -> Double? {
-        guard profile.isConvertedFormulaProfile else {
-            return nil
-        }
-        return supportedUpperBoundSeconds
-    }
-
-    /// State-aware caption for the formula graph. Branches on the
-    /// current basis so the headline matches the shaded region the
-    /// user sees: no-correction inputs read as identity-line guidance,
-    /// numeric outside-guidance reads as a formula prediction outside
-    /// the source range, supported formula inputs read as on the
-    /// active curve.
-    ///
-    /// Caption strings omit a trailing period to match the rest of
-    /// the graph caption surface, which renders as banner text.
-    private func formulaGraphCaption(
-        for bindingState: FilmModeReciprocityBindingState,
-        noCorrectionRangeUpperBoundSeconds: Double?
-    ) -> String {
-        let basis = bindingState.policyResult.metadata.basis
-        if basis == .officialThresholdNoCorrection,
-           noCorrectionRangeUpperBoundSeconds != nil {
-            return "Adjusted shutter equals corrected exposure within the no-correction range"
-        }
-
-        if bindingState.presentation.category == .unsupported,
-           bindingState.policyResult.correctedExposureSeconds != nil {
-            return "Formula prediction outside the manufacturer-supported boundary"
-        }
-
-        return "Adjusted shutter vs corrected exposure on the active calculation curve"
-    }
-
-    private func graphUnsupportedExplanation(
-        for bindingState: FilmModeReciprocityBindingState
-    ) -> String? {
-        guard bindingState.presentation.category == .unsupported else {
-            return nil
-        }
-
-        // Distinguish "outside guidance with a numeric formula
-        // prediction available" from "outside guidance with no value
-        // at all". Same copy in both cases would mask the timer-start
-        // affordance for the numeric path.
-        if bindingState.policyResult.correctedExposureSeconds != nil {
-            if bindingState.profile.isConvertedFormulaProfile {
-                return "Current input is beyond the manufacturer source range. The plotted value is a formula prediction past the published reference and should be verified."
-            }
-            return "Current input is outside manufacturer guidance. The plotted value is a formula prediction outside the supported range and should be verified."
-        }
-
-        return "Current input is outside the supported range. No quantified corrected point is available."
-    }
-
-    private func unsupportedRegionStartSeconds(
-        supportedUpperBoundSeconds: Double?,
-        currentMeteredExposureSeconds: Double,
-        isUnsupported: Bool
-    ) -> Double? {
-        guard isUnsupported,
-              let supportedUpperBoundSeconds,
-              currentMeteredExposureSeconds > supportedUpperBoundSeconds else {
-            return nil
-        }
-
-        return supportedUpperBoundSeconds
     }
 
     // MARK: - Current point

@@ -104,6 +104,18 @@ struct ReciprocityDetailsVocabularyPresenter {
            let caveat = unofficialProfileAuthorityCaveat(for: bindingState.profile) {
             return caveat
         }
+        // Custom (user-defined)
+        // profiles surface their full provenance here — source
+        // type, formula summary, application range, and any user
+        // notes — so the Details sheet never reads like
+        // manufacturer-backed guidance.
+        if bindingState.profile.source.authority == .userDefined,
+           let provenance = customProvenanceText(
+               film: bindingState.film,
+               profile: bindingState.profile
+           ) {
+            return provenance
+        }
 
         switch bindingState.presentation.category {
         case .unsupported:
@@ -139,20 +151,12 @@ struct ReciprocityDetailsVocabularyPresenter {
     // MARK: - Subtitle authority label
 
     /// Authority label rendered under the film name in the Details
-    /// subtitle. Reuses the same wording the main film row produces so
-    /// the user never sees one label on the row and a different label
-    /// for the same profile in the Details sheet. Details adds the
-    /// "User-defined" fallback that the main row deliberately suppresses.
+    /// subtitle. Delegates to `FilmSelectionModel.filmRowAuthorityLabel`
+    /// so the same wording appears on the main row and the Details
+    /// sheet — including the "Custom" label for
+    /// `.userDefined` authority.
     func subtitleAuthorityLabel(for authority: ReciprocityAuthority) -> String? {
-        if let alignedLabel = FilmSelectionModel.filmRowAuthorityLabel(forAuthority: authority) {
-            return alignedLabel
-        }
-        switch authority {
-        case .userDefined:
-            return "User-defined"
-        case .official, .unofficial, .unknown:
-            return nil
-        }
+        FilmSelectionModel.filmRowAuthorityLabel(forAuthority: authority)
     }
 
     // MARK: - Status text
@@ -229,6 +233,76 @@ struct ReciprocityDetailsVocabularyPresenter {
     }
 
     // MARK: - Helpers
+
+    // MARK: - Custom provenance
+
+    /// Multi-line summary for a `.userDefined`-authority profile.
+    /// Each line is a single fact (source type, formula, range,
+    /// note) so the Details sheet renders a scannable provenance
+    /// block. Returns `nil` only when nothing useful can be
+    /// derived — the caller falls back to the per-state copy.
+    func customProvenanceText(
+        film: FilmIdentity,
+        profile: ReciprocityProfile
+    ) -> String? {
+        var lines: [String] = []
+        if let sourceType = profile.userMetadata?.customSourceType
+            ?? film.userMetadata?.customSourceType {
+            lines.append("Source: \(sourceType.displayLabel)")
+        }
+        if let formulaText = TimerStartComposer.customProfileFormulaText(profile: profile) {
+            lines.append("Formula: \(formulaText)")
+        }
+        if let rangeText = customRangeText(profile: profile) {
+            lines.append("Range: \(rangeText)")
+        }
+        let profileNotes = profile.userMetadata?.notes ?? []
+        let filmNotes = film.userMetadata?.notes ?? []
+        for note in (profileNotes + filmNotes) {
+            let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            lines.append(trimmed)
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    private func customRangeText(profile: ReciprocityProfile) -> String? {
+        // shared formula carries the no-correction and
+        // source-range boundaries on the formula itself.
+        let formulaRule = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+            if case .formula(let f) = rule { return f }
+            return nil
+        }.first
+        let thresholdMax = profile.rules.compactMap { rule -> Double? in
+            if case .threshold(let t) = rule { return t.noCorrectionRange.maximumSeconds }
+            return nil
+        }.first
+        let noCorrection = formulaRule?.formula.noCorrectionThroughSeconds ?? thresholdMax
+        let sourceRangeThrough = formulaRule?.formula.sourceRangeThroughSeconds
+
+        var segments: [String] = []
+        if let noCorrection {
+            segments.append("no correction up to \(Self.formatSeconds(noCorrection))")
+        }
+        if let sourceRangeThrough {
+            segments.append("source range through \(Self.formatSeconds(sourceRangeThrough))")
+        }
+        return segments.isEmpty ? nil : segments.joined(separator: "; ")
+    }
+
+    private static func formatSeconds(_ seconds: Double) -> String {
+        if seconds >= 60 {
+            let minutes = seconds / 60
+            if minutes == minutes.rounded() {
+                return "\(Int(minutes))m"
+            }
+            return String(format: "%.1fm", minutes)
+        }
+        if seconds == seconds.rounded() {
+            return "\(Int(seconds))s"
+        }
+        return String(format: "%.1fs", seconds)
+    }
 
     private func profileUsesFormula(_ profile: ReciprocityProfile) -> Bool {
         profile.rules.contains(where: {

@@ -88,7 +88,8 @@ final class RecordReplayHarness {
             contextPersistenceStore: NoOpCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: NoOpCameraSlotSessionPersistenceStore(),
             metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),
-            lockScreenTargetExposer: lockScreenExposer
+            lockScreenTargetExposer: lockScreenExposer,
+            customFilmLibrary: CustomFilmLibrary()
         )
     }
 

@@ -82,6 +82,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// title and pager labels when the rename surface fires, without
     /// adding a second observed-model dependency in the screen.
     @Published private(set) var cameraSlotCustomDisplayNames: [CameraSlotID: String] = [:]
+    /// Custom films, mirrored from `customFilmLibrary`.
+    @Published private(set) var customFilms: [FilmIdentity] = []
 
     /// Calculation responsibility (calculator instance, inputs, result).
     /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
@@ -119,6 +121,9 @@ final class ExposureCalculatorViewModel: ObservableObject {
     /// legacy convenience init can construct a ViewModel without
     /// session persistence.
     private let sessionPersistence: CameraSlotSessionPersistenceController?
+    /// Source of truth for photographer-authored custom
+    /// films. Internal so the +CustomFilm extension can write.
+    let customFilmLibrary: CustomFilmLibrary
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
     /// Suppresses `persistCalculatorContext` calls during a camera-slot
@@ -153,13 +158,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
         )
         let cameraSlotSessionModel = CameraSlotSessionModel()
+        let customLibrary = dependencies.customFilmLibrary
         let filmSelectionModel = FilmSelectionModel(
             presetFilms: dependencies.presetFilms,
             contextPersistenceStore: dependencies.contextPersistenceStore,
             currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
             currentNDStep: { calculatorModel.ndStep },
             currentScaleMode: { calculatorModel.scaleMode },
-            currentActiveCameraSlotID: { cameraSlotSessionModel.activeSlotID }
+            currentActiveCameraSlotID: { cameraSlotSessionModel.activeSlotID },
+            currentCustomFilms: { customLibrary.customFilms }
         )
         self.init(
             dependencies: dependencies,
@@ -168,7 +175,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             timerWorkspaceModel: timerWorkspaceModel,
             filmSelectionModel: filmSelectionModel,
             cameraSlotSessionModel: cameraSlotSessionModel,
-            targetShutterModel: TargetShutterModel()
+            targetShutterModel: TargetShutterModel(),
+            customFilmLibrary: dependencies.customFilmLibrary
         )
     }
 
@@ -183,9 +191,11 @@ final class ExposureCalculatorViewModel: ObservableObject {
         timerWorkspaceModel: TimerWorkspaceModel,
         filmSelectionModel: FilmSelectionModel,
         cameraSlotSessionModel: CameraSlotSessionModel? = nil,
-        targetShutterModel: TargetShutterModel? = nil
+        targetShutterModel: TargetShutterModel? = nil,
+        customFilmLibrary: CustomFilmLibrary? = nil
     ) {
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
+        let resolvedCustomLibrary = customFilmLibrary ?? dependencies.customFilmLibrary
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
@@ -194,8 +204,10 @@ final class ExposureCalculatorViewModel: ObservableObject {
         self.targetShutterModel = targetShutterModel ?? TargetShutterModel()
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
-            presetFilms: dependencies.presetFilms
+            presetFilms: dependencies.presetFilms,
+            currentCustomFilms: { resolvedCustomLibrary.customFilms }
         )
+        self.customFilmLibrary = resolvedCustomLibrary
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
@@ -216,6 +228,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$activeCameraSlotID)
         resolvedSlotSession.$customDisplayNames
             .assign(to: &$cameraSlotCustomDisplayNames)
+        resolvedCustomLibrary.$customFilms
+            .assign(to: &$customFilms)
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -229,10 +243,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
         cameraSlotSessionModel: CameraSlotSessionModel? = nil,
-        targetShutterModel: TargetShutterModel? = nil
+        targetShutterModel: TargetShutterModel? = nil,
+        customFilmLibrary: CustomFilmLibrary? = nil
     ) {
         let calculatorModel = CalculatorModel(calculator: calculator)
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
+        let resolvedCustomLibrary = customFilmLibrary ?? CustomFilmLibrary()
         self.calculatorModel = calculatorModel
         self.reciprocityModel = ReciprocityModel()
         self.timerWorkspaceModel = TimerWorkspaceModel(
@@ -248,14 +264,17 @@ final class ExposureCalculatorViewModel: ObservableObject {
             currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
             currentNDStep: { calculatorModel.ndStep },
             currentScaleMode: { calculatorModel.scaleMode },
-            currentActiveCameraSlotID: { resolvedSlotSession.activeSlotID }
+            currentActiveCameraSlotID: { resolvedSlotSession.activeSlotID },
+            currentCustomFilms: { resolvedCustomLibrary.customFilms }
         )
         self.cameraSlotSessionModel = resolvedSlotSession
         self.targetShutterModel = targetShutterModel ?? TargetShutterModel()
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: cameraSlotSessionPersistenceStore,
-            presetFilms: presetFilms
+            presetFilms: presetFilms,
+            currentCustomFilms: { resolvedCustomLibrary.customFilms }
         )
+        self.customFilmLibrary = resolvedCustomLibrary
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
@@ -270,6 +289,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$activeCameraSlotID)
         resolvedSlotSession.$customDisplayNames
             .assign(to: &$cameraSlotCustomDisplayNames)
+        resolvedCustomLibrary.$customFilms
+            .assign(to: &$customFilms)
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -362,9 +383,13 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var filmSelectorEntries: [FilmSelectorEntry] {
-        var entries: [FilmSelectorEntry] = [
-            FilmSelectorEntry(id: "no-film", primaryText: "No film")
-        ]
+        // Build the canonical rows first (Custom + preset +
+        // unofficial). The Quick Access aliases are then assembled
+        // from these canonical entries so a tap on either surface
+        // resolves to the same `film`/`profileOverride` identity
+        // `selectEntry(_:)` already knows how to route.
+        var canonicalAfterNoFilm: [FilmSelectorEntry] = []
+        canonicalAfterNoFilm.append(contentsOf: customFilmSelectorEntries())
 
         let sortedFilms = presetFilms.sorted { lhs, rhs in
             let lhsManufacturer = lhs.manufacturer ?? ""
@@ -376,7 +401,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         for film in sortedFilms {
-            entries.append(FilmSelectorEntry(
+            canonicalAfterNoFilm.append(FilmSelectorEntry(
                 id: film.id,
                 primaryText: film.canonicalStockName,
                 secondaryText: FilmSelectionModel.filmRowISOText(for: film),
@@ -391,7 +416,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             if let unofficialProfile = UnofficialPracticalProfiles.profile(forFilmID: film.id) {
                 // Unofficial variant shares the canonical name; `supportState`
                 // drives the visible UNOFFICIAL badge next to the name.
-                entries.append(FilmSelectorEntry(
+                canonicalAfterNoFilm.append(FilmSelectorEntry(
                     id: unofficialProfile.id,
                     primaryText: film.canonicalStockName,
                     secondaryText: FilmSelectionModel.filmRowISOText(for: film),
@@ -406,6 +431,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
         }
 
+        var entries: [FilmSelectorEntry] = [
+            FilmSelectorEntry(id: "no-film", primaryText: "No film")
+        ]
+        // Quick Access alias section sits between "No film" and
+        // the canonical rows so the photographer can reach their
+        // selected film + custom library without scrolling past
+        // the alphabetised preset catalog. Aliases reuse the same
+        // `film`/`profileOverride` identity as their canonical
+        // row, so selection routes the same way regardless of
+        // which entry the user taps.
+        entries.append(contentsOf: quickAccessSelectorEntries(originals: canonicalAfterNoFilm))
+        entries.append(contentsOf: canonicalAfterNoFilm)
         return entries
     }
 
@@ -1225,7 +1262,8 @@ final class ExposureCalculatorViewModel: ObservableObject {
             filmDisplayName: payload.filmDisplayName,
             filmProfileQualifier: payload.filmProfileQualifier,
             exposureSource: payload.exposureSource,
-            isOutsideManufacturerGuidance: payload.isOutsideManufacturerGuidance
+            isOutsideManufacturerGuidance: payload.isOutsideManufacturerGuidance,
+            customProfileSummary: payload.customProfileSummary
         )
     }
 
@@ -1452,6 +1490,23 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
             persistCalculatorContext()
         }
+    }
+
+    /// Helper exposed for the +CustomFilm extension. Scrubs
+    /// every inactive camera-slot snapshot's film reference matching
+    /// `id` so a custom-film deletion cannot resurface a deleted
+    /// reference on slot switch. Returns the touched slot ids so the
+    /// caller can decide whether to flush persistence.
+    @discardableResult
+    func clearCustomFilmFromInactiveSlots(id: String) -> Set<CameraSlotID> {
+        cameraSlotSessionModel.clearFilmReference(filmID: id)
+    }
+
+    /// Helper that pipes a custom-film delete through the
+    /// same persistence path a regular state mutation uses, so the
+    /// inactive-slot scrub survives a relaunch.
+    func persistInactiveSlotCleanup() {
+        persistCalculatorContext()
     }
 
     private func persistCalculatorContext() {

@@ -43,6 +43,14 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     /// older snapshots decode unchanged; the default decoded value is
     /// `false`.
     let isOutsideManufacturerGuidance: Bool?
+    /// Bundled identity summary
+    /// (`profile name · ISO N · source type · formula`) captured at
+    /// start time for timers started from a custom `.userDefined`
+    /// profile. Optional and additive so older snapshots decode
+    /// unchanged; the workspace renders this line under the film
+    /// name so the timer card stays readable after the source
+    /// profile is later deleted.
+    let customProfileSummary: String?
 
     init(
         id: UUID,
@@ -54,7 +62,8 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
         exposureSourceRaw: String? = nil,
-        isOutsideManufacturerGuidance: Bool? = nil
+        isOutsideManufacturerGuidance: Bool? = nil,
+        customProfileSummary: String? = nil
     ) {
         self.id = id
         self.order = order
@@ -66,6 +75,7 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         self.filmProfileQualifier = filmProfileQualifier
         self.exposureSourceRaw = exposureSourceRaw
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+        self.customProfileSummary = customProfileSummary
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -79,6 +89,7 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         case filmProfileQualifier
         case exposureSourceRaw
         case isOutsideManufacturerGuidance
+        case customProfileSummary
     }
 
     init(from decoder: Decoder) throws {
@@ -95,6 +106,10 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         self.isOutsideManufacturerGuidance = try container.decodeIfPresent(
             Bool.self,
             forKey: .isOutsideManufacturerGuidance
+        )
+        self.customProfileSummary = try container.decodeIfPresent(
+            String.self,
+            forKey: .customProfileSummary
         )
     }
 
@@ -113,6 +128,7 @@ struct PersistentTimerMetadataSnapshot: Codable, Equatable {
             isOutsideManufacturerGuidance,
             forKey: .isOutsideManufacturerGuidance
         )
+        try container.encodeIfPresent(customProfileSummary, forKey: .customProfileSummary)
     }
 }
 

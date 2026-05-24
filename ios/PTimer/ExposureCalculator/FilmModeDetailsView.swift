@@ -23,6 +23,12 @@ struct FilmModeDetailsSheet: View {
     @State private var scrollOffset: CGFloat = 0
     @State private var selectedDetent: PresentationDetent = reciprocityDetailsInitialDetent
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    /// The sheet uses an explicit
+    /// top-left close button so dismissal is reachable without
+    /// the drag-down gesture. The button replaces no other
+    /// content — every block below the navigation bar stays
+    /// unchanged.
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -101,6 +107,18 @@ struct FilmModeDetailsSheet: View {
             }
             .navigationTitle(details.title)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .accessibilityLabel("Close")
+                    }
+                    .accessibilityIdentifier("film-mode-details-close")
+                }
+            }
         }
         .animation(.easeInOut(duration: 0.18), value: showsStickySummary)
         .presentationDetents([reciprocityDetailsInitialDetent, .large], selection: $selectedDetent)

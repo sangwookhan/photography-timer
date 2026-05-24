@@ -11,6 +11,14 @@ struct FilmSelectorEntry: Equatable, Identifiable {
     /// indicator (icon or "Unofficial" badge) and the accessibility
     /// label fragment.
     let supportState: FilmSelectorSupportDisplayState
+    /// When this row is a Quick Access alias
+    /// of a canonical row (the row also appears in a manufacturer
+    /// or Custom Films section), this carries the original entry's
+    /// id. The selector view uses it to mark alias rows as selected
+    /// when the canonical row is selected, so the photographer
+    /// sees a consistent highlight without alias rows fighting
+    /// each other for the active marker.
+    let aliasOfOriginalID: String?
 
     init(
         id: String,
@@ -19,7 +27,8 @@ struct FilmSelectorEntry: Equatable, Identifiable {
         manufacturer: String? = nil,
         film: FilmIdentity? = nil,
         profileOverride: ReciprocityProfile? = nil,
-        supportState: FilmSelectorSupportDisplayState = .none
+        supportState: FilmSelectorSupportDisplayState = .none,
+        aliasOfOriginalID: String? = nil
     ) {
         self.id = id
         self.primaryText = primaryText
@@ -28,6 +37,7 @@ struct FilmSelectorEntry: Equatable, Identifiable {
         self.film = film
         self.profileOverride = profileOverride
         self.supportState = supportState
+        self.aliasOfOriginalID = aliasOfOriginalID
     }
 }
 

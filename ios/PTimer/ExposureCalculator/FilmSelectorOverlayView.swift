@@ -9,29 +9,72 @@ struct FilmSelectorOverlay: View {
     let sections: [FilmSelectorSection]
     let selectedFilmID: String?
     let onSelectEntry: (FilmSelectorEntry) -> Void
+    /// Tapping the "Create custom film" sentinel row at the top of
+    /// the picker invokes this callback. Optional so the picker can
+    /// still render in surfaces that have no editor entry point
+    /// (preview / future read-only contexts).
+    let onCreateCustomFilm: (() -> Void)?
+    /// Long-press "Delete custom film" action on a custom-film row.
+    /// The closure receives the film id. Optional so the overlay
+    /// still renders in contexts that have no delete entry point
+    /// (preview / read-only contexts). The selector only
+    /// surfaces the action on rows whose `film.kind == .custom` so
+    /// preset rows can never be deleted by mistake.
+    let onDeleteCustomFilm: ((String) -> Void)?
+    /// Opens the editor on the existing custom
+    /// film via the row overflow menu (Edit). Same gating rule as
+    /// `onDeleteCustomFilm` — only `kind == .custom` rows surface
+    /// the action.
+    let onEditCustomFilm: ((String) -> Void)?
     let style: ExposureWorkspaceMainLayoutStyle
+
+    init(
+        sections: [FilmSelectorSection],
+        selectedFilmID: String?,
+        onSelectEntry: @escaping (FilmSelectorEntry) -> Void,
+        onCreateCustomFilm: (() -> Void)? = nil,
+        onDeleteCustomFilm: ((String) -> Void)? = nil,
+        onEditCustomFilm: ((String) -> Void)? = nil,
+        style: ExposureWorkspaceMainLayoutStyle
+    ) {
+        self.sections = sections
+        self.selectedFilmID = selectedFilmID
+        self.onSelectEntry = onSelectEntry
+        self.onCreateCustomFilm = onCreateCustomFilm
+        self.onDeleteCustomFilm = onDeleteCustomFilm
+        self.onEditCustomFilm = onEditCustomFilm
+        self.style = style
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: true) {
-                // Eager VStack (not LazyVStack) so every section card and
-                // every row is registered with the ScrollViewProxy before
-                // the .onAppear scroll target is requested. With 34 films
-                // across 6 manufacturer groups the eagerness cost is
-                // negligible, but the reliability gain is the difference
-                // between scrollTo finding a row and silently no-oping
-                // when the target row sits below the initial viewport.
-                VStack(spacing: groupSpacing) {
-                    ForEach(sections) { section in
-                        FilmSelectorSectionCard(
-                            section: section,
-                            selectedFilmID: selectedFilmID,
-                            onSelectEntry: onSelectEntry,
-                            rowHeight: rowHeight
-                        )
+            VStack(spacing: 0) {
+                FilmSelectorHeader(
+                    style: style,
+                    onCreateCustomFilm: onCreateCustomFilm
+                )
+                ScrollView(.vertical, showsIndicators: true) {
+                    // Eager VStack (not LazyVStack) so every section card and
+                    // every row is registered with the ScrollViewProxy before
+                    // the .onAppear scroll target is requested. With 34 films
+                    // across 6 manufacturer groups the eagerness cost is
+                    // negligible, but the reliability gain is the difference
+                    // between scrollTo finding a row and silently no-oping
+                    // when the target row sits below the initial viewport.
+                    VStack(spacing: groupSpacing) {
+                        ForEach(sections) { section in
+                            FilmSelectorSectionCard(
+                                section: section,
+                                selectedFilmID: selectedFilmID,
+                                onSelectEntry: onSelectEntry,
+                                onDeleteCustomFilm: onDeleteCustomFilm,
+                                onEditCustomFilm: onEditCustomFilm,
+                                rowHeight: rowHeight
+                            )
+                        }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxWidth: overlayWidth, maxHeight: maxOverlayHeight)
@@ -123,6 +166,8 @@ private struct FilmSelectorSectionCard: View {
     let section: FilmSelectorSection
     let selectedFilmID: String?
     let onSelectEntry: (FilmSelectorEntry) -> Void
+    let onDeleteCustomFilm: ((String) -> Void)?
+    let onEditCustomFilm: ((String) -> Void)?
     let rowHeight: CGFloat
 
     private let cardCornerRadius: CGFloat = 14
@@ -176,46 +221,111 @@ private struct FilmSelectorSectionCard: View {
 
     @ViewBuilder
     private func rowButton(for entry: FilmSelectorEntry) -> some View {
-        Button {
-            onSelectEntry(entry)
-        } label: {
-            HStack(spacing: 10) {
-                // Keep the Unofficial badge next to the film name so it reads as profile identity.
-                HStack(spacing: 6) {
-                    Text(entry.primaryText)
-                        .font(.body.weight(isSelected(entry) ? .semibold : .regular))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+        HStack(spacing: 4) {
+            Button {
+                onSelectEntry(entry)
+            } label: {
+                HStack(spacing: 10) {
+                    // Keep the Unofficial badge next to the film name so it reads as profile identity.
+                    HStack(spacing: 6) {
+                        Text(entry.primaryText)
+                            .font(.body.weight(isSelected(entry) ? .semibold : .regular))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
 
-                    unofficialBadge(for: entry.supportState)
+                        unofficialBadge(for: entry.supportState)
+                    }
+                    .layoutPriority(0)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    // Official support icon sits next to ISO; shape carries the support state.
+                    officialSupportIcon(for: entry.supportState)
+
+                    if let secondaryText = entry.secondaryText {
+                        Text(secondaryText)
+                            .font(.caption)
+                            .foregroundStyle(Color.primary.opacity(0.68))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .layoutPriority(1)
+                    }
                 }
-                .layoutPriority(0)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 6)
+                .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .leading)
+                .background(rowBackground(for: entry))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel(for: entry))
+            .accessibilityAddTraits(isSelected(entry) ? .isSelected : [])
+            .accessibilityIdentifier("film-selector-entry-\(entry.id)")
 
-                // Official support icon sits next to ISO; shape carries the support state.
-                officialSupportIcon(for: entry.supportState)
-
-                if let secondaryText = entry.secondaryText {
-                    Text(secondaryText)
-                        .font(.caption)
-                        .foregroundStyle(Color.primary.opacity(0.68))
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .layoutPriority(1)
+            // Edit/Delete overflow menu for
+            // custom-film rows only. Preset rows render the same
+            // trailing space empty so the row heights stay aligned
+            // across the picker.
+            customRowOverflowMenu(for: entry)
+        }
+        .id(entry.id)
+        .contextMenu {
+            // Long-press fallback for custom-film rows. Same gating
+            // rule as the inline overflow menu so a shipped film
+            // cannot be deleted by accident.
+            if entry.film?.kind == .custom {
+                if let onEditCustomFilm {
+                    Button {
+                        onEditCustomFilm(entry.id)
+                    } label: {
+                        Label("Edit custom film", systemImage: "pencil")
+                    }
+                }
+                if let onDeleteCustomFilm {
+                    Button(role: .destructive) {
+                        onDeleteCustomFilm(entry.id)
+                    } label: {
+                        Label("Delete custom film", systemImage: "trash")
+                    }
                 }
             }
-            .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .leading)
-            .background(rowBackground(for: entry))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .id(entry.id)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel(for: entry))
-        .accessibilityAddTraits(isSelected(entry) ? .isSelected : [])
-        .accessibilityIdentifier("film-selector-entry-\(entry.id)")
+    }
+
+    @ViewBuilder
+    private func customRowOverflowMenu(for entry: FilmSelectorEntry) -> some View {
+        let isCustom = entry.film?.kind == .custom
+        let hasAction = onEditCustomFilm != nil || onDeleteCustomFilm != nil
+        if isCustom, hasAction {
+            Menu {
+                if let onEditCustomFilm {
+                    Button {
+                        onEditCustomFilm(entry.id)
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                }
+                if let onDeleteCustomFilm {
+                    Button(role: .destructive) {
+                        onDeleteCustomFilm(entry.id)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.primary.opacity(0.6))
+                    .frame(width: 28, height: rowHeight)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Custom film options")
+            .accessibilityIdentifier("film-selector-entry-overflow-\(entry.id)")
+        } else {
+            Color.clear.frame(width: 0, height: rowHeight)
+        }
     }
 
     /// Compact SF Symbol for the three official support states.
@@ -285,7 +395,13 @@ private struct FilmSelectorSectionCard: View {
     }
 
     private func isSelected(_ entry: FilmSelectorEntry) -> Bool {
-        entry.id == selectedFilmID
+        guard let selectedFilmID else { return false }
+        if entry.id == selectedFilmID { return true }
+        // A Quick Access alias row is the
+        // same selection identity as its canonical row; mark both
+        // selected so the photographer sees a single coherent
+        // highlight regardless of which row they tapped.
+        return entry.aliasOfOriginalID == selectedFilmID
     }
 
     @ViewBuilder
@@ -295,5 +411,44 @@ private struct FilmSelectorSectionCard: View {
         } else {
             Color.clear
         }
+    }
+}
+
+/// Lightweight overlay chrome that carries the picker title and
+/// the trailing "+" button. The "+" is the primary entry point
+/// for the custom-film editor. Kept outside the ScrollView so it
+/// stays pinned even after a long scroll.
+private struct FilmSelectorHeader: View {
+    let style: ExposureWorkspaceMainLayoutStyle
+    let onCreateCustomFilm: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Films")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 4)
+            if let onCreateCustomFilm {
+                Button(action: onCreateCustomFilm) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.primary.opacity(0.78))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Create custom film")
+                .accessibilityIdentifier("film-selector-create-custom-film")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(
+            // Match the parent material so the header reads as
+            // part of the popover surface rather than a separate
+            // toolbar.
+            Color.clear
+        )
     }
 }

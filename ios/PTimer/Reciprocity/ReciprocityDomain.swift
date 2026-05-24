@@ -29,15 +29,63 @@ struct UserEditableMetadata: Codable, Equatable {
     let displayNameOverride: String?
     let tags: [String]
     let notes: [String]
+    /// User-supplied classification of a custom (`.userDefined`-
+    /// authority) profile's origin. Optional so preset films and
+    /// legacy user metadata decode unchanged. The calculation
+    /// policy never reads this field — it is descriptive metadata
+    /// surfaced in the selector subtitle, Film Details, and timer
+    /// identity snapshot so a custom profile cannot be mistaken for
+    /// manufacturer data.
+    let customSourceType: CustomProfileSourceType?
+    /// Photographer-entered manufacturer string for a custom film
+    /// (e.g. `"Kodak"`).
+    /// Stored separately from `FilmIdentity.manufacturer` because
+    /// the latter drives the selector's manufacturer-grouping pass;
+    /// custom films must stay in the dedicated "Custom films"
+    /// section regardless of what the photographer typed.
+    let customManufacturer: String?
+    /// Optional reference URL the photographer can attach so a
+    /// later edit recalls the formula's source. Additive Optional
+    /// field — older `UserEditableMetadata` payloads decode
+    /// unchanged.
+    let referenceURL: String?
 
     init(
         displayNameOverride: String? = nil,
         tags: [String] = [],
-        notes: [String] = []
+        notes: [String] = [],
+        customSourceType: CustomProfileSourceType? = nil,
+        customManufacturer: String? = nil,
+        referenceURL: String? = nil
     ) {
         self.displayNameOverride = displayNameOverride
         self.tags = tags
         self.notes = notes
+        self.customSourceType = customSourceType
+        self.customManufacturer = customManufacturer
+        self.referenceURL = referenceURL
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case displayNameOverride
+        case tags
+        case notes
+        case customSourceType
+        case customManufacturer
+        case referenceURL
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.displayNameOverride = try container.decodeIfPresent(String.self, forKey: .displayNameOverride)
+        self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+        self.customSourceType = try container.decodeIfPresent(
+            CustomProfileSourceType.self,
+            forKey: .customSourceType
+        )
+        self.customManufacturer = try container.decodeIfPresent(String.self, forKey: .customManufacturer)
+        self.referenceURL = try container.decodeIfPresent(String.self, forKey: .referenceURL)
     }
 }
 

@@ -1,0 +1,178 @@
+import XCTest
+@testable import PTimer
+
+/// Details provenance coverage. Asserts the custom-only
+/// multi-line provenance block exposes source type, formula
+/// summary, range, and user notes — and that it never reads
+/// like manufacturer-backed guidance.
+@MainActor
+final class CustomFilmProvenanceDetailsTests: XCTestCase {
+
+    private let presenter = ReciprocityDetailsVocabularyPresenter()
+
+    func test_customProvenance_listsSourceTypeFormulaRangeAndNotes() throws {
+        let film = makeCustomFilm(
+            sourceType: .personalTest,
+            exponent: 1.30,
+            noCorrectionThrough: 1.0,
+            validThrough: 240.0,
+            notes: ["Bracketed at 1s, 4s, 30s"]
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+        let provenance = try XCTUnwrap(presenter.customProvenanceText(film: film, profile: profile))
+
+        XCTAssertTrue(provenance.contains("Personal test"))
+        XCTAssertTrue(provenance.contains("Tc"))
+        XCTAssertTrue(provenance.contains("1.3"))
+        XCTAssertTrue(provenance.contains("no correction up to 1s"))
+        XCTAssertTrue(provenance.contains("source range through 4m"))
+        XCTAssertTrue(provenance.contains("Bracketed at 1s, 4s, 30s"))
+    }
+
+    func test_customProvenance_doesNotPresentOfficialWording() throws {
+        let film = makeCustomFilm(
+            sourceType: .communityReference,
+            exponent: 1.45,
+            noCorrectionThrough: 1.0,
+            validThrough: 120.0,
+            notes: []
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+        let provenance = try XCTUnwrap(presenter.customProvenanceText(film: film, profile: profile))
+        let lowered = provenance.lowercased()
+        XCTAssertFalse(lowered.contains("official"))
+        XCTAssertFalse(lowered.contains("manufacturer"))
+        XCTAssertFalse(lowered.contains("kodak"))
+        XCTAssertFalse(lowered.contains("fuji"))
+    }
+
+    // MARK: - Structured custom-profile section
+
+    /// The Details sheet renders custom-profile metadata as a
+    /// dedicated section below the graph rather than as text inside
+    /// the top result card. The section exposes one row per fact so
+    /// each line is independently inspectable.
+    func test_customProfileSection_emitsOneRowPerFact() throws {
+        let film = makeCustomFilm(
+            sourceType: .personalTest,
+            exponent: 1.30,
+            noCorrectionThrough: 1.0,
+            validThrough: 240.0,
+            notes: ["Bracketed at 1s, 4s, 30s"]
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+        let section = try XCTUnwrap(
+            presenter.customProfileSection(film: film, profile: profile)
+        )
+        XCTAssertEqual(section.title, "Custom profile")
+
+        let titles = section.rows.map(\.title)
+        // The formula itself is the Reciprocity Graph title
+        // (canonical formula display); repeating it as a row here
+        // would duplicate the same expression on the Details
+        // sheet, so the section carries only the surrounding
+        // provenance.
+        XCTAssertEqual(titles, ["Source", "Range", "Notes"])
+        XCTAssertFalse(
+            section.rows.contains { $0.style == .formulaExpression },
+            "Custom profile section must not duplicate the graph's formula text."
+        )
+
+        XCTAssertEqual(section.rows[0].value, "Personal test")
+        XCTAssertTrue(section.rows[1].value.contains("no correction up to 1s"))
+        XCTAssertTrue(section.rows[1].value.contains("source range through 4m"))
+        XCTAssertEqual(section.rows[2].value, "Bracketed at 1s, 4s, 30s")
+    }
+
+    func test_customProfileSection_returnsNilForPresetProfile() throws {
+        // Use a preset Provia 100F profile — official authority,
+        // so the custom-profile section must not render.
+        let film = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Provia 100F" }
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+        XCTAssertNil(presenter.customProfileSection(film: film, profile: profile))
+    }
+
+    func test_summaryDetailText_returnsNilForUserDefinedProfile() throws {
+        // The top result card stays focused on the per-shot output
+        // (Adjusted / Corrected / Status). Custom provenance now
+        // belongs in the dedicated section below the graph, so the
+        // detail line under Status must be empty for user-defined
+        // profiles.
+        let film = makeCustomFilm(
+            sourceType: .personalTest,
+            exponent: 1.30,
+            noCorrectionThrough: 1.0,
+            validThrough: 60.0,
+            notes: []
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+        let model = ReciprocityModel()
+        let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: 4)
+        let bindingState = FilmModeReciprocityBindingState(
+            film: film,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
+        XCTAssertNil(presenter.summaryDetailText(for: bindingState))
+    }
+
+    func test_subtitleAuthorityLabel_remainsCustomForUserDefined() {
+        // Details subtitle delegates to the main row's authority
+        // label, which returns "Custom" for the user-defined
+        // authority. The presenter must keep this contract so a
+        // future label rename does not silently revert the
+        // Details surface to nil.
+        XCTAssertEqual(presenter.subtitleAuthorityLabel(for: .userDefined), "Custom")
+        XCTAssertEqual(presenter.subtitleAuthorityLabel(for: .official), "Official guidance")
+        XCTAssertEqual(presenter.subtitleAuthorityLabel(for: .unofficial), "Unofficial practical")
+        XCTAssertNil(presenter.subtitleAuthorityLabel(for: .unknown))
+    }
+
+    // MARK: - Helpers
+
+    private func makeCustomFilm(
+        sourceType: CustomProfileSourceType,
+        exponent: Double,
+        noCorrectionThrough: Double,
+        validThrough: Double,
+        notes: [String]
+    ) -> FilmIdentity {
+        let formula = ReciprocityFormula(
+            exponent: exponent,
+            noCorrectionThroughSeconds: noCorrectionThrough,
+            sourceRangeThroughSeconds: validThrough
+        )
+        let profile = ReciprocityProfile(
+            id: "custom-profile",
+            name: "Custom",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                confidence: .unknown,
+                publisher: ""
+            ),
+            rules: [.formula(FormulaReciprocityRule(formula: formula))],
+            notes: [],
+            userMetadata: UserEditableMetadata(
+                notes: notes,
+                customSourceType: sourceType
+            ),
+            sourceEvidence: []
+        )
+        return FilmIdentity(
+            id: "custom-film",
+            kind: .custom,
+            canonicalStockName: "Custom",
+            manufacturer: nil,
+            brandLabel: nil,
+            aliases: [],
+            iso: 100,
+            productionStatus: .unknown,
+            profiles: [profile],
+            userMetadata: UserEditableMetadata(customSourceType: sourceType)
+        )
+    }
+}

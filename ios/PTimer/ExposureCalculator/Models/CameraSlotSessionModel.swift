@@ -232,4 +232,36 @@ final class CameraSlotSessionModel: ObservableObject {
     func currentInactiveSnapshots() -> [CameraSlotID: CameraSlotCalculatorSnapshot] {
         inactiveSnapshots
     }
+
+    /// Scrubs `filmID` from every inactive slot snapshot
+    /// so a custom-film deletion does not leave the other slots
+    /// dangling on a no-longer-existing reference. The active slot
+    /// is not touched here — the ViewModel facade clears the active
+    /// selection through `FilmSelectionModel` separately. Returns
+    /// the set of slots whose snapshot was mutated so the caller
+    /// can trigger persistence + UI republish only when something
+    /// actually changed.
+    @discardableResult
+    func clearFilmReference(filmID: String) -> Set<CameraSlotID> {
+        var touched: Set<CameraSlotID> = []
+        for (slotID, snapshot) in inactiveSnapshots {
+            guard snapshot.selectedPresetFilm?.id == filmID else {
+                continue
+            }
+            var updated = snapshot
+            updated.selectedPresetFilm = nil
+            updated.selectedProfileOverride = nil
+            inactiveSnapshots[slotID] = updated
+            touched.insert(slotID)
+        }
+        // `inactiveSnapshots` is not `@Published` (page state reads
+        // are pull-driven via `snapshot(forInactiveSlot:)`), so a
+        // mutation in here would otherwise not trip the model's
+        // objectWillChange. Send manually only when something
+        // changed so non-deletion writes stay quiet.
+        if !touched.isEmpty {
+            objectWillChange.send()
+        }
+        return touched
+    }
 }

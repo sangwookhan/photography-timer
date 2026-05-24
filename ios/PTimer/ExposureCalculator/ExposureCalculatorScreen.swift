@@ -22,6 +22,15 @@ struct ExposureCalculatorScreen: View {
     /// `nil` automatically. Only the active slot can request a
     /// rename — the title affordance on inactive pages is hidden.
     @State private var slotIDPendingRename: CameraSlotID?
+    /// Visibility of the custom-film editor sheet. Toggled by the
+    /// header "+" button inside the film selector; the selector
+    /// collapses first so the sheet presents over a stable
+    /// background.
+    @State private var isCustomFilmEditorPresented = false
+    /// When non-nil, the editor opens in Edit mode prefilled from
+    /// this existing custom film. `.sheet(item:)` keys off this so
+    /// dismissal clears it back to nil.
+    @State private var customFilmBeingEdited: EditingCustomFilmIdentity?
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
@@ -166,6 +175,33 @@ struct ExposureCalculatorScreen: View {
                             viewModel.selectEntry(entry)
                             isFilmSelectorPresented = false
                         },
+                        onCreateCustomFilm: {
+                            // Dismiss the selector first so the
+                            // editor sheet presents over a stable
+                            // background — leaving the selector up
+                            // would double-stack a material overlay
+                            // behind the form sheet.
+                            isFilmSelectorPresented = false
+                            isCustomFilmEditorPresented = true
+                        },
+                        onDeleteCustomFilm: { filmID in
+                            // Drop the row immediately so the picker
+                            // reflects the deletion; if the deleted
+                            // row was active, the ViewModel clears
+                            // the selection internally.
+                            viewModel.deleteCustomFilm(id: filmID)
+                        },
+                        onEditCustomFilm: { filmID in
+                            // Edit collapses the selector and opens
+                            // the editor prefilled from the existing
+                            // film.
+                            guard let film = viewModel.customFilmLibrary
+                                .film(withID: filmID) else {
+                                return
+                            }
+                            isFilmSelectorPresented = false
+                            customFilmBeingEdited = EditingCustomFilmIdentity(film: film)
+                        },
                         style: style
                     )
                     .padding(.top, screenLevelSelectorOverlayTopPadding(style: style))
@@ -213,6 +249,34 @@ struct ExposureCalculatorScreen: View {
                     },
                     onReset: {
                         viewModel.resetCameraSlotCustomName(slotID)
+                    }
+                )
+            }
+            .sheet(isPresented: $isCustomFilmEditorPresented) {
+                CustomFilmEditorView(
+                    onSave: { film in
+                        viewModel.addCustomFilm(film)
+                        isCustomFilmEditorPresented = false
+                    },
+                    onCancel: {
+                        isCustomFilmEditorPresented = false
+                    }
+                )
+            }
+            .sheet(item: $customFilmBeingEdited) { editing in
+                CustomFilmEditorView(
+                    editing: editing.film,
+                    onSave: { updated in
+                        // Upsert by id replaces the existing entry
+                        // in place, so any running timer's identity
+                        // snapshot stays frozen at its start-time
+                        // values while live calculations switch to
+                        // the edited formula on the next read.
+                        viewModel.addCustomFilm(updated)
+                        customFilmBeingEdited = nil
+                    },
+                    onCancel: {
+                        customFilmBeingEdited = nil
                     }
                 )
             }
@@ -758,6 +822,17 @@ extension View {
                     .stroke(Color(.separator), lineWidth: 1)
             )
     }
+}
+
+/// `Identifiable` wrapper so the screen can drive the Edit sheet
+/// via `.sheet(item:)` (`FilmIdentity` itself is not
+/// `Identifiable` because the domain model already uses `id` as a
+/// regular field). The wrapper's id mirrors the film id so
+/// SwiftUI dismisses correctly when the screen reassigns the
+/// state.
+private struct EditingCustomFilmIdentity: Identifiable {
+    let film: FilmIdentity
+    var id: String { film.id }
 }
 
 private extension String {

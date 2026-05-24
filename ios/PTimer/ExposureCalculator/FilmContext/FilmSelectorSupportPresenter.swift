@@ -11,7 +11,7 @@ import Foundation
 /// readable independent of color.
 enum FilmSelectorSupportDisplayState: Equatable {
     /// No indicator. Used by the "No film" sentinel row and by
-    /// catalog-less profile sources (`.userDefined` / `.unknown`).
+    /// catalog-less profile sources whose authority is `.unknown`.
     case none
 
     /// Official profile that publishes a quantified reciprocity
@@ -36,9 +36,16 @@ enum FilmSelectorSupportDisplayState: Equatable {
     /// never collapse into an icon or color alone.
     case unofficialPractical
 
+    /// Photographer-authored custom profile. Renders a
+    /// visible "Custom" text badge so a user-defined entry can never
+    /// be mistaken for an official manufacturer row at a glance —
+    /// shape, not color, carries the meaning, matching the
+    /// `.unofficialPractical` treatment.
+    case userDefinedFormulaPrediction
+
     /// SF Symbol rendered alongside official-profile rows. `nil`
-    /// for the unofficial badge case (rendered as text) and for
-    /// `.none`.
+    /// for the unofficial / custom badge cases (rendered as text)
+    /// and for `.none`.
     var iconSystemName: String? {
         switch self {
         case .officialQuantifiedPrediction:
@@ -47,19 +54,21 @@ enum FilmSelectorSupportDisplayState: Equatable {
             return "info.circle"
         case .noQuantifiedPrediction:
             return "nosign"
-        case .unofficialPractical, .none:
+        case .unofficialPractical, .userDefinedFormulaPrediction, .none:
             return nil
         }
     }
 
-    /// Visible text shown inside the row for the unofficial badge.
-    /// `nil` for every other state. Only the unofficial case carries
-    /// a textual badge so a row cannot be misread as official from
-    /// icon shape alone.
+    /// Visible text badge rendered inside the row for the
+    /// unofficial and custom cases. `nil` for every other state.
+    /// Both badges are textual so a row cannot be misread as
+    /// official from icon shape or color alone.
     var unofficialBadgeText: String? {
         switch self {
         case .unofficialPractical:
             return "Unofficial"
+        case .userDefinedFormulaPrediction:
+            return "Custom"
         case .none,
              .officialQuantifiedPrediction,
              .officialLimitedGuidance,
@@ -84,6 +93,8 @@ enum FilmSelectorSupportDisplayState: Equatable {
             return "No quantified prediction available"
         case .unofficialPractical:
             return "Unofficial practical estimate"
+        case .userDefinedFormulaPrediction:
+            return "Custom user-defined profile"
         }
     }
 }
@@ -95,22 +106,20 @@ enum FilmSelectorSupportDisplayState: Equatable {
 /// reciprocity rules at view time.
 ///
 /// Authority maps drive the top-level branch: an `.unofficial`
-/// authority on the active profile always produces
-/// `.unofficialPractical`, regardless of the film's other profiles.
-/// For `.official` authorities, the rule set decides between
-/// quantified prediction, limited guidance, and no quantified
-/// prediction. `.userDefined` and `.unknown` collapse to `.none`
-/// because the launch preset catalog never produces them and a
-/// future custom-profile UI will introduce its own indicator
-/// vocabulary.
+/// authority always produces `.unofficialPractical`; a `.userDefined`
+/// authority with a formula rule produces
+/// `.userDefinedFormulaPrediction`. For
+/// `.official` authorities, the rule set decides between quantified
+/// prediction, limited guidance, and no quantified prediction.
+/// `.unknown` collapses to `.none`.
 enum FilmSelectorSupportPresenter {
     /// Classifies a film / profile-override pair for the selector
     /// row. When a `profileOverride` is supplied (the unofficial
     /// practical row variant), the override's authority drives the
     /// classification — the film's official primary profile does
     /// not leak through. When no override is supplied, the film's
-    /// first profile (the launch catalog's official primary) is
-    /// inspected.
+    /// first profile (the launch catalog's official primary, or the
+    /// single user-defined profile on a custom film) is inspected.
     static func makeSupportState(
         for film: FilmIdentity?,
         profileOverride: ReciprocityProfile? = nil
@@ -131,7 +140,9 @@ enum FilmSelectorSupportPresenter {
                 return .officialLimitedGuidance
             }
             return .noQuantifiedPrediction
-        case .userDefined, .unknown:
+        case .userDefined:
+            return .userDefinedFormulaPrediction
+        case .unknown:
             return .none
         }
     }

@@ -34,6 +34,13 @@ final class FilmSelectionModel: ObservableObject {
     /// so a relaunch grafts the persisted context back onto the
     /// correct slot rather than overwriting Camera 1's state.
     private let currentActiveCameraSlotID: () -> CameraSlotID?
+    /// Closure that surfaces the photographer's custom
+    /// film library at restore time. `restoreContext()` uses it to
+    /// resolve a persisted film id against both the preset catalog
+    /// and the user-authored library so a relaunch can restore a
+    /// custom film selection — previously the lookup only consulted
+    /// `presetFilms` and dropped custom selections silently.
+    private let currentCustomFilms: () -> [FilmIdentity]
 
     /// Result of restoring the persisted context. Either we have a
     /// valid restored snapshot (potentially with a missing film id, in
@@ -63,7 +70,8 @@ final class FilmSelectionModel: ObservableObject {
         currentBaseShutterSeconds: @escaping () -> Double,
         currentNDStep: @escaping () -> NDStep,
         currentScaleMode: @escaping () -> ExposureScaleMode = { .oneThirdStop },
-        currentActiveCameraSlotID: @escaping () -> CameraSlotID? = { nil }
+        currentActiveCameraSlotID: @escaping () -> CameraSlotID? = { nil },
+        currentCustomFilms: @escaping () -> [FilmIdentity] = { [] }
     ) {
         self.presetFilms = presetFilms
         self.contextPersistenceStore = contextPersistenceStore
@@ -71,6 +79,7 @@ final class FilmSelectionModel: ObservableObject {
         self.currentNDStep = currentNDStep
         self.currentScaleMode = currentScaleMode
         self.currentActiveCameraSlotID = currentActiveCameraSlotID
+        self.currentCustomFilms = currentCustomFilms
     }
 
     // MARK: - Read accessors
@@ -143,7 +152,9 @@ final class FilmSelectionModel: ObservableObject {
             .flatMap { CameraSlotID(rawValue: $0) }
 
         if let selectedPresetFilmID = snapshot.selectedPresetFilmID {
-            guard let restoredFilm = presetFilms.first(where: { $0.id == selectedPresetFilmID }) else {
+            let resolved = presetFilms.first(where: { $0.id == selectedPresetFilmID })
+                ?? currentCustomFilms().first(where: { $0.id == selectedPresetFilmID })
+            guard let restoredFilm = resolved else {
                 activeContext.selectedPresetFilm = nil
                 contextPersistenceStore.clearSnapshot()
                 return RestoredContext(
@@ -218,8 +229,8 @@ final class FilmSelectionModel: ObservableObject {
     // MARK: - Display helpers
 
     /// Short authority label for the main Film row subtitle.
-    /// Returns nil for userDefined/unknown so only official/unofficial
-    /// films carry a visible qualifier.
+    /// Returns nil for unknown sources so only official, unofficial,
+    /// and user-defined films carry a visible qualifier.
     nonisolated static func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
         filmRowAuthorityLabel(forAuthority: profile?.source.authority)
     }
@@ -236,7 +247,8 @@ final class FilmSelectionModel: ObservableObject {
         switch authority {
         case .official: return "Official guidance"
         case .unofficial: return "Unofficial practical"
-        case .userDefined, .unknown, nil: return nil
+        case .userDefined: return "Custom"
+        case .unknown, nil: return nil
         }
     }
 

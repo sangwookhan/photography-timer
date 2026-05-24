@@ -75,48 +75,100 @@ enum CustomFilmEditorPreviewPresenter {
         let validThrough: Double?
     }
 
-    /// Best-effort parse of the form state. Mirrors the validate()
-    /// parsing rules but tolerates missing optional fields (uses
-    /// defaults) so the preview shows useful guidance even while
-    /// the user is still typing.
+    /// Strict parse of the form state. Empty entries fall back to
+    /// documented defaults
+    /// (`baseTm = baseTc = 1`, `offset = 0`, `noCorrection = 1`,
+    /// `validThrough = Unlimited`) — but a non-empty unparseable
+    /// entry yields `nil`, which the preview view renders as an
+    /// invalid state instead of a silently-defaulted curve. This
+    /// keeps the preview honest with the editor's Save guard:
+    /// if Save is disabled, the preview is too.
     static func parse(form: CustomFilmEditorFormState) -> ParsedFormula? {
         guard let exponent = Double(form.exponentText.trimmingCharacters(in: .whitespacesAndNewlines)),
               exponent.isFinite, exponent > 0 else {
             return nil
         }
-        let baseTm = parseAnchor(form.baseTmText) ?? 1.0
-        let baseTc = parseAnchor(form.baseTcText) ?? 1.0
-        let offset = Double(form.offsetSecondsText.trimmingCharacters(in: .whitespacesAndNewlines))
-            ?? 0.0
-        let noCorrectionThrough = Double(
-            form.noCorrectionThroughText.trimmingCharacters(in: .whitespacesAndNewlines)
-        ) ?? 1.0
-        let validThrough = Double(
-            form.validThroughText.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
-        guard baseTm.isFinite, baseTm > 0,
-              baseTc.isFinite, baseTc > 0,
-              offset.isFinite,
-              noCorrectionThrough.isFinite, noCorrectionThrough >= 0 else {
-            return nil
-        }
-        if let validThrough, !(validThrough.isFinite && validThrough > noCorrectionThrough) {
-            return nil
-        }
+        guard let baseTm = strictPositiveAnchor(form.baseTmText, default: 1.0) else { return nil }
+        guard let baseTc = strictPositiveAnchor(form.baseTcText, default: 1.0) else { return nil }
+        guard let offset = strictFiniteNumber(form.offsetSecondsText, default: 0.0) else { return nil }
+        guard let noCorrectionThrough = strictNonNegativeDuration(
+            form.noCorrectionThroughText,
+            default: 1.0
+        ) else { return nil }
+        guard let validThrough = strictOptionalValidThrough(
+            form.validThroughText,
+            noCorrectionThrough: noCorrectionThrough
+        ) else { return nil }
         return ParsedFormula(
             exponent: exponent,
             baseTm: baseTm,
             baseTc: baseTc,
             offsetSeconds: offset,
             noCorrectionThrough: noCorrectionThrough,
-            validThrough: validThrough
+            validThrough: validThrough.value
         )
     }
 
-    private static func parseAnchor(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        return Double(trimmed)
+    /// Wrapped result so an "unlimited" valid-through can be
+    /// distinguished from a parse failure by the caller.
+    private enum OptionalValidThrough {
+        case finite(Double)
+        case unlimited
+        var value: Double? {
+            switch self {
+            case .finite(let v): return v
+            case .unlimited: return nil
+            }
+        }
+    }
+
+    /// Anchor fields (baseTm / baseTc) accept the same duration-
+    /// string shapes the FormState validator accepts (`"1"`, `"1s"`,
+    /// `"0.1s"`, `"5m"`, `"1h"`), so a value that saves cleanly also
+    /// previews cleanly. `Unlimited` is rejected on anchors because
+    /// the formula needs a finite reference point. Empty input
+    /// falls back to the documented default so the preview reflects
+    /// the editor's `1`/`1`/`0` defaults.
+    private static func strictPositiveAnchor(_ text: String, default fallback: Double) -> Double? {
+        switch CustomFilmDurationParser.parse(text) {
+        case .empty: return fallback
+        case .seconds(let value) where value.isFinite && value > 0: return value
+        case .seconds, .unlimited, .none: return nil
+        }
+    }
+
+    /// Offset accepts the same duration-string shapes as anchors,
+    /// minus the positive-only constraint (a negative offset is a
+    /// valid model when paired with a sufficiently large baseTc).
+    /// `Unlimited` is rejected.
+    private static func strictFiniteNumber(_ text: String, default fallback: Double) -> Double? {
+        switch CustomFilmDurationParser.parse(text) {
+        case .empty: return fallback
+        case .seconds(let value) where value.isFinite: return value
+        case .seconds, .unlimited, .none: return nil
+        }
+    }
+
+    private static func strictNonNegativeDuration(_ text: String, default fallback: Double) -> Double? {
+        switch CustomFilmDurationParser.parse(text) {
+        case .empty: return fallback
+        case .seconds(let value) where value.isFinite && value >= 0: return value
+        case .seconds, .unlimited, .none: return nil
+        }
+    }
+
+    private static func strictOptionalValidThrough(
+        _ text: String,
+        noCorrectionThrough: Double
+    ) -> OptionalValidThrough? {
+        switch CustomFilmDurationParser.parse(text) {
+        case .empty, .unlimited:
+            return .unlimited
+        case .seconds(let value) where value.isFinite && value > noCorrectionThrough:
+            return .finite(value)
+        case .seconds, .none:
+            return nil
+        }
     }
 
     /// Computes the preview rows for `form` over the default

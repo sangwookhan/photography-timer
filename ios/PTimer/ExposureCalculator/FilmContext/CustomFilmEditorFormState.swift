@@ -86,6 +86,11 @@ struct CustomFilmEditorFormState: Equatable {
 /// Returned as an unordered set so the editor can highlight every
 /// invalid field on Save rather than only the first one.
 enum CustomFilmEditorValidationError: Error, Equatable, Hashable {
+    /// Retired — the photographer's
+    /// `Manufacturer + Label + ISO` composition drives the
+    /// auto-generated profile name. The hidden `profileName` text
+    /// field stays for backward compat but the validator never
+    /// raises this case anymore.
     case missingProfileName
     case missingFilmLabel
     case invalidISO
@@ -106,10 +111,10 @@ enum CustomFilmEditorValidationError: Error, Equatable, Hashable {
     case invalidValidThrough
     /// The photographer's combination of
     /// anchors/exponent/offset would produce a corrected exposure
-    /// shorter than the metered exposure inside the formula
-    /// range. The editor blocks save so the calculator never
-    /// emits misleading "long-exposure correction makes the shot
-    /// shorter" guidance.
+    /// shorter than the metered exposure inside the formula's
+    /// usable range. The editor blocks save so the calculator
+    /// never emits misleading "long-exposure correction makes the
+    /// shot shorter" guidance.
     case formulaShortensExposure
 }
 
@@ -250,10 +255,6 @@ extension CustomFilmEditorFormState {
     ) -> Result<FilmIdentity, CustomFilmEditorValidationErrors> {
         var errors: Set<CustomFilmEditorValidationError> = []
 
-        let trimmedProfileName = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedProfileName.isEmpty {
-            errors.insert(.missingProfileName)
-        }
         let trimmedFilmLabel = filmLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedFilmLabel.isEmpty {
             errors.insert(.missingFilmLabel)
@@ -284,19 +285,18 @@ extension CustomFilmEditorFormState {
         if let exponent,
            let baseTm,
            let baseTc,
-           let noCorrectionThrough {
-            // Boundary check uses the anchored form directly:
-            //   Tc(T_b) = baseTc · (T_b / baseTm)^exponent + offset.
-            // For exponent ≥ 0 and baseTc, baseTm > 0 the function
-            // is monotonically non-decreasing in T_m, so satisfying
-            // Tc(T_b) ≥ T_b at the lower edge covers the whole
-            // usable range. 1ms slack lets a flat (T_c = T_m)
-            // anchor pass without rounding noise.
-            let offset = offsetSeconds ?? 0.0
-            let tcAtBoundary = baseTc * pow(noCorrectionThrough / baseTm, exponent) + offset
-            if tcAtBoundary + 0.001 < noCorrectionThrough {
-                errors.insert(.formulaShortensExposure)
-            }
+           let noCorrectionThrough,
+           !CustomFilmFormulaGuard.passesUsableRangeCheck(
+               .init(
+                   exponent: exponent,
+                   referenceMeteredTimeSeconds: baseTm,
+                   coefficientSeconds: baseTc,
+                   offsetSeconds: offsetSeconds ?? 0.0,
+                   noCorrectionThroughSeconds: noCorrectionThrough,
+                   sourceRangeThroughSeconds: validThrough
+               )
+           ) {
+            errors.insert(.formulaShortensExposure)
         }
 
         guard errors.isEmpty,
@@ -308,9 +308,24 @@ extension CustomFilmEditorFormState {
             return .failure(CustomFilmEditorValidationErrors(errors))
         }
 
+        // The editor no longer
+        // surfaces a separate profile-name field; the
+        // auto-generated `Manufacturer + Label · ISO N` string
+        // drives both the user-facing display name and the
+        // internal `ReciprocityProfile.name`. The legacy
+        // `profileName` form field stays only as a fallback for
+        // pre-stabilization callers / tests.
+        let resolvedProfileName = Self.composeDisplayName(
+            manufacturer: manufacturerText,
+            label: trimmedFilmLabel,
+            iso: iso
+        )
+        let fallbackName = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
         let film = buildFilmIdentity(
             ValidatedInput(
-                profileName: trimmedProfileName,
+                profileName: resolvedProfileName.isEmpty
+                    ? (fallbackName.isEmpty ? trimmedFilmLabel : fallbackName)
+                    : resolvedProfileName,
                 filmLabel: trimmedFilmLabel,
                 iso: iso,
                 exponent: exponent,
@@ -325,43 +340,71 @@ extension CustomFilmEditorFormState {
         return .success(film)
     }
 
+    /// The canonical display-name
+    /// composer used by both the editor's auto-generated profile
+    /// name and the editor view's header text. Same rule applied
+    /// in one place so the runtime / Details / timer surfaces all
+    /// read the same string for a given (manufacturer, label, ISO)
+    /// triple.
+    static func composeDisplayName(
+        manufacturer: String,
+        label: String,
+        iso: Int?
+    ) -> String {
+        let trimmedManufacturer = manufacturer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nameParts = [trimmedManufacturer, trimmedLabel].filter { !$0.isEmpty }
+        let nameJoined = nameParts.joined(separator: " ")
+        let isoSegment = iso.map { "ISO \($0)" } ?? ""
+        let segments = [nameJoined, isoSegment].filter { !$0.isEmpty }
+        return segments.joined(separator: " · ")
+    }
+
     /// Parses an anchor field (`baseTmText` / `baseTcText`).
     /// Empty input falls back to the documented `1` default so the
     /// editor's default state behaves like an exponent-only
     /// formula; non-empty, non-finite, or non-positive input
     /// raises the matching error so the editor surfaces it.
+    /// Accept the same duration
+    /// shapes (`100`, `100s`, `5m`, `1h`) as the application-range
+    /// fields so the photographer can write `0.1s` for a base
+    /// anchor without ambiguity. "Unlimited" makes no sense for an
+    /// anchor and is rejected. Empty input still falls back to the
+    /// documented `1` default.
     private func parseAnchor(
         _ text: String,
         invalidError: CustomFilmEditorValidationError,
         errors: inout Set<CustomFilmEditorValidationError>
     ) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
+        switch CustomFilmDurationParser.parse(text) {
+        case .empty:
             return 1.0
+        case .seconds(let value) where value.isFinite && value > 0:
+            return value
+        case .seconds, .unlimited, .none:
+            errors.insert(invalidError)
+            return nil
         }
-        if let parsed = Double(trimmed), parsed.isFinite, parsed > 0 {
-            return parsed
-        }
-        errors.insert(invalidError)
-        return nil
     }
 
     private func parseNoCorrectionThrough(
         errors: inout Set<CustomFilmEditorValidationError>
     ) -> Double? {
-        let trimmed = noCorrectionThroughText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            // Empty = use the documented 1.0s default. The
-            // photographer's edit flow always shows a value, but
-            // the create flow seeds "1" so this branch is mostly
-            // defensive.
+        switch CustomFilmDurationParser.parse(noCorrectionThroughText) {
+        case .empty:
             return 1.0
+        case .unlimited:
+            // "Unlimited" makes no sense for the no-correction
+            // threshold (it would skip the formula entirely);
+            // surface as invalid.
+            errors.insert(.invalidNoCorrectionThrough)
+            return nil
+        case .seconds(let value) where value >= 0:
+            return value
+        case .seconds, .none:
+            errors.insert(.invalidNoCorrectionThrough)
+            return nil
         }
-        if let parsed = Double(trimmed), parsed.isFinite, parsed >= 0 {
-            return parsed
-        }
-        errors.insert(.invalidNoCorrectionThrough)
-        return nil
     }
 
     /// An empty / "Unlimited" entry
@@ -373,19 +416,19 @@ extension CustomFilmEditorFormState {
         noCorrectionThrough: Double?,
         errors: inout Set<CustomFilmEditorValidationError>
     ) -> Double? {
-        let trimmed = validThroughText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed.caseInsensitiveCompare("unlimited") != .orderedSame else {
+        switch CustomFilmDurationParser.parse(validThroughText) {
+        case .empty, .unlimited:
             return nil
-        }
-        guard let parsed = Double(trimmed), parsed.isFinite, parsed > 0 else {
+        case .seconds(let parsed) where parsed.isFinite && parsed > 0:
+            if let noCorrectionThrough, parsed <= noCorrectionThrough {
+                errors.insert(.invalidValidThrough)
+                return nil
+            }
+            return parsed
+        case .seconds, .none:
             errors.insert(.invalidValidThrough)
             return nil
         }
-        if let noCorrectionThrough, parsed <= noCorrectionThrough {
-            errors.insert(.invalidValidThrough)
-            return nil
-        }
-        return parsed
     }
 
     /// Bundle of validated, type-safe fields handed to
@@ -533,17 +576,23 @@ extension CustomFilmEditorFormState {
         return nil
     }
 
+    /// Offset accepts the duration
+    /// parser's `.seconds` case (`100`, `100s`, `5m`, `1h`) but
+    /// rejects `Unlimited`. Empty stays optional (the editor's
+    /// documented 0s default applies in the build path).
     private func optionalFinite(
         _ text: String,
         invalidError: CustomFilmEditorValidationError,
         errors: inout Set<CustomFilmEditorValidationError>
     ) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        if let value = Double(trimmed), value.isFinite {
+        switch CustomFilmDurationParser.parse(text) {
+        case .empty:
+            return nil
+        case .seconds(let value) where value.isFinite:
             return value
+        case .seconds, .unlimited, .none:
+            errors.insert(invalidError)
+            return nil
         }
-        errors.insert(invalidError)
-        return nil
     }
 }

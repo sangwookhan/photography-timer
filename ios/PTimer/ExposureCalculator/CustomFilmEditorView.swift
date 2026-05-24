@@ -136,31 +136,29 @@ struct CustomFilmEditorView: View {
                 .accessibilityIdentifier("custom-film-editor-formula-model")
 
             editorRow(label: "Base Tm") {
-                HStack(spacing: 4) {
-                    TextField("1", text: $formState.baseTmText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 80)
-                        .accessibilityIdentifier("custom-film-editor-base-tm")
-                    Text("s").foregroundStyle(.secondary)
-                }
+                TextField("1s", text: $formState.baseTmText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .accessibilityIdentifier("custom-film-editor-base-tm")
             }
             if validationErrors.contains(.invalidBaseTm) {
-                fieldErrorText("Base Tm must be a positive number of seconds.")
+                fieldErrorText("Base Tm must be a positive duration (e.g. 1s, 5m).")
             }
 
             editorRow(label: "Base Tc") {
-                HStack(spacing: 4) {
-                    TextField("1", text: $formState.baseTcText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 80)
-                        .accessibilityIdentifier("custom-film-editor-base-tc")
-                    Text("s").foregroundStyle(.secondary)
-                }
+                TextField("1s", text: $formState.baseTcText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .accessibilityIdentifier("custom-film-editor-base-tc")
             }
             if validationErrors.contains(.invalidBaseTc) {
-                fieldErrorText("Base Tc must be a positive number of seconds.")
+                fieldErrorText("Base Tc must be a positive duration (e.g. 1s, 5m).")
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -210,47 +208,42 @@ struct CustomFilmEditorView: View {
             }
 
             editorRow(label: "Offset") {
-                HStack(spacing: 4) {
-                    TextField("0", text: $formState.offsetSecondsText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 80)
-                        .accessibilityIdentifier("custom-film-editor-offset")
-                    Text("s").foregroundStyle(.secondary)
-                }
+                TextField("0s", text: $formState.offsetSecondsText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .accessibilityIdentifier("custom-film-editor-offset")
             }
             if validationErrors.contains(.invalidFormulaOffset) {
-                fieldErrorText("Offset must be a number.")
+                fieldErrorText("Offset must be a duration (e.g. 0s, 1s).")
             }
 
             editorRow(label: "No correction up to") {
-                HStack(spacing: 4) {
-                    TextField("1", text: $formState.noCorrectionThroughText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 80)
-                        .accessibilityIdentifier("custom-film-editor-no-correction-through")
-                    Text("s").foregroundStyle(.secondary)
-                }
+                TextField("1s", text: $formState.noCorrectionThroughText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                    .accessibilityIdentifier("custom-film-editor-no-correction-through")
             }
             if validationErrors.contains(.invalidNoCorrectionThrough) {
-                fieldErrorText("Enter a positive number of seconds.")
+                fieldErrorText("Enter a positive duration (e.g. 1s, 5m).")
             }
 
             editorRow(label: "Source range through") {
-                HStack(spacing: 4) {
-                    TextField("Unlimited", text: $formState.validThroughText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 80)
-                        .accessibilityIdentifier("custom-film-editor-valid-through")
-                    if !formState.validThroughText.isEmpty {
-                        Text("s").foregroundStyle(.secondary)
-                    }
-                }
+                TextField("Unlimited", text: $formState.validThroughText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 120)
+                    .accessibilityIdentifier("custom-film-editor-valid-through")
             }
             if validationErrors.contains(.invalidValidThrough) {
-                fieldErrorText("Valid-through must be greater than no-correction.")
+                fieldErrorText("Enter a duration greater than no-correction, or `Unlimited`.")
             }
         }
     }
@@ -337,14 +330,14 @@ struct CustomFilmEditorView: View {
     // MARK: - Computed copy
 
     private var displayName: String {
-        let trimmedManufacturer = formState.manufacturerText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedLabel = formState.filmLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedISO = formState.isoText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let nameParts = [trimmedManufacturer, trimmedLabel].filter { !$0.isEmpty }
-        let nameJoined = nameParts.joined(separator: " ")
-        let isoSegment = trimmedISO.isEmpty ? "" : "ISO \(trimmedISO)"
-        let segments = [nameJoined, isoSegment].filter { !$0.isEmpty }
-        return segments.isEmpty ? "New custom film" : segments.joined(separator: " · ")
+        let iso = Int(trimmedISO)
+        let composed = CustomFilmEditorFormState.composeDisplayName(
+            manufacturer: formState.manufacturerText,
+            label: formState.filmLabel,
+            iso: iso
+        )
+        return composed.isEmpty ? "New custom film" : composed
     }
 
     /// Simplified live formula display rendered in the Preview
@@ -585,12 +578,16 @@ private struct CustomFilmEditorPreviewTable: View {
         switch row.status {
         case .noCorrection:
             return row.status.displayLabel
-        case .formulaApplied:
+        case .formulaApplied, .beyondSourceRange:
+            // confidence boundary: beyond-source-range
+            // still carries a numeric result with a real Δstop, so
+            // the table reads "+N stops" alongside the reduced
+            // confidence label rather than dropping the value.
             if let delta = row.stopDelta {
                 return String(format: "+%.1f stop%@", delta, delta < 1.5 ? "" : "s")
             }
             return row.status.displayLabel
-        case .beyondValidRange, .invalidFormulaResult:
+        case .invalidFormulaResult:
             return row.status.displayLabel
         }
     }
@@ -599,7 +596,7 @@ private struct CustomFilmEditorPreviewTable: View {
         switch status {
         case .noCorrection: return Color.secondary
         case .formulaApplied: return Color.accentColor
-        case .beyondValidRange: return Color.orange
+        case .beyondSourceRange: return Color.orange
         case .invalidFormulaResult: return Color.red.opacity(0.8)
         }
     }

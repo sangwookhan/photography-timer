@@ -1,47 +1,33 @@
 import Foundation
 
-/// Shared correctness helpers for
-/// the custom-film formula model. The previous validator only
-/// sampled the no-correction boundary, which let `exponent < 1`
-/// formulas slip through even though they would shorten metered
-/// exposures at longer times. This helper centralises the usable-
-/// range check so the editor validate path, the persistence
-/// sanitation path, and the preview presenter all enforce the
-/// same rule.
+/// Shared correctness helpers for the custom-film formula model.
+/// The editor validate path, the persistence sanitation path, and
+/// the preview presenter all enforce the same `Tc >= Tm` invariant
+/// through this guard.
+///
+/// Field names mirror the shared `ReciprocityFormula`
+/// (`coefficientSeconds`, `referenceMeteredTimeSeconds`,
+/// `noCorrectionThroughSeconds`, `sourceRangeThroughSeconds`) so
+/// custom and preset profiles speak the same vocabulary at the
+/// authoring layer.
+///
+/// The check is **analytic**, not sample-based. Reparameterising
+/// `Tc(t) = a · (t / Tref)^e + b` as `f(t) = c · t^e + b - t` with
+/// `c = a / Tref^e` gives a function with at most one interior
+/// critical point on `(0, ∞)`. Verifying f at the two endpoints
+/// plus the critical point — when it falls inside the usable
+/// range — therefore covers the whole interval. A sparse
+/// log-spaced scan could silently miss between samples; the
+/// analytic check cannot.
 enum CustomFilmFormulaGuard {
-    /// Upper sample horizon for `Unlimited` valid-through. 3
-    /// hours is enough to catch any sub-1 exponent that would
-    /// shorten realistic photographic exposures while avoiding
-    /// floating-point overflow at extreme metered values.
-    static let unlimitedSampleHorizonSeconds: Double = 10800
+    /// 1 ms slack so a flat `Tc = Tm` boundary stays valid under
+    /// floating-point rounding.
+    private static let slackSeconds: Double = 0.001
 
-    /// Sample count for the log-spaced range scan. 24 samples
-    /// across [noCorrectionThrough, upper] gives sub-stop
-    /// resolution while keeping validation cheap on every
-    /// keystroke.
-    static let sampleCount: Int = 24
-
-    /// Returns `true` when `Tc(T_m) = baseTc · (T_m / baseTm)^e + offset`
-    /// stays at or above `T_m` everywhere in the formula's usable
-    /// range. The check is sample-based with a 1 ms tolerance so a
-    /// perfectly flat boundary (T_c = T_m at the lower edge) is
-    /// not rejected by rounding noise.
-    ///
-    /// `Unlimited` (`validThrough == nil`) with `exponent < 1` is
-    /// rejected outright because the formula will eventually
-    /// shorten any metered value past the chosen sample horizon —
-    /// trying to draw the line elsewhere produces fragile
-    /// edge cases. The same Unlimited case with `exponent == 1`
-    /// is caught by the sample at the horizon when
-    /// `baseTc < baseTm` (the limit of T_c/T_m is `baseTc / baseTm`).
     /// Parameter bundle for `passesUsableRangeCheck` — kept as a
     /// struct so the helper stays under the swiftlint parameter
     /// limit and call sites can name fields without positional
-    /// ambiguity.
-    /// Parameter bundle for `passesUsableRangeCheck`. Field names
-    /// mirror the shared `ReciprocityFormula` so custom
-    /// and preset profiles speak the same vocabulary at the
-    /// authoring layer.
+    /// ambiguity. Names match the shared `ReciprocityFormula`.
     struct UsableRangeInput {
         let exponent: Double
         let referenceMeteredTimeSeconds: Double
@@ -51,6 +37,8 @@ enum CustomFilmFormulaGuard {
         let sourceRangeThroughSeconds: Double?
     }
 
+    /// Returns `true` when no `Tm` in the usable formula range
+    /// produces `Tc < Tm`.
     static func passesUsableRangeCheck(_ input: UsableRangeInput) -> Bool {
         let exponent = input.exponent
         let referenceMeteredTime = input.referenceMeteredTimeSeconds
@@ -58,41 +46,117 @@ enum CustomFilmFormulaGuard {
         let offset = input.offsetSeconds
         let noCorrectionThrough = input.noCorrectionThroughSeconds
         let sourceRangeThrough = input.sourceRangeThroughSeconds
+
         // Defensive: the validator parses for finiteness already,
         // but guard against pathological inputs the sanitation
         // path may receive directly.
-        guard exponent.isFinite, referenceMeteredTime.isFinite, referenceMeteredTime > 0,
+        guard exponent.isFinite, exponent > 0,
+              referenceMeteredTime.isFinite, referenceMeteredTime > 0,
               coefficient.isFinite, coefficient > 0,
               offset.isFinite,
               noCorrectionThrough.isFinite, noCorrectionThrough >= 0 else {
             return false
         }
-
-        if exponent < 1, sourceRangeThrough == nil {
+        if let sourceRangeThrough,
+           !(sourceRangeThrough.isFinite && sourceRangeThrough > noCorrectionThrough) {
             return false
         }
 
-        let upper = sourceRangeThrough ?? unlimitedSampleHorizonSeconds
-        let lower = max(noCorrectionThrough, 1e-3)
-        guard upper > lower else {
-            // Range collapses to a single point — only the
-            // boundary check matters and `Tc(lower) >= lower` is
-            // the right test.
-            let tc = coefficient * pow(lower / referenceMeteredTime, exponent) + offset
-            return tc + 0.001 >= lower
+        // Reparameterise to `f(t) = c · t^e + offset - t` so the
+        // endpoints + critical point analysis works in a single
+        // closed-form variable.
+        let scaledCoefficient = coefficient / pow(referenceMeteredTime, exponent)
+        let lower = max(noCorrectionThrough, 1e-9)
+
+        let formula = ShorteningFormula(
+            coefficient: scaledCoefficient,
+            exponent: exponent,
+            offset: offset
+        )
+
+        // exponent == 1: f is linear (slope = c - 1). Behaviour
+        // determined entirely by `c` and (for finite ranges) the
+        // endpoints.
+        if abs(exponent - 1.0) < 1e-9 {
+            return passesLinearCase(
+                formula: formula,
+                lower: lower,
+                sourceRangeThrough: sourceRangeThrough
+            )
         }
 
-        let logLower = log(lower)
-        let logUpper = log(upper)
-        for i in 0..<sampleCount {
-            let t = Double(i) / Double(sampleCount - 1)
-            let metered = exp(logLower + (logUpper - logLower) * t)
-            let tc = coefficient * pow(metered / referenceMeteredTime, exponent) + offset
-            if tc + 0.001 < metered {
-                return false
-            }
+        // exponent < 1: f is concave on `(0, ∞)` (second
+        // derivative c·e·(e-1)·t^(e-2) < 0), so the minimum on a
+        // closed interval sits at an endpoint. With Unlimited the
+        // formula eventually shortens regardless of `c`, so
+        // reject outright.
+        if exponent < 1 {
+            guard let upper = sourceRangeThrough else { return false }
+            return formula.fIsNonNegative(at: lower)
+                && formula.fIsNonNegative(at: upper)
+        }
+
+        // exponent > 1: f is convex on `(0, ∞)`. Endpoints handle
+        // the boundary case; an interior critical point — when it
+        // exists and falls inside the usable range — is the only
+        // other place the minimum can live.
+        guard formula.fIsNonNegative(at: lower) else { return false }
+        if let upper = sourceRangeThrough, !formula.fIsNonNegative(at: upper) {
+            return false
+        }
+        // Critical point: solve f'(t*) = c·e·t*^(e-1) - 1 = 0
+        // → t* = (1 / (c·e))^(1/(e-1)).
+        let denominator = scaledCoefficient * exponent
+        guard denominator > 0 else {
+            // No real critical point with positive `t*` — the
+            // endpoint checks already covered the range.
+            return true
+        }
+        let critical = pow(1.0 / denominator, 1.0 / (exponent - 1.0))
+        let upperBound = sourceRangeThrough ?? .infinity
+        if critical.isFinite, critical > lower, critical < upperBound {
+            return formula.fIsNonNegative(at: critical)
         }
         return true
+    }
+
+    private static func passesLinearCase(
+        formula: ShorteningFormula,
+        lower: Double,
+        sourceRangeThrough: Double?
+    ) -> Bool {
+        let slope = formula.coefficient - 1.0
+        if slope > 1e-9 {
+            // Monotonically increasing — lower endpoint suffices.
+            return formula.fIsNonNegative(at: lower)
+        }
+        if slope < -1e-9 {
+            // Monotonically decreasing — Unlimited eventually
+            // shortens, finite ranges must clear the upper bound.
+            guard let upper = sourceRangeThrough else { return false }
+            return formula.fIsNonNegative(at: lower)
+                && formula.fIsNonNegative(at: upper)
+        }
+        // c == 1 → f(t) = offset, constant. Need offset >= 0.
+        return formula.offset + slackSeconds >= 0
+    }
+
+    /// Internal compact view of the shortening function used by
+    /// the analytic checks. Kept private to this enum so the
+    /// invariant (slackSeconds tolerance) stays in one place.
+    private struct ShorteningFormula {
+        let coefficient: Double
+        let exponent: Double
+        let offset: Double
+
+        /// Returns `Tc(t) + slack >= t`. The slack mirrors the
+        /// 1 ms tolerance the editor's validator uses so a flat
+        /// boundary doesn't get rejected by rounding.
+        func fIsNonNegative(at t: Double) -> Bool {
+            guard t > 0 else { return offset + slackSeconds >= 0 }
+            let tc = coefficient * pow(t, exponent) + offset
+            return tc + slackSeconds >= t
+        }
     }
 }
 

@@ -150,19 +150,21 @@ final class CustomFilmLibrary: ObservableObject {
         return true
     }
 
-    /// Boundary check: `Tc(noCorrectionThrough) >= noCorrectionThrough`.
-    /// For exponent >= 0 and positive anchors, the formula is
-    /// monotonically non-decreasing in `Tm`, so satisfying the
-    /// inequality at the lower edge covers the whole usable range.
-    /// 1ms slack tolerates the flat `Tc = Tm` boundary under
-    /// floating-point rounding.
+    /// Shared no-shortening guard. Reads the anchor pair directly
+    /// off the formula so a custom profile never relies on metadata
+    /// side channels.
     private static func hasNonShorteningBoundary(
         formula: FormulaReciprocityRule
     ) -> Bool {
-        let f = formula.formula
-        let boundary = max(f.noCorrectionThroughSeconds, 1e-9)
-        let scaled = boundary / f.referenceMeteredTimeSeconds
-        let predicted = f.coefficientSeconds * pow(scaled, f.exponent) + f.offsetSeconds
-        return predicted + 0.001 >= boundary
+        CustomFilmFormulaGuard.passesUsableRangeCheck(
+            .init(
+                exponent: formula.formula.exponent,
+                referenceMeteredTimeSeconds: formula.formula.referenceMeteredTimeSeconds,
+                coefficientSeconds: formula.formula.coefficientSeconds,
+                offsetSeconds: formula.formula.offsetSeconds,
+                noCorrectionThroughSeconds: formula.formula.noCorrectionThroughSeconds,
+                sourceRangeThroughSeconds: formula.formula.sourceRangeThroughSeconds
+            )
+        )
     }
 }

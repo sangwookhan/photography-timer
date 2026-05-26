@@ -224,6 +224,18 @@ enum CustomFilmEditorPreviewPresenter {
                 stopDelta: nil
             )
         }
+        // A sample whose Tc would
+        // shorten the metered time must never read as
+        // `.formulaApplied`. Tolerate 1 ms of floating-point
+        // slack so a perfectly flat boundary stays valid.
+        if tc + 0.001 < meteredSeconds {
+            return Row(
+                meteredSeconds: meteredSeconds,
+                correctedSeconds: tc,
+                status: .invalidFormulaResult,
+                stopDelta: nil
+            )
+        }
         let stopDelta = log2(tc / meteredSeconds)
         return Row(
             meteredSeconds: meteredSeconds,

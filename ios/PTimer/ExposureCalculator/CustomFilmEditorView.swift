@@ -1,4 +1,3 @@
-import Charts
 import SwiftUI
 
 /// Sheet-presented editor for authoring a custom reciprocity
@@ -204,7 +203,7 @@ struct CustomFilmEditorView: View {
                 fieldErrorText("Enter a positive number.")
             }
             if validationErrors.contains(.formulaShortensExposure) {
-                fieldErrorText("Formula must not shorten the metered time at the no-correction boundary.")
+                fieldErrorText("Corrected time must be equal to or longer than metered time.")
             }
 
             editorRow(label: "Offset") {
@@ -252,22 +251,42 @@ struct CustomFilmEditorView: View {
 
     @ViewBuilder
     private var previewCard: some View {
-        Section {
-            CustomFilmEditorPreviewChart(form: formState)
-                .frame(height: 160)
-                .accessibilityIdentifier("custom-film-editor-preview-chart")
+        Section("Preview") {
+            // Render the editor preview through the same
+            // `FilmModeDetailsGraph` view the runtime Reciprocity
+            // Details sheet uses, so the same formula parameters
+            // produce the same shape / viewport / boundary
+            // semantics on both surfaces.
+            if let graphState = CustomFilmEditorPreviewGraphPresenter
+                .graphDisplayState(for: formState) {
+                FilmModeDetailsGraph(graph: graphState)
+                    .accessibilityIdentifier("custom-film-editor-preview-chart")
+            } else {
+                previewPlaceholder
+                    .accessibilityIdentifier("custom-film-editor-preview-chart")
+            }
             CustomFilmEditorPreviewTable(form: formState)
                 .accessibilityIdentifier("custom-film-editor-preview-table")
-        } header: {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("Preview")
-                Spacer(minLength: 4)
-                Text(previewFormulaSummary)
-                    .font(.footnote.monospaced())
+        }
+    }
+
+    @ViewBuilder
+    private var previewPlaceholder: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        Color.secondary.opacity(0.3),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                    )
+                Text("Invalid formula input")
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.trailing)
-                    .accessibilityIdentifier("custom-film-editor-preview-formula")
+                    .multilineTextAlignment(.center)
+                    .padding(8)
             }
+            .frame(height: 196)
+            .accessibilityIdentifier("custom-film-editor-preview-placeholder")
         }
     }
 
@@ -340,37 +359,6 @@ struct CustomFilmEditorView: View {
         return composed.isEmpty ? "New custom film" : composed
     }
 
-    /// Live formula display rendered in the Preview header.
-    /// routes the strict preview parse
-    /// through `FormulaEquationFormatter` — the same renderer
-    /// shipped preset formulas use — so editor / Details / timer
-    /// all agree on display. A partially-invalid form yields the
-    /// invalid placeholder instead of a silently-defaulted curve.
-    private var previewFormulaSummary: String {
-        guard let parsed = CustomFilmEditorPreviewPresenter.parse(form: formState) else {
-            return previewInvalidPlaceholder
-        }
-        let formula = ReciprocityFormula(
-            coefficientSeconds: parsed.baseTc,
-            referenceMeteredTimeSeconds: parsed.baseTm,
-            exponent: parsed.exponent,
-            offsetSeconds: parsed.offsetSeconds,
-            noCorrectionThroughSeconds: parsed.noCorrectionThrough,
-            sourceRangeThroughSeconds: parsed.validThrough
-        )
-        return FormulaEquationFormatter.userFacingText(for: formula)
-    }
-
-    /// Shown in the Preview header when the form is not
-    /// parseable. The chart's placeholder and the table's
-    /// `invalid formula result` rows already communicate the
-    /// state visually; this string keeps the model-schema hint
-    /// out of the header (which would otherwise read like a
-    /// successful formula).
-    private var previewInvalidPlaceholder: String {
-        "Invalid formula input"
-    }
-
     private var canSave: Bool {
         if case .success = formState.validate() {
             return true
@@ -432,84 +420,10 @@ struct CustomFilmEditorView: View {
     ]
 }
 
-/// Small Swift Charts preview that
-/// visualises the active formula across its valid range. The chart
-/// stays empty when the form's coefficients are not parseable so
-/// an in-progress edit does not render a misleading curve.
-private struct CustomFilmEditorPreviewChart: View {
-    let form: CustomFilmEditorFormState
-
-    private var curve: [CustomFilmEditorPreviewPresenter.Row] {
-        CustomFilmEditorPreviewPresenter.curveSamples(form: form)
-    }
-
-    private var sampleDots: [CustomFilmEditorPreviewPresenter.Row] {
-        CustomFilmEditorPreviewPresenter.rows(form: form)
-            .filter { $0.status == .formulaApplied || $0.status == .noCorrection }
-    }
-
-    var body: some View {
-        if curve.isEmpty {
-            placeholder
-        } else {
-            Chart {
-                // Reference line y = x so the formula's correction
-                // is visible relative to the no-correction baseline.
-                ForEach(curve, id: \.meteredSeconds) { point in
-                    LineMark(
-                        x: .value("Metered seconds", point.meteredSeconds),
-                        y: .value("Metered seconds", point.meteredSeconds),
-                        series: .value("Series", "Tm")
-                    )
-                    .foregroundStyle(Color.secondary.opacity(0.35))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 4]))
-                }
-                ForEach(curve, id: \.meteredSeconds) { point in
-                    if let tc = point.correctedSeconds {
-                        LineMark(
-                            x: .value("Metered seconds", point.meteredSeconds),
-                            y: .value("Corrected seconds", tc),
-                            series: .value("Series", "Tc")
-                        )
-                        .foregroundStyle(Color.accentColor)
-                    }
-                }
-                ForEach(sampleDots, id: \.meteredSeconds) { dot in
-                    if let tc = dot.correctedSeconds {
-                        PointMark(
-                            x: .value("Metered seconds", dot.meteredSeconds),
-                            y: .value("Corrected seconds", tc)
-                        )
-                        .foregroundStyle(Color.accentColor.opacity(0.75))
-                        .symbolSize(35)
-                    }
-                }
-            }
-            .chartXScale(type: .log)
-            .chartYScale(type: .log)
-            .chartXAxisLabel("Tm (s)", position: .bottomTrailing)
-            .chartYAxisLabel("Tc (s)", position: .topTrailing)
-        }
-    }
-
-    @ViewBuilder
-    private var placeholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-            Text("Enter a formula and range to preview the curve.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(8)
-        }
-    }
-}
-
-/// Editor preview table. Renders the
-/// presenter's sample rows with `Tm | Tc | Δstop or status` so the
-/// photographer can sanity-check the formula across common
-/// metered exposures before saving.
+/// Editor preview table. Renders the presenter's sample rows with
+/// `Tm | Tc | Δstop or status` so the photographer can
+/// sanity-check the formula across common metered exposures
+/// before saving.
 private struct CustomFilmEditorPreviewTable: View {
     let form: CustomFilmEditorFormState
 
@@ -559,10 +473,10 @@ private struct CustomFilmEditorPreviewTable: View {
         case .noCorrection:
             return row.status.displayLabel
         case .formulaApplied, .beyondSourceRange:
-            // confidence boundary: beyond-source-range
-            // still carries a numeric result with a real Δstop, so
-            // the table reads "+N stops" alongside the reduced
-            // confidence label rather than dropping the value.
+            // Beyond-source-range still carries a numeric result
+            // with a real Δstop, so the table reads "+N stops"
+            // alongside the reduced confidence label rather than
+            // dropping the value.
             if let delta = row.stopDelta {
                 return String(format: "+%.1f stop%@", delta, delta < 1.5 ? "" : "s")
             }

@@ -6,10 +6,10 @@ import Foundation
 /// entries whose `kind == .custom` and whose single profile carries
 /// `.userDefined` authority.
 ///
-/// Persistence : the library loads the
-/// `CustomFilmLibraryStoring` snapshot at init and writes back on
-/// every mutation. Pass a `NoOpCustomFilmLibraryStore` for tests
-/// that only care about the in-memory invariants; pass the
+/// Persistence: the library loads the `CustomFilmLibraryStoring`
+/// snapshot at init and writes back on every mutation. Pass a
+/// `NoOpCustomFilmLibraryStore` for tests that only care about
+/// the in-memory invariants; pass the
 /// `UserDefaultsCustomFilmLibraryStore` (wired by
 /// `ViewModelDependencyFactory.production()`) for the shipping
 /// path.
@@ -128,10 +128,9 @@ final class CustomFilmLibrary: ObservableObject {
         }.first
     }
 
-    /// Shared formula model: every field lives on the
-    /// formula itself. The basic-shape check rejects non-finite
-    /// values or non-positive coefficient / reference / exponent
-    /// before the analytic shortening guard runs.
+    /// Basic-shape check that rejects non-finite values or
+    /// non-positive coefficient / reference / exponent before the
+    /// analytic shortening guard runs.
     private static func hasWellFormedFormulaCoefficients(_ formula: FormulaReciprocityRule) -> Bool {
         formula.formula.hasValidParameters
     }

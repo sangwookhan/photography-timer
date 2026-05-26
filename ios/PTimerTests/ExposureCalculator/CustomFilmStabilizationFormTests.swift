@@ -1,10 +1,10 @@
 import XCTest
 @testable import PTimer
 
-/// Covers the form-validation +
-/// preview parsing + duration parser fixes. All checks operate on
-/// the pure-value form state and the strict preview parser; no
-/// SwiftUI view is exercised.
+/// Covers the form-validation + preview parsing + duration
+/// parser invariants. All checks operate on the pure-value form
+/// state and the strict preview parser; no SwiftUI view is
+/// exercised.
 final class CustomFilmStabilizationFormTests: XCTestCase {
 
     // MARK: - profileName is no longer required

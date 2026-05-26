@@ -1,10 +1,10 @@
 import XCTest
 @testable import PTimer
 
-/// Covers the editor preview
-/// presenter's Tm→Tc evaluation and curve generation. The
-/// presenter is a pure value transform so tests bind directly to
-/// its output without exercising the SwiftUI view.
+/// Covers the editor preview presenter's Tm→Tc evaluation and
+/// curve generation. The presenter is a pure value transform so
+/// tests bind directly to its output without exercising the
+/// SwiftUI view.
 final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
 
     func test_rows_belowThreshold_marksNoCorrection() {
@@ -37,8 +37,8 @@ final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
     }
 
     func test_rows_beyondSourceRange_keepsCalculatingWithReducedConfidence() {
-        // source/fitting confidence boundary semantics:
-        // a sample past `sourceRangeThroughSeconds` still has a
+        // Source/fitting confidence boundary semantics: a sample
+        // past `sourceRangeThroughSeconds` still has a
         // formula-derived corrected value; only the status flips
         // to `.beyondSourceRange` so the preview table reads the
         // reduced confidence rather than missing data.
@@ -88,100 +88,11 @@ final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
 
     // MARK: - Duration-string parser policy
 
-    /// The preview parser routes every
-    /// duration field through `CustomFilmDurationParser` so the
-    /// editor's keyboard policy (`100`, `100s`, `5m`, `1h`) and the
-    /// preview accept the same input shapes. `Unlimited` stays
-    /// restricted to `validThrough`.
-
-    func test_parse_anchorAccepts_durationStringWithSuffix() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "0.1s",
-            baseTcText: "0.1s",
-            offsetSecondsText: "1s",
-            noCorrectionThroughText: "1",
-            validThroughText: "5m"
-        )
-        let parsed = CustomFilmEditorPreviewPresenter.parse(form: form)
-        XCTAssertEqual(parsed?.baseTm ?? 0, 0.1, accuracy: 1e-9)
-        XCTAssertEqual(parsed?.baseTc ?? 0, 0.1, accuracy: 1e-9)
-        XCTAssertEqual(parsed?.offsetSeconds ?? -1, 1.0, accuracy: 1e-9)
-        XCTAssertEqual(parsed?.validThrough ?? 0, 300.0, accuracy: 1e-9)
-    }
-
-    func test_parse_anchorRejectsUnlimited() {
-        let baseTmForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "Unlimited",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTmForm))
-
-        let baseTcForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTcText: "Unlimited",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTcForm))
-    }
-
-    func test_parse_offsetRejectsUnlimitedAndGarbage() {
-        let unlimited = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            offsetSecondsText: "Unlimited",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: unlimited))
-
-        let dashOnly = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            offsetSecondsText: "-",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: dashOnly))
-    }
-
-    func test_parse_anchorRejectsGarbage() {
-        let baseTmForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "abc",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTmForm))
-
-        let baseTcForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTcText: "abc",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTcForm))
-    }
-
-    func test_parse_validThroughEmptyMeansUnlimited() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            noCorrectionThroughText: "1",
-            validThroughText: ""
-        )
-        let parsed = CustomFilmEditorPreviewPresenter.parse(form: form)
-        XCTAssertNotNil(parsed)
-        XCTAssertNil(parsed?.validThrough)
-    }
-
-    // MARK: - Duration-string parser policy
-
-    /// The preview parser routes every
-    /// duration field through `CustomFilmDurationParser` so the
-    /// editor's keyboard policy (`100`, `100s`, `5m`, `1h`) and the
-    /// preview accept the same input shapes. `Unlimited` stays
-    /// restricted to `validThrough`.
+    /// The preview parser routes every duration field through
+    /// `CustomFilmDurationParser` so the editor's keyboard policy
+    /// (`100`, `100s`, `5m`, `1h`) and the preview accept the same
+    /// input shapes. `Unlimited` stays restricted to
+    /// `validThrough`.
 
     func test_parse_anchorAccepts_durationStringWithSuffix() {
         let form = CustomFilmEditorFormState(

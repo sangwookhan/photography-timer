@@ -1,9 +1,9 @@
 import Foundation
 
-/// Pure value transform that turns
-/// the editor's pending form state into preview data so the
-/// editor view can render a live Tm→Tc table and a small preview
-/// graph without re-implementing the policy evaluator.
+/// Pure value transform that turns the editor's pending form
+/// state into preview data so the editor view can render a live
+/// Tm→Tc table and a small preview graph without re-implementing
+/// the policy evaluator.
 ///
 /// The presenter never throws and never mutates the form state.
 /// When the form is incomplete or invalid it returns rows with
@@ -22,13 +22,12 @@ enum CustomFilmEditorPreviewPresenter {
     enum RowStatus: Equatable, Hashable {
         case noCorrection
         case formulaApplied
-        /// Source/fitting confidence boundary: a sample
-        /// whose metered exposure sits above
-        /// `sourceRangeThroughSeconds` still has a corrected value
-        /// (the formula keeps producing one); the status flags the
-        /// reduced confidence so the table reads it as beyond the
-        /// photographer's stated source range, not as a calculation
-        /// stop.
+        /// Source/fitting confidence boundary: a sample whose
+        /// metered exposure sits above `sourceRangeThroughSeconds`
+        /// still has a corrected value (the formula keeps
+        /// producing one); the status flags the reduced confidence
+        /// so the table reads it as beyond the photographer's
+        /// stated source range, not as a calculation stop.
         case beyondSourceRange
         case invalidFormulaResult
 
@@ -76,13 +75,13 @@ enum CustomFilmEditorPreviewPresenter {
     }
 
     /// Strict parse of the form state. Empty entries fall back to
-    /// documented defaults
-    /// (`baseTm = baseTc = 1`, `offset = 0`, `noCorrection = 1`,
-    /// `validThrough = Unlimited`) — but a non-empty unparseable
-    /// entry yields `nil`, which the preview view renders as an
-    /// invalid state instead of a silently-defaulted curve. This
-    /// keeps the preview honest with the editor's Save guard:
-    /// if Save is disabled, the preview is too.
+    /// documented defaults (`baseTm = baseTc = 1`, `offset = 0`,
+    /// `noCorrection = 1`, `validThrough = Unlimited`) — but a
+    /// non-empty unparseable entry yields `nil`, which the preview
+    /// view renders as an invalid state instead of a
+    /// silently-defaulted curve. This keeps the preview honest
+    /// with the editor's Save guard: if Save is disabled, the
+    /// preview is too.
     static func parse(form: CustomFilmEditorFormState) -> ParsedFormula? {
         guard let exponent = Double(form.exponentText.trimmingCharacters(in: .whitespacesAndNewlines)),
               exponent.isFinite, exponent > 0 else {
@@ -203,9 +202,9 @@ enum CustomFilmEditorPreviewPresenter {
                 stopDelta: 0
             )
         }
-        // source/fitting confidence boundary: above
-        // `sourceRangeThroughSeconds` the formula still produces a
-        // corrected value; only the status flips to
+        // Source range is a confidence boundary, not a calculation
+        // stop. Above `sourceRangeThroughSeconds` the formula still
+        // produces a corrected value; the status flips to
         // `.beyondSourceRange` so the table reads the reduced
         // confidence rather than missing data.
         let isBeyondSourceRange: Bool
@@ -224,10 +223,10 @@ enum CustomFilmEditorPreviewPresenter {
                 stopDelta: nil
             )
         }
-        // A sample whose Tc would
-        // shorten the metered time must never read as
-        // `.formulaApplied`. Tolerate 1 ms of floating-point
-        // slack so a perfectly flat boundary stays valid.
+        // A sample whose Tc would shorten the metered time must
+        // never read as `.formulaApplied`. Tolerate 1 ms of
+        // floating-point slack so a perfectly flat boundary stays
+        // valid.
         if tc + 0.001 < meteredSeconds {
             return Row(
                 meteredSeconds: meteredSeconds,

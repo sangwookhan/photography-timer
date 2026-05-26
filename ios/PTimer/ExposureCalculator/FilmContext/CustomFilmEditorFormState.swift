@@ -30,21 +30,20 @@ struct CustomFilmEditorFormState: Equatable {
     /// default `"1"`.
     var baseTcText: String
     var offsetSecondsText: String
-    /// Metered exposures up to this many
-    /// seconds receive `Tc = Tm` (no correction) instead of the
-    /// formula. Defaults to "1" because reciprocity behavior is a
-    /// long-exposure concept and sub-1s adjustments would be
-    /// misleading.
+    /// Metered exposures up to this many seconds receive
+    /// `Tc = Tm` (no correction) instead of the formula. Defaults
+    /// to "1" because reciprocity behavior is a long-exposure
+    /// concept and sub-1s adjustments would be misleading.
     var noCorrectionThroughText: String
     /// Metered exposures above this many seconds fall outside the
     /// formula's stated source range. Optional: empty /
     /// "Unlimited" means the formula extrapolates upward without
     /// bound (the saved `sourceRangeThroughSeconds` is `nil`).
     var validThroughText: String
-    /// Photographer-typed
-    /// manufacturer string. Stored on `UserEditableMetadata.customManufacturer`,
-    /// not on `FilmIdentity.manufacturer`, so the picker keeps
-    /// custom films in the "Custom films" group.
+    /// Photographer-typed manufacturer string. Stored on
+    /// `UserEditableMetadata.customManufacturer`, not on
+    /// `FilmIdentity.manufacturer`, so the picker keeps custom
+    /// films in the "Custom films" group.
     var manufacturerText: String
     /// Optional reference URL the photographer recorded; lives at
     /// the bottom of the editor and round-trips through
@@ -86,11 +85,10 @@ struct CustomFilmEditorFormState: Equatable {
 /// Returned as an unordered set so the editor can highlight every
 /// invalid field on Save rather than only the first one.
 enum CustomFilmEditorValidationError: Error, Equatable, Hashable {
-    /// Retired — the photographer's
-    /// `Manufacturer + Label + ISO` composition drives the
-    /// auto-generated profile name. The hidden `profileName` text
-    /// field stays for backward compat but the validator never
-    /// raises this case anymore.
+    /// Retired — the photographer's `Manufacturer + Label + ISO`
+    /// composition drives the auto-generated profile name. The
+    /// hidden `profileName` text field stays for backward compat
+    /// but the validator never raises this case anymore.
     case missingProfileName
     case missingFilmLabel
     case invalidISO
@@ -109,12 +107,12 @@ enum CustomFilmEditorValidationError: Error, Equatable, Hashable {
     /// `Set.contains` compile.
     case missingValidThrough
     case invalidValidThrough
-    /// The photographer's combination of
-    /// anchors/exponent/offset would produce a corrected exposure
-    /// shorter than the metered exposure inside the formula's
-    /// usable range. The editor blocks save so the calculator
-    /// never emits misleading "long-exposure correction makes the
-    /// shot shorter" guidance.
+    /// The photographer's combination of anchors/exponent/offset
+    /// would produce a corrected exposure shorter than the
+    /// metered exposure inside the formula's usable range. The
+    /// editor blocks save so the calculator never emits
+    /// misleading "long-exposure correction makes the shot
+    /// shorter" guidance.
     case formulaShortensExposure
 }
 
@@ -162,20 +160,20 @@ extension CustomFilmEditorFormState {
             ?? film.userMetadata?.notes.first
             ?? ""
 
-        // shared formula carries the range boundaries
-        // on the formula itself; the editor reads them directly so
-        // an Edit round-trip preserves whatever the photographer
+        // The shared formula carries the range boundaries on the
+        // formula itself; the editor reads them directly so an
+        // Edit round-trip preserves whatever the photographer
         // saved.
         let noCorrectionThrough = formula.noCorrectionThroughSeconds
         let validThrough = formula.sourceRangeThroughSeconds
 
-        // Recover the manufacturer
-        // and label from `userMetadata.customManufacturer` and
-        // the canonical stock name. Pre-UI-pass payloads stored
-        // the full name in `canonicalStockName` only; this lookup
-        // detects the manufacturer prefix and splits it back into
-        // separate fields so the new editor surfaces a clean Label
-        // row instead of leaking the manufacturer string into it.
+        // Recover the manufacturer and label from
+        // `userMetadata.customManufacturer` and the canonical
+        // stock name. Older payloads stored the full name in
+        // `canonicalStockName` only; this lookup detects the
+        // manufacturer prefix and splits it back into separate
+        // fields so the editor surfaces a clean Label row instead
+        // of leaking the manufacturer string into it.
         let storedManufacturer = profile.userMetadata?.customManufacturer
             ?? film.userMetadata?.customManufacturer
         let manufacturerText = storedManufacturer ?? ""
@@ -190,7 +188,7 @@ extension CustomFilmEditorFormState {
             ?? film.userMetadata?.referenceURL
             ?? ""
 
-        // shared formula stores the anchor pair on the
+        // The shared formula stores the anchor pair on the
         // formula directly: `referenceMeteredTimeSeconds` is the
         // editor's Base Tm and `coefficientSeconds` is its Base
         // Tc.
@@ -247,9 +245,9 @@ extension CustomFilmEditorFormState {
     /// Validates and converts the pending input into a fully-formed
     /// custom `FilmIdentity`. Returns either the new identity or the
     /// unordered set of field-level reasons it failed. The id is
-    /// supplied by the caller so the persistence layer (Increment 2)
-    /// can drive stable identifiers without the form state having to
-    /// reach for a UUID generator at validation time.
+    /// supplied by the caller so the persistence layer can drive
+    /// stable identifiers without the form state having to reach
+    /// for a UUID generator at validation time.
     func validate(
         idGenerator: () -> String = { UUID().uuidString }
     ) -> Result<FilmIdentity, CustomFilmEditorValidationErrors> {
@@ -308,13 +306,12 @@ extension CustomFilmEditorFormState {
             return .failure(CustomFilmEditorValidationErrors(errors))
         }
 
-        // The editor no longer
-        // surfaces a separate profile-name field; the
-        // auto-generated `Manufacturer + Label · ISO N` string
-        // drives both the user-facing display name and the
-        // internal `ReciprocityProfile.name`. The legacy
-        // `profileName` form field stays only as a fallback for
-        // pre-stabilization callers / tests.
+        // The editor does not surface a separate profile-name
+        // field; the auto-generated `Manufacturer + Label · ISO N`
+        // string drives both the user-facing display name and the
+        // internal `ReciprocityProfile.name`. The `profileName`
+        // form field stays only as a fallback for callers that
+        // still set it explicitly.
         let resolvedProfileName = Self.composeDisplayName(
             manufacturer: manufacturerText,
             label: trimmedFilmLabel,
@@ -340,12 +337,11 @@ extension CustomFilmEditorFormState {
         return .success(film)
     }
 
-    /// The canonical display-name
-    /// composer used by both the editor's auto-generated profile
-    /// name and the editor view's header text. Same rule applied
-    /// in one place so the runtime / Details / timer surfaces all
-    /// read the same string for a given (manufacturer, label, ISO)
-    /// triple.
+    /// The canonical display-name composer used by both the
+    /// editor's auto-generated profile name and the editor view's
+    /// header text. Same rule applied in one place so the runtime
+    /// / Details / timer surfaces all read the same string for a
+    /// given (manufacturer, label, ISO) triple.
     static func composeDisplayName(
         manufacturer: String,
         label: String,
@@ -365,12 +361,11 @@ extension CustomFilmEditorFormState {
     /// editor's default state behaves like an exponent-only
     /// formula; non-empty, non-finite, or non-positive input
     /// raises the matching error so the editor surfaces it.
-    /// Accept the same duration
-    /// shapes (`100`, `100s`, `5m`, `1h`) as the application-range
-    /// fields so the photographer can write `0.1s` for a base
-    /// anchor without ambiguity. "Unlimited" makes no sense for an
-    /// anchor and is rejected. Empty input still falls back to the
-    /// documented `1` default.
+    /// Accepts the same duration shapes (`100`, `100s`, `5m`,
+    /// `1h`) as the application-range fields so the photographer
+    /// can write `0.1s` for a base anchor without ambiguity.
+    /// "Unlimited" makes no sense for an anchor and is rejected.
+    /// Empty input still falls back to the documented `1` default.
     private func parseAnchor(
         _ text: String,
         invalidError: CustomFilmEditorValidationError,
@@ -407,11 +402,11 @@ extension CustomFilmEditorFormState {
         }
     }
 
-    /// An empty / "Unlimited" entry
-    /// means the formula has no upper bound. The validator never
-    /// raises `.missingValidThrough` anymore — the field is
-    /// optional. Non-empty values still have to be finite,
-    /// positive, and strictly greater than `noCorrectionThrough`.
+    /// An empty / "Unlimited" entry means the formula has no upper
+    /// bound. The validator never raises `.missingValidThrough` —
+    /// the field is optional. Non-empty values still have to be
+    /// finite, positive, and strictly greater than
+    /// `noCorrectionThrough`.
     private func parseValidThrough(
         noCorrectionThrough: Double?,
         errors: inout Set<CustomFilmEditorValidationError>
@@ -446,7 +441,7 @@ extension CustomFilmEditorFormState {
         let offsetSeconds: Double?
         let noCorrectionThrough: Double
         /// `nil` when the photographer left the field blank /
-        /// "Unlimited" — the saved formula rule's
+        /// "Unlimited" — the saved formula's
         /// `sourceRangeThroughSeconds` is then `nil`.
         let validThrough: Double?
     }
@@ -477,12 +472,12 @@ extension CustomFilmEditorFormState {
         _ input: ValidatedInput,
         idGenerator: () -> String
     ) -> FilmIdentity {
-        // shared formula model. Custom profiles produce
-        // the same `ReciprocityFormula` shape shipped preset
-        // profiles use, so the runtime evaluator, the Details
-        // graph presenter, the equation formatter, and the timer
-        // identity summary all read one schema. Editor UI labels
-        // map onto the shared field names verbatim:
+        // Custom profiles produce the same shared
+        // `ReciprocityFormula` shape preset profiles use, so the
+        // runtime evaluator, the Details graph presenter, the
+        // equation formatter, and the timer identity summary all
+        // read one schema. Editor UI labels map onto the shared
+        // field names verbatim:
         //
         //   Base Tm                → referenceMeteredTimeSeconds
         //   Base Tc                → coefficientSeconds
@@ -576,10 +571,10 @@ extension CustomFilmEditorFormState {
         return nil
     }
 
-    /// Offset accepts the duration
-    /// parser's `.seconds` case (`100`, `100s`, `5m`, `1h`) but
-    /// rejects `Unlimited`. Empty stays optional (the editor's
-    /// documented 0s default applies in the build path).
+    /// Offset accepts the duration parser's `.seconds` case
+    /// (`100`, `100s`, `5m`, `1h`) but rejects `Unlimited`. Empty
+    /// stays optional (the editor's documented 0s default applies
+    /// in the build path).
     private func optionalFinite(
         _ text: String,
         invalidError: CustomFilmEditorValidationError,

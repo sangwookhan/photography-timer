@@ -1,10 +1,9 @@
 import XCTest
 @testable import PTimer
 
-/// Pins the five
-/// fixes that get folded into the existing stabilization commits
-/// (Quick Access id, Details graph formula, analytic shortening
-/// guard, duration parser policy, strict preview header).
+/// Pins the five custom-film stabilization invariants: Quick
+/// Access id, Details graph formula, analytic shortening guard,
+/// duration parser policy, and strict preview header.
 final class CustomFilmStabilizationFixesTests: XCTestCase {
 
     // MARK: - Fix 1: Quick Access canonical id

@@ -14,25 +14,21 @@ struct FilmSelectorOverlay: View {
     /// still render in surfaces that have no editor entry point
     /// (preview / future read-only contexts).
     let onCreateCustomFilm: (() -> Void)?
-    /// Confirmed-delete callback. The overlay wraps the delete tap
-    /// in a confirmation dialog, so this closure is only invoked
-    /// after the photographer taps the destructive button in the
-    /// dialog. Optional — the overlay still renders in read-only
-    /// contexts. Only `kind == .custom` rows surface the action,
-    /// so a preset row can never be deleted by mistake.
+    /// contexts. Only `kind == .custom` rows surface the action, so
+    /// a preset row can never be deleted by mistake.
     let onDeleteCustomFilm: ((String) -> Void)?
-    /// Opens the editor on the existing custom
-    /// film via the row overflow menu (Edit). Same gating rule as
+    /// Opens the editor on the existing custom film via the row
+    /// overflow menu (Edit). Same gating rule as
     /// `onDeleteCustomFilm` — only `kind == .custom` rows surface
     /// the action.
     let onEditCustomFilm: ((String) -> Void)?
     let style: ExposureWorkspaceMainLayoutStyle
 
-    /// Captured entry awaiting the
-    /// "Delete custom film?" confirmation. Keyed on the full
-    /// `FilmSelectorEntry` so the dialog can render the film's
-    /// stock name in the destructive button label without
-    /// re-resolving the entry through the section data.
+    /// Captured entry awaiting the "Delete custom film?"
+    /// confirmation. Keyed on the full `FilmSelectorEntry` so the
+    /// dialog can render the film's stock name in the destructive
+    /// button label without re-resolving the entry through the
+    /// section data.
     @State private var pendingDelete: FilmSelectorEntry?
 
     init(
@@ -96,12 +92,11 @@ struct FilmSelectorOverlay: View {
             .padding(.horizontal, 28)
             .frame(maxWidth: .infinity, alignment: .center)
             .accessibilityIdentifier("film-selector-overlay")
-            // Confirmation dialog
-            // for the destructive Delete action. Held at the
-            // overlay level so the long-press contextMenu and
-            // the inline `…` Menu both route through the same
-            // reliable confirmation step before the library
-            // mutation runs.
+            // Confirmation dialog for the destructive Delete
+            // action. Held at the overlay level so the long-press
+            // contextMenu and the inline `…` Menu both route
+            // through the same reliable confirmation step before
+            // the library mutation runs.
             .confirmationDialog(
                 "Delete custom film?",
                 isPresented: Binding(
@@ -110,11 +105,10 @@ struct FilmSelectorOverlay: View {
                 ),
                 presenting: pendingDelete
             ) { entry in
-                // Always confirm
-                // against the canonical custom-film id so a
-                // Quick Access alias row (id prefix `quick:`)
-                // does not route through the alias when removing
-                // the entry from the library.
+                // Always confirm against the canonical custom-film
+                // id so a Quick Access alias row (id prefix
+                // `quick:`) does not route through the alias when
+                // removing the entry from the library.
                 Button("Delete \(entry.primaryText)", role: .destructive) {
                     if let canonical = entry.canonicalCustomFilmID {
                         onDeleteCustomFilm?(canonical)
@@ -209,11 +203,11 @@ private struct FilmSelectorSectionCard: View {
     let section: FilmSelectorSection
     let selectedFilmID: String?
     let onSelectEntry: (FilmSelectorEntry) -> Void
-    /// The section card raises a
-    /// request to delete (full `FilmSelectorEntry`) so the parent
-    /// overlay can route it through a single confirmation dialog.
-    /// The actual library mutation happens only after the user
-    /// taps the destructive button in the dialog.
+    /// The section card raises a request to delete (full
+    /// `FilmSelectorEntry`) so the parent overlay can route it
+    /// through a single confirmation dialog. The actual library
+    /// mutation happens only after the user taps the destructive
+    /// button in the dialog.
     let onRequestDeleteCustomFilm: ((FilmSelectorEntry) -> Void)?
     let onEditCustomFilm: ((String) -> Void)?
     let rowHeight: CGFloat
@@ -310,10 +304,9 @@ private struct FilmSelectorSectionCard: View {
             .accessibilityAddTraits(isSelected(entry) ? .isSelected : [])
             .accessibilityIdentifier("film-selector-entry-\(entry.id)")
 
-            // Edit/Delete overflow menu for
-            // custom-film rows only. Preset rows render the same
-            // trailing space empty so the row heights stay aligned
-            // across the picker.
+            // Edit/Delete overflow menu for custom-film rows only.
+            // Preset rows render the same trailing space empty so
+            // the row heights stay aligned across the picker.
             customRowOverflowMenu(for: entry)
         }
         .id(entry.id)
@@ -445,10 +438,10 @@ private struct FilmSelectorSectionCard: View {
     private func isSelected(_ entry: FilmSelectorEntry) -> Bool {
         guard let selectedFilmID else { return false }
         if entry.id == selectedFilmID { return true }
-        // A Quick Access alias row is the
-        // same selection identity as its canonical row; mark both
-        // selected so the photographer sees a single coherent
-        // highlight regardless of which row they tapped.
+        // A Quick Access alias row is the same selection identity
+        // as its canonical row; mark both selected so the
+        // photographer sees a single coherent highlight regardless
+        // of which row they tapped.
         return entry.aliasOfOriginalID == selectedFilmID
     }
 

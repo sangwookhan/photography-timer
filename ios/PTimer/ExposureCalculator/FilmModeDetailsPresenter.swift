@@ -96,13 +96,13 @@ struct FilmModeDetailsPresenter {
             ? reference.formulaSections(for: referenceInput)
             : reference.limitedGuidanceSections(for: referenceInput)
 
-        // User-defined profile
-        // metadata lives in a dedicated section so the top result
-        // card carries only the per-shot output (Adjusted /
-        // Corrected / Status), matching the preset Details
-        // hierarchy. Placed first among the post-graph sections so
-        // the user reads the profile identity before any
-        // (currently empty) Source / Guidance subsections.
+        // User-defined profile metadata lives in a dedicated
+        // section so the top result card carries only the per-shot
+        // output (Adjusted / Corrected / Status), matching the
+        // preset Details hierarchy. Placed first among the
+        // post-graph sections so the user reads the profile
+        // identity before any (currently empty) Source / Guidance
+        // subsections.
         if let customSection = vocabulary.customProfileSection(
             film: input.bindingState.film,
             profile: input.bindingState.profile

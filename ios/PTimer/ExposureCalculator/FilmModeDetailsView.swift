@@ -23,11 +23,10 @@ struct FilmModeDetailsSheet: View {
     @State private var scrollOffset: CGFloat = 0
     @State private var selectedDetent: PresentationDetent = reciprocityDetailsInitialDetent
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    /// The sheet uses an explicit
-    /// top-left close button so dismissal is reachable without
-    /// the drag-down gesture. The button replaces no other
-    /// content — every block below the navigation bar stays
-    /// unchanged.
+    /// The sheet uses an explicit top-left close button so
+    /// dismissal is reachable without the drag-down gesture. The
+    /// button replaces no other content — every block below the
+    /// navigation bar stays unchanged.
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

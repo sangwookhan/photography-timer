@@ -108,8 +108,8 @@ struct ReciprocityDetailsVocabularyPresenter {
         // as a dedicated section *below* the graph (see
         // `FilmModeDetailsPresenter.customProfileSection`), not as
         // detail text in the top result card. The top card stays
-        // focused on adjusted shutter / corrected exposure / status,
-        // matching the preset Details hierarchy.
+        // focused on adjusted shutter / corrected exposure /
+        // status, matching the preset Details hierarchy.
         if bindingState.profile.source.authority == .userDefined {
             return nil
         }
@@ -233,11 +233,11 @@ struct ReciprocityDetailsVocabularyPresenter {
 
     // MARK: - Custom provenance
 
-    /// Structured provenance section
-    /// for a `.userDefined`-authority profile. Renders below the
-    /// graph as a regular Details section card (one row per fact)
-    /// so the top result card stays focused on Adjusted / Corrected
-    /// / Status, matching the preset Details hierarchy.
+    /// Structured provenance section for a `.userDefined`-
+    /// authority profile. Renders below the graph as a regular
+    /// Details section card (one row per fact) so the top result
+    /// card stays focused on Adjusted / Corrected / Status,
+    /// matching the preset Details hierarchy.
     ///
     /// Returns `nil` for non-userDefined profiles or when nothing
     /// useful can be derived (e.g. a malformed custom profile).
@@ -247,12 +247,11 @@ struct ReciprocityDetailsVocabularyPresenter {
     ) -> FilmModeDetailsSectionState? {
         guard profile.source.authority == .userDefined else { return nil }
 
-        // The formula itself is
-        // already shown as the Reciprocity Graph title (the
-        // canonical display position for a custom profile's
-        // formula). Repeating it as a row here would print the
-        // same expression twice on the Details sheet, so this
-        // section carries only the surrounding provenance —
+        // The formula itself is already shown as the Reciprocity
+        // Graph title (the canonical display position for a custom
+        // profile's formula). Repeating it as a row here would
+        // print the same expression twice on the Details sheet, so
+        // this section carries only the surrounding provenance —
         // Source / Range / Notes / Reference URL — that the graph
         // does not already convey.
         var rows: [FilmModeDetailsRowState] = []
@@ -308,10 +307,9 @@ struct ReciprocityDetailsVocabularyPresenter {
     /// block. Returns `nil` only when nothing useful can be
     /// derived — the caller falls back to the per-state copy.
     ///
-    /// This remains available for
-    /// pre-stabilization callers (timer identity snapshots,
-    /// tests) but is no longer rendered in the Details sheet's
-    /// top card — see `customProfileSection` for the in-sheet
+    /// Remains available for timer identity snapshots and tests
+    /// but is no longer rendered in the Details sheet's top
+    /// card — see `customProfileSection` for the in-sheet
     /// rendering.
     func customProvenanceText(
         film: FilmIdentity,
@@ -340,9 +338,10 @@ struct ReciprocityDetailsVocabularyPresenter {
 
     private func customRangeText(profile: ReciprocityProfile) -> String? {
         // The shared formula carries the no-correction and
-        // source-range boundaries on the formula itself; preset
-        // shapes that still ship a threshold rule fall back to the
-        // legacy maximum-seconds field.
+        // source-range boundaries on itself. Prefer the formula's
+        // fields; fall back to a threshold rule only when one is
+        // present (some preset shapes may surface through this
+        // branch).
         let formulaRule = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
             if case .formula(let f) = rule { return f }
             return nil

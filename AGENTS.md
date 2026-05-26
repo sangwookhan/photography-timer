@@ -147,6 +147,63 @@ Documentation-only changes do not require app test execution.
 
 ---
 
+## Behavioral Guardrails
+
+These guardrails apply across every ticket and complement the
+Required Working Style and Scope Discipline sections. They exist
+to reduce common LLM coding mistakes; for trivial tasks, use
+judgment.
+
+### Think before coding
+
+- State assumptions explicitly before implementing. If a key input
+  is uncertain, name it instead of guessing.
+- When multiple reasonable interpretations exist, present them
+  rather than silently picking one.
+- When a simpler approach exists, say so — push back on
+  overcomplication, even if the brief implies otherwise.
+- If something is unclear, stop and name what is confusing. Do not
+  hide confusion behind speculative code.
+
+### Simplicity first
+
+- Write the minimum code that satisfies the spec. No speculative
+  features, configurability, or abstractions for single-use code.
+- Do not add error handling for scenarios that cannot occur within
+  the declared scope (see also `docs/conventions/ErrorModel.md`).
+- If the change feels long for what it is, rewrite it shorter
+  before reporting it. Ask: "Would a senior engineer call this
+  overcomplicated?"
+
+### Surgical changes
+
+Reinforces the Scope Discipline section above:
+
+- Match the surrounding style even if you would write it
+  differently elsewhere.
+- Do not "improve" adjacent code, comments, or formatting.
+- Remove imports, helpers, and variables that YOUR change made
+  unused. Do not delete pre-existing dead code that your change
+  did not orphan — mention it in the final report instead.
+- Every changed line should trace directly to the declared task
+  scope.
+
+### Goal-driven execution
+
+- Convert each task into a verifiable success criterion before
+  starting:
+  - "Add validation" → "Write tests for invalid inputs, then make
+    them pass"
+  - "Fix the bug" → "Write a test that reproduces it, then make it
+    pass"
+  - "Refactor X" → "Tests pass before and after, behavior unchanged"
+- For multi-step work, write the plan as `Step → verify: check`
+  pairs so each step has a concrete checkpoint. This feeds the
+  verification step in Required Working Style and the test-run
+  expectations under Build and Test Commands.
+
+---
+
 ## Protected Areas
 
 The following behaviors must not be changed without explicit

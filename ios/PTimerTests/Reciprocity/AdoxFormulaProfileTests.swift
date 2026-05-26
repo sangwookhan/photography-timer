@@ -1,7 +1,8 @@
 import XCTest
 @testable import PTimer
 
-/// Behavior contract for ADOX CMS 20 II's formula profile (PTIMER-139).
+/// Behavior contract for ADOX CMS 20 II's formula profile (PTIMER-139,
+/// updated by PTIMER-160).
 ///
 /// The manufacturer publishes:
 ///
@@ -21,13 +22,17 @@ import XCTest
 ///    source evidence only — it does not fit the formula or move the
 ///    calculated corrected exposure off the identity line.
 /// 2. 1 s (+1/2 stop) and 10 s (+1 stop) anchor a log-log formula
-///    Tc = 1.4142 × Tm^1.150515. The formula's domain runs from 1 s
-///    (inclusive — the threshold rule wins at exactly 1 s) up to
-///    100 s (exclusive).
-/// 3. 100 s is published as "Not recommended"; the formula rule sets
-///    `extrapolateBeyondMaximum = false` so inputs at or above 100 s
-///    return an unsupported result with no corrected exposure. The
-///    100 s row is preserved as a Guidance boundary entry.
+///    Tc = 1.4142 × Tm^1.150515. The 1 s open boundary
+///    (`noCorrectionThroughSeconds = 0.999999`) leaves the formula
+///    to fire at exactly 1 s; the source-backed range ends at the
+///    10 s anchor (`sourceRangeThroughSeconds = 10`).
+/// 3. PTIMER-160 made `sourceRangeThroughSeconds` a confidence
+///    boundary, not a calculation stop. The formula keeps producing
+///    numeric values above 10 s; presentation classifies those as
+///    beyond source range. The 100 s "Not recommended" row is
+///    preserved as a published warning marker through the Guidance
+///    boundary section — it is NOT a corrected-time anchor and never
+///    promotes its neighborhood back into source-backed status.
 final class AdoxFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
@@ -64,7 +69,12 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 0.001, accuracy: 1e-9)
     }
 
-    // MARK: - Formula range (1 s … 100 s, exclusive at the upper bound)
+    // MARK: - Source-backed formula range (1 s … 10 s)
+    //
+    // The 10 s anchor is the last quantified source-backed metered
+    // time per PTIMER-160. Inputs strictly above 10 s still compute
+    // a formula-derived value but are classified outside source
+    // range (see the "Beyond the source-backed range" tests).
 
     func testCms20IIFormulaAnchorAtOneSecondMatchesPublishedHalfStop() throws {
         let profile = try cms20Profile()
@@ -111,58 +121,58 @@ final class AdoxFormulaProfileTests: XCTestCase {
         }
     }
 
-    func testCms20IIBeyondTenSecondsButBelowOneHundredStillReturnsFormulaValue() throws {
-        // 14 s, 27 s, and 54 s sit past the last published anchor
-        // (10 s) but inside the calculation-allowed continuation
-        // (1 s … 100 s). The formula must continue to produce a
-        // numeric corrected exposure on the same curve.
+    // MARK: - Beyond the source-backed range (> 10 s, with 100 s as
+    // a warning marker)
+    //
+    // PTIMER-160 policy: `sourceRangeThroughSeconds` is the last
+    // quantified source-backed metered time — for CMS 20 II that is
+    // the 10 s anchor. Inputs above 10 s still compute a formula-
+    // derived continuation but are classified outside source range.
+    // The 100 s row is preserved as a "Not recommended" warning
+    // marker only; it is NOT a corrected-time anchor and never
+    // promotes its neighborhood back into source-backed status.
+
+    func testCms20IIBeyondTenSecondsCarriesFormulaPredictionAsBeyondSource() throws {
+        // 14 s, 27 s, 54 s, and 100 s all sit above the source-
+        // backed 10 s anchor. The formula continues to produce
+        // numeric values, but presentation must surface them as
+        // beyond source range (formula-derived continuation, not
+        // manufacturer guidance).
         let profile = try cms20Profile()
         for (metered, expected) in [
             (14.0, 29.4),
             (27.0, 62.7),
             (54.0, 139.3),
+            (100.0, 1.4142136 * pow(100.0, 1.150515)),
         ] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
-                .formulaDerived,
-                "CMS 20 II at \(metered) s is past the last published anchor but inside the policy's formula range."
+                .unsupportedOutOfPolicyRange,
+                "CMS 20 II at \(metered) s sits above the 10 s source-backed boundary; presentation must classify it as outside source range."
             )
             let corrected = try XCTUnwrap(result.correctedExposureSeconds)
             XCTAssertEqual(
                 corrected,
                 expected,
-                accuracy: 0.5,
-                "CMS 20 II at \(metered) s must keep producing the formula-derived corrected exposure."
+                accuracy: max(0.5, expected * 0.005),
+                "CMS 20 II at \(metered) s must keep producing the formula-derived continuation value."
             )
         }
     }
 
-    // MARK: - Unsupported boundary (≥ 100 s)
-
-    func testCms20IIAtOneHundredSecondsIsUnsupportedAndCarriesNoCorrectedExposure() throws {
-        let profile = try cms20Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 100)
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertNil(
-            result.correctedExposureSeconds,
-            "100 s is published as 'Not recommended'; CMS 20 II must not surface a corrected exposure at the stop signal."
-        )
-    }
-
-    func testCms20IIBeyondOneHundredSecondsRemainsUnsupportedWithNoCorrectedExposure() throws {
+    func testCms20IIAbove100SecondsRemainsBeyondSourceWithFormulaPrediction() throws {
         let profile = try cms20Profile()
         for metered in [120.0, 200.0, 500.0, 1_000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
                 .unsupportedOutOfPolicyRange,
-                "CMS 20 II at \(metered) s sits past the 100 s stop signal and must be unsupported."
+                "CMS 20 II at \(metered) s sits past the 100 s 'Not recommended' marker; the classification stays beyond source range."
             )
-            XCTAssertNil(
-                result.correctedExposureSeconds,
-                "CMS 20 II must never produce a formula prediction past 100 s; \(metered) s must return no corrected exposure."
-            )
+            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
+            let expected = 1.4142136 * pow(metered, 1.150515)
+            XCTAssertEqual(corrected, expected, accuracy: expected * 0.005)
         }
     }
 
@@ -175,34 +185,29 @@ final class AdoxFormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, 1.150515, accuracy: 1e-3)
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
+        let coefficient = formulaRule.formula.coefficientSeconds
         XCTAssertEqual(coefficient, 1.4142136, accuracy: 1e-3)
 
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("Tm^P"),
-            "Equation must use the Tm^P placeholder; got: \(equation)"
-        )
-
-        let range = try XCTUnwrap(formulaRule.meteredRange)
-        XCTAssertEqual(range.minimumSeconds, 1, accuracy: 1e-6)
-        XCTAssertEqual(range.maximumSeconds ?? 0, 100, accuracy: 1e-6)
-        XCTAssertFalse(
-            formulaRule.extrapolateBeyondMaximum,
-            "CMS 20 II must opt out of formula prediction past the 100 s stop signal."
-        )
+        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-6)
+        // PTIMER-160: sourceRangeThroughSeconds is the last quantified
+        // source-backed metered time. For CMS 20 II that is the 10 s
+        // anchor; the 100 s row is preserved as a 'Not recommended'
+        // warning marker and is NOT a corrected-time anchor.
+        let sourceRange = try XCTUnwrap(formulaRule.formula.sourceRangeThroughSeconds)
+        XCTAssertEqual(sourceRange, 10, accuracy: 1e-6)
     }
 
-    func testCms20IIThresholdRuleCoversFullSubOneSecondBand() throws {
+    /// PTIMER-160 retired the companion threshold rule for formula
+    /// profiles. CMS 20 II's sub-1 s no-correction band is now owned
+    /// by the formula's `noCorrectionThroughSeconds` guard.
+    func testCms20IIFormulaCoversFullSubOneSecondNoCorrectionBand() throws {
         let profile = try cms20Profile()
-        let threshold = try XCTUnwrap(profile.rules.compactMap { rule -> ThresholdReciprocityRule? in
-            guard case let .threshold(rule) = rule else { return nil }
+        let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+            guard case let .formula(rule) = rule else { return nil }
             return rule
         }.first)
-        XCTAssertEqual(threshold.noCorrectionRange.minimumSeconds, 0.001, accuracy: 1e-9)
-        XCTAssertEqual(threshold.noCorrectionRange.maximumSeconds ?? 0, 1, accuracy: 1e-9)
+        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-9)
     }
 
     // MARK: - Source evidence preservation
@@ -307,27 +312,33 @@ final class AdoxFormulaProfileTests: XCTestCase {
         }
     }
 
+    /// PTIMER-160: the beyond-source-range region starts at the
+    /// formula's `sourceRangeThroughSeconds`, which for CMS 20 II is
+    /// the 10 s source-backed anchor. The 100 s row is preserved as
+    /// a separate "Not recommended" marker (see
+    /// `notRecommendedBoundarySeconds`), not as the boundary of the
+    /// source-backed range.
     @MainActor
-    func testCms20IIGraphBeyondSourceRangeStartsAtOneHundredSecondsNotAtTenSeconds() throws {
+    func testCms20IIGraphBeyondSourceRangeStartsAtTenSecondsAtSourceBoundary() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(
             graph.beyondSourceRangeStartSeconds ?? 0,
-            100,
+            10,
             accuracy: 1e-6,
-            "The unsupported region must start at the 100 s stop signal, never at the 10 s anchor."
+            "The beyond-source region must start at the 10 s source-backed boundary; 100 s is a separate not-recommended warning marker."
         )
     }
 
     @MainActor
-    func testCms20IIGraphSupportedRangeUpperBoundIsOneHundredSeconds() throws {
+    func testCms20IIGraphSupportedRangeUpperBoundIsTenSeconds() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(
             graph.supportedRangeUpperBoundSeconds ?? 0,
-            100,
+            10,
             accuracy: 1e-6,
-            "Formula's upper bound (the policy stop signal) is 100 s."
+            "Source-backed range upper bound is the 10 s anchor."
         )
     }
 
@@ -371,9 +382,12 @@ final class AdoxFormulaProfileTests: XCTestCase {
         }
     }
 
+    /// Current marker inside the source-backed range (1 s … 10 s)
+    /// plots with the `.formulaDerived` style — the formula matches
+    /// ADOX's published anchors there.
     @MainActor
-    func testCms20IICurrentMarkerInFormulaRangePlotsAtFormulaValue() throws {
-        for (metered, expected) in [(1.7, 2.604), (6.8, 12.83), (14.0, 29.4)] {
+    func testCms20IICurrentMarkerInSourceBackedRangePlotsAtFormulaValue() throws {
+        for (metered, expected) in [(1.7, 2.604), (6.8, 12.83)] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             let currentPoint = try XCTUnwrap(graph.currentPoint)
@@ -383,24 +397,27 @@ final class AdoxFormulaProfileTests: XCTestCase {
                 currentPoint.point.correctedExposureSeconds,
                 expected,
                 accuracy: 0.5,
-                "Current marker at \(metered) s must plot at the formula-derived corrected exposure."
+                "Current marker at \(metered) s must plot at the source-backed formula-derived corrected exposure."
             )
         }
     }
 
+    /// PTIMER-160: past the 10 s source-backed anchor CMS 20 II
+    /// surfaces a formula-prediction marker plotted in the
+    /// beyond-source style — the formula keeps producing values
+    /// (14 s, 27 s, 54 s, …) but presentation must classify them as
+    /// formula-derived continuation, not as source-backed prediction.
     @MainActor
-    func testCms20IIBeyondOneHundredSecondsHasNoCurrentPointAndUsesCurrentInputGuideOnly() throws {
-        for metered in [100.0, 200.0, 500.0] {
+    func testCms20IIAboveTenSecondsPlotsBeyondSourceMarker() throws {
+        for metered in [14.0, 27.0, 54.0, 120.0, 200.0, 500.0] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
-            XCTAssertNil(
+            let currentPoint = try XCTUnwrap(
                 graph.currentPoint,
-                "CMS 20 II at \(metered) s must not plot a current-result marker — no corrected exposure exists."
+                "CMS 20 II at \(metered) s must plot a current-result marker in the beyond-source style (PTIMER-160)."
             )
-            XCTAssertTrue(
-                graph.usesCurrentInputGuideOnly,
-                "CMS 20 II at \(metered) s must fall back to the current-input guide so the user still sees where the input lands on the x-axis."
-            )
+            XCTAssertEqual(currentPoint.style, .beyondSourceRange)
+            XCTAssertFalse(graph.usesCurrentInputGuideOnly)
         }
     }
 
@@ -445,11 +462,11 @@ final class AdoxFormulaProfileTests: XCTestCase {
 
     @MainActor
     func testCms20IISourceReferenceRowsAreSortedByMeteredExposureAscending() throws {
-        // The Source reference block must read bottom-up as a
-        // shutter sweep: the published 1/1000 s point (evidence-only)
-        // appears first, then the 1/1000 s … 1 s no-correction band
-        // that wraps it, then 1 s, then 10 s. The 100 s row lives in
-        // the Guidance boundary section and must not appear here.
+        // PTIMER-160 retired CMS 20 II's companion threshold rule; the
+        // no-correction band is now contributed by the formula itself
+        // and sorts at sortValue 0 (the band's effective start), so it
+        // leads the block. The published anchors and the 1/1000 s
+        // evidence-only point follow in ascending order.
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let sourceReferenceSection = try XCTUnwrap(
             displayState.sections.first(where: { $0.title == "Source reference" })
@@ -463,16 +480,16 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(dataLines.count, 4, "Expected at least four reference rows; got \(dataLines).")
 
         XCTAssertTrue(
-            dataLines[0].contains("*"),
-            "First row must be the 1/1000 s evidence-only entry (carries the * marker); got: \(dataLines[0])"
-        )
-        XCTAssertTrue(
-            dataLines[1].contains("No correction"),
-            "Second row must be the 1/1000 s … 1 s no-correction band; got: \(dataLines[1])"
+            dataLines[0].contains("No correction"),
+            "First row must be the sub-1 s no-correction band; got: \(dataLines[0])"
         )
         XCTAssertFalse(
+            dataLines[0].contains("*"),
+            "The no-correction band row must not carry the * marker; got: \(dataLines[0])"
+        )
+        XCTAssertTrue(
             dataLines[1].contains("*"),
-            "The no-correction band row must not carry the * marker; got: \(dataLines[1])"
+            "Second row must be the 1/1000 s evidence-only entry (carries the * marker); got: \(dataLines[1])"
         )
 
         let firstColumn: (String) -> String = { line in
@@ -482,26 +499,22 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertTrue(firstColumn(dataLines[3]).hasPrefix("10"), "Fourth row must start with the 10 s anchor; got: \(dataLines[3])")
     }
 
-    /// CMS 20 II is the *stop signal* profile: past the 100 s
-    /// boundary the corrected exposure is nil (no formula prediction
-    /// outside the source range), and the detail / graph explanation
-    /// carry the "no quantified corrected point" wording rather than
-    /// the numeric continuation copy other converted profiles use.
+    /// PTIMER-160: past the 100 s "Not recommended" warning marker
+    /// (still beyond the 10 s source-backed boundary), CMS 20 II
+    /// surfaces a formula prediction outside the source range. The
+    /// detail / graph explanation switch to the "outside source
+    /// range" wording with the numeric continuation copy other
+    /// converted profiles use.
     @MainActor
-    func testCms20IIBeyondOneHundredSecondsUsesBeyondSourceRangeWordingWithNoValue() throws {
+    func testCms20IIBeyondOneHundredSecondsUsesBeyondSourceRangeWordingWithValue() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 200)
         XCTAssertEqual(displayState.summary.summaryText, "Beyond source range")
-        let detail = try XCTUnwrap(displayState.summary.detailText)
-        XCTAssertTrue(
-            detail.lowercased().contains("no quantified corrected point is available"),
-            "Detail text at >=100 s must call out the missing corrected value; got: \(detail)"
-        )
 
         let graph = try XCTUnwrap(displayState.graph)
         let explanation = try XCTUnwrap(graph.unsupportedExplanation)
         XCTAssertTrue(
-            explanation.lowercased().contains("no quantified corrected point is available"),
-            "Graph explanation at >=100 s must also call out the missing corrected value; got: \(explanation)"
+            explanation.lowercased().contains("source range"),
+            "Graph explanation at >=100 s must carry source-range wording; got: \(explanation)"
         )
     }
 

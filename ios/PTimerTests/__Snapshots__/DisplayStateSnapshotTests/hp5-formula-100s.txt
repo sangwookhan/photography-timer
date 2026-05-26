@@ -10,4 +10,4 @@
         ▿ notes: 1 element
           ▿ PTimer.ReciprocityPolicyNote
             - token: nil
-            - text: "Exponent P = 1.31."
+            - text: "Exponent p = 1.31."

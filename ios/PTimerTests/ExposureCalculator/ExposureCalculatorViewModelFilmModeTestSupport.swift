@@ -83,7 +83,7 @@ extension XCTestCase {
                             FormulaReciprocityRule(
                                 formula: ReciprocityFormula(
                                     exponent: 1.31,
-                                    equation: nil
+                                    noCorrectionThroughSeconds: 1
                                 )
                             )
                         ),

@@ -5,14 +5,15 @@ import XCTest
 /// profile. Locks the invariants:
 ///
 /// - Below the 1 s no-correction threshold the threshold rule wins.
-/// - In (1 s, 64 s) the formula wins (basis == `.formulaDerived`),
+/// - In (1 s, 32 s] the formula wins (basis == `.formulaDerived`),
 ///   even at the published 4/8/16/32 s reference rows — the formula
 ///   closely tracks them but the rows live as source evidence only.
-/// - 64 s is Fujifilm's published not-recommended boundary: the
-///   basis is `.unsupportedOutOfPolicyRange` and the result still
-///   carries a numeric formula prediction outside the source range.
+/// - The source-backed range ends at the 32 s anchor (PTIMER-160);
+///   inputs above 32 s classify as `.unsupportedOutOfPolicyRange`
+///   with a numeric formula-derived continuation value.
+/// - The 64 s row is preserved as a "Not recommended" warning
+///   marker only and is never used as a formula fitting point.
 /// - All five published rows stay visible as `sourceEvidence`.
-/// - The 64 s row is never used as a formula fitting point.
 final class Velvia50FormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
@@ -28,11 +29,11 @@ final class Velvia50FormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 1, accuracy: 1e-6)
     }
 
-    // MARK: - Formula range (1 s … 64 s exclusive)
+    // MARK: - Source-backed formula range (1 s … 32 s inclusive)
 
-    func testVelvia50InsideFormulaRangeIsFormulaDerivedNotExactTablePoint() throws {
+    func testVelvia50InsideSourceBackedRangeIsFormulaDerivedNotExactTablePoint() throws {
         let profile = try velvia50Profile()
-        for metered in [2.0, 4.0, 8.0, 16.0, 24.0, 32.0, 50.0] {
+        for metered in [2.0, 4.0, 8.0, 16.0, 24.0, 32.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
@@ -49,14 +50,10 @@ final class Velvia50FormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, 1.1821, accuracy: 0.001)
         // Anchored at 1 s threshold endpoint, so the coefficient
         // collapses to 1 and the equation is the bare power form.
-        XCTAssertEqual(formulaRule.formula.coefficient ?? 1, 1, accuracy: 0.001)
-
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(equation.contains("Tm^P"), "Equation must use the Tm^P placeholder; got: \(equation)")
+        XCTAssertEqual(formulaRule.formula.coefficientSeconds, 1, accuracy: 0.001)
 
         let note = try XCTUnwrap(formulaRule.notes.first)
         XCTAssertTrue(
@@ -69,28 +66,28 @@ final class Velvia50FormulaProfileTests: XCTestCase {
         )
     }
 
-    // MARK: - Not-recommended boundary (≥ 64 s) with formula prediction outside source range
+    // MARK: - Beyond the source-backed range (> 32 s, with 64 s as
+    // a warning marker)
 
-    func testVelvia50At64SecondsIsUnsupportedWithFormulaPredictionOutsideSourceRange() throws {
+    /// PTIMER-160: the source-backed range ends at the 32 s anchor.
+    /// 50 s, 64 s, and 90 s all sit above that boundary; the formula
+    /// keeps producing a numeric continuation but the basis must
+    /// classify them as outside the source range. 64 s also exists as
+    /// a published "Not recommended" warning marker, which surfaces
+    /// independently through the source-evidence row — it does not
+    /// promote 64 s back into source-backed status.
+    func testVelvia50Above32SecondsCarriesFormulaPredictionAsBeyondSource() throws {
         let profile = try velvia50Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 64)
-
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        let corrected = try XCTUnwrap(
-            result.correctedExposureSeconds,
-            "64 s must carry a numeric formula prediction outside the source range, not nil."
-        )
-        let expected = pow(64.0, 1.1821)
-        XCTAssertEqual(corrected, expected, accuracy: 0.5)
-    }
-
-    func testVelvia50Beyond64SecondsProducesFormulaPredictionAndStaysUnsupported() throws {
-        let profile = try velvia50Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 90)
-
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, pow(90.0, 1.1821), accuracy: 1)
+        for metered in [50.0, 64.0, 90.0] {
+            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+            XCTAssertEqual(
+                result.metadata.basis,
+                .unsupportedOutOfPolicyRange,
+                "Velvia 50 at \(metered) s sits above the 32 s source-backed boundary."
+            )
+            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
+            XCTAssertEqual(corrected, pow(metered, 1.1821), accuracy: 1)
+        }
     }
 
     // MARK: - Source-evidence preservation

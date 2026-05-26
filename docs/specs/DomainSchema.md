@@ -115,17 +115,33 @@ Example: `Kodak PORTRA 400` reports no correction below ~1 s; beyond, manufactur
 
 ### 5.2 Formula rule
 
-Indicates a closed-form correction.
+Indicates a closed-form correction. The rule wraps a single shared `ReciprocityFormula` value that owns the formula math AND its no-correction / source-range guards — PTIMER-160 retired the companion threshold rule that formula profiles previously carried.
 
-- **meteredRange** — optional [time range](#8-reciprocity-time-range) constraining the formula's domain. Open-ended `meteredRange` shall mean "applies wherever the calculation policy reaches the formula step".
-- **formula** — the only defined formula form is the **exponent power** form: `T_c = coefficient × T_m^exponent + offsetSeconds` (`coefficient` defaults to `1`, `offsetSeconds` defaults to `0`). The structure shall include the source's published equation string for transparency.
+- **formula** — a `ReciprocityFormula` value (§5.2.1).
 - **additionalAdjustments** — array of supplementary adjustments (e.g. development-time hints) that the calculation does not consume.
-- **extrapolateBeyondMaximum** — boolean (default `true`). When `true`, the formula keeps producing a numeric value past `meteredRange.maximumSeconds` and the result is reclassified as `unsupportedOutOfPolicyRange` carrying that numeric continuation as a formula prediction outside the supported range. When `false`, the upper bound is a manufacturer-published hard stop signal: the result is `unsupportedOutOfPolicyRange` with no corrected exposure value at all (ADOX CMS 20 II's `≥ 100 s` "Not recommended" boundary uses this).
 - **notes** — array of free-form notes.
 
 Manufacturer reference points associated with a formula profile (e.g. Provia 100F's published `240 s +1/3 stop` row) live on the profile's `sourceEvidence` array (§3.1, §3.3), not as data on the formula rule itself.
 
 Example: `ILFORD HP5 Plus` uses `T_c = T_m^1.31` for `T_m > 1 s`.
+
+#### 5.2.1 ReciprocityFormula (shared guarded model)
+
+The shared guarded reciprocity formula is the contract every formula profile uses — shipped catalog entries today, and the PTIMER-84 custom profile / PTIMER-159 verification UI / PTIMER-161 table-converted refit / PTIMER-162 next formula family work later.
+
+Display form (Modified Schwarzschild family):
+
+`T_c = a × (T_m / T_ref)^p + b`
+
+- **formulaFamily** — required. A discriminator enum. PTIMER-160 ships exactly one case, `modifiedSchwarzschild`, with the display form above. PTIMER-162 will add the next family case alongside. Consumers must switch on this enum exhaustively (no default branch) so adding a future case surfaces as a compile error.
+- **coefficientSeconds** (`a`, seconds) — scale coefficient. At `T_m = T_ref` the power term equals `a`; the corrected exposure there is `a + b`. Default `1`. `a` is NOT the corrected time when `b ≠ 0`.
+- **referenceMeteredTimeSeconds** (`T_ref`, seconds) — reference metered time used to scale the input. Default `1 s` reduces the display form to the legacy power form `T_c = a × T_m^p + b`.
+- **exponent** (`p`) — drives curve steepness. Required.
+- **offsetSeconds** (`b`, seconds) — constant offset added after the power term. Default `0`.
+- **noCorrectionThroughSeconds** — inclusive upper bound of the no-correction band. For `T_m ≤ noCorrectionThroughSeconds` the formula returns the identity (`T_c = T_m`). The value mirrors the manufacturer-published no-correction marker. An ε-encoded value (e.g. `0.999999` for Tri-X's open boundary at `1 s`, `119.999999` for Acros II's open boundary at `120 s`) signals the source's open-boundary semantic ("Tm strictly below X is no-correction; Tm at exactly X activates the formula"); the policy note renders that as `< X sec` while inclusive integers render as `≤ X sec`.
+- **sourceRangeThroughSeconds** — optional. Inclusive upper bound of the source / fitting confidence range — typically the last quantified source-backed anchor. **It is a confidence boundary, not a calculation stop.** Inputs strictly above the boundary still compute a corrected exposure; the policy classifies them as `unsupportedOutOfPolicyRange` (beyond source range) and the presentation surfaces the value as a formula-derived continuation rather than manufacturer guidance. `nil` means the formula carries no published source boundary and every formula-domain input stays classified as within the stated range.
+
+The formula's `evaluate(meteredExposureSeconds:)` returns one of five outcomes — `noCorrection`, `withinSourceRange(corrected)`, `beyondSourceRange(corrected)`, `invalidInput` (bad metered input), `invalidFormula` (parameter-contract violation), `formulaOutputUnusable` (non-finite / non-positive output), or `unsafeShorteningFormula` (output would shorten the exposure). The first three are normal evaluation paths; the last four are distinct failure modes the policy routes to different presentations so a user-defined custom formula never silently masquerades as "no correction needed".
 
 ### 5.3 Limited-guidance rule
 
@@ -254,7 +270,7 @@ A tagged union describing a single piece of guidance attached to a rule's `adjus
 - **multiplier** — `{ factor }`. The published correction is a scalar multiplier on the metered time at the row's metered point.
 - **colorFilter** — `{ filterName, note? }`. A color-correction filter recommendation (e.g. `5M`, `CC10R`).
 - **development** — `{ instruction, note? }`. A development-time adjustment hint (e.g. `-10% development`).
-- **warning** — `{ severity, message }`. `severity` is one of `caution` or `notRecommended`. `notRecommended` on a formula's source-evidence row marks the manufacturer's stop-signal boundary; the calculation policy reads the stop-signal location from the formula rule's `meteredRange.maximumSeconds`/`extrapolateBeyondMaximum`, not from this row.
+- **warning** — `{ severity, message }`. `severity` is one of `caution` or `notRecommended`. `notRecommended` on a formula's source-evidence row marks the manufacturer's stop-signal boundary. The calculation policy itself reads the source/fitting confidence boundary from the formula's `sourceRangeThroughSeconds`; the warning row is preserved as published-evidence display data and does NOT act as a corrected-time anchor (e.g. CMS 20 II's 100 s "Not recommended" row sits above the 10 s `sourceRangeThroughSeconds`).
 - **note** — `{ text }`. Free-form supplementary guidance.
 
 Exposure adjustments are display-only data attached to threshold / limited-guidance rules and source-evidence rows. The calculation policy reads no quantified prediction from them; corrected exposure values come from the threshold (identity) or formula (closed-form) rules only.
@@ -305,7 +321,7 @@ The bundled launch catalog ships the **34-film launch-ready scope** (wiki 131727
 
 Every launch preset profile matches exactly one of two allowed shapes:
 
-1. **Official quantified formula** — threshold rule (no-correction band) plus formula rule (closed-form correction), with optional `sourceEvidence` rows preserving the manufacturer's published reference points. Calculation produces `formulaDerived` corrected exposures inside the formula range; past the formula's `meteredRange.maximumSeconds` the result transitions to `unsupportedOutOfPolicyRange` (with or without a numeric continuation depending on `extrapolateBeyondMaximum`).
+1. **Official quantified formula** — formula rule only (the shared `ReciprocityFormula` owns its no-correction and source-range guards; PTIMER-160 retired the companion threshold rule), with optional `sourceEvidence` rows preserving the manufacturer's published reference points. Calculation produces `officialThresholdNoCorrection` for `T_m ≤ noCorrectionThroughSeconds`, `formulaDerived` for inputs above that boundary up through `sourceRangeThroughSeconds`, and `unsupportedOutOfPolicyRange` (carrying a numeric formula continuation) for inputs above the source range.
 2. **Official limited guidance** — threshold rule plus limited-guidance rule (§5.3) for the region above the threshold. Calculation produces `officialThresholdNoCorrection` inside the threshold band and `limitedGuidanceNoQuantifiedPrediction` above it; no formula curve, no quantified continuation.
 
 Unofficial practical profiles (`authority = "unofficial"`) are bundled outside the launch catalog file and are documented in §13.3.
@@ -316,12 +332,12 @@ Launch preset profiles shall not carry calculation table rules. The domain has n
 
 | Manufacturer       | Count | Profile shape |
 |--------------------|------:|---------------|
-| ILFORD / HARMAN    |    12 | Threshold + formula (`Tc = Tm^P`) |
-| Kodak Still Film   |     9 | Threshold + formula (B/W: Tri-X 400, T-MAX 100/400) or threshold + limited-guidance (color negatives, Ektachrome E100) |
-| Fujifilm           |     4 | Threshold + formula with `sourceEvidence` reference rows |
-| FOMA BOHEMIA       |     3 | Threshold + formula with `sourceEvidence` reference rows |
-| Rollei             |     4 | Threshold + formula with `sourceEvidence` reference rows |
-| ADOX               |     2 | Threshold + formula with `sourceEvidence` reference rows (CMS 20 II uses `extrapolateBeyondMaximum = false` for its 100 s stop signal) |
+| ILFORD / HARMAN    |    12 | Formula (`Tc = Tm^p`) |
+| Kodak Still Film   |     9 | Formula with `sourceEvidence` reference rows (B/W: Tri-X 400, T-MAX 100/400) or threshold + limited-guidance (color negatives, Ektachrome E100) |
+| Fujifilm           |     4 | Formula with `sourceEvidence` reference rows |
+| FOMA BOHEMIA       |     3 | Formula with `sourceEvidence` reference rows |
+| Rollei             |     4 | Formula with `sourceEvidence` reference rows |
+| ADOX               |     2 | Formula with `sourceEvidence` reference rows (CMS 20 II's 100 s "Not recommended" row is preserved as a published warning marker above the 10 s `sourceRangeThroughSeconds`) |
 | **Total**          |  **34** | |
 
 ILFORD/HARMAN films share the exponent-formula method with film-specific exponents and a common no-correction threshold at ≤ 1 sec. Kodak black-and-white films (TRI-X 400, T-MAX 100, T-MAX 400) ship as converted formula profiles whose `sourceEvidence` array preserves the published 1 / 10 / 100 sec reference rows for verification; Kodak color-negative films (Ektar 100, Portra 160 / 400, Gold 200, Ultra Max 400) ship as threshold + limited-guidance profiles — the manufacturer publishes only a no-correction range, with qualitative guidance ("test under your conditions") above it. Ektachrome E100 ships as a threshold + limited-guidance profile carrying a 120 sec CC10R color-filter recommendation as a `colorFilter` adjustment on its limited-guidance rule. Fujifilm, FOMA, Rollei, and ADOX films ship as converted formula profiles whose `sourceEvidence` array preserves the original manufacturer reference rows (with color-filter and corrected-time data attached) so users can see the formula curve passes through the published anchors.

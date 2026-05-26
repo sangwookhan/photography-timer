@@ -141,7 +141,7 @@ struct FilmModeDetailsGraphPresenter {
         )
         let tier = tierSelection.tier
 
-        let supportedUpperBoundSeconds = formulaRule.meteredRange?.maximumSeconds
+        let supportedUpperBoundSeconds = formulaRule.formula.sourceRangeThroughSeconds
         let noCorrectionRangeUpperBoundSeconds = effectiveNoCorrectionUpperBoundSeconds(
             for: bindingState
         )
@@ -300,38 +300,26 @@ struct FilmModeDetailsGraphPresenter {
     }
 
     /// Effective no-correction upper bound used by the formula
-    /// graph overlay. Combines explicit threshold rules with the
-    /// policy's default formula no-correction handoff (1 s) so
-    /// formula-only profiles like Portra 400 unofficial still show
-    /// a visible no-correction band on the graph instead of
-    /// implying no policy structure exists below 1 s.
+    /// graph overlay. Reads from the formula rule's own
+    /// `noCorrectionThroughSeconds` guard (formula profiles no
+    /// longer carry a companion threshold rule). Falls back to
+    /// threshold rules for the limited-guidance profile shape that
+    /// still uses one.
     private func effectiveNoCorrectionUpperBoundSeconds(
         for bindingState: FilmModeReciprocityBindingState
     ) -> Double? {
-        let explicitMax = FilmModeDetailsGraphCurveSampler.profileThresholdUpperBounds(in: bindingState.profile)
-            .filter { $0 > 0 }
-            .max()
-        let formulaOnly = FilmModeDetailsGraphCurveSampler.profileUsesFormula(bindingState.profile)
-            && FilmModeDetailsGraphCurveSampler.profileThresholdUpperBounds(in: bindingState.profile).isEmpty
-        let synthesizedDefault: Double? = formulaOnly ? policyDefaultFormulaNoCorrectionUpperBoundSeconds : nil
-        switch (explicitMax, synthesizedDefault) {
-        case let (explicit?, default_?):
-            return max(explicit, default_)
-        case let (explicit?, nil):
-            return explicit
-        case let (nil, default_?):
-            return default_
-        case (nil, nil):
-            return nil
+        let formulaBounds = FilmModeDetailsGraphCurveSampler.profileFormulaNoCorrectionUpperBounds(
+            in: bindingState.profile
+        )
+        if let formulaMax = formulaBounds.max() {
+            return formulaMax
         }
+        let thresholdBounds = bindingState.profile.rules.compactMap { rule -> Double? in
+            guard case let .threshold(thresholdRule) = rule else { return nil }
+            return thresholdRule.noCorrectionRange.maximumSeconds
+        }
+        return thresholdBounds.filter { $0 > 0 }.max()
     }
-
-    /// Mirrors the policy evaluator's default formula no-correction
-    /// upper bound so the graph overlay agrees with the calculation
-    /// result. Kept as a single literal in both places (the policy
-    /// evaluator owns the authoritative constant); a contract test
-    /// in the policy suite ties the two so they cannot drift apart.
-    private var policyDefaultFormulaNoCorrectionUpperBoundSeconds: Double { 1.0 }
 
     /// `true` when the current input would draw at the plot's left
     /// edge instead of its real position because at least one of
@@ -376,7 +364,7 @@ struct FilmModeDetailsGraphPresenter {
         var maxValue: Double = 1
 
         let curveUpper = [
-            formulaRule.meteredRange?.maximumSeconds,
+            formulaRule.formula.sourceRangeThroughSeconds,
             currentMeteredExposureSeconds,
         ]
         .compactMap { $0 }

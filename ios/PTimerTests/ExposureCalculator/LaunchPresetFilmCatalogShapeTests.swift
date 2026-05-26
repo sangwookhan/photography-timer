@@ -202,7 +202,7 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
                 return false
             }
 
-            if hasFormula && hasThreshold && !hasLimitedGuidance {
+            if hasFormula && !hasThreshold && !hasLimitedGuidance {
                 return .officialQuantifiedFormula
             }
             if hasThreshold && hasLimitedGuidance && !hasFormula {
@@ -259,8 +259,20 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
         XCTAssertNil(ProfileShape.classify(profile))
     }
 
-    func testClassifyRejectsOfficialProfileMissingThreshold() {
+    /// PTIMER-160 made formula-only the canonical shape for formula
+    /// profiles; the companion threshold rule was retired. A
+    /// formula-only profile must now classify as
+    /// `officialQuantifiedFormula`.
+    func testClassifyAcceptsOfficialFormulaOnlyProfile() {
         let profile = MixedShapeFactory.officialFormulaWithoutThreshold()
+        XCTAssertEqual(ProfileShape.classify(profile), .officialQuantifiedFormula)
+    }
+
+    /// PTIMER-160: a companion threshold rule on a formula profile is
+    /// no longer a valid shape — the formula owns its no-correction
+    /// guard.
+    func testClassifyRejectsOfficialFormulaPlusThresholdProfile() {
+        let profile = MixedShapeFactory.officialFormulaPlusThreshold()
         XCTAssertNil(ProfileShape.classify(profile))
     }
 
@@ -271,8 +283,13 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
     /// `LaunchPresetFilmCatalogLoader.validateProfileShape`) so a
     /// hand-edited catalog file cannot smuggle a mixed-shape profile
     /// past the decoder.
-    func testLoaderRejectsProfileMissingThresholdRule() throws {
-        let invalidFilm = try shapeProbeFilm(profile: MixedShapeFactory.officialFormulaWithoutThreshold())
+    func testLoaderRejectsFormulaProfileCarryingThresholdCompanion() throws {
+        // PTIMER-160: formula profiles own their no-correction guard
+        // through the formula struct; a companion threshold rule is no
+        // longer allowed.
+        let invalidFilm = try shapeProbeFilm(
+            profile: MixedShapeFactory.officialFormulaPlusThreshold()
+        )
         let data = try JSONEncoder().encode([invalidFilm])
 
         let error = try XCTUnwrap(
@@ -283,7 +300,10 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
 
         XCTAssertEqual(
             error,
-            .invalidRuleShape(filmID: invalidFilm.id, reason: "missing threshold rule")
+            .invalidRuleShape(
+                filmID: invalidFilm.id,
+                reason: "formula profiles must not carry a companion threshold rule (the formula owns its no-correction guard)"
+            )
         )
     }
 
@@ -320,7 +340,7 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
             error,
             .invalidRuleShape(
                 filmID: invalidFilm.id,
-                reason: "threshold rule must be paired with either a formula or a limited-guidance rule"
+                reason: "profile must declare either a formula rule or a threshold + limited-guidance pair"
             )
         )
     }
@@ -470,6 +490,15 @@ private enum MixedShapeFactory {
         )
     }
 
+    static func officialFormulaPlusThreshold() -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "mixed.official.formula+threshold",
+            name: "Formula with companion threshold",
+            source: officialSource(),
+            rules: [.threshold(thresholdRule()), .formula(formulaRule())]
+        )
+    }
+
     static func officialThresholdOnly() -> ReciprocityProfile {
         ReciprocityProfile(
             id: "mixed.official.threshold-only",
@@ -519,8 +548,11 @@ private enum MixedShapeFactory {
 
     private static func formulaRule() -> FormulaReciprocityRule {
         FormulaReciprocityRule(
-            meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 100),
-            formula: ReciprocityFormula(exponent: 1.3)
+            formula: ReciprocityFormula(
+                exponent: 1.3,
+                noCorrectionThroughSeconds: 1,
+                sourceRangeThroughSeconds: 100
+            )
         )
     }
 

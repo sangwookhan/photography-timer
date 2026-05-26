@@ -8,9 +8,9 @@ import XCTest
 /// gate for "no table rules in the bundled catalog."
 final class ReciprocityDomainTests: XCTestCase {
 
-    // MARK: - Threshold + formula
+    // MARK: - Formula
 
-    func testThresholdAndFormulaRulesRoundTripThroughJSON() throws {
+    func testFormulaRuleRoundTripsThroughJSON() throws {
         let film = FilmIdentity(
             id: "ilford-hp5-plus-400",
             kind: .preset,
@@ -31,15 +31,12 @@ final class ReciprocityDomainTests: XCTestCase {
                         publisher: "Ilford Photo"
                     ),
                     rules: [
-                        .threshold(
-                            ThresholdReciprocityRule(
-                                noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
-                            )
-                        ),
                         .formula(
                             FormulaReciprocityRule(
-                                meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001),
-                                formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P")
+                                formula: ReciprocityFormula(
+                                    exponent: 1.31,
+                                    noCorrectionThroughSeconds: 1
+                                )
                             )
                         ),
                     ]
@@ -52,9 +49,17 @@ final class ReciprocityDomainTests: XCTestCase {
         let decoded = try JSONDecoder().decode(FilmIdentity.self, from: data)
 
         XCTAssertEqual(decoded.profiles.count, 1)
-        XCTAssertEqual(decoded.profiles[0].rules.count, 2)
-        XCTAssertEqual(decoded.profiles[0].rules[0].kind, .threshold)
-        XCTAssertEqual(decoded.profiles[0].rules[1].kind, .formula)
+        XCTAssertEqual(decoded.profiles[0].rules.count, 1)
+        XCTAssertEqual(decoded.profiles[0].rules[0].kind, .formula)
+        guard case let .formula(formulaRule) = decoded.profiles[0].rules[0] else {
+            return XCTFail("Expected formula rule.")
+        }
+        XCTAssertEqual(formulaRule.formula.exponent, 1.31, accuracy: 1e-9)
+        XCTAssertEqual(formulaRule.formula.coefficientSeconds, 1, accuracy: 1e-9)
+        XCTAssertEqual(formulaRule.formula.referenceMeteredTimeSeconds, 1, accuracy: 1e-9)
+        XCTAssertEqual(formulaRule.formula.offsetSeconds, 0, accuracy: 1e-9)
+        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-9)
+        XCTAssertNil(formulaRule.formula.sourceRangeThroughSeconds)
     }
 
     // MARK: - Limited guidance
@@ -116,11 +121,12 @@ final class ReciprocityDomainTests: XCTestCase {
             rules: [
                 .formula(
                     FormulaReciprocityRule(
-                        meteredRange: ReciprocityTimeRange(minimumSeconds: 128.000_001, maximumSeconds: 480),
                         formula: ReciprocityFormula(
-                            kind: .exponentPower,
+                            coefficientSeconds: 128,
+                            referenceMeteredTimeSeconds: 128,
                             exponent: 1.3676,
-                            coefficient: pow(128.0, 1 - 1.3676)
+                            noCorrectionThroughSeconds: 128,
+                            sourceRangeThroughSeconds: 480
                         )
                     )
                 ),

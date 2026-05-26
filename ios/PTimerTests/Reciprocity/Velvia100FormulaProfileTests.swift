@@ -66,18 +66,14 @@ final class Velvia100FormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, 1.2667, accuracy: 0.001)
-        // coefficient encodes the 60 s threshold anchor: 60^(1 - P).
-        let expectedCoefficient = pow(60.0, 1 - 1.2667)
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
-        XCTAssertEqual(coefficient, expectedCoefficient, accuracy: 0.001)
-
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("60"),
-            "Equation must communicate the 60 s threshold anchor; got: \(equation)"
-        )
+        // PTIMER-160 preserves Velvia 100's published display form
+        // `Tc = 60 × (Tm / 60)^p` by storing the formula with
+        // `coefficientSeconds = referenceMeteredTimeSeconds = 60`,
+        // mathematically equivalent to the legacy
+        // `coefficient ≈ 0.336` with `Tref = 1` form.
+        XCTAssertEqual(formulaRule.formula.coefficientSeconds, 60, accuracy: 1e-6)
+        XCTAssertEqual(formulaRule.formula.referenceMeteredTimeSeconds, 60, accuracy: 1e-6)
 
         let note = try XCTUnwrap(formulaRule.notes.first)
         XCTAssertTrue(

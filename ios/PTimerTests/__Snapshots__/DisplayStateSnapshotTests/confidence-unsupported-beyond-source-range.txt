@@ -12,7 +12,7 @@
       - PTimer.ReciprocityConfidenceExplanationToken.officialRangeExceeded
       - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
     ▿ supportingNotes: 2 elements
-      - "Manufacturer guidance ends at 600 sec."
-      - "Outside manufacturer guidance — value is a formula prediction outside the supported range."
-    - defaultExplanation: "Manufacturer guidance ends at 600 sec. Outside manufacturer guidance — value is a formula prediction outside the supported range."
+      - "Manufacturer source range ends at 600 sec."
+      - "Outside manufacturer source range — value is a formula prediction outside the published source range."
+    - defaultExplanation: "Manufacturer source range ends at 600 sec. Outside manufacturer source range — value is a formula prediction outside the published source range."
     - returnsCalculatedExposureTime: true

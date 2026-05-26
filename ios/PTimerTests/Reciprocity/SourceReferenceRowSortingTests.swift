@@ -148,13 +148,17 @@ final class SourceReferenceRowSortingTests: XCTestCase {
             2,
             "Need at least two rows to verify the pointAnchor-before-range tiebreak."
         )
+        // PTIMER-160 sorts the formula's no-correction band at
+        // sortValue 0 (the band's effective start, since the formula
+        // no longer carries an explicit lower bound), so the band row
+        // leads and the 1/1000 s evidence-only point anchor follows.
         XCTAssertTrue(
-            dataLines[0].contains("*"),
-            "First rendered row must be the 1/1000 s point anchor (carries the * marker); got: \(dataLines[0])"
+            dataLines[0].contains("No correction"),
+            "First rendered row must be the no-correction band; got: \(dataLines[0])"
         )
         XCTAssertTrue(
-            dataLines[1].contains("No correction"),
-            "Second rendered row must be the 1/1000 s … 1 s no-correction band; got: \(dataLines[1])"
+            dataLines[1].contains("*"),
+            "Second rendered row must be the 1/1000 s point anchor (carries the * marker); got: \(dataLines[1])"
         )
     }
 

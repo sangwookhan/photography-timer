@@ -68,16 +68,9 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, 1, accuracy: 1e-9)
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
+        let coefficient = formulaRule.formula.coefficientSeconds
         XCTAssertEqual(coefficient, sqrt(2.0), accuracy: 1e-9)
-
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("√2"),
-            "Equation must surface the √2 multiplier so users read it as +1/2 stop; got: \(equation)"
-        )
 
         let note = try XCTUnwrap(formulaRule.notes.first)
         XCTAssertTrue(
@@ -219,15 +212,17 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         XCTAssertEqual(beyondStart, 1000.000001, accuracy: 1e-3)
     }
 
+    /// PTIMER-160's formatter regenerates the display from the
+    /// formula's numeric fields, so the constant √2 multiplier
+    /// renders as its decimal `1.4142 × Tm` form. The `^1` exponent
+    /// is omitted as a neutral value so the multiplier-only shape
+    /// reads cleanly.
     @MainActor
-    func testAcrosIIFormulaGraphTextDisplaysMultiplierFormVerbatim() throws {
+    func testAcrosIIFormulaGraphTextRendersConstantMultiplierWithoutSpuriousExponent() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 500)
         let graph = try XCTUnwrap(displayState.graph)
         let formula = try XCTUnwrap(graph.formulaDisplayText)
-        XCTAssertTrue(
-            formula.contains("√2"),
-            "Formula display text must render the constant √2 multiplier verbatim, not a misleading Tm^1 form; got: \(formula)"
-        )
+        XCTAssertEqual(formula, "Tc = 1.4142 × Tm")
     }
 
     /// Past 1000 s Acros II's numeric continuation must surface

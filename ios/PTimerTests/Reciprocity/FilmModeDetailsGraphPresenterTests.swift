@@ -36,7 +36,10 @@ final class FilmModeDetailsGraphPresenterTests: XCTestCase {
     func testFormulaProfileGraphMarksCurrentPointBeyondSourceRangeAtUnsupportedNumeric() throws {
         let graph = try presenterGraph(forFilm: "Provia 100F", meteredSeconds: 600)
         XCTAssertEqual(graph.currentPoint?.style, .beyondSourceRange)
-        XCTAssertEqual(graph.beyondSourceRangeStartSeconds ?? 0, 480, accuracy: 1e-6)
+        // PTIMER-160: beyond-source region starts at the 240 s
+        // source-backed anchor; the separate 480 s row remains a
+        // not-recommended warning marker.
+        XCTAssertEqual(graph.beyondSourceRangeStartSeconds ?? 0, 240, accuracy: 1e-6)
         XCTAssertEqual(graph.notRecommendedBoundarySeconds ?? 0, 480, accuracy: 1e-6)
         XCTAssertEqual(graph.descriptionLines.count, 1)
         let line = try XCTUnwrap(graph.descriptionLines.first)

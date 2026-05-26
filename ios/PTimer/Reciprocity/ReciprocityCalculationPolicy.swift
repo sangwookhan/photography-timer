@@ -576,50 +576,20 @@ private extension ReciprocityResult {
 }
 
 struct ReciprocityCalculationPolicyEvaluator {
-    /// Default upper bound (in seconds) for the synthesized no-correction
-    /// handoff applied to formula-only profiles that lack an explicit
-    /// threshold rule and an explicit `meteredRange.minimumSeconds`.
-    ///
-    /// Practical long-exposure formulas (e.g. `Tc = Tm^P` curve fits)
-    /// are only valid above their published domain. Applying such a
-    /// formula to a sub-1s metered exposure produces a corrected time
-    /// shorter than the adjusted shutter, which violates the
-    /// fundamental reciprocity invariant: a reciprocity correction
-    /// can never shorten the exposure. The catalog convention for
-    /// the long-exposure films that ship with PTimer is that
-    /// reciprocity correction starts at 1 sec — every official
-    /// converted formula profile carries an explicit
-    /// `threshold.noCorrectionRange: 0…1s` companion to its
-    /// formula rule, so this default does not change those results.
-    /// It activates for profiles that omit both — today, the
-    /// `UnofficialPracticalProfiles` registry's Portra 400 entry.
-    ///
-    /// Profiles that publish explicit sub-1s correction (e.g. a
-    /// formula with `meteredRange.minimumSeconds < 1`) opt out of
-    /// the default; their published data takes precedence.
-    private let defaultFormulaNoCorrectionUpperBoundSeconds: Double = 1.0
-
     /// Evaluation order is part of the policy contract:
-    /// threshold-only no-correction guidance first, then the default
-    /// formula no-correction handoff for formula-only profiles below
-    /// their practical domain, then formula evaluation, then
-    /// limited-guidance continuation, and finally unsupported. The
-    /// result is then passed through `clampToCorrectionInvariant` so
-    /// the public guarantee `corrected >= adjusted` holds for every
-    /// rule path.
+    /// formula rules win when present (they own their no-correction
+    /// and source-range guards via the shared
+    /// `ReciprocityFormula` contract), then threshold-only
+    /// no-correction guidance, then limited-guidance continuation,
+    /// and finally unsupported.
     func evaluate(
         profile: ReciprocityProfile,
         meteredExposureSeconds: Double
     ) -> ReciprocityResult {
         let sourceAuthorityImpact = mapSourceAuthorityImpact(from: profile.source)
         let assembler = ResultAssembler(sourceAuthorityImpact: sourceAuthorityImpact)
-        let rawResult = evaluateRuleSelection(
+        return evaluateRuleSelection(
             profile: profile,
-            meteredExposureSeconds: meteredExposureSeconds,
-            assembler: assembler
-        )
-        return clampToCorrectionInvariant(
-            result: rawResult,
             meteredExposureSeconds: meteredExposureSeconds,
             assembler: assembler
         )
@@ -635,46 +605,35 @@ struct ReciprocityCalculationPolicyEvaluator {
                 guard case let .threshold(thresholdRule) = $0 else {
                     return nil
                 }
-
                 return thresholdRule
             },
             formulaRules: profile.rules.compactMap {
                 guard case let .formula(formulaRule) = $0 else {
                     return nil
                 }
-
                 return formulaRule
             },
             limitedGuidanceRules: profile.rules.compactMap {
                 guard case let .limitedGuidance(rule) = $0 else {
                     return nil
                 }
-
                 return rule
             }
         )
+
+        if let formulaRule = selector.formulaRules.first {
+            return evaluateFormulaRule(
+                rule: formulaRule,
+                meteredExposureSeconds: meteredExposureSeconds,
+                assembler: assembler
+            )
+        }
 
         if let thresholdRule = selector.thresholdRule(for: meteredExposureSeconds) {
             return assembler.thresholdNoCorrection(
                 meteredExposureSeconds: meteredExposureSeconds,
                 thresholdRule: thresholdRule
             )
-        }
-
-        if let result = evaluateDefaultFormulaNoCorrection(
-            selection: selector,
-            meteredExposureSeconds: meteredExposureSeconds,
-            assembler: assembler
-        ) {
-            return result
-        }
-
-        if let result = evaluateFormulaResult(
-            selection: selector,
-            meteredExposureSeconds: meteredExposureSeconds,
-            assembler: assembler
-        ) {
-            return result
         }
 
         if let limitedGuidanceRule = selector.limitedGuidanceRule(for: meteredExposureSeconds) {
@@ -695,132 +654,81 @@ struct ReciprocityCalculationPolicyEvaluator {
         )
     }
 
-    /// Tolerance for the correction invariant comparison. Floating-
-    /// point identity cases (formula at exactly Tm=1 with P≈1) can
-    /// land microscopically below the metered value; treating those
-    /// as violations would falsely clamp valid formula prediction.
-    private let correctionInvariantTolerance: Double = 1e-6
-
-    /// Universal correction invariant: a reciprocity correction must
-    /// never shorten the adjusted shutter. When the rule-pipeline
-    /// produces a result whose `corrected < metered`, the value is
-    /// reclassified as a no-correction handoff. This is the global
-    /// safety net on top of `evaluateDefaultFormulaNoCorrection`'s
-    /// narrower domain check.
-    ///
-    /// Results without a numeric corrected exposure (limited-guidance
-    /// and value-less unsupported) pass through untouched — there is
-    /// no value to compare against.
-    private func clampToCorrectionInvariant(
-        result: ReciprocityResult,
+    private func evaluateFormulaRule(
+        rule: FormulaReciprocityRule,
         meteredExposureSeconds: Double,
         assembler: ResultAssembler
     ) -> ReciprocityResult {
-        guard meteredExposureSeconds > 0,
-              meteredExposureSeconds.isFinite else {
-            return result
-        }
-        guard let corrected = result.correctedExposureSeconds,
-              corrected.isFinite else {
-            return result
-        }
-        guard corrected < meteredExposureSeconds - correctionInvariantTolerance else {
-            return result
-        }
-        return assembler.invariantClampedNoCorrection(
-            meteredExposureSeconds: meteredExposureSeconds
-        )
-    }
-
-    /// Synthesizes a no-correction handoff for formula-only profiles
-    /// whose practical formula domain starts at 1s (the catalog's
-    /// long-exposure convention) but which do not carry an explicit
-    /// threshold rule covering sub-1s metered exposures.
-    private func evaluateDefaultFormulaNoCorrection(
-        selection: Selection,
-        meteredExposureSeconds: Double,
-        assembler: ResultAssembler
-    ) -> ReciprocityResult? {
-        let defaultUpperBound = defaultFormulaNoCorrectionUpperBoundSeconds
-        guard meteredExposureSeconds < defaultUpperBound,
-              meteredExposureSeconds > 0 else {
-            return nil
-        }
-        guard !selection.formulaRules.isEmpty else {
-            return nil
-        }
-        let anyFormulaOptsIntoSubDefaultCorrection = selection.formulaRules.contains { rule in
-            guard let minimum = rule.meteredRange?.minimumSeconds else {
-                return false
-            }
-            return minimum < defaultUpperBound
-        }
-        guard !anyFormulaOptsIntoSubDefaultCorrection else {
-            return nil
-        }
-        return assembler.defaultFormulaNoCorrection(
-            meteredExposureSeconds: meteredExposureSeconds,
-            defaultUpperBoundSeconds: defaultUpperBound
-        )
-    }
-
-    private func evaluateFormulaResult(
-        selection: Selection,
-        meteredExposureSeconds: Double,
-        assembler: ResultAssembler
-    ) -> ReciprocityResult? {
-        guard let formulaRule = selection.formulaRule(for: meteredExposureSeconds) else {
-            if let boundedFormulaRule = selection.firstFormulaRuleExceeded(by: meteredExposureSeconds) {
-                let predictedSeconds: Double?
-                if boundedFormulaRule.extrapolateBeyondMaximum {
-                    predictedSeconds = formulaCorrectedExposureSeconds(
-                        for: boundedFormulaRule.formula,
-                        meteredExposureSeconds: meteredExposureSeconds
-                    ).flatMap { value -> Double? in
-                        guard value.isFinite, value > 0 else { return nil }
-                        return value
-                    }
-                } else {
-                    predictedSeconds = nil
-                }
-
-                return assembler.unsupportedFormulaOutsideSourceRange(
-                    meteredExposureSeconds: meteredExposureSeconds,
-                    correctedExposureSeconds: predictedSeconds,
-                    formulaRule: boundedFormulaRule
-                )
-            }
-
-            return nil
-        }
-
-        guard let correctedExposureSeconds = formulaCorrectedExposureSeconds(
-            for: formulaRule.formula,
-            meteredExposureSeconds: meteredExposureSeconds
-        ) else {
-            return nil
-        }
-
-        return assembler.formula(
-            meteredExposureSeconds: meteredExposureSeconds,
-            correctedExposureSeconds: correctedExposureSeconds,
-            formulaRule: formulaRule
-        )
-    }
-
-    private func formulaCorrectedExposureSeconds(
-        for formula: ReciprocityFormula,
-        meteredExposureSeconds: Double
-    ) -> Double? {
-        guard meteredExposureSeconds >= 0 else {
-            return nil
-        }
-
-        switch formula.kind {
-        case .exponentPower:
-            let coefficient = formula.coefficient ?? 1
-            let offsetSeconds = formula.offsetSeconds ?? 0
-            return (coefficient * pow(meteredExposureSeconds, formula.exponent)) + offsetSeconds
+        switch rule.formula.evaluate(meteredExposureSeconds: meteredExposureSeconds) {
+        case .noCorrection:
+            return assembler.formulaNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds,
+                formulaRule: rule
+            )
+        case let .withinSourceRange(corrected):
+            return assembler.formula(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: corrected,
+                formulaRule: rule
+            )
+        case let .beyondSourceRange(corrected):
+            return assembler.unsupportedFormulaOutsideSourceRange(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: corrected,
+                formulaRule: rule
+            )
+        case .invalidInput:
+            // Bad metered input (NaN, infinity, ≤ 0). Surface as
+            // unsupported rather than silently returning the metered
+            // value — PTIMER-84 user input must not hide as
+            // "no correction needed".
+            return assembler.unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Metered exposure is not a positive finite number; no reciprocity correction can be computed."
+                    ),
+                ]
+            )
+        case .invalidFormula:
+            // Formula parameters violate the safe-formula contract.
+            // Distinct from `.invalidInput` and `.unsafeShorteningFormula`
+            // because this is a data error in the formula itself —
+            // PTIMER-84 custom-profile validation depends on this
+            // staying visible.
+            return assembler.unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Formula parameters violate the safe-formula contract; the corrected exposure cannot be computed."
+                    ),
+                ]
+            )
+        case .formulaOutputUnusable:
+            // Formula produced NaN / non-positive output even
+            // though parameters and input look valid. Surface as
+            // unsupported with a runtime explanation distinct from
+            // the parameter-validation case.
+            return assembler.unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Formula produced a non-finite or non-positive output for this metered exposure."
+                    ),
+                ]
+            )
+        case .unsafeShorteningFormula:
+            // Runtime safety handoff: the formula would shorten the
+            // exposure here, so the policy substitutes the identity
+            // (no-correction) result instead. Distinct from data
+            // errors above — this is the catalog's universal
+            // "Tc ≥ Tm" guarantee at work.
+            return assembler.invariantClampedNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds
+            )
         }
     }
 
@@ -868,47 +776,6 @@ private extension ReciprocityCalculationPolicyEvaluator {
                 $0.appliesWhenMetered?.contains(meteredExposureSeconds) ?? true
             }
         }
-
-        /// Returns the formula rule whose supported range contains the
-        /// metered exposure. The upper bound (`meteredRange.maximumSeconds`)
-        /// is treated as **exclusive** here so it can serve as the
-        /// manufacturer's not-recommended boundary marker: at the
-        /// boundary the result must already be reported as outside
-        /// supported guidance even if the formula can still produce a
-        /// numeric prediction. Lower bounds remain inclusive so the
-        /// threshold ↔ formula handoff at the no-correction boundary
-        /// stays seamless.
-        func formulaRule(for meteredExposureSeconds: Double) -> FormulaReciprocityRule? {
-            formulaRules.first {
-                guard let range = $0.meteredRange else {
-                    return true
-                }
-                guard meteredExposureSeconds >= range.minimumSeconds else {
-                    return false
-                }
-                guard let maximumSeconds = range.maximumSeconds else {
-                    return true
-                }
-                return meteredExposureSeconds < maximumSeconds
-            }
-        }
-
-        /// First formula rule whose supported boundary the metered
-        /// exposure has reached or exceeded. Drives the unsupported path
-        /// for a formula prediction outside the source range: the
-        /// formula can still compute a value, but the result is
-        /// presented as outside manufacturer
-        /// guidance.
-        func firstFormulaRuleExceeded(by meteredExposureSeconds: Double) -> FormulaReciprocityRule? {
-            formulaRules.first {
-                guard let range = $0.meteredRange,
-                      let maximumSeconds = range.maximumSeconds else {
-                    return false
-                }
-
-                return meteredExposureSeconds >= maximumSeconds
-            }
-        }
     }
 
     struct ResultAssembler {
@@ -933,25 +800,30 @@ private extension ReciprocityCalculationPolicyEvaluator {
             )
         }
 
-        /// Synthesizes a no-correction result for a formula-only
-        /// profile below the evaluator's default formula domain.
-        /// Mirrors `thresholdNoCorrection` (same basis, identity
-        /// corrected exposure) so downstream display code reads the
-        /// same shape — "No correction" badge, identity current
-        /// point on the graph — without needing to special-case a
-        /// synthesized handoff.
-        func defaultFormulaNoCorrection(
+        /// Synthesizes a no-correction result for a formula rule
+        /// whose `noCorrectionThroughSeconds` guard fired. Reuses the
+        /// `officialThresholdNoCorrection` basis so downstream
+        /// display code reads the same shape — "No correction" badge,
+        /// identity current point on the graph — without needing to
+        /// special-case a formula-owned guard.
+        func formulaNoCorrection(
             meteredExposureSeconds: Double,
-            defaultUpperBoundSeconds: Double
+            formulaRule: FormulaReciprocityRule
         ) -> ReciprocityResult {
-            let boundaryText = formatBoundarySeconds(defaultUpperBoundSeconds)
+            let boundary = formulaRule.formula.noCorrectionThroughSeconds
+            // Detect epsilon-encoded open boundaries (e.g. Tri-X's
+            // 0.999999, Acros II's 119.999999): the manufacturer's
+            // semantic is "Tm < integer s no correction, Tm ≥
+            // integer s formula", so the note reads as "< X sec",
+            // not the rounded inclusive "≤ X sec" form.
+            let comparison = noCorrectionBoundaryComparisonText(for: boundary)
             return .thresholdNoCorrection(
                 meteredExposureSeconds: meteredExposureSeconds,
                 sourceAuthorityImpact: sourceAuthorityImpact,
                 notes: [
                     ReciprocityPolicyNote(
                         token: .thresholdGuidanceOnly,
-                        text: "Reciprocity correction is not applied below the practical formula domain (default \(boundaryText))."
+                        text: "Reciprocity correction is not applied within the formula's no-correction range (\(comparison))."
                     ),
                 ] + sourceAuthorityNotes
             )
@@ -1034,22 +906,21 @@ private extension ReciprocityCalculationPolicyEvaluator {
 
         /// Returns an unsupported result whose corrected exposure is a
         /// formula prediction outside the manufacturer-supported source
-        /// range (or `nil` when the formula cannot produce a finite value).
+        /// range. The new shared formula model always produces a value
+        /// past its `sourceRangeThroughSeconds`; the unsupported
+        /// classification carries the strong-warning presentation while
+        /// preserving the predicted corrected exposure.
         func unsupportedFormulaOutsideSourceRange(
             meteredExposureSeconds: Double,
-            correctedExposureSeconds: Double?,
+            correctedExposureSeconds: Double,
             formulaRule: FormulaReciprocityRule
         ) -> ReciprocityResult {
             let boundaryText: String
-            if let maximumSeconds = formulaRule.meteredRange?.maximumSeconds {
-                boundaryText = "Manufacturer guidance ends at \(formatBoundarySeconds(maximumSeconds))."
+            if let upper = formulaRule.formula.sourceRangeThroughSeconds {
+                boundaryText = "Manufacturer source range ends at \(formatBoundarySeconds(upper))."
             } else {
-                boundaryText = "Manufacturer guidance does not cover this metered exposure."
+                boundaryText = "Manufacturer source range does not cover this metered exposure."
             }
-
-            let policyText = correctedExposureSeconds != nil
-                ? "Outside manufacturer guidance — value is a formula prediction outside the supported range."
-                : "This metered exposure is beyond the explicit formula policy boundary."
 
             return unsupported(
                 meteredExposureSeconds: meteredExposureSeconds,
@@ -1061,7 +932,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
                     ),
                     ReciprocityPolicyNote(
                         token: .unsupportedByPolicy,
-                        text: policyText
+                        text: "Outside manufacturer source range — value is a formula prediction outside the published source range."
                     ),
                 ]
             )
@@ -1073,6 +944,23 @@ private extension ReciprocityCalculationPolicyEvaluator {
             }
 
             return String(format: "%.3f sec", value)
+        }
+
+        /// Produces the comparison-operator phrase used for the
+        /// no-correction-band note. Returns "< X sec" when the stored
+        /// boundary is an epsilon-encoded open boundary (the
+        /// manufacturer's semantic is "no correction strictly below
+        /// integer X sec; the formula picks up at exactly X sec",
+        /// e.g. Tri-X's 0.999999 → "< 1 sec"). Otherwise returns
+        /// "≤ X sec" — the inclusive case where the boundary value
+        /// itself is part of the no-correction band.
+        private func noCorrectionBoundaryComparisonText(for value: Double) -> String {
+            let ceiling = ceil(value)
+            let gap = ceiling - value
+            if gap > 0, gap < 1e-3 {
+                return "< \(formatBoundarySeconds(ceiling))"
+            }
+            return "≤ \(formatBoundarySeconds(value))"
         }
 
         private var sourceAuthorityNotes: [ReciprocityPolicyNote] {

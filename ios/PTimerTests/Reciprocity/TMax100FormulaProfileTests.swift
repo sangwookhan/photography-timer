@@ -84,18 +84,14 @@ final class TMax100FormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, expectedExponent, accuracy: 1e-3)
-        // coefficient encodes the 1/10 sec threshold anchor: 0.1^(1 - P).
-        let expectedCoefficient = pow(expectedAnchor, 1 - expectedExponent)
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
-        XCTAssertEqual(coefficient, expectedCoefficient, accuracy: 1e-3)
-
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("0.1"),
-            "Equation must communicate the 1/10 sec threshold anchor; got: \(equation)"
-        )
+        // PTIMER-160 preserves the published display form
+        // `Tc = 0.1 × (Tm / 0.1)^p` by storing the formula with
+        // `coefficientSeconds = referenceMeteredTimeSeconds = 0.1`,
+        // mathematically equivalent to the legacy
+        // `coefficient ≈ 1.249` with `Tref = 1` form.
+        XCTAssertEqual(formulaRule.formula.coefficientSeconds, expectedAnchor, accuracy: 1e-6)
+        XCTAssertEqual(formulaRule.formula.referenceMeteredTimeSeconds, expectedAnchor, accuracy: 1e-6)
 
         let note = try XCTUnwrap(formulaRule.notes.first)
         XCTAssertTrue(
@@ -116,16 +112,24 @@ final class TMax100FormulaProfileTests: XCTestCase {
 
     func testTMax100Short1Over10000ExposureIsNotALongExposureFittingPoint() throws {
         let profile = try tmax100Profile()
-        // 1/10000 sec sits below the threshold band so the evaluator
-        // returns nothing for it via the long-exposure formula. The
-        // profile-level note still documents Kodak's +1/3 stop short
-        // -exposure guidance; the formula curve must not accidentally
-        // inherit that anchor.
+        // 1/10000 sec sits well below the formula's
+        // `noCorrectionThroughSeconds` boundary (1/10 sec). The
+        // PTIMER-160 shared guarded formula returns identity (Tc = Tm)
+        // for every input in the no-correction band, so 1/10000 sec
+        // must NOT pick up a long-exposure correction. The published
+        // +1/3 stop short-exposure guidance lives only as a
+        // profile-level note and never enters the formula curve.
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.0 / 10_000.0)
         XCTAssertEqual(
             result.metadata.basis,
-            .unsupportedOutOfPolicyRange,
-            "1/10000 sec sits below the 1/1000 sec no-correction lower bound; the long-exposure rules must not silently quantify it via the formula curve."
+            .officialThresholdNoCorrection,
+            "1/10000 sec sits inside the formula's no-correction band; the long-exposure rules must not silently quantify it via the formula curve."
+        )
+        XCTAssertEqual(
+            result.correctedExposureSeconds ?? -1,
+            1.0 / 10_000.0,
+            accuracy: 1e-9,
+            "1/10000 sec must return the identity corrected exposure."
         )
 
         let shortExposureMetered = 1.0 / 10_000.0

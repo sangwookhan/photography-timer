@@ -288,33 +288,34 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
+        // 8 s × 4 ND stops = 128 s adjusted shutter — well above
+        // Velvia 50's 32 s source-backed boundary (64 s is preserved
+        // as a published "Not recommended" warning marker, never as
+        // the source-range boundary). The result lands in the
+        // beyond-source-range classification with a numeric formula
+        // prediction (PTIMER-160).
         viewModel.baseShutter = 8
-        viewModel.ndStop = 3
+        viewModel.ndStop = 4
         viewModel.selectPresetFilm(film)
 
-        // Velvia 50's 64 s row is the formula's not-recommended
-        // boundary. The formula keeps producing a numeric corrected
-        // exposure past the published source range, so the
-        // corrected-exposure card surfaces the predicted value and
-        // the Play button enables.
-        let expectedCorrected = pow(64.0, 1.1821)
+        let expectedCorrected = pow(128.0, 1.1821)
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
-        XCTAssertEqual(resultState.adjustedShutterSeconds, 64, accuracy: 0.0001)
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 128, accuracy: 0.0001)
         XCTAssertEqual(resultState.reciprocityState.badgeText, "Beyond source range")
         XCTAssertEqual(resultState.reciprocityState.tone, .unsupported)
-        XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 64, accuracy: 0.0001)
+        XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 128, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertEqual(
             resultState.correctedExposure.correctedExposureSeconds ?? 0,
             expectedCorrected,
-            accuracy: 0.5
+            accuracy: 1.0
         )
         XCTAssertEqual(
             resultState.correctedExposureAction.targetSeconds ?? 0,
             expectedCorrected,
-            accuracy: 0.5
+            accuracy: 1.0
         )
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
         XCTAssertTrue(resultState.correctedExposureAction.isOutsideManufacturerGuidance)

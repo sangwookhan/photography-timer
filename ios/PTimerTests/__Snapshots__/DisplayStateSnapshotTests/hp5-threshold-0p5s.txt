@@ -11,4 +11,4 @@
           ▿ PTimer.ReciprocityPolicyNote
             ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.thresholdGuidanceOnly)
               - some: PTimer.ReciprocityPolicyNoteToken.thresholdGuidanceOnly
-            - text: "No compensation required at 1 second or less."
+            - text: "Reciprocity correction is not applied within the formula\'s no-correction range (≤ 1 sec)."

@@ -117,11 +117,13 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testFilmModeBeyondVelvia50SourceRangeStartsCorrectedExposureTimerFromFormulaPrediction() throws {
-        // Velvia 50's 64 s row is the formula's not-recommended
-        // boundary. The formula still produces a numeric corrected
-        // exposure past the published source range, so the
-        // corrected-exposure timer affordance enables and stamps the
-        // timer with the formula-predicted duration.
+        // Velvia 50's source-backed range ends at the 32 s anchor;
+        // the 64 s row is a published "Not recommended" warning
+        // marker only. At adjusted shutter 64 s the result is
+        // beyond-source-with-numeric — the formula keeps producing
+        // a corrected exposure, so the corrected-exposure timer
+        // affordance enables and stamps the timer with the
+        // formula-predicted duration.
         let timerManager = TimerManager(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }

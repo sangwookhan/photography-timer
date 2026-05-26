@@ -57,21 +57,18 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
         for film in films {
             let profile = try XCTUnwrap(film.profiles.first)
-            XCTAssertTrue(
-                profile.rules.contains { rule in
-                    if case .formula = rule { return true }
-                    return false
-                },
+            let formulaRule = try XCTUnwrap(
+                profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+                    guard case let .formula(formulaRule) = rule else { return nil }
+                    return formulaRule
+                }.first,
                 "ILFORD/HARMAN films must ship as exponent-formula profiles."
             )
-            XCTAssertTrue(
-                profile.rules.contains { rule in
-                    if case let .threshold(threshold) = rule {
-                        return threshold.noCorrectionRange.maximumSeconds == 1
-                    }
-                    return false
-                },
-                "ILFORD/HARMAN films must preserve the 1-second no-compensation threshold."
+            XCTAssertEqual(
+                formulaRule.formula.noCorrectionThroughSeconds,
+                1,
+                accuracy: 1e-9,
+                "ILFORD/HARMAN films must preserve the 1-second no-compensation boundary in the formula."
             )
         }
     }
@@ -98,7 +95,6 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
                 "Missing ILFORD/HARMAN film '\(canonicalName)'."
             )
             let formulaRule = try XCTUnwrap(formulaRule(in: film), "Missing formula rule for \(canonicalName).")
-            XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
             XCTAssertEqual(formulaRule.formula.exponent, exponent, accuracy: 0.001)
         }
     }
@@ -351,15 +347,22 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 0.5, accuracy: 0.000001)
     }
 
-    func testFujifilmStopSignalRowReturnsUnsupported() throws {
+    /// PTIMER-160 sets Velvia 50's `sourceRangeThroughSeconds` to
+    /// the 32 s last-quantified anchor; the 64 s "Not recommended"
+    /// row is a published warning marker and is NOT part of the
+    /// source-backed range. Inputs strictly above 32 s become
+    /// beyond-source-range with a numeric formula-derived
+    /// continuation; the 80 s sample exercises that path.
+    func testFujifilmAbove32SecondsIsBeyondSourceWithFormulaPrediction() throws {
         let velvia = try XCTUnwrap(film(named: "Velvia 50"))
         let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: velvia.profiles[0], meteredExposureSeconds: 64)
+            .evaluate(profile: velvia.profiles[0], meteredExposureSeconds: 80)
 
         guard case let .unsupported(payload) = result else {
-            return XCTFail("Expected unsupported stop-signal result, got \(result).")
+            return XCTFail("Expected unsupported beyond-source result, got \(result).")
         }
         XCTAssertEqual(payload.metadata.basis, .unsupportedOutOfPolicyRange)
+        XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
     func testFomapanFormulaPredictionTracksPublishedMultiplierRow() throws {

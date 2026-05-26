@@ -6,11 +6,21 @@ import XCTest
 /// conversion from corrected-time tables to formula-based
 /// prediction. Locks the invariants:
 ///
-/// - The published threshold band stays unchanged.
-/// - Above the threshold and up to and including the highest
-///   published row, the formula wins (basis == `.formulaDerived`).
-///   Above the upper-published row the formula continues as
-///   numeric continuation outside the published source range.
+/// - `noCorrectionThroughSeconds` mirrors the manufacturer-published
+///   no-correction marker (0.5 sec for RETRO 80S / SUPERPAN 200,
+///   1 sec for RPX 100 / RPX 400). For three of these films
+///   (RETRO 80S, SUPERPAN 200, RPX 100) the fitted formula's
+///   natural Tc = Tm crossover lies above the source marker, so
+///   inputs in (source marker, crossover] route through the policy
+///   evaluator's runtime safety net rather than the formula curve
+///   itself. The source marker is preserved as published; the gap
+///   is tracked by
+///   `GuardedReciprocityFormulaTests.knownFormulaFitGapsRequiringRuntimeHandoff`.
+/// - Above the no-correction boundary and up to and including the
+///   highest published row, the formula wins
+///   (basis == `.formulaDerived`). Above the upper-published row
+///   the formula continues as numeric continuation outside the
+///   published source range.
 /// - RETRO 80S and SUPERPAN 200 publish corrected exposure as a
 ///   range at 1 sec and 2 sec. Those range-valued rows live as
 ///   source-evidence notes — they MUST NOT enter the formula as
@@ -151,9 +161,8 @@ final class RolleiFormulaProfileTests: XCTestCase {
                 return rule
             }.first)
 
-            XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
             XCTAssertEqual(formulaRule.formula.exponent, fit.exponent, accuracy: 1e-3, "\(fit.canonicalStockName) exponent mismatch")
-            let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
+            let coefficient = formulaRule.formula.coefficientSeconds
             XCTAssertEqual(coefficient, fit.coefficient, accuracy: 1e-3, "\(fit.canonicalStockName) coefficient mismatch")
 
             let note = try XCTUnwrap(formulaRule.notes.first)
@@ -247,7 +256,7 @@ final class RolleiFormulaProfileTests: XCTestCase {
                 return rule
             }.first)
             XCTAssertEqual(formulaRule.formula.exponent, 1.5361, accuracy: 1e-3)
-            XCTAssertEqual(formulaRule.formula.coefficient ?? 0, 0.9601, accuracy: 1e-3)
+            XCTAssertEqual(formulaRule.formula.coefficientSeconds, 0.9601, accuracy: 1e-3)
         }
     }
 

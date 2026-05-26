@@ -117,17 +117,33 @@ Profile의 동작은 하나 이상의 rule로 표현. Rule은 세 variant의 tag
 
 ### 5.2 Formula rule
 
-closed-form 보정 표시.
+closed-form 보정 표시. 규칙은 공식 수식과 무보정 / source-range guard를 함께 소유하는 단일 `ReciprocityFormula` 값을 감싼다 — PTIMER-160은 formula profile이 이전에 함께 들고 있던 동반 threshold rule을 retire 했다.
 
-- **meteredRange** — 공식의 도메인을 제약하는 옵션 [time range](#8-reciprocity-time-range). Open-ended `meteredRange`는 "계산 정책이 공식 단계에 도달하는 곳마다 적용" 의미.
-- **formula** — 유일하게 정의된 공식 형태는 **지수 power** 형태: `T_c = coefficient × T_m^exponent + offsetSeconds` (`coefficient` 기본값 `1`, `offsetSeconds` 기본값 `0`). 구조는 투명성을 위해 source의 출판된 등식 문자열 포함.
+- **formula** — `ReciprocityFormula` 값 (§5.2.1).
 - **additionalAdjustments** — 계산이 소비하지 않는 보충 조정 배열 (예: 현상 시간 hint).
-- **extrapolateBeyondMaximum** — boolean (기본 `true`). `true`이면 `meteredRange.maximumSeconds` 너머에서도 공식이 숫자 값을 산출하며 결과는 `unsupportedOutOfPolicyRange`로 reclassify (numeric continuation 동반). `false`이면 상한이 제조사 stop signal — 결과는 `unsupportedOutOfPolicyRange` + 보정 노출 값 자체 부재 (ADOX CMS 20 II `≥ 100 s` "Not recommended" 경계가 이 경우).
 - **notes** — free-form note 배열.
 
 Formula profile과 연관된 제조사 reference 점 (예: Provia 100F가 출판한 `240 s +1/3 stop` row)은 formula rule의 데이터가 아닌 profile의 `sourceEvidence` 배열 (§3.1, §3.3)에 위치.
 
 예: `ILFORD HP5 Plus`는 `T_m > 1 s`에 대해 `T_c = T_m^1.31` 사용.
+
+#### 5.2.1 ReciprocityFormula (shared guarded model)
+
+shared guarded reciprocity formula는 모든 formula profile이 사용하는 contract — 오늘은 shipped catalog가, 이후엔 PTIMER-84 custom profile / PTIMER-159 verification UI / PTIMER-161 table 변환 refit / PTIMER-162 next formula family.
+
+표시 형태 (Modified Schwarzschild family):
+
+`T_c = a × (T_m / T_ref)^p + b`
+
+- **formulaFamily** — 필수. discriminator enum. PTIMER-160은 단일 case `modifiedSchwarzschild`만 ship; PTIMER-162에서 다음 family case 추가 예정. 모든 consumer는 default branch 없이 exhaustive switch 해야 미래 case 추가가 컴파일 에러로 드러난다.
+- **coefficientSeconds** (`a`, seconds) — scale coefficient. `T_m = T_ref`에서 power term은 `a`와 같고, 보정 노출은 `a + b`이다. 기본값 `1`. `b ≠ 0`일 때 `a`는 보정 노출 자체가 아니다.
+- **referenceMeteredTimeSeconds** (`T_ref`, seconds) — 입력을 scaling하는 기준 측광 시간. 기본값 `1 s`로 두면 표시 형태는 legacy power form `T_c = a × T_m^p + b`로 축약.
+- **exponent** (`p`) — 곡선 기울기. 필수.
+- **offsetSeconds** (`b`, seconds) — power term 뒤에 더해지는 상수 offset. 기본값 `0`.
+- **noCorrectionThroughSeconds** — 무보정 band의 inclusive 상한. `T_m ≤ noCorrectionThroughSeconds`이면 공식은 identity (`T_c = T_m`) 반환. 값은 제조사가 출판한 무보정 marker를 그대로 mirror. ε-인코딩 값 (예: Tri-X의 `0.999999`로 open boundary at `1 s`, Acros II의 `119.999999`로 open boundary at `120 s`)은 source의 open-boundary semantic을 표현 ("`Tm`이 X보다 strictly 작을 때 무보정; 정확히 X에서 공식 적용"); 정책 note는 그것을 `< X sec`로, inclusive integer는 `≤ X sec`로 렌더.
+- **sourceRangeThroughSeconds** — 옵션. source / fitting confidence 상한 — 일반적으로 마지막 quantified source-backed anchor. **이것은 confidence boundary이지 calculation hard stop이 아니다.** 상한 strictly 너머의 입력도 보정 노출을 계산하며, 정책은 `unsupportedOutOfPolicyRange` (beyond source range)로 분류하고 표시 계층은 그 값을 manufacturer guidance가 아닌 formula-derived continuation으로 표현한다. `nil`은 source boundary가 없음을 의미.
+
+공식의 `evaluate(meteredExposureSeconds:)`는 7가지 outcome 중 하나를 반환 — `noCorrection`, `withinSourceRange(corrected)`, `beyondSourceRange(corrected)`, `invalidInput` (잘못된 측광 입력), `invalidFormula` (parameter contract 위반), `formulaOutputUnusable` (non-finite / non-positive 출력), `unsafeShorteningFormula` (노출 단축 출력). 앞 셋은 정상 평가 경로; 뒷 넷은 정책이 서로 다른 표현으로 라우팅하는 별도 실패 모드로, 사용자 정의 custom formula가 조용히 "보정 불필요"로 둔갑할 수 없게 한다.
 
 ### 5.3 Limited-guidance rule
 
@@ -256,7 +272,7 @@ Rule의 `adjustments` 또는 source-evidence row의 `adjustments` 배열에 atta
 - **multiplier** — `{ factor }`. 출판된 보정은 row의 측광 점에서 측광 시간에 대한 scalar multiplier.
 - **colorFilter** — `{ filterName, note? }`. 컬러 보정 필터 권고 (예: `5M`, `CC10R`).
 - **development** — `{ instruction, note? }`. 현상 시간 조정 hint (예: `-10% development`).
-- **warning** — `{ severity, message }`. `severity`는 `caution` 또는 `notRecommended`. Formula의 source-evidence row에서 `notRecommended`는 제조사 stop-signal 경계를 표시 — 단, 계산 정책은 stop-signal 위치를 이 row가 아닌 formula rule의 `meteredRange.maximumSeconds`/`extrapolateBeyondMaximum`에서 읽는다.
+- **warning** — `{ severity, message }`. `severity`는 `caution` 또는 `notRecommended`. Formula의 source-evidence row에서 `notRecommended`는 제조사 stop-signal 경계를 표시. 계산 정책 자체는 source/fitting confidence 경계를 공식의 `sourceRangeThroughSeconds`에서 읽으며, warning row는 출판 evidence 표시 데이터로 보존되고 corrected-time anchor 역할은 하지 않는다 (예: CMS 20 II의 100 s "Not recommended" row는 10 s `sourceRangeThroughSeconds`보다 위에 있다).
 - **note** — `{ text }`. Free-form 보조 안내.
 
 Exposure adjustment는 threshold / limited-guidance rule + source-evidence row에 attach 되는 display 전용 데이터. 계산 정책은 이들로부터 quantified prediction을 read 하지 않는다 — 보정 노출 값은 threshold (identity) 또는 formula (closed-form) rule에서만 산출.
@@ -305,7 +321,7 @@ Bundled launch 카탈로그는 **34-필름 launch-ready scope** (wiki 13172737, 
 
 모든 launch preset profile은 다음 두 허용 shape 중 정확히 하나에 매치:
 
-1. **Official quantified formula** — threshold rule (무보정 band) + formula rule (closed-form 보정), 제조사 reference 점을 보존하는 옵션 `sourceEvidence` row. 계산은 formula range 내부에서 `formulaDerived` 보정 노출 산출; formula의 `meteredRange.maximumSeconds` 너머에서 `unsupportedOutOfPolicyRange`로 전환 (`extrapolateBeyondMaximum`에 따라 numeric continuation 동반 여부 결정).
+1. **Official quantified formula** — formula rule만 (공유 `ReciprocityFormula`가 자체 무보정 / source-range guard를 소유; PTIMER-160이 동반 threshold rule을 retire), 옵션으로 제조사 reference 점을 보존하는 `sourceEvidence` row. 계산은 `T_m ≤ noCorrectionThroughSeconds`에 대해 `officialThresholdNoCorrection`, 그 위부터 `sourceRangeThroughSeconds`까지 `formulaDerived`, source range 너머는 numeric formula continuation을 carry하는 `unsupportedOutOfPolicyRange` 산출.
 2. **Official limited guidance** — threshold rule + threshold 너머 영역에 대한 limited-guidance rule (§5.3). 계산은 threshold band 내부에서 `officialThresholdNoCorrection`, 너머에서 `limitedGuidanceNoQuantifiedPrediction` 산출; formula curve 없음, quantified continuation 없음.
 
 Unofficial practical profile (`authority = "unofficial"`)은 launch 카탈로그 파일 외부에 bundle 되며 §13.3에서 별도로 기술한다.
@@ -316,12 +332,12 @@ Launch preset profile은 계산 table rule을 갖지 않는다. 도메인에 `.t
 
 | 제조사            | 수    | Profile shape |
 |------------------|------:|---------------|
-| ILFORD / HARMAN  |    12 | Threshold + formula (`Tc = Tm^P`) |
-| Kodak Still Film |     9 | Threshold + formula (B/W: Tri-X 400, T-MAX 100/400) 또는 threshold + limited-guidance (color negative, Ektachrome E100) |
-| Fujifilm         |     4 | Threshold + formula with `sourceEvidence` reference row |
-| FOMA BOHEMIA     |     3 | Threshold + formula with `sourceEvidence` reference row |
-| Rollei           |     4 | Threshold + formula with `sourceEvidence` reference row |
-| ADOX             |     2 | Threshold + formula with `sourceEvidence` reference row (CMS 20 II는 100 s stop signal로 `extrapolateBeyondMaximum = false`) |
+| ILFORD / HARMAN  |    12 | Formula (`Tc = Tm^p`) |
+| Kodak Still Film |     9 | Formula with `sourceEvidence` reference row (B/W: Tri-X 400, T-MAX 100/400) 또는 threshold + limited-guidance (color negative, Ektachrome E100) |
+| Fujifilm         |     4 | Formula with `sourceEvidence` reference row |
+| FOMA BOHEMIA     |     3 | Formula with `sourceEvidence` reference row |
+| Rollei           |     4 | Formula with `sourceEvidence` reference row |
+| ADOX             |     2 | Formula with `sourceEvidence` reference row (CMS 20 II는 100 s "Not recommended" row가 10 s `sourceRangeThroughSeconds` 위에 publised warning marker로 보존) |
 | **합계**         | **34** | |
 
 ### 13.2 Launch dataset 제외 항목

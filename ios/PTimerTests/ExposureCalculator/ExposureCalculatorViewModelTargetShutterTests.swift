@@ -132,11 +132,13 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
 
     @MainActor
     func testFilmWorkflowBeyondVelvia50SourceRangeComparesAgainstFormulaPrediction() throws {
-        // Velvia 50's 64 s row is the formula's not-recommended
-        // boundary, and the formula still yields a numeric corrected
-        // exposure past the source range. Target Shutter must
-        // compare against that quantified value rather than
-        // reporting "no comparison available". The synthetic
+        // Velvia 50's source-backed range ends at the 32 s anchor;
+        // the 64 s row is a published "Not recommended" warning
+        // marker only. At adjusted shutter 64 s the result is
+        // beyond-source-with-numeric — the formula still yields a
+        // corrected exposure. Target Shutter must compare against
+        // that quantified value rather than reporting "no
+        // comparison available". The synthetic
         // unsupported-without-numeric path is exercised in
         // `TargetShutterPresenterTests` via a direct `.unavailable`
         // comparison source — no launch-catalog film reaches that

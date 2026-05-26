@@ -85,28 +85,17 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, 1.3423, accuracy: 1e-4)
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
+        let coefficient = formulaRule.formula.coefficientSeconds
         XCTAssertEqual(coefficient, 1.2102, accuracy: 1e-4)
 
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("Tm^P"),
-            "Equation must use the Tm^P placeholder so the graph renders the exponent superscript; got: \(equation)"
-        )
-
-        let range = try XCTUnwrap(formulaRule.meteredRange)
-        XCTAssertEqual(range.minimumSeconds, 1, accuracy: 1e-6)
+        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-6)
+        let sourceRange = try XCTUnwrap(formulaRule.formula.sourceRangeThroughSeconds)
         XCTAssertEqual(
-            range.maximumSeconds ?? 0,
+            sourceRange,
             15,
             accuracy: 1e-6,
             "CHS 100 II's formula domain must end at the last 2024 published row (15 sec)."
-        )
-        XCTAssertTrue(
-            formulaRule.extrapolateBeyondMaximum,
-            "CHS 100 II must keep the default formula prediction past 15 sec so 'Beyond source range' surfaces a numeric continuation, not an Unavailable value."
         )
     }
 

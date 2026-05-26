@@ -5,16 +5,18 @@ import XCTest
 /// formula. These tests lock the invariants:
 ///
 /// - Below the 128 s no-correction threshold, the threshold rule wins.
-/// - In (128, 480) the formula wins (basis == `.formulaDerived`).
-/// - 240 s — the manufacturer's published +1/3-stop reference point —
-///   produces a formula-derived corrected exposure of ≈302 s. The
-///   reference is preserved as `sourceEvidence`, never as a
-///   calculation rule.
-/// - At and beyond 480 s — the manufacturer's "not recommended"
-///   boundary — the basis is `.unsupportedOutOfPolicyRange` and the
-///   result still carries a numeric formula prediction outside the
-///   source range (visibly marked outside manufacturer guidance).
-///   480 s is never used as a formula fitting point.
+/// - In (128, 240] the formula wins (basis == `.formulaDerived`); the
+///   source-backed range ends at the 240 s published +1/3-stop
+///   reference (PTIMER-160).
+/// - 240 s itself produces a formula-derived corrected exposure of
+///   ≈302 s. The reference is preserved as `sourceEvidence`, never
+///   as a calculation rule.
+/// - Above 240 s the basis is `.unsupportedOutOfPolicyRange` and the
+///   formula keeps producing a numeric prediction (visibly marked
+///   outside manufacturer guidance).
+/// - The 480 s row is preserved as a "Not recommended" warning marker
+///   only; it is never used as a formula fitting point or as a
+///   corrected-time anchor.
 /// - The 240 s (+1/3 stop, 2.5G) row and the 480 s not-recommended row
 ///   stay visible as source evidence so users can verify the formula
 ///   prediction against the manufacturer's published reference points.
@@ -33,7 +35,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 128, accuracy: 1e-6)
     }
 
-    // MARK: - Formula range (128 s … 480 s exclusive)
+    // MARK: - Source-backed formula range (128 s … 240 s inclusive)
 
     func testProvia100FAt240SecondsIsFormulaDerivedNotExactTablePoint() throws {
         let profile = try proviaProfile()
@@ -52,15 +54,15 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 302.4, accuracy: 2.0)
     }
 
-    func testProvia100FBetweenThresholdAndStopSignalIsFormulaDerived() throws {
+    func testProvia100FBetweenThresholdAnd240SecondsIsFormulaDerived() throws {
         let profile = try proviaProfile()
 
-        for metered in [150.0, 200.0, 360.0, 470.0] {
+        for metered in [150.0, 200.0, 230.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
                 .formulaDerived,
-                "Metered \(metered) s in the formula range must be formula-derived."
+                "Metered \(metered) s in the source-backed range must be formula-derived."
             )
         }
     }
@@ -72,55 +74,40 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, 1.3676, accuracy: 0.0001)
 
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
-        // coefficient = 128^(1 - 1.3676) = 128^(-0.3676) ≈ 0.16803
-        XCTAssertEqual(coefficient, pow(128.0, 1 - 1.3676), accuracy: 0.0005)
-
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("128"),
-            "Equation text must communicate the 128 s anchor; got: \(equation)"
-        )
+        // PTIMER-160 preserves Provia 100F's published display form
+        // `Tc = 128 × (Tm / 128)^p` by storing the formula with
+        // `coefficientSeconds = referenceMeteredTimeSeconds = 128`,
+        // mathematically equivalent to the legacy
+        // `coefficient ≈ 0.168` with `Tref = 1` form.
+        XCTAssertEqual(formulaRule.formula.coefficientSeconds, 128, accuracy: 1e-6)
+        XCTAssertEqual(formulaRule.formula.referenceMeteredTimeSeconds, 128, accuracy: 1e-6)
     }
 
-    // MARK: - Unsupported boundary (≥ 480 s) with formula prediction outside source range
+    // MARK: - Beyond the source-backed range (> 240 s, with 480 s
+    // as a warning marker)
 
-    func testProvia100FAt480SecondsIsUnsupportedWithFormulaPredictionOutsideSourceRange() throws {
+    /// PTIMER-160: source-backed range ends at the 240 s anchor.
+    /// 360 s, 480 s, and 500 s all sit above that boundary; the
+    /// formula keeps producing a numeric continuation but the basis
+    /// must classify them as outside the source range. 480 s also
+    /// exists as a published "Not recommended" warning marker, which
+    /// surfaces independently through the source-evidence row — it
+    /// does not promote 480 s back into source-backed status.
+    func testProvia100FAbove240SecondsCarriesFormulaPredictionAsBeyondSource() throws {
         let profile = try proviaProfile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 480)
-
-        XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-
-        // The boundary itself sits outside manufacturer guidance, but
-        // the formula can still produce a value the user can act on.
-        // Tc = 128 × (480 / 128)^1.3676 = 128 × 3.75^1.3676 ≈ 781 s.
-        let corrected = try XCTUnwrap(
-            result.correctedExposureSeconds,
-            "480 s must carry a numeric formula prediction outside the source range, not nil."
-        )
-        let expected = 128.0 * pow(480.0 / 128.0, 1.3676)
-        XCTAssertEqual(corrected, expected, accuracy: 1.5)
-    }
-
-    func testProvia100FBeyond480SecondsProducesFormulaPredictionAndStaysUnsupported() throws {
-        let profile = try proviaProfile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 500)
-
-        XCTAssertEqual(
-            result.metadata.basis,
-            .unsupportedOutOfPolicyRange,
-            "Beyond the 480 s boundary the result remains classified as outside manufacturer guidance."
-        )
-
-        let corrected = try XCTUnwrap(
-            result.correctedExposureSeconds,
-            "Formula must keep producing a numeric prediction past the manufacturer boundary."
-        )
-        let expected = 128.0 * pow(500.0 / 128.0, 1.3676)
-        XCTAssertEqual(corrected, expected, accuracy: 1.5)
+        for metered in [360.0, 470.0, 480.0, 500.0] {
+            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+            XCTAssertEqual(
+                result.metadata.basis,
+                .unsupportedOutOfPolicyRange,
+                "Provia 100F at \(metered) s sits above the 240 s source-backed boundary."
+            )
+            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
+            let expected = 128.0 * pow(metered / 128.0, 1.3676)
+            XCTAssertEqual(corrected, expected, accuracy: max(1.5, expected * 0.005))
+        }
     }
 
     func testProvia100FUnsupportedNumericResultExposesCalculatedTime() throws {

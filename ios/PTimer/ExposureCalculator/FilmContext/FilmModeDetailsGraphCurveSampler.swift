@@ -23,19 +23,21 @@ struct FilmModeDetailsGraphCurveSampler {
 
     /// Source path drawn by the formula graph: identity (Tc = Tm)
     /// inside the no-correction zone, then the formula curve past
-    /// the no-correction upper bound. The two segments join at
-    /// the threshold so the curve does not appear to cut off at
-    /// the edge of the green band — the green band reads as the
+    /// the no-correction upper bound. The green band reads as the
     /// policy zone *covered* by the identity portion of the same
     /// curve, not as a missing chunk of the formula prediction.
     ///
     /// Identity segment runs from the viewport's effective lower
-    /// bound to the no-correction upper bound. Formula segment
-    /// runs from the formula rule's domain up to the canonical
-    /// upper sample. The threshold seam point appears at most
-    /// once (the formula's first sample is anchored at the
-    /// threshold so its (Tm, Tc) equals (threshold, threshold)
-    /// for every catalog profile).
+    /// bound up to and including `noCorrectionThroughSeconds`.
+    /// Formula segment starts strictly above that boundary
+    /// (`noCorrectionThroughSeconds × 1.001`) and runs up to the
+    /// canonical upper sample — formulas with an open boundary at
+    /// the threshold (Tri-X, Acros II) intentionally jump from the
+    /// identity line to the formula curve at the boundary, so the
+    /// formula's first sample is NOT anchored at
+    /// `(threshold, threshold)`. The seam-deduplication guard below
+    /// still drops a duplicate point in the rare case where the two
+    /// segments happen to land on the same (x, y).
     func sourcePoints(_ inputs: Inputs) -> [FilmModeDetailsGraphPoint] {
         let formulaPoints = formulaSegmentPoints(
             for: inputs.rule,
@@ -50,9 +52,11 @@ struct FilmModeDetailsGraphCurveSampler {
         )
 
         // If the identity segment's last sample lands on the same
-        // point as the formula segment's first sample (the
-        // threshold seam), drop the duplicate so the stroked path
-        // does not double-back over a single x.
+        // point as the formula segment's first sample, drop the
+        // duplicate so the stroked path does not double-back over a
+        // single x. With the formula segment offset above the
+        // threshold this case is rare in practice but the guard
+        // costs nothing.
         guard let lastIdentity = identityPoints.last,
               let firstFormula = formulaPoints.first else {
             return identityPoints + formulaPoints
@@ -101,42 +105,34 @@ struct FilmModeDetailsGraphCurveSampler {
         currentMeteredExposureSeconds: Double,
         tierUpperBoundSeconds: Double
     ) -> [FilmModeDetailsGraphPoint] {
-        // Anchor the formula curve to the formula's own supported
-        // zone. When a threshold rule defines a no-correction range
-        // (e.g. Provia 100F's 0…128 s), the curve must not extend
-        // through that range or it reads as the active prediction
-        // there. The view shades the no-correction region separately
-        // so the zone left of the curve reads as policy-controlled.
-        let thresholdCandidates = Self.profileThresholdUpperBounds(in: profile)
-        let lowerBoundCandidates: [Double?] = [
-            rule.meteredRange?.minimumSeconds,
-            thresholdCandidates.min(),
-            // Legacy fallback for formula profiles that carry neither
-            // an explicit meteredRange nor a threshold rule. Keeps the
-            // curve at 1 s when both anchors above are nil.
-            (rule.meteredRange?.minimumSeconds == nil && thresholdCandidates.isEmpty) ? 1 : nil,
-        ]
-        // When no explicit meteredRange is defined, use a canonical practical range
-        // so the graph shows a stable reference viewport rather than auto-scaling
-        // tightly around the current input.
+        // Anchor the formula curve strictly above the no-correction
+        // boundary so the identity segment owns the no-correction
+        // zone and the formula curve takes over past it. The 0.1 %
+        // nudge survives the log-interpolation round-trip — a tighter
+        // ε can collapse back to the boundary value through
+        // `pow(10, log10(x))`, which lets a formula sample sneak into
+        // the identity zone.
+        let formulaLowerBound = rule.formula.noCorrectionThroughSeconds > 0
+            ? rule.formula.noCorrectionThroughSeconds * 1.001
+            : 1
+        // When the formula has no published source range, use a
+        // canonical practical upper bound so the graph shows a stable
+        // reference viewport rather than auto-scaling tightly around
+        // the current input.
         let canonicalUpperBoundSeconds: Double = 120
         let upperBoundCandidates = [
-            rule.meteredRange?.maximumSeconds,
+            rule.formula.sourceRangeThroughSeconds,
             canonicalUpperBoundSeconds,
             currentMeteredExposureSeconds,
         ]
 
-        let positiveLowerBound = lowerBoundCandidates
-            .compactMap { $0 }
-            .filter { $0 > 0 }
-            .max()
         let positiveUpperBound = upperBoundCandidates
             .compactMap { $0 }
             .filter { $0 > 0 }
             .max()
 
-        guard let lowerBound = positiveLowerBound,
-              let upperBound = positiveUpperBound else {
+        guard let upperBound = positiveUpperBound,
+              formulaLowerBound > 0 else {
             return []
         }
 
@@ -147,7 +143,7 @@ struct FilmModeDetailsGraphCurveSampler {
         // (1 s) so no sample sits at the left-edge clamp position
         // pretending to be a 1 s value.
         let tierClampedUpperBound = min(upperBound, tierUpperBoundSeconds)
-        let tierClampedLowerBound = max(lowerBound, FilmModeDetailsGraphScaleTier.t1.lowerBoundSeconds)
+        let tierClampedLowerBound = max(formulaLowerBound, FilmModeDetailsGraphScaleTier.t1.lowerBoundSeconds)
         let clampedLowerBound = min(tierClampedLowerBound, tierClampedUpperBound)
         let clampedUpperBound = max(tierClampedLowerBound, tierClampedUpperBound)
         let sampleCount = 24
@@ -178,13 +174,35 @@ struct FilmModeDetailsGraphCurveSampler {
 
     // MARK: - Formula arithmetic helpers (shared with the presenter)
 
-    static func profileThresholdUpperBounds(in profile: ReciprocityProfile) -> [Double] {
+    /// Returns the formula-owned no-correction upper bounds for the
+    /// profile's formula rules. Used by the graph overlay to draw the
+    /// green no-correction band even though the formula now owns its
+    /// own guard (the threshold rule was retired from formula
+    /// profiles in PTIMER-160).
+    static func profileFormulaNoCorrectionUpperBounds(
+        in profile: ReciprocityProfile
+    ) -> [Double] {
         profile.rules.compactMap { rule -> Double? in
-            guard case let .threshold(thresholdRule) = rule else {
+            guard case let .formula(formulaRule) = rule else {
                 return nil
             }
-            return thresholdRule.noCorrectionRange.maximumSeconds
+            let upper = formulaRule.formula.noCorrectionThroughSeconds
+            return upper > 0 ? upper : nil
         }
+    }
+
+    /// Source-range upper bound for the profile's first formula rule
+    /// (if any). Shared by the graph presenter so the beyond-source
+    /// region matches the calculation policy.
+    static func profileFormulaSourceRangeUpperBoundSeconds(
+        in profile: ReciprocityProfile
+    ) -> Double? {
+        for rule in profile.rules {
+            if case let .formula(formulaRule) = rule {
+                return formulaRule.formula.sourceRangeThroughSeconds
+            }
+        }
+        return nil
     }
 
     static func formulaCorrectedExposureSeconds(
@@ -192,15 +210,19 @@ struct FilmModeDetailsGraphCurveSampler {
         meteredExposureSeconds: Double
     ) -> Double? {
         guard meteredExposureSeconds.isFinite,
-              meteredExposureSeconds > 0 else {
+              meteredExposureSeconds > 0,
+              formula.hasValidParameters else {
             return nil
         }
-
-        switch formula.kind {
-        case .exponentPower:
-            let coefficient = formula.coefficient ?? 1
-            let offsetSeconds = formula.offsetSeconds ?? 0
-            return (coefficient * pow(meteredExposureSeconds, formula.exponent)) + offsetSeconds
+        // Exhaustive switch on the formula family so PTIMER-162's
+        // future `.kronHalmContinuous` addition forces a compile
+        // failure here instead of silently falling back to Modified
+        // Schwarzschild.
+        switch formula.formulaFamily {
+        case .modifiedSchwarzschild:
+            let scaled = meteredExposureSeconds / formula.referenceMeteredTimeSeconds
+            let powered = pow(scaled, formula.exponent)
+            return (formula.coefficientSeconds * powered) + formula.offsetSeconds
         }
     }
 

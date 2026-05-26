@@ -34,7 +34,10 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
             rules: [
                 .formula(
                     FormulaReciprocityRule(
-                        formula: ReciprocityFormula(exponent: 1.3)
+                        formula: ReciprocityFormula(
+                            exponent: 1.3,
+                            noCorrectionThroughSeconds: 1
+                        )
                     )
                 ),
             ]

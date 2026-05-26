@@ -16,6 +16,24 @@ import Foundation
 struct CameraSlotSessionPersistenceController {
     let sessionStore: CameraSlotSessionPersistenceStoring
     let presetFilms: [FilmIdentity]
+    /// Closure that surfaces the photographer's custom
+    /// film library at session restore time. `runtimeSnapshot(from:)`
+    /// resolves persisted film ids against the preset catalog first
+    /// (cheaper, immutable) and falls back to this closure so a
+    /// custom film selected before relaunch is restored on the right
+    /// slot. Default `{ [] }` preserves the legacy
+    /// empty-list behavior for callers that pre-date custom films.
+    let currentCustomFilms: () -> [FilmIdentity]
+
+    init(
+        sessionStore: CameraSlotSessionPersistenceStoring,
+        presetFilms: [FilmIdentity],
+        currentCustomFilms: @escaping () -> [FilmIdentity] = { [] }
+    ) {
+        self.sessionStore = sessionStore
+        self.presetFilms = presetFilms
+        self.currentCustomFilms = currentCustomFilms
+    }
 
     /// Restored session ready to apply to the runtime. The active
     /// slot's snapshot is included in `inactiveSnapshots` even though
@@ -133,8 +151,17 @@ struct CameraSlotSessionPersistenceController {
     private func runtimeSnapshot(
         from entry: PersistentCameraSlotCalculatorSnapshot
     ) -> CameraSlotCalculatorSnapshot {
-        let film: FilmIdentity? = entry.selectedPresetFilmID
-            .flatMap { id in presetFilms.first { $0.id == id } }
+        let film: FilmIdentity? = entry.selectedPresetFilmID.flatMap { id in
+            // Preset catalog first (immutable, cheap), then the
+            // user-authored custom library. A persisted id that
+            // matches neither resolves to "No film", same as the
+            // legacy behavior — the slot stays usable instead of
+            // dangling on a deleted film reference.
+            if let preset = presetFilms.first(where: { $0.id == id }) {
+                return preset
+            }
+            return currentCustomFilms().first { $0.id == id }
+        }
 
         let profile: ReciprocityProfile? = {
             guard let film,

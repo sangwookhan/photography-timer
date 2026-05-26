@@ -75,7 +75,8 @@ final class TimerWorkspaceModel: ObservableObject {
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
         exposureSource: ExposureTimerSource? = nil,
-        isOutsideManufacturerGuidance: Bool = false
+        isOutsideManufacturerGuidance: Bool = false,
+        customProfileSummary: String? = nil
     ) -> UUID? {
         let order = nextTimerOrder
         timerMetadata[id] = TimerMetadataEntry(
@@ -86,7 +87,8 @@ final class TimerWorkspaceModel: ObservableObject {
             filmDisplayName: filmDisplayName,
             filmProfileQualifier: filmProfileQualifier,
             exposureSource: exposureSource,
-            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance
+            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
+            customProfileSummary: customProfileSummary
         )
 
         guard timerManager.start(id: id, duration: duration) != nil else {
@@ -130,7 +132,8 @@ final class TimerWorkspaceModel: ObservableObject {
             filmDisplayName: source.filmDisplayName,
             filmProfileQualifier: source.filmProfileQualifier,
             exposureSource: source.exposureSource,
-            isOutsideManufacturerGuidance: source.isOutsideManufacturerGuidance
+            isOutsideManufacturerGuidance: source.isOutsideManufacturerGuidance,
+            customProfileSummary: source.customProfileSummary
         )
     }
 
@@ -227,7 +230,8 @@ final class TimerWorkspaceModel: ObservableObject {
                         filmDisplayName: entry.filmDisplayName,
                         filmProfileQualifier: entry.filmProfileQualifier,
                         exposureSource: exposureSource,
-                        isOutsideManufacturerGuidance: entry.isOutsideManufacturerGuidance ?? false
+                        isOutsideManufacturerGuidance: entry.isOutsideManufacturerGuidance ?? false,
+                        customProfileSummary: entry.customProfileSummary
                     )
                 )
             }
@@ -256,7 +260,8 @@ final class TimerWorkspaceModel: ObservableObject {
                         exposureSourceRaw: metadata.exposureSource?.rawValue,
                         isOutsideManufacturerGuidance: metadata.isOutsideManufacturerGuidance
                             ? true
-                            : nil
+                            : nil,
+                        customProfileSummary: metadata.customProfileSummary
                     )
                 }
                 .sorted { lhs, rhs in
@@ -299,7 +304,8 @@ final class TimerWorkspaceModel: ObservableObject {
                     filmDisplayName: metadata?.filmDisplayName,
                     filmProfileQualifier: metadata?.filmProfileQualifier,
                     exposureSource: metadata?.exposureSource,
-                    isOutsideManufacturerGuidance: metadata?.isOutsideManufacturerGuidance ?? false
+                    isOutsideManufacturerGuidance: metadata?.isOutsideManufacturerGuidance ?? false,
+                    customProfileSummary: metadata?.customProfileSummary
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
@@ -361,6 +367,7 @@ private struct TimerMetadataEntry {
     let filmProfileQualifier: String?
     let exposureSource: ExposureTimerSource?
     let isOutsideManufacturerGuidance: Bool
+    let customProfileSummary: String?
 
     init(
         order: Int,
@@ -370,7 +377,8 @@ private struct TimerMetadataEntry {
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
         exposureSource: ExposureTimerSource? = nil,
-        isOutsideManufacturerGuidance: Bool = false
+        isOutsideManufacturerGuidance: Bool = false,
+        customProfileSummary: String? = nil
     ) {
         self.order = order
         self.name = name
@@ -380,5 +388,6 @@ private struct TimerMetadataEntry {
         self.filmProfileQualifier = filmProfileQualifier
         self.exposureSource = exposureSource
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+        self.customProfileSummary = customProfileSummary
     }
 }

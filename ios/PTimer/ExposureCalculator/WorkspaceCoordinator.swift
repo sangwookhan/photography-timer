@@ -20,6 +20,7 @@ final class WorkspaceCoordinator: ObservableObject {
     let filmSelectionModel: FilmSelectionModel
     let cameraSlotSessionModel: CameraSlotSessionModel
     let targetShutterModel: TargetShutterModel
+    let customFilmLibrary: CustomFilmLibrary
     let viewModel: ExposureCalculatorViewModel
 
     init(dependencies: ViewModelDependencies) {
@@ -37,13 +38,15 @@ final class WorkspaceCoordinator: ObservableObject {
         // persistence time — that lets the persisted calculator
         // context capture which slot owns its values.
         let cameraSlotSessionModel = CameraSlotSessionModel()
+        let customLibrary = dependencies.customFilmLibrary
         let filmSelectionModel = FilmSelectionModel(
             presetFilms: dependencies.presetFilms,
             contextPersistenceStore: dependencies.contextPersistenceStore,
             currentBaseShutterSeconds: { calculatorModel.baseShutterSeconds },
             currentNDStep: { calculatorModel.ndStep },
             currentScaleMode: { calculatorModel.scaleMode },
-            currentActiveCameraSlotID: { cameraSlotSessionModel.activeSlotID }
+            currentActiveCameraSlotID: { cameraSlotSessionModel.activeSlotID },
+            currentCustomFilms: { customLibrary.customFilms }
         )
         let targetShutterModel = TargetShutterModel()
         self.calculatorModel = calculatorModel
@@ -52,6 +55,7 @@ final class WorkspaceCoordinator: ObservableObject {
         self.filmSelectionModel = filmSelectionModel
         self.cameraSlotSessionModel = cameraSlotSessionModel
         self.targetShutterModel = targetShutterModel
+        self.customFilmLibrary = dependencies.customFilmLibrary
         self.viewModel = ExposureCalculatorViewModel(
             dependencies: dependencies,
             calculatorModel: calculatorModel,
@@ -59,7 +63,8 @@ final class WorkspaceCoordinator: ObservableObject {
             timerWorkspaceModel: timerWorkspaceModel,
             filmSelectionModel: filmSelectionModel,
             cameraSlotSessionModel: cameraSlotSessionModel,
-            targetShutterModel: targetShutterModel
+            targetShutterModel: targetShutterModel,
+            customFilmLibrary: dependencies.customFilmLibrary
         )
     }
 }

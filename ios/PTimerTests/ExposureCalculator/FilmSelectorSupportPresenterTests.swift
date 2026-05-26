@@ -22,7 +22,7 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
         )
     }
 
-    func testUserDefinedAuthorityMapsToNone() {
+    func testUserDefinedAuthorityMapsToCustomFormulaPrediction() {
         let userDefinedProfile = ReciprocityProfile(
             id: "user-defined-profile",
             name: "User defined",
@@ -46,8 +46,8 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
 
         XCTAssertEqual(
             FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .none,
-            "User-defined authority does not share the launch-catalog vocabulary; the row carries no indicator."
+            .userDefinedFormulaPrediction,
+            "User-defined authority renders a visible 'Custom' badge."
         )
     }
 

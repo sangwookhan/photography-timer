@@ -47,8 +47,8 @@ struct ExposureTimerIdentitySnapshot: Equatable, Hashable {
     /// `nil` indicates the timer was started without a film selected
     /// (digital workflow).
     let filmDisplayName: String?
-    /// Optional profile qualifier (e.g., `"Unofficial"`) when the user
-    /// chose a non-primary profile.
+    /// Optional profile qualifier (e.g., `"Unofficial"`, `"Custom"`)
+    /// when the user chose a non-primary or user-authored profile.
     let filmProfileQualifier: String?
     let exposureSource: ExposureTimerSource
     /// True when the timer was started from a formula prediction that
@@ -58,18 +58,28 @@ struct ExposureTimerIdentitySnapshot: Equatable, Hashable {
     /// to `false` for the supported quantified path and for non-film
     /// timers.
     let isOutsideManufacturerGuidance: Bool
+    /// Identity summary for a timer started from a
+    /// user-authored custom profile. Carries `profile name · ISO ·
+    /// source type · formula` as one display-ready string so the
+    /// timer card stays understandable even if the photographer later
+    /// deletes the source profile. `nil` for preset / unofficial /
+    /// non-film timers — the existing `filmProfileQualifier` carries
+    /// the qualifier in those cases.
+    let customProfileSummary: String?
 
     init(
         cameraSlot: CameraSlotIdentity?,
         filmDisplayName: String?,
         filmProfileQualifier: String?,
         exposureSource: ExposureTimerSource,
-        isOutsideManufacturerGuidance: Bool = false
+        isOutsideManufacturerGuidance: Bool = false,
+        customProfileSummary: String? = nil
     ) {
         self.cameraSlot = cameraSlot
         self.filmDisplayName = filmDisplayName
         self.filmProfileQualifier = filmProfileQualifier
         self.exposureSource = exposureSource
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+        self.customProfileSummary = customProfileSummary
     }
 }

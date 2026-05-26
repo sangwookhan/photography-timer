@@ -16,6 +16,11 @@ struct ViewModelDependencies {
     let cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring
     let metadataPersistenceStore: TimerMetadataPersistenceStoring
     let lockScreenTargetExposer: LockScreenTimerTargetExposing
+    /// Photographer-authored custom film library. In
+    /// Increment 1 this is purely in-memory; Increment 2 swaps in a
+    /// persisted backing through a `*Storing` collaborator without
+    /// changing the model's observation surface.
+    let customFilmLibrary: CustomFilmLibrary
 }
 
 @MainActor
@@ -34,7 +39,10 @@ enum ViewModelDependencyFactory {
             contextPersistenceStore: UserDefaultsCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: UserDefaultsCameraSlotSessionStore(),
             metadataPersistenceStore: UserDefaultsTimerMetadataStore(),
-            lockScreenTargetExposer: ActivityKitLockScreenTimerTargetExposer()
+            lockScreenTargetExposer: ActivityKitLockScreenTimerTargetExposer(),
+            customFilmLibrary: CustomFilmLibrary(
+                store: UserDefaultsCustomFilmLibraryStore()
+            )
         )
     }
 
@@ -46,7 +54,10 @@ enum ViewModelDependencyFactory {
             contextPersistenceStore: NoOpCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: NoOpCameraSlotSessionPersistenceStore(),
             metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),
-            lockScreenTargetExposer: NoOpLockScreenTimerTargetExposer()
+            lockScreenTargetExposer: NoOpLockScreenTimerTargetExposer(),
+            customFilmLibrary: CustomFilmLibrary(
+                store: NoOpCustomFilmLibraryStore()
+            )
         )
     }
 }

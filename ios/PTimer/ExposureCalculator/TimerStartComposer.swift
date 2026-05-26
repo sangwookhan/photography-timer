@@ -62,6 +62,7 @@ struct TimerStartComposer {
         let filmProfileQualifier: String?
         let exposureSource: ExposureTimerSource?
         let isOutsideManufacturerGuidance: Bool
+        let customProfileSummary: String?
     }
 
     let formatShutter: (TimeInterval) -> String
@@ -72,13 +73,33 @@ struct TimerStartComposer {
 
         let captured = input.source.capturesCalculatorIdentity
         let activeFilm = captured ? input.selectedPresetFilm : nil
-        let activeProfile = captured ? input.selectedProfileOverride : nil
+        // For preset films the user may have toggled an Unofficial
+        // override; for custom films the FilmIdentity is
+        // self-contained — there is no override and the single
+        // user-defined profile drives the identity. Reaching for
+        // `film.profiles.first` covers that case so a custom timer
+        // captures the profile name + formula even when the user
+        // never touched a profile picker.
+        let activeProfile: ReciprocityProfile? = {
+            guard captured else { return nil }
+            if let override = input.selectedProfileOverride {
+                return override
+            }
+            return input.selectedPresetFilm?.profiles.first
+        }()
         let filmProfileQualifier = activeProfile.flatMap { profile -> String? in
             switch profile.source.authority {
             case .unofficial: return "Unofficial"
-            case .official, .userDefined, .unknown: return nil
+            case .userDefined: return "Custom"
+            case .official, .unknown: return nil
             }
         }
+        let customProfileSummary: String? = {
+            guard let activeProfile, activeProfile.source.authority == .userDefined else {
+                return nil
+            }
+            return Self.customProfileSummary(film: activeFilm, profile: activeProfile)
+        }()
 
         // Outside-manufacturer-guidance applies only on the corrected
         // exposure start path. Adjusted-shutter / target-shutter
@@ -99,8 +120,74 @@ struct TimerStartComposer {
             filmDisplayName: activeFilm?.canonicalStockName,
             filmProfileQualifier: filmProfileQualifier,
             exposureSource: input.source.timerExposureSource,
-            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance
+            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
+            customProfileSummary: customProfileSummary
         )
+    }
+
+    /// Bundles the identifying facts of a custom profile (name,
+    /// ISO, source type, formula) into one `·`-joined string
+    /// suitable for the timer card's secondary line. Persisted on
+    /// the snapshot so a later deletion of the source profile
+    /// cannot strip the timer of its provenance.
+    ///
+    /// Returns `nil` only when *every* contributing segment is
+    /// missing, which would imply a malformed custom profile —
+    /// callers may render the qualifier alone in that edge case.
+    static func customProfileSummary(
+        film: FilmIdentity?,
+        profile: ReciprocityProfile
+    ) -> String? {
+        var segments: [String] = []
+        let trimmedName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty {
+            segments.append(trimmedName)
+        }
+        if let film, film.iso > 0 {
+            segments.append("ISO \(film.iso)")
+        }
+        if let sourceType = profile.userMetadata?.customSourceType
+            ?? film?.userMetadata?.customSourceType {
+            segments.append(sourceType.displayLabel)
+        }
+        if let formulaText = customProfileFormulaText(profile: profile) {
+            segments.append(formulaText)
+        }
+        return segments.isEmpty ? nil : segments.joined(separator: " · ")
+    }
+
+    /// Compact, human-readable rendering of a `.userDefined`
+    /// profile's formula. Custom profiles share the
+    /// `ReciprocityFormula` schema with shipped presets, so the
+    /// same `FormulaEquationFormatter` produces the editor
+    /// preview text, the Reciprocity Details graph title, the
+    /// Details provenance line, and the timer identity snapshot.
+    /// Returns `nil` only when the profile lacks a formula rule —
+    /// defensive only, every well-formed custom profile satisfies
+    /// the shape.
+    static func customProfileFormulaText(profile: ReciprocityProfile) -> String? {
+        for rule in profile.rules {
+            if case .formula(let formulaRule) = rule {
+                return FormulaEquationFormatter.userFacingText(for: formulaRule.formula)
+            }
+        }
+        return nil
+    }
+
+    private static func trim(_ value: Double) -> String {
+        // Render with up to 2 decimals, drop trailing zeros so
+        // round values stay short ("1.3" not "1.30") while
+        // preserving precision for non-round ones.
+        let formatted = String(format: "%.2f", value)
+        var trimmed = formatted
+        while trimmed.contains(".") && (trimmed.hasSuffix("0") || trimmed.hasSuffix(".")) {
+            trimmed.removeLast()
+            if trimmed.hasSuffix(".") {
+                trimmed.removeLast()
+                break
+            }
+        }
+        return trimmed
     }
 
     // MARK: - Name

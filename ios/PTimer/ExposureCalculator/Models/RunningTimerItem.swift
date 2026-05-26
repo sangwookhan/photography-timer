@@ -46,6 +46,11 @@ struct RunningTimerItem: Identifiable, Equatable {
     /// to `false` for older snapshots and for the supported quantified
     /// path.
     let isOutsideManufacturerGuidance: Bool
+    /// Captured-at-start identity summary for timers started
+    /// from a custom (`.userDefined`) profile. Optional so preset /
+    /// unofficial / non-film timers and older snapshots decode
+    /// unchanged.
+    let customProfileSummary: String?
 
     init(
         id: UUID,
@@ -63,7 +68,8 @@ struct RunningTimerItem: Identifiable, Equatable {
         filmDisplayName: String? = nil,
         filmProfileQualifier: String? = nil,
         exposureSource: ExposureTimerSource? = nil,
-        isOutsideManufacturerGuidance: Bool = false
+        isOutsideManufacturerGuidance: Bool = false,
+        customProfileSummary: String? = nil
     ) {
         self.id = id
         self.order = order
@@ -81,6 +87,7 @@ struct RunningTimerItem: Identifiable, Equatable {
         self.filmProfileQualifier = filmProfileQualifier
         self.exposureSource = exposureSource
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
+        self.customProfileSummary = customProfileSummary
     }
 
     /// Convenience packaging of the slot + film + source identity
@@ -103,7 +110,8 @@ struct RunningTimerItem: Identifiable, Equatable {
             filmDisplayName: filmDisplayName,
             filmProfileQualifier: filmProfileQualifier,
             exposureSource: exposureSource,
-            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance
+            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
+            customProfileSummary: customProfileSummary
         )
     }
 

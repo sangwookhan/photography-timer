@@ -14,12 +14,12 @@ struct FilmSelectorOverlay: View {
     /// still render in surfaces that have no editor entry point
     /// (preview / future read-only contexts).
     let onCreateCustomFilm: (() -> Void)?
-    /// Long-press "Delete custom film" action on a custom-film row.
-    /// The closure receives the film id. Optional so the overlay
-    /// still renders in contexts that have no delete entry point
-    /// (preview / read-only contexts). The selector only
-    /// surfaces the action on rows whose `film.kind == .custom` so
-    /// preset rows can never be deleted by mistake.
+    /// Confirmed-delete callback. The overlay wraps the delete tap
+    /// in a confirmation dialog, so this closure is only invoked
+    /// after the photographer taps the destructive button in the
+    /// dialog. Optional — the overlay still renders in read-only
+    /// contexts. Only `kind == .custom` rows surface the action,
+    /// so a preset row can never be deleted by mistake.
     let onDeleteCustomFilm: ((String) -> Void)?
     /// Opens the editor on the existing custom
     /// film via the row overflow menu (Edit). Same gating rule as
@@ -27,6 +27,13 @@ struct FilmSelectorOverlay: View {
     /// the action.
     let onEditCustomFilm: ((String) -> Void)?
     let style: ExposureWorkspaceMainLayoutStyle
+
+    /// Captured entry awaiting the
+    /// "Delete custom film?" confirmation. Keyed on the full
+    /// `FilmSelectorEntry` so the dialog can render the film's
+    /// stock name in the destructive button label without
+    /// re-resolving the entry through the section data.
+    @State private var pendingDelete: FilmSelectorEntry?
 
     init(
         sections: [FilmSelectorSection],
@@ -67,7 +74,9 @@ struct FilmSelectorOverlay: View {
                                 section: section,
                                 selectedFilmID: selectedFilmID,
                                 onSelectEntry: onSelectEntry,
-                                onDeleteCustomFilm: onDeleteCustomFilm,
+                                onRequestDeleteCustomFilm: onDeleteCustomFilm == nil
+                                    ? nil
+                                    : { entry in pendingDelete = entry },
                                 onEditCustomFilm: onEditCustomFilm,
                                 rowHeight: rowHeight
                             )
@@ -87,6 +96,40 @@ struct FilmSelectorOverlay: View {
             .padding(.horizontal, 28)
             .frame(maxWidth: .infinity, alignment: .center)
             .accessibilityIdentifier("film-selector-overlay")
+            // Confirmation dialog
+            // for the destructive Delete action. Held at the
+            // overlay level so the long-press contextMenu and
+            // the inline `…` Menu both route through the same
+            // reliable confirmation step before the library
+            // mutation runs.
+            .confirmationDialog(
+                "Delete custom film?",
+                isPresented: Binding(
+                    get: { pendingDelete != nil },
+                    set: { presented in if !presented { pendingDelete = nil } }
+                ),
+                presenting: pendingDelete
+            ) { entry in
+                // Always confirm
+                // against the canonical custom-film id so a
+                // Quick Access alias row (id prefix `quick:`)
+                // does not route through the alias when removing
+                // the entry from the library.
+                Button("Delete \(entry.primaryText)", role: .destructive) {
+                    if let canonical = entry.canonicalCustomFilmID {
+                        onDeleteCustomFilm?(canonical)
+                    }
+                    pendingDelete = nil
+                }
+                .accessibilityIdentifier(
+                    "film-selector-confirm-delete-\(entry.canonicalCustomFilmID ?? entry.id)"
+                )
+                Button("Cancel", role: .cancel) {
+                    pendingDelete = nil
+                }
+            } message: { entry in
+                Text("This removes \(entry.primaryText) from your custom films. Running and completed timers keep their original profile.")
+            }
             .onAppear {
                 scrollToSelection(proxy: proxy)
             }
@@ -166,7 +209,12 @@ private struct FilmSelectorSectionCard: View {
     let section: FilmSelectorSection
     let selectedFilmID: String?
     let onSelectEntry: (FilmSelectorEntry) -> Void
-    let onDeleteCustomFilm: ((String) -> Void)?
+    /// The section card raises a
+    /// request to delete (full `FilmSelectorEntry`) so the parent
+    /// overlay can route it through a single confirmation dialog.
+    /// The actual library mutation happens only after the user
+    /// taps the destructive button in the dialog.
+    let onRequestDeleteCustomFilm: ((FilmSelectorEntry) -> Void)?
     let onEditCustomFilm: ((String) -> Void)?
     let rowHeight: CGFloat
 
@@ -274,16 +322,16 @@ private struct FilmSelectorSectionCard: View {
             // rule as the inline overflow menu so a shipped film
             // cannot be deleted by accident.
             if entry.film?.kind == .custom {
-                if let onEditCustomFilm {
+                if let onEditCustomFilm, let canonical = entry.canonicalCustomFilmID {
                     Button {
-                        onEditCustomFilm(entry.id)
+                        onEditCustomFilm(canonical)
                     } label: {
                         Label("Edit custom film", systemImage: "pencil")
                     }
                 }
-                if let onDeleteCustomFilm {
+                if let onRequestDeleteCustomFilm {
                     Button(role: .destructive) {
-                        onDeleteCustomFilm(entry.id)
+                        onRequestDeleteCustomFilm(entry)
                     } label: {
                         Label("Delete custom film", systemImage: "trash")
                     }
@@ -295,19 +343,19 @@ private struct FilmSelectorSectionCard: View {
     @ViewBuilder
     private func customRowOverflowMenu(for entry: FilmSelectorEntry) -> some View {
         let isCustom = entry.film?.kind == .custom
-        let hasAction = onEditCustomFilm != nil || onDeleteCustomFilm != nil
+        let hasAction = onEditCustomFilm != nil || onRequestDeleteCustomFilm != nil
         if isCustom, hasAction {
             Menu {
-                if let onEditCustomFilm {
+                if let onEditCustomFilm, let canonical = entry.canonicalCustomFilmID {
                     Button {
-                        onEditCustomFilm(entry.id)
+                        onEditCustomFilm(canonical)
                     } label: {
                         Label("Edit", systemImage: "pencil")
                     }
                 }
-                if let onDeleteCustomFilm {
+                if let onRequestDeleteCustomFilm {
                     Button(role: .destructive) {
-                        onDeleteCustomFilm(entry.id)
+                        onRequestDeleteCustomFilm(entry)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }

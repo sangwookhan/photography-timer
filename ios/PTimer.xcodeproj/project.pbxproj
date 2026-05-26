@@ -178,6 +178,7 @@
 		A00000000000000000000982 /* CustomFilmAnchoredFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */; };
 		A00000000000000000000986 /* CustomFilmStabilizationFormTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */; };
 		A00000000000000000000988 /* CustomFilmStabilizationGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */; };
+		A0000000000000000000098E /* CustomFilmStabilizationFixesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */; };
 		A00000000000000000000708 /* ReciprocitySourceEvidenceClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */; };
 		A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */; };
 		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
@@ -418,6 +419,7 @@
 		A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmAnchoredFormulaTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationFormTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationGuardTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationFixesTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySourceEvidenceClassifier.swift; sourceTree = "<group>"; };
 		A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
@@ -800,6 +802,7 @@
 				A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */,
 				A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */,
 				A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */,
+				A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */,
 			);
 			path = ExposureCalculator;
 			sourceTree = "<group>";
@@ -1208,6 +1211,7 @@
 				A00000000000000000000982 /* CustomFilmAnchoredFormulaTests.swift in Sources */,
 				A00000000000000000000986 /* CustomFilmStabilizationFormTests.swift in Sources */,
 				A00000000000000000000988 /* CustomFilmStabilizationGuardTests.swift in Sources */,
+				A0000000000000000000098E /* CustomFilmStabilizationFixesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

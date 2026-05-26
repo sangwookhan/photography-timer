@@ -20,6 +20,18 @@ struct FilmSelectorEntry: Equatable, Identifiable {
     /// each other for the active marker.
     let aliasOfOriginalID: String?
 
+    /// Canonical `FilmIdentity.id` for
+    /// the custom film backing this row, or `nil` when the row is
+    /// not a custom film. Quick Access alias rows store
+    /// `"quick:<originalID>"` in `id`, so edit / delete actions
+    /// must read this helper to address the custom library
+    /// correctly — passing `id` directly would route through the
+    /// alias prefix and miss the actual film.
+    var canonicalCustomFilmID: String? {
+        guard let film, film.kind == .custom else { return nil }
+        return film.id
+    }
+
     init(
         id: String,
         primaryText: String,

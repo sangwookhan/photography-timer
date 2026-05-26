@@ -11,6 +11,6 @@
       - PTimer.ReciprocityConfidenceExplanationToken.withinStatedRange
       - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
     ▿ supportingNotes: 1 element
-      - "No compensation required at 1 second or less."
-    - defaultExplanation: "No compensation required at 1 second or less."
+      - "Reciprocity correction is not applied within the formula\'s no-correction range (≤ 1 sec)."
+    - defaultExplanation: "Reciprocity correction is not applied within the formula\'s no-correction range (≤ 1 sec)."
     - returnsCalculatedExposureTime: true

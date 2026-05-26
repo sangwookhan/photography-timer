@@ -94,16 +94,22 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
 
     // MARK: - Beyond-source-range (pink) region
 
+    /// PTIMER-160: pink beyond-source region starts at
+    /// `sourceRangeThroughSeconds`, the last quantified source-backed
+    /// anchor — 240 s for Provia 100F. The 480 s row is a separate
+    /// "Not recommended" warning marker (see
+    /// `notRecommendedBoundarySeconds`), not the source-range
+    /// boundary.
     @MainActor
-    func testProvia100FGraphCarriesBeyondSourceRangeStartAt480Seconds() throws {
+    func testProvia100FGraphCarriesBeyondSourceRangeStartAt240Seconds() throws {
         for metered in [60.0, 240.0, 600.0] {
             let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             XCTAssertEqual(
                 graph.beyondSourceRangeStartSeconds ?? 0,
-                480,
+                240,
                 accuracy: 1e-6,
-                "Metered \(metered) s: pink beyond-source region must start at 480 s regardless of current input."
+                "Metered \(metered) s: pink beyond-source region must start at the 240 s source-backed anchor."
             )
         }
     }

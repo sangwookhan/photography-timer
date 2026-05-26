@@ -31,14 +31,15 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
 
     @MainActor
     func testFilmModePortra400UnofficialSubSecondReturnsNoCorrectionAndPreservesCaveat() throws {
-        // Portra 400 unofficial practical has only a formula rule
-        // (Tc = Tm^1.34) with no `meteredRange` minimum and no
-        // companion threshold rule. Without the policy-level default
-        // no-correction handoff, an adjusted shutter of ~1/30 s would
-        // produce a corrected exposure shorter than the adjusted
-        // shutter — a reciprocity correction can never shorten the
-        // exposure. The result must read as "No correction" while
-        // keeping the unofficial-authority caveat visible.
+        // Portra 400 unofficial practical has a single formula rule
+        // (Tc = Tm^1.34) whose `noCorrectionThroughSeconds` open
+        // boundary at ~1 s owns the long-exposure threshold — no
+        // companion threshold rule. Without that guard, an adjusted
+        // shutter of ~1/30 s would produce a corrected exposure
+        // shorter than the adjusted shutter, which a reciprocity
+        // correction must never do. The result reads as "No
+        // correction" while keeping the unofficial-authority caveat
+        // visible.
         let viewModel = makeFilmModeViewModel()
         let unofficialEntry = try XCTUnwrap(
             viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
@@ -152,10 +153,14 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
             1.0,
             "Sub-second no-correction graph must expand its lower bound below 1 s so the no-correction region is visible."
         )
+        // PTIMER-160: the unofficial profile stores its no-correction
+        // boundary on the formula itself; the practical 1 s long-
+        // exposure threshold is encoded as 0.999999 so Tm = 1 s
+        // activates the formula (matching the rest of the catalog).
         XCTAssertEqual(
             graph.noCorrectionRangeUpperBoundSeconds,
-            1.0,
-            "Formula-only unofficial profile must surface the policy's default 1 s no-correction upper bound so the green overlay renders."
+            0.999_999,
+            "Formula-only unofficial profile must surface the formula's no-correction boundary so the green overlay renders."
         )
         XCTAssertFalse(
             graph.isBelowVisibleRange,

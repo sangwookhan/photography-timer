@@ -82,15 +82,21 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         )
     }
 
-    func testFormulaProfileWithHardStopReturnsUnsupportedWithoutCorrectedValue() {
+    /// PTIMER-160 introduced the shared guarded formula model. Under
+    /// the new contract `sourceRangeThroughSeconds` is purely a
+    /// confidence boundary — the formula keeps producing a numeric
+    /// corrected exposure past it, classified as outside source range
+    /// with a strong warning. The legacy "hard stop" rule (a formula
+    /// that returned nil past its boundary) no longer exists.
+    func testFormulaProfileBeyondSourceRangeStillCarriesPrediction() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.formulaHardStopProfile(),
-            meteredExposureSeconds: 150
+            profile: ReciprocityPolicyScenarioFactory.formulaBoundedProfile(),
+            meteredExposureSeconds: 1_000
         )
 
         XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange)
-        XCTAssertFalse(result.hasCalculatedExposureTime)
-        XCTAssertNil(result.correctedExposureSeconds)
+        XCTAssertTrue(result.hasCalculatedExposureTime)
+        XCTAssertEqual(result.correctedExposureSeconds ?? 0, pow(1_000.0, 1.31), accuracy: 5.0)
     }
 
     // MARK: - Limited guidance
@@ -160,9 +166,9 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
         XCTAssertEqual(result.metadata.warningLevel, .caution)
     }
 
-    // MARK: - Default formula no-correction handoff
+    // MARK: - No-correction guard owned by the formula
 
-    func testFormulaOnlyProfileBelowOneSecondReturnsNoCorrection() {
+    func testFormulaOnlyProfileBelowNoCorrectionThroughSecondsReturnsNoCorrection() {
         let profile = ReciprocityProfile(
             id: "unofficial-portra-400",
             name: "Unofficial practical",
@@ -173,7 +179,12 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
                 publisher: ""
             ),
             rules: [
-                .formula(FormulaReciprocityRule(formula: ReciprocityFormula(exponent: 1.34)))
+                .formula(FormulaReciprocityRule(
+                    formula: ReciprocityFormula(
+                        exponent: 1.34,
+                        noCorrectionThroughSeconds: 1
+                    )
+                )),
             ]
         )
 
@@ -188,8 +199,8 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
     func testCorrectedNeverShorterThanMetered() {
         // Synthetic formula with sub-unit exponent: `Tc = Tm^0.5` —
         // produces corrected values shorter than metered for inputs
-        // above 1 s (e.g. 2 → √2 ≈ 1.414). The clamp must reclassify
-        // those inputs to threshold no-correction so a reciprocity
+        // above 1 s (e.g. 2 → √2 ≈ 1.414). The safety net must
+        // reclassify those inputs to no-correction so a reciprocity
         // correction can never shorten the adjusted shutter.
         let profile = ReciprocityProfile(
             id: "shorter-corrected-formula",
@@ -202,8 +213,10 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
             ),
             rules: [
                 .formula(FormulaReciprocityRule(
-                    meteredRange: ReciprocityTimeRange(minimumSeconds: 1),
-                    formula: ReciprocityFormula(exponent: 0.5)
+                    formula: ReciprocityFormula(
+                        exponent: 0.5,
+                        noCorrectionThroughSeconds: 1
+                    )
                 )),
             ]
         )
@@ -229,20 +242,13 @@ enum ReciprocityPolicyScenarioFactory {
             name: "Official formula",
             source: provenance(for: authority, publisher: "Ilford Photo"),
             rules: [
-                .threshold(
-                    ThresholdReciprocityRule(
-                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1),
-                        notes: ["No compensation required at 1 second or less."]
-                    )
-                ),
                 .formula(
                     FormulaReciprocityRule(
-                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1.000_001),
                         formula: ReciprocityFormula(
                             exponent: 1.31,
-                            equation: "Tc = Tm^P"
+                            noCorrectionThroughSeconds: 1
                         ),
-                        notes: ["Exponent P = 1.31."]
+                        notes: ["Exponent p = 1.31."]
                     )
                 ),
             ]
@@ -281,11 +287,12 @@ enum ReciprocityPolicyScenarioFactory {
         )
     }
 
-    /// Formula profile whose `meteredRange.maximumSeconds = 600`
-    /// triggers the unsupported path for a formula prediction outside
-    /// the source range: past the boundary the result is reclassified
-    /// as `unsupported` but the formula still produces a numeric
-    /// prediction.
+    /// Formula profile whose `sourceRangeThroughSeconds = 600`
+    /// triggers the beyond-source-range path: past the boundary the
+    /// result is reclassified as `unsupported` but the formula still
+    /// produces a numeric prediction (per the PTIMER-160 shared
+    /// guarded formula contract — `sourceRangeThroughSeconds` is a
+    /// confidence boundary, not a calculation stop).
     static func formulaBoundedProfile() -> ReciprocityProfile {
         ReciprocityProfile(
             id: "bounded-formula-profile",
@@ -299,34 +306,11 @@ enum ReciprocityPolicyScenarioFactory {
             rules: [
                 .formula(
                     FormulaReciprocityRule(
-                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 600),
-                        formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P")
-                    )
-                ),
-            ]
-        )
-    }
-
-    /// Formula profile whose `extrapolateBeyondMaximum = false` makes
-    /// the manufacturer maximum a hard stop signal: past the boundary
-    /// the result is unsupported with no corrected exposure (ADOX
-    /// CMS 20 II's `>= 100 s` boundary uses this shape).
-    static func formulaHardStopProfile() -> ReciprocityProfile {
-        ReciprocityProfile(
-            id: "hard-stop-formula-profile",
-            name: "Hard-stop formula",
-            source: ReciprocitySourceProvenance(
-                kind: .manufacturerPublished,
-                authority: .official,
-                confidence: .high,
-                publisher: "Test Publisher"
-            ),
-            rules: [
-                .formula(
-                    FormulaReciprocityRule(
-                        meteredRange: ReciprocityTimeRange(minimumSeconds: 1, maximumSeconds: 100),
-                        formula: ReciprocityFormula(exponent: 1.31, equation: "Tc = Tm^P"),
-                        extrapolateBeyondMaximum: false
+                        formula: ReciprocityFormula(
+                            exponent: 1.31,
+                            noCorrectionThroughSeconds: 1,
+                            sourceRangeThroughSeconds: 600
+                        )
                     )
                 ),
             ]

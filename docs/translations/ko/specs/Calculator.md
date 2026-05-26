@@ -148,13 +148,22 @@ Reciprocity 계산은 layer 분리를 깨끗하게 보존:
 
 측광 노출 `t`에 대해, 정책 layer는 필름의 profile을 다음 순서로 평가. 각 단계는 결과를 산출하고 멈추거나 다음 단계로 넘어간다.
 
-1. **Threshold 무보정** — profile이 무보정 임계값을 정의하고 `t`가 그 안에 있으면 `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
-2. **Default formula 무보정 handoff** — `t < 1 s`이고 profile에 sub-1s 보정에 opt-in 하지 않는 formula rule이 있으면 (`meteredRange.minimumSeconds`가 부재 또는 `≥ 1 s`), `corrected = t` + basis = `officialThresholdNoCorrection`으로 무보정 결과 합성. 이는 `Tc = Tm^P` 스타일 실용 공식이 형식의 실용 도메인 아래 sub-1s 측광값에서 `corrected < metered`를 산출하지 않도록 막는다.
-3. **Formula** — profile이 `t`를 포함하는 `meteredRange`의 formula rule을 정의하면 공식을 평가해 basis = `formulaDerived` 반환. Formula가 명시적 `meteredRange.maximumSeconds`를 선언하고 `t`가 거기에 도달하거나 너머이면 `unsupportedOutOfPolicyRange` 반환; `extrapolateBeyondMaximum`이 `true`이면 결과는 source-range boundary 너머의 formula prediction을 numeric continuation으로 carry (outside manufacturer guidance로 렌더), `false`이면 결과에 보정 노출 값 자체 부재.
-4. **Limited guidance** — profile이 `t`를 cover 하는 (또는 open-ended) `appliesWhenMetered`의 limited-guidance rule을 정의하면 `limitedGuidanceNoQuantifiedPrediction` 반환. 숫자 보정 노출 없음.
-5. **Unsupported 대체** — 어떤 rule도 적용되지 않으면 보정 노출 없이 `unsupportedOutOfPolicyRange` 반환.
+1. **Formula rule** — profile이 formula rule을 정의하면 공유 `ReciprocityFormula` (`Tc = a × (Tm / Tref)^p + b`)를 `t`에서 평가. 공식 자체가 guard를 소유:
+   - `t ≤ noCorrectionThroughSeconds` → `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
+   - 그 외에는 `evaluate(...)`가 `withinSourceRange(corrected)`, `beyondSourceRange(corrected)`, `invalidInput`, `invalidFormula`, `formulaOutputUnusable`, `unsafeShorteningFormula` 중 하나 반환. 정책은 각각:
+     - `withinSourceRange` → `formulaDerived` (보정 노출 동반);
+     - `beyondSourceRange` → numeric continuation을 carry하는 `unsupportedOutOfPolicyRange` (값은 `sourceRangeThroughSeconds` 너머의 formula prediction이며 manufacturer guidance가 아닌 outside guidance로 표현);
+     - `invalidInput` → 잘못된 측광 입력을 표현하는 `unsupportedOutOfPolicyRange`;
+     - `invalidFormula` → parameter contract 위반을 표현하는 `unsupportedOutOfPolicyRange` (PTIMER-84 custom formula가 이 별도 case를 사용);
+     - `formulaOutputUnusable` → 런타임 산술 실패를 표현하는 `unsupportedOutOfPolicyRange`;
+     - `unsafeShorteningFormula` → `corrected = t`로 `officialThresholdNoCorrection`에 handoff (reciprocity 보정이 셔터를 결코 줄이지 않도록 보장하는 보편 safety net).
+2. **Threshold 무보정** — 독립 threshold rule을 여전히 가지는 profile (limited-guidance 모양)에 한해, `t`가 threshold 안에 있으면 `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
+3. **Limited guidance** — profile이 `t`를 cover하는 (또는 open-ended) `appliesWhenMetered`의 limited-guidance rule을 정의하면 `limitedGuidanceNoQuantifiedPrediction` 반환. 숫자 보정 노출 없음.
+4. **Unsupported 대체** — 어떤 rule도 적용되지 않으면 보정 노출 없이 `unsupportedOutOfPolicyRange` 반환.
 
-Rule pipeline 후 보편 **correction invariant** 실행: corrected 노출이 metered보다 짧은 결과는 `officialThresholdNoCorrection`으로 reclassify. Reciprocity 보정은 adjusted shutter를 절대 줄일 수 없다 — 이 clamp는 formula의 도메인이 no-correction 경계 너머로 새는 edge case를, 어떤 rule이 값을 산출했든 catch.
+`sourceRangeThroughSeconds`는 **source / fitting confidence boundary**이지 calculation hard stop이 아니다 — 모든 공식은 그 너머에서도 숫자 값을 산출하고 (위 1단계 안전 검사 적용), 결과는 억제되는 대신 beyond-source 표현으로 reclassify 된다.
+
+1단계의 `unsafeShorteningFormula` handoff가 보편 **correction invariant**다: 보정 노출이 측광 값보다 짧으면 identity로 치환. Reciprocity 보정은 adjusted shutter를 절대 줄일 수 없으며, safety net이 공식 곡선이 자신의 no-correction 경계를 넘는 edge case에서도 그 보장을 유지한다.
 
 ### 3.3 결과 형태 + metadata
 
@@ -254,7 +263,7 @@ Calculator의 working context — 선택된 필름 identity + **노출 scale 토
 
 - **Aperture + ISO** 노출 변수는 intent-level (wiki 3964929) 이지만 현 release에 포함 안 됨. Fixed/Derived 상태 머신, 다중 변수 linkage 규칙, 한 변수 이상 가로지른 reverse 계산은 유보.
 - **두 개 위 multi-derived ceiling.** Wiki 3964929가 확장 옵션 예약 — 결정 기록 없음.
-- **Outside-source-range prediction cap.** `meteredRange.maximumSeconds`를 가진 공식은 `extrapolateBeyondMaximum = true` (launch default) 일 때 source-range boundary 너머에서 numeric continuation을 산출. Profile-independent ceiling이 이 prediction을 얼마나 멀리 확장하도록 cap 할지는 open.
+- **Outside-source-range prediction cap.** `sourceRangeThroughSeconds`를 가진 공식은 경계 너머에서도 numeric continuation을 산출한다 (경계는 source/fitting confidence marker이지 hard stop이 아니다). Profile-independent ceiling이 이 prediction을 얼마나 멀리 확장하도록 cap 할지는 open.
 - **사용자 정의 필름 schema.** Wiki 15138817이 검증 요구사항으로 list — 데이터 모델과 UX는 명시 안 됨. 향후 custom table 입력도 launch preset scope 외부이며 자체 feature 설계가 필요하다.
 - **다중 profile 필름.** 일부 필름은 다중 official profile 가질 수 있음 (다른 현상액, push/pull). 선택 규칙은 아직 정의 안 됨; 현 launch 정책은 필름 identity 당 한 primary profile ship.
 - **First-class 컬러 / 현상 정책.** Profile이 이를 source-evidence adjustment로 기록 (예: Velvia 50 `5M`, Tri-X 400 `-10% development`) but spec은 calculator가 display 너머로 어떻게 promote 할지 아직 정의 안 됨.

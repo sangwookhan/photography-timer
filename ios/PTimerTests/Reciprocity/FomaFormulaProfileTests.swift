@@ -139,16 +139,9 @@ final class FomaFormulaProfileTests: XCTestCase {
                 return rule
             }.first)
 
-            XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
             XCTAssertEqual(formulaRule.formula.exponent, fit.exponent, accuracy: 1e-3, "\(fit.canonicalStockName) exponent mismatch")
-            let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
+            let coefficient = formulaRule.formula.coefficientSeconds
             XCTAssertEqual(coefficient, fit.coefficient, accuracy: 1e-3, "\(fit.canonicalStockName) coefficient mismatch")
-
-            let equation = try XCTUnwrap(formulaRule.formula.equation)
-            XCTAssertTrue(
-                equation.contains("Tm^P"),
-                "\(fit.canonicalStockName) equation must use the Tm^P placeholder; got: \(equation)"
-            )
 
             let note = try XCTUnwrap(formulaRule.notes.first)
             XCTAssertTrue(

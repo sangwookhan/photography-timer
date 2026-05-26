@@ -213,6 +213,17 @@ enum ReciprocityConfidence: String, Codable, Equatable {
     case unknown
 }
 
+/// Reciprocity rule kinds a profile can declare. PTIMER-160's shared
+/// guarded formula model lives inside the `.formula` case via
+/// `FormulaReciprocityRule.formula` (a `ReciprocityFormula` value
+/// that carries its own `formulaFamily` discriminator).
+///
+/// `FormulaFamily` is the FORMULA RULE's internal discriminator and
+/// does not narrow `ReciprocityProfile` to formula-only. If a future
+/// ticket re-introduces a table-interpolation profile, it can extend
+/// this enum with a new rule case and the profile validator + decoder
+/// alongside; PTIMER-160's scope is limited to defining the formula
+/// model and does not close that door.
 enum ReciprocityRule: Codable, Equatable {
     case threshold(ThresholdReciprocityRule)
     case formula(FormulaReciprocityRule)
@@ -290,57 +301,34 @@ struct ThresholdReciprocityRule: Codable, Equatable {
 }
 
 struct FormulaReciprocityRule: Codable, Equatable {
-    let meteredRange: ReciprocityTimeRange?
     let formula: ReciprocityFormula
     let additionalAdjustments: [ReciprocityAdjustment]
     let notes: [String]
-    /// `true` (default) when the formula can still produce a numeric
-    /// value past its `meteredRange.maximumSeconds`; the result is
-    /// reclassified as unsupported but carries the formula prediction
-    /// outside the source range as an actionable corrected exposure.
-    ///
-    /// `false` when the manufacturer publishes the upper bound as a
-    /// hard stop signal — exceeding it returns an unsupported result
-    /// with no corrected exposure value, regardless of whether the
-    /// formula itself could still compute one. ADOX CMS 20 II uses
-    /// this for its `>= 100 s` "Not recommended" boundary.
-    let extrapolateBeyondMaximum: Bool
 
     init(
-        meteredRange: ReciprocityTimeRange? = nil,
         formula: ReciprocityFormula,
         additionalAdjustments: [ReciprocityAdjustment] = [],
-        notes: [String] = [],
-        extrapolateBeyondMaximum: Bool = true
+        notes: [String] = []
     ) {
-        self.meteredRange = meteredRange
         self.formula = formula
         self.additionalAdjustments = additionalAdjustments
         self.notes = notes
-        self.extrapolateBeyondMaximum = extrapolateBeyondMaximum
     }
 
     private enum CodingKeys: String, CodingKey {
-        case meteredRange
         case formula
         case additionalAdjustments
         case notes
-        case extrapolateBeyondMaximum
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.meteredRange = try container.decodeIfPresent(ReciprocityTimeRange.self, forKey: .meteredRange)
         self.formula = try container.decode(ReciprocityFormula.self, forKey: .formula)
         self.additionalAdjustments = try container.decodeIfPresent(
             [ReciprocityAdjustment].self,
             forKey: .additionalAdjustments
         ) ?? []
         self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
-        self.extrapolateBeyondMaximum = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .extrapolateBeyondMaximum
-        ) ?? true
     }
 }
 
@@ -377,32 +365,272 @@ struct ReciprocityTimeRange: Codable, Equatable {
     }
 }
 
-struct ReciprocityFormula: Codable, Equatable {
-    let kind: ReciprocityFormulaKind
-    let exponent: Double
-    // Reserved for future formula variants. The current exponent-power
-    // validation sample does not require these fields.
-    let coefficient: Double?
-    let offsetSeconds: Double?
-    let equation: String?
+/// Mathematical family a reciprocity formula belongs to.
+///
+/// PTIMER-160 ships only `.modifiedSchwarzschild`; PTIMER-162 will
+/// add the next family. Downstream consumers MUST switch on this
+/// enum exhaustively (no `default` branch) so adding a future case
+/// surfaces as a compile error rather than a silent fall-through.
+enum FormulaFamily: String, Codable, Equatable, CaseIterable {
+    case modifiedSchwarzschild
+}
 
+/// Shared guarded reciprocity formula model.
+///
+/// Display form (Modified Schwarzschild family):
+///
+/// ```
+/// Tc = a × (Tm / Tref)^p + b
+/// ```
+///
+/// Domain mapping:
+/// - `a` = `coefficientSeconds` (scale coefficient)
+/// - `Tref` = `referenceMeteredTimeSeconds`
+/// - `p` = `exponent`
+/// - `b` = `offsetSeconds`
+///
+/// Guards owned by the formula:
+/// - `Tm <= noCorrectionThroughSeconds` → `Tc = Tm` (identity).
+/// - `Tm >  noCorrectionThroughSeconds` → formula evaluation.
+/// - `sourceRangeThroughSeconds` is the source / fitting confidence
+///   boundary. It is **not** a calculation stop — the formula keeps
+///   producing values past it; the presentation layer classifies
+///   them as beyond the source / fitting range.
+///
+/// Shared contract referenced by PTIMER-84 (custom profile
+/// lifecycle), PTIMER-159 (Details verification UI), PTIMER-161
+/// (table-converted formula refit), and PTIMER-162 (next formula
+/// family). Custom and shipped formula profiles both use this struct
+/// so downstream surfaces only have one shape to consume.
+struct ReciprocityFormula: Codable, Equatable {
+    /// Required. See `FormulaFamily` for current scope. The custom
+    /// decoder rejects missing or unknown values so a future family
+    /// cannot silently fall through.
+    let formulaFamily: FormulaFamily
+    /// Scale coefficient `a` (in seconds). At `Tm = Tref` the power
+    /// term equals `a`, so the corrected exposure is `a + b` — the
+    /// offset is always added on top. Default `1` is the neutral
+    /// coefficient; `a` is NOT the corrected time when `b ≠ 0`.
+    let coefficientSeconds: Double
+    /// Reference metered time `Tref` used to scale the input. Default
+    /// `1s` reduces `Tc = a × (Tm / Tref)^p + b` to the legacy power
+    /// form `Tc = a × Tm^p + b`.
+    let referenceMeteredTimeSeconds: Double
+    /// Exponent `p` driving curve steepness. Required.
+    let exponent: Double
+    /// Constant offset `b` (in seconds) added after the power term.
+    /// Default `0` (no offset).
+    let offsetSeconds: Double
+    /// Upper bound (inclusive) of the no-correction band. At or
+    /// below this metered exposure the formula returns `Tc = Tm`.
+    let noCorrectionThroughSeconds: Double
+    /// Upper bound (inclusive) of the manufacturer-supported source
+    /// / fitting range. Inputs strictly above this value still
+    /// compute a corrected exposure; the presentation layer
+    /// classifies them as beyond source range. `nil` means the
+    /// formula carries no published source boundary and every
+    /// formula-domain input stays classified as within the stated
+    /// range.
+    let sourceRangeThroughSeconds: Double?
+
+    /// `formulaFamily` defaults to `.modifiedSchwarzschild` for
+    /// Swift-side construction convenience only (test fixtures,
+    /// in-code factories). The serialized form has no such default —
+    /// `init(from:)` `decode`s the field so a missing or unknown
+    /// value throws.
     init(
-        kind: ReciprocityFormulaKind = .exponentPower,
+        formulaFamily: FormulaFamily = .modifiedSchwarzschild,
+        coefficientSeconds: Double = 1,
+        referenceMeteredTimeSeconds: Double = 1,
         exponent: Double,
-        coefficient: Double? = nil,
-        offsetSeconds: Double? = nil,
-        equation: String? = nil
+        offsetSeconds: Double = 0,
+        noCorrectionThroughSeconds: Double,
+        sourceRangeThroughSeconds: Double? = nil
     ) {
-        self.kind = kind
+        self.formulaFamily = formulaFamily
+        self.coefficientSeconds = coefficientSeconds
+        self.referenceMeteredTimeSeconds = referenceMeteredTimeSeconds
         self.exponent = exponent
-        self.coefficient = coefficient
         self.offsetSeconds = offsetSeconds
-        self.equation = equation
+        self.noCorrectionThroughSeconds = noCorrectionThroughSeconds
+        self.sourceRangeThroughSeconds = sourceRangeThroughSeconds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case formulaFamily
+        case coefficientSeconds
+        case referenceMeteredTimeSeconds
+        case exponent
+        case offsetSeconds
+        case noCorrectionThroughSeconds
+        case sourceRangeThroughSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // `formulaFamily` is required in the on-disk schema. Decoding
+        // intentionally throws when missing or unknown so an unknown
+        // future family value cannot be silently demoted to
+        // `.modifiedSchwarzschild`. PTIMER-162 will add a new case;
+        // every shipped JSON entry is migrated in lock-step.
+        self.formulaFamily = try container.decode(FormulaFamily.self, forKey: .formulaFamily)
+        self.coefficientSeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .coefficientSeconds
+        ) ?? 1
+        self.referenceMeteredTimeSeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .referenceMeteredTimeSeconds
+        ) ?? 1
+        self.exponent = try container.decode(Double.self, forKey: .exponent)
+        self.offsetSeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .offsetSeconds
+        ) ?? 0
+        self.noCorrectionThroughSeconds = try container.decode(
+            Double.self,
+            forKey: .noCorrectionThroughSeconds
+        )
+        self.sourceRangeThroughSeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .sourceRangeThroughSeconds
+        )
     }
 }
 
-enum ReciprocityFormulaKind: String, Codable, Equatable {
-    case exponentPower
+extension ReciprocityFormula {
+    /// Outcome of a single formula evaluation.
+    enum EvaluationResult: Equatable {
+        /// `Tm` sat inside the no-correction band. `Tc = Tm`.
+        case noCorrection
+        /// Formula produced a finite, positive corrected exposure
+        /// inside the source / fitting range.
+        case withinSourceRange(correctedExposureSeconds: Double)
+        /// Formula produced a finite, positive corrected exposure
+        /// beyond `sourceRangeThroughSeconds`. Same arithmetic as
+        /// `withinSourceRange`; the case difference exists so the
+        /// confidence presentation can flag it without re-deriving
+        /// the boundary.
+        case beyondSourceRange(correctedExposureSeconds: Double)
+        /// Metered exposure input is not a positive finite number.
+        /// PTIMER-84 user-defined inputs flow through here; the
+        /// policy evaluator surfaces it as an unsupported result so
+        /// a bad input does not masquerade as "no correction
+        /// needed".
+        case invalidInput
+        /// Formula parameters violate the safe-formula contract
+        /// (non-finite, non-positive coefficient or reference,
+        /// negative no-correction boundary, source range below the
+        /// no-correction boundary). Distinct from `invalidInput`
+        /// because the formula itself is malformed — the policy
+        /// must surface this as an unsupported / data-error result,
+        /// never as a silent no-correction handoff. Critical for
+        /// PTIMER-84 custom profile validation feedback.
+        case invalidFormula
+        /// Formula output is non-finite or non-positive (e.g. NaN
+        /// from a pathological combination of valid-looking
+        /// parameters). The policy surfaces this as unsupported.
+        case formulaOutputUnusable
+        /// Formula output is finite but would shorten the exposure
+        /// (`Tc < Tm`). A reciprocity correction must never make
+        /// the adjusted shutter shorter; the policy hands off to
+        /// no-correction so the user gets `Tc = Tm` rather than a
+        /// dangerous shortened value. This is a runtime safety net,
+        /// NOT a parameter validation error.
+        case unsafeShorteningFormula
+    }
+
+    /// `true` when every formula parameter satisfies the safe-
+    /// formula contract:
+    ///
+    /// - `coefficientSeconds`, `referenceMeteredTimeSeconds`,
+    ///   `exponent`, `offsetSeconds`, `noCorrectionThroughSeconds`
+    ///   are finite.
+    /// - `coefficientSeconds > 0` and
+    ///   `referenceMeteredTimeSeconds > 0` so the power term stays
+    ///   defined for every positive metered exposure.
+    /// - `noCorrectionThroughSeconds >= 0`.
+    /// - `sourceRangeThroughSeconds`, when set, is finite and
+    ///   strictly greater than `noCorrectionThroughSeconds` so the
+    ///   formula has a non-empty source range above the
+    ///   no-correction band.
+    var hasValidParameters: Bool {
+        guard coefficientSeconds.isFinite, coefficientSeconds > 0 else { return false }
+        guard referenceMeteredTimeSeconds.isFinite, referenceMeteredTimeSeconds > 0 else { return false }
+        guard exponent.isFinite else { return false }
+        guard offsetSeconds.isFinite else { return false }
+        guard noCorrectionThroughSeconds.isFinite, noCorrectionThroughSeconds >= 0 else { return false }
+        if let upper = sourceRangeThroughSeconds {
+            guard upper.isFinite, upper > noCorrectionThroughSeconds else { return false }
+        }
+        return true
+    }
+
+    /// Single shared evaluator. Encapsulates the guarded math so the
+    /// runtime evaluator, the graph sampler, and the verification
+    /// presenters all see identical numeric output.
+    ///
+    /// - `Tm <= noCorrectionThroughSeconds` → `noCorrection` (identity
+    ///   handled by the caller; `meteredExposureSeconds` is the
+    ///   corrected exposure).
+    /// - `Tm > noCorrectionThroughSeconds` → family-specific
+    ///   arithmetic. Modified Schwarzschild produces
+    ///   `Tc = a × (Tm / Tref)^p + b`.
+    /// - The unsafe-formula safety net rejects any output where
+    ///   `Tc < Tm` so a reciprocity correction can never shorten the
+    ///   adjusted shutter inside the formula range.
+    ///
+    /// The `switch` on `formulaFamily` is intentionally exhaustive
+    /// with no `default` branch: PTIMER-162 will add a new family
+    /// `case` and the compiler must surface the omission here rather
+    /// than silently falling back to Modified Schwarzschild.
+    func evaluate(meteredExposureSeconds: Double) -> EvaluationResult {
+        // Bad input flows to a distinct case so the policy can
+        // surface it as unsupported instead of silently returning
+        // "no correction needed" — important for PTIMER-84 custom
+        // formulas where a user input mistake must not hide as a
+        // benign result.
+        guard meteredExposureSeconds.isFinite,
+              meteredExposureSeconds > 0 else {
+            return .invalidInput
+        }
+        // Bad formula parameters surface as `.invalidFormula` so
+        // PTIMER-84's editor / catalog validation can distinguish a
+        // malformed formula from a runtime safety handoff.
+        guard hasValidParameters else {
+            return .invalidFormula
+        }
+        if meteredExposureSeconds <= noCorrectionThroughSeconds {
+            return .noCorrection
+        }
+
+        let corrected: Double
+        switch formulaFamily {
+        case .modifiedSchwarzschild:
+            let scaled = meteredExposureSeconds / referenceMeteredTimeSeconds
+            let powered = pow(scaled, exponent)
+            corrected = coefficientSeconds * powered + offsetSeconds
+        }
+
+        guard corrected.isFinite, corrected > 0 else {
+            return .formulaOutputUnusable
+        }
+        // Safety net: a reciprocity correction must never shorten
+        // the adjusted shutter. This is distinct from
+        // `.invalidFormula` — the parameters are individually valid,
+        // but their combination would produce `Tc < Tm` at this
+        // input. The policy hands off to no-correction so the user
+        // gets `Tc = Tm` rather than a dangerous shortened value.
+        // Tolerance matches the legacy clamp.
+        guard corrected >= meteredExposureSeconds - 1e-6 else {
+            return .unsafeShorteningFormula
+        }
+        if let upper = sourceRangeThroughSeconds,
+           meteredExposureSeconds > upper {
+            return .beyondSourceRange(correctedExposureSeconds: corrected)
+        }
+        return .withinSourceRange(correctedExposureSeconds: corrected)
+    }
 }
 
 enum MeteredExposureSelector: Codable, Equatable {
@@ -672,9 +900,14 @@ enum UnofficialPracticalProfiles {
         rules: [
             .formula(FormulaReciprocityRule(
                 formula: ReciprocityFormula(
-                    kind: .exponentPower,
+                    formulaFamily: .modifiedSchwarzschild,
                     exponent: 1.34,
-                    equation: "Tc = Tm^P"
+                    // Open-boundary semantic: the unofficial 1 s
+                    // long-exposure threshold reads as "no correction
+                    // strictly below 1 s; Tm = 1 s itself activates
+                    // the formula". The `.999_999` epsilon encodes
+                    // that source-defined open boundary.
+                    noCorrectionThroughSeconds: 0.999_999
                 )
             )),
         ],

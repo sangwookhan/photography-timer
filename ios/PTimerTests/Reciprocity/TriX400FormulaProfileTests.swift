@@ -83,16 +83,9 @@ final class TriX400FormulaProfileTests: XCTestCase {
             return rule
         }.first)
 
-        XCTAssertEqual(formulaRule.formula.kind, .exponentPower)
         XCTAssertEqual(formulaRule.formula.exponent, expectedExponent, accuracy: 1e-3)
-        let coefficient = try XCTUnwrap(formulaRule.formula.coefficient)
+        let coefficient = formulaRule.formula.coefficientSeconds
         XCTAssertEqual(coefficient, expectedCoefficient, accuracy: 1e-3)
-
-        let equation = try XCTUnwrap(formulaRule.formula.equation)
-        XCTAssertTrue(
-            equation.contains("Tm^P"),
-            "Equation must use the Tm^P placeholder; got: \(equation)"
-        )
 
         let note = try XCTUnwrap(formulaRule.notes.first)
         XCTAssertTrue(

@@ -131,20 +131,22 @@ struct LaunchPresetFilmCatalogLoader {
         }
     }
 
-    /// Enforces the post-PTIMER-140 allow-list at load time so a malformed
-    /// catalog cannot ship a rule combination the calculation policy no
-    /// longer supports. The bundled catalog is "official" everywhere
-    /// (the loader already rejects unofficial / user-defined sources
-    /// above), so this validator only enumerates the two official
-    /// shapes:
+    /// Enforces the post-PTIMER-160 allow-list at load time so a
+    /// malformed catalog cannot ship a rule combination the
+    /// calculation policy no longer supports. The bundled catalog is
+    /// "official" everywhere (the loader already rejects unofficial /
+    /// user-defined sources above), so this validator only
+    /// enumerates the two official shapes:
     ///
-    /// - threshold + formula (no limited-guidance rule)
+    /// - formula only (the formula owns its no-correction and source
+    ///   range guards via the shared `ReciprocityFormula` contract;
+    ///   no companion threshold rule is needed)
     /// - threshold + limited-guidance (no formula rule)
     ///
-    /// Any other combination — bare formula, bare limited-guidance,
-    /// formula + limited-guidance, an empty rule list — is rejected
-    /// with `.invalidRuleShape` so the failure surfaces as a load-time
-    /// error rather than a soft warning.
+    /// Any other combination — bare limited-guidance, formula +
+    /// limited-guidance, formula + threshold, an empty rule list —
+    /// is rejected with `.invalidRuleShape` so the failure surfaces
+    /// as a load-time error rather than a soft warning.
     private func validateProfileShape(_ profile: ReciprocityProfile, filmID: String) throws {
         guard !profile.rules.isEmpty else {
             throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
@@ -167,13 +169,6 @@ struct LaunchPresetFilmCatalogLoader {
             }
         }
 
-        guard hasThreshold else {
-            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
-                filmID: filmID,
-                reason: "missing threshold rule"
-            )
-        }
-
         if hasFormula && hasLimitedGuidance {
             throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
                 filmID: filmID,
@@ -181,18 +176,53 @@ struct LaunchPresetFilmCatalogLoader {
             )
         }
 
-        guard hasFormula || hasLimitedGuidance else {
+        if hasFormula {
+            if hasThreshold {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "formula profiles must not carry a companion threshold rule (the formula owns its no-correction guard)"
+                )
+            }
+            try validateFormulaParameters(profile, filmID: filmID)
+            return
+        }
+
+        guard hasLimitedGuidance else {
             throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
                 filmID: filmID,
-                reason: "threshold rule must be paired with either a formula or a limited-guidance rule"
+                reason: "profile must declare either a formula rule or a threshold + limited-guidance pair"
             )
         }
 
-        if hasLimitedGuidance, !profile.sourceEvidence.isEmpty {
+        guard hasThreshold else {
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "limited-guidance profiles must be paired with a threshold rule"
+            )
+        }
+
+        if !profile.sourceEvidence.isEmpty {
             throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
                 filmID: filmID,
                 reason: "limited-guidance profiles cannot carry sourceEvidence rows"
             )
+        }
+    }
+
+    private func validateFormulaParameters(
+        _ profile: ReciprocityProfile,
+        filmID: String
+    ) throws {
+        for rule in profile.rules {
+            guard case let .formula(formulaRule) = rule else {
+                continue
+            }
+            guard formulaRule.formula.hasValidParameters else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "formula parameters violate the safe-formula contract (finite, positive coefficient and reference, non-negative no-correction boundary, source-range above no-correction)"
+                )
+            }
         }
     }
 

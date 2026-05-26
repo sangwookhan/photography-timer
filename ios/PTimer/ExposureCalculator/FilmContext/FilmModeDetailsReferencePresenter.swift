@@ -113,8 +113,30 @@ struct FilmModeDetailsReferencePresenter {
             hasEvidenceOnlyRows: false
         )
 
+        // Formula profiles surface their no-correction band from the
+        // formula's own `noCorrectionThroughSeconds` guard (the
+        // threshold rule was retired from formula profiles in
+        // PTIMER-160). The renderer treats the band as a synthetic
+        // 0 … noCorrectionThroughSeconds range row so the display
+        // shape is unchanged.
         for rule in input.bindingState.profile.rules {
-            if case let .threshold(thresholdRule) = rule {
+            if case let .formula(formulaRule) = rule {
+                let upper = formulaRule.formula.noCorrectionThroughSeconds
+                guard upper > 0 else { continue }
+                collected.orderedLines.append(
+                    ReferenceRow(
+                        key: SourceReferenceRowSortKey(
+                            sortValue: 0,
+                            kind: .range,
+                            catalogOffset: collected.orderedLines.count
+                        ),
+                        columns: sourceReferenceFormulaNoCorrectionColumns(
+                            upperBoundSeconds: upper,
+                            formatDuration: input.formatDuration
+                        )
+                    )
+                )
+            } else if case let .threshold(thresholdRule) = rule {
                 collected.orderedLines.append(
                     ReferenceRow(
                         key: SourceReferenceRowSortKey(
@@ -401,6 +423,21 @@ struct FilmModeDetailsReferencePresenter {
             return "< \(formatDuration(ceiling))"
         }
         return "<= \(formatDuration(upperBound))"
+    }
+
+    /// Formula no-correction band row for the formula "Source
+    /// reference" section. The formula owns its `noCorrectionThroughSeconds`
+    /// guard inclusively, so the row reads as "<= upper, No correction
+    /// range" mirroring the legacy threshold-rule row format.
+    private func sourceReferenceFormulaNoCorrectionColumns(
+        upperBoundSeconds: Double,
+        formatDuration: (Double) -> String
+    ) -> [String] {
+        let label = sourceReferenceThresholdUpperBoundLabel(
+            for: upperBoundSeconds,
+            formatDuration: formatDuration
+        )
+        return [label, "No correction range"]
     }
 
     /// Shared formatter for the source-evidence reference block. Keeps

@@ -27,8 +27,8 @@ final class ReciprocityPolicyPerformanceTests: XCTestCase {
 
     /// Bounded formula past its supported range — exercises the
     /// beyond-source-range unsupported path that still carries a
-    /// numeric continuation past the formula's `meteredRange`
-    /// upper bound.
+    /// numeric continuation past the formula's
+    /// `sourceRangeThroughSeconds` confidence boundary.
     func testFormulaBoundedBeyondSourceRangeEvaluationPerformance() {
         let profile = ReciprocityPolicyScenarioFactory.formulaBoundedProfile()
 

@@ -376,19 +376,22 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
+        // 8 s × 4 ND stops = 128 s adjusted shutter — well above
+        // Velvia 50's 32 s source-backed boundary (64 s is preserved
+        // as a published "Not recommended" warning marker, never as
+        // the source-range boundary). The result is unsupported-
+        // with-numeric (formula prediction outside the source
+        // range), so the current-point marker plots at its real
+        // (128 s, ~250 s) position instead of collapsing to an
+        // x-only guide.
         viewModel.baseShutter = 8
-        viewModel.ndStop = 3
+        viewModel.ndStop = 4
         viewModel.selectPresetFilm(film)
 
         _ = try XCTUnwrap(viewModel.filmModeExposureResultState)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         let graph = try XCTUnwrap(details.graph)
 
-        // Velvia 50's 64 s row is the formula's not-recommended
-        // boundary. The result is unsupported-with-numeric (formula
-        // prediction outside the source range), so the current-point
-        // marker plots at its real (64 s, ~120 s) position instead
-        // of collapsing to an x-only guide.
         XCTAssertEqual(details.summary.badgeText, "Beyond source range")
         XCTAssertEqual(details.summary.summaryText, "Beyond source range")
         XCTAssertEqual(
@@ -396,12 +399,12 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
             "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
         )
         XCTAssertEqual(details.currentResult.layout, .comparison)
-        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "01:04")
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "02:08")
         XCTAssertFalse(graph.usesCurrentInputGuideOnly)
         let currentPoint = try XCTUnwrap(graph.currentPoint)
-        XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 64, accuracy: 0.0001)
-        XCTAssertEqual(currentPoint.point.correctedExposureSeconds, pow(64.0, 1.1821), accuracy: 0.5)
-        XCTAssertEqual(graph.currentMeteredExposureSeconds ?? 0, 64, accuracy: 0.0001)
+        XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 128, accuracy: 0.0001)
+        XCTAssertEqual(currentPoint.point.correctedExposureSeconds, pow(128.0, 1.1821), accuracy: 1.0)
+        XCTAssertEqual(graph.currentMeteredExposureSeconds ?? 0, 128, accuracy: 0.0001)
         XCTAssertNotNil(graph.supportedRangeUpperBoundSeconds)
         let explanation = try XCTUnwrap(graph.unsupportedExplanation)
         XCTAssertTrue(

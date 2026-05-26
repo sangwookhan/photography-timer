@@ -256,10 +256,12 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     let xAxisTicks: [FilmModeDetailsGraphAxisTick]
     let yAxisTicks: [FilmModeDetailsGraphAxisTick]
     /// Upper bound of the manufacturer-supported region — for formula
-    /// graphs this is the formula `meteredRange.maximumSeconds`, the
-    /// boundary at which the result transitions from `.formulaDerived`
-    /// to `.unsupportedOutOfPolicyRange`. Drives the dashed boundary
-    /// guide in the view.
+    /// graphs this is the formula's
+    /// `sourceRangeThroughSeconds` (the source/fitting confidence
+    /// boundary), the value above which the result transitions from
+    /// `.formulaDerived` to `.unsupportedOutOfPolicyRange` while the
+    /// formula keeps producing a numeric prediction. Drives the
+    /// dashed boundary guide in the view.
     let supportedRangeUpperBoundSeconds: Double?
     let unsupportedRegionStartSeconds: Double?
     /// Upper bound of the threshold no-correction range, when the

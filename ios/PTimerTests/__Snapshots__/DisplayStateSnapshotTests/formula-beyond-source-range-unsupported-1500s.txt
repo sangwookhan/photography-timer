@@ -12,8 +12,8 @@
           ▿ PTimer.ReciprocityPolicyNote
             ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
               - some: PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
-            - text: "Manufacturer guidance ends at 600 sec."
+            - text: "Manufacturer source range ends at 600 sec."
           ▿ PTimer.ReciprocityPolicyNote
             ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.unsupportedByPolicy)
               - some: PTimer.ReciprocityPolicyNoteToken.unsupportedByPolicy
-            - text: "Outside manufacturer guidance — value is a formula prediction outside the supported range."
+            - text: "Outside manufacturer source range — value is a formula prediction outside the published source range."

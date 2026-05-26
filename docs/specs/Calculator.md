@@ -148,13 +148,22 @@ The reciprocity computation shall preserve a clean layer split:
 
 For a metered exposure `t`, the policy layer shall evaluate the film's profile in the following order. Each step either produces a result and stops, or falls through.
 
-1. **Threshold no-correction** — if the profile defines a no-correction threshold and `t` lies inside it, return `corrected = t` with basis = `officialThresholdNoCorrection`.
-2. **Default formula no-correction handoff** — if `t < 1 s` and the profile has a formula rule that does not opt into sub-1s correction (its `meteredRange.minimumSeconds` is absent or `≥ 1 s`), synthesize a no-correction result with `corrected = t` and basis = `officialThresholdNoCorrection`. This keeps `Tc = Tm^P`-style practical formulas from producing `corrected < metered` at sub-1s metered values that lie below the formula's practical domain.
-3. **Formula** — if the profile defines a formula rule whose `meteredRange` contains `t`, evaluate the formula and return with basis = `formulaDerived`. When the formula declares an explicit `meteredRange.maximumSeconds` and `t` is at or beyond it, return `unsupportedOutOfPolicyRange`; if `extrapolateBeyondMaximum` is `true` the result carries a formula prediction outside the supported range as a numeric continuation past the source-range boundary (rendered as outside manufacturer guidance), if `false` the result has no corrected exposure value at all.
-4. **Limited guidance** — if the profile defines a limited-guidance rule whose `appliesWhenMetered` covers `t` (or is open-ended), return `limitedGuidanceNoQuantifiedPrediction`. No numeric corrected exposure.
-5. **Unsupported fallback** — if no rule applies, return `unsupportedOutOfPolicyRange` with no corrected exposure.
+1. **Formula rule** — if the profile defines a formula rule, evaluate the shared `ReciprocityFormula` (`Tc = a × (Tm / Tref)^p + b`) at `t`. The formula owns its own guards:
+   - `t ≤ noCorrectionThroughSeconds` → return `corrected = t` with basis = `officialThresholdNoCorrection`.
+   - Otherwise the formula's `evaluate(...)` returns one of: `withinSourceRange(corrected)`, `beyondSourceRange(corrected)`, `invalidInput`, `invalidFormula`, `formulaOutputUnusable`, `unsafeShorteningFormula`. The policy routes those to:
+     - `withinSourceRange` → `formulaDerived` (corrected exposure attached);
+     - `beyondSourceRange` → `unsupportedOutOfPolicyRange` carrying the numeric continuation (the value is a formula prediction past `sourceRangeThroughSeconds` and is presented as outside manufacturer guidance);
+     - `invalidInput` → `unsupportedOutOfPolicyRange` describing the bad metered input;
+     - `invalidFormula` → `unsupportedOutOfPolicyRange` describing the parameter-contract failure (PTIMER-84 custom formulas use this distinct case);
+     - `formulaOutputUnusable` → `unsupportedOutOfPolicyRange` describing the runtime arithmetic failure;
+     - `unsafeShorteningFormula` → handoff to `officialThresholdNoCorrection` with `corrected = t` (universal safety net so a reciprocity correction never shortens the shutter).
+2. **Threshold no-correction** — for profiles that still carry a standalone threshold rule (the limited-guidance shape), if `t` lies inside the threshold band return `corrected = t` with basis = `officialThresholdNoCorrection`.
+3. **Limited guidance** — if the profile defines a limited-guidance rule whose `appliesWhenMetered` covers `t` (or is open-ended), return `limitedGuidanceNoQuantifiedPrediction`. No numeric corrected exposure.
+4. **Unsupported fallback** — if no rule applies, return `unsupportedOutOfPolicyRange` with no corrected exposure.
 
-After the rule pipeline, the universal **correction invariant** runs: a result whose corrected exposure would be shorter than the metered value is reclassified to `officialThresholdNoCorrection`. A reciprocity correction can never shorten the adjusted shutter; this clamp catches edge cases where a formula's domain bleeds across the no-correction boundary regardless of which rule produced the value.
+`sourceRangeThroughSeconds` is a **source / fitting confidence boundary**, not a calculation hard stop — every formula keeps producing a numeric value past it (subject to the runtime safety check above), and the result is reclassified to the beyond-source presentation rather than suppressed.
+
+The `unsafeShorteningFormula` handoff in step 1 is the universal **correction invariant**: a corrected exposure shorter than the metered value is replaced by the identity. A reciprocity correction can never shorten the adjusted shutter; the safety net keeps that guarantee even when a formula's curve bleeds across its no-correction boundary.
 
 ### 3.3 Result shape and metadata
 
@@ -254,7 +263,7 @@ These are unresolved or partially specified. They are recorded so the system doe
 
 - **Aperture and ISO** as exposure variables are intent-level (wiki 3964929) but not part of the current release. The Fixed/Derived state machine, the multi-variable linkage rules, and the reverse calculation across more than one variable are deferred.
 - **Multi-derived ceiling above two.** Wiki 3964929 reserves the option to extend; no decision is recorded.
-- **Outside-source-range prediction caps.** A formula with `meteredRange.maximumSeconds` produces a numeric continuation past the source-range boundary when `extrapolateBeyondMaximum = true` (the launch default). Whether a profile-independent ceiling should cap how far that prediction extends is open.
+- **Outside-source-range prediction caps.** A formula with `sourceRangeThroughSeconds` keeps producing a numeric continuation past the boundary (the boundary is a source/fitting confidence marker, not a hard stop). Whether a profile-independent ceiling should cap how far that prediction extends is open.
 - **User-defined film schema.** Wiki 15138817 lists this as a validation requirement; the data model and UX are not specified. A future custom-table input is also outside the launch preset scope and would need its own feature design.
 - **Multi-profile films.** Some films may have multiple official profiles (different developers, push/pull). Selection rules are not yet defined; the current launch policy ships one primary profile per film identity.
 - **First-class color / development policy.** Profiles record these as source-evidence adjustments (e.g. Velvia 50 `5M`, Tri-X 400 `-10% development`) but the spec does not yet define how the calculator promotes them beyond display.

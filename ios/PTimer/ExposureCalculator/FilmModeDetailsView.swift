@@ -180,14 +180,16 @@ struct FilmModeDetailsSheet: View {
         }
     }
 
-    /// Sections that describe manufacturer source evidence. Placed
-    /// directly under the reference graph so the user can read each
-    /// plotted element (source reference, guidance boundary, or the
-    /// limited-guidance "Reference" block) without scrolling past
-    /// the profile metadata first.
+    /// Sections that describe manufacturer source evidence or
+    /// custom-profile provenance. Placed directly under the
+    /// reference graph so the user can read each plotted element
+    /// (source reference, guidance boundary, the limited-guidance
+    /// "Reference" block) or the custom profile metadata
+    /// (Source / Formula / Range / Notes / Reference URL) without
+    /// scrolling past the profile metadata first.
     private func isEvidenceSection(_ section: FilmModeDetailsSectionState) -> Bool {
         switch section.title {
-        case "Source reference", "Guidance boundary", "Reference":
+        case "Source reference", "Guidance boundary", "Reference", "Custom profile":
             return true
         default:
             return false

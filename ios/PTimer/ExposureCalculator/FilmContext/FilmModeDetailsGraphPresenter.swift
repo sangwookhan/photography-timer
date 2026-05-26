@@ -177,6 +177,8 @@ struct FilmModeDetailsGraphPresenter {
             isBeyondVisibleRange: tierSelection.isBeyondVisibleRange,
             isBelowVisibleRange: isBelowVisibleRange
         )
+        // Custom and preset profiles share the `ReciprocityFormula`
+        // schema, so the same equation formatter renders both.
         let formulaDisplayText = FormulaEquationFormatter.userFacingText(for: formulaRule.formula)
         let beyondSourceRangeStartSeconds = textPresenter.beyondSourceRangeStartSeconds(
             profile: bindingState.profile,

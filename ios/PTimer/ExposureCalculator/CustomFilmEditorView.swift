@@ -340,55 +340,35 @@ struct CustomFilmEditorView: View {
         return composed.isEmpty ? "New custom film" : composed
     }
 
-    /// Simplified live formula display rendered in the Preview
-    /// header. Collapses the anchored form when both anchors are
-    /// 1 and the offset is 0 (the editor's documented default)
-    /// so the reader sees `Tc = Tm^exponent` instead of the full
-    /// `Tc = 1 × (Tm / 1)^exponent + 0` boilerplate. The
-    /// anchored shape is preserved verbatim when the photographer
-    /// moves either anchor.
+    /// Live formula display rendered in the Preview header.
+    /// routes the strict preview parse
+    /// through `FormulaEquationFormatter` — the same renderer
+    /// shipped preset formulas use — so editor / Details / timer
+    /// all agree on display. A partially-invalid form yields the
+    /// invalid placeholder instead of a silently-defaulted curve.
     private var previewFormulaSummary: String {
-        let exponentText = formState.exponentText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !exponentText.isEmpty, Double(exponentText) != nil else {
-            return "Tc = base Tc × (Tm / base Tm)^exponent + offset"
+        guard let parsed = CustomFilmEditorPreviewPresenter.parse(form: formState) else {
+            return previewInvalidPlaceholder
         }
-        let baseTm = Self.numberOrDefault(formState.baseTmText, default: 1.0)
-        let baseTc = Self.numberOrDefault(formState.baseTcText, default: 1.0)
-        let offset = Self.numberOrDefault(formState.offsetSecondsText, default: 0.0)
-
-        let isUnanchored = abs(baseTm - 1.0) < 1e-9 && abs(baseTc - 1.0) < 1e-9
-        let offsetIsZero = abs(offset) < 1e-9
-
-        if isUnanchored {
-            let body = "Tc = Tm^\(exponentText)"
-            return offsetIsZero ? body : "\(body) + \(Self.formatPlain(offset))"
-        }
-        let baseTmDisplay = Self.formatPlain(baseTm)
-        let baseTcDisplay = Self.formatPlain(baseTc)
-        let body = "Tc = \(baseTcDisplay) × (Tm / \(baseTmDisplay))^\(exponentText)"
-        return offsetIsZero ? body : "\(body) + \(Self.formatPlain(offset))"
+        let formula = ReciprocityFormula(
+            coefficientSeconds: parsed.baseTc,
+            referenceMeteredTimeSeconds: parsed.baseTm,
+            exponent: parsed.exponent,
+            offsetSeconds: parsed.offsetSeconds,
+            noCorrectionThroughSeconds: parsed.noCorrectionThrough,
+            sourceRangeThroughSeconds: parsed.validThrough
+        )
+        return FormulaEquationFormatter.userFacingText(for: formula)
     }
 
-    private static func numberOrDefault(_ text: String, default fallback: Double) -> Double {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return Double(trimmed) ?? fallback
-    }
-
-    /// Same compact rendering rule the formula summary uses: drop
-    /// trailing zeros so `1.0` reads `"1"` and `1.30` reads
-    /// `"1.3"`, while preserving precision for values like
-    /// `1.0966`.
-    private static func formatPlain(_ value: Double) -> String {
-        let formatted = String(format: "%.4f", value)
-        var trimmed = formatted
-        while trimmed.contains(".") && (trimmed.hasSuffix("0") || trimmed.hasSuffix(".")) {
-            trimmed.removeLast()
-            if trimmed.hasSuffix(".") {
-                trimmed.removeLast()
-                break
-            }
-        }
-        return trimmed
+    /// Shown in the Preview header when the form is not
+    /// parseable. The chart's placeholder and the table's
+    /// `invalid formula result` rows already communicate the
+    /// state visually; this string keeps the model-schema hint
+    /// out of the header (which would otherwise read like a
+    /// successful formula).
+    private var previewInvalidPlaceholder: String {
+        "Invalid formula input"
     }
 
     private var canSave: Bool {

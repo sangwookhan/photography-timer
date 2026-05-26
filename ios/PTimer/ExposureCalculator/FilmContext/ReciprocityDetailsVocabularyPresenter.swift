@@ -104,17 +104,14 @@ struct ReciprocityDetailsVocabularyPresenter {
            let caveat = unofficialProfileAuthorityCaveat(for: bindingState.profile) {
             return caveat
         }
-        // Custom (user-defined)
-        // profiles surface their full provenance here — source
-        // type, formula summary, application range, and any user
-        // notes — so the Details sheet never reads like
-        // manufacturer-backed guidance.
-        if bindingState.profile.source.authority == .userDefined,
-           let provenance = customProvenanceText(
-               film: bindingState.film,
-               profile: bindingState.profile
-           ) {
-            return provenance
+        // Custom (user-defined) profiles render their provenance
+        // as a dedicated section *below* the graph (see
+        // `FilmModeDetailsPresenter.customProfileSection`), not as
+        // detail text in the top result card. The top card stays
+        // focused on adjusted shutter / corrected exposure / status,
+        // matching the preset Details hierarchy.
+        if bindingState.profile.source.authority == .userDefined {
+            return nil
         }
 
         switch bindingState.presentation.category {
@@ -236,11 +233,86 @@ struct ReciprocityDetailsVocabularyPresenter {
 
     // MARK: - Custom provenance
 
+    /// Structured provenance section
+    /// for a `.userDefined`-authority profile. Renders below the
+    /// graph as a regular Details section card (one row per fact)
+    /// so the top result card stays focused on Adjusted / Corrected
+    /// / Status, matching the preset Details hierarchy.
+    ///
+    /// Returns `nil` for non-userDefined profiles or when nothing
+    /// useful can be derived (e.g. a malformed custom profile).
+    func customProfileSection(
+        film: FilmIdentity,
+        profile: ReciprocityProfile
+    ) -> FilmModeDetailsSectionState? {
+        guard profile.source.authority == .userDefined else { return nil }
+
+        // The formula itself is
+        // already shown as the Reciprocity Graph title (the
+        // canonical display position for a custom profile's
+        // formula). Repeating it as a row here would print the
+        // same expression twice on the Details sheet, so this
+        // section carries only the surrounding provenance —
+        // Source / Range / Notes / Reference URL — that the graph
+        // does not already convey.
+        var rows: [FilmModeDetailsRowState] = []
+        if let sourceType = profile.userMetadata?.customSourceType
+            ?? film.userMetadata?.customSourceType {
+            rows.append(FilmModeDetailsRowState(
+                title: "Source",
+                value: sourceType.displayLabel
+            ))
+        }
+        if let rangeText = customRangeText(profile: profile) {
+            rows.append(FilmModeDetailsRowState(
+                title: "Range",
+                value: rangeText
+            ))
+        }
+        let trimmedNotes = collectedCustomNotes(film: film, profile: profile)
+        if !trimmedNotes.isEmpty {
+            rows.append(FilmModeDetailsRowState(
+                title: "Notes",
+                value: trimmedNotes.joined(separator: "\n")
+            ))
+        }
+        if let urlString = profile.userMetadata?.referenceURL
+            ?? film.userMetadata?.referenceURL,
+           !urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let destination = URL(string: urlString.trimmingCharacters(in: .whitespacesAndNewlines))
+            rows.append(FilmModeDetailsRowState(
+                title: "Reference",
+                value: urlString,
+                destinationURL: destination
+            ))
+        }
+        guard !rows.isEmpty else { return nil }
+        return FilmModeDetailsSectionState(title: "Custom profile", rows: rows)
+    }
+
+    private func collectedCustomNotes(
+        film: FilmIdentity,
+        profile: ReciprocityProfile
+    ) -> [String] {
+        let profileNotes = profile.userMetadata?.notes ?? []
+        let filmNotes = film.userMetadata?.notes ?? []
+        return (profileNotes + filmNotes).compactMap { note in
+            let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+    }
+
     /// Multi-line summary for a `.userDefined`-authority profile.
     /// Each line is a single fact (source type, formula, range,
     /// note) so the Details sheet renders a scannable provenance
     /// block. Returns `nil` only when nothing useful can be
     /// derived — the caller falls back to the per-state copy.
+    ///
+    /// This remains available for
+    /// pre-stabilization callers (timer identity snapshots,
+    /// tests) but is no longer rendered in the Details sheet's
+    /// top card — see `customProfileSection` for the in-sheet
+    /// rendering.
     func customProvenanceText(
         film: FilmIdentity,
         profile: ReciprocityProfile
@@ -267,8 +339,10 @@ struct ReciprocityDetailsVocabularyPresenter {
     }
 
     private func customRangeText(profile: ReciprocityProfile) -> String? {
-        // shared formula carries the no-correction and
-        // source-range boundaries on the formula itself.
+        // The shared formula carries the no-correction and
+        // source-range boundaries on the formula itself; preset
+        // shapes that still ship a threshold rule fall back to the
+        // legacy maximum-seconds field.
         let formulaRule = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
             if case .formula(let f) = rule { return f }
             return nil

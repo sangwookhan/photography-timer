@@ -184,6 +184,12 @@ struct LaunchPresetFilmCatalogLoader {
                 )
             }
             try validateFormulaParameters(profile, filmID: filmID)
+            try validateExplicitModelBasis(
+                profile,
+                filmID: filmID,
+                hasFormula: hasFormula,
+                hasLimitedGuidance: hasLimitedGuidance
+            )
             return
         }
 
@@ -205,6 +211,87 @@ struct LaunchPresetFilmCatalogLoader {
             throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
                 filmID: filmID,
                 reason: "limited-guidance profiles cannot carry sourceEvidence rows"
+            )
+        }
+
+        try validateExplicitModelBasis(
+            profile,
+            filmID: filmID,
+            hasFormula: hasFormula,
+            hasLimitedGuidance: hasLimitedGuidance
+        )
+    }
+
+    /// PTIMER-163 sanity check: when a profile declares an explicit
+    /// `modelBasis`, both halves of the basis must line up with what
+    /// the launch catalog actually ships.
+    ///
+    /// - `calculationModel` must match the rule shape. `.unsupported`
+    ///   and `.tableLookup` have no implemented rule shape on the
+    ///   launch catalog today and are rejected so the metadata cannot
+    ///   advertise behavior the evaluator does not provide.
+    /// - `sourceModel` must be manufacturer-shape on the launch
+    ///   catalog (the loader already enforces
+    ///   `manufacturerPublished` + `official` source provenance).
+    ///   `practicalCommunityGuidance`, `userDefined`, and explicit
+    ///   `unknown` would mislabel official manufacturer data and are
+    ///   rejected; entries with an unknown source shape must omit
+    ///   `modelBasis` and rely on `effectiveModelBasis`.
+    private func validateExplicitModelBasis(
+        _ profile: ReciprocityProfile,
+        filmID: String,
+        hasFormula: Bool,
+        hasLimitedGuidance: Bool
+    ) throws {
+        guard let basis = profile.modelBasis else { return }
+
+        switch basis.calculationModel {
+        case .guardedFormula:
+            guard hasFormula else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "modelBasis.calculationModel = guardedFormula requires a formula rule"
+                )
+            }
+        case .limitedGuidance:
+            guard hasLimitedGuidance else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "modelBasis.calculationModel = limitedGuidance requires a limited-guidance rule"
+                )
+            }
+        case .unsupported:
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "modelBasis.calculationModel = unsupported is not implemented for launch preset modelBasis yet"
+            )
+        case .tableLookup:
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "modelBasis.calculationModel = tableLookup is not yet implemented"
+            )
+        }
+
+        switch basis.sourceModel {
+        case .manufacturerFormula,
+             .manufacturerTable,
+             .manufacturerRangeGuidance,
+             .manufacturerLimitedGuidance:
+            break
+        case .practicalCommunityGuidance:
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "modelBasis.sourceModel = practicalCommunityGuidance is not allowed for the official manufacturer launch catalog"
+            )
+        case .userDefined:
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "modelBasis.sourceModel = userDefined is not allowed for the official manufacturer launch catalog"
+            )
+        case .unknown:
+            throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                filmID: filmID,
+                reason: "modelBasis.sourceModel = unknown is not allowed for the launch catalog; omit modelBasis to rely on the inferred fallback"
             )
         }
     }

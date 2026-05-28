@@ -234,6 +234,10 @@
     "profiles": [
       {
         "id": "ilford-hp5-plus-400-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerFormula"
+        },
         "name": "Official formula",
         "notes": [],
         "rules": [
@@ -539,6 +543,10 @@
     "profiles": [
       {
         "id": "kodak-tri-x-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official log-log formula fit through published 1/10/100 sec rows",
         "notes": [],
         "rules": [
@@ -933,6 +941,10 @@
     "profiles": [
       {
         "id": "kodak-ektar-100-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
         "name": "Official threshold guidance",
         "notes": [],
         "rules": [
@@ -1723,6 +1735,10 @@
     "profiles": [
       {
         "id": "foma-fomapan-100-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official log-log formula fit through published multiplier rows",
         "notes": [],
         "rules": [

@@ -131,6 +131,7 @@
 		A0000000000000000000092E /* Provia100FGraphVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */; };
 		A00000000000000000000930 /* HP5PlusFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */; };
 		A00000000001600000000001 /* GuardedReciprocityFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */; };
+		A00000000001700000000001 /* ReciprocityProfileModelBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */; };
 		A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */; };
 		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
 		A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */; };
@@ -391,6 +392,7 @@
 		A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FGraphVisibilityTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HP5PlusFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardedReciprocityFormulaTests.swift; sourceTree = "<group>"; };
+		A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityProfileModelBasisTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia50FormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcrosIIFormulaProfileTests.swift; sourceTree = "<group>"; };
@@ -881,6 +883,7 @@
 				A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */,
 				A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */,
 				A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */,
+				A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */,
 				A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */,
 				A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */,
 				A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */,
@@ -1217,6 +1220,7 @@
 				A0000000000000000000092E /* Provia100FGraphVisibilityTests.swift in Sources */,
 				A00000000000000000000930 /* HP5PlusFormulaProfileTests.swift in Sources */,
 				A00000000001600000000001 /* GuardedReciprocityFormulaTests.swift in Sources */,
+				A00000000001700000000001 /* ReciprocityProfileModelBasisTests.swift in Sources */,
 				A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */,
 				A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */,
 				A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */,

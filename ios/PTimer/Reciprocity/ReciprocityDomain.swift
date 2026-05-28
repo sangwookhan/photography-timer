@@ -102,6 +102,14 @@ struct ReciprocityProfile: Codable, Equatable {
     /// the calculation as table anchors even when the profile keeps a
     /// manufacturer reference table on display.
     let sourceEvidence: [ReciprocitySourceEvidenceRow]
+    /// PTIMER-163 vocabulary distinguishing the manufacturer's source
+    /// data shape (`sourceModel`) from the app's calculation strategy
+    /// (`calculationModel`). Optional so older preset entries and
+    /// PTIMER-84 custom profiles decode unchanged; `effectiveModelBasis`
+    /// returns a conservative inferred value when this field is absent.
+    /// The runtime calculation policy does NOT read this field — it
+    /// is descriptive catalog metadata, not a calculation discriminator.
+    let modelBasis: ReciprocityProfileModelBasis?
 
     init(
         id: String,
@@ -110,7 +118,8 @@ struct ReciprocityProfile: Codable, Equatable {
         rules: [ReciprocityRule],
         notes: [String] = [],
         userMetadata: UserEditableMetadata? = nil,
-        sourceEvidence: [ReciprocitySourceEvidenceRow] = []
+        sourceEvidence: [ReciprocitySourceEvidenceRow] = [],
+        modelBasis: ReciprocityProfileModelBasis? = nil
     ) {
         self.id = id
         self.name = name
@@ -119,6 +128,7 @@ struct ReciprocityProfile: Codable, Equatable {
         self.notes = notes
         self.userMetadata = userMetadata
         self.sourceEvidence = sourceEvidence
+        self.modelBasis = modelBasis
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -129,6 +139,7 @@ struct ReciprocityProfile: Codable, Equatable {
         case notes
         case userMetadata
         case sourceEvidence
+        case modelBasis
     }
 
     init(from decoder: Decoder) throws {
@@ -143,6 +154,10 @@ struct ReciprocityProfile: Codable, Equatable {
             [ReciprocitySourceEvidenceRow].self,
             forKey: .sourceEvidence
         ) ?? []
+        self.modelBasis = try container.decodeIfPresent(
+            ReciprocityProfileModelBasis.self,
+            forKey: .modelBasis
+        )
     }
 }
 
@@ -209,6 +224,137 @@ extension ReciprocityProfile {
         }
         return hasFormulaRule && !sourceEvidence.isEmpty
     }
+
+    /// PTIMER-163 vocabulary view of the profile. Returns the
+    /// explicitly declared `modelBasis` when the catalog entry sets
+    /// one; otherwise infers a conservative basis from the rules and
+    /// `sourceEvidence` so older entries (and PTIMER-84 custom
+    /// profiles) behave as if the basis had always been present.
+    /// Descriptive only — the calculation policy evaluator does not
+    /// branch on this value.
+    var effectiveModelBasis: ReciprocityProfileModelBasis {
+        modelBasis ?? inferredModelBasis
+    }
+
+    private var inferredModelBasis: ReciprocityProfileModelBasis {
+        let hasFormulaRule = rules.contains { rule in
+            if case .formula = rule { return true }
+            return false
+        }
+        let hasLimitedGuidanceRule = rules.contains { rule in
+            if case .limitedGuidance = rule { return true }
+            return false
+        }
+
+        let calculationModel: ReciprocityCalculationModel
+        if hasFormulaRule {
+            calculationModel = .guardedFormula
+        } else if hasLimitedGuidanceRule {
+            calculationModel = .limitedGuidance
+        } else {
+            calculationModel = .unsupported
+        }
+
+        let sourceModel: ReciprocitySourceModel
+        switch source.kind {
+        case .userDefined:
+            sourceModel = .userDefined
+        case .thirdPartyPublication:
+            sourceModel = .practicalCommunityGuidance
+        case .manufacturerPublished, .manufacturerArchive:
+            if hasFormulaRule {
+                // A formula rule paired with manufacturer reference
+                // rows is a table-origin source converted to a
+                // derived guarded formula; a bare formula rule is a
+                // manufacturer-published formula (Ilford-style).
+                sourceModel = sourceEvidence.isEmpty
+                    ? .manufacturerFormula
+                    : .manufacturerTable
+            } else if hasLimitedGuidanceRule {
+                sourceModel = .manufacturerLimitedGuidance
+            } else {
+                sourceModel = .unknown
+            }
+        case .unknown:
+            sourceModel = .unknown
+        }
+
+        return ReciprocityProfileModelBasis(
+            sourceModel: sourceModel,
+            calculationModel: calculationModel
+        )
+    }
+}
+
+/// How the manufacturer / data source actually publishes reciprocity
+/// guidance for the film stock. PTIMER-163 introduced this enum so the
+/// catalog can preserve the source data shape (formula / table / range
+/// / limited guidance) independently of the calculation strategy the
+/// app uses for that profile (`ReciprocityCalculationModel`).
+///
+/// Display / catalog vocabulary only — the calculation policy
+/// evaluator never reads this value. Custom (`userDefined`) and
+/// older catalog entries decode unchanged because the field is
+/// optional on `ReciprocityProfile`.
+enum ReciprocitySourceModel: String, Codable, Equatable, CaseIterable {
+    /// Source publishes a closed-form reciprocity formula (e.g.
+    /// Ilford / Harman exponent rule).
+    case manufacturerFormula
+    /// Source publishes a discrete reciprocity correction table —
+    /// metered/corrected anchor rows the app may convert to a
+    /// derived formula for calculation (e.g. Kodak Tri-X 400,
+    /// Fomapan 100 Classic).
+    case manufacturerTable
+    /// Source publishes a corrected value as a range (e.g. Rollei
+    /// RETRO 80S's "1 to 2 sec" row).
+    case manufacturerRangeGuidance
+    /// Source publishes only qualitative guidance — no quantified
+    /// corrected exposure (e.g. Kodak Portra / Ektar / Ektachrome).
+    case manufacturerLimitedGuidance
+    /// Practical / community guidance — explicitly NOT manufacturer
+    /// authority (paired with unofficial / third-party provenance).
+    case practicalCommunityGuidance
+    /// User-defined / custom profile authored through the PTIMER-84
+    /// custom formula editor.
+    case userDefined
+    /// Source shape is not declared. Reserved fallback so a future
+    /// entry can decode without committing to a more specific value.
+    case unknown
+}
+
+/// How the app calculates a corrected exposure for the profile,
+/// distinct from the source model (`ReciprocitySourceModel`).
+///
+/// The calculation policy still reads `ReciprocityRule` to evaluate;
+/// this enum is catalog vocabulary that lets the entry say "source
+/// published a table, app uses a guarded formula" without re-deriving
+/// the answer from rule shape.
+enum ReciprocityCalculationModel: String, Codable, Equatable, CaseIterable {
+    /// PTIMER-160 guarded reciprocity formula
+    /// (`ReciprocityFormula`).
+    case guardedFormula
+    /// Quantified prediction is intentionally unavailable above the
+    /// no-correction threshold (the profile carries a
+    /// limited-guidance rule).
+    case limitedGuidance
+    /// Calculation is intentionally unsupported above the
+    /// no-correction threshold — neither a quantified prediction nor
+    /// limited guidance applies.
+    case unsupported
+    /// Reserved placeholder for a future table-lookup / interpolation
+    /// calculation strategy. PTIMER-163 does NOT implement table
+    /// calculation; the launch catalog loader rejects this value so a
+    /// later ticket must enable it alongside the lookup implementation.
+    case tableLookup
+}
+
+/// Catalog-level vocabulary describing how reciprocity is sourced and
+/// calculated for a profile. PTIMER-163 introduced this struct so the
+/// catalog can distinguish the source data shape from the calculation
+/// strategy without changing calculation behavior.
+struct ReciprocityProfileModelBasis: Codable, Equatable {
+    let sourceModel: ReciprocitySourceModel
+    let calculationModel: ReciprocityCalculationModel
 }
 
 struct ReciprocitySourceProvenance: Codable, Equatable {

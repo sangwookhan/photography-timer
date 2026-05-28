@@ -13,11 +13,18 @@ import Foundation
 enum CustomFilmEditorPreviewPresenter {
 
     /// Sample metered exposures (in seconds) the editor preview
-    /// table renders by default. Chosen to span the typical
-    /// long-exposure photography ladder — every doubling step
-    /// from 1s through 5min — so the photographer can sanity-
-    /// check their formula across the relevant range at a glance.
-    static let defaultSampleSeconds: [Double] = [1, 2, 4, 8, 15, 30, 60, 120, 300]
+    /// table renders by default. A compact 5-row ladder spanning
+    /// the long-exposure photography range so the photographer
+    /// can scan the formula at decade boundaries without the
+    /// table dominating the editor screen.
+    static let defaultSampleSeconds: [Double] = [1, 10, 60, 300, 1_000]
+
+    /// Three representative samples (1s, 10s, 1m) used by the
+    /// Formula card's inline Live Check block. Smaller set than
+    /// `defaultSampleSeconds` so the live numeric feedback fits
+    /// next to the formula inputs without duplicating the full
+    /// Preview table.
+    static let liveCheckSampleSeconds: [Double] = [1, 10, 60]
 
     enum RowStatus: Equatable, Hashable {
         case noCorrection
@@ -72,6 +79,86 @@ enum CustomFilmEditorPreviewPresenter {
         let offsetSeconds: Double
         let noCorrectionThrough: Double
         let validThrough: Double?
+    }
+
+    /// Field-level reason the editor preview cannot render. Returned
+    /// by `diagnose(form:)` so the view can swap the row table for a
+    /// single recovery-oriented message instead of repeating
+    /// "Invalid formula result" once per sample row.
+    enum InvalidReason: Equatable, Hashable {
+        case emptyExponent
+        case invalidExponent
+        case invalidBaseTm
+        case invalidBaseTc
+        case invalidOffset
+        case invalidNoCorrectionThrough
+        /// Source range value is finite but not strictly greater
+        /// than the no-correction threshold, or otherwise unparseable.
+        case invalidSourceRange
+
+        /// Short, photographer-readable explanation rendered in the
+        /// preview's recovery panel. Wording uses the same
+        /// symbol-anchored vocabulary as the Formula card rows
+        /// (`p`, `Tm₀`, `Tc₀`, `b`) so the preview and the editor
+        /// rows describe the same field the same way.
+        var displayMessage: String {
+            switch self {
+            case .emptyExponent:
+                return "p is required."
+            case .invalidExponent:
+                return "p must be > 0."
+            case .invalidBaseTm:
+                return "Tm₀ must be > 0."
+            case .invalidBaseTc:
+                return "Tc₀ must be > 0."
+            case .invalidOffset:
+                return "b must be a finite duration."
+            case .invalidNoCorrectionThrough:
+                return "No correction must be ≥ 0."
+            case .invalidSourceRange:
+                return "Source data must be > No correction."
+            }
+        }
+    }
+
+    /// Pure diagnostic that reports the first invalid formula
+    /// field, or `nil` when the form parses cleanly. Order matches
+    /// the editor card's row order so the reason the user sees
+    /// reads as "the topmost broken field", not a randomised pick.
+    /// Empty `exponent` returns `.emptyExponent` so the preview can
+    /// render a neutral placeholder instead of a red error in the
+    /// initial new-form state.
+    static func diagnose(form: CustomFilmEditorFormState) -> InvalidReason? {
+        let trimmedExponent = form.exponentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedExponent.isEmpty {
+            return .emptyExponent
+        }
+        guard let exponent = Double(trimmedExponent), exponent.isFinite, exponent > 0 else {
+            return .invalidExponent
+        }
+        if strictPositiveAnchor(form.baseTmText, default: 1.0) == nil {
+            return .invalidBaseTm
+        }
+        if strictPositiveAnchor(form.baseTcText, default: 1.0) == nil {
+            return .invalidBaseTc
+        }
+        if strictFiniteNumber(form.offsetSecondsText, default: 0.0) == nil {
+            return .invalidOffset
+        }
+        guard let noCorrection = strictNonNegativeDuration(
+            form.noCorrectionThroughText,
+            default: 1.0
+        ) else {
+            return .invalidNoCorrectionThrough
+        }
+        if strictOptionalValidThrough(
+            form.validThroughText,
+            noCorrectionThrough: noCorrection
+        ) == nil {
+            return .invalidSourceRange
+        }
+        _ = exponent
+        return nil
     }
 
     /// Strict parse of the form state. Empty entries fall back to

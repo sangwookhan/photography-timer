@@ -344,7 +344,10 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
             exponent: 1.45,
             noCorrectionThroughSeconds: 1
         )
-        XCTAssertEqual(FormulaEquationFormatter.userFacingText(for: formula), "Tc = 2 × (Tm / 10s)^1.45")
+        // In the anchored shape the coefficient is the corrected
+        // exposure at the reference time, so the formatter
+        // renders it with seconds units.
+        XCTAssertEqual(FormulaEquationFormatter.userFacingText(for: formula), "Tc = 2s × (Tm / 10s)^1.45")
     }
 
     func testFormatterRendersOffsetWhenNonZero() {
@@ -355,7 +358,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
             offsetSeconds: 0.3,
             noCorrectionThroughSeconds: 1
         )
-        XCTAssertEqual(FormulaEquationFormatter.userFacingText(for: formula), "Tc = 2 × (Tm / 10s)^1.45 + 0.3s")
+        XCTAssertEqual(FormulaEquationFormatter.userFacingText(for: formula), "Tc = 2s × (Tm / 10s)^1.45 + 0.3s")
     }
 
     func testFormatterDropsExponentOneForConstantMultiplierForm() {
@@ -382,7 +385,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
         let proviaFormula = try XCTUnwrap(formulaRule(in: provia)?.formula)
         XCTAssertEqual(
             FormulaEquationFormatter.userFacingText(for: proviaFormula),
-            "Tc = 128 × (Tm / 128s)^1.3676"
+            "Tc = 128s × (Tm / 128s)^1.3676"
         )
     }
 

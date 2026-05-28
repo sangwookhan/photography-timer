@@ -14,11 +14,10 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
 
         XCTAssertEqual(viewModel.customFilms.map(\.id), ["test-1"])
         let entries = viewModel.filmSelectorEntries
-        // Adding a custom film inserts both the canonical entry
-        // and its Quick Access alias.
-        XCTAssertEqual(entries.count, initialCount + 2)
+        // Single canonical entry — no Quick Access alias duplication.
+        XCTAssertEqual(entries.count, initialCount + 1)
+        XCTAssertEqual(entries.filter { $0.id == "test-1" }.count, 1)
         XCTAssertTrue(entries.contains { $0.id == "test-1" })
-        XCTAssertTrue(entries.contains { $0.aliasOfOriginalID == "test-1" })
     }
 
     func test_addCustomFilm_populatesCustomFilmsSection() {

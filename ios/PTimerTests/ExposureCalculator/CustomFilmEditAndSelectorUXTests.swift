@@ -1,10 +1,10 @@
 import XCTest
 @testable import PTimer
 
-/// Edit flow + selector header "+" + Quick Access alias
-/// coverage. Covers the prefilled editor, upsert-on-save
-/// behavior, the Quick Access section's aliasing rule, and the
-/// "No film" top row anchor.
+/// Edit flow + selector top-of-list affordances. Covers the
+/// prefilled editor, upsert-on-save behavior, the explicit
+/// "New custom film" row, the "No film" top row anchor, and
+/// stable list ordering after selection.
 @MainActor
 final class CustomFilmEditAndSelectorUXTests: XCTestCase {
 
@@ -78,75 +78,70 @@ final class CustomFilmEditAndSelectorUXTests: XCTestCase {
         XCTAssertEqual(library.customFilms.first?.iso, 200)
     }
 
-    // MARK: - Quick Access aliasing
+    // MARK: - Quick Access removal + explicit Create row
 
-    func test_quickAccessSection_appearsAfterNoFilm_beforePresets() {
+    func test_filmSelectorEntries_noQuickAccessSection() {
         let viewModel = makeViewModel()
         viewModel.addCustomFilm(makeFormulaFilm(id: "alpha", stockName: "Alpha"))
 
-        let sections = viewModel.filmSelectorSections
-        let noFilmIndex = sections.firstIndex { $0.entries.contains { $0.id == "no-film" } }
-        let quickIndex = sections.firstIndex {
-            $0.manufacturer == ExposureCalculatorViewModel.quickAccessSectionManufacturerLabel
-        }
-        let firstPresetIndex = sections.firstIndex { section in
-            // Skip Custom Films + Quick Access sections.
-            guard let manufacturer = section.manufacturer else { return false }
-            return manufacturer != ExposureCalculatorViewModel.customFilmsSectionManufacturerLabel
-                && manufacturer != ExposureCalculatorViewModel.quickAccessSectionManufacturerLabel
-        }
-
-        XCTAssertNotNil(quickIndex, "Quick Access section must appear when custom films exist")
-        if let noFilmIndex, let quickIndex, let firstPresetIndex {
-            XCTAssertLessThan(noFilmIndex, quickIndex)
-            XCTAssertLessThan(quickIndex, firstPresetIndex)
-        }
-    }
-
-    func test_quickAccessAlias_routesToSameSelectionIdentity() {
-        let viewModel = makeViewModel()
-        viewModel.addCustomFilm(makeFormulaFilm(id: "shared", stockName: "Shared"))
-
-        let entries = viewModel.filmSelectorEntries
-        guard let canonical = entries.first(where: { $0.id == "shared" }),
-              let alias = entries.first(where: { $0.aliasOfOriginalID == "shared" }) else {
-            return XCTFail("Both canonical and alias rows must exist for the same film")
-        }
-        XCTAssertEqual(alias.film?.id, canonical.film?.id)
-        XCTAssertEqual(
-            alias.manufacturer,
-            ExposureCalculatorViewModel.quickAccessSectionManufacturerLabel
-        )
-
-        // Selecting the alias must produce the same selected
-        // canonical entry id as selecting the original.
-        viewModel.selectEntry(alias)
-        XCTAssertEqual(viewModel.selectedSelectorEntryID, "shared")
-        XCTAssertEqual(viewModel.selectedPresetFilm?.id, "shared")
-    }
-
-    func test_quickAccessSection_omittedWhenEmpty() {
-        let viewModel = makeViewModel()
-        // No custom films, nothing selected → Quick Access is
-        // empty and the section must not appear at all so users
-        // do not see a redundant blank header.
+        // No section should ever carry the legacy "Quick access"
+        // pseudo-manufacturer label after the PTIMER-84 UX pass.
         let hasQuickAccess = viewModel.filmSelectorSections.contains {
-            $0.manufacturer == ExposureCalculatorViewModel.quickAccessSectionManufacturerLabel
+            $0.manufacturer == "Quick access"
         }
         XCTAssertFalse(hasQuickAccess)
     }
 
-    func test_quickAccessSection_includesSelectedPresetWhenChosen() throws {
+    func test_filmSelectorEntries_doesNotDuplicateCustomFilm() {
         let viewModel = makeViewModel()
-        let provia = try XCTUnwrap(
-            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Provia 100F" }
-        )
-        viewModel.selectPresetFilm(provia)
+        viewModel.addCustomFilm(makeFormulaFilm(id: "alpha", stockName: "Alpha"))
 
-        let quickEntries = viewModel.filmSelectorSections
-            .first { $0.manufacturer == ExposureCalculatorViewModel.quickAccessSectionManufacturerLabel }?
-            .entries ?? []
-        XCTAssertTrue(quickEntries.contains { $0.aliasOfOriginalID == provia.id })
+        let alphaEntries = viewModel.filmSelectorEntries.filter { $0.id == "alpha" }
+        XCTAssertEqual(alphaEntries.count, 1, "Custom film must appear exactly once")
+    }
+
+    func test_filmSelectorEntries_includesCreateCustomFilmRow_belowNoFilm() {
+        let viewModel = makeViewModel()
+        let entries = viewModel.filmSelectorEntries
+        guard let noFilmIndex = entries.firstIndex(where: { $0.id == "no-film" }),
+              let createIndex = entries.firstIndex(where: { $0.isCreateCustomFilmAction }) else {
+            return XCTFail("Both 'No film' and Create rows must exist")
+        }
+        XCTAssertEqual(createIndex, noFilmIndex + 1)
+        XCTAssertEqual(
+            entries[createIndex].id,
+            ExposureCalculatorViewModel.createCustomFilmEntryID
+        )
+    }
+
+    func test_createCustomFilmRow_isNeverMarkedSelected() {
+        let viewModel = makeViewModel()
+        viewModel.addCustomFilm(makeFormulaFilm(id: "selected", stockName: "Selected"))
+        let film = viewModel.customFilms.first!
+        viewModel.selectPresetFilm(film)
+        // The active selection should be on the canonical custom
+        // film id — never on the create-action row id.
+        XCTAssertEqual(viewModel.selectedSelectorEntryID, "selected")
+        XCTAssertNotEqual(
+            viewModel.selectedSelectorEntryID,
+            ExposureCalculatorViewModel.createCustomFilmEntryID
+        )
+    }
+
+    // MARK: - Stable list order
+
+    func test_customFilmList_orderStableAcrossSelectionChanges() {
+        let viewModel = makeViewModel()
+        viewModel.addCustomFilm(makeFormulaFilm(id: "alpha", stockName: "Alpha"))
+        viewModel.addCustomFilm(makeFormulaFilm(id: "bravo", stockName: "Bravo"))
+        viewModel.addCustomFilm(makeFormulaFilm(id: "charlie", stockName: "Charlie"))
+
+        let baselineOrder = viewModel.filmSelectorEntries.map(\.id)
+        // Select a film in the middle of the list — the order
+        // must not reshuffle so the photographer's scroll position
+        // and visual scanning stays stable.
+        viewModel.selectPresetFilm(viewModel.customFilms.first { $0.id == "bravo" }!)
+        XCTAssertEqual(viewModel.filmSelectorEntries.map(\.id), baselineOrder)
     }
 
     // MARK: - No film row anchor

@@ -9,8 +9,12 @@ import Foundation
 /// Tc = a × (Tm / Tref)^p + b
 /// ```
 ///
-/// - `a` is the scale coefficient (always rendered as a numeric
-///   multiplier — never confused with `p`).
+/// - `a` is the scale coefficient. In the anchored form (paired
+///   with a non-neutral `Tref`) it represents the corrected
+///   exposure at the reference time and therefore renders with
+///   seconds units (`3s × (Tm / 2s)^1.29`). In the neutral-
+///   reference form it reads as a pure multiplier and renders
+///   without units (`Tc = 2.2457 × Tm^1.4515`).
 /// - Neutral values are omitted so simple formulas stay compact:
 ///   - `a = 1`      → drop the leading `a ×`.
 ///   - `Tref = 1s`  → drop the `(Tm / Tref)` rescaling, render `Tm`.
@@ -23,8 +27,8 @@ import Foundation
 /// ```
 /// Tc = Tm^1.31
 /// Tc = 2.2457 × Tm^1.4515
-/// Tc = 2 × (Tm / 10s)^1.45
-/// Tc = 2 × (Tm / 10s)^1.45 + 0.3s
+/// Tc = 2s × (Tm / 10s)^1.45
+/// Tc = 2s × (Tm / 10s)^1.45 + 0.3s
 /// ```
 enum FormulaEquationFormatter {
 
@@ -71,7 +75,16 @@ enum FormulaEquationFormatter {
 
         var rightHandSide = poweredTerm
         if !isNeutralCoefficient(scaleCoefficient) {
-            rightHandSide = "\(formatNumber(scaleCoefficient)) × \(poweredTerm)"
+            // Coefficient reads as a duration ("the corrected
+            // exposure at the reference time") whenever the
+            // formula is shown in its anchored form. In the
+            // neutral-reference shape there is no anchor, so the
+            // same number reads as a pure multiplier and renders
+            // without the `s` suffix.
+            let coefficientToken = isNeutralReference(reference)
+                ? formatNumber(scaleCoefficient)
+                : formatSecondsValue(scaleCoefficient)
+            rightHandSide = "\(coefficientToken) × \(poweredTerm)"
         }
         if !isNeutralOffset(offset) {
             let sign = offset >= 0 ? "+" : "-"

@@ -256,6 +256,11 @@ struct ExposureCalculatorScreen: View {
                 CustomFilmEditorView(
                     onSave: { film in
                         viewModel.addCustomFilm(film)
+                        // New-custom flow: auto-select the freshly
+                        // saved film into the current slot so the
+                        // photographer is not dropped back into "No
+                        // film" after creating one.
+                        viewModel.selectPresetFilm(film)
                         isCustomFilmEditorPresented = false
                     },
                     onCancel: {

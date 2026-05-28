@@ -383,13 +383,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     var filmSelectorEntries: [FilmSelectorEntry] {
-        // Build the canonical rows first (Custom + preset +
-        // unofficial). The Quick Access aliases are then assembled
-        // from these canonical entries so a tap on either surface
-        // resolves to the same `film`/`profileOverride` identity
-        // `selectEntry(_:)` already knows how to route.
-        var canonicalAfterNoFilm: [FilmSelectorEntry] = []
-        canonicalAfterNoFilm.append(contentsOf: customFilmSelectorEntries())
+        // One stable list: "No film" sentinel, the explicit
+        // "New custom film" action row, then the user's Custom
+        // Films section (above the preset catalog), then every
+        // built-in film grouped by manufacturer.
+        var entries: [FilmSelectorEntry] = [
+            FilmSelectorEntry(id: "no-film", primaryText: "No film"),
+            createCustomFilmSelectorEntry(),
+        ]
+        entries.append(contentsOf: customFilmSelectorEntries())
 
         let sortedFilms = presetFilms.sorted { lhs, rhs in
             let lhsManufacturer = lhs.manufacturer ?? ""
@@ -401,7 +403,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         for film in sortedFilms {
-            canonicalAfterNoFilm.append(FilmSelectorEntry(
+            entries.append(FilmSelectorEntry(
                 id: film.id,
                 primaryText: film.canonicalStockName,
                 secondaryText: FilmSelectionModel.filmRowISOText(for: film),
@@ -416,7 +418,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             if let unofficialProfile = UnofficialPracticalProfiles.profile(forFilmID: film.id) {
                 // Unofficial variant shares the canonical name; `supportState`
                 // drives the visible UNOFFICIAL badge next to the name.
-                canonicalAfterNoFilm.append(FilmSelectorEntry(
+                entries.append(FilmSelectorEntry(
                     id: unofficialProfile.id,
                     primaryText: film.canonicalStockName,
                     secondaryText: FilmSelectionModel.filmRowISOText(for: film),
@@ -431,18 +433,6 @@ final class ExposureCalculatorViewModel: ObservableObject {
             }
         }
 
-        var entries: [FilmSelectorEntry] = [
-            FilmSelectorEntry(id: "no-film", primaryText: "No film")
-        ]
-        // Quick Access alias section sits between "No film" and
-        // the canonical rows so the photographer can reach their
-        // selected film + custom library without scrolling past
-        // the alphabetised preset catalog. Aliases reuse the same
-        // `film`/`profileOverride` identity as their canonical
-        // row, so selection routes the same way regardless of
-        // which entry the user taps.
-        entries.append(contentsOf: quickAccessSelectorEntries(originals: canonicalAfterNoFilm))
-        entries.append(contentsOf: canonicalAfterNoFilm)
         return entries
     }
 

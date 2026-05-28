@@ -254,7 +254,16 @@ struct FilmModeDetailsGraphPresenter {
             sourceReferenceMarkers: geometry.sourceReferenceMarkers,
             notRecommendedBoundarySeconds: geometry.notRecommendedBoundarySeconds,
             beyondSourceRangeStartSeconds: geometry.beyondSourceRangeStartSeconds,
-            formulaDisplayText: geometry.formulaDisplayText,
+            // User-defined (custom) profiles render their formula
+            // text through the shared `CalculationBasisPresenter`
+            // area below the graph instead of in the graph header,
+            // so the same expression does not appear twice on the
+            // editor preview / Details sheet. Preset profiles keep
+            // the in-graph header text — the dedupe is scoped to
+            // the custom path.
+            formulaDisplayText: bindingState.profile.source.authority == .userDefined
+                ? nil
+                : geometry.formulaDisplayText,
             descriptionLines: geometry.descriptionLines,
             scaleTier: geometry.tier,
             isBeyondVisibleRange: geometry.isBeyondVisibleRange,

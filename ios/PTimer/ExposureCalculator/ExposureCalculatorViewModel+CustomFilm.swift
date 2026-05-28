@@ -18,20 +18,36 @@ extension ExposureCalculatorViewModel {
     /// string.
     static let customFilmsSectionManufacturerLabel = "Custom films"
 
-    /// Pseudo-manufacturer label for the Quick Access section. Sits
-    /// between "No film" and the manufacturer-grouped presets so the
-    /// photographer's selected film plus their custom-authored films
-    /// are reachable without scrolling past the alphabetised preset
-    /// catalog.
-    static let quickAccessSectionManufacturerLabel = "Quick access"
+    /// Sentinel entry id for the explicit "New custom film" row that
+    /// sits near the top of the selector (under the "No film" row).
+    /// Routing taps through this id keeps the editor entry point
+    /// out of the selection identity space — selecting the row
+    /// opens the editor instead of mutating the active film slot.
+    static let createCustomFilmEntryID = "create-custom-film"
 
     /// Persists a freshly authored custom film through the library
     /// model. The editor view is the only caller; validation already
     /// ran inside `CustomFilmEditorFormState.validate()` so the
     /// `film` argument is guaranteed to be `kind == .custom` with a
     /// single `.userDefined`-authority profile.
+    ///
+    /// When the upsert matches the currently selected film by id
+    /// (Edit-save of the active selection), the active selection is
+    /// refreshed to the updated identity so live calculations and
+    /// the Details sheet read the new formula immediately. The
+    /// selection itself is preserved by id; no slot reset occurs.
     func addCustomFilm(_ film: FilmIdentity) {
         customFilmLibrary.add(film)
+        if selectedPresetFilm?.id == film.id {
+            // Edit-save of the currently selected custom film:
+            // replace the in-memory identity so downstream readers
+            // (Details graph, badge text, live calculations) see
+            // the new formula parameters without forcing the
+            // photographer to re-tap the row. Custom films never
+            // carry a profile override, so re-selecting via the
+            // existing public path is safe.
+            selectPresetFilm(film)
+        }
     }
 
     /// Removes a custom film from the library and the picker. If the
@@ -84,50 +100,20 @@ extension ExposureCalculatorViewModel {
         }
     }
 
-    /// Quick Access alias rows. Contains the currently selected
-    /// film (preset or custom) plus every custom-authored film,
-    /// sorted alphabetically. Each alias references the canonical
-    /// entry id through `aliasOfOriginalID` so the selector view
-    /// marks both the alias and the canonical row as selected for
-    /// the same film. Returns `[]` when there is nothing to
-    /// alias — the section is then omitted entirely.
-    func quickAccessSelectorEntries(originals: [FilmSelectorEntry]) -> [FilmSelectorEntry] {
-        var aliasFilmIDs: Set<String> = []
-        var aliases: [FilmSelectorEntry] = []
-
-        // Selected canonical row first, if any.
-        if let selectedSelectorEntryID,
-           let original = originals.first(where: { $0.id == selectedSelectorEntryID }) {
-            aliases.append(quickAccessAlias(of: original))
-            if let filmID = original.film?.id {
-                aliasFilmIDs.insert(filmID)
-            }
-        }
-
-        // Then every custom film, sorted alphabetically.
-        let sortedCustomFilms = customFilms.sorted { lhs, rhs in
-            lhs.canonicalStockName.localizedCaseInsensitiveCompare(rhs.canonicalStockName) == .orderedAscending
-        }
-        for film in sortedCustomFilms where !aliasFilmIDs.contains(film.id) {
-            guard let original = originals.first(where: { $0.id == film.id }) else {
-                continue
-            }
-            aliases.append(quickAccessAlias(of: original))
-            aliasFilmIDs.insert(film.id)
-        }
-        return aliases
-    }
-
-    private func quickAccessAlias(of original: FilmSelectorEntry) -> FilmSelectorEntry {
+    /// Explicit, discoverable "New custom film" row rendered near
+    /// the top of the selector (just under the "No film" sentinel).
+    /// Tapping the row dispatches to the editor through
+    /// `FilmSelectorEntry.isCreateCustomFilmAction == true`; it is
+    /// not a selectable film and is never marked selected.
+    func createCustomFilmSelectorEntry() -> FilmSelectorEntry {
         FilmSelectorEntry(
-            id: "quick:\(original.id)",
-            primaryText: original.primaryText,
-            secondaryText: original.secondaryText,
-            manufacturer: Self.quickAccessSectionManufacturerLabel,
-            film: original.film,
-            profileOverride: original.profileOverride,
-            supportState: original.supportState,
-            aliasOfOriginalID: original.id
+            id: Self.createCustomFilmEntryID,
+            primaryText: "New custom film",
+            secondaryText: nil,
+            manufacturer: nil,
+            film: nil,
+            supportState: .none,
+            isCreateCustomFilmAction: true
         )
     }
 }

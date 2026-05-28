@@ -152,22 +152,21 @@ struct FilmModeDetailsSheet: View {
     }
 
     private func formulaExpressionText(_ value: String) -> Text {
-        guard
-            let caretIndex = value.firstIndex(of: "^"),
-            value.index(after: caretIndex) < value.endIndex
-        else {
-            return Text(value)
-                .font(.callout.weight(.medium))
+        // Share the whitespace-bounded splitter with the graph's
+        // standalone renderer so an Advanced formula's trailing
+        // ` + 0.3s` offset never bleeds into the superscript on
+        // either surface.
+        guard let parts = FilmModeDetailsFormulaExpressionText.split(value) else {
+            return Text(value).font(.callout.weight(.medium))
         }
-
-        let base = String(value[..<caretIndex])
-        let exponent = String(value[value.index(after: caretIndex)...])
-
-        return Text(base)
-            .font(.callout.weight(.medium))
-        + Text(exponent)
-            .font(.caption.weight(.semibold))
-            .baselineOffset(7)
+        let head = Text(parts.base).font(.callout.weight(.medium))
+            + Text(parts.exponent)
+                .font(.caption.weight(.semibold))
+                .baselineOffset(7)
+        if parts.remainder.isEmpty {
+            return head
+        }
+        return head + Text(parts.remainder).font(.callout.weight(.medium))
     }
 
     private func sectionDisplayTitle(for title: String) -> String {
@@ -188,7 +187,11 @@ struct FilmModeDetailsSheet: View {
     /// scrolling past the profile metadata first.
     private func isEvidenceSection(_ section: FilmModeDetailsSectionState) -> Bool {
         switch section.title {
-        case "Source reference", "Guidance boundary", "Reference", "Custom profile":
+        case "Source reference",
+             "Guidance boundary",
+             "Reference",
+             "Calculation basis",
+             "Custom profile":
             return true
         default:
             return false

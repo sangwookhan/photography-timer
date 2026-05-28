@@ -24,8 +24,8 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         XCTAssertTrue(provenance.contains("Personal test"))
         XCTAssertTrue(provenance.contains("Tc"))
         XCTAssertTrue(provenance.contains("1.3"))
-        XCTAssertTrue(provenance.contains("no correction up to 1s"))
-        XCTAssertTrue(provenance.contains("source range through 4m"))
+        XCTAssertTrue(provenance.contains("No correction through 1s"))
+        XCTAssertTrue(provenance.contains("Source range through 4m"))
         XCTAssertTrue(provenance.contains("Bracketed at 1s, 4s, 30s"))
     }
 
@@ -79,9 +79,38 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         )
 
         XCTAssertEqual(section.rows[0].value, "Personal test")
-        XCTAssertTrue(section.rows[1].value.contains("no correction up to 1s"))
-        XCTAssertTrue(section.rows[1].value.contains("source range through 4m"))
+        // Range row renders as two stand-alone lines (PTIMER-84 polish).
+        let rangeLines = section.rows[1].value.components(separatedBy: "\n")
+        XCTAssertEqual(rangeLines.count, 2)
+        XCTAssertEqual(rangeLines[0], "No correction through 1s")
+        XCTAssertEqual(rangeLines[1], "Source range through 4m")
         XCTAssertEqual(section.rows[2].value, "Bracketed at 1s, 4s, 30s")
+    }
+
+    /// When the formula has no finite source-range upper bound, the
+    /// Range row still renders both lines but the second line reads
+    /// "Source range unlimited" so the user reads the confidence
+    /// boundary explicitly rather than its absence.
+    func test_customProfileSection_unlimitedSourceRange_rendersUnlimitedLine() throws {
+        let film = makeCustomFilm(
+            sourceType: .userDefined,
+            exponent: 1.30,
+            noCorrectionThrough: 1.0,
+            validThrough: nil,
+            notes: []
+        )
+        let profile = try XCTUnwrap(film.profiles.first)
+        let section = try XCTUnwrap(
+            presenter.customProfileSection(film: film, profile: profile)
+        )
+        guard let rangeRow = section.rows.first(where: { $0.title == "Range" }) else {
+            return XCTFail("Custom profile section must include a Range row.")
+        }
+        let lines = rangeRow.value.components(separatedBy: "\n")
+        XCTAssertEqual(lines, [
+            "No correction through 1s",
+            "Source range unlimited",
+        ])
     }
 
     func test_customProfileSection_returnsNilForPresetProfile() throws {
@@ -137,7 +166,7 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         sourceType: CustomProfileSourceType,
         exponent: Double,
         noCorrectionThrough: Double,
-        validThrough: Double,
+        validThrough: Double?,
         notes: [String]
     ) -> FilmIdentity {
         let formula = ReciprocityFormula(

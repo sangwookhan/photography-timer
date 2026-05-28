@@ -109,7 +109,52 @@ struct FilmModeDetailsPresenter {
         ) {
             sections.insert(customSection, at: 0)
         }
+        // Shared Calculation Basis section. Renders the equation
+        // text between the graph and the textual interpretation
+        // (custom-profile metadata / source / range). Limited to
+        // profiles whose basis is a single formula expression —
+        // the presenter returns `nil` for non-formula profiles so
+        // the section disappears entirely. Inserted at index 0 so
+        // it sits ahead of the custom-profile metadata in the
+        // section stack the view renders below the graph.
+        if let basisSection = calculationBasisSection(
+            for: input.bindingState.profile
+        ) {
+            sections.insert(basisSection, at: 0)
+        }
         return sections
+    }
+
+    /// Wraps `CalculationBasisPresenter.calculationBasisText` in a
+    /// detail section so the view layer renders it through the
+    /// same row/section chrome it uses for every other Details
+    /// block. The single row carries the formula equation in the
+    /// `.formulaExpression` style so the superscript exponent
+    /// matches the legacy in-graph rendering the custom path
+    /// retired.
+    ///
+    /// Scoped to user-defined (custom) profiles so the dedupe
+    /// pairs cleanly with the graph-header formula suppression:
+    /// preset / unofficial profiles keep their existing in-graph
+    /// formula header and do not gain a duplicate basis section.
+    private func calculationBasisSection(
+        for profile: ReciprocityProfile
+    ) -> FilmModeDetailsSectionState? {
+        guard profile.source.authority == .userDefined else { return nil }
+        guard let basisText = CalculationBasisPresenter
+            .calculationBasisText(for: profile) else {
+            return nil
+        }
+        return FilmModeDetailsSectionState(
+            title: "Calculation basis",
+            rows: [
+                FilmModeDetailsRowState(
+                    title: "",
+                    value: basisText,
+                    style: .formulaExpression
+                ),
+            ]
+        )
     }
 
     // MARK: - Summary
@@ -138,7 +183,7 @@ struct FilmModeDetailsPresenter {
         graph: FilmModeDetailsGraphDisplayState?
     ) -> FilmModeDetailsCurrentResultState {
         let statusText = vocabulary.statusText(for: input.bindingState, graph: graph)
-        let statusTone = vocabulary.tone(for: input.bindingState.presentation.badgeStyle)
+        let statusTone = vocabulary.tone(for: input.bindingState)
 
         guard let filmModeExposureResultState = input.filmModeExposureResultState else {
             return FilmModeDetailsCurrentResultState(

@@ -25,7 +25,7 @@ Calculation results (the output of evaluating a profile against a metered exposu
 - **id** — non-empty string, unique within the catalog. Stable identifier; the user-facing UI never displays it. It is the key for persistence references.
 - **kind** — one of:
   - `preset` — bundled launch dataset entry.
-  - `custom` — user-defined entry (deferred; see §15).
+  - `custom` — user-defined identity authored by the photographer through the custom profile editor (see §13.4). The launch catalog never ships a `custom` identity; the runtime resolves custom identities from a separate user library.
   - `unknown` — present for forward-compatible decoding only; never written.
 - **canonicalStockName** — non-empty, unique within the catalog. The display-default name for the film. Examples: `"Kodak TRI-X 400"`, `"ILFORD HP5 Plus"`.
 - **manufacturer** — original manufacturer string when known. Repackaged brand labels (a film sold under different labels) shall not appear here; they go in `brandLabel`.
@@ -87,8 +87,8 @@ Source-evidence rows shall never be promoted to calculation rules. The calculati
 
 Every reciprocity profile carries provenance:
 
-- **kind** — one of `manufacturerPublished`, `manufacturerArchive` (a manufacturer's own archived / superseded documentation), `thirdPartyPublication` (a non-manufacturer publication such as a community-tested practical formula), `userDefined`, `unknown`. The launch dataset shall use only `manufacturerPublished`.
-- **authority** — one of `official`, `unofficial`, `userDefined`, `unknown`. The launch dataset shall use only `official`. Supplementary non-launch profiles (§13.3) use `unofficial`.
+- **kind** — one of `manufacturerPublished`, `manufacturerArchive` (a manufacturer's own archived / superseded documentation), `thirdPartyPublication` (a non-manufacturer publication such as a community-tested practical formula), `userDefined`, `unknown`. The launch dataset shall use only `manufacturerPublished`. User-defined custom profiles (§13.4) use `userDefined`.
+- **authority** — one of `official`, `unofficial`, `userDefined`, `unknown`. The launch dataset shall use only `official`. Supplementary non-launch profiles (§13.3) use `unofficial`. User-defined custom profiles (§13.4) use `userDefined` and shall not be presented as manufacturer authority.
 - **confidence** — one of `high`, `medium`, `low`, `unknown`. The default for omitted is `unknown`. The launch dataset uses `high`.
 - **publisher** — the entity that published the data, e.g. `"Kodak"`, `"Ilford Photo"`. Required non-empty string for launch (official) profiles. Supplementary unofficial profiles (§13.3) may leave this empty as the documented "source pending verification" marker; presentation suppresses the Sources section in that case and conveys the disclosure through the unofficial-authority subtitle plus the profile's caveat note.
 - **title** — optional string referring to a specific document or page.
@@ -364,7 +364,20 @@ The system may bundle additional **non-launch profiles** *outside* the launch ca
 
 Example: an unofficial practical formula `T_c = T_m^1.34` for Kodak PORTRA 400 is bundled outside the launch catalog as a secondary alternative to PORTRA 400's official threshold + limited-guidance profile.
 
-The presentation contract for these profiles lives in [UI Spec](UI.md) §2.1 (explicit "Official guidance" / "Unofficial practical" subtitles) and §2.6 (Authority row visible in details sheet for all profiles).
+The presentation contract for these profiles lives in [UI Spec](UI.md) §2.1 (explicit "Official guidance" / "Unofficial practical" subtitles) and §2.6 (Authority subtitle visible in details sheet for all profiles).
+
+### 13.4 User-defined custom profiles
+
+User-defined custom profiles are reciprocity profiles the photographer authors through the custom profile editor ([UI Spec](UI.md) §4.2). They are first-class shooting data:
+
+- The film identity uses `kind = "custom"` (§2.1) and is created, edited, deleted, and reused by the photographer from the film picker (selector treatment in [UI Spec](UI.md) §4.1.1; editor surface in [UI Spec](UI.md) §4.2). Custom identities are persisted in a separate user library and survive an app restart.
+- Each custom identity carries exactly one profile whose `source.kind = "userDefined"` and `source.authority = "userDefined"`. The profile uses the **shared guarded reciprocity formula model** (§5.2.1); table-rule, threshold-rule, and limited-guidance-rule variants are not authored through the editor.
+- Photographer-supplied source metadata — source kind (user-defined / personal-test / community reference / unknown), manufacturer / stock label, reference URL — is preserved verbatim. The runtime shall **never** treat user-supplied source metadata as manufacturer authority; presentation surfaces ([UI Spec](UI.md) §2.1, §2.6) keep the "Custom" subtitle and a dedicated metadata card so a user-defined profile cannot visually pose as a manufacturer-published row.
+- The formula fields the photographer edits (§5.2.1) map to the editor vocabulary as `coefficientSeconds = Tc₀`, `referenceMeteredTimeSeconds = Tm₀`, `exponent = p`, `offsetSeconds = b`, `noCorrectionThroughSeconds = No correction`, `sourceRangeThroughSeconds = Source data`. The semantics — including `sourceRangeThroughSeconds` as a **source/confidence boundary, not a calculation cutoff** — are identical to a preset formula profile.
+- Custom profiles do not enter the §12 launch-catalog validator. They are validated at editor commit time against the same parameter contracts the shared formula model enforces.
+- Timer and details surfaces preserve enough custom-profile identity for the photographer to tell that the result came from a user-defined profile after the original profile is selected, used, or even later deleted; the persisted identity blob includes a custom-profile summary alongside the standard timer metadata.
+
+Table-derived input (multi-row tables, point fitting, table interpolation as a custom calculation model) and remote sharing / sync / inventory management remain **future scope** — they are not part of the user-defined formula profile workflow described above.
 
 ---
 
@@ -386,7 +399,7 @@ The domain shall **not**:
 
 ## 15. Drift and open questions
 
-- **User-defined film schema.** Wiki 15138817 lists user-defined films as a validation requirement; the entry/edit UX, validation rules, and persistence boundary are not specified.
+- **User-defined table input.** User-defined *formula* profiles are implemented (§13.4); user-defined *table-derived* input — multi-row reference tables and point fitting as a custom calculation model — remains future scope. The schema, editor surface, and fitting policy for that workflow are not specified.
 - **Multi-profile support.** Reserved by domain (an identity may carry multiple profiles) but the selection mechanism (which profile is "active" at a given metered exposure, push/pull semantics, developer-time variants) is not specified.
 - **Color correction metadata.** Velvia-style "M color correction" is captured via the `colorFilter` exposure adjustment (§10) on source-evidence rows. A first-class color-correction policy distinct from per-row annotations has no schema entry.
 - **Development-time adjustments.** Development-time adjustment metadata (e.g. Tri-X-style "dev −10%" from wiki guidance) is captured via the `development` exposure adjustment (§10) on source-evidence rows; a first-class development-time policy is not modeled.

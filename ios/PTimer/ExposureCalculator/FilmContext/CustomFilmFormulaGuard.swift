@@ -161,8 +161,8 @@ enum CustomFilmFormulaGuard {
 }
 
 /// Parser for the duration-style strings the editor accepts in
-/// the application-range fields (`No correction up to`,
-/// `Source range through`).
+/// the application-range fields (`No correction until`,
+/// `Source data through`).
 ///
 /// Accepted shapes:
 /// - empty string → `nil` (caller decides default / Unlimited)

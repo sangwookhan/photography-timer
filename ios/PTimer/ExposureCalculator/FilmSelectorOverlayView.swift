@@ -69,7 +69,13 @@ struct FilmSelectorOverlay: View {
                             FilmSelectorSectionCard(
                                 section: section,
                                 selectedFilmID: selectedFilmID,
-                                onSelectEntry: onSelectEntry,
+                                onSelectEntry: { entry in
+                                    if entry.isCreateCustomFilmAction {
+                                        onCreateCustomFilm?()
+                                    } else {
+                                        onSelectEntry(entry)
+                                    }
+                                },
                                 onRequestDeleteCustomFilm: onDeleteCustomFilm == nil
                                     ? nil
                                     : { entry in pendingDelete = entry },
@@ -105,10 +111,6 @@ struct FilmSelectorOverlay: View {
                 ),
                 presenting: pendingDelete
             ) { entry in
-                // Always confirm against the canonical custom-film
-                // id so a Quick Access alias row (id prefix
-                // `quick:`) does not route through the alias when
-                // removing the entry from the library.
                 Button("Delete \(entry.primaryText)", role: .destructive) {
                     if let canonical = entry.canonicalCustomFilmID {
                         onDeleteCustomFilm?(canonical)
@@ -268,11 +270,17 @@ private struct FilmSelectorSectionCard: View {
                 onSelectEntry(entry)
             } label: {
                 HStack(spacing: 10) {
+                    if entry.isCreateCustomFilmAction {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+
                     // Keep the Unofficial badge next to the film name so it reads as profile identity.
                     HStack(spacing: 6) {
                         Text(entry.primaryText)
-                            .font(.body.weight(isSelected(entry) ? .semibold : .regular))
-                            .foregroundStyle(.primary)
+                            .font(.body.weight(isSelected(entry) || entry.isCreateCustomFilmAction ? .semibold : .regular))
+                            .foregroundStyle(entry.isCreateCustomFilmAction ? Color.accentColor : .primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
 
@@ -292,6 +300,13 @@ private struct FilmSelectorSectionCard: View {
                             .fixedSize(horizontal: true, vertical: false)
                             .layoutPriority(1)
                     }
+
+                    if isSelected(entry) {
+                        Image(systemName: "checkmark")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                            .accessibilityHidden(true)
+                    }
                 }
                 .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .leading)
@@ -302,7 +317,9 @@ private struct FilmSelectorSectionCard: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityLabel(for: entry))
             .accessibilityAddTraits(isSelected(entry) ? .isSelected : [])
-            .accessibilityIdentifier("film-selector-entry-\(entry.id)")
+            .accessibilityIdentifier(entry.isCreateCustomFilmAction
+                ? "film-selector-create-custom-film-row"
+                : "film-selector-entry-\(entry.id)")
 
             // Edit/Delete overflow menu for custom-film rows only.
             // Preset rows render the same trailing space empty so
@@ -437,12 +454,8 @@ private struct FilmSelectorSectionCard: View {
 
     private func isSelected(_ entry: FilmSelectorEntry) -> Bool {
         guard let selectedFilmID else { return false }
-        if entry.id == selectedFilmID { return true }
-        // A Quick Access alias row is the same selection identity
-        // as its canonical row; mark both selected so the
-        // photographer sees a single coherent highlight regardless
-        // of which row they tapped.
-        return entry.aliasOfOriginalID == selectedFilmID
+        guard !entry.isCreateCustomFilmAction else { return false }
+        return entry.id == selectedFilmID
     }
 
     @ViewBuilder

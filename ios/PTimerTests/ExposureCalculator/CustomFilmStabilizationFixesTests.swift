@@ -1,12 +1,12 @@
 import XCTest
 @testable import PTimer
 
-/// Pins the five custom-film stabilization invariants: Quick
-/// Access id, Details graph formula, analytic shortening guard,
-/// duration parser policy, and strict preview header.
+/// Pins the custom-film stabilization invariants: canonical id
+/// for custom entries, Details graph formula, analytic shortening
+/// guard, duration parser policy, and strict preview header.
 final class CustomFilmStabilizationFixesTests: XCTestCase {
 
-    // MARK: - Fix 1: Quick Access canonical id
+    // MARK: - Canonical custom film id
 
     func test_canonicalCustomFilmID_returnsFilmIDForCustomEntry() {
         let film = customFilm(id: "kodak-tmax", stockName: "T-MAX 100")
@@ -16,18 +16,6 @@ final class CustomFilmStabilizationFixesTests: XCTestCase {
             film: film
         )
         XCTAssertEqual(canonical.canonicalCustomFilmID, "kodak-tmax")
-    }
-
-    func test_canonicalCustomFilmID_returnsFilmIDForAliasEntry() {
-        let film = customFilm(id: "kodak-tmax", stockName: "T-MAX 100")
-        let alias = FilmSelectorEntry(
-            id: "quick:kodak-tmax",
-            primaryText: "T-MAX 100",
-            film: film,
-            aliasOfOriginalID: "kodak-tmax"
-        )
-        XCTAssertEqual(alias.canonicalCustomFilmID, "kodak-tmax")
-        XCTAssertNotEqual(alias.canonicalCustomFilmID, alias.id)
     }
 
     func test_canonicalCustomFilmID_isNilForPresetAndNoFilmEntries() {

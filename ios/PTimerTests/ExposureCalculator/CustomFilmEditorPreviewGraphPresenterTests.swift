@@ -106,18 +106,25 @@ final class CustomFilmEditorPreviewGraphTests: XCTestCase {
         )
     }
 
-    // MARK: - Formula title formatter
+    // MARK: - Graph header formula suppression
 
-    /// The graph carries the same formula text the timer / Details
-    /// surface uses — produced by `FormulaEquationFormatter`.
-    /// Default anchors collapse to the simplified form `Tc = Tm^e`.
-    func test_formulaDisplayText_usesSharedFormatter_simplified() {
+    /// PTIMER-84 polish: the editor preview synthesizes a
+    /// user-defined-authority profile, and user-defined profiles
+    /// now render their formula text through the shared
+    /// `CalculationBasisPresenter` block between the graph and
+    /// the checkpoint table. The graph header itself must be
+    /// quiet on the custom path to avoid duplication.
+    func test_graphHeader_suppressesFormulaText_onCustomPath() {
         let form = makeValidForm(exponent: "1.30")
         let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(for: form)
-        XCTAssertEqual(state?.formulaDisplayText, "Tc = Tm^1.3")
+        XCTAssertNotNil(state, "Editor preview must still produce a graph state.")
+        XCTAssertNil(
+            state?.formulaDisplayText,
+            "Custom-path graph state must drop the in-header formula text so the shared Calculation Basis block is the single source."
+        )
     }
 
-    func test_formulaDisplayText_usesSharedFormatter_anchored() {
+    func test_graphHeader_suppressesFormulaText_anchoredFormula() {
         let form = makeValidForm(
             exponent: "1.0966",
             baseTm: "0.1",
@@ -126,10 +133,24 @@ final class CustomFilmEditorPreviewGraphTests: XCTestCase {
             validThrough: "240"
         )
         let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(for: form)
-        // Shared `FormulaEquationFormatter` renders the reference
-        // time as a seconds value (`0.1s`), matching every preset
-        // formula display elsewhere in the app.
-        XCTAssertEqual(state?.formulaDisplayText, "Tc = 0.1 × (Tm / 0.1s)^1.0966")
+        XCTAssertNil(state?.formulaDisplayText)
+    }
+
+    /// The text the graph header used to render is still available
+    /// on the shared Calculation Basis presenter — the relocation
+    /// must not lose the wording, only move it to a single spot.
+    func test_calculationBasis_carriesSameWordingAsTheLegacyGraphHeader() {
+        let form = makeValidForm(
+            exponent: "1.0966",
+            baseTm: "0.1",
+            baseTc: "0.1",
+            offset: "0",
+            validThrough: "240"
+        )
+        XCTAssertEqual(
+            CalculationBasisPresenter.calculationBasisText(for: form),
+            "Tc = 0.1s × (Tm / 0.1s)^1.0966"
+        )
     }
 
     // MARK: - Viewport stability

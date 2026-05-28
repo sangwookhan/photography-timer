@@ -25,7 +25,9 @@ final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
             noCorrectionThroughText: "1",
             validThroughText: "120"
         )
-        let rows = CustomFilmEditorPreviewPresenter.rows(form: form)
+        // Use explicit samples so this test does not depend on the
+        // editor's default ladder.
+        let rows = CustomFilmEditorPreviewPresenter.rows(form: form, samples: [1, 4, 30])
         // 4s sample sits well inside the formula range:
         // Tc = 4^1.3 ≈ 6.063.
         guard let fourSecondRow = rows.first(where: { $0.meteredSeconds == 4 }) else {
@@ -47,7 +49,10 @@ final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
             noCorrectionThroughText: "1",
             validThroughText: "60"
         )
-        let rows = CustomFilmEditorPreviewPresenter.rows(form: form)
+        let rows = CustomFilmEditorPreviewPresenter.rows(
+            form: form,
+            samples: [1, 10, 120, 300]
+        )
         let beyondSamples = rows.filter { $0.meteredSeconds == 120 || $0.meteredSeconds == 300 }
         XCTAssertEqual(beyondSamples.count, 2)
         for row in beyondSamples {
@@ -78,7 +83,8 @@ final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
             noCorrectionThroughText: "1",
             validThroughText: "240"
         )
-        guard let row = CustomFilmEditorPreviewPresenter.rows(form: form)
+        guard let row = CustomFilmEditorPreviewPresenter
+            .rows(form: form, samples: [4])
             .first(where: { $0.meteredSeconds == 4 }) else {
             return XCTFail("Expected 4s row")
         }

@@ -413,12 +413,48 @@ private struct FilmModeDetailsLegendFlow: View {
 
 /// Renders a formula reference string with the same superscript
 /// styling as the Formula section row. Reused inside the Reference
-/// Graph card so the curve and its equation read together.
-private struct FilmModeDetailsFormulaExpressionText: View {
+/// Graph card so the curve and its equation read together. Now
+/// also used by the custom-film editor's Calculation Basis block
+/// so the editor preview and Details surfaces render the
+/// expression in the same shape.
+///
+/// Splitting policy (see `split(_:)`): only the exponent *token*
+/// is superscripted. Anything after the first whitespace following
+/// `^` — typically the ` + 0.3s` offset segment the Advanced
+/// formula prints — renders at the normal baseline so the
+/// expression stays readable.
+struct FilmModeDetailsFormulaExpressionText: View {
     private let value: String
 
     init(_ value: String) {
         self.value = value
+    }
+
+    /// Result of splitting a `Tc = … ^p [ + b]` expression at the
+    /// caret. `remainder` is empty when the formula ends with the
+    /// exponent.
+    struct ExponentParts: Equatable {
+        let base: String
+        let exponent: String
+        let remainder: String
+    }
+
+    /// Pure splitter exposed for tests so the superscript scope is
+    /// pinned to whitespace-bounded exponent tokens. `nil` when
+    /// the input does not contain a usable `^…` token (no caret,
+    /// or caret at the end).
+    static func split(_ value: String) -> ExponentParts? {
+        guard let caretIndex = value.firstIndex(of: "^") else {
+            return nil
+        }
+        let afterCaret = value.index(after: caretIndex)
+        guard afterCaret < value.endIndex else { return nil }
+        let exponentEnd = value[afterCaret...].firstIndex(of: " ") ?? value.endIndex
+        return ExponentParts(
+            base: String(value[..<caretIndex]),
+            exponent: String(value[afterCaret..<exponentEnd]),
+            remainder: String(value[exponentEnd...])
+        )
     }
 
     var body: some View {
@@ -427,21 +463,17 @@ private struct FilmModeDetailsFormulaExpressionText: View {
     }
 
     private var text: Text {
-        guard
-            let caretIndex = value.firstIndex(of: "^"),
-            value.index(after: caretIndex) < value.endIndex
-        else {
+        guard let parts = Self.split(value) else {
             return Text(value).font(.callout.weight(.medium))
         }
-
-        let base = String(value[..<caretIndex])
-        let exponent = String(value[value.index(after: caretIndex)...])
-
-        return Text(base)
-            .font(.callout.weight(.medium))
-        + Text(exponent)
-            .font(.caption.weight(.semibold))
-            .baselineOffset(7)
+        let head = Text(parts.base).font(.callout.weight(.medium))
+            + Text(parts.exponent)
+                .font(.caption.weight(.semibold))
+                .baselineOffset(7)
+        if parts.remainder.isEmpty {
+            return head
+        }
+        return head + Text(parts.remainder).font(.callout.weight(.medium))
     }
 }
 

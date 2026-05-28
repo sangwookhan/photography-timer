@@ -19,7 +19,7 @@ struct ReciprocityDetailsVocabularyPresenter {
     ) -> FilmModeReciprocityStateDisplayState {
         FilmModeReciprocityStateDisplayState(
             badgeText: badgeText(for: bindingState),
-            tone: tone(for: bindingState.presentation.badgeStyle),
+            tone: tone(for: bindingState),
             infoText: guidanceExplanation(for: bindingState.presentation),
             showsInfoAffordance: true
         )
@@ -34,6 +34,12 @@ struct ReciprocityDetailsVocabularyPresenter {
         case .noCorrection:
             return "No correction"
         case .formulaDerived:
+            // Photographer-authored profiles read as "Custom formula"
+            // (method/authority wording) so the badge does not look
+            // like the warning copy used for official profiles.
+            if bindingState.profile.source.authority == .userDefined {
+                return "Custom formula"
+            }
             return "Formula-derived"
         case .limitedGuidance:
             return "No quantified prediction"
@@ -41,13 +47,32 @@ struct ReciprocityDetailsVocabularyPresenter {
             // Converted formula profiles (formula + source evidence)
             // surface as "Beyond source range" — the canonical wording
             // shared with the Detail status line.
-            if bindingState.profile.isConvertedFormulaProfile {
+            if bindingState.profile.isConvertedFormulaProfile
+                || bindingState.profile.source.authority == .userDefined {
                 return "Beyond source range"
             }
             return bindingState.policyResult.correctedExposureSeconds != nil
                 ? "Outside guidance"
                 : "No corrected value"
         }
+    }
+
+    /// Tone mapping used by the Main badge chip and the Detail
+    /// status line. The base mapping comes from the
+    /// presentation's `badgeStyle`, but a custom (userDefined)
+    /// formula in its normal source range is downgraded from
+    /// `.caution` (orange) to `.measured` (blue) so the user does
+    /// not see a warning treatment for normal custom-profile use.
+    /// Beyond-source-range or other unsupported states keep their
+    /// stronger tone.
+    func tone(for bindingState: FilmModeReciprocityBindingState) -> FilmModeReciprocityStateTone {
+        let baseTone = tone(for: bindingState.presentation.badgeStyle)
+        guard bindingState.profile.source.authority == .userDefined,
+              bindingState.presentation.category == .formulaDerived,
+              baseTone == .caution else {
+            return baseTone
+        }
+        return .measured
     }
 
     func tone(for badgeStyle: ReciprocityConfidenceBadgeStyle) -> FilmModeReciprocityStateTone {
@@ -262,10 +287,11 @@ struct ReciprocityDetailsVocabularyPresenter {
                 value: sourceType.displayLabel
             ))
         }
-        if let rangeText = customRangeText(profile: profile) {
+        let rangeLines = customRangeLines(profile: profile)
+        if !rangeLines.isEmpty {
             rows.append(FilmModeDetailsRowState(
                 title: "Range",
-                value: rangeText
+                value: rangeLines.joined(separator: "\n")
             ))
         }
         let trimmedNotes = collectedCustomNotes(film: film, profile: profile)
@@ -323,9 +349,11 @@ struct ReciprocityDetailsVocabularyPresenter {
         if let formulaText = TimerStartComposer.customProfileFormulaText(profile: profile) {
             lines.append("Formula: \(formulaText)")
         }
-        if let rangeText = customRangeText(profile: profile) {
-            lines.append("Range: \(rangeText)")
-        }
+        // The new wording reads as standalone facts ("No correction
+        // through 1s", "Source range through 4m"), so they are
+        // appended directly without a "Range:" prefix — each line
+        // already names the concept it carries.
+        lines.append(contentsOf: customRangeLines(profile: profile))
         let profileNotes = profile.userMetadata?.notes ?? []
         let filmNotes = film.userMetadata?.notes ?? []
         for note in (profileNotes + filmNotes) {
@@ -336,7 +364,19 @@ struct ReciprocityDetailsVocabularyPresenter {
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
-    private func customRangeText(profile: ReciprocityProfile) -> String? {
+    /// Two-line Range wording for the custom-profile Details
+    /// section. Returns each line as a standalone fact so the view
+    /// can either join them with a newline (Details Range row) or
+    /// append them directly to a wider provenance summary
+    /// (`customProvenanceText`). Empty when no formula or threshold
+    /// rule supplies a no-correction boundary.
+    ///
+    /// Wording:
+    /// - `No correction through 1s`
+    /// - `Source range through 4m`  (finite source range), or
+    /// - `Source range unlimited`   (formula extrapolates upward
+    ///   without bound)
+    func customRangeLines(profile: ReciprocityProfile) -> [String] {
         // The shared formula carries the no-correction and
         // source-range boundaries on itself. Prefer the formula's
         // fields; fall back to a threshold rule only when one is
@@ -351,16 +391,20 @@ struct ReciprocityDetailsVocabularyPresenter {
             return nil
         }.first
         let noCorrection = formulaRule?.formula.noCorrectionThroughSeconds ?? thresholdMax
-        let sourceRangeThrough = formulaRule?.formula.sourceRangeThroughSeconds
+        guard let noCorrection else { return [] }
 
-        var segments: [String] = []
-        if let noCorrection {
-            segments.append("no correction up to \(Self.formatSeconds(noCorrection))")
+        var lines: [String] = []
+        lines.append("No correction through \(Self.formatSeconds(noCorrection))")
+        if let sourceRangeThrough = formulaRule?.formula.sourceRangeThroughSeconds {
+            lines.append("Source range through \(Self.formatSeconds(sourceRangeThrough))")
+        } else if formulaRule != nil {
+            // Formula profiles without a finite source range
+            // extrapolate without bound — the Details surface
+            // should still surface this fact so the user reads the
+            // confidence boundary rather than its absence.
+            lines.append("Source range unlimited")
         }
-        if let sourceRangeThrough {
-            segments.append("source range through \(Self.formatSeconds(sourceRangeThrough))")
-        }
-        return segments.isEmpty ? nil : segments.joined(separator: "; ")
+        return lines
     }
 
     private static func formatSeconds(_ seconds: Double) -> String {

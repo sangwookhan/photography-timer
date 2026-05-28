@@ -151,9 +151,69 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         XCTAssertEqual(displayState.badgeText, presenter.badgeText(for: bindingState))
         XCTAssertEqual(
             displayState.tone,
-            presenter.tone(for: bindingState.presentation.badgeStyle)
+            presenter.tone(for: bindingState)
         )
         XCTAssertTrue(displayState.showsInfoAffordance)
+    }
+
+    // MARK: - userDefined wording / tone overrides
+
+    func testUserDefinedFormulaBadgeReadsCustomFormula() {
+        let bindingState = makeUserDefinedBindingState(meteredSeconds: 30)
+        XCTAssertEqual(presenter.badgeText(for: bindingState), "Custom formula")
+    }
+
+    func testUserDefinedFormulaInRange_useMeasuredTone_notCaution() {
+        // A custom user-defined formula in its normal calculation
+        // range must not paint the badge orange — caution tone
+        // belongs to actual confidence/status states like Beyond
+        // source range. PTIMER-84 explicitly softens the tone for
+        // this case to `.measured` (blue) so the photographer does
+        // not read every custom profile as a warning.
+        let bindingState = makeUserDefinedBindingState(meteredSeconds: 30)
+        XCTAssertEqual(bindingState.presentation.category, .formulaDerived)
+        XCTAssertEqual(presenter.tone(for: bindingState), .measured)
+    }
+
+    private func makeUserDefinedBindingState(meteredSeconds: Double) -> FilmModeReciprocityBindingState {
+        let formula = ReciprocityFormula(
+            exponent: 1.30,
+            noCorrectionThroughSeconds: 1
+        )
+        let profile = ReciprocityProfile(
+            id: "user-defined",
+            name: "Custom profile",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                confidence: .unknown,
+                publisher: ""
+            ),
+            rules: [.formula(FormulaReciprocityRule(formula: formula))]
+        )
+        let film = FilmIdentity(
+            id: "user-film",
+            kind: .custom,
+            canonicalStockName: "Test Custom",
+            manufacturer: nil,
+            brandLabel: nil,
+            aliases: [],
+            iso: 100,
+            productionStatus: .unknown,
+            profiles: [profile],
+            userMetadata: nil
+        )
+        let model = ReciprocityModel()
+        let policyResult = model.evaluate(
+            profile: profile,
+            meteredExposureSeconds: meteredSeconds
+        )
+        return FilmModeReciprocityBindingState(
+            film: film,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
     }
 
     // MARK: - Helpers

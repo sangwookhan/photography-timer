@@ -105,7 +105,7 @@ final class CustomFilmStabilizationGuardTests: XCTestCase {
             noCorrectionThroughText: "1",
             validThroughText: "100"
         )
-        let rows = CustomFilmEditorPreviewPresenter.rows(form: form)
+        let rows = CustomFilmEditorPreviewPresenter.rows(form: form, samples: [8])
         guard let eight = rows.first(where: { $0.meteredSeconds == 8 }) else {
             return XCTFail("Expected an 8s sample row")
         }

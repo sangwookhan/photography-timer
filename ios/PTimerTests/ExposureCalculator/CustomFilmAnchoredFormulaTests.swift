@@ -126,7 +126,8 @@ final class CustomFilmAnchoredFormulaTests: XCTestCase {
             validThroughText: ""
         )
         // At Tm = 8s: Tc = 0.1 · (8 / 0.1)^1.0966 ≈ 0.1 · 80^1.0966 ≈ 12.66s.
-        guard let row = CustomFilmEditorPreviewPresenter.rows(form: form)
+        guard let row = CustomFilmEditorPreviewPresenter
+            .rows(form: form, samples: [8])
             .first(where: { $0.meteredSeconds == 8 }) else {
             return XCTFail("Expected 8s row")
         }
@@ -155,8 +156,11 @@ final class CustomFilmAnchoredFormulaTests: XCTestCase {
             noCorrectionThroughText: "1",
             validThroughText: "30"
         )
-        let rows = CustomFilmEditorPreviewPresenter.rows(form: form)
-        // Samples past 30s (60s, 120s, 300s) become beyond-valid.
+        let rows = CustomFilmEditorPreviewPresenter.rows(
+            form: form,
+            samples: [10, 60, 300]
+        )
+        // Samples past 30s (60s, 300s) become beyond-valid.
         XCTAssertTrue(rows.contains { $0.meteredSeconds == 60 && $0.status == .beyondSourceRange })
         XCTAssertTrue(rows.contains { $0.meteredSeconds == 300 && $0.status == .beyondSourceRange })
     }

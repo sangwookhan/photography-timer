@@ -165,6 +165,8 @@ For a metered exposure `t`, the policy layer shall evaluate the film's profile i
 
 The `unsafeShorteningFormula` handoff in step 1 is the universal **correction invariant**: a corrected exposure shorter than the metered value is replaced by the identity. A reciprocity correction can never shorten the adjusted shutter; the safety net keeps that guarantee even when a formula's curve bleeds across its no-correction boundary.
 
+User-defined custom profiles ([DomainSchema Spec](DomainSchema.md) §13.4) flow through the same evaluation order, the same shared `ReciprocityFormula` value, and the same routing table above — `formulaDerived` inside the source range, `unsupportedOutOfPolicyRange` carrying a numeric continuation past `sourceRangeThroughSeconds`, `officialThresholdNoCorrection` at or below `noCorrectionThroughSeconds`, and `unsafeShorteningFormula` short-circuited to the identity. The calculation policy does not distinguish a user-defined profile from a preset formula profile at evaluation time; the difference is carried in `sourceAuthorityImpact` so presentation can keep user-defined data visually distinct from manufacturer-published data without altering the math.
+
 ### 3.3 Result shape and metadata
 
 Every reciprocity evaluation produces a result that takes one of three mutually-exclusive forms:
@@ -200,9 +202,9 @@ The reference panel surfaces the source data attached to a profile. Its presenta
 The presentation layer maps each result to one of four confidence categories:
 
 - **No correction** — basis = `officialThresholdNoCorrection`. The corrected exposure equals the metered exposure. User-facing label: `No correction`.
-- **Formula-derived** — basis = `formulaDerived`. The result is anchored on the active calculation curve. User-facing label: `Formula-derived`.
+- **Formula-derived** — basis = `formulaDerived`. The result is anchored on the active calculation curve. User-facing label: `Formula-derived` for preset profiles; `Custom formula` when the active profile is user-defined ([DomainSchema Spec](DomainSchema.md) §13.4), so a normal custom-profile result reads as a method/authority statement rather than the warning copy reserved for converted formula profiles.
 - **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. The UI shall show calm explanatory text in place of a number; it shall not fabricate a value.
-- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on whether a numeric formula prediction outside the supported range is available: `Beyond source range` for converted formula profiles (formula rule with sourceEvidence) outside the published source range, otherwise `Outside guidance` for a numeric continuation, or `No corrected value` when no value at all is available.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on the active profile and whether a numeric formula prediction outside the supported range is available: `Beyond source range` for converted preset formula profiles (formula rule with sourceEvidence) and for user-defined custom formula profiles past their `sourceRangeThroughSeconds`; `Outside guidance` for a numeric continuation that is neither; `No corrected value` when no value at all is available.
 
 The category and badge wording shall not surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary status / badge text on launch preset reciprocity presentation; those terms encoded the legacy table model and are not part of the current vocabulary.
 
@@ -264,7 +266,7 @@ These are unresolved or partially specified. They are recorded so the system doe
 - **Aperture and ISO** as exposure variables are intent-level (wiki 3964929) but not part of the current release. The Fixed/Derived state machine, the multi-variable linkage rules, and the reverse calculation across more than one variable are deferred.
 - **Multi-derived ceiling above two.** Wiki 3964929 reserves the option to extend; no decision is recorded.
 - **Outside-source-range prediction caps.** A formula with `sourceRangeThroughSeconds` keeps producing a numeric continuation past the boundary (the boundary is a source/fitting confidence marker, not a hard stop). Whether a profile-independent ceiling should cap how far that prediction extends is open.
-- **User-defined film schema.** Wiki 15138817 lists this as a validation requirement; the data model and UX are not specified. A future custom-table input is also outside the launch preset scope and would need its own feature design.
+- **User-defined table input.** User-defined *formula* profiles are implemented and evaluated through the shared guarded formula path described in §3.2 ([DomainSchema Spec](DomainSchema.md) §13.4). A future user-defined *table* workflow — multi-row reference tables and point fitting as a custom calculation model — is outside the launch preset scope and would need its own feature design.
 - **Multi-profile films.** Some films may have multiple official profiles (different developers, push/pull). Selection rules are not yet defined; the current launch policy ships one primary profile per film identity.
 - **First-class color / development policy.** Profiles record these as source-evidence adjustments (e.g. Velvia 50 `5M`, Tri-X 400 `-10% development`) but the spec does not yet define how the calculator promotes them beyond display.
 

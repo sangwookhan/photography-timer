@@ -37,9 +37,9 @@ Above the variable section sits a film row that conveys current workflow mode:
 - **No film selected (digital workflow)** — the row presents an empty-state label and a "Choose Film" affordance.
 - **Film selected (film workflow)** — the row presents the selected film's canonical name plus brand, a "Change" affordance, and a "Clear" affordance.
 
-When a film is selected, the row shall also carry an **explicit profile-authority subtitle** matching the active reciprocity profile's authority: **"Official guidance"** for an official-authority profile, **"Unofficial practical"** for an unofficial-authority profile. The label shall be present in both cases — there is no implicit "missing label means official" interpretation.
+When a film is selected, the row shall also carry an **explicit profile-authority subtitle** matching the active reciprocity profile's authority: **"Official guidance"** for an official-authority profile, **"Unofficial practical"** for an unofficial-authority profile, **"Custom"** for a user-defined custom profile. The label shall be present for every supported authority — there is no implicit "missing label means official" interpretation.
 
-The launch catalog ships only `authority = "official"` primary profiles ([DomainSchema Spec](DomainSchema.md) §13), so every shipped launch profile renders the **"Official guidance"** subtitle. Supplementary unofficial-practical profiles (DomainSchema §13.3) are bundled outside the launch catalog as secondary alternatives on a film identity; when one is the active profile, the subtitle reads **"Unofficial practical"**. `userDefined` and `unknown` authorities are reserved for post-launch flows and have no presentation contract yet, so the subtitle is omitted for them — the "always present" rule above applies only to the two shipping authorities.
+The launch catalog ships only `authority = "official"` primary profiles ([DomainSchema Spec](DomainSchema.md) §13), so every shipped launch profile renders the **"Official guidance"** subtitle. Supplementary unofficial-practical profiles (DomainSchema §13.3) are bundled outside the launch catalog as secondary alternatives on a film identity; when one is the active profile, the subtitle reads **"Unofficial practical"**. Photographer-authored custom profiles (DomainSchema §13.4) carry `authority = "userDefined"` and render the **"Custom"** subtitle so a user-defined entry never reads as manufacturer-backed at a glance. `unknown` authorities have no presentation contract; the subtitle is omitted for that case only.
 
 The "Clear" affordance shall remove the film selection without altering Base Shutter or ND. It shall not appear in the empty state.
 
@@ -129,12 +129,13 @@ A secondary affordance opens a **Reciprocity Details sheet** that shows referenc
 - shall render formulas in math-style typography;
 - shall keep selector and current-result visuals quieter than the main calculator.
 
-**Section order**: the sheet shall present sections in this order so the user can verify the active profile basis *before* relying on the result graph:
+**Section order**: the sheet shall present sections in this order so every profile (preset official, unofficial practical, user-defined custom) reads the same shape:
 
-1. **Profile** — active profile name plus an **Authority row** (Official / Unofficial / etc.) shown for *all* profiles, not only ambiguous ones.
-2. **Reference data** — the active formula expression, plus any manufacturer source-evidence rows ("Source reference" / "Guidance boundary" sub-sections), or the no-correction threshold + limited-guidance directive for limited-guidance profiles.
-3. **Graph** — the calculation curve plus source-evidence markers.
-4. **Sources** — provenance (publisher, citation, sourceVersion).
+1. **Profile header** — active profile name plus an **Authority subtitle** (Official guidance / Unofficial practical / Custom) shown for *all* profiles whose authority is one of the shipping cases, not only ambiguous ones.
+2. **Result card** — Adjusted Shutter, Corrected Exposure, and the reciprocity status / calculation basis for the active inputs.
+3. **Reciprocity Graph** — the calculation curve plus source-evidence markers when available.
+4. **Profile metadata** — for preset profiles, the active formula expression and any manufacturer source-evidence rows ("Source reference" / "Guidance boundary" sub-sections), or the no-correction threshold + limited-guidance directive for limited-guidance profiles; for user-defined custom profiles, a dedicated **"Custom profile"** card carries the photographer-supplied source kind, manufacturer / stock metadata, and reference URL when set. The custom-profile card shall not borrow manufacturer-published visual treatments and shall make clear the data came from a user-defined profile.
+5. **Sources** — provenance (publisher, citation, sourceVersion) when the active profile carries published source data. User-defined profiles do not synthesize a Sources section.
 
 **Sheet height**: the sheet shall open at a stable initial height regardless of profile shape (official quantified formula, official limited guidance, unofficial practical formula). The initial detent shall not vary with content.
 
@@ -242,6 +243,8 @@ The sheet does not include in-list edit, sort, or filter affordances; those are 
 
 The film selector supports the expanded launch preset catalog and presents preset films grouped visually by manufacturer. Each manufacturer renders as a **subtle grouped card** — a tinted rounded surface containing the manufacturer's films plus a header label — so the grouping reads as a real visual group rather than only a faint text divider between rows. The leading "No film" sentinel is rendered as a plain headerless row outside any card so it stays visually distinct from the preset groups and clears the current film selection on tap.
 
+Photographer-authored custom profiles ([DomainSchema Spec](DomainSchema.md) §13.4) are presented in their **own group, separate from the shipped manufacturer cards**, so a user-defined entry can never visually pose as a manufacturer-published row. Each custom row carries a visible **"Custom" text badge** alongside the canonical name — the user-defined treatment must not collapse into icon or color alone — and selection of a custom row applies it on the same terms as a preset selection. The same group surfaces a **discoverable create-custom-profile affordance** so authoring a new profile is reachable from the selector without a settings detour.
+
 The manufacturer label sits inside the card as a **subtle header pill** — a small tinted rounded label with a slightly stronger fill than the card surface itself, paired with near-primary text contrast so the label reads immediately. The pill is bold + uppercase + tracked so it remains visually subordinate to film rows by size, not by faded color. Group cards stay light overall: no per-manufacturer colors, no heavy decoration.
 
 Within a manufacturer group, films are ordered alphabetically by canonical stock name. Manufacturer order itself is alphabetical for now unless a later explicit product sort order is introduced.
@@ -267,7 +270,36 @@ Reopening the selector reveals the current selection. When the picker is present
 
 Selector row identities are stable and distinguish official from unofficial variants for the same film. An active unofficial selection lands on the unofficial row, not on the official row above it. The implementation requires that every selector row participates in the layout pass before the scroll is requested, so the view materializes its rows eagerly rather than lazily.
 
-### 4.2 Clear
+### 4.2 Custom profile editor
+
+The custom profile editor is a **formula-first** sheet for authoring, editing, and reviewing a user-defined reciprocity profile. The editor renders the active formula as a single symbolic line
+
+$$T_c = T_{c_0} \times (T_m / T_{m_0})^p + b$$
+
+and exposes each formula term as a **tappable token** in that line. Tapping a token opens a focused per-field input surface; the preview area underneath the formula renders the resulting curve, a representative Tm→Tc table, and the calculation basis so the photographer can see the effect of an edit without leaving the editor.
+
+The formula tokens map to the shared guarded formula fields ([DomainSchema Spec](DomainSchema.md) §5.2.1) as:
+
+- **Tc₀** — corrected exposure at the anchor (`coefficientSeconds`).
+- **Tm₀** — metered exposure at the anchor (`referenceMeteredTimeSeconds`).
+- **p** — curve exponent (`exponent`).
+- **b** — fixed offset added after the power term (`offsetSeconds`).
+
+A compact range/policy block sits beneath the formula tokens and exposes the two boundaries that bound the formula's behavior:
+
+- **No correction** — the inclusive upper bound of the no-correction band (`noCorrectionThroughSeconds`). Tm at or below this value returns the identity.
+- **Source data** — the inclusive upper bound of the source / fitting confidence range (`sourceRangeThroughSeconds`). Results past this value present as **Beyond source range**; calculation continues past the boundary.
+
+`No correction` and `Source data` are **range/policy controls**, not formula terms — they bound the formula's domain rather than appearing inside the equation.
+
+The editor exposes two recovery affordances in the formula card:
+
+- **Reset** — replaces the formula fields and range/policy controls with neutral starter values. Available in both the New and Edit flows.
+- **Revert Changes** — restores the formula and range/policy values to the snapshot the editor was opened with. Available only in the Edit flow, where an opening snapshot exists to revert to.
+
+**Invalid formula presentation.** When a formula state violates a parameter contract (for example, a non-positive Tc₀, a missing exponent, or a `No correction` value above `Source data`), the editor shall surface an inline explanation of the violated constraint on the offending field and shall suppress misleading preview output for that state. The editor shall not render a numeric curve, table, or status preview that suggests the invalid state would produce a usable correction.
+
+### 4.3 Clear
 
 The "Clear" affordance lives in the header / mode strip on the calculator screen, not in the picker sheet. Clearing is a separate operation.
 

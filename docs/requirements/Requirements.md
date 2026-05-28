@@ -192,6 +192,12 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-2.6** Reciprocity evaluation shall be deterministic — the same profile and metered value shall always produce the same result form, corrected value, and status indication. (NFR-D.1)
 - **FR-2.7** The user shall reach the film selection through a dedicated, dismissible surface rather than an inline dropdown that competes with the calculator for screen room. (Scenario 2)
 - **FR-2.8** Reciprocity coverage shall not be limited to films with a quantified formula. Threshold-only and limited-guidance published guidance are first-class scope rather than lesser fallbacks, and the domain shall reserve capacity for future unofficial or user-defined entries. (Scenario 2 boundary; complements FR-2.2)
+- **FR-2.9** The user shall be able to author a **custom reciprocity formula profile** through a formula-first editor that exposes the four formula terms (corrected exposure at the anchor, metered exposure at the anchor, curve exponent, fixed offset) and the two range/policy boundaries (the no-correction upper bound and the source / confidence upper bound). A custom profile shall use the same shared guarded formula evaluation path as a preset formula profile. (Persona 1.2)
+- **FR-2.10** The user shall be able to **save, reuse, select, edit, and delete** custom reciprocity profiles. A saved custom profile shall survive an app restart and shall be selectable from the same film picker as the preset catalog, presented in its own group so it cannot be mistaken for a manufacturer-published entry. (Persona 1.2; Scenario 2)
+- **FR-2.11** A custom profile selected on the calculator shall drive the Corrected Exposure on the same terms as a preset profile, and the **Start Timer** affordance on the Corrected Exposure row shall be available whenever the custom-profile result is quantified or carries a numeric formula continuation past the source range. (Persona 1.2; Scenarios 2, 3; extends FR-2.5)
+- **FR-2.12** The editor shall **reject or safely present** invalid formula input — for example a non-positive anchor exposure, a missing exponent, or range boundaries in the wrong order — by surfacing an inline explanation of the violated constraint and suppressing preview output that would suggest the invalid state produces a usable correction. The system shall never persist a custom profile whose formula state violates the shared parameter contract. (Persona 1.2)
+- **FR-2.13** A custom profile's **photographer-supplied source metadata** (source kind, manufacturer / stock label, reference URL) shall be preserved verbatim and shall **never be presented as manufacturer authority**. The film row authority subtitle, the picker row badge, the Details surface, and any timer launched from a custom profile shall make clear that the result came from a user-defined profile. (Persona 1.2; complements FR-2.3)
+- **FR-2.14** Each timer started from a custom-profile calculation shall preserve enough custom-profile identity in its metadata for the photographer to recognise that the timer's duration came from a user-defined profile, even after the source custom profile is later edited or deleted. (Scenarios 3, 5; extends FR-4.6)
 
 ### 3.3 Timer lifecycle
 
@@ -307,7 +313,9 @@ The product intentionally excludes:
 - Timer queueing / chaining (start B when A finishes). Multi-timer is independent timers running in parallel, not a sequence.
 - Studio strobe / flash duration modes.
 - Video mode / cinematography.
-- Cross-device sync. Each phone keeps its own catalog and persisted state.
+- Cross-device sync. Each phone keeps its own catalog and persisted state. Remote sharing of user-authored custom reciprocity profiles is also out of scope; FR-2.9 covers local authoring only.
+- Table-derived custom reciprocity input. The current custom-profile workflow (FR-2.9 through FR-2.14) accepts a formula authored term-by-term; multi-row reference tables and point fitting as a custom calculation model are reserved for a future feature.
+- Broad film-inventory management beyond the picker's select / create / edit / delete affordances. Bulk import/export, tagging, and per-stock notes outside the custom-profile editor are not part of this release.
 - TCA / Redux-style global stores.
 
 ---
@@ -316,7 +324,7 @@ The product intentionally excludes:
 
 These are not requirements — they are points where the wiki / tickets reserve a future decision. Listed here so they don't drift into implicit requirements.
 
-- **User-defined films.** Wiki 15138817 lists user-defined films as a future validation target; the entry/edit UX, validation rules, and persistence boundary are not specified.
+- **User-defined table input.** User-defined *formula* profiles are implemented (FR-2.9 through FR-2.14). A future user-defined *table-derived* workflow — multi-row reference tables and point fitting as a custom calculation model — has no entry/edit UX, validation rules, or persistence boundary specified.
 - **Multi-profile per identity.** The domain reserves the ability to attach multiple profiles to one identity, but the launch dataset ships one profile per identity and the active-profile selection rule is not pinned.
 - **Color correction metadata.** Velvia-style "M color correction" is mentioned in wiki 15138817 but has no schema entry yet.
 - **Android port.** A future Android port is anticipated and shared test-fixture material is being curated for cross-platform parity, but the Android codebase itself is not in scope for the current release.

@@ -140,6 +140,7 @@
 		A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400FormulaProfileTests.swift */; };
 		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
 		A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaFormulaProfileTests.swift */; };
+		A00000000000000000000BA6 /* Fomapan100ModelReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */; };
 		A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000255 /* RolleiFormulaProfileTests.swift */; };
 		A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000257 /* AdoxFormulaProfileTests.swift */; };
 		A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */; };
@@ -401,6 +402,7 @@
 		A00000000000000000000249 /* TMax400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400FormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000253 /* FomaFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100ModelReviewTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000255 /* RolleiFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolleiFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000257 /* AdoxFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmDetailsGraphKindInvariantTests.swift; sourceTree = "<group>"; };
@@ -893,6 +895,7 @@
 				A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */,
 				A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */,
 				A00000000000000000000253 /* FomaFormulaProfileTests.swift */,
+				A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */,
 				A00000000000000000000255 /* RolleiFormulaProfileTests.swift */,
 				A00000000000000000000257 /* AdoxFormulaProfileTests.swift */,
 				A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */,
@@ -1230,6 +1233,7 @@
 				A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */,
 				A00000000000000000000602 /* UnofficialPracticalProfilesShapeTests.swift in Sources */,
 				A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */,
+				A00000000000000000000BA6 /* Fomapan100ModelReviewTests.swift in Sources */,
 				A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */,
 				A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */,
 				A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */,

@@ -17,6 +17,8 @@ struct FilmModeDetailsLegendPresenter {
                 return formulaRule.additionalAdjustments
             case let .limitedGuidance(rule):
                 return rule.adjustments
+            case let .tableInterpolation(rule):
+                return rule.additionalAdjustments
             }
         }
         let evidenceAdjustments = profile.sourceEvidence.flatMap(\.adjustments)

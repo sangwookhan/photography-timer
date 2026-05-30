@@ -27,11 +27,13 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         XCTAssertEqual(basis.calculationModel, .guardedFormula)
     }
 
-    func testBundledFomapan100ProfileDeclaresTableSourceWithGuardedFormulaCalculation() throws {
+    func testBundledFomapan100ProfileDeclaresTableSourceWithLogLogCalculation() throws {
+        // PTIMER-159: Fomapan's default is the official log-log table,
+        // not the app-derived guarded formula.
         let film = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
         let basis = try XCTUnwrap(film.profiles[0].modelBasis)
         XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .guardedFormula)
+        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
     }
 
     func testBundledEktar100ProfileDeclaresLimitedGuidanceSource() throws {

@@ -4,9 +4,32 @@ struct FilmModeDetailsPresenterInput {
     let bindingState: FilmModeReciprocityBindingState
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let filmModeExposureResultState: FilmModeExposureResultState?
+    /// Profile/model picker state owned by the view model. `nil` for
+    /// single-profile films so no picker renders (PTIMER-159).
+    let modelSelection: FilmModeDetailsModelSelectionState?
     let formatDuration: (Double) -> String
     let formatDurationCoarse: (Double) -> String
     let formatAxisDuration: (Double) -> String
+
+    /// `modelSelection` carries a default so call sites that predate
+    /// the PTIMER-159 picker (presenter unit tests) compile unchanged.
+    init(
+        bindingState: FilmModeReciprocityBindingState,
+        calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>,
+        filmModeExposureResultState: FilmModeExposureResultState?,
+        modelSelection: FilmModeDetailsModelSelectionState? = nil,
+        formatDuration: @escaping (Double) -> String,
+        formatDurationCoarse: @escaping (Double) -> String,
+        formatAxisDuration: @escaping (Double) -> String
+    ) {
+        self.bindingState = bindingState
+        self.calculationResult = calculationResult
+        self.filmModeExposureResultState = filmModeExposureResultState
+        self.modelSelection = modelSelection
+        self.formatDuration = formatDuration
+        self.formatDurationCoarse = formatDurationCoarse
+        self.formatAxisDuration = formatAxisDuration
+    }
 }
 
 /// Orchestration-level presenter for the Film Details sheet.
@@ -31,17 +54,23 @@ struct FilmModeDetailsPresenter {
     private let reference: FilmModeDetailsReferencePresenter
     private let graph: FilmModeDetailsGraphPresenter
     private let legend: FilmModeDetailsLegendPresenter
+    private let modelMetadata: ReciprocityModelMetadataPresenter
+    private let modelComparison: ReciprocityModelComparisonPresenter
 
     init(
         vocabulary: ReciprocityDetailsVocabularyPresenter = ReciprocityDetailsVocabularyPresenter(),
         reference: FilmModeDetailsReferencePresenter = FilmModeDetailsReferencePresenter(),
         graph: FilmModeDetailsGraphPresenter = FilmModeDetailsGraphPresenter(),
-        legend: FilmModeDetailsLegendPresenter = FilmModeDetailsLegendPresenter()
+        legend: FilmModeDetailsLegendPresenter = FilmModeDetailsLegendPresenter(),
+        modelMetadata: ReciprocityModelMetadataPresenter = ReciprocityModelMetadataPresenter(),
+        modelComparison: ReciprocityModelComparisonPresenter = ReciprocityModelComparisonPresenter()
     ) {
         self.vocabulary = vocabulary
         self.reference = reference
         self.graph = graph
         self.legend = legend
+        self.modelMetadata = modelMetadata
+        self.modelComparison = modelComparison
     }
 
     // MARK: - Public entry points
@@ -69,6 +98,7 @@ struct FilmModeDetailsPresenter {
             subtitle: filmIdentitySubtitle(for: bindingState),
             summary: detailsSummaryState(for: input),
             currentResult: currentResultState(for: input, graph: graphState),
+            modelSelection: input.modelSelection,
             sections: sections,
             graph: graphState,
             legend: legend.legendDisplayState(for: bindingState.profile)
@@ -122,6 +152,37 @@ struct FilmModeDetailsPresenter {
         ) {
             sections.insert(basisSection, at: 0)
         }
+
+        // App-derived / fitted comparison (PTIMER-159). Gated to
+        // explicitly app-derived alternate models (e.g. Fomapan 100's
+        // app-derived formula) so it never leaks onto official
+        // converted-formula profiles (Tri-X, Provia, …) that merely
+        // carry source anchors. Kept separate from the source-only
+        // reference sections and inserted ahead of "Sources" so that
+        // citation footer stays last.
+        if AlternateReciprocityModels.isAppDerivedModel(id: input.bindingState.profile.id),
+           let comparisonSection = modelComparison.comparisonSection(
+            for: input.bindingState.profile,
+            formatDuration: input.formatDuration
+        ) {
+            if let sourcesIndex = sections.firstIndex(where: { $0.title == "Sources" }) {
+                sections.insert(comparisonSection, at: sourcesIndex)
+            } else {
+                sections.append(comparisonSection)
+            }
+        }
+
+        // Active reciprocity model metadata (PTIMER-159). Inserted last
+        // at index 0 so it leads the post-graph section stack for every
+        // film, giving the user the active profile/model identity before
+        // any source or comparison detail.
+        sections.insert(
+            modelMetadata.metadataSection(
+                film: input.bindingState.film,
+                profile: input.bindingState.profile
+            ),
+            at: 0
+        )
         return sections
     }
 
@@ -243,18 +304,44 @@ struct FilmModeDetailsPresenter {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return nil }
 
-        if let label = vocabulary.subtitleAuthorityLabel(for: bindingState.profile.source.authority) {
-            return "\(trimmedName) · \(label)"
+        guard let label = subtitleModelLabel(for: bindingState.profile) else {
+            return trimmedName
         }
-        return trimmedName
+        return "\(trimmedName) · \(label)"
+    }
+
+    /// Concise, model-aware subtitle label (PTIMER-159). Non-default
+    /// alternate models (app-derived formula, unofficial practical) and
+    /// the log-log table model name themselves, so the app-derived model
+    /// never reads as plain "Official guidance". Every other catalog
+    /// profile keeps the concise authority label so single-model films
+    /// are not saddled with their verbose internal profile names.
+    private func subtitleModelLabel(for profile: ReciprocityProfile) -> String? {
+        if AlternateReciprocityModels.profile(withID: profile.id) != nil {
+            return profile.source.authority == .unofficial
+                ? "Unofficial practical"
+                : profile.name
+        }
+        if profile.effectiveModelBasis.calculationModel == .tableLogLogInterpolation {
+            return profile.name
+        }
+        return FilmSelectionModel.filmRowAuthorityLabel(forAuthority: profile.source.authority)
     }
 
     // MARK: - Helpers
 
+    /// Profiles that compute a quantified curve (a formula or a
+    /// log-log table) render the "Source reference" + graph sections;
+    /// limited-guidance profiles render the qualitative reference block.
     private func profileUsesFormula(_ profile: ReciprocityProfile) -> Bool {
         profile.rules.contains(where: {
-            if case .formula = $0 { return true }
-            return false
+            switch $0 {
+            case .formula, .tableInterpolation:
+                return true
+            case .threshold, .limitedGuidance:
+                return false
+            }
         })
     }
+
 }

@@ -173,11 +173,11 @@ struct CameraSlotSessionPersistenceController {
             if let preset = film.profiles.first(where: { $0.id == profileID }) {
                 return preset
             }
-            // The Unofficial-practical override surface lives outside
-            // `film.profiles`; reach into the catalog for those.
-            if let unofficial = UnofficialPracticalProfiles.profile(forFilmID: film.id),
-               unofficial.id == profileID {
-                return unofficial
+            // Alternate models (unofficial practical, app-derived
+            // formula) live outside `film.profiles`; reach into the
+            // registry to reconstruct a persisted override by id.
+            if let alternate = AlternateReciprocityModels.profile(withID: profileID) {
+                return alternate
             }
             return nil
         }()

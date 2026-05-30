@@ -40,14 +40,20 @@ struct ReciprocityDetailsVocabularyPresenter {
             if bindingState.profile.source.authority == .userDefined {
                 return "Custom formula"
             }
+            // The official log-log table model is table-derived, not a
+            // closed-form formula (PTIMER-159).
+            if bindingState.policyResult.metadata.basis == .tableLogLogDerived {
+                return "Table-derived"
+            }
             return "Formula-derived"
         case .limitedGuidance:
             return "No quantified prediction"
         case .unsupported:
-            // Converted formula profiles (formula + source evidence)
-            // surface as "Beyond source range" — the canonical wording
-            // shared with the Detail status line.
-            if bindingState.profile.isConvertedFormulaProfile
+            // Source-range-backed profiles (converted formula + source
+            // evidence, or the log-log table model) surface as "Beyond
+            // source range" — the canonical wording shared with the
+            // Detail status line.
+            if bindingState.profile.presentsBeyondSourceRange
                 || bindingState.profile.source.authority == .userDefined {
                 return "Beyond source range"
             }
@@ -107,10 +113,12 @@ struct ReciprocityDetailsVocabularyPresenter {
             return "No correction in the supported range"
         case .formulaDerived:
             return "Formula-based correction on the active curve"
+        case .tableLogLogDerived:
+            return "Log-log interpolation of the official table"
         case .limitedGuidanceNoQuantifiedPrediction:
             return "Beyond published no-correction range"
         case .unsupportedOutOfPolicyRange:
-            return bindingState.profile.isConvertedFormulaProfile
+            return bindingState.profile.presentsBeyondSourceRange
                 ? "Beyond source range"
                 : "Outside supported reciprocity range"
         }
@@ -142,6 +150,9 @@ struct ReciprocityDetailsVocabularyPresenter {
         switch bindingState.presentation.category {
         case .unsupported:
             if bindingState.policyResult.correctedExposureSeconds != nil {
+                if bindingState.profile.usesTableInterpolation {
+                    return "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+                }
                 if bindingState.profile.isConvertedFormulaProfile {
                     return "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
                 }
@@ -171,15 +182,6 @@ struct ReciprocityDetailsVocabularyPresenter {
     }
 
     // MARK: - Subtitle authority label
-
-    /// Authority label rendered under the film name in the Details
-    /// subtitle. Delegates to `FilmSelectionModel.filmRowAuthorityLabel`
-    /// so the same wording appears on the main row and the Details
-    /// sheet — including the "Custom" label for
-    /// `.userDefined` authority.
-    func subtitleAuthorityLabel(for authority: ReciprocityAuthority) -> String? {
-        FilmSelectionModel.filmRowAuthorityLabel(forAuthority: authority)
-    }
 
     // MARK: - Status text
 

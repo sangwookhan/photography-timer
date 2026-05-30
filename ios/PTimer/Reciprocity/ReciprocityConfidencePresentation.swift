@@ -368,7 +368,10 @@ struct ReciprocityConfidencePresentationMapper {
         switch result.metadata.basis {
         case .officialThresholdNoCorrection:
             return .noCorrection(payload: payload)
-        case .formulaDerived:
+        case .formulaDerived, .tableLogLogDerived:
+            // Table log-log results reuse the measured/quantified
+            // presentation category; the honest "Table-derived" wording
+            // is applied in `shortLabel`.
             return .formulaDerived(payload: payload)
         case .limitedGuidanceNoQuantifiedPrediction:
             return .limitedGuidance(payload: payload)
@@ -410,9 +413,12 @@ struct ReciprocityConfidencePresentationMapper {
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
     ) -> ReciprocityConfidenceLevel {
         switch basis {
-        case .officialThresholdNoCorrection, .formulaDerived:
+        case .officialThresholdNoCorrection, .formulaDerived, .tableLogLogDerived:
             switch sourceAuthorityImpact {
             case .currentOfficial:
+                // A current-official table reproduces the published
+                // anchors exactly, so it earns high confidence (like a
+                // threshold), not the medium reserved for fitted formulas.
                 return basis == .formulaDerived ? .medium : .high
             case .archivalOfficial:
                 return .medium
@@ -469,6 +475,8 @@ struct ReciprocityConfidencePresentationMapper {
             return "Outside guidance"
         case .formulaDerived:
             return prefix.isEmpty ? "Formula-derived" : "\(prefix)formula"
+        case .tableLogLogDerived:
+            return prefix.isEmpty ? "Table-derived" : "\(prefix)table"
         }
     }
 
@@ -519,7 +527,10 @@ struct ReciprocityConfidencePresentationMapper {
             appendUnique(.limitedGuidanceContinuationOnly, to: &tokens)
         case .unsupportedOutOfPolicyRange:
             appendUnique(.unsupportedByPolicy, to: &tokens)
-        case .formulaDerived:
+        case .formulaDerived, .tableLogLogDerived:
+            // Reuse the formula-derived explanation token; table results
+            // always carry a policy note describing the log-log
+            // interpolation, so the note text (not this token) surfaces.
             appendUnique(.formulaDerived, to: &tokens)
         }
     }

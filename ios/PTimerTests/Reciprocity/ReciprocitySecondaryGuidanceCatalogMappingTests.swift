@@ -147,6 +147,8 @@ final class SecondaryGuidanceCatalogMappingTests: XCTestCase {
             return formula.additionalAdjustments
         case let .limitedGuidance(rule):
             return rule.adjustments
+        case let .tableInterpolation(rule):
+            return rule.additionalAdjustments
         }
     }
 }

@@ -296,9 +296,10 @@ final class ReciprocityModel {
         let isOutsideManufacturerGuidance = bindingState.presentation.category == .unsupported
 
         if let correctedExposureSeconds, correctedExposureSeconds > 0 {
-            let isConvertedFormulaProfile = bindingState.profile.isConvertedFormulaProfile
             let outsideGuidanceHint: String
-            if isConvertedFormulaProfile {
+            if bindingState.profile.usesTableInterpolation {
+                outsideGuidanceHint = "Starts a timer using a value extrapolated beyond the published source table"
+            } else if bindingState.profile.isConvertedFormulaProfile {
                 outsideGuidanceHint = "Starts a timer using a formula prediction beyond the manufacturer source range"
             } else {
                 outsideGuidanceHint = "Starts a timer using a formula prediction outside the supported range"

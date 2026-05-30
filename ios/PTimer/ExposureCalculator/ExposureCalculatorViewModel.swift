@@ -403,6 +403,12 @@ final class ExposureCalculatorViewModel: ObservableObject {
         }
 
         for film in sortedFilms {
+            // PTIMER-159: the main selector stays film-stock focused —
+            // one entry per stock. Films with more than one reciprocity
+            // profile/model (e.g. Portra 400 official + unofficial
+            // practical) expose that choice through the model selector
+            // (the main-screen segmented control, mirrored in Details),
+            // not as duplicate top-level rows.
             entries.append(FilmSelectorEntry(
                 id: film.id,
                 primaryText: film.canonicalStockName,
@@ -414,31 +420,16 @@ final class ExposureCalculatorViewModel: ObservableObject {
                     profileOverride: nil
                 )
             ))
-
-            if let unofficialProfile = UnofficialPracticalProfiles.profile(forFilmID: film.id) {
-                // Unofficial variant shares the canonical name; `supportState`
-                // drives the visible UNOFFICIAL badge next to the name.
-                entries.append(FilmSelectorEntry(
-                    id: unofficialProfile.id,
-                    primaryText: film.canonicalStockName,
-                    secondaryText: FilmSelectionModel.filmRowISOText(for: film),
-                    manufacturer: film.manufacturer,
-                    film: film,
-                    profileOverride: unofficialProfile,
-                    supportState: FilmSelectorSupportPresenter.makeSupportState(
-                        for: film,
-                        profileOverride: unofficialProfile
-                    )
-                ))
-            }
         }
 
         return entries
     }
 
     var selectedSelectorEntryID: String? {
-        guard let film = selectedPresetFilm else { return nil }
-        return filmSelectionModel.selectedProfileOverride?.id ?? film.id
+        // One row per film stock (PTIMER-159): an active profile/model
+        // override still highlights the single film-stock row, so the
+        // selector identity is the film id regardless of the override.
+        selectedPresetFilm?.id
     }
 
     /// Manufacturer-grouped view of `filmSelectorEntries` for the
@@ -564,6 +555,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 bindingState: bindingState,
                 calculationResult: calculationResult,
                 filmModeExposureResultState: filmModeExposureResultState,
+                modelSelection: filmDetailsModelSelection,
                 formatDuration: { [self] in formatDuration($0) },
                 formatDurationCoarse: { [self] in formatReciprocityDurationCoarse($0) },
                 formatAxisDuration: { [self] in formatReciprocityAxisDuration($0) }
@@ -593,6 +585,113 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func selectEntry(_ entry: FilmSelectorEntry) {
         filmSelectionModel.selectEntry(entry)
+    }
+
+    /// Switches the active reciprocity profile/model within the
+    /// currently selected film (PTIMER-159). The Details model picker
+    /// calls this; the film stays selected while the profile override
+    /// flips. Reuses the existing override plumbing — setting the
+    /// override on `filmSelectionModel` persists the calculator context
+    /// and, through the `$activeContext` subscription, refreshes the
+    /// derived binding state and the camera-slot session snapshot.
+    func selectProfileVariant(profileID: String) {
+        guard let film = selectedPresetFilm else { return }
+        if let alternate = AlternateReciprocityModels
+            .alternates(forFilmID: film.id)
+            .first(where: { $0.id == profileID }) {
+            filmSelectionModel.selectProfileOverride(alternate)
+        } else {
+            // Any other id resolves to the film's primary (catalog)
+            // profile, cleared back to the no-override default.
+            filmSelectionModel.selectProfileOverride(nil)
+        }
+    }
+
+    /// Profile/model picker state for Reciprocity Details. `nil` for a
+    /// film stock that exposes a single profile/model so single-profile
+    /// films stay frictionless (no picker). The active option follows
+    /// the current override, defaulting to the primary profile.
+    var filmDetailsModelSelection: FilmModeDetailsModelSelectionState? {
+        guard let film = selectedPresetFilm else { return nil }
+
+        var profiles: [ReciprocityProfile] = []
+        if let primary = film.profiles.first {
+            profiles.append(primary)
+        }
+        profiles.append(contentsOf: AlternateReciprocityModels.alternates(forFilmID: film.id))
+
+        guard profiles.count > 1 else { return nil }
+
+        let options = profiles.map {
+            FilmModeDetailsModelOption(
+                id: $0.id,
+                name: $0.name,
+                selectorLabel: Self.modelSelectorLabel(for: $0)
+            )
+        }
+        let activeID = (filmSelectionModel.selectedProfileOverride ?? film.profiles.first)?.id ?? ""
+        return FilmModeDetailsModelSelectionState(options: options, activeOptionID: activeID)
+    }
+
+    /// Short, non-misleading label for the segmented model selectors,
+    /// where full catalog names ("Official threshold guidance",
+    /// "Unofficial practical approximation") would truncate (PTIMER-159).
+    /// An explicit `profile.selectorLabel` wins when present (so a future
+    /// source-named model like "Ohzart" reads its own name); otherwise a
+    /// heuristic label is derived from authority / calculation.
+    /// `internal` (not `private`) so the fallback/preference is unit-testable.
+    static func modelSelectorLabel(for profile: ReciprocityProfile) -> String {
+        if let explicit = profile.selectorLabel, !explicit.isEmpty {
+            return explicit
+        }
+        if AlternateReciprocityModels.isAppDerivedModel(id: profile.id) {
+            return "App formula"
+        }
+        switch profile.source.authority {
+        case .unofficial:
+            return "Unofficial"
+        case .userDefined:
+            return "Custom"
+        case .unknown:
+            return "Model"
+        case .official:
+            return profile.effectiveModelBasis.calculationModel == .tableLogLogInterpolation
+                ? "Official table"
+                : "Official"
+        }
+    }
+
+    /// Compact two-line active-model summary for the main calculation
+    /// screen (PTIMER-159): model name + calculation method. Present
+    /// whenever a film is selected, independent of the current result.
+    var activeFilmModelSummary: FilmModeActiveModelSummary? {
+        guard let film = selectedPresetFilm,
+              let profile = filmSelectionModel.selectedProfileOverride ?? film.profiles.first else {
+            return nil
+        }
+        return FilmModeActiveModelSummary(
+            name: profile.name,
+            calculation: Self.calculationMethodShortLabel(
+                for: profile.effectiveModelBasis.calculationModel
+            )
+        )
+    }
+
+    private static func calculationMethodShortLabel(
+        for model: ReciprocityCalculationModel
+    ) -> String {
+        switch model {
+        case .tableLogLogInterpolation:
+            return "Log-log interpolation"
+        case .guardedFormula:
+            return "Guarded formula"
+        case .limitedGuidance:
+            return "Limited guidance"
+        case .unsupported:
+            return "Unsupported"
+        case .tableLookup:
+            return "Table lookup"
+        }
     }
 
     func selectPresetFilm(_ film: FilmIdentity) {

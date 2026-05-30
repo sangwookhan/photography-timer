@@ -27,29 +27,33 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
 
     private let films = LaunchPresetFilmCatalog.films
 
-    // MARK: - No table rule anywhere in the bundled catalog
+    // MARK: - Supported rule kinds in the bundled catalog
 
-    /// PTIMER-140's structural contract: the launch catalog contains
-    /// no table rules. The domain no longer carries a `.table` case;
-    /// this test confirms the JSON catalog cannot decode into anything
-    /// the evaluator would have to special-case, and additionally
-    /// guards future edits that might smuggle table-shaped data back in
-    /// via, for example, a per-row stop-delta block.
-    func testNoLaunchPresetProfileContainsATableRule() {
+    /// PTIMER-159 supersedes PTIMER-140's "no table rule" contract: the
+    /// launch catalog now carries the official log-log
+    /// `.tableInterpolation` rule (Fomapan 100). This test confirms the
+    /// catalog uses only rule kinds the evaluator implements, and that
+    /// the table rule is present where expected.
+    func testLaunchPresetProfilesUseOnlySupportedRuleKinds() throws {
         for film in films {
             for profile in film.profiles {
                 for rule in profile.rules {
                     switch rule {
-                    case .threshold, .formula, .limitedGuidance:
+                    case .threshold, .formula, .limitedGuidance, .tableInterpolation:
                         continue
                     }
                 }
             }
         }
-        // The switch above is exhaustive across the surviving rule
-        // kinds. The structural guarantee that there is no `.table`
-        // case is enforced by the compiler — this test fails to
-        // compile if a future commit adds one back.
+
+        // The deliberate introduction: Fomapan 100 ships the official
+        // table log-log model.
+        let fomapan = try XCTUnwrap(films.first { $0.canonicalStockName == "Fomapan 100 Classic" })
+        let usesTable = fomapan.profiles[0].rules.contains {
+            if case .tableInterpolation = $0 { return true }
+            return false
+        }
+        XCTAssertTrue(usesTable, "Fomapan 100 must ship the official table-interpolation rule (PTIMER-159).")
     }
 
     /// Every preset film must classify as exactly one of the two
@@ -170,6 +174,9 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
     enum ProfileShape: Equatable {
         case officialQuantifiedFormula
         case officialLimitedGuidance
+        /// PTIMER-159: official manufacturer table evaluated by log-log
+        /// interpolation (Fomapan 100).
+        case officialTableLogLog
 
         /// Classifies a launch-catalog profile against the two-shape
         /// allow-list (DomainSchema §13). Returns `nil` for any other
@@ -201,7 +208,14 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
                 if case .limitedGuidance = rule { return true }
                 return false
             }
+            let hasTableInterpolation = profile.rules.contains { rule in
+                if case .tableInterpolation = rule { return true }
+                return false
+            }
 
+            if hasTableInterpolation && !hasFormula && !hasThreshold && !hasLimitedGuidance {
+                return .officialTableLogLog
+            }
             if hasFormula && !hasThreshold && !hasLimitedGuidance {
                 return .officialQuantifiedFormula
             }

@@ -409,11 +409,49 @@ extension FilmModeDetailsGraphDisplayState {
     }
 }
 
+/// One selectable reciprocity profile/model option shown in the
+/// Details model picker (PTIMER-159). `id` is the profile id the view
+/// model resolves back to an active override.
+struct FilmModeDetailsModelOption: Equatable, Identifiable {
+    let id: String
+    /// Full model name, e.g. "Official FOMA table" / "App-derived
+    /// formula" / "Official threshold guidance". Used for subtitle,
+    /// summary, and accessibility — anywhere with room for clarity.
+    let name: String
+    /// Short label for the segmented selectors where horizontal space is
+    /// tight, e.g. "Official table" / "App formula" / "Official" /
+    /// "Unofficial". Never misleading — just a concise form of `name`.
+    let selectorLabel: String
+}
+
+/// Two-line active-model summary for the main calculation screen
+/// (PTIMER-159): the model name on the first line, the calculation
+/// method on the second.
+struct FilmModeActiveModelSummary: Equatable {
+    let name: String
+    let calculation: String
+}
+
+/// Drives the Details profile/model picker. Present only when a film
+/// stock exposes more than one reciprocity profile/model; `nil` keeps
+/// single-profile films frictionless (no picker rendered).
+struct FilmModeDetailsModelSelectionState: Equatable, Identifiable {
+    let options: [FilmModeDetailsModelOption]
+    let activeOptionID: String
+
+    /// Identity for `.sheet(item:)`. Folds in every option id plus the
+    /// active id so re-presenting after a switch refreshes the sheet.
+    var id: String {
+        (options.map(\.id) + [activeOptionID]).joined(separator: "|")
+    }
+}
+
 struct FilmModeDetailsDisplayState: Equatable, Identifiable {
     let title: String
     let subtitle: String?
     let summary: FilmModeDetailsSummaryState
     let currentResult: FilmModeDetailsCurrentResultState
+    let modelSelection: FilmModeDetailsModelSelectionState?
     let sections: [FilmModeDetailsSectionState]
     let graph: FilmModeDetailsGraphDisplayState?
     let legend: FilmModeDetailsLegendState?
@@ -423,6 +461,7 @@ struct FilmModeDetailsDisplayState: Equatable, Identifiable {
         subtitle: String? = nil,
         summary: FilmModeDetailsSummaryState,
         currentResult: FilmModeDetailsCurrentResultState,
+        modelSelection: FilmModeDetailsModelSelectionState? = nil,
         sections: [FilmModeDetailsSectionState],
         graph: FilmModeDetailsGraphDisplayState? = nil,
         legend: FilmModeDetailsLegendState? = nil
@@ -431,6 +470,7 @@ struct FilmModeDetailsDisplayState: Equatable, Identifiable {
         self.subtitle = subtitle
         self.summary = summary
         self.currentResult = currentResult
+        self.modelSelection = modelSelection
         self.sections = sections
         self.graph = graph
         self.legend = legend
@@ -449,6 +489,7 @@ struct FilmModeDetailsDisplayState: Equatable, Identifiable {
                 String(describing: currentResult.layout),
                 currentResult.adjustedShutter.valueText,
                 currentResult.correctedExposure.valueText,
+                modelSelection?.activeOptionID ?? "no-model-selection",
                 graphID,
                 legend?.lines.joined(separator: "|") ?? "no-legend",
             ] + sections.map(\.id)

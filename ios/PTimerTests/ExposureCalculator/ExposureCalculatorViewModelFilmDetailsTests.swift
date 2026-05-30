@@ -61,7 +61,11 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertEqual(details.currentResult.correctedExposure.valueText, "36s")
         XCTAssertNil(details.currentResult.correctedExposure.detailText)
         XCTAssertTrue(details.currentResult.correctedExposure.emphasizesValue)
+        // Tri-X 400 is an official converted-formula profile, not an
+        // app-derived model, so it shows no App-derived comparison
+        // (PTIMER-159 gate).
         XCTAssertEqual(details.sections.map(\.title), [
+            "Reciprocity model",
             "Source reference",
             "Sources",
         ])
@@ -246,10 +250,12 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
         XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-derived")
         XCTAssertEqual(resultState.reciprocityState.tone, .measured)
-        // Converted formula profiles lead with the Source reference
-        // section that pairs the threshold band with the published
-        // source rows.
-        XCTAssertEqual(details.sections.first?.title, "Source reference")
+        // Details lead with the active-model metadata section
+        // (PTIMER-159), followed by the converted-formula Source
+        // reference section that pairs the threshold band with the
+        // published source rows.
+        XCTAssertEqual(details.sections.first?.title, "Reciprocity model")
+        XCTAssertEqual(details.sections.dropFirst().first?.title, "Source reference")
         XCTAssertEqual(
             resultState.adjustedShutterAction.targetSeconds ?? 0,
             1,
@@ -304,7 +310,11 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         // formula expression now lives next to the graph.
         XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
         XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
-        XCTAssertEqual(details.sections.map(\.title), ["Sources"])
+        // HP5 Plus is a source-less manufacturer-formula profile: it
+        // leads with the active-model metadata (PTIMER-159) and keeps
+        // its Sources citation, with no source-evidence or comparison
+        // sections.
+        XCTAssertEqual(details.sections.map(\.title), ["Reciprocity model", "Sources"])
         let formula = try XCTUnwrap(details.graph?.formulaDisplayText)
         XCTAssertEqual(formula, "Tc = Tm^1.31")
         XCTAssertEqual(details.summary.badgeText, "Formula-derived")
@@ -429,7 +439,10 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertEqual(details.summary.summaryText, "Beyond source range")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "17:04")
         XCTAssertNotEqual(details.currentResult.correctedExposure.valueText, "No quantified prediction")
-        XCTAssertEqual(details.sections.map(\.title), ["Source reference", "Sources"])
+        XCTAssertEqual(
+            details.sections.map(\.title),
+            ["Reciprocity model", "Source reference", "Sources"]
+        )
     }
 
     @MainActor

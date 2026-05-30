@@ -110,6 +110,16 @@ struct ReciprocityProfile: Codable, Equatable {
     /// The runtime calculation policy does NOT read this field — it
     /// is descriptive catalog metadata, not a calculation discriminator.
     let modelBasis: ReciprocityProfileModelBasis?
+    /// Optional short label for the compact model selectors (PTIMER-159).
+    /// When present it is preferred over the heuristic label derived from
+    /// authority / calculation; source-named unofficial / community /
+    /// custom models (e.g. a future "Ohzart" practical table) should set
+    /// it so the segmented control reads the source name rather than a
+    /// generic "Unofficial". It is NOT a source title or URL — those stay
+    /// in `source` / the Sources section. Optional so every existing
+    /// catalog and custom profile decodes unchanged (Fomapan/Portra keep
+    /// their derived labels).
+    let selectorLabel: String?
 
     init(
         id: String,
@@ -119,7 +129,8 @@ struct ReciprocityProfile: Codable, Equatable {
         notes: [String] = [],
         userMetadata: UserEditableMetadata? = nil,
         sourceEvidence: [ReciprocitySourceEvidenceRow] = [],
-        modelBasis: ReciprocityProfileModelBasis? = nil
+        modelBasis: ReciprocityProfileModelBasis? = nil,
+        selectorLabel: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -129,6 +140,7 @@ struct ReciprocityProfile: Codable, Equatable {
         self.userMetadata = userMetadata
         self.sourceEvidence = sourceEvidence
         self.modelBasis = modelBasis
+        self.selectorLabel = selectorLabel
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -140,6 +152,7 @@ struct ReciprocityProfile: Codable, Equatable {
         case userMetadata
         case sourceEvidence
         case modelBasis
+        case selectorLabel
     }
 
     init(from decoder: Decoder) throws {
@@ -158,6 +171,7 @@ struct ReciprocityProfile: Codable, Equatable {
             ReciprocityProfileModelBasis.self,
             forKey: .modelBasis
         )
+        self.selectorLabel = try container.decodeIfPresent(String.self, forKey: .selectorLabel)
     }
 }
 
@@ -225,6 +239,23 @@ extension ReciprocityProfile {
         return hasFormulaRule && !sourceEvidence.isEmpty
     }
 
+    /// `true` when the profile evaluates via the log-log table model
+    /// (PTIMER-159).
+    var usesTableInterpolation: Bool {
+        rules.contains { rule in
+            if case .tableInterpolation = rule { return true }
+            return false
+        }
+    }
+
+    /// `true` for profiles that carry a published source-range boundary
+    /// they can exceed — converted formula profiles and table profiles.
+    /// Presentation reads "Beyond source range" for inputs past the
+    /// boundary on these profiles (and never on source-less profiles).
+    var presentsBeyondSourceRange: Bool {
+        isConvertedFormulaProfile || usesTableInterpolation
+    }
+
     /// PTIMER-163 vocabulary view of the profile. Returns the
     /// explicitly declared `modelBasis` when the catalog entry sets
     /// one; otherwise infers a conservative basis from the rules and
@@ -245,9 +276,15 @@ extension ReciprocityProfile {
             if case .limitedGuidance = rule { return true }
             return false
         }
+        let hasTableInterpolationRule = rules.contains { rule in
+            if case .tableInterpolation = rule { return true }
+            return false
+        }
 
         let calculationModel: ReciprocityCalculationModel
-        if hasFormulaRule {
+        if hasTableInterpolationRule {
+            calculationModel = .tableLogLogInterpolation
+        } else if hasFormulaRule {
             calculationModel = .guardedFormula
         } else if hasLimitedGuidanceRule {
             calculationModel = .limitedGuidance
@@ -262,7 +299,11 @@ extension ReciprocityProfile {
         case .thirdPartyPublication:
             sourceModel = .practicalCommunityGuidance
         case .manufacturerPublished, .manufacturerArchive:
-            if hasFormulaRule {
+            if hasTableInterpolationRule {
+                // A table-interpolation rule is, by construction, a
+                // manufacturer published table.
+                sourceModel = .manufacturerTable
+            } else if hasFormulaRule {
                 // A formula rule paired with manufacturer reference
                 // rows is a table-origin source converted to a
                 // derived guarded formula; a bare formula rule is a
@@ -341,11 +382,16 @@ enum ReciprocityCalculationModel: String, Codable, Equatable, CaseIterable {
     /// no-correction threshold — neither a quantified prediction nor
     /// limited guidance applies.
     case unsupported
-    /// Reserved placeholder for a future table-lookup / interpolation
-    /// calculation strategy. PTIMER-163 does NOT implement table
-    /// calculation; the launch catalog loader rejects this value so a
-    /// later ticket must enable it alongside the lookup implementation.
+    /// Reserved placeholder for a future discrete table-lookup
+    /// calculation strategy. PTIMER-163 did NOT implement it; the
+    /// launch catalog loader still rejects this value. Distinct from
+    /// `.tableLogLogInterpolation` below, which IS implemented.
     case tableLookup
+    /// PTIMER-159: official manufacturer table converted to a corrected
+    /// exposure by piecewise log-log interpolation between published
+    /// anchors (e.g. Fomapan 100's 1/10/100 sec rows). The user-facing
+    /// label is "Log-log table interpolation" — never a bare "lookup".
+    case tableLogLogInterpolation
 }
 
 /// Catalog-level vocabulary describing how reciprocity is sourced and
@@ -422,6 +468,7 @@ enum ReciprocityRule: Codable, Equatable {
     case threshold(ThresholdReciprocityRule)
     case formula(FormulaReciprocityRule)
     case limitedGuidance(LimitedGuidanceReciprocityRule)
+    case tableInterpolation(TableInterpolationReciprocityRule)
 
     var kind: ReciprocityRuleKind {
         switch self {
@@ -431,6 +478,8 @@ enum ReciprocityRule: Codable, Equatable {
             return .formula
         case .limitedGuidance:
             return .limitedGuidance
+        case .tableInterpolation:
+            return .tableInterpolation
         }
     }
 
@@ -439,6 +488,7 @@ enum ReciprocityRule: Codable, Equatable {
         case threshold
         case formula
         case limitedGuidance
+        case tableInterpolation
     }
 
     init(from decoder: Decoder) throws {
@@ -454,6 +504,10 @@ enum ReciprocityRule: Codable, Equatable {
             self = .limitedGuidance(
                 try container.decode(LimitedGuidanceReciprocityRule.self, forKey: .limitedGuidance)
             )
+        case .tableInterpolation:
+            self = .tableInterpolation(
+                try container.decode(TableInterpolationReciprocityRule.self, forKey: .tableInterpolation)
+            )
         }
     }
 
@@ -468,6 +522,8 @@ enum ReciprocityRule: Codable, Equatable {
             try container.encode(rule, forKey: .formula)
         case let .limitedGuidance(rule):
             try container.encode(rule, forKey: .limitedGuidance)
+        case let .tableInterpolation(rule):
+            try container.encode(rule, forKey: .tableInterpolation)
         }
     }
 }
@@ -476,6 +532,7 @@ enum ReciprocityRuleKind: String, Codable, Equatable {
     case threshold
     case formula
     case limitedGuidance
+    case tableInterpolation
 }
 
 struct ThresholdReciprocityRule: Codable, Equatable {
@@ -544,6 +601,75 @@ struct LimitedGuidanceReciprocityRule: Codable, Equatable {
         self.appliesWhenMetered = appliesWhenMetered
         self.adjustments = adjustments
         self.notes = notes
+    }
+}
+
+/// One published anchor in a manufacturer reciprocity table: a metered
+/// exposure mapped to its published corrected exposure (PTIMER-159).
+struct TableAnchor: Codable, Equatable {
+    let meteredSeconds: Double
+    let correctedSeconds: Double
+}
+
+/// PTIMER-159 calculation rule: convert a manufacturer reciprocity
+/// TABLE into a corrected exposure by piecewise log-log interpolation
+/// between published `anchors` (e.g. Fomapan 100's 1s→2s, 10s→80s,
+/// 100s→1600s). Distinct from `FormulaReciprocityRule`, which evaluates
+/// a closed-form curve. The evaluator (`evaluate(meteredExposureSeconds:)`)
+/// lives in `TableInterpolationModel.swift`.
+///
+/// - `noCorrectionThroughSeconds`: at or below this metered exposure the
+///   rule returns `Tc = Tm` (identity), matching the table's lower band.
+/// - `anchors`: ascending, published metered→corrected points. Interpolation
+///   passes through them exactly.
+/// - `sourceRangeThroughSeconds`: the published table's upper bound (the
+///   last anchor's metered value). Inputs above it still compute a value by
+///   extrapolating the last log-log segment, classified beyond source range.
+struct TableInterpolationReciprocityRule: Codable, Equatable {
+    let anchors: [TableAnchor]
+    let additionalAdjustments: [ReciprocityAdjustment]
+    let notes: [String]
+    let noCorrectionThroughSeconds: Double
+    let sourceRangeThroughSeconds: Double
+
+    init(
+        anchors: [TableAnchor],
+        additionalAdjustments: [ReciprocityAdjustment] = [],
+        notes: [String] = [],
+        noCorrectionThroughSeconds: Double,
+        sourceRangeThroughSeconds: Double
+    ) {
+        self.anchors = anchors
+        self.additionalAdjustments = additionalAdjustments
+        self.notes = notes
+        self.noCorrectionThroughSeconds = noCorrectionThroughSeconds
+        self.sourceRangeThroughSeconds = sourceRangeThroughSeconds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case anchors
+        case additionalAdjustments
+        case notes
+        case noCorrectionThroughSeconds
+        case sourceRangeThroughSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.anchors = try container.decode([TableAnchor].self, forKey: .anchors)
+        self.additionalAdjustments = try container.decodeIfPresent(
+            [ReciprocityAdjustment].self,
+            forKey: .additionalAdjustments
+        ) ?? []
+        self.notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+        self.noCorrectionThroughSeconds = try container.decode(
+            Double.self,
+            forKey: .noCorrectionThroughSeconds
+        )
+        self.sourceRangeThroughSeconds = try container.decode(
+            Double.self,
+            forKey: .sourceRangeThroughSeconds
+        )
     }
 }
 

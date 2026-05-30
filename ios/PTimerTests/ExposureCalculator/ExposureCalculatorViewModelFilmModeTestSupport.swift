@@ -20,6 +20,36 @@ extension XCTestCase {
         return viewModel
     }
 
+    /// PTIMER-159: the unofficial Portra 400 practical profile is no
+    /// longer a duplicate top-level film-selector entry — profile/model
+    /// selection moved into Reciprocity Details. Tests that need the
+    /// unofficial profile active reconstruct the selector entry the
+    /// catalog used to vend and select it; selecting that entry sets the
+    /// same `selectedProfileOverride` the Details model picker now sets,
+    /// so the resulting calculator/Details state is identical.
+    @MainActor
+    func unofficialPortra400SelectorEntry(
+        in viewModel: ExposureCalculatorViewModel
+    ) throws -> FilmSelectorEntry {
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" },
+            "Portra 400 must remain in the launch catalog."
+        )
+        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
+        return FilmSelectorEntry(
+            id: profile.id,
+            primaryText: film.canonicalStockName,
+            secondaryText: FilmSelectionModel.filmRowISOText(for: film),
+            manufacturer: film.manufacturer,
+            film: film,
+            profileOverride: profile,
+            supportState: FilmSelectorSupportPresenter.makeSupportState(
+                for: film,
+                profileOverride: profile
+            )
+        )
+    }
+
     /// Collects every user-visible text fragment from the Details
     /// display state so the assertions can scan for forbidden /
     /// required wording without coupling to a single field.

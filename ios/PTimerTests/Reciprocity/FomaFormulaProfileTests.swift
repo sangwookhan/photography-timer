@@ -38,18 +38,11 @@ final class FomaFormulaProfileTests: XCTestCase {
         let stopTolerancePerRow: Double
     }
 
-    private let foma100 = FomaFit(
-        canonicalStockName: "Fomapan 100 Classic",
-        coefficient: 2.2457,
-        exponent: 1.4515,
-        publishedRows: [
-            FomaPublishedRow(metered: 1, multiplier: 2, corrected: 2),
-            FomaPublishedRow(metered: 10, multiplier: 8, corrected: 80),
-            FomaPublishedRow(metered: 100, multiplier: 16, corrected: 1600),
-        ],
-        stopTolerancePerRow: 0.35
-    )
-
+    // PTIMER-159: Fomapan 100 Classic migrated to the official log-log
+    // table model and is no longer a formula profile here. Its table
+    // behavior is covered by Fomapan100TableModelTests; its retired
+    // app-derived formula by Fomapan100ModelReviewTests. Fomapan 200/400
+    // remain formula profiles (out of PTIMER-159 scope).
     private let foma200 = FomaFit(
         canonicalStockName: "Fomapan 200 Creative",
         coefficient: 3.2107,
@@ -74,7 +67,7 @@ final class FomaFormulaProfileTests: XCTestCase {
         stopTolerancePerRow: 0.6
     )
 
-    private var allFits: [FomaFit] { [foma100, foma200, foma400] }
+    private var allFits: [FomaFit] { [foma200, foma400] }
 
     // MARK: - Threshold boundary (inclusive at 1/2 sec)
 

@@ -100,6 +100,15 @@ final class FilmSelectionModel: ObservableObject {
         persistContext()
     }
 
+    /// Switches the profile override on the active film without
+    /// changing the selected film (PTIMER-159 Details model picker).
+    /// Persists the combined snapshot so a relaunch restores the
+    /// chosen profile/model the same way `selectEntry` does.
+    func selectProfileOverride(_ profileOverride: ReciprocityProfile?) {
+        activeContext.selectedProfileOverride = profileOverride
+        persistContext()
+    }
+
     /// Selects a preset film without overriding the profile choice.
     func selectPresetFilm(_ film: FilmIdentity) {
         activeContext.selectedPresetFilm = film

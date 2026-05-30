@@ -5,6 +5,11 @@ enum ReciprocityCalculationBasis: String, Codable, Equatable {
     case limitedGuidanceNoQuantifiedPrediction
     case unsupportedOutOfPolicyRange
     case formulaDerived
+    /// PTIMER-159: corrected exposure produced by log-log interpolation
+    /// of a manufacturer reciprocity table (e.g. Fomapan 100). Distinct
+    /// from `.formulaDerived` so presentation can label it honestly as
+    /// table-derived rather than formula-derived.
+    case tableLogLogDerived
 }
 
 enum ReciprocitySourceAuthorityImpact: String, Codable, Equatable {
@@ -186,7 +191,7 @@ enum ReciprocityResult: Equatable {
             return "limitedGuidanceNoQuantifiedPrediction must not be carried by a quantified payload."
         case .unsupportedOutOfPolicyRange:
             return "unsupportedOutOfPolicyRange must not be carried by a quantified payload."
-        case .formulaDerived:
+        case .formulaDerived, .tableLogLogDerived:
             break
         }
 
@@ -468,6 +473,19 @@ private extension ReciprocityResultMetadata {
         )
     }
 
+    static func tableLogLog(
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        Self(
+            basis: .tableLogLogDerived,
+            sourceAuthorityImpact: sourceAuthorityImpact,
+            rangeStatus: .withinStatedRange,
+            warningLevel: warningLevel(for: .tableLogLogDerived, sourceAuthorityImpact: sourceAuthorityImpact),
+            notes: notes
+        )
+    }
+
     private static func warningLevel(
         for basis: ReciprocityCalculationBasis,
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
@@ -491,7 +509,7 @@ private extension ReciprocityResultMetadata {
             }
         case .unsupportedOutOfPolicyRange:
             return .strongWarning
-        case .formulaDerived:
+        case .formulaDerived, .tableLogLogDerived:
             switch sourceAuthorityImpact {
             case .currentOfficial:
                 return .none
@@ -573,6 +591,24 @@ private extension ReciprocityResult {
             )
         )
     }
+
+    static func tableLogLog(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double,
+        sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
+        notes: [ReciprocityPolicyNote]
+    ) -> Self {
+        .quantified(
+            QuantifiedPayload(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                metadata: .tableLogLog(
+                    sourceAuthorityImpact: sourceAuthorityImpact,
+                    notes: notes
+                )
+            )
+        )
+    }
 }
 
 struct ReciprocityCalculationPolicyEvaluator {
@@ -618,12 +654,26 @@ struct ReciprocityCalculationPolicyEvaluator {
                     return nil
                 }
                 return rule
+            },
+            tableInterpolationRules: profile.rules.compactMap {
+                guard case let .tableInterpolation(rule) = $0 else {
+                    return nil
+                }
+                return rule
             }
         )
 
         if let formulaRule = selector.formulaRules.first {
             return evaluateFormulaRule(
                 rule: formulaRule,
+                meteredExposureSeconds: meteredExposureSeconds,
+                assembler: assembler
+            )
+        }
+
+        if let tableRule = selector.tableInterpolationRules.first {
+            return evaluateTableInterpolationRule(
+                rule: tableRule,
                 meteredExposureSeconds: meteredExposureSeconds,
                 assembler: assembler
             )
@@ -732,6 +782,55 @@ struct ReciprocityCalculationPolicyEvaluator {
         }
     }
 
+    private func evaluateTableInterpolationRule(
+        rule: TableInterpolationReciprocityRule,
+        meteredExposureSeconds: Double,
+        assembler: ResultAssembler
+    ) -> ReciprocityResult {
+        switch rule.evaluate(meteredExposureSeconds: meteredExposureSeconds) {
+        case .noCorrection:
+            // Reuse the no-correction shape so the badge / identity
+            // graph point read the same as every other no-correction path.
+            return assembler.invariantClampedNoCorrection(
+                meteredExposureSeconds: meteredExposureSeconds
+            )
+        case let .withinSourceRange(corrected):
+            return assembler.tableLogLog(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: corrected,
+                rule: rule
+            )
+        case let .beyondSourceRange(corrected):
+            // Past the published table: keep a computed value, presented
+            // as "Beyond source range" (never a value-less unsupported).
+            return assembler.tableOutsideSourceRange(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: corrected,
+                rule: rule
+            )
+        case .invalidInput:
+            return assembler.unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Metered exposure is not a positive finite number; no reciprocity correction can be computed."
+                    ),
+                ]
+            )
+        case .invalidRule:
+            return assembler.unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Table anchors violate the safe-table contract; the corrected exposure cannot be computed."
+                    ),
+                ]
+            )
+        }
+    }
+
     private func mapSourceAuthorityImpact(
         from source: ReciprocitySourceProvenance
     ) -> ReciprocitySourceAuthorityImpact {
@@ -764,6 +863,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
         let thresholdRules: [ThresholdReciprocityRule]
         let formulaRules: [FormulaReciprocityRule]
         let limitedGuidanceRules: [LimitedGuidanceReciprocityRule]
+        let tableInterpolationRules: [TableInterpolationReciprocityRule]
 
         func thresholdRule(for meteredExposureSeconds: Double) -> ThresholdReciprocityRule? {
             thresholdRules.first { $0.noCorrectionRange.contains(meteredExposureSeconds) }
@@ -901,6 +1001,56 @@ private extension ReciprocityCalculationPolicyEvaluator {
                 notes: [
                     ReciprocityPolicyNote(text: noteText),
                 ] + sourceAuthorityNotes
+            )
+        }
+
+        /// Quantified result from log-log interpolation of a
+        /// manufacturer reciprocity table within its published range
+        /// (PTIMER-159). Carries the `.tableLogLogDerived` basis so the
+        /// presentation labels it honestly (not "Formula-derived").
+        func tableLogLog(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            rule: TableInterpolationReciprocityRule
+        ) -> ReciprocityResult {
+            let noteText = rule.notes.first
+                ?? "Calculated by log-log interpolation of the manufacturer reciprocity table."
+
+            return .tableLogLog(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                sourceAuthorityImpact: sourceAuthorityImpact,
+                notes: [
+                    ReciprocityPolicyNote(text: noteText),
+                ] + sourceAuthorityNotes
+            )
+        }
+
+        /// Beyond the published table the model keeps a computed value
+        /// (a log-log extrapolation of the last segment) rather than
+        /// dead-ending; it carries the "Beyond source range" presentation
+        /// the same way a formula prediction past its source range does.
+        func tableOutsideSourceRange(
+            meteredExposureSeconds: Double,
+            correctedExposureSeconds: Double,
+            rule: TableInterpolationReciprocityRule
+        ) -> ReciprocityResult {
+            let boundaryText =
+                "Manufacturer table ends at \(formatBoundarySeconds(rule.sourceRangeThroughSeconds))."
+
+            return unsupported(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds,
+                notes: [
+                    ReciprocityPolicyNote(
+                        token: .beyondOfficialQuantifiedRange,
+                        text: boundaryText
+                    ),
+                    ReciprocityPolicyNote(
+                        token: .unsupportedByPolicy,
+                        text: "Beyond the published table — value is a log-log extrapolation past the manufacturer source range."
+                    ),
+                ]
             )
         }
 

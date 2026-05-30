@@ -20,6 +20,11 @@ private let reciprocityDetailsInitialDetent: PresentationDetent = .fraction(0.85
 
 struct FilmModeDetailsSheet: View {
     let details: FilmModeDetailsDisplayState
+    /// Invoked when the model picker selects a profile/model id
+    /// (PTIMER-159). The screen flips the active override and refreshes
+    /// the snapshot in place. Defaults to a no-op so previews and
+    /// single-profile callers need not supply it.
+    var onSelectProfile: (String) -> Void = { _ in }
     @State private var scrollOffset: CGFloat = 0
     @State private var selectedDetent: PresentationDetent = reciprocityDetailsInitialDetent
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -59,6 +64,19 @@ struct FilmModeDetailsSheet: View {
                         summary: details.summary
                     )
 
+                    // Compact "Reciprocity model" block (PTIMER-159):
+                    // one heading, the secondary/contextual segmented
+                    // selector (the main screen is the primary selector),
+                    // and one-line Source / Calculation rows. Sits above
+                    // the graph and source/comparison sections.
+                    if let modelSection = details.sections.first(where: { $0.title == "Reciprocity model" }) {
+                        FilmModeDetailsModelSection(
+                            modelSelection: details.modelSelection,
+                            summaryRows: modelSection.rows,
+                            onSelectProfile: onSelectProfile
+                        )
+                    }
+
                     if let graph = details.graph {
                         FilmModeDetailsGraph(graph: graph)
                     } else if details.summary.tone != .limitedGuidance {
@@ -66,6 +84,19 @@ struct FilmModeDetailsSheet: View {
                     }
 
                     ForEach(details.sections.filter(isEvidenceSection)) { section in
+                        FilmModeDetailsSectionCard(
+                            title: sectionDisplayTitle(for: section.title),
+                            section: section,
+                            detailRowText: detailRowText(for:)
+                        )
+                    }
+
+                    // App-derived / fitted comparison (PTIMER-159).
+                    // Rendered after the source-only sections so the
+                    // app-derived deltas never sit inside Source
+                    // reference. Present only where comparison data
+                    // exists (today Fomapan 100).
+                    ForEach(details.sections.filter { $0.title == "App-derived comparison" }) { section in
                         FilmModeDetailsSectionCard(
                             title: sectionDisplayTitle(for: section.title),
                             section: section,
@@ -343,6 +374,63 @@ private struct FilmModeDetailsSectionCard<RowContent: View>: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Compact "Reciprocity model" block in Reciprocity Details
+/// (PTIMER-159): one heading, the secondary/contextual segmented
+/// selector (shown only when >1 model; the main screen is the primary
+/// selector), and one-line Source / Calculation rows. The current
+/// corrected result lives in the result card above, so this block stays
+/// small — no large metadata table.
+private struct FilmModeDetailsModelSection: View {
+    let modelSelection: FilmModeDetailsModelSelectionState?
+    let summaryRows: [FilmModeDetailsRowState]
+    let onSelectProfile: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Reciprocity model")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if let modelSelection {
+                Picker(
+                    "Reciprocity model",
+                    selection: Binding(
+                        get: { modelSelection.activeOptionID },
+                        set: { onSelectProfile($0) }
+                    )
+                ) {
+                    ForEach(modelSelection.options) { option in
+                        Text(option.selectorLabel).tag(option.id)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("film-mode-details-model-picker")
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(summaryRows) { row in
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(row.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 96, alignment: .leading)
+                        Text(row.value)
+                            .font(.callout)
+                            .foregroundStyle(.primary.opacity(0.85))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(row.title)
+                    .accessibilityValue(row.value)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("film-mode-details-reciprocity-model")
     }
 }
 

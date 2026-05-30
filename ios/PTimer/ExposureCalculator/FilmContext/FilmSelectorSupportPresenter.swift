@@ -133,7 +133,7 @@ enum FilmSelectorSupportPresenter {
         case .unofficial:
             return .unofficialPractical
         case .official:
-            if hasFormulaRule(profile) {
+            if hasFormulaRule(profile) || hasTableInterpolationRule(profile) {
                 return .officialQuantifiedPrediction
             }
             if hasLimitedGuidanceRule(profile) {
@@ -157,6 +157,13 @@ enum FilmSelectorSupportPresenter {
     private static func hasLimitedGuidanceRule(_ profile: ReciprocityProfile) -> Bool {
         profile.rules.contains { rule in
             if case .limitedGuidance = rule { return true }
+            return false
+        }
+    }
+
+    private static func hasTableInterpolationRule(_ profile: ReciprocityProfile) -> Bool {
+        profile.rules.contains { rule in
+            if case .tableInterpolation = rule { return true }
             return false
         }
     }

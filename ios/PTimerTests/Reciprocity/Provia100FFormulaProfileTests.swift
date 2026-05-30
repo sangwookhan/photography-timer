@@ -188,7 +188,7 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             // points — the manufacturer's 240 s row stays in
             // sourceEvidence only.
             switch rule {
-            case .threshold, .formula, .limitedGuidance:
+            case .threshold, .formula, .limitedGuidance, .tableInterpolation:
                 continue
             }
         }

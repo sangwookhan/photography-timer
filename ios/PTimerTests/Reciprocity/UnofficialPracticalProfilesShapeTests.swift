@@ -77,7 +77,7 @@ final class UnofficialPracticalProfilesShapeTests: XCTestCase {
         let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
         for rule in profile.rules {
             switch rule {
-            case .threshold, .formula, .limitedGuidance:
+            case .threshold, .formula, .limitedGuidance, .tableInterpolation:
                 continue
             }
         }

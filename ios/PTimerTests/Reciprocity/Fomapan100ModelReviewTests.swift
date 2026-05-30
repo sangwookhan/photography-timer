@@ -128,14 +128,17 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// constants, the review document and these residual tables go
     /// stale together — this test fails first so the drift is
     /// surfaced loudly.
-    func testCatalogStillCarriesReviewedFomapan100FormulaConstants() throws {
-        let profile = try profile(for: "Fomapan 100 Classic")
+    func testAppDerivedFormulaStillCarriesReviewedFomapan100FormulaConstants() throws {
+        // PTIMER-159: the reviewed p-formula is no longer Fomapan's
+        // default (the official log-log table is). It survives as the
+        // non-default app-derived formula model, which this fixture pins.
+        let profile = AlternateReciprocityModels.fomapan100AppDerivedFormula
         let formulaRule = try XCTUnwrap(
             profile.rules.compactMap { rule -> FormulaReciprocityRule? in
                 guard case let .formula(rule) = rule else { return nil }
                 return rule
             }.first,
-            "Fomapan 100 Classic must keep a formula rule for the review fixture to make sense."
+            "The app-derived Fomapan 100 model must keep a formula rule for the review fixture to make sense."
         )
 
         XCTAssertEqual(
@@ -169,7 +172,7 @@ final class Fomapan100ModelReviewTests: XCTestCase {
 
     func testCurrentAppFormulaOutputsMatchReviewNumbers() throws {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
-        let profile = try profile(for: "Fomapan 100 Classic")
+        let profile = AlternateReciprocityModels.fomapan100AppDerivedFormula
 
         let oneSecond = try XCTUnwrap(
             evaluator.evaluate(profile: profile, meteredExposureSeconds: 1)
@@ -200,7 +203,7 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// needs to be regenerated.
     func testCurrentAppFormulaResidualsAgainstOfficialTableMatchReviewSummary() throws {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
-        let profile = try profile(for: "Fomapan 100 Classic")
+        let profile = AlternateReciprocityModels.fomapan100AppDerivedFormula
 
         struct ExpectedResidual {
             let metered: Double

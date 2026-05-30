@@ -150,6 +150,25 @@ struct FilmModeDetailsReferencePresenter {
                         )
                     )
                 )
+            } else if case let .tableInterpolation(tableRule) = rule {
+                // The table rule owns its no-correction band, mirroring
+                // the formula path so the source-reference shape is the
+                // same (a synthetic 0 … noCorrectionThroughSeconds row).
+                let upper = tableRule.noCorrectionThroughSeconds
+                guard upper > 0 else { continue }
+                collected.orderedLines.append(
+                    ReferenceRow(
+                        key: SourceReferenceRowSortKey(
+                            sortValue: 0,
+                            kind: .range,
+                            catalogOffset: collected.orderedLines.count
+                        ),
+                        columns: sourceReferenceFormulaNoCorrectionColumns(
+                            upperBoundSeconds: upper,
+                            formatDuration: input.formatDuration
+                        )
+                    )
+                )
             }
         }
 
@@ -287,7 +306,7 @@ struct FilmModeDetailsReferencePresenter {
                 ) {
                     lines.append(columns)
                 }
-            case .formula:
+            case .formula, .tableInterpolation:
                 continue
             }
         }

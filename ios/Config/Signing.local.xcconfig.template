@@ -1,0 +1,7 @@
+// Copy this file to "Signing.local.xcconfig" (same directory) on each
+// machine and fill in the Apple Developer Team ID used there. The copy
+// is git-ignored; this template is committed as the reference.
+//
+//     cp Signing.local.xcconfig.template Signing.local.xcconfig
+
+DEVELOPMENT_TEAM =

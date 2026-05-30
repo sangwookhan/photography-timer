@@ -1,0 +1,13 @@
+// Signing configuration shared across build configurations.
+//
+// DEVELOPMENT_TEAM is machine/account-specific and must NOT be committed.
+// Each machine provides it via a local, git-ignored override file:
+//
+//     ios/Config/Signing.local.xcconfig
+//         DEVELOPMENT_TEAM = XXXXXXXXXX
+//
+// The include below is optional ("#include?"), so the project still
+// builds (e.g. for simulator) when the local file is absent. Device
+// signing requires the local file to be present.
+
+#include? "Signing.local.xcconfig"

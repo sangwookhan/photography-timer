@@ -8,6 +8,10 @@ build/
 xcuserdata/
 *.moved-aside
 
+# Machine-local signing override (Apple Developer Team ID per machine);
+# the committed *.template documents what to create.
+Signing.local.xcconfig
+
 # Swift Package Manager local state
 .build/
 .swiftpm/

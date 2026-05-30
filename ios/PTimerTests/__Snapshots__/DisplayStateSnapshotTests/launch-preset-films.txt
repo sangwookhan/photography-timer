@@ -44,6 +44,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-fp4-plus-125"
@@ -90,6 +91,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-delta-100"
@@ -136,6 +138,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-delta-400"
@@ -182,6 +185,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-delta-3200"
@@ -228,6 +232,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-hp5-plus-400"
@@ -278,6 +283,7 @@
             ▿ some: PTimer.ReciprocityProfileModelBasis
               - sourceModel: PTimer.ReciprocitySourceModel.manufacturerFormula
               - calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-xp2-super-400"
@@ -324,6 +330,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-sfx-200"
@@ -369,6 +376,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-ortho-plus-80"
@@ -414,6 +422,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-kentmere-pan-100"
@@ -460,6 +469,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-kentmere-pan-200"
@@ -506,6 +516,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "ilford-kentmere-pan-400"
@@ -552,6 +563,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-tri-x-400"
@@ -668,6 +680,7 @@
             ▿ some: PTimer.ReciprocityProfileModelBasis
               - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-tmax-100"
@@ -764,6 +777,7 @@
                 - "100 sec → +1 stop, corrected 200 sec."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-tmax-400"
@@ -847,6 +861,7 @@
                 - "100 sec → +1 1/2 stops, corrected 300 sec."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-ektar-100"
@@ -902,6 +917,7 @@
             ▿ some: PTimer.ReciprocityProfileModelBasis
               - sourceModel: PTimer.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimer.ReciprocityCalculationModel.limitedGuidance
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-portra-160"
@@ -954,6 +970,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-portra-400"
@@ -1006,6 +1023,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-gold-200"
@@ -1058,6 +1076,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-ultra-max-400"
@@ -1110,6 +1129,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "kodak-ektachrome-e100"
@@ -1168,6 +1188,7 @@
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-acros-ii"
@@ -1229,6 +1250,7 @@
                 - "120 to 1000 sec → +1/2 stop."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-velvia-50"
@@ -1346,6 +1368,7 @@
               - notes: 0 elements
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-velvia-100"
@@ -1422,6 +1445,7 @@
                 - "4 min → +1/2 stop, 2.5M."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "fujifilm-provia-100f"
@@ -1493,6 +1517,7 @@
               - notes: 0 elements
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "foma-fomapan-100"
@@ -1508,8 +1533,8 @@
       - productionStatus: PTimer.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimer.ReciprocityProfile
-          - id: "foma-fomapan-100-official-formula"
-          - name: "Official log-log formula fit through published multiplier rows"
+          - id: "foma-fomapan-100-official-table"
+          - name: "Official FOMA table"
           ▿ source: PTimer.ReciprocitySourceProvenance
             - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
             - authority: PTimer.ReciprocityAuthority.official
@@ -1521,20 +1546,23 @@
               - some: "Foma technical sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
-                  - coefficientSeconds: 2.2457
-                  - referenceMeteredTimeSeconds: 1.0
-                  - exponent: 1.4515
-                  - offsetSeconds: 0.0
-                  - noCorrectionThroughSeconds: 0.5
-                  ▿ sourceRangeThroughSeconds: Optional(100.0)
-                    - some: 100.0
+            ▿ PTimer.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+                ▿ anchors: 3 elements
+                  ▿ PTimer.TableAnchor
+                    - meteredSeconds: 1.0
+                    - correctedSeconds: 2.0
+                  ▿ PTimer.TableAnchor
+                    - meteredSeconds: 10.0
+                    - correctedSeconds: 80.0
+                  ▿ PTimer.TableAnchor
+                    - meteredSeconds: 100.0
+                    - correctedSeconds: 1600.0
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Tc = 2.2457 × Tm^p, p ≈ 1.4515. Free log-log fit through FOMA BOHEMIA\'s published multiplier rows at 1/10/100 sec (×2 / ×8 / ×16). The data sheet rows do not lie on a single power law, so the fit sits ~1/6 stop above the 1 sec and 100 sec rows and ~1/3 stop below the 10 sec row; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                  - "Official FOMA BOHEMIA multiplier rows at 1/10/100 sec (×2 / ×8 / ×16 → 2 / 80 / 1600 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+                - noCorrectionThroughSeconds: 0.5
+                - sourceRangeThroughSeconds: 100.0
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
@@ -1592,10 +1620,11 @@
               ▿ notes: 1 element
                 - "100 sec → ×16 (corrected 1600 sec)."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula))
+          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
             ▿ some: PTimer.ReciprocityProfileModelBasis
               - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula
+              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "foma-fomapan-200"
@@ -1696,6 +1725,7 @@
                 - "100 sec → ×18 (corrected 1800 sec)."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "foma-fomapan-400"
@@ -1796,6 +1826,7 @@
                 - "100 sec → ×8 (corrected 800 sec)."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-rpx-100"
@@ -1911,6 +1942,7 @@
                 - "30 sec → corrected 150 sec."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-rpx-400"
@@ -2026,6 +2058,7 @@
                 - "20 sec → corrected 80 sec."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-retro-80s"
@@ -2147,6 +2180,7 @@
                 - "30 sec → corrected 180 sec."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "rollei-superpan-200"
@@ -2268,6 +2302,7 @@
                 - "30 sec → corrected 180 sec."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "adox-chs-100-ii"
@@ -2386,6 +2421,7 @@
                 - "15 sec → ×3 (corrected 45 sec)."
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimer.FilmIdentity
       - id: "adox-cms-20-ii"
@@ -2489,4 +2525,5 @@
               - notes: 0 elements
               - isSourceEvidenceOnly: false
           - modelBasis: nil
+          - selectorLabel: nil
       - userMetadata: nil

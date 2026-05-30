@@ -5,10 +5,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     @MainActor
     func testFilmModeDetailsUnofficialPortra400ShowsUnofficialAuthorityAndFormula() throws {
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
-            "Unofficial Portra 400 selector entry must exist."
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -65,9 +62,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     @MainActor
     func testFilmSelectionDisplayStateUnofficialPortra400ShowsUnofficialPracticalLabel() throws {
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
         viewModel.selectEntry(unofficialEntry)
 
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
@@ -82,9 +77,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     func testFilmSelectionDisplayStateOfficialAndUnofficialPortra400AreDistinguishable() throws {
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.selectPresetFilm(officialFilm)
         let officialDisplay = viewModel.filmSelectionDisplayState
@@ -106,9 +99,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     @MainActor
     func testFilmModeDetailsUnofficialPortra400ShowsFormulaNearGraphWithoutProfileSection() throws {
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 15
         viewModel.ndStop = 0
@@ -159,9 +150,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // so the sheet can open for either profile.
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 15
         viewModel.ndStop = 0
@@ -189,10 +178,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // does not read one label on the main row and a different label
         // for the same selected profile inside the sheet.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
-            "Unofficial Portra 400 selector entry must exist."
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -225,9 +211,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // can recognize the lower-authority status before trusting the
         // predicted corrected exposure.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -250,9 +234,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // "Guidance boundary" sections all imply a published Kodak
         // source-range, which the unofficial profile does not have.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 30
         viewModel.ndStop = 0
@@ -366,9 +348,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // present, is the last section in the array.
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 15
         viewModel.ndStop = 0

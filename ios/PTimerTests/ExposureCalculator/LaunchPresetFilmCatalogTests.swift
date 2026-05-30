@@ -365,22 +365,20 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
-    func testFomapanFormulaPredictionTracksPublishedMultiplierRow() throws {
-        // Fomapan 100 Classic is formula-backed; the calculation
-        // path no longer returns the published 1 sec multiplier row
-        // as an exact-table point. The formula is anchored to a free
-        // log-log fit through the published rows so the prediction
-        // sits within ~1/6 stop of the 1 sec row.
+    func testFomapanTableReproducesPublishedMultiplierRowExactly() throws {
+        // PTIMER-159: Fomapan 100 Classic is the official log-log table
+        // model. Interpolation passes through the published anchors, so
+        // the 1 sec row reproduces the published 2 sec corrected time
+        // exactly (no fitting error).
         let fomapan = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: fomapan.profiles[0], meteredExposureSeconds: 1)
 
         guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified formula result, got \(result).")
+            return XCTFail("Expected quantified table result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        // 2.2457 × 1^1.4515 = 2.2457; published row corrected = 2.
-        XCTAssertEqual(payload.correctedExposureSeconds, 2.2457, accuracy: 0.01)
+        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
+        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 1e-4)
     }
 
     func testRolleiRangeRowsArePreservedAsSourceEvidenceNotesRatherThanInvented() throws {

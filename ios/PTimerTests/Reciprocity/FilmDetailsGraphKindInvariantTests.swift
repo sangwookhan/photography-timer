@@ -44,7 +44,9 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
         .init(stock: "Velvia 100", kind: .formula, sampleMeteredSeconds: 30),
         .init(stock: "Provia 100F", kind: .formula, sampleMeteredSeconds: 240),
 
-        // FOMA
+        // FOMA — Fomapan 100 Classic uses the log-log table model
+        // (PTIMER-159); it renders a graph (kind .formula) sampled from
+        // the table curve rather than a closed-form formula.
         .init(stock: "Fomapan 100 Classic", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "Fomapan 200 Creative", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "Fomapan 400 Action", kind: .formula, sampleMeteredSeconds: 10),

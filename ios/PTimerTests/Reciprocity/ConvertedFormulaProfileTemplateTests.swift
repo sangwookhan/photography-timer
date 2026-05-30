@@ -62,12 +62,10 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
             insideFormulaRangeSample: 5,
             aboveSourceRangeSample: 200
         ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "Fomapan 100 Classic",
-            belowThresholdSample: 0.1,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 300
-        ),
+        // PTIMER-159: Fomapan 100 Classic migrated to the official
+        // log-log table model — it is no longer a converted-formula
+        // profile. Its behavior is covered by Fomapan100TableModelTests.
+        // Fomapan 200/400 remain formula profiles (out of PTIMER-159 scope).
         ConvertedFormulaProfileCase(
             canonicalStockName: "Fomapan 200 Creative",
             belowThresholdSample: 0.1,

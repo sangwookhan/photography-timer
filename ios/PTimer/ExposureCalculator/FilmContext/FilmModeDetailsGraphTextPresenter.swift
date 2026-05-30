@@ -25,8 +25,11 @@ struct FilmModeDetailsGraphTextPresenter {
             return ["Current result is below the visible graph range."]
         }
         if bindingState.presentation.category == .unsupported,
-           bindingState.profile.isConvertedFormulaProfile {
-            return ["Formula-derived result outside published source range."]
+           bindingState.profile.presentsBeyondSourceRange {
+            let line = bindingState.profile.usesTableInterpolation
+                ? "Table value beyond the published source range."
+                : "Formula-derived result outside published source range."
+            return [line]
         }
         return []
     }
@@ -40,7 +43,7 @@ struct FilmModeDetailsGraphTextPresenter {
         profile: ReciprocityProfile,
         supportedUpperBoundSeconds: Double?
     ) -> Double? {
-        guard profile.isConvertedFormulaProfile else {
+        guard profile.presentsBeyondSourceRange else {
             return nil
         }
         return supportedUpperBoundSeconds
@@ -67,7 +70,9 @@ struct FilmModeDetailsGraphTextPresenter {
 
         if bindingState.presentation.category == .unsupported,
            bindingState.policyResult.correctedExposureSeconds != nil {
-            return "Formula prediction outside the manufacturer-supported boundary"
+            return bindingState.profile.usesTableInterpolation
+                ? "Beyond the published source table"
+                : "Formula prediction outside the manufacturer-supported boundary"
         }
 
         return "Adjusted shutter vs corrected exposure on the active calculation curve"
@@ -86,6 +91,9 @@ struct FilmModeDetailsGraphTextPresenter {
         }
 
         if bindingState.policyResult.correctedExposureSeconds != nil {
+            if bindingState.profile.usesTableInterpolation {
+                return "Current input is beyond the published source table. The plotted value is extrapolated past the official anchors and should be verified."
+            }
             if bindingState.profile.isConvertedFormulaProfile {
                 return "Current input is beyond the manufacturer source range. The plotted value is a formula prediction past the published reference and should be verified."
             }

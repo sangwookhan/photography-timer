@@ -9,9 +9,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // With a short current input, the graph should still plot source points up to
         // the canonical 120s upper bound so the graph feels stable, not auto-scaled.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 2      // short input — well below canonical 120s
         viewModel.ndStop = 0
@@ -41,10 +39,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // correction" while keeping the unofficial-authority caveat
         // visible.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" },
-            "Unofficial Portra 400 selector entry must exist."
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 1.0 / 30.0   // 0.033 sec, well below 1s
         viewModel.ndStop = 0
@@ -114,9 +109,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // formula rule unchanged, preserving the prior PTIMER-143
         // behavior for the unofficial profile.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -137,9 +130,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // inside the plot and the no-correction overlay renders
         // up to the synthesized 1 s default upper bound.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 0
@@ -280,9 +271,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // Spec: "0.033 s, 1.1 s, 17 s on the same profile must use
         // the same graph frame; current result marker only moves."
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
         viewModel.ndStop = 0
         viewModel.selectEntry(unofficialEntry)
 
@@ -322,9 +311,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // identity samples sit on the y = x line up to 1 s, and at
         // least one formula sample beyond 1 s lifts above it.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try XCTUnwrap(
-            viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == "Portra 400" }
-        )
+        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
         viewModel.selectEntry(unofficialEntry)
@@ -398,9 +385,9 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         ]
         for caseInfo in formulaGraphFilmCases {
             if caseInfo.selectsUnofficial {
-                let entry = try XCTUnwrap(
-                    viewModel.filmSelectorEntries.first { $0.profileOverride != nil && $0.film?.canonicalStockName == caseInfo.name }
-                )
+                // Portra 400 is the only unofficial-practical case today;
+                // activate it via the relocated profile/model path.
+                let entry = try unofficialPortra400SelectorEntry(in: viewModel)
                 viewModel.baseShutter = caseInfo.baseShutter
                 viewModel.selectEntry(entry)
             } else {

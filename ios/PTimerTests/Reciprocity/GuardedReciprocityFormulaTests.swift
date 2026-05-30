@@ -542,6 +542,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
                         switch result.metadata.basis {
                         case .officialThresholdNoCorrection,
                              .formulaDerived,
+                             .tableLogLogDerived,
                              .unsupportedOutOfPolicyRange:
                             break  // expected
                         case .limitedGuidanceNoQuantifiedPrediction:

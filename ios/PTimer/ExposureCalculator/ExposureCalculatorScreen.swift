@@ -232,8 +232,28 @@ struct ExposureCalculatorScreen: View {
                     onClose: bottomSheetStateStore.collapse
                 )
             }
-            .sheet(item: $presentedFilmDetails) { details in
-                FilmModeDetailsSheet(details: details)
+            // Presented via `isPresented` (not `item`) so switching the
+            // profile/model inside Details refreshes the snapshot in
+            // place. An `item` binding would re-present the sheet when
+            // the snapshot identity changes, resetting the detent
+            // (PTIMER-159).
+            .sheet(
+                isPresented: Binding(
+                    get: { presentedFilmDetails != nil },
+                    set: { if !$0 { presentedFilmDetails = nil } }
+                )
+            ) {
+                if let details = presentedFilmDetails {
+                    FilmModeDetailsSheet(
+                        details: details,
+                        onSelectProfile: { profileID in
+                            viewModel.selectProfileVariant(profileID: profileID)
+                            // Re-read the recomputed snapshot so the open
+                            // sheet reflects the newly active profile/model.
+                            presentedFilmDetails = viewModel.filmModeDetailsDisplayState
+                        }
+                    )
+                }
             }
             .sheet(item: $slotIDPendingRename) { slotID in
                 CameraSlotRenameSheet(
@@ -491,6 +511,14 @@ private struct CameraSlotCalculatorPage: View {
                 selectedFilmID: pageState.selectedSelectorEntryID,
                 filmSelectionDisplayState: pageState.filmSelectionDisplayState,
                 onToggleSelector: pageState.isActive ? onToggleFilmSelector : {},
+                // The active-model selector is sourced from the live view
+                // model and shown only on the active page (the main screen).
+                activeModelSummary: pageState.isActive ? viewModel.activeFilmModelSummary : nil,
+                modelSelection: pageState.isActive ? viewModel.filmDetailsModelSelection : nil,
+                onSelectModel: { profileID in
+                    guard pageState.isActive else { return }
+                    viewModel.selectProfileVariant(profileID: profileID)
+                },
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
@@ -631,6 +659,14 @@ private struct HeaderView: View {
     let selectedFilmID: String?
     let filmSelectionDisplayState: FilmSelectionDisplayState
     let onToggleSelector: () -> Void
+    /// Compact active-model summary (name + calculation) for the
+    /// single-model case; `nil` when no film is selected. PTIMER-159.
+    let activeModelSummary: FilmModeActiveModelSummary?
+    /// Present only when the selected film exposes more than one model;
+    /// drives the inline segmented model selector.
+    let modelSelection: FilmModeDetailsModelSelectionState?
+    /// Switches the active model inline (main-screen segmented control).
+    let onSelectModel: (String) -> Void
     let showsResetAction: Bool
     let onResetFilmModeContext: () -> Void
     /// Tap handler that opens the rename sheet. Non-nil only on the
@@ -656,6 +692,18 @@ private struct HeaderView: View {
                 onToggleSelector: onToggleSelector,
                 style: style
             )
+
+            if let modelSelection {
+                // Compact inline segmented selector for quick switching
+                // while the main calculation values stay visible.
+                ReciprocityModelSegmentedSelector(
+                    selection: modelSelection,
+                    onSelect: onSelectModel
+                )
+            } else if let activeModelSummary {
+                // Single-model film: one compact line, no selector.
+                ReciprocityModelCompactLabel(summary: activeModelSummary)
+            }
 
             HStack {
                 Spacer()
@@ -756,6 +804,58 @@ private struct FilmSelectionRow: View {
     private var selectedFilmAccessibilityValue: String {
         selectorEntries.first(where: { $0.id == selectedFilmID })?.primaryText
             ?? displayState.primaryText
+    }
+}
+
+/// Compact inline segmented model selector on the main calculation
+/// screen (PTIMER-159). Switches the active reciprocity model in place
+/// — the photographer keeps seeing the calculation values — without a
+/// standalone heading or large card. Shown only when the selected film
+/// exposes more than one model.
+private struct ReciprocityModelSegmentedSelector: View {
+    let selection: FilmModeDetailsModelSelectionState
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        Picker(
+            "Reciprocity model",
+            selection: Binding(
+                get: { selection.activeOptionID },
+                set: { onSelect($0) }
+            )
+        ) {
+            ForEach(selection.options) { option in
+                Text(option.selectorLabel).tag(option.id)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("reciprocity-model-segmented-selector")
+    }
+}
+
+/// One-line active-model label for a single-model film. Keeps the
+/// active model visible under the film row without any selection
+/// affordance or wasted vertical space.
+private struct ReciprocityModelCompactLabel: View {
+    let summary: FilmModeActiveModelSummary
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("Model")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text("\(summary.name) · \(summary.calculation)")
+                .font(.caption)
+                .foregroundStyle(.primary.opacity(0.85))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Reciprocity model")
+        .accessibilityValue("\(summary.name), \(summary.calculation)")
+        .accessibilityIdentifier("reciprocity-model-compact-label")
     }
 }
 

@@ -160,8 +160,8 @@ final class Provia100FPresentationTests: XCTestCase {
         let titles = displayState.sections.map(\.title)
         XCTAssertEqual(
             titles,
-            ["Source reference", "Guidance boundary", "Sources"],
-            "Provia 100F details only show evidence sections plus Sources; Profile/Formula are gone."
+            ["Reciprocity model", "Source reference", "Guidance boundary", "Sources"],
+            "Provia 100F leads with the active-model metadata (PTIMER-159), keeps its source-only evidence sections, and ends with Sources. The app-derived comparison is gated to explicitly app-derived models, so it does not appear here."
         )
     }
 

@@ -47,7 +47,7 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
                 switch rule {
                 case .formula:
                     XCTFail("\(entry.canonicalStockName) must not ship with a formula rule — Kodak limited-guidance profiles stay out of the formula path.")
-                case .threshold, .limitedGuidance:
+                case .threshold, .limitedGuidance, .tableInterpolation:
                     continue
                 }
             }

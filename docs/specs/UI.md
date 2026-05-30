@@ -90,9 +90,9 @@ The result section displays the computed exposure:
 
 The Corrected Exposure row shall always be visible in film workflow. Its content is determined by the reciprocity result category:
 
-- **Quantified** (`No correction` or `Formula-derived`, per [Calculator Spec](Calculator.md) §3.5) — show the corrected time using the same time-display rules as the Adjusted Shutter, plus a status badge.
-- **Quantified with warning** (formula prediction outside the supported range; surfaces as `Beyond source range` for converted formula profiles or `Outside guidance` otherwise) — show the numeric value with a warning-toned badge so the user can tell the prediction is outside manufacturer guidance.
-- **Non-quantified** (`No quantified prediction` for limited-guidance results, or `No corrected value` when the unsupported case has no formula continuation) — show calm explanatory text in place of a number. The UI shall not fabricate a numeric value.
+- **Quantified** (`No correction`, `Formula-derived`, or `Table-derived`, per [Calculator Spec](Calculator.md) §3.5) — show the corrected time using the same time-display rules as the Adjusted Shutter, plus a status badge.
+- **Quantified with warning** (a numeric continuation outside the supported range — a formula prediction or a table-derived extrapolation; surfaces as `Beyond source range` for converted-formula and table-log-log profiles, or `Outside guidance` otherwise) — show the numeric value with a warning-toned badge so the user can tell the prediction is outside manufacturer guidance.
+- **Non-quantified** (`No quantified prediction` for limited-guidance results, or `No corrected value` when the unsupported case has no numeric continuation) — show calm explanatory text in place of a number. The UI shall not fabricate a numeric value.
 
 A **reciprocity state badge** sits with the row to convey the result category at a glance. The badge wording shall match the vocabulary above; legacy table-era wording (`Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`) shall not appear on launch preset reciprocity presentation.
 
@@ -123,23 +123,26 @@ Tapping Start Timer creates a new timer using the current calculation snapshot a
 
 ### 2.6 Reciprocity details surface
 
-A secondary affordance opens a **Reciprocity Details sheet** that shows reference data for the selected film: the active profile, the formula expression and any manufacturer source-evidence rows, a graph visualization, and the source list. The details sheet:
+A secondary affordance opens a **Reciprocity Details sheet** that shows reference data for the selected film: the active model (source + calculation), the formula expression or published table anchors, any manufacturer source-evidence rows, a graph visualization, and the source list. The details sheet:
 
 - shall present the data using calm, secondary visual weight (not loud);
 - shall render formulas in math-style typography;
 - shall keep selector and current-result visuals quieter than the main calculator.
 
-**Section order**: the sheet shall present sections in this order so every profile (preset official, unofficial practical, user-defined custom) reads the same shape:
+**Section order**: the sheet shall present sections in this order so every profile (preset official formula, official table log-log, unofficial practical, user-defined custom) reads the same shape:
 
-1. **Profile header** — active profile name plus an **Authority subtitle** (Official guidance / Unofficial practical / Custom) shown for *all* profiles whose authority is one of the shipping cases, not only ambiguous ones.
+1. **Header** — title plus a model subtitle naming the active model (e.g. "Official FOMA table" / "App-derived formula" / "Official guidance" / "Unofficial practical").
 2. **Result card** — Adjusted Shutter, Corrected Exposure, and the reciprocity status / calculation basis for the active inputs.
-3. **Reciprocity Graph** — the calculation curve plus source-evidence markers when available.
-4. **Profile metadata** — for preset profiles, the active formula expression and any manufacturer source-evidence rows ("Source reference" / "Guidance boundary" sub-sections), or the no-correction threshold + limited-guidance directive for limited-guidance profiles; for user-defined custom profiles, a dedicated **"Custom profile"** card carries the photographer-supplied source kind, manufacturer / stock metadata, and reference URL when set. The custom-profile card shall not borrow manufacturer-published visual treatments and shall make clear the data came from a user-defined profile.
-5. **Sources** — provenance (publisher, citation, sourceVersion) when the active profile carries published source data. User-defined profiles do not synthesize a Sources section.
+3. **Reciprocity model** — a compact block: the secondary segmented model selector (shown only when the film exposes more than one model; the main screen is the primary selector) plus one-line **Source** and **Calculation** rows. It does not reintroduce a large per-film metadata table.
+4. **Reciprocity Graph** — the calculation curve (guarded formula or log-log table) plus source-evidence markers when available.
+5. **Source reference** — for preset profiles, any manufacturer source-evidence rows ("Source reference" / "Guidance boundary" sub-sections, source-only) and, **only for explicitly app-derived models**, a separate **App-derived comparison** block; the no-correction threshold + limited-guidance directive for limited-guidance profiles; for user-defined custom profiles, a dedicated **"Custom profile"** card carrying the photographer-supplied source kind, manufacturer / stock metadata, and reference URL when set. The custom-profile card shall not borrow manufacturer-published visual treatments.
+6. **Sources** — provenance (publisher, citation, sourceVersion) when the active profile carries published source data. User-defined profiles do not synthesize a Sources section.
 
-**Sheet height**: the sheet shall open at a stable initial height regardless of profile shape (official quantified formula, official limited guidance, unofficial practical formula). The initial detent shall not vary with content.
+**Sheet height**: the sheet shall open at a stable initial height regardless of profile shape (official quantified formula, official table log-log, official limited guidance, unofficial practical formula). The initial detent shall not vary with content.
 
-**Graph axis**: the formula graph shall extend to a **canonical 120 s upper bound** regardless of the current input metered exposure, so the reference curve is visually stable across inputs.
+**Graph scale**: the reciprocity graph (formula or table model) shall use a stable scale tier so the reference curve does not auto-rescale tightly around the current input; the same profile and scale tier produce the same frame while only the current-result marker moves.
+
+**Model selector labels**: the compact model selectors (the main-screen segmented control and the Details segmented control) shall show a short label per model. A profile's explicit `selectorLabel` ([DomainSchema Spec](DomainSchema.md) §3.2) is used when present; otherwise the label is derived from authority / calculation. Source-named unofficial / community / custom models should provide an explicit `selectorLabel` (e.g. "Ohzart") so the control reads the source name rather than a generic "Unofficial". The label is for compact selectors only — the full model `name` remains in the Details subtitle, the Source/Calculation summary, the Sources section, and accessibility; `selectorLabel` is never a source title or URL.
 
 ### 2.7 Target Shutter row
 

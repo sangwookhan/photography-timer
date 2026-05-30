@@ -41,7 +41,17 @@ struct FilmModeDetailsGraphPresenter {
             calculationResult: input.calculationResult
         )
 
-        return formulaDetailsGraphDisplayState(
+        if let formulaState = formulaDetailsGraphDisplayState(
+            for: input.bindingState,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint,
+            formatDuration: input.formatDuration
+        ) {
+            return formulaState
+        }
+
+        // PTIMER-159: the official log-log table model graphs too.
+        return tableDetailsGraphDisplayState(
             for: input.bindingState,
             currentMeteredExposureSeconds: currentMeteredExposureSeconds,
             currentPoint: currentPoint,
@@ -97,10 +107,177 @@ struct FilmModeDetailsGraphPresenter {
         return nil
     }
 
+    // MARK: - Table log-log graph construction (PTIMER-159)
+
+    /// Builds the graph for a log-log table model (Fomapan 100's
+    /// official model). Reuses the same display-state assembly, current
+    /// marker, source-reference markers, no-correction band, and
+    /// beyond-source region as the formula graph — only the curve
+    /// sampler and tier inputs differ.
+    private func tableDetailsGraphDisplayState(
+        for bindingState: FilmModeReciprocityBindingState,
+        currentMeteredExposureSeconds: Double,
+        currentPoint: FilmModeDetailsGraphCurrentPoint?,
+        formatDuration: (Double) -> String
+    ) -> FilmModeDetailsGraphDisplayState? {
+        guard let tableRule = firstTableRule(in: bindingState.profile) else {
+            return nil
+        }
+        guard let geometry = tableGraphGeometry(
+            for: bindingState,
+            tableRule: tableRule,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint,
+            formatDuration: formatDuration
+        ) else {
+            return nil
+        }
+        return buildFormulaGraphDisplayState(
+            geometry: geometry,
+            bindingState: bindingState,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint
+        )
+    }
+
+    private func firstTableRule(in profile: ReciprocityProfile) -> TableInterpolationReciprocityRule? {
+        for rule in profile.rules {
+            if case let .tableInterpolation(tableRule) = rule {
+                return tableRule
+            }
+        }
+        return nil
+    }
+
+    private func tableGraphGeometry(
+        for bindingState: FilmModeReciprocityBindingState,
+        tableRule: TableInterpolationReciprocityRule,
+        currentMeteredExposureSeconds: Double,
+        currentPoint: FilmModeDetailsGraphCurrentPoint?,
+        formatDuration: (Double) -> String
+    ) -> FormulaGraphGeometry? {
+        let sourceEvidencePresenter = FilmModeDetailsGraphEvidencePresenter()
+        let sourceReferenceMarkers = sourceEvidencePresenter.markers(
+            for: bindingState.profile,
+            formatDuration: formatDuration
+        )
+        let notRecommendedBoundarySeconds = sourceEvidencePresenter.notRecommendedBoundarySeconds(
+            for: bindingState.profile
+        )
+
+        let tierSelection = selectTableGraphScaleTier(
+            tableRule: tableRule,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint,
+            sourceReferenceMarkers: sourceReferenceMarkers,
+            notRecommendedBoundarySeconds: notRecommendedBoundarySeconds
+        )
+        let tier = tierSelection.tier
+
+        let supportedUpperBoundSeconds = tableRule.sourceRangeThroughSeconds
+        let noCorrectionRangeUpperBoundSeconds = effectiveNoCorrectionUpperBoundSeconds(
+            for: bindingState
+        )
+        let stableLowerBoundSeconds = formulaGraphStableLowerBoundSeconds
+
+        let sourcePoints = FilmModeDetailsGraphCurveSampler().tableSourcePoints(
+            FilmModeDetailsGraphCurveSampler.TableInputs(
+                rule: tableRule,
+                profile: bindingState.profile,
+                currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+                tierUpperBoundSeconds: tier.upperBoundSeconds,
+                viewportLowerBoundSeconds: stableLowerBoundSeconds
+            )
+        )
+        guard sourcePoints.count >= 2 else {
+            return nil
+        }
+
+        let isBelowVisibleRange = isCurrentInputBelowVisibleLowerBound(
+            viewportLowerBoundSeconds: stableLowerBoundSeconds,
+            currentMeteredExposureSeconds: currentMeteredExposureSeconds,
+            currentPoint: currentPoint
+        )
+        let textPresenter = FilmModeDetailsGraphTextPresenter()
+        let descriptionLines = textPresenter.descriptionLines(
+            for: bindingState,
+            isBeyondVisibleRange: tierSelection.isBeyondVisibleRange,
+            isBelowVisibleRange: isBelowVisibleRange
+        )
+        let beyondSourceRangeStartSeconds = textPresenter.beyondSourceRangeStartSeconds(
+            profile: bindingState.profile,
+            supportedUpperBoundSeconds: supportedUpperBoundSeconds
+        )
+        let usesCurrentInputGuideOnly = bindingState.presentation.category == .unsupported
+            && currentPoint == nil
+
+        return FormulaGraphGeometry(
+            formulaRule: nil,
+            sourceReferenceMarkers: sourceReferenceMarkers,
+            notRecommendedBoundarySeconds: notRecommendedBoundarySeconds,
+            tier: tier,
+            isBeyondVisibleRange: tierSelection.isBeyondVisibleRange,
+            supportedUpperBoundSeconds: supportedUpperBoundSeconds,
+            noCorrectionRangeUpperBoundSeconds: noCorrectionRangeUpperBoundSeconds,
+            stableLowerBoundSeconds: stableLowerBoundSeconds,
+            sourcePoints: sourcePoints,
+            isBelowVisibleRange: isBelowVisibleRange,
+            descriptionLines: descriptionLines,
+            // No equation header for the table model — the curve plus
+            // the source anchors carry the meaning.
+            formulaDisplayText: nil,
+            beyondSourceRangeStartSeconds: beyondSourceRangeStartSeconds,
+            usesCurrentInputGuideOnly: usesCurrentInputGuideOnly
+        )
+    }
+
+    private func selectTableGraphScaleTier(
+        tableRule: TableInterpolationReciprocityRule,
+        currentMeteredExposureSeconds: Double,
+        currentPoint: FilmModeDetailsGraphCurrentPoint?,
+        sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference],
+        notRecommendedBoundarySeconds: Double?
+    ) -> (tier: FilmModeDetailsGraphScaleTier, isBeyondVisibleRange: Bool) {
+        var maxValue: Double = 1
+
+        let curveUpper = [tableRule.sourceRangeThroughSeconds, currentMeteredExposureSeconds]
+            .filter { $0 > 0 }
+            .max() ?? 0
+        if curveUpper > 0 {
+            maxValue = max(maxValue, curveUpper)
+            if let curveUpperCorrected = FilmModeDetailsGraphCurveSampler.tableCorrectedExposureSeconds(
+                for: tableRule,
+                meteredExposureSeconds: curveUpper
+            ) {
+                maxValue = max(maxValue, curveUpperCorrected)
+            }
+        }
+
+        if let currentPoint {
+            maxValue = max(maxValue, currentPoint.point.meteredExposureSeconds)
+            maxValue = max(maxValue, currentPoint.point.correctedExposureSeconds)
+        }
+        for marker in sourceReferenceMarkers {
+            maxValue = max(maxValue, marker.point.meteredExposureSeconds)
+            maxValue = max(maxValue, marker.point.correctedExposureSeconds)
+        }
+        if let notRecommendedBoundarySeconds {
+            maxValue = max(maxValue, notRecommendedBoundarySeconds)
+        }
+
+        return (
+            tier: FilmModeDetailsGraphScalePolicy.selectTier(maxPlottedSeconds: maxValue),
+            isBeyondVisibleRange: FilmModeDetailsGraphScalePolicy.isBeyondVisibleRange(
+                maxPlottedSeconds: maxValue
+            )
+        )
+    }
+
     /// Pre-computed values shared between the geometry builder and
     /// the final display-state assembly.
     private struct FormulaGraphGeometry {
-        let formulaRule: FormulaReciprocityRule
+        /// `nil` for the table-log-log model, which has no formula rule.
+        let formulaRule: FormulaReciprocityRule?
         let sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference]
         let notRecommendedBoundarySeconds: Double?
         let tier: FilmModeDetailsGraphScaleTier
@@ -111,7 +288,8 @@ struct FilmModeDetailsGraphPresenter {
         let sourcePoints: [FilmModeDetailsGraphPoint]
         let isBelowVisibleRange: Bool
         let descriptionLines: [String]
-        let formulaDisplayText: String
+        /// `nil` for the table model, which shows no equation header.
+        let formulaDisplayText: String?
         let beyondSourceRangeStartSeconds: Double?
         let usesCurrentInputGuideOnly: Bool
     }
@@ -324,6 +502,12 @@ struct FilmModeDetailsGraphPresenter {
         )
         if let formulaMax = formulaBounds.max() {
             return formulaMax
+        }
+        let tableBounds = FilmModeDetailsGraphCurveSampler.profileTableNoCorrectionUpperBounds(
+            in: bindingState.profile
+        )
+        if let tableMax = tableBounds.max() {
+            return tableMax
         }
         let thresholdBounds = bindingState.profile.rules.compactMap { rule -> Double? in
             guard case let .threshold(thresholdRule) = rule else { return nil }

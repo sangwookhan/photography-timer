@@ -158,6 +158,7 @@ struct LaunchPresetFilmCatalogLoader {
         var hasThreshold = false
         var hasFormula = false
         var hasLimitedGuidance = false
+        var hasTableInterpolation = false
         for rule in profile.rules {
             switch rule {
             case .threshold:
@@ -166,7 +167,30 @@ struct LaunchPresetFilmCatalogLoader {
                 hasFormula = true
             case .limitedGuidance:
                 hasLimitedGuidance = true
+            case .tableInterpolation:
+                hasTableInterpolation = true
             }
+        }
+
+        // A table-interpolation profile owns its own no-correction band
+        // and source range, so it stands alone — no companion formula,
+        // threshold, or limited-guidance rule (PTIMER-159).
+        if hasTableInterpolation {
+            guard !hasFormula, !hasLimitedGuidance, !hasThreshold else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "table-interpolation profiles must not carry a companion formula, threshold, or limited-guidance rule"
+                )
+            }
+            try validateTableInterpolationParameters(profile, filmID: filmID)
+            try validateExplicitModelBasis(
+                profile,
+                filmID: filmID,
+                hasFormula: hasFormula,
+                hasLimitedGuidance: hasLimitedGuidance,
+                hasTableInterpolation: hasTableInterpolation
+            )
+            return
         }
 
         if hasFormula && hasLimitedGuidance {
@@ -241,7 +265,8 @@ struct LaunchPresetFilmCatalogLoader {
         _ profile: ReciprocityProfile,
         filmID: String,
         hasFormula: Bool,
-        hasLimitedGuidance: Bool
+        hasLimitedGuidance: Bool,
+        hasTableInterpolation: Bool = false
     ) throws {
         guard let basis = profile.modelBasis else { return }
 
@@ -251,6 +276,13 @@ struct LaunchPresetFilmCatalogLoader {
                 throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
                     filmID: filmID,
                     reason: "modelBasis.calculationModel = guardedFormula requires a formula rule"
+                )
+            }
+        case .tableLogLogInterpolation:
+            guard hasTableInterpolation else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "modelBasis.calculationModel = tableLogLogInterpolation requires a table-interpolation rule"
                 )
             }
         case .limitedGuidance:
@@ -308,6 +340,23 @@ struct LaunchPresetFilmCatalogLoader {
                 throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
                     filmID: filmID,
                     reason: "formula parameters violate the safe-formula contract (finite, positive coefficient and reference, non-negative no-correction boundary, source-range above no-correction)"
+                )
+            }
+        }
+    }
+
+    private func validateTableInterpolationParameters(
+        _ profile: ReciprocityProfile,
+        filmID: String
+    ) throws {
+        for rule in profile.rules {
+            guard case let .tableInterpolation(tableRule) = rule else {
+                continue
+            }
+            guard tableRule.hasValidParameters else {
+                throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(
+                    filmID: filmID,
+                    reason: "table-interpolation anchors violate the safe-table contract (at least two ascending positive anchors, each corrected ≥ metered, no-correction below the first anchor, source range at the last anchor)"
                 )
             }
         }

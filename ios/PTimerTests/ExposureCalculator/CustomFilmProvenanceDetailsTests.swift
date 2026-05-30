@@ -148,17 +148,9 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         XCTAssertNil(presenter.summaryDetailText(for: bindingState))
     }
 
-    func test_subtitleAuthorityLabel_remainsCustomForUserDefined() {
-        // Details subtitle delegates to the main row's authority
-        // label, which returns "Custom" for the user-defined
-        // authority. The presenter must keep this contract so a
-        // future label rename does not silently revert the
-        // Details surface to nil.
-        XCTAssertEqual(presenter.subtitleAuthorityLabel(for: .userDefined), "Custom")
-        XCTAssertEqual(presenter.subtitleAuthorityLabel(for: .official), "Official guidance")
-        XCTAssertEqual(presenter.subtitleAuthorityLabel(for: .unofficial), "Unofficial practical")
-        XCTAssertNil(presenter.subtitleAuthorityLabel(for: .unknown))
-    }
+    // PTIMER-159: the Details subtitle now names the active model
+    // (profile name) rather than delegating to the authority label, so
+    // the former `subtitleAuthorityLabel` presenter API was removed.
 
     // MARK: - Helpers
 

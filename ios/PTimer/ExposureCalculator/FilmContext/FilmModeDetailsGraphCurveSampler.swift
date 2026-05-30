@@ -172,6 +172,121 @@ struct FilmModeDetailsGraphCurveSampler {
         }
     }
 
+    // MARK: - Table log-log curve (PTIMER-159)
+
+    struct TableInputs {
+        let rule: TableInterpolationReciprocityRule
+        let profile: ReciprocityProfile
+        let currentMeteredExposureSeconds: Double
+        let tierUpperBoundSeconds: Double
+        let viewportLowerBoundSeconds: Double
+    }
+
+    /// Source path for a log-log table profile: identity through the
+    /// no-correction zone joined to the interpolated table curve. Mirrors
+    /// `sourcePoints(_:)` so the graph view renders a table model the same
+    /// way it renders a formula model.
+    func tableSourcePoints(_ inputs: TableInputs) -> [FilmModeDetailsGraphPoint] {
+        let curvePoints = tableSegmentPoints(
+            for: inputs.rule,
+            currentMeteredExposureSeconds: inputs.currentMeteredExposureSeconds,
+            tierUpperBoundSeconds: inputs.tierUpperBoundSeconds
+        )
+        let identityPoints = identitySegmentPoints(
+            viewportLowerBoundSeconds: inputs.viewportLowerBoundSeconds,
+            noCorrectionRangeUpperBoundSeconds: inputs.rule.noCorrectionThroughSeconds
+        )
+
+        guard let lastIdentity = identityPoints.last,
+              let firstCurve = curvePoints.first else {
+            return identityPoints + curvePoints
+        }
+        let isSamePoint = abs(lastIdentity.meteredExposureSeconds - firstCurve.meteredExposureSeconds) < 1e-6
+            && abs(lastIdentity.correctedExposureSeconds - firstCurve.correctedExposureSeconds) < 1e-6
+        if isSamePoint {
+            return identityPoints + curvePoints.dropFirst()
+        }
+        return identityPoints + curvePoints
+    }
+
+    private func tableSegmentPoints(
+        for rule: TableInterpolationReciprocityRule,
+        currentMeteredExposureSeconds: Double,
+        tierUpperBoundSeconds: Double
+    ) -> [FilmModeDetailsGraphPoint] {
+        let curveLowerBound = rule.noCorrectionThroughSeconds > 0
+            ? rule.noCorrectionThroughSeconds * 1.001
+            : 1
+        let canonicalUpperBoundSeconds: Double = 120
+        let upperBoundCandidates = [
+            rule.sourceRangeThroughSeconds,
+            canonicalUpperBoundSeconds,
+            currentMeteredExposureSeconds,
+        ]
+        let positiveUpperBound = upperBoundCandidates
+            .filter { $0 > 0 }
+            .max()
+
+        guard let upperBound = positiveUpperBound, curveLowerBound > 0 else {
+            return []
+        }
+
+        let tierClampedUpperBound = min(upperBound, tierUpperBoundSeconds)
+        let tierClampedLowerBound = max(curveLowerBound, FilmModeDetailsGraphScaleTier.t1.lowerBoundSeconds)
+        let clampedLowerBound = min(tierClampedLowerBound, tierClampedUpperBound)
+        let clampedUpperBound = max(tierClampedLowerBound, tierClampedUpperBound)
+        let sampleCount = 24
+
+        return (0..<sampleCount).compactMap { index in
+            let progress = Double(index) / Double(sampleCount - 1)
+            let meteredExposureSeconds = Self.logInterpolatedValue(
+                minimum: clampedLowerBound,
+                maximum: clampedUpperBound,
+                progress: progress
+            )
+            guard let correctedExposureSeconds = Self.tableCorrectedExposureSeconds(
+                for: rule,
+                meteredExposureSeconds: meteredExposureSeconds
+            ),
+            correctedExposureSeconds.isFinite,
+            correctedExposureSeconds > 0 else {
+                return nil
+            }
+            return FilmModeDetailsGraphPoint(
+                meteredExposureSeconds: meteredExposureSeconds,
+                correctedExposureSeconds: correctedExposureSeconds
+            )
+        }
+    }
+
+    /// Corrected exposure for a table rule at a metered value, using the
+    /// shared evaluator so the graph curve agrees with the policy result.
+    static func tableCorrectedExposureSeconds(
+        for rule: TableInterpolationReciprocityRule,
+        meteredExposureSeconds: Double
+    ) -> Double? {
+        switch rule.evaluate(meteredExposureSeconds: meteredExposureSeconds) {
+        case .noCorrection:
+            return meteredExposureSeconds
+        case let .withinSourceRange(corrected), let .beyondSourceRange(corrected):
+            return corrected
+        case .invalidInput, .invalidRule:
+            return nil
+        }
+    }
+
+    /// No-correction upper bounds carried by the profile's table rules,
+    /// so the graph overlay can draw the green band for a table model.
+    static func profileTableNoCorrectionUpperBounds(
+        in profile: ReciprocityProfile
+    ) -> [Double] {
+        profile.rules.compactMap { rule -> Double? in
+            guard case let .tableInterpolation(tableRule) = rule else { return nil }
+            let upper = tableRule.noCorrectionThroughSeconds
+            return upper > 0 ? upper : nil
+        }
+    }
+
     // MARK: - Formula arithmetic helpers (shared with the presenter)
 
     /// Returns the formula-owned no-correction upper bounds for the

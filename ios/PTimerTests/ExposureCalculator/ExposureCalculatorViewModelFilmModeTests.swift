@@ -55,35 +55,31 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmSelectorEntriesKeepISOAsSecondaryMetadata() {
+    func testFilmSelectorEntriesKeepISOAsSecondaryMetadata() throws {
         let viewModel = makeFilmModeViewModel()
 
         XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
         XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
 
-        // Every preset row carries an ISO secondary. Films with a
-        // registered unofficial practical profile (Portra 400 today)
-        // surface as a second row that shares the canonical name and
-        // ISO; `supportState` drives the unofficial badge. Spot-check
-        // exemplars without coupling to the full catalog ordering.
-        let portraOfficial = viewModel.filmSelectorEntries.first { entry in
-            entry.primaryText == "Portra 400" && entry.profileOverride == nil
-        }
-        let portraUnofficial = viewModel.filmSelectorEntries.first { entry in
-            entry.film?.id == "kodak-portra-400" && entry.profileOverride != nil
-        }
-        XCTAssertNotNil(portraOfficial, "Portra 400 official row should exist.")
-        XCTAssertEqual(portraOfficial?.secondaryText, "ISO 400")
-        XCTAssertEqual(portraOfficial?.supportState, .officialLimitedGuidance)
-        XCTAssertNotNil(portraUnofficial, "Portra 400 unofficial row should exist with a profile override.")
-        XCTAssertEqual(portraUnofficial?.primaryText, "Portra 400", "Unofficial row keeps the canonical name; the badge carries the qualifier.")
-        XCTAssertEqual(portraUnofficial?.secondaryText, "ISO 400", "Unofficial row's right column is the ISO speed, not the qualifier.")
-        XCTAssertEqual(portraUnofficial?.supportState, .unofficialPractical)
-        XCTAssertNotNil(portraUnofficial?.profileOverride, "Unofficial row carries a profile override so the model can apply it on selection.")
-        XCTAssertNotEqual(
-            portraOfficial?.id,
-            portraUnofficial?.id,
-            "Official and unofficial rows must use distinct ids so scroll-to-selection lands on the correct variant."
+        // PTIMER-159: the main selector stays film-stock focused — one
+        // entry per stock, even for films with more than one reciprocity
+        // profile/model. Portra 400 (official + unofficial practical) now
+        // appears as a single top-level row and exposes the unofficial
+        // profile through the model selector, not as a duplicate row.
+        let portraEntries = viewModel.filmSelectorEntries.filter { $0.film?.id == "kodak-portra-400" }
+        XCTAssertEqual(
+            portraEntries.count,
+            1,
+            "Portra 400 must surface as a single top-level film-stock row (no duplicate unofficial entry)."
+        )
+        let portraOfficial = try XCTUnwrap(portraEntries.first, "Portra 400 row should exist.")
+        XCTAssertNil(portraOfficial.profileOverride, "The single Portra 400 row is film-stock focused, carrying no profile override.")
+        XCTAssertEqual(portraOfficial.primaryText, "Portra 400")
+        XCTAssertEqual(portraOfficial.secondaryText, "ISO 400")
+        XCTAssertEqual(portraOfficial.supportState, .officialLimitedGuidance)
+        XCTAssertFalse(
+            viewModel.filmSelectorEntries.contains { $0.profileOverride != nil },
+            "No film may surface a profile-override variant as a top-level selector row."
         )
 
         let exemplars: [(name: String, expectedSecondary: String)] = [
@@ -219,20 +215,17 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
             viewModel.filmSelectorEntries.map(\.id)
         )
 
-        // Spot-check: Portra 400 official and unofficial rows live in the
-        // same Kodak section, contiguously, so the user does not have to
-        // hunt for the unofficial variant elsewhere in the list.
+        // Spot-check (PTIMER-159): Portra 400 appears as a single
+        // film-stock row in the Kodak section — its second profile/model
+        // (unofficial practical) is reached through the model selector,
+        // not as a duplicate selector row.
         let kodakSection = try XCTUnwrap(
             manufacturerSections.first(where: { $0.manufacturer == "Kodak" }),
             "Kodak manufacturer section is required."
         )
-        let portraIndices = kodakSection.entries.enumerated().compactMap { idx, entry in
-            entry.primaryText.hasPrefix("Portra 400") ? idx : nil
-        }
-        XCTAssertEqual(portraIndices.count, 2, "Kodak section should contain official + unofficial Portra 400 rows.")
-        if portraIndices.count == 2 {
-            XCTAssertEqual(portraIndices[1] - portraIndices[0], 1, "Official and unofficial Portra 400 rows must be contiguous in the Kodak section.")
-        }
+        let portraRows = kodakSection.entries.filter { $0.primaryText.hasPrefix("Portra 400") }
+        XCTAssertEqual(portraRows.count, 1, "Kodak section should contain a single Portra 400 film-stock row.")
+        XCTAssertNil(portraRows.first?.profileOverride, "The Portra 400 row is film-stock focused, carrying no profile override.")
     }
 
     @MainActor

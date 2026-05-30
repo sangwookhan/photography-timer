@@ -14,52 +14,28 @@
 		A00000000000000000000005 /* TimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* TimerManager.swift */; };
 		A00000000000000000000006 /* ExposureCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* ExposureCalculatorTests.swift */; };
 		A00000000000000000000007 /* TimerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TimerManagerTests.swift */; };
-		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
-		A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */; };
-		A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */; };
-		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
-		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
-		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
-		A0000000000000000000090C /* TimerManagerPauseResumeStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */; };
-		A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */; };
-		A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000110 /* DisplayStateSnapshot.swift */; };
-		A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000112 /* DisplayStateSnapshotTests.swift */; };
-		A00000000000000000000116 /* RecordReplayTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000115 /* RecordReplayTrace.swift */; };
-		A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* RecordReplayBaseline.swift */; };
-		A0000000000000000000011A /* RecordReplaySpies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RecordReplaySpies.swift */; };
-		A0000000000000000000011C /* RecordReplayHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011B /* RecordReplayHarness.swift */; };
-		A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */; };
-		A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000401 /* SharedFixtureLocator.swift */; };
 		A00000000000000000000008 /* ExposureCalculatorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ExposureCalculatorViewModel.swift */; };
-		A00000000000000000000940 /* TimerStartComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000941 /* TimerStartComposer.swift */; };
-		A00000000000000000000942 /* CameraSlotPageStateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */; };
-		A00000000000000000000944 /* CalculatorContextRestorePlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */; };
 		A00000000000000000000009 /* ExposureCalculatorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */; };
 		A0000000000000000000000A /* ExposureCalculationAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */; };
 		A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */; };
-		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
-		A00000000000000000000922 /* BottomSheetWorkspaceCompactPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000923 /* BottomSheetWorkspaceCompactPresentationTests.swift */; };
-		A00000000000000000000924 /* BottomSheetWorkspaceCompactProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000925 /* BottomSheetWorkspaceCompactProgressTests.swift */; };
-		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
-		A000000000000000000000FB /* BottomSheetWorkspaceSnapshotFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000FC /* BottomSheetWorkspaceSnapshotFactoryTests.swift */; };
-		A00000000000000000000934 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000935 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift */; };
-		A000000000000000000000FD /* BottomSheetWorkspaceOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000FE /* BottomSheetWorkspaceOrderingTests.swift */; };
-		A000000000000000000000FF /* BottomSheetIdentityPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000100 /* BottomSheetIdentityPaletteTests.swift */; };
-		A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */; };
-		A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000103 /* RunningTimerPanelView.swift */; };
-		A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000106 /* ViewModelDependencyFactory.swift */; };
-		A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000107 /* FilmModeDetailsPresenter.swift */; };
-		A0000000000000000000010A /* LockScreenTimerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000109 /* LockScreenTimerCoordinator.swift */; };
+		A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */; };
+		A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
+		A0000000000000000000000F /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
+		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
+		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
+		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */; };
+		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
+		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
+		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
+		A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */; };
+		A000000000000000000000AF /* ReciprocityCalculationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */; };
+		A000000000000000000000B1 /* ReciprocityConfidencePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */; };
+		A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */; };
+		A000000000000000000000B5 /* PresetFilmCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B6 /* PresetFilmCatalog.swift */; };
 		A000000000000000000000B7 /* ExposureCalculatorViewModelFilmModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B8 /* ExposureCalculatorViewModelFilmModeTests.swift */; };
-		A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */; };
-		A00000000000000000000912 /* ExposureCalculatorViewModelFilmDetailsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */; };
-		A00000000000000000000914 /* ExposureCalculatorViewModelFilmAuthorityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */; };
-		A00000000000000000000916 /* ExposureCalculatorViewModelFilmGraphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000917 /* ExposureCalculatorViewModelFilmGraphTests.swift */; };
-		A00000000000000000000918 /* ExposureCalculatorViewModelFilmExtrapolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000919 /* ExposureCalculatorViewModelFilmExtrapolationTests.swift */; };
+		A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */; };
 		A000000000000000000000BD /* ExposureCalculatorViewModelTimerIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BE /* ExposureCalculatorViewModelTimerIntegrationTests.swift */; };
-		A0000000000000000000091A /* CalculatorTimerMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091B /* CalculatorTimerMetadataTests.swift */; };
-		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
-		A0000000000000000000091E /* CalculatorTimerDisplaySemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091F /* CalculatorTimerDisplaySemanticsTests.swift */; };
 		A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */; };
 		A000000000000000000000CF /* ExposureCalculatorViewModelScenePhaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */; };
 		A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */; };
@@ -69,38 +45,31 @@
 		A000000000000000000000DA /* BottomSheetWorkspaceSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000D9 /* BottomSheetWorkspaceSnapshotStore.swift */; };
 		A000000000000000000000DC /* BottomSheetWorkspaceActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000DB /* BottomSheetWorkspaceActions.swift */; };
 		A000000000000000000000DE /* BottomSheetWorkspaceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000DD /* BottomSheetWorkspaceSnapshot.swift */; };
-		A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */; };
-		A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
-		A0000000000000000000000F /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
-		A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */; };
-		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
-		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
-		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
-		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
-		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
-		A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */; };
-		A00000000000000000000C0B /* TableInterpolationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0C /* TableInterpolationModel.swift */; };
-		A00000000000000000000C0D /* AlternateReciprocityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0E /* AlternateReciprocityModels.swift */; };
-		A000000000000000000000AF /* ReciprocityCalculationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */; };
-		A0000000000000000000010B /* ReciprocityCalculationPolicyPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */; };
-		A00000000000000000000122 /* ReciprocityResultCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000121 /* ReciprocityResultCodableTests.swift */; };
-		A00000000000000000000500 /* LaunchPresetFilmCatalogShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000501 /* LaunchPresetFilmCatalogShapeTests.swift */; };
-		A00000000000000000000602 /* UnofficialPracticalProfilesShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */; };
-		A000000000000000000000B1 /* ReciprocityConfidencePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */; };
-		A000000000000000000000B3 /* ReciprocityConfidencePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */; };
-		A000000000000000000000B5 /* PresetFilmCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000B6 /* PresetFilmCatalog.swift */; };
+		A000000000000000000000E1 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
+		A000000000000000000000E2 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
 		A000000000000000000000F2 /* ExposureCalculatorWorkingContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */; };
 		A000000000000000000000F4 /* PersistentCalculatorContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F3 /* PersistentCalculatorContext.swift */; };
 		A000000000000000000000F6 /* FilmSelectionDisplayState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F5 /* FilmSelectionDisplayState.swift */; };
-		A00000000000000000000261 /* FilmSelectorSupportPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */; };
-		A00000000000000000000263 /* FilmSelectorSupportPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */; };
 		A000000000000000000000F8 /* FilmModeResultDisplayStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */; };
 		A000000000000000000000FA /* FilmModeDetailsDisplayStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */; };
-		A000000000000000000000B9 /* LaunchPresetFilmCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */; };
-		A000000000000000000000E1 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
-		A000000000000000000000E2 /* LaunchPresetFilmCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */; };
-		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
+		A000000000000000000000FB /* BottomSheetWorkspaceSnapshotFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000FC /* BottomSheetWorkspaceSnapshotFactoryTests.swift */; };
+		A000000000000000000000FD /* BottomSheetWorkspaceOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000FE /* BottomSheetWorkspaceOrderingTests.swift */; };
+		A000000000000000000000FF /* BottomSheetIdentityPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000100 /* BottomSheetIdentityPaletteTests.swift */; };
+		A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */; };
+		A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000103 /* RunningTimerPanelView.swift */; };
+		A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000106 /* ViewModelDependencyFactory.swift */; };
+		A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000107 /* FilmModeDetailsPresenter.swift */; };
+		A0000000000000000000010A /* LockScreenTimerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000109 /* LockScreenTimerCoordinator.swift */; };
+		A0000000000000000000010B /* ReciprocityCalculationPolicyPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */; };
+		A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */; };
+		A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000110 /* DisplayStateSnapshot.swift */; };
+		A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000112 /* DisplayStateSnapshotTests.swift */; };
+		A00000000000000000000116 /* RecordReplayTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000115 /* RecordReplayTrace.swift */; };
+		A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* RecordReplayBaseline.swift */; };
+		A0000000000000000000011A /* RecordReplaySpies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RecordReplaySpies.swift */; };
+		A0000000000000000000011C /* RecordReplayHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011B /* RecordReplayHarness.swift */; };
+		A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */; };
+		A00000000000000000000122 /* ReciprocityResultCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000121 /* ReciprocityResultCodableTests.swift */; };
 		A00000000000000000000123 /* WorkspaceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000124 /* WorkspaceCoordinator.swift */; };
 		A00000000000000000000125 /* CalculatorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000126 /* CalculatorModel.swift */; };
 		A00000000000000000000128 /* CalculatorModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000129 /* CalculatorModelTests.swift */; };
@@ -114,104 +83,12 @@
 		A00000000000000000000146 /* RunningTimerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000144 /* RunningTimerItem.swift */; };
 		A00000000000000000000147 /* TimerMetadataPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000145 /* TimerMetadataPersistence.swift */; };
 		A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000148 /* FilmModeDetailsView.swift */; };
-		A00000000000000000000801 /* FilmModeDetailsGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000800 /* FilmModeDetailsGraphView.swift */; };
-		A00000000000000000000803 /* FilmModeDetailsGraphRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */; };
-		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
-		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
-		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
 		A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014A /* WheelPickerContinuousObserver.swift */; };
 		A0000000000000000000014D /* ViewModelDisplayStateBaselineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */; };
 		A0000000000000000000014F /* SharedFixtureGoldenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014E /* SharedFixtureGoldenTests.swift */; };
 		A00000000000000000000150 /* ReciprocitySecondaryGuidancePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */; };
 		A00000000000000000000152 /* ReciprocitySecondaryGuidancePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */; };
 		A00000000000000000000154 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */; };
-		A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */; };
-		A00000000000000000000950 /* FilmModeDetailsGraphPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */; };
-		A00000000000000000000928 /* Provia100FFormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */; };
-		A0000000000000000000092A /* Provia100FScalePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092B /* Provia100FScalePolicyTests.swift */; };
-		A0000000000000000000092C /* Provia100FPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* Provia100FPresentationTests.swift */; };
-		A0000000000000000000092E /* Provia100FGraphVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */; };
-		A00000000000000000000930 /* HP5PlusFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */; };
-		A00000000001600000000001 /* GuardedReciprocityFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */; };
-		A00000000001700000000001 /* ReciprocityProfileModelBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */; };
-		A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */; };
-		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
-		A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */; };
-		A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400FormulaProfileTests.swift */; };
-		A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100FormulaProfileTests.swift */; };
-		A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400FormulaProfileTests.swift */; };
-		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
-		A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaFormulaProfileTests.swift */; };
-		A00000000000000000000BA6 /* Fomapan100ModelReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */; };
-		A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000255 /* RolleiFormulaProfileTests.swift */; };
-		A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000257 /* AdoxFormulaProfileTests.swift */; };
-		A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */; };
-		A0000000000000000000025A /* AdoxChs100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */; };
-		A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025D /* SourceReferenceRowSorting.swift */; };
-		A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */; };
-		A00000000000000000000600 /* ConvertedFormulaProfileTemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */; };
-		A00000000000000000000700 /* ReciprocityDetailsVocabularyPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */; };
-		A00000000000000000000C01 /* ReciprocityModelMetadataPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C02 /* ReciprocityModelMetadataPresenter.swift */; };
-		A00000000000000000000C03 /* ReciprocityModelComparisonPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C04 /* ReciprocityModelComparisonPresenter.swift */; };
-		A00000000000000000000702 /* FilmModeDetailsLegendPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */; };
-		A00000000000000000000704 /* FilmModeDetailsReferencePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */; };
-		A00000000000000000000706 /* FilmModeDetailsGraphPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */; };
-		A00000000000000000000952 /* FormulaEquationFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000953 /* FormulaEquationFormatter.swift */; };
-		A00000000000000000000954 /* FilmModeDetailsGraphCurveSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */; };
-		A00000000000000000000956 /* FilmModeDetailsGraphEvidencePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000957 /* FilmModeDetailsGraphEvidencePresenter.swift */; };
-		A00000000000000000000958 /* FilmModeDetailsGraphTextPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000959 /* FilmModeDetailsGraphTextPresenter.swift */; };
-		A0000000000000000000095A /* CustomProfileSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000095B /* CustomProfileSourceType.swift */; };
-		A0000000000000000000095C /* CustomFilmLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000095D /* CustomFilmLibrary.swift */; };
-		A0000000000000000000095E /* CustomFilmEditorFormState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000095F /* CustomFilmEditorFormState.swift */; };
-		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
-		A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */; };
-		A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */; };
-		A00000000000000000000B98 /* CalculationBasisPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B99 /* CalculationBasisPresenter.swift */; };
-		A00000000000000000000B9A /* CalculationBasisPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9B /* CalculationBasisPresenterTests.swift */; };
-		A00000000000000000000B9C /* CustomFilmDetailsCalculationBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9D /* CustomFilmDetailsCalculationBasisTests.swift */; };
-		A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */; };
-		A00000000000000000000BA0 /* CustomFilmEditorTwoLineFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA1 /* CustomFilmEditorTwoLineFormulaTests.swift */; };
-		A00000000000000000000BA2 /* CustomFilmEditorFormulaTokenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA3 /* CustomFilmEditorFormulaTokenTests.swift */; };
-		A00000000000000000000BA4 /* CustomFilmEditorResetRevertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA5 /* CustomFilmEditorResetRevertTests.swift */; };
-		A00000000000000000000962 /* CustomFilmEditorFormStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000963 /* CustomFilmEditorFormStateTests.swift */; };
-		A00000000000000000000964 /* CustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000965 /* CustomFilmLibraryTests.swift */; };
-		A00000000000000000000966 /* ExposureCalculatorViewModelCustomFilmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000967 /* ExposureCalculatorViewModelCustomFilmTests.swift */; };
-		A00000000000000000000968 /* ExposureCalculatorViewModel+CustomFilm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000969 /* ExposureCalculatorViewModel+CustomFilm.swift */; };
-		A0000000000000000000096A /* PersistentCustomFilmLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* PersistentCustomFilmLibrary.swift */; };
-		A0000000000000000000097A /* CustomFilmEditorPreviewPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000097B /* CustomFilmEditorPreviewPresenter.swift */; };
-		A00000000000000000000990 /* CustomFilmEditorPreviewGraphPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000991 /* CustomFilmEditorPreviewGraphPresenter.swift */; };
-		A00000000000000000000984 /* CustomFilmFormulaGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000985 /* CustomFilmFormulaGuard.swift */; };
-		A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */; };
-		A0000000000000000000096E /* CalculatorViewModelCustomFilmCalculationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096F /* CalculatorViewModelCustomFilmCalculationTests.swift */; };
-		A00000000000000000000970 /* CalculatorViewModelCustomFilmTimerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */; };
-		A00000000000000000000972 /* CustomFilmDeleteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */; };
-		A00000000000000000000974 /* CustomFilmLifecycleCorrectnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */; };
-		A00000000000000000000976 /* CustomFilmEditAndSelectorUXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */; };
-		A00000000000000000000978 /* CustomFilmRangeGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000979 /* CustomFilmRangeGuardTests.swift */; };
-		A0000000000000000000097C /* CustomFilmEditorPreviewPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000097D /* CustomFilmEditorPreviewPresenterTests.swift */; };
-		A00000000000000000000992 /* CustomFilmEditorPreviewGraphPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000993 /* CustomFilmEditorPreviewGraphPresenterTests.swift */; };
-		A0000000000000000000097E /* CustomFilmProvenanceDetailsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000097F /* CustomFilmProvenanceDetailsTests.swift */; };
-		A00000000000000000000980 /* CustomFilmEditorUIPassTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000981 /* CustomFilmEditorUIPassTests.swift */; };
-		A00000000000000000000982 /* CustomFilmAnchoredFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */; };
-		A00000000000000000000986 /* CustomFilmStabilizationFormTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */; };
-		A00000000000000000000988 /* CustomFilmStabilizationGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */; };
-		A0000000000000000000098E /* CustomFilmStabilizationFixesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */; };
-		A00000000000000000000B84 /* CustomFilmEditorInputModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B85 /* CustomFilmEditorInputModeTests.swift */; };
-		A00000000000000000000B86 /* CustomFilmAutoSelectAfterSaveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B87 /* CustomFilmAutoSelectAfterSaveTests.swift */; };
-		A00000000000000000000B88 /* CustomFilmEditorFormulaRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B89 /* CustomFilmEditorFormulaRecoveryTests.swift */; };
-		A00000000000000000000B8A /* CustomFilmEditorPreviewDiagnoseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B8B /* CustomFilmEditorPreviewDiagnoseTests.swift */; };
-		A00000000000000000000B8C /* CustomFilmEditorLiveCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B8D /* CustomFilmEditorLiveCheckTests.swift */; };
-		A00000000000000000000B8E /* CustomFilmEditorSaveDisabledReasonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B8F /* CustomFilmEditorSaveDisabledReasonTests.swift */; };
-		A00000000000000000000B94 /* CustomFilmEditorInlineValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B95 /* CustomFilmEditorInlineValidationTests.swift */; };
-		A00000000000000000000B96 /* CustomFilmEditorFormulaSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B97 /* CustomFilmEditorFormulaSummaryTests.swift */; };
-		A00000000000000000000708 /* ReciprocitySourceEvidenceClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */; };
-		A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */; };
-		A00000000000000000000C0F /* TableInterpolationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C10 /* TableInterpolationModelTests.swift */; };
-		A00000000000000000000C11 /* Fomapan100TableModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C12 /* Fomapan100TableModelTests.swift */; };
-		A00000000000000000000C05 /* ReciprocityModelMetadataPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C06 /* ReciprocityModelMetadataPresenterTests.swift */; };
-		A00000000000000000000C07 /* ReciprocityModelComparisonPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C08 /* ReciprocityModelComparisonPresenterTests.swift */; };
-		A00000000000000000000C09 /* ReciprocityModelSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0A /* ReciprocityModelSelectionTests.swift */; };
-		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
 		A00000000000000000000156 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */; };
 		A00000000000000000000158 /* ExposureScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000159 /* ExposureScale.swift */; };
 		A0000000000000000000015A /* ExposureScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000015B /* ExposureScaleTests.swift */; };
@@ -224,7 +101,6 @@
 		A0000000000000000000020B /* CameraSlotIdentityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020A /* CameraSlotIdentityTests.swift */; };
 		A0000000000000000000020D /* CameraSlotSessionModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020C /* CameraSlotSessionModelTests.swift */; };
 		A0000000000000000000020F /* ExposureCalculatorViewModelCameraSlotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */; };
-		A00000000000000000000932 /* CalculatorViewModelCameraSlotRenameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000933 /* CalculatorViewModelCameraSlotRenameTests.swift */; };
 		A00000000000000000000211 /* CameraSlotCalculatorSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */; };
 		A00000000000000000000213 /* CalculatorDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000212 /* CalculatorDefaults.swift */; };
 		A00000000000000000000215 /* ExposureTimerIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000214 /* ExposureTimerIdentity.swift */; };
@@ -242,6 +118,130 @@
 		A0000000000000000000022C /* ExposureCalculatorViewModelTargetShutterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */; };
 		A0000000000000000000022E /* TargetShutterInputState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022F /* TargetShutterInputState.swift */; };
 		A00000000000000000000230 /* TargetShutterInputStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000231 /* TargetShutterInputStateTests.swift */; };
+		A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */; };
+		A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */; };
+		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
+		A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */; };
+		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
+		A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400FormulaProfileTests.swift */; };
+		A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100FormulaProfileTests.swift */; };
+		A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400FormulaProfileTests.swift */; };
+		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
+		A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaFormulaProfileTests.swift */; };
+		A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000255 /* RolleiFormulaProfileTests.swift */; };
+		A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000257 /* AdoxFormulaProfileTests.swift */; };
+		A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */; };
+		A0000000000000000000025A /* AdoxChs100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */; };
+		A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025D /* SourceReferenceRowSorting.swift */; };
+		A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */; };
+		A00000000000000000000261 /* FilmSelectorSupportPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */; };
+		A00000000000000000000263 /* FilmSelectorSupportPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */; };
+		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
+		A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000401 /* SharedFixtureLocator.swift */; };
+		A00000000000000000000500 /* LaunchPresetFilmCatalogShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000501 /* LaunchPresetFilmCatalogShapeTests.swift */; };
+		A00000000000000000000600 /* ConvertedFormulaProfileTemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */; };
+		A00000000000000000000602 /* UnofficialPracticalProfilesShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */; };
+		A00000000000000000000700 /* ReciprocityDetailsVocabularyPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */; };
+		A00000000000000000000702 /* FilmModeDetailsLegendPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */; };
+		A00000000000000000000704 /* FilmModeDetailsReferencePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */; };
+		A00000000000000000000706 /* FilmModeDetailsGraphPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */; };
+		A00000000000000000000708 /* ReciprocitySourceEvidenceClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */; };
+		A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */; };
+		A00000000000000000000801 /* FilmModeDetailsGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000800 /* FilmModeDetailsGraphView.swift */; };
+		A00000000000000000000803 /* FilmModeDetailsGraphRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */; };
+		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
+		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
+		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
+		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
+		A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */; };
+		A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */; };
+		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
+		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
+		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
+		A0000000000000000000090C /* TimerManagerPauseResumeStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */; };
+		A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */; };
+		A00000000000000000000912 /* ExposureCalculatorViewModelFilmDetailsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */; };
+		A00000000000000000000914 /* ExposureCalculatorViewModelFilmAuthorityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */; };
+		A00000000000000000000916 /* ExposureCalculatorViewModelFilmGraphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000917 /* ExposureCalculatorViewModelFilmGraphTests.swift */; };
+		A00000000000000000000918 /* ExposureCalculatorViewModelFilmExtrapolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000919 /* ExposureCalculatorViewModelFilmExtrapolationTests.swift */; };
+		A0000000000000000000091A /* CalculatorTimerMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091B /* CalculatorTimerMetadataTests.swift */; };
+		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
+		A0000000000000000000091E /* CalculatorTimerDisplaySemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091F /* CalculatorTimerDisplaySemanticsTests.swift */; };
+		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
+		A00000000000000000000922 /* BottomSheetWorkspaceCompactPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000923 /* BottomSheetWorkspaceCompactPresentationTests.swift */; };
+		A00000000000000000000924 /* BottomSheetWorkspaceCompactProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000925 /* BottomSheetWorkspaceCompactProgressTests.swift */; };
+		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
+		A00000000000000000000928 /* Provia100FFormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */; };
+		A0000000000000000000092A /* Provia100FScalePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092B /* Provia100FScalePolicyTests.swift */; };
+		A0000000000000000000092C /* Provia100FPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* Provia100FPresentationTests.swift */; };
+		A0000000000000000000092E /* Provia100FGraphVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */; };
+		A00000000000000000000930 /* HP5PlusFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */; };
+		A00000000000000000000932 /* CalculatorViewModelCameraSlotRenameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000933 /* CalculatorViewModelCameraSlotRenameTests.swift */; };
+		A00000000000000000000934 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000935 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift */; };
+		A00000000000000000000940 /* TimerStartComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000941 /* TimerStartComposer.swift */; };
+		A00000000000000000000942 /* CameraSlotPageStateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */; };
+		A00000000000000000000944 /* CalculatorContextRestorePlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */; };
+		A00000000000000000000950 /* FilmModeDetailsGraphPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */; };
+		A00000000000000000000952 /* FormulaEquationFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000953 /* FormulaEquationFormatter.swift */; };
+		A00000000000000000000954 /* FilmModeDetailsGraphCurveSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */; };
+		A00000000000000000000956 /* FilmModeDetailsGraphEvidencePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000957 /* FilmModeDetailsGraphEvidencePresenter.swift */; };
+		A00000000000000000000958 /* FilmModeDetailsGraphTextPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000959 /* FilmModeDetailsGraphTextPresenter.swift */; };
+		A0000000000000000000095A /* CustomProfileSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000095B /* CustomProfileSourceType.swift */; };
+		A0000000000000000000095C /* CustomFilmLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000095D /* CustomFilmLibrary.swift */; };
+		A0000000000000000000095E /* CustomFilmEditorFormState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000095F /* CustomFilmEditorFormState.swift */; };
+		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
+		A00000000000000000000962 /* CustomFilmEditorFormStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000963 /* CustomFilmEditorFormStateTests.swift */; };
+		A00000000000000000000964 /* CustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000965 /* CustomFilmLibraryTests.swift */; };
+		A00000000000000000000966 /* ExposureCalculatorViewModelCustomFilmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000967 /* ExposureCalculatorViewModelCustomFilmTests.swift */; };
+		A00000000000000000000968 /* ExposureCalculatorViewModel+CustomFilm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000969 /* ExposureCalculatorViewModel+CustomFilm.swift */; };
+		A0000000000000000000096A /* PersistentCustomFilmLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* PersistentCustomFilmLibrary.swift */; };
+		A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */; };
+		A0000000000000000000096E /* CalculatorViewModelCustomFilmCalculationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096F /* CalculatorViewModelCustomFilmCalculationTests.swift */; };
+		A00000000000000000000970 /* CalculatorViewModelCustomFilmTimerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */; };
+		A00000000000000000000972 /* CustomFilmDeleteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */; };
+		A00000000000000000000974 /* CustomFilmLifecycleCorrectnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */; };
+		A00000000000000000000976 /* CustomFilmEditAndSelectorUXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */; };
+		A00000000000000000000978 /* CustomFilmRangeGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000979 /* CustomFilmRangeGuardTests.swift */; };
+		A0000000000000000000097A /* CustomFilmEditorPreviewPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000097B /* CustomFilmEditorPreviewPresenter.swift */; };
+		A0000000000000000000097C /* CustomFilmEditorPreviewPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000097D /* CustomFilmEditorPreviewPresenterTests.swift */; };
+		A0000000000000000000097E /* CustomFilmProvenanceDetailsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000097F /* CustomFilmProvenanceDetailsTests.swift */; };
+		A00000000000000000000980 /* CustomFilmEditorUIPassTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000981 /* CustomFilmEditorUIPassTests.swift */; };
+		A00000000000000000000982 /* CustomFilmAnchoredFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */; };
+		A00000000000000000000984 /* CustomFilmFormulaGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000985 /* CustomFilmFormulaGuard.swift */; };
+		A00000000000000000000986 /* CustomFilmStabilizationFormTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */; };
+		A00000000000000000000988 /* CustomFilmStabilizationGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */; };
+		A0000000000000000000098E /* CustomFilmStabilizationFixesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */; };
+		A00000000000000000000990 /* CustomFilmEditorPreviewGraphPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000991 /* CustomFilmEditorPreviewGraphPresenter.swift */; };
+		A00000000000000000000992 /* CustomFilmEditorPreviewGraphPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000993 /* CustomFilmEditorPreviewGraphPresenterTests.swift */; };
+		A00000000000000000000B84 /* CustomFilmEditorInputModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B85 /* CustomFilmEditorInputModeTests.swift */; };
+		A00000000000000000000B86 /* CustomFilmAutoSelectAfterSaveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B87 /* CustomFilmAutoSelectAfterSaveTests.swift */; };
+		A00000000000000000000B88 /* CustomFilmEditorFormulaRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B89 /* CustomFilmEditorFormulaRecoveryTests.swift */; };
+		A00000000000000000000B8A /* CustomFilmEditorPreviewDiagnoseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B8B /* CustomFilmEditorPreviewDiagnoseTests.swift */; };
+		A00000000000000000000B8C /* CustomFilmEditorLiveCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B8D /* CustomFilmEditorLiveCheckTests.swift */; };
+		A00000000000000000000B8E /* CustomFilmEditorSaveDisabledReasonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B8F /* CustomFilmEditorSaveDisabledReasonTests.swift */; };
+		A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */; };
+		A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */; };
+		A00000000000000000000B94 /* CustomFilmEditorInlineValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B95 /* CustomFilmEditorInlineValidationTests.swift */; };
+		A00000000000000000000B96 /* CustomFilmEditorFormulaSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B97 /* CustomFilmEditorFormulaSummaryTests.swift */; };
+		A00000000000000000000B98 /* CalculationBasisPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B99 /* CalculationBasisPresenter.swift */; };
+		A00000000000000000000B9A /* CalculationBasisPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9B /* CalculationBasisPresenterTests.swift */; };
+		A00000000000000000000B9C /* CustomFilmDetailsCalculationBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9D /* CustomFilmDetailsCalculationBasisTests.swift */; };
+		A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */; };
+		A00000000000000000000BA0 /* CustomFilmEditorTwoLineFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA1 /* CustomFilmEditorTwoLineFormulaTests.swift */; };
+		A00000000000000000000BA2 /* CustomFilmEditorFormulaTokenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA3 /* CustomFilmEditorFormulaTokenTests.swift */; };
+		A00000000000000000000BA4 /* CustomFilmEditorResetRevertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA5 /* CustomFilmEditorResetRevertTests.swift */; };
+		A00000000000000000000BA6 /* Fomapan100ModelReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */; };
+		A00000000000000000000C01 /* ReciprocityModelMetadataPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C02 /* ReciprocityModelMetadataPresenter.swift */; };
+		A00000000000000000000C03 /* ReciprocityModelComparisonPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C04 /* ReciprocityModelComparisonPresenter.swift */; };
+		A00000000000000000000C05 /* ReciprocityModelMetadataPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C06 /* ReciprocityModelMetadataPresenterTests.swift */; };
+		A00000000000000000000C07 /* ReciprocityModelComparisonPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C08 /* ReciprocityModelComparisonPresenterTests.swift */; };
+		A00000000000000000000C09 /* ReciprocityModelSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0A /* ReciprocityModelSelectionTests.swift */; };
+		A00000000000000000000C0B /* TableInterpolationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0C /* TableInterpolationModel.swift */; };
+		A00000000000000000000C0D /* AlternateReciprocityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0E /* AlternateReciprocityModels.swift */; };
+		A00000000000000000000C0F /* TableInterpolationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C10 /* TableInterpolationModelTests.swift */; };
+		A00000000000000000000C11 /* Fomapan100TableModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C12 /* Fomapan100TableModelTests.swift */; };
+		A00000000001600000000001 /* GuardedReciprocityFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */; };
+		A00000000001700000000001 /* ReciprocityProfileModelBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -278,19 +278,61 @@
 /* Begin PBXFileReference section */
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
+		A0000000000000000000EF01 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A00000000000000000000013 /* ExposureCalculatorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorScreen.swift; sourceTree = "<group>"; };
 		A00000000000000000000014 /* ExposureCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculator.swift; sourceTree = "<group>"; };
 		A00000000000000000000015 /* TimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManager.swift; sourceTree = "<group>"; };
 		A00000000000000000000016 /* ExposureCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000017 /* TimerManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
-		A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerCompletionAlertTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerNotificationSchedulingTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeStateTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000019 /* ExposureCalculatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModel.swift; sourceTree = "<group>"; };
+		A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculationAccuracyTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCompletionNotificationScheduler.swift; sourceTree = "<group>"; };
+		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
+		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
+		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
+		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatter.swift; sourceTree = "<group>"; };
+		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
+		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicy.swift; sourceTree = "<group>"; };
+		A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicyTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentation.swift; sourceTree = "<group>"; };
+		A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentationTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000B6 /* PresetFilmCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetFilmCatalog.swift; sourceTree = "<group>"; };
+		A000000000000000000000B8 /* ExposureCalculatorViewModelFilmModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000BE /* ExposureCalculatorViewModelTimerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTimerIntegrationTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000C5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelContextPersistenceTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShell.swift; sourceTree = "<group>"; };
+		A000000000000000000000D3 /* BottomSheetWorkspaceStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceStateStore.swift; sourceTree = "<group>"; };
+		A000000000000000000000D5 /* BottomSheetWorkspaceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceMetrics.swift; sourceTree = "<group>"; };
+		A000000000000000000000D7 /* BottomSheetWorkspacePresentationAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspacePresentationAdapter.swift; sourceTree = "<group>"; };
+		A000000000000000000000D9 /* BottomSheetWorkspaceSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshotStore.swift; sourceTree = "<group>"; };
+		A000000000000000000000DB /* BottomSheetWorkspaceActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceActions.swift; sourceTree = "<group>"; };
+		A000000000000000000000DD /* BottomSheetWorkspaceSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshot.swift; sourceTree = "<group>"; };
+		A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = LaunchPresetFilmCatalog.json; sourceTree = "<group>"; };
+		A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelScenePhaseTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorWorkingContext.swift; sourceTree = "<group>"; };
+		A000000000000000000000F3 /* PersistentCalculatorContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCalculatorContext.swift; sourceTree = "<group>"; };
+		A000000000000000000000F5 /* FilmSelectionDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionDisplayState.swift; sourceTree = "<group>"; };
+		A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeResultDisplayStates.swift; sourceTree = "<group>"; };
+		A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsDisplayStates.swift; sourceTree = "<group>"; };
+		A000000000000000000000FC /* BottomSheetWorkspaceSnapshotFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshotFactoryTests.swift; sourceTree = "<group>"; };
+		A000000000000000000000FE /* BottomSheetWorkspaceOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceOrderingTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000100 /* BottomSheetIdentityPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetIdentityPaletteTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorLayoutMetrics.swift; sourceTree = "<group>"; };
+		A00000000000000000000103 /* RunningTimerPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerPanelView.swift; sourceTree = "<group>"; };
+		A00000000000000000000106 /* ViewModelDependencyFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDependencyFactory.swift; sourceTree = "<group>"; };
+		A00000000000000000000107 /* FilmModeDetailsPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000109 /* LockScreenTimerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerCoordinator.swift; sourceTree = "<group>"; };
+		A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicyPerformanceTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerCoordinatorTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000110 /* DisplayStateSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStateSnapshot.swift; sourceTree = "<group>"; };
 		A00000000000000000000112 /* DisplayStateSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStateSnapshotTests.swift; sourceTree = "<group>"; };
@@ -299,79 +341,7 @@
 		A00000000000000000000119 /* RecordReplaySpies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplaySpies.swift; sourceTree = "<group>"; };
 		A0000000000000000000011B /* RecordReplayHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayHarness.swift; sourceTree = "<group>"; };
 		A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayBaselineSmokeTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000401 /* SharedFixtureLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureLocator.swift; sourceTree = "<group>"; };
-		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A00000000000000000000019 /* ExposureCalculatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModel.swift; sourceTree = "<group>"; };
-		A00000000000000000000941 /* TimerStartComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStartComposer.swift; sourceTree = "<group>"; };
-		A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPageStateBuilder.swift; sourceTree = "<group>"; };
-		A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorContextRestorePlanBuilder.swift; sourceTree = "<group>"; };
-		A0000000000000000000001A /* ExposureCalculatorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000001B /* ExposureCalculationAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculationAccuracyTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
-		A00000000000000000000923 /* BottomSheetWorkspaceCompactPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceCompactPresentationTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000925 /* BottomSheetWorkspaceCompactProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceCompactProgressTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000FC /* BottomSheetWorkspaceSnapshotFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshotFactoryTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000935 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshotStartAgainTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000FE /* BottomSheetWorkspaceOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceOrderingTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000100 /* BottomSheetIdentityPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetIdentityPaletteTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorLayoutMetrics.swift; sourceTree = "<group>"; };
-		A00000000000000000000103 /* RunningTimerPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerPanelView.swift; sourceTree = "<group>"; };
-		A00000000000000000000106 /* ViewModelDependencyFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDependencyFactory.swift; sourceTree = "<group>"; };
-		A00000000000000000000107 /* FilmModeDetailsPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000109 /* LockScreenTimerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerCoordinator.swift; sourceTree = "<group>"; };
-		A000000000000000000000B8 /* ExposureCalculatorViewModelFilmModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTestSupport.swift; sourceTree = "<group>"; };
-		A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmDetailsTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmAuthorityTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000917 /* ExposureCalculatorViewModelFilmGraphTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmGraphTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000919 /* ExposureCalculatorViewModelFilmExtrapolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmExtrapolationTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000BE /* ExposureCalculatorViewModelTimerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTimerIntegrationTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000091B /* CalculatorTimerMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerMetadataTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000091F /* CalculatorTimerDisplaySemanticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerDisplaySemanticsTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelContextPersistenceTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelScenePhaseTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShell.swift; sourceTree = "<group>"; };
-		A000000000000000000000D3 /* BottomSheetWorkspaceStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceStateStore.swift; sourceTree = "<group>"; };
-		A000000000000000000000D5 /* BottomSheetWorkspaceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceMetrics.swift; sourceTree = "<group>"; };
-		A000000000000000000000D7 /* BottomSheetWorkspacePresentationAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspacePresentationAdapter.swift; sourceTree = "<group>"; };
-		A000000000000000000000D9 /* BottomSheetWorkspaceSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshotStore.swift; sourceTree = "<group>"; };
-		A000000000000000000000DB /* BottomSheetWorkspaceActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceActions.swift; sourceTree = "<group>"; };
-		A000000000000000000000DD /* BottomSheetWorkspaceSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshot.swift; sourceTree = "<group>"; };
-		A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCompletionNotificationScheduler.swift; sourceTree = "<group>"; };
-		A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatter.swift; sourceTree = "<group>"; };
-		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
-		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicy.swift; sourceTree = "<group>"; };
-		A00000000000000000000C0C /* TableInterpolationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableInterpolationModel.swift; sourceTree = "<group>"; };
-		A00000000000000000000C0E /* AlternateReciprocityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlternateReciprocityModels.swift; sourceTree = "<group>"; };
-		A000000000000000000000B0 /* ReciprocityCalculationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicyTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000010C /* ReciprocityCalculationPolicyPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicyPerformanceTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000121 /* ReciprocityResultCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityResultCodableTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000501 /* LaunchPresetFilmCatalogShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogShapeTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnofficialPracticalProfilesShapeTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentation.swift; sourceTree = "<group>"; };
-		A000000000000000000000B4 /* ReciprocityConfidencePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityConfidencePresentationTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000B6 /* PresetFilmCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetFilmCatalog.swift; sourceTree = "<group>"; };
-		A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorWorkingContext.swift; sourceTree = "<group>"; };
-		A000000000000000000000F3 /* PersistentCalculatorContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCalculatorContext.swift; sourceTree = "<group>"; };
-		A000000000000000000000F5 /* FilmSelectionDisplayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectionDisplayState.swift; sourceTree = "<group>"; };
-		A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenterTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeResultDisplayStates.swift; sourceTree = "<group>"; };
-		A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsDisplayStates.swift; sourceTree = "<group>"; };
-		A000000000000000000000BA /* LaunchPresetFilmCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogTests.swift; sourceTree = "<group>"; };
-		A000000000000000000000C5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = LaunchPresetFilmCatalog.json; sourceTree = "<group>"; };
-		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
-		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
-		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
-		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
 		A00000000000000000000124 /* WorkspaceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceCoordinator.swift; sourceTree = "<group>"; };
 		A00000000000000000000126 /* CalculatorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000129 /* CalculatorModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorModelTests.swift; sourceTree = "<group>"; };
@@ -385,104 +355,12 @@
 		A00000000000000000000144 /* RunningTimerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerItem.swift; sourceTree = "<group>"; };
 		A00000000000000000000145 /* TimerMetadataPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerMetadataPersistence.swift; sourceTree = "<group>"; };
 		A00000000000000000000148 /* FilmModeDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsView.swift; sourceTree = "<group>"; };
-		A00000000000000000000800 /* FilmModeDetailsGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphView.swift; sourceTree = "<group>"; };
-		A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphRendering.swift; sourceTree = "<group>"; };
-		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
-		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
-		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
 		A0000000000000000000014A /* WheelPickerContinuousObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelPickerContinuousObserver.swift; sourceTree = "<group>"; };
 		A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDisplayStateBaselineTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000014E /* SharedFixtureGoldenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureGoldenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000153 /* ReciprocitySecondaryGuidancePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidancePresentationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000155 /* ReciprocitySecondaryGuidanceCatalogMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySecondaryGuidanceCatalogMappingTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTestSupport.swift; sourceTree = "<group>"; };
-		A0000000000000000000092B /* Provia100FScalePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FScalePolicyTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000092D /* Provia100FPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FPresentationTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FGraphVisibilityTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HP5PlusFormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardedReciprocityFormulaTests.swift; sourceTree = "<group>"; };
-		A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityProfileModelBasisTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia50FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcrosIIFormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000245 /* TriX400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000247 /* TMax100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000249 /* TMax400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000253 /* FomaFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaFormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100ModelReviewTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000255 /* RolleiFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolleiFormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000257 /* AdoxFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxFormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmDetailsGraphKindInvariantTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxChs100FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000025D /* SourceReferenceRowSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSorting.swift; sourceTree = "<group>"; };
-		A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSortingTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvertedFormulaProfileTemplateTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000C02 /* ReciprocityModelMetadataPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelMetadataPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000C04 /* ReciprocityModelComparisonPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelComparisonPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsLegendPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsReferencePresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000953 /* FormulaEquationFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaEquationFormatter.swift; sourceTree = "<group>"; };
-		A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphCurveSampler.swift; sourceTree = "<group>"; };
-		A00000000000000000000957 /* FilmModeDetailsGraphEvidencePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphEvidencePresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000959 /* FilmModeDetailsGraphTextPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphTextPresenter.swift; sourceTree = "<group>"; };
-		A0000000000000000000095B /* CustomProfileSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomProfileSourceType.swift; sourceTree = "<group>"; };
-		A0000000000000000000095D /* CustomFilmLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLibrary.swift; sourceTree = "<group>"; };
-		A0000000000000000000095F /* CustomFilmEditorFormState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormState.swift; sourceTree = "<group>"; };
-		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
-		A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckView.swift; sourceTree = "<group>"; };
-		A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFieldSheets.swift; sourceTree = "<group>"; };
-		A00000000000000000000B99 /* CalculationBasisPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationBasisPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000B9B /* CalculationBasisPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationBasisPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B9D /* CustomFilmDetailsCalculationBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmDetailsCalculationBasisTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPolishTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000BA1 /* CustomFilmEditorTwoLineFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorTwoLineFormulaTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000BA3 /* CustomFilmEditorFormulaTokenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormulaTokenTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000BA5 /* CustomFilmEditorResetRevertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorResetRevertTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000963 /* CustomFilmEditorFormStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormStateTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000965 /* CustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLibraryTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000967 /* ExposureCalculatorViewModelCustomFilmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelCustomFilmTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000969 /* ExposureCalculatorViewModel+CustomFilm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ExposureCalculatorViewModel+CustomFilm.swift"; sourceTree = "<group>"; };
-		A0000000000000000000096B /* PersistentCustomFilmLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibrary.swift; sourceTree = "<group>"; };
-		A0000000000000000000097B /* CustomFilmEditorPreviewPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000991 /* CustomFilmEditorPreviewGraphPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewGraphPresenter.swift; sourceTree = "<group>"; };
-		A00000000000000000000985 /* CustomFilmFormulaGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmFormulaGuard.swift; sourceTree = "<group>"; };
-		A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibraryTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000096F /* CalculatorViewModelCustomFilmCalculationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCustomFilmCalculationTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCustomFilmTimerTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmDeleteFlowTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLifecycleCorrectnessTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditAndSelectorUXTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000979 /* CustomFilmRangeGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmRangeGuardTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000097D /* CustomFilmEditorPreviewPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000993 /* CustomFilmEditorPreviewGraphPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewGraphPresenterTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000097F /* CustomFilmProvenanceDetailsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmProvenanceDetailsTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000981 /* CustomFilmEditorUIPassTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorUIPassTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmAnchoredFormulaTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationFormTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationGuardTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationFixesTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B85 /* CustomFilmEditorInputModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorInputModeTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B87 /* CustomFilmAutoSelectAfterSaveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmAutoSelectAfterSaveTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B89 /* CustomFilmEditorFormulaRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormulaRecoveryTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B8B /* CustomFilmEditorPreviewDiagnoseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewDiagnoseTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B8D /* CustomFilmEditorLiveCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B8F /* CustomFilmEditorSaveDisabledReasonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorSaveDisabledReasonTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B95 /* CustomFilmEditorInlineValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorInlineValidationTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000B97 /* CustomFilmEditorFormulaSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormulaSummaryTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySourceEvidenceClassifier.swift; sourceTree = "<group>"; };
-		A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000C10 /* TableInterpolationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableInterpolationModelTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000C12 /* Fomapan100TableModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100TableModelTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000C06 /* ReciprocityModelMetadataPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelMetadataPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000C08 /* ReciprocityModelComparisonPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelComparisonPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000C0A /* ReciprocityModelSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelSelectionTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000157 /* FilmModeDetailsSecondaryGuidancePresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsSecondaryGuidancePresenterTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000159 /* ExposureScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScale.swift; sourceTree = "<group>"; };
 		A0000000000000000000015B /* ExposureScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureScaleTests.swift; sourceTree = "<group>"; };
@@ -496,7 +374,6 @@
 		A0000000000000000000020A /* CameraSlotIdentityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotIdentityTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000020C /* CameraSlotSessionModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotSessionModelTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000020E /* ExposureCalculatorViewModelCameraSlotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelCameraSlotsTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000933 /* CalculatorViewModelCameraSlotRenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCameraSlotRenameTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotCalculatorSnapshot.swift; sourceTree = "<group>"; };
 		A00000000000000000000212 /* CalculatorDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorDefaults.swift; sourceTree = "<group>"; };
 		A00000000000000000000214 /* ExposureTimerIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureTimerIdentity.swift; sourceTree = "<group>"; };
@@ -514,6 +391,130 @@
 		A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTargetShutterTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000022F /* TargetShutterInputState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterInputState.swift; sourceTree = "<group>"; };
 		A00000000000000000000231 /* TargetShutterInputStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterInputStateTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia50FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcrosIIFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
+		A00000000000000000000245 /* TriX400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000247 /* TMax100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000249 /* TMax400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000253 /* FomaFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000255 /* RolleiFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolleiFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000257 /* AdoxFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmDetailsGraphKindInvariantTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxChs100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000025D /* SourceReferenceRowSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSorting.swift; sourceTree = "<group>"; };
+		A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSortingTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000262 /* FilmSelectorSupportPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000401 /* SharedFixtureLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureLocator.swift; sourceTree = "<group>"; };
+		A00000000000000000000501 /* LaunchPresetFilmCatalogShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPresetFilmCatalogShapeTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvertedFormulaProfileTemplateTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnofficialPracticalProfilesShapeTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsLegendPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsReferencePresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocitySourceEvidenceClassifier.swift; sourceTree = "<group>"; };
+		A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000800 /* FilmModeDetailsGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphView.swift; sourceTree = "<group>"; };
+		A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphRendering.swift; sourceTree = "<group>"; };
+		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
+		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
+		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
+		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
+		A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerCompletionAlertTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerNotificationSchedulingTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeStateTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTestSupport.swift; sourceTree = "<group>"; };
+		A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmDetailsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmAuthorityTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000917 /* ExposureCalculatorViewModelFilmGraphTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmGraphTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000919 /* ExposureCalculatorViewModelFilmExtrapolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmExtrapolationTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000091B /* CalculatorTimerMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerMetadataTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000091F /* CalculatorTimerDisplaySemanticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerDisplaySemanticsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
+		A00000000000000000000923 /* BottomSheetWorkspaceCompactPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceCompactPresentationTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000925 /* BottomSheetWorkspaceCompactProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceCompactProgressTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000929 /* Provia100FFormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTestSupport.swift; sourceTree = "<group>"; };
+		A0000000000000000000092B /* Provia100FScalePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FScalePolicyTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000092D /* Provia100FPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FPresentationTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000092F /* Provia100FGraphVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FGraphVisibilityTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000931 /* HP5PlusFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HP5PlusFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000933 /* CalculatorViewModelCameraSlotRenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCameraSlotRenameTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000935 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceSnapshotStartAgainTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000941 /* TimerStartComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStartComposer.swift; sourceTree = "<group>"; };
+		A00000000000000000000943 /* CameraSlotPageStateBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPageStateBuilder.swift; sourceTree = "<group>"; };
+		A00000000000000000000945 /* CalculatorContextRestorePlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorContextRestorePlanBuilder.swift; sourceTree = "<group>"; };
+		A00000000000000000000951 /* FilmModeDetailsGraphPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000953 /* FormulaEquationFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaEquationFormatter.swift; sourceTree = "<group>"; };
+		A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphCurveSampler.swift; sourceTree = "<group>"; };
+		A00000000000000000000957 /* FilmModeDetailsGraphEvidencePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphEvidencePresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000959 /* FilmModeDetailsGraphTextPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphTextPresenter.swift; sourceTree = "<group>"; };
+		A0000000000000000000095B /* CustomProfileSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomProfileSourceType.swift; sourceTree = "<group>"; };
+		A0000000000000000000095D /* CustomFilmLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLibrary.swift; sourceTree = "<group>"; };
+		A0000000000000000000095F /* CustomFilmEditorFormState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormState.swift; sourceTree = "<group>"; };
+		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
+		A00000000000000000000963 /* CustomFilmEditorFormStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormStateTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000965 /* CustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLibraryTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000967 /* ExposureCalculatorViewModelCustomFilmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelCustomFilmTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000969 /* ExposureCalculatorViewModel+CustomFilm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ExposureCalculatorViewModel+CustomFilm.swift"; sourceTree = "<group>"; };
+		A0000000000000000000096B /* PersistentCustomFilmLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibrary.swift; sourceTree = "<group>"; };
+		A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibraryTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000096F /* CalculatorViewModelCustomFilmCalculationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCustomFilmCalculationTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCustomFilmTimerTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmDeleteFlowTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLifecycleCorrectnessTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditAndSelectorUXTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000979 /* CustomFilmRangeGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmRangeGuardTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000097B /* CustomFilmEditorPreviewPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewPresenter.swift; sourceTree = "<group>"; };
+		A0000000000000000000097D /* CustomFilmEditorPreviewPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewPresenterTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000097F /* CustomFilmProvenanceDetailsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmProvenanceDetailsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000981 /* CustomFilmEditorUIPassTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorUIPassTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000983 /* CustomFilmAnchoredFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmAnchoredFormulaTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000985 /* CustomFilmFormulaGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmFormulaGuard.swift; sourceTree = "<group>"; };
+		A00000000000000000000987 /* CustomFilmStabilizationFormTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationFormTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000989 /* CustomFilmStabilizationGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationGuardTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000098F /* CustomFilmStabilizationFixesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmStabilizationFixesTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000991 /* CustomFilmEditorPreviewGraphPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewGraphPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000993 /* CustomFilmEditorPreviewGraphPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewGraphPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B85 /* CustomFilmEditorInputModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorInputModeTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B87 /* CustomFilmAutoSelectAfterSaveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmAutoSelectAfterSaveTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B89 /* CustomFilmEditorFormulaRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormulaRecoveryTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B8B /* CustomFilmEditorPreviewDiagnoseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPreviewDiagnoseTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B8D /* CustomFilmEditorLiveCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B8F /* CustomFilmEditorSaveDisabledReasonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorSaveDisabledReasonTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckView.swift; sourceTree = "<group>"; };
+		A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFieldSheets.swift; sourceTree = "<group>"; };
+		A00000000000000000000B95 /* CustomFilmEditorInlineValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorInlineValidationTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B97 /* CustomFilmEditorFormulaSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormulaSummaryTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B99 /* CalculationBasisPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationBasisPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000B9B /* CalculationBasisPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculationBasisPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B9D /* CustomFilmDetailsCalculationBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmDetailsCalculationBasisTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPolishTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000BA1 /* CustomFilmEditorTwoLineFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorTwoLineFormulaTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000BA3 /* CustomFilmEditorFormulaTokenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFormulaTokenTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000BA5 /* CustomFilmEditorResetRevertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorResetRevertTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100ModelReviewTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000C02 /* ReciprocityModelMetadataPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelMetadataPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000C04 /* ReciprocityModelComparisonPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelComparisonPresenter.swift; sourceTree = "<group>"; };
+		A00000000000000000000C06 /* ReciprocityModelMetadataPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelMetadataPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000C08 /* ReciprocityModelComparisonPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelComparisonPresenterTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000C0A /* ReciprocityModelSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityModelSelectionTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000C0C /* TableInterpolationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableInterpolationModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000C0E /* AlternateReciprocityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlternateReciprocityModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000C10 /* TableInterpolationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableInterpolationModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000C12 /* Fomapan100TableModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100TableModelTests.swift; sourceTree = "<group>"; };
+		A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardedReciprocityFormulaTests.swift; sourceTree = "<group>"; };
+		A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityProfileModelBasisTests.swift; sourceTree = "<group>"; };
+		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -545,6 +546,7 @@
 			isa = PBXGroup;
 			children = (
 				F2683D862F7A020F009BCD7F /* PTimer.xctestplan */,
+				A0000000000000000000EF01 /* Signing.xcconfig */,
 				A00000000000000000000031 /* PTimer */,
 				A00000000000000000000094 /* PTimerWidgets */,
 				A00000000000000000000033 /* PTimerTests */,
@@ -566,29 +568,38 @@
 			path = PTimer;
 			sourceTree = "<group>";
 		};
-		A000000000000000000000C6 /* App */ = {
+		A00000000000000000000032 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A00000000000000000000011 /* PTimerApp.swift */,
-				A00000000000000000000012 /* ContentView.swift */,
-				A000000000000000000000D0 /* Workspace */,
+				A00000000000000000000010 /* PTimer.app */,
+				A00000000000000000000018 /* PTimerTests.xctest */,
+				A00000000000000000000090 /* PTimerWidgets.appex */,
 			);
-			path = App;
+			name = Products;
 			sourceTree = "<group>";
 		};
-		A000000000000000000000D0 /* Workspace */ = {
+		A00000000000000000000033 /* PTimerTests */ = {
 			isa = PBXGroup;
 			children = (
-				A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */,
-				A000000000000000000000D3 /* BottomSheetWorkspaceStateStore.swift */,
-				A000000000000000000000D5 /* BottomSheetWorkspaceMetrics.swift */,
-				A000000000000000000000D7 /* BottomSheetWorkspacePresentationAdapter.swift */,
-				A000000000000000000000D9 /* BottomSheetWorkspaceSnapshotStore.swift */,
-				A000000000000000000000DB /* BottomSheetWorkspaceActions.swift */,
-				A000000000000000000000DD /* BottomSheetWorkspaceSnapshot.swift */,
-				A00000000000000000000216 /* TimerCardIdentityPresenter.swift */,
+				A000000000000000000000CB /* App */,
+				A000000000000000000000BC /* ExposureCalculator */,
+				A000000000000000000000CC /* Reciprocity */,
+				A000000000000000000000CD /* Timers */,
+				A00000000000000000000113 /* Snapshots */,
+				A00000000000000000000114 /* RecordReplay */,
+				A00000000000000000000402 /* Support */,
 			);
-			path = Workspace;
+			path = PTimerTests;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000094 /* PTimerWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000009D /* Info.plist */,
+				A00000000000000000000092 /* PTimerWidgetsBundle.swift */,
+				A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */,
+			);
+			path = PTimerWidgets;
 			sourceTree = "<group>";
 		};
 		A000000000000000000000BB /* ExposureCalculator */ = {
@@ -628,189 +639,6 @@
 				A00000000000000000000124 /* WorkspaceCoordinator.swift */,
 			);
 			path = ExposureCalculator;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000209 /* CameraSlot */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000201 /* CameraSlotIdentity.swift */,
-				A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */,
-				A00000000000000000000205 /* CameraSlotPageState.swift */,
-				A00000000000000000000218 /* PersistentCameraSlotSession.swift */,
-				A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */,
-				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
-				A0000000000000000000021E /* CameraSlotRenameSheet.swift */,
-			);
-			path = CameraSlot;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000127 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000126 /* CalculatorModel.swift */,
-				A00000000000000000000131 /* ReciprocityModel.swift */,
-				A00000000000000000000135 /* TimerWorkspaceModel.swift */,
-				A00000000000000000000139 /* FilmSelectionModel.swift */,
-				A00000000000000000000144 /* RunningTimerItem.swift */,
-				A00000000000000000000207 /* CameraSlotSessionModel.swift */,
-				A00000000000000000000214 /* ExposureTimerIdentity.swift */,
-				A00000000000000000000221 /* TargetShutterModel.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		A000000000000000000000F0 /* FilmContext */ = {
-			isa = PBXGroup;
-			children = (
-				A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */,
-				A000000000000000000000F3 /* PersistentCalculatorContext.swift */,
-				A000000000000000000000F5 /* FilmSelectionDisplayState.swift */,
-				A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */,
-				A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */,
-				A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */,
-				A0000000000000000000025D /* SourceReferenceRowSorting.swift */,
-				A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */,
-				A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */,
-				A00000000000000000000C02 /* ReciprocityModelMetadataPresenter.swift */,
-				A00000000000000000000C04 /* ReciprocityModelComparisonPresenter.swift */,
-				A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */,
-				A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */,
-				A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */,
-				A00000000000000000000953 /* FormulaEquationFormatter.swift */,
-				A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */,
-				A00000000000000000000957 /* FilmModeDetailsGraphEvidencePresenter.swift */,
-				A00000000000000000000959 /* FilmModeDetailsGraphTextPresenter.swift */,
-				A0000000000000000000095B /* CustomProfileSourceType.swift */,
-				A0000000000000000000095D /* CustomFilmLibrary.swift */,
-				A0000000000000000000095F /* CustomFilmEditorFormState.swift */,
-				A0000000000000000000096B /* PersistentCustomFilmLibrary.swift */,
-				A0000000000000000000097B /* CustomFilmEditorPreviewPresenter.swift */,
-				A00000000000000000000991 /* CustomFilmEditorPreviewGraphPresenter.swift */,
-				A00000000000000000000985 /* CustomFilmFormulaGuard.swift */,
-				A00000000000000000000B99 /* CalculationBasisPresenter.swift */,
-			);
-			path = FilmContext;
-			sourceTree = "<group>";
-		};
-		A000000000000000000000C7 /* Reciprocity */ = {
-			isa = PBXGroup;
-			children = (
-				A000000000000000000000AA /* ReciprocityDomain.swift */,
-				A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */,
-				A00000000000000000000C0C /* TableInterpolationModel.swift */,
-				A00000000000000000000C0E /* AlternateReciprocityModels.swift */,
-				A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */,
-				A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */,
-			);
-			path = Reciprocity;
-			sourceTree = "<group>";
-		};
-		A000000000000000000000C8 /* Timers */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000015 /* TimerManager.swift */,
-				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
-				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
-				A00000000000000000000109 /* LockScreenTimerCoordinator.swift */,
-				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
-				A00000000000000000000145 /* TimerMetadataPersistence.swift */,
-			);
-			path = Timers;
-			sourceTree = "<group>";
-		};
-		A000000000000000000000C9 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				A000000000000000000000C5 /* Assets.xcassets */,
-				A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */,
-			);
-			path = Resources;
-			sourceTree = "<group>";
-		};
-		A000000000000000000000CA /* Support */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Support;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000094 /* PTimerWidgets */ = {
-			isa = PBXGroup;
-			children = (
-				A0000000000000000000009D /* Info.plist */,
-				A00000000000000000000092 /* PTimerWidgetsBundle.swift */,
-				A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */,
-			);
-			path = PTimerWidgets;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000032 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000010 /* PTimer.app */,
-				A00000000000000000000018 /* PTimerTests.xctest */,
-				A00000000000000000000090 /* PTimerWidgets.appex */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000033 /* PTimerTests */ = {
-			isa = PBXGroup;
-			children = (
-				A000000000000000000000CB /* App */,
-				A000000000000000000000BC /* ExposureCalculator */,
-				A000000000000000000000CC /* Reciprocity */,
-				A000000000000000000000CD /* Timers */,
-				A00000000000000000000113 /* Snapshots */,
-				A00000000000000000000114 /* RecordReplay */,
-				A00000000000000000000402 /* Support */,
-			);
-			path = PTimerTests;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000113 /* Snapshots */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000110 /* DisplayStateSnapshot.swift */,
-				A00000000000000000000112 /* DisplayStateSnapshotTests.swift */,
-			);
-			path = Snapshots;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000114 /* RecordReplay */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000115 /* RecordReplayTrace.swift */,
-				A00000000000000000000117 /* RecordReplayBaseline.swift */,
-				A00000000000000000000119 /* RecordReplaySpies.swift */,
-				A0000000000000000000011B /* RecordReplayHarness.swift */,
-				A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */,
-			);
-			path = RecordReplay;
-			sourceTree = "<group>";
-		};
-		A00000000000000000000402 /* Support */ = {
-			isa = PBXGroup;
-			children = (
-				A00000000000000000000401 /* SharedFixtureLocator.swift */,
-			);
-			path = Support;
-			sourceTree = "<group>";
-		};
-		A000000000000000000000CB /* App */ = {
-			isa = PBXGroup;
-			children = (
-				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
-				A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */,
-				A00000000000000000000923 /* BottomSheetWorkspaceCompactPresentationTests.swift */,
-				A00000000000000000000925 /* BottomSheetWorkspaceCompactProgressTests.swift */,
-				A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */,
-				A000000000000000000000FC /* BottomSheetWorkspaceSnapshotFactoryTests.swift */,
-				A00000000000000000000935 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift */,
-				A000000000000000000000FE /* BottomSheetWorkspaceOrderingTests.swift */,
-				A00000000000000000000100 /* BottomSheetIdentityPaletteTests.swift */,
-			);
-			path = App;
 			sourceTree = "<group>";
 		};
 		A000000000000000000000BC /* ExposureCalculator */ = {
@@ -893,6 +721,74 @@
 			path = ExposureCalculator;
 			sourceTree = "<group>";
 		};
+		A000000000000000000000C6 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000011 /* PTimerApp.swift */,
+				A00000000000000000000012 /* ContentView.swift */,
+				A000000000000000000000D0 /* Workspace */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C7 /* Reciprocity */ = {
+			isa = PBXGroup;
+			children = (
+				A000000000000000000000AA /* ReciprocityDomain.swift */,
+				A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */,
+				A00000000000000000000C0C /* TableInterpolationModel.swift */,
+				A00000000000000000000C0E /* AlternateReciprocityModels.swift */,
+				A000000000000000000000B2 /* ReciprocityConfidencePresentation.swift */,
+				A00000000000000000000151 /* ReciprocitySecondaryGuidancePresentation.swift */,
+			);
+			path = Reciprocity;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C8 /* Timers */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000015 /* TimerManager.swift */,
+				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
+				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
+				A00000000000000000000109 /* LockScreenTimerCoordinator.swift */,
+				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
+				A00000000000000000000145 /* TimerMetadataPersistence.swift */,
+			);
+			path = Timers;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000C9 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A000000000000000000000C5 /* Assets.xcassets */,
+				A000000000000000000000E0 /* LaunchPresetFilmCatalog.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000CA /* Support */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000CB /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
+				A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */,
+				A00000000000000000000923 /* BottomSheetWorkspaceCompactPresentationTests.swift */,
+				A00000000000000000000925 /* BottomSheetWorkspaceCompactProgressTests.swift */,
+				A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */,
+				A000000000000000000000FC /* BottomSheetWorkspaceSnapshotFactoryTests.swift */,
+				A00000000000000000000935 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift */,
+				A000000000000000000000FE /* BottomSheetWorkspaceOrderingTests.swift */,
+				A00000000000000000000100 /* BottomSheetIdentityPaletteTests.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
 		A000000000000000000000CC /* Reciprocity */ = {
 			isa = PBXGroup;
 			children = (
@@ -951,6 +847,112 @@
 				A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */,
 			);
 			path = Timers;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000D0 /* Workspace */ = {
+			isa = PBXGroup;
+			children = (
+				A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */,
+				A000000000000000000000D3 /* BottomSheetWorkspaceStateStore.swift */,
+				A000000000000000000000D5 /* BottomSheetWorkspaceMetrics.swift */,
+				A000000000000000000000D7 /* BottomSheetWorkspacePresentationAdapter.swift */,
+				A000000000000000000000D9 /* BottomSheetWorkspaceSnapshotStore.swift */,
+				A000000000000000000000DB /* BottomSheetWorkspaceActions.swift */,
+				A000000000000000000000DD /* BottomSheetWorkspaceSnapshot.swift */,
+				A00000000000000000000216 /* TimerCardIdentityPresenter.swift */,
+			);
+			path = Workspace;
+			sourceTree = "<group>";
+		};
+		A000000000000000000000F0 /* FilmContext */ = {
+			isa = PBXGroup;
+			children = (
+				A000000000000000000000F1 /* ExposureCalculatorWorkingContext.swift */,
+				A000000000000000000000F3 /* PersistentCalculatorContext.swift */,
+				A000000000000000000000F5 /* FilmSelectionDisplayState.swift */,
+				A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */,
+				A000000000000000000000F7 /* FilmModeResultDisplayStates.swift */,
+				A000000000000000000000F9 /* FilmModeDetailsDisplayStates.swift */,
+				A0000000000000000000025D /* SourceReferenceRowSorting.swift */,
+				A00000000000000000000709 /* ReciprocitySourceEvidenceClassifier.swift */,
+				A00000000000000000000701 /* ReciprocityDetailsVocabularyPresenter.swift */,
+				A00000000000000000000C02 /* ReciprocityModelMetadataPresenter.swift */,
+				A00000000000000000000C04 /* ReciprocityModelComparisonPresenter.swift */,
+				A00000000000000000000703 /* FilmModeDetailsLegendPresenter.swift */,
+				A00000000000000000000705 /* FilmModeDetailsReferencePresenter.swift */,
+				A00000000000000000000707 /* FilmModeDetailsGraphPresenter.swift */,
+				A00000000000000000000953 /* FormulaEquationFormatter.swift */,
+				A00000000000000000000955 /* FilmModeDetailsGraphCurveSampler.swift */,
+				A00000000000000000000957 /* FilmModeDetailsGraphEvidencePresenter.swift */,
+				A00000000000000000000959 /* FilmModeDetailsGraphTextPresenter.swift */,
+				A0000000000000000000095B /* CustomProfileSourceType.swift */,
+				A0000000000000000000095D /* CustomFilmLibrary.swift */,
+				A0000000000000000000095F /* CustomFilmEditorFormState.swift */,
+				A0000000000000000000096B /* PersistentCustomFilmLibrary.swift */,
+				A0000000000000000000097B /* CustomFilmEditorPreviewPresenter.swift */,
+				A00000000000000000000991 /* CustomFilmEditorPreviewGraphPresenter.swift */,
+				A00000000000000000000985 /* CustomFilmFormulaGuard.swift */,
+				A00000000000000000000B99 /* CalculationBasisPresenter.swift */,
+			);
+			path = FilmContext;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000113 /* Snapshots */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000110 /* DisplayStateSnapshot.swift */,
+				A00000000000000000000112 /* DisplayStateSnapshotTests.swift */,
+			);
+			path = Snapshots;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000114 /* RecordReplay */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000115 /* RecordReplayTrace.swift */,
+				A00000000000000000000117 /* RecordReplayBaseline.swift */,
+				A00000000000000000000119 /* RecordReplaySpies.swift */,
+				A0000000000000000000011B /* RecordReplayHarness.swift */,
+				A0000000000000000000011D /* RecordReplayBaselineSmokeTests.swift */,
+			);
+			path = RecordReplay;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000127 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000126 /* CalculatorModel.swift */,
+				A00000000000000000000131 /* ReciprocityModel.swift */,
+				A00000000000000000000135 /* TimerWorkspaceModel.swift */,
+				A00000000000000000000139 /* FilmSelectionModel.swift */,
+				A00000000000000000000144 /* RunningTimerItem.swift */,
+				A00000000000000000000207 /* CameraSlotSessionModel.swift */,
+				A00000000000000000000214 /* ExposureTimerIdentity.swift */,
+				A00000000000000000000221 /* TargetShutterModel.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000209 /* CameraSlot */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000201 /* CameraSlotIdentity.swift */,
+				A00000000000000000000210 /* CameraSlotCalculatorSnapshot.swift */,
+				A00000000000000000000205 /* CameraSlotPageState.swift */,
+				A00000000000000000000218 /* PersistentCameraSlotSession.swift */,
+				A0000000000000000000021A /* CameraSlotSessionPersistenceController.swift */,
+				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
+				A0000000000000000000021E /* CameraSlotRenameSheet.swift */,
+			);
+			path = CameraSlot;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000402 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000401 /* SharedFixtureLocator.swift */,
+			);
+			path = Support;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1422,6 +1424,7 @@
 		};
 		A00000000000000000000072 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A0000000000000000000EF01 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -1454,7 +1457,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = ZGHBLMT3UR;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -1482,6 +1484,7 @@
 		};
 		A00000000000000000000073 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A0000000000000000000EF01 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -1514,7 +1517,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = ZGHBLMT3UR;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -1581,7 +1583,6 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = ZGHBLMT3UR;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PTimerWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1608,7 +1609,6 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = ZGHBLMT3UR;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PTimerWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

@@ -157,9 +157,16 @@ For a metered exposure `t`, the policy layer shall evaluate the film's profile i
      - `invalidFormula` → `unsupportedOutOfPolicyRange` describing the parameter-contract failure (PTIMER-84 custom formulas use this distinct case);
      - `formulaOutputUnusable` → `unsupportedOutOfPolicyRange` describing the runtime arithmetic failure;
      - `unsafeShorteningFormula` → handoff to `officialThresholdNoCorrection` with `corrected = t` (universal safety net so a reciprocity correction never shortens the shutter).
-2. **Threshold no-correction** — for profiles that still carry a standalone threshold rule (the limited-guidance shape), if `t` lies inside the threshold band return `corrected = t` with basis = `officialThresholdNoCorrection`.
-3. **Limited guidance** — if the profile defines a limited-guidance rule whose `appliesWhenMetered` covers `t` (or is open-ended), return `limitedGuidanceNoQuantifiedPrediction`. No numeric corrected exposure.
-4. **Unsupported fallback** — if no rule applies, return `unsupportedOutOfPolicyRange` with no corrected exposure.
+2. **Table-interpolation rule** — if the profile defines a table-interpolation rule, evaluate it at `t`. The rule converts a manufacturer reciprocity *table* (published metered→corrected anchors) into a corrected exposure by piecewise-linear interpolation in **log10–log10** space, so interpolation passes through every published anchor exactly. The rule owns its own guards:
+   - `t ≤ noCorrectionThroughSeconds` → return `corrected = t` with basis = `officialThresholdNoCorrection`.
+   - `t` within the published range → basis = `tableLogLogDerived` (corrected exposure attached).
+   - `t` above the last anchor (`sourceRangeThroughSeconds`) → the rule keeps computing by extrapolating the last log-log segment and the result is reclassified to `unsupportedOutOfPolicyRange` carrying the numeric continuation (presented as beyond the published source range). It does **not** dead-end — a value-less unsupported result is reserved for genuinely uncomputable input.
+   - invalid input / malformed anchors → `unsupportedOutOfPolicyRange` with no corrected exposure.
+
+   Fomapan 100 Classic is the representative table-model profile (official FOMA rows 1s→2s, 10s→80s, 100s→1600s). Its app-derived power-law formula is retained as a non-default, clearly-labelled alternate model, not the official default.
+3. **Threshold no-correction** — for profiles that still carry a standalone threshold rule (the limited-guidance shape), if `t` lies inside the threshold band return `corrected = t` with basis = `officialThresholdNoCorrection`.
+4. **Limited guidance** — if the profile defines a limited-guidance rule whose `appliesWhenMetered` covers `t` (or is open-ended), return `limitedGuidanceNoQuantifiedPrediction`. No numeric corrected exposure.
+5. **Unsupported fallback** — if no rule applies, return `unsupportedOutOfPolicyRange` with no corrected exposure.
 
 `sourceRangeThroughSeconds` is a **source / fitting confidence boundary**, not a calculation hard stop — every formula keeps producing a numeric value past it (subject to the runtime safety check above), and the result is reclassified to the beyond-source presentation rather than suppressed.
 
@@ -171,15 +178,15 @@ User-defined custom profiles ([DomainSchema Spec](DomainSchema.md) §13.4) flow 
 
 Every reciprocity evaluation produces a result that takes one of three mutually-exclusive forms:
 
-- **Quantified** — a numeric corrected exposure is returned. The result carries the metered exposure, the corrected exposure, and the metadata block described below. Basis is `officialThresholdNoCorrection` or `formulaDerived`.
+- **Quantified** — a numeric corrected exposure is returned. The result carries the metered exposure, the corrected exposure, and the metadata block described below. Basis is `officialThresholdNoCorrection`, `formulaDerived`, or `tableLogLogDerived`.
 - **Limited-guidance** — no numeric corrected exposure can be returned, but the system reports the metered exposure and the metadata block. Basis is `limitedGuidanceNoQuantifiedPrediction`. The presentation layer renders calm guidance text in place of a number.
-- **Unsupported** — the metered exposure is outside the policy-supported range. The result carries the metered exposure and the metadata block. Basis is `unsupportedOutOfPolicyRange`. An optional corrected exposure is present only when a formula-backed profile produced a numeric continuation past its supported boundary; the presenter marks such values as outside manufacturer guidance.
+- **Unsupported** — the metered exposure is outside the policy-supported range. The result carries the metered exposure and the metadata block. Basis is `unsupportedOutOfPolicyRange`. An optional corrected exposure is present only when a formula- or table-backed profile produced a numeric continuation past its supported boundary; the presenter marks such values as outside manufacturer guidance.
 
-The pairing of form and basis is structural — it is enforced at compile time rather than checked at runtime, so a result can never claim a numeric corrected value while omitting one (with the single allowed exception of the unsupported case above carrying a formula prediction outside the supported range).
+The pairing of form and basis is structural — it is enforced at compile time rather than checked at runtime, so a result can never claim a numeric corrected value while omitting one (with the single allowed exception of the unsupported case above carrying a formula- or table-derived numeric continuation outside the supported range).
 
 The metadata block, present in all three forms, carries:
 
-- `calculationBasis` — one of: `officialThresholdNoCorrection`, `formulaDerived`, `limitedGuidanceNoQuantifiedPrediction`, `unsupportedOutOfPolicyRange`.
+- `calculationBasis` — one of: `officialThresholdNoCorrection`, `formulaDerived`, `tableLogLogDerived`, `limitedGuidanceNoQuantifiedPrediction`, `unsupportedOutOfPolicyRange`.
 - `sourceAuthorityImpact` — derived from the profile provenance (current official / archival official / unofficial secondary / user-defined).
 - `rangeStatus` — `withinStatedRange`, `beyondLastRepresentativePoint`, or `beyondPolicyLimit`.
 - `warningLevel` — `none`, `note`, `caution`, or `strongWarning`.
@@ -203,8 +210,9 @@ The presentation layer maps each result to one of four confidence categories:
 
 - **No correction** — basis = `officialThresholdNoCorrection`. The corrected exposure equals the metered exposure. User-facing label: `No correction`.
 - **Formula-derived** — basis = `formulaDerived`. The result is anchored on the active calculation curve. User-facing label: `Formula-derived` for preset profiles; `Custom formula` when the active profile is user-defined ([DomainSchema Spec](DomainSchema.md) §13.4), so a normal custom-profile result reads as a method/authority statement rather than the warning copy reserved for converted formula profiles.
+- **Table-derived** — basis = `tableLogLogDerived`. The result is interpolated from a manufacturer reciprocity table in log-log space (Fomapan 100's official model). User-facing label: `Table-derived`; the Details model summary reads the calculation method as `Log-log table interpolation` — never a bare "lookup".
 - **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. The UI shall show calm explanatory text in place of a number; it shall not fabricate a value.
-- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on the active profile and whether a numeric formula prediction outside the supported range is available: `Beyond source range` for converted preset formula profiles (formula rule with sourceEvidence) and for user-defined custom formula profiles past their `sourceRangeThroughSeconds`; `Outside guidance` for a numeric continuation that is neither; `No corrected value` when no value at all is available.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label depends on the active profile and whether a numeric continuation outside the supported range is available: `Beyond source range` for converted preset formula profiles (formula rule with sourceEvidence), for the official log-log table model past its published anchors, and for user-defined custom formula profiles past their `sourceRangeThroughSeconds`; `Outside guidance` for a numeric continuation that is none of those; `No corrected value` when no value at all is available.
 
 The category and badge wording shall not surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary status / badge text on launch preset reciprocity presentation; those terms encoded the legacy table model and are not part of the current vocabulary.
 
@@ -228,7 +236,7 @@ Target Shutter is an optional workflow that compares a photographer-supplied tar
 
 ## 4. Timer integration
 
-A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.6). The system shall not start a timer from a limited-guidance corrected exposure: when the result is `limitedGuidanceNoQuantifiedPrediction`, or `unsupportedOutOfPolicyRange` without a numeric continuation, the Film-mode corrected-exposure timer affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. An unsupported result that carries a formula prediction outside the supported range (when the formula keeps producing a value past its source-range boundary) does enable the timer with a warning treatment so the user can still commit to the predicted value. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
+A timer is created from the **Output Shutter** (digital workflow), the **Corrected Exposure** (film workflow), or the **Target Shutter** (when set, §3.6). The system shall not start a timer from a limited-guidance corrected exposure: when the result is `limitedGuidanceNoQuantifiedPrediction`, or `unsupportedOutOfPolicyRange` without a numeric continuation, the Film-mode corrected-exposure timer affordance shall be disabled and the user shall be guided to either change inputs or proceed with the ND-adjusted shutter explicitly. An unsupported result that carries a numeric continuation outside the supported range (a formula prediction, or a table-derived extrapolation past the published anchors) does enable the timer with a warning treatment so the user can still commit to the predicted value. A Target-Shutter-started timer's duration is the target itself, independent of the comparison value or its availability.
 
 A timer's metadata shall be a snapshot of the calculation result at creation time. Subsequent changes to the calculator inputs shall not mutate any already-created timer. A timer's exposure source remains distinguishable across its lifetime — a Target-Shutter timer remains a Target-Shutter timer regardless of later input changes. (See [Timer Spec](Timer.md) §1.4.)
 
@@ -246,7 +254,7 @@ A snapshot written by an older release that predates the exposure scale token (o
 
 The system shall **not**:
 
-1. Fabricate a numeric corrected value when the result is limited-guidance, or unsupported without a numeric continuation from the formula. Numeric formula predictions outside the supported range are permitted and presented as outside manufacturer guidance.
+1. Fabricate a numeric corrected value when the result is limited-guidance, or unsupported without a numeric continuation. Numeric continuations outside the supported range (formula predictions or table-derived extrapolations) are permitted and presented as outside manufacturer guidance.
 2. Encode calculation policy inside the domain model. (Domain stores manufacturer data verbatim; policy is its own layer.)
 3. Promote source-evidence rows (display reference data) into calculation anchors.
 4. Allow a reciprocity correction to shorten the adjusted shutter. Any rule path that would yield `corrected < metered` is reclassified to `officialThresholdNoCorrection` (§3.2 correction invariant).
@@ -265,7 +273,7 @@ These are unresolved or partially specified. They are recorded so the system doe
 
 - **Aperture and ISO** as exposure variables are intent-level (wiki 3964929) but not part of the current release. The Fixed/Derived state machine, the multi-variable linkage rules, and the reverse calculation across more than one variable are deferred.
 - **Multi-derived ceiling above two.** Wiki 3964929 reserves the option to extend; no decision is recorded.
-- **Outside-source-range prediction caps.** A formula with `sourceRangeThroughSeconds` keeps producing a numeric continuation past the boundary (the boundary is a source/fitting confidence marker, not a hard stop). Whether a profile-independent ceiling should cap how far that prediction extends is open.
+- **Outside-source-range prediction caps.** A formula (or the log-log table model) with a `sourceRangeThroughSeconds` boundary keeps producing a numeric continuation past it (the boundary is a source/fitting confidence marker, not a hard stop). Whether a profile-independent ceiling should cap how far that continuation extends is open.
 - **User-defined table input.** User-defined *formula* profiles are implemented and evaluated through the shared guarded formula path described in §3.2 ([DomainSchema Spec](DomainSchema.md) §13.4). A future user-defined *table* workflow — multi-row reference tables and point fitting as a custom calculation model — is outside the launch preset scope and would need its own feature design.
 - **Multi-profile films.** Some films may have multiple official profiles (different developers, push/pull). Selection rules are not yet defined; the current launch policy ships one primary profile per film identity.
 - **First-class color / development policy.** Profiles record these as source-evidence adjustments (e.g. Velvia 50 `5M`, Tri-X 400 `-10% development`) but the spec does not yet define how the calculator promotes them beyond display.

@@ -67,6 +67,7 @@ A profile describes how a film stock responds to long-exposure metered values.
 ### 3.2 Optional fields
 
 - **userMetadata** — user-editable fields parallel to §2.3, scoped to this profile. Absent for preset profiles.
+- **selectorLabel** — optional short label for the **compact model selectors** (main-screen and Details segmented controls), where the full `name` would truncate. When present it is preferred; otherwise the UI derives a label from authority / calculation (e.g. "Official table", "App formula", "Official", "Unofficial"). Source-named unofficial / community / custom models (e.g. a future "Ohzart" practical table whose `name` is "Ohzart practical table") **should** set an explicit `selectorLabel` ("Ohzart") so the selector reads the source name. `selectorLabel` is **not** a source title or URL — those live in `source` (§4) and the Sources presentation. Absent for the shipping Fomapan / Portra models, which use derived labels.
 
 ### 3.3 Source-evidence rows
 
@@ -163,7 +164,7 @@ A result is one of three mutually exclusive forms:
 
 - **Quantified** — a corrected exposure was produced. Carries the metadata block (see below) plus a `correctedExposure` payload (a reciprocity time value in seconds).
 - **Limited-guidance** — the manufacturer publishes only qualitative guidance for this region; no corrected exposure is produced. Carries the metadata block; no `correctedExposure` field.
-- **Unsupported** — the metered exposure is outside the profile's supported range. Carries the metadata block; an optional `correctedExposure` field is present only when a formula-backed profile produced a formula prediction outside the supported range, in which case the presenter marks the value as outside manufacturer guidance.
+- **Unsupported** — the metered exposure is outside the profile's supported range. Carries the metadata block; an optional `correctedExposure` field is present only when a formula- or table-backed profile produced a numeric continuation outside the supported range, in which case the presenter marks the value as outside manufacturer guidance.
 
 The metadata block carried by every form contains:
 
@@ -309,7 +310,7 @@ A bundled launch catalog shall pass these checks before the runtime accepts it.
 8. Every profile's source has `kind = "manufacturerPublished"`.
 9. Every profile's source has `authority = "official"`.
 10. Every profile has at least one rule, and every rule decodes to a known variant (no `unknown` `kind` values).
-11. Every profile matches one of the two allowed launch shapes (§13): the rule set carries a threshold rule, and either (a) a formula rule with no limited-guidance rule, or (b) a limited-guidance rule with no formula rule and an empty `sourceEvidence` array. A bare threshold rule, a bare formula rule, or any other combination is rejected.
+11. Every profile matches one of the three allowed launch shapes (§13): (a) a formula rule alone (the formula owns its no-correction guard; no companion threshold), with optional `sourceEvidence`; (b) a `tableInterpolation` rule alone (it owns its own no-correction band and source range), with optional `sourceEvidence`; or (c) a threshold rule plus a limited-guidance rule with no formula/table rule and an empty `sourceEvidence` array. A bare threshold rule or any other combination is rejected; the reserved `tableLookup` calculation model is rejected at load.
 
 A catalog that fails any of these checks shall produce a clear decode diagnostic and shall not be loaded.
 
@@ -319,14 +320,15 @@ A catalog that fails any of these checks shall produce a clear decode diagnostic
 
 The bundled launch catalog ships the **34-film launch-ready scope** (wiki 13172737, PTIMER-86 preset dataset policy outcome). Each shipped identity carries exactly one primary profile sourced from current official manufacturer documentation with `kind = "manufacturerPublished"`, `authority = "official"`, and `confidence = "high"`.
 
-Every launch preset profile matches exactly one of two allowed shapes:
+Every launch preset profile matches exactly one of three allowed shapes:
 
-1. **Official quantified formula** — formula rule only (the shared `ReciprocityFormula` owns its no-correction and source-range guards; PTIMER-160 retired the companion threshold rule), with optional `sourceEvidence` rows preserving the manufacturer's published reference points. Calculation produces `officialThresholdNoCorrection` for `T_m ≤ noCorrectionThroughSeconds`, `formulaDerived` for inputs above that boundary up through `sourceRangeThroughSeconds`, and `unsupportedOutOfPolicyRange` (carrying a numeric formula continuation) for inputs above the source range.
-2. **Official limited guidance** — threshold rule plus limited-guidance rule (§5.3) for the region above the threshold. Calculation produces `officialThresholdNoCorrection` inside the threshold band and `limitedGuidanceNoQuantifiedPrediction` above it; no formula curve, no quantified continuation.
+1. **Official quantified formula** — formula rule only (the shared `ReciprocityFormula` owns its no-correction and source-range guards; PTIMER-160 retired the companion threshold rule), with optional `sourceEvidence` rows preserving the manufacturer's published reference points. Calculation produces `officialThresholdNoCorrection` for `T_m ≤ noCorrectionThroughSeconds`, `formulaDerived` for inputs above that boundary up through `sourceRangeThroughSeconds`, and `unsupportedOutOfPolicyRange` (carrying a numeric continuation) for inputs above the source range.
+2. **Official table log-log** (PTIMER-159) — a `tableInterpolation` rule that converts a manufacturer reciprocity *table* into a corrected exposure by piecewise log-log interpolation between published anchors, with `sourceEvidence` rows preserving those anchors. The rule owns its own no-correction band and source range. Calculation produces `officialThresholdNoCorrection` below the band, `tableLogLogDerived` within the published range, and `unsupportedOutOfPolicyRange` (carrying a numeric continuation, extrapolated from the last log-log segment) above the last anchor. Fomapan 100 Classic is the current launch profile of this shape; its app-derived power-law formula is preserved as a non-default alternate (§13.3).
+3. **Official limited guidance** — threshold rule plus limited-guidance rule (§5.3) for the region above the threshold. Calculation produces `officialThresholdNoCorrection` inside the threshold band and `limitedGuidanceNoQuantifiedPrediction` above it; no quantified continuation.
 
 Unofficial practical profiles (`authority = "unofficial"`) are bundled outside the launch catalog file and are documented in §13.3.
 
-Launch preset profiles shall not carry calculation table rules. The domain has no `.table` rule variant; future custom or user-defined table input is outside the launch preset scope and would have to be designed as a new feature.
+The only calculation table rule allowed on launch preset profiles is the **official table log-log** shape above (an explicit, anchored interpolation). A broad arbitrary table-interpolation engine is *not* implied; the reserved `tableLookup` calculation model remains unimplemented and is rejected at load.
 
 ### 13.1 Launch-ready manufacturer breakdown
 
@@ -385,15 +387,15 @@ Table-derived input (multi-row tables, point fitting, table interpolation as a c
 
 The domain shall **not**:
 
-1. Reintroduce a calculation table rule on launch preset profiles. The domain has no `.table` rule variant; future custom / user-defined table input is outside this scope.
-2. Promote source-evidence rows (§3.3) into calculation anchors. The calculation policy reads only threshold, formula, and limited-guidance rules; source-evidence is display-only reference data.
+1. Reintroduce a broad, arbitrary table-interpolation engine. The only table calculation rule allowed is the **official table log-log** shape (PTIMER-159, §13) with explicit published anchors; the reserved `tableLookup` model and free-form multi-row table input remain out of scope.
+2. Promote source-evidence rows (§3.3) into calculation anchors. The calculation policy reads only threshold, formula, table-interpolation, and limited-guidance rules; source-evidence is display-only reference data and is never read by calculation (the official table model carries its own anchors inside the `tableInterpolation` rule).
 3. Synthesize provenance fields to fill gaps. Missing optional fields stay absent.
 4. Mix repackaged-brand identities with original-manufacturer identities under one entry. Repackaging is a `brandLabel` annotation on the original identity, not a parallel record.
-5. Allow a calculation result that claims a corrected exposure without carrying the value, or carries a corrected-exposure value without claiming one (with the single allowed exception of `unsupportedOutOfPolicyRange` carrying a formula prediction outside the supported range as a numeric continuation past the source-range boundary). The contradictory pairings are unrepresentable by the result's form.
+5. Allow a calculation result that claims a corrected exposure without carrying the value, or carries a corrected-exposure value without claiming one (with the single allowed exception of `unsupportedOutOfPolicyRange` carrying a formula- or table-derived numeric continuation outside the supported range, past the source-range boundary). The contradictory pairings are unrepresentable by the result's form.
 6. Allow a launch preset profile to carry user metadata.
 7. Ignore catalog validation. A failing catalog is a load-time error, not a soft-warn.
 8. Collapse multiple official profiles for one film into one record. (Wiki 15138817 reserves multi-profile support; in launch, only one profile is shipped per identity.)
-9. Surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary user-facing status / badge wording on launch preset reciprocity presentation. Those terms encoded the legacy table model; the current vocabulary is `No correction` / `Formula-derived` / `Beyond source range` / `No quantified prediction` / `Outside guidance` ([Calculator Spec](Calculator.md) §3.5, [UI Spec](UI.md) §2.3).
+9. Surface `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, or `Advisory` as primary user-facing status / badge wording on launch preset reciprocity presentation. Those terms encoded the legacy arbitrary-table model; the current vocabulary is `No correction` / `Formula-derived` / `Table-derived` / `Beyond source range` / `No quantified prediction` / `Outside guidance` ([Calculator Spec](Calculator.md) §3.5, [UI Spec](UI.md) §2.3).
 
 ---
 

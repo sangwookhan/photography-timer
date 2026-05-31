@@ -63,22 +63,31 @@ struct ReciprocityDetailsVocabularyPresenter {
         }
     }
 
-    /// Tone mapping used by the Main badge chip and the Detail
-    /// status line. The base mapping comes from the
-    /// presentation's `badgeStyle`, but a custom (userDefined)
-    /// formula in its normal source range is downgraded from
-    /// `.caution` (orange) to `.measured` (blue) so the user does
-    /// not see a warning treatment for normal custom-profile use.
-    /// Beyond-source-range or other unsupported states keep their
-    /// stronger tone.
+    /// Tone mapping used by the Main badge chip and the Detail status
+    /// line. The badge tone follows CALCULATION status first; source
+    /// authority / confidence is communicated through the model label,
+    /// the unofficial caveat, and the Source metadata, not the tone.
+    ///
+    /// - `No correction` is a normal, safe outcome — nothing was
+    ///   changed — so it always reads as success (green / `.trusted`),
+    ///   independent of source authority.
+    /// - A successful in-range derived value (`Formula-derived` /
+    ///   `Table-derived`) reads as `.measured` (blue); it is never
+    ///   downgraded to `.caution` purely because the source is
+    ///   unofficial, app-derived, or a medium-confidence community
+    ///   table (PTIMER-84 custom formulas, PTIMER-164's Ohzart table).
+    /// - `Beyond source range` and limited-guidance / unsupported
+    ///   states keep their stronger caution / unsupported tone.
     func tone(for bindingState: FilmModeReciprocityBindingState) -> FilmModeReciprocityStateTone {
         let baseTone = tone(for: bindingState.presentation.badgeStyle)
-        guard bindingState.profile.source.authority == .userDefined,
-              bindingState.presentation.category == .formulaDerived,
-              baseTone == .caution else {
+        switch bindingState.presentation.category {
+        case .noCorrection:
+            return .trusted
+        case .formulaDerived:
+            return baseTone == .caution ? .measured : baseTone
+        case .limitedGuidance, .unsupported:
             return baseTone
         }
-        return .measured
     }
 
     func tone(for badgeStyle: ReciprocityConfidenceBadgeStyle) -> FilmModeReciprocityStateTone {
@@ -114,7 +123,17 @@ struct ReciprocityDetailsVocabularyPresenter {
         case .formulaDerived:
             return "Formula-based correction on the active curve"
         case .tableLogLogDerived:
-            return "Log-log interpolation of the official table"
+            // The table can be official (FOMA) or an unofficial
+            // community source (Ohzart); the wording must not call a
+            // community table "official".
+            switch bindingState.profile.source.authority {
+            case .official:
+                return "Log-log interpolation of the official table"
+            case .unofficial:
+                return "Log-log interpolation of the community table"
+            case .userDefined, .unknown:
+                return "Log-log interpolation of the source table"
+            }
         case .limitedGuidanceNoQuantifiedPrediction:
             return "Beyond published no-correction range"
         case .unsupportedOutOfPolicyRange:

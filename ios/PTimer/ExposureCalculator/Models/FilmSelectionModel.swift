@@ -241,7 +241,16 @@ final class FilmSelectionModel: ObservableObject {
     /// Returns nil for unknown sources so only official, unofficial,
     /// and user-defined films carry a visible qualifier.
     nonisolated static func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
-        filmRowAuthorityLabel(forAuthority: profile?.source.authority)
+        // App-derived alternate models (e.g. the Fomapan 100 app
+        // formula) are fitted by the app from official source data, so
+        // they must not read as official manufacturer guidance on the
+        // film-row / camera-slot subtitle. They name themselves
+        // ("App-derived formula") instead. Only the official table
+        // model keeps the "Official guidance" label.
+        if let profile, AlternateReciprocityModels.isAppDerivedModel(id: profile.id) {
+            return profile.name
+        }
+        return filmRowAuthorityLabel(forAuthority: profile?.source.authority)
     }
 
     /// Authority-only variant so other surfaces (the Details subtitle)

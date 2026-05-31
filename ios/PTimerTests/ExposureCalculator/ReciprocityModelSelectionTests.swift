@@ -200,8 +200,11 @@ final class ReciprocityModelSelectionTests: XCTestCase {
         viewModel.selectPresetFilm(film)
 
         let selection = try XCTUnwrap(viewModel.filmDetailsModelSelection)
-        XCTAssertEqual(selection.options.map(\.selectorLabel), ["Official table", "App formula"])
-        XCTAssertEqual(selection.options.map(\.name), ["Official FOMA table", "App-derived formula"])
+        XCTAssertEqual(selection.options.map(\.selectorLabel), ["Official table", "Ohzart", "App formula"])
+        XCTAssertEqual(
+            selection.options.map(\.name),
+            ["Official FOMA table", "Ohzart community table", "App-derived formula"]
+        )
     }
 
     @MainActor

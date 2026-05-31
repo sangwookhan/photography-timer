@@ -1035,8 +1035,13 @@ private extension ReciprocityCalculationPolicyEvaluator {
             correctedExposureSeconds: Double,
             rule: TableInterpolationReciprocityRule
         ) -> ReciprocityResult {
+            // Source-neutral wording: the table model serves both the
+            // official FOMA table and unofficial community tables
+            // (Ohzart), so the boundary note must not claim manufacturer
+            // authority. Wording only — the classification and tokens
+            // below are unchanged.
             let boundaryText =
-                "Manufacturer table ends at \(formatBoundarySeconds(rule.sourceRangeThroughSeconds))."
+                "Source table ends at \(formatBoundarySeconds(rule.sourceRangeThroughSeconds))."
 
             return unsupported(
                 meteredExposureSeconds: meteredExposureSeconds,
@@ -1048,7 +1053,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
                     ),
                     ReciprocityPolicyNote(
                         token: .unsupportedByPolicy,
-                        text: "Beyond the published table — value is a log-log extrapolation past the manufacturer source range."
+                        text: "Beyond the published table — value is a log-log extrapolation past the published source range."
                     ),
                 ]
             )

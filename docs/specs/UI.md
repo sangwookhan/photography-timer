@@ -96,6 +96,8 @@ The Corrected Exposure row shall always be visible in film workflow. Its content
 
 A **reciprocity state badge** sits with the row to convey the result category at a glance. The badge wording shall match the vocabulary above; legacy table-era wording (`Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`) shall not appear on launch preset reciprocity presentation.
 
+**Badge tone policy.** The badge **tone follows calculation status first**; source authority and confidence are communicated through the model label, the Source metadata, and the unofficial/custom caveats — not through the badge color. Accordingly: `No correction` is a normal, safe state and shall use the **success tone** across every model (official, community, or custom); `Formula-derived` and `Table-derived` in-range results shall use the **normal (non-warning) tone** and shall not be downgraded to caution merely because the source is unofficial, app-derived, or a medium-confidence community table; `Beyond source range` shall use the **warning tone**; and `No quantified prediction` / unsupported shall use the **limited / unsupported tone**.
+
 ### 2.4 Time-display rules
 
 Time values follow a single hierarchy. Two display modes apply at the **day-scale** boundary:

@@ -7,13 +7,15 @@ import Foundation
 /// via `selectedProfileOverride`, never as duplicate top-level film
 /// rows (PTIMER-159).
 ///
-/// Two films currently expose an alternate model:
+/// Films that currently expose an alternate model:
 /// - Kodak Portra 400 — an unofficial practical approximation
 ///   (lower authority; defined in `UnofficialPracticalProfiles`).
-/// - Fomapan 100 Classic — an APP-DERIVED formula fitted to the
-///   official FOMA table. It is non-default (the official table
-///   log-log model is the default) and is clearly labelled app-derived,
-///   never presented as the official source/model.
+/// - Fomapan 100 Classic — two non-default alternates alongside the
+///   default official FOMA table log-log model: the Ohzart community
+///   practical table (a table-derived model that reproduces the
+///   community anchors exactly) and an APP-DERIVED formula fitted to the
+///   official FOMA table. Both are clearly labelled and never presented
+///   as the official source/model.
 enum AlternateReciprocityModels {
 
     /// Alternate models for a film stock, in display order. Empty when
@@ -23,7 +25,9 @@ enum AlternateReciprocityModels {
         case "kodak-portra-400":
             return [UnofficialPracticalProfiles.kodakPortra400UnofficialPractical]
         case "foma-fomapan-100":
-            return [fomapan100AppDerivedFormula]
+            // Display order after the default official table:
+            // Ohzart community table, then the app-derived formula.
+            return [fomapan100OhzartCommunityTable, fomapan100AppDerivedFormula]
         default:
             return []
         }
@@ -45,9 +49,88 @@ enum AlternateReciprocityModels {
     static func profile(withID profileID: String) -> ReciprocityProfile? {
         let all = [
             UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
+            fomapan100OhzartCommunityTable,
             fomapan100AppDerivedFormula,
         ]
         return all.first { $0.id == profileID }
+    }
+
+    /// Ohzart community practical table for Fomapan 100 — an
+    /// unofficial, test-based community source (not FOMA-published).
+    /// Modelled as a TABLE, not a fitted formula: the published anchors
+    /// (1s→1.9s … 60s→795s) are reproduced exactly by the same log-log
+    /// interpolation the official FOMA table uses, so every Ohzart row
+    /// comes back without fitting error. It shares Official FOMA's
+    /// 0.5 s no-correction boundary; its published range ends at 60 s,
+    /// past which the model extrapolates the last segment and presents
+    /// the value as beyond source range. Kept non-default and labelled
+    /// "Ohzart"; its source rows stay separate from the official FOMA
+    /// table and never read as manufacturer data.
+    static let fomapan100OhzartCommunityTable = ReciprocityProfile(
+        id: "foma-fomapan-100-ohzart-community-table",
+        name: "Ohzart community table",
+        source: ReciprocitySourceProvenance(
+            kind: .thirdPartyPublication,
+            authority: .unofficial,
+            confidence: .medium,
+            publisher: "Ohzart",
+            title: "Reciprocity practical table",
+            citation: "https://ohzart1.tistory.com/78"
+        ),
+        rules: [
+            .tableInterpolation(TableInterpolationReciprocityRule(
+                anchors: [
+                    TableAnchor(meteredSeconds: 1, correctedSeconds: 1.9),
+                    TableAnchor(meteredSeconds: 2, correctedSeconds: 5),
+                    TableAnchor(meteredSeconds: 4, correctedSeconds: 13),
+                    TableAnchor(meteredSeconds: 8, correctedSeconds: 35),
+                    TableAnchor(meteredSeconds: 15, correctedSeconds: 90),
+                    TableAnchor(meteredSeconds: 30, correctedSeconds: 265),
+                    TableAnchor(meteredSeconds: 60, correctedSeconds: 795),
+                ],
+                notes: [
+                    "Ohzart community practical table for Fomapan 100, reproduced by log-log interpolation between the published anchors. Practical / community guidance, not FOMA-published data.",
+                ],
+                noCorrectionThroughSeconds: 0.5,
+                sourceRangeThroughSeconds: 60
+            )),
+        ],
+        notes: [
+            "Unofficial practical community table (Ohzart). Not FOMA-published data.",
+        ],
+        sourceEvidence: ohzartCommunityAnchorEvidence,
+        modelBasis: ReciprocityProfileModelBasis(
+            sourceModel: .practicalCommunityGuidance,
+            calculationModel: .tableLogLogInterpolation
+        ),
+        selectorLabel: "Ohzart"
+    )
+
+    /// The Ohzart anchor rows preserved as source evidence so the
+    /// "Source reference" section and graph markers show the community
+    /// table values (kept distinct from the official FOMA anchors).
+    /// Ohzart publishes corrected times directly, so each row carries
+    /// only a corrected-time mapping — no multiplier column.
+    private static let ohzartCommunityAnchorEvidence: [ReciprocitySourceEvidenceRow] = [
+        ohzartAnchorEvidence(metered: 1, corrected: 1.9),
+        ohzartAnchorEvidence(metered: 2, corrected: 5),
+        ohzartAnchorEvidence(metered: 4, corrected: 13),
+        ohzartAnchorEvidence(metered: 8, corrected: 35),
+        ohzartAnchorEvidence(metered: 15, corrected: 90),
+        ohzartAnchorEvidence(metered: 30, corrected: 265),
+        ohzartAnchorEvidence(metered: 60, corrected: 795),
+    ]
+
+    private static func ohzartAnchorEvidence(
+        metered: Double,
+        corrected: Double
+    ) -> ReciprocitySourceEvidenceRow {
+        ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(metered),
+            adjustments: [
+                .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: metered, correctedSeconds: corrected))),
+            ]
+        )
     }
 
     /// App-derived guarded formula for Fomapan 100 — the retired free

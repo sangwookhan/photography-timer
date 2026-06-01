@@ -245,11 +245,12 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 0.5, accuracy: 0.000001)
     }
 
-    func testKodakTMax100FormulaProfileQuantifiesInsidePublishedRange() throws {
-        // T-MAX 100 is now formula-based; inputs inside the source-
-        // backed long-exposure range stay quantified with
-        // basis = .formulaDerived and the formula curve passes near
-        // Kodak's published rows.
+    func testKodakTMax100TableProfileQuantifiesInsidePublishedRange() throws {
+        // PTIMER-168: T-MAX 100 is table-based; inputs inside the
+        // source-backed long-exposure range stay quantified with
+        // basis = .tableLogLogDerived, interpolated in log-log space
+        // between the 0.5 sec no-correction knee and the published
+        // 10 sec → 15 sec anchor.
         let tmax100 = try XCTUnwrap(film(named: "T-MAX 100"))
         let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -257,15 +258,15 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         guard case let .quantified(payload) = result else {
             return XCTFail("T-MAX 100 at 4 sec must produce a quantified result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        // Threshold-anchored log-log fit through Kodak's published
-        // 10 sec / 100 sec corrected times predicts ≈ 5.7 sec at
-        // metered = 4 sec.
-        XCTAssertEqual(payload.correctedExposureSeconds, 5.7, accuracy: 0.2)
+        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
+        // Log-log interpolation between the 0.5 s no-correction knee
+        // (0.5 s → 0.5 s) and the 10 s → 15 s anchor predicts ≈ 5.3 sec
+        // at metered = 4 sec.
+        XCTAssertEqual(payload.correctedExposureSeconds, 5.300, accuracy: 0.05)
     }
 
     func testKodakBlackAndWhiteFilmsPreserveNoCorrectionThresholdBand() throws {
-        // Every Kodak B/W formula profile must keep its published
+        // Every Kodak B/W table profile must keep its published
         // no-correction threshold band intact: inside the band the
         // result stays quantified with
         // basis = .officialThresholdNoCorrection and corrected =
@@ -292,36 +293,36 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
     }
 
-    func testKodakTriX400FormulaPredictsBeyond100SecondsAsUnsupportedNumeric() throws {
-        // Tri-X 400 is now formula-based; inputs above the published
-        // 100 sec upper anchor land on the same curve as a numeric
-        // continuation outside the published source range
-        // (basis = .unsupportedOutOfPolicyRange with a non-nil
-        // corrected exposure).
+    func testKodakTriX400TableContinuesBeyondPublishedSourceRangeAsUnsupportedNumeric() throws {
+        // PTIMER-168: Tri-X 400 now uses official table interpolation.
+        // Inputs above the published 100 sec upper anchor extrapolate the
+        // last table segment as a numeric continuation outside the
+        // published source range (basis = .unsupportedOutOfPolicyRange
+        // with a non-nil corrected exposure).
         let trix = try XCTUnwrap(film(named: "Tri-X 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1500)
 
         guard case let .unsupported(payload) = result else {
-            return XCTFail("Expected unsupported (formula prediction outside the source range) result past Tri-X 400's published range, got \(result).")
+            return XCTFail("Expected unsupported (table-derived prediction outside the source range) result past Tri-X 400's published range, got \(result).")
         }
         XCTAssertEqual(payload.metadata.basis, .unsupportedOutOfPolicyRange)
         XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
-    func testKodakTriXFormulaProfileTracksPublished1SecondRow() throws {
-        // Tri-X 400 is now formula-based; the published 1 sec row
-        // (+1 stop, corrected 2 sec) is preserved as source evidence
-        // and the formula's free LSQ fit tracks it within ~0.01 stop.
+    func testKodakTriXTableProfileReproducesPublished1SecondRow() throws {
+        // PTIMER-168: Tri-X 400 is table-based; the published 1 sec row
+        // (+1 stop, corrected 2 sec) is a table anchor, reproduced
+        // exactly by the log-log table model.
         let trix = try XCTUnwrap(film(named: "Tri-X 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: trix.profiles[0], meteredExposureSeconds: 1)
 
         guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified formula result, got \(result).")
+            return XCTFail("Expected quantified table result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 0.05)
+        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
+        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 1e-4)
     }
 
     func testKodakColorNegativeLimitedGuidanceBeyondThreshold() throws {

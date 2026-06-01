@@ -254,25 +254,29 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
 
     // MARK: - Formula-profile regression guards
 
-    func testKodakBlackAndWhiteFormulaProfilesStillUseFormulaPrediction() throws {
+    func testKodakBlackAndWhiteTableProfilesUseTableLogLogPrediction() throws {
+        // PTIMER-168 migrated the Kodak B/W stocks from app-fitted
+        // formulas to the official Kodak table log-log model. They must
+        // still quantify a corrected exposure (unlike the limited-guidance
+        // Kodak color films), but now through the table, not a formula.
         for stock in ["Tri-X 400", "T-MAX 100", "T-MAX 400"] {
             let profile = try profile(for: stock)
-            let hasFormulaRule = profile.rules.contains { rule in
-                if case .formula = rule { return true }
-                return false
-            }
             XCTAssertTrue(
-                hasFormulaRule,
-                "Kodak B/W formula profile '\(stock)' must remain formula-based."
+                profile.usesTableInterpolation,
+                "Kodak B/W table profile '\(stock)' must use the official table log-log model."
+            )
+            XCTAssertFalse(
+                profile.rules.contains { if case .formula = $0 { return true }; return false },
+                "\(stock) must not keep a manufacturer formula default after PTIMER-168."
             )
 
-            // Picked a metered exposure clearly inside the formula
-            // range so the policy must hand back `.formulaDerived`.
+            // Picked a metered exposure clearly inside the published
+            // table range so the policy hands back `.tableLogLogDerived`.
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 10)
             XCTAssertEqual(
                 result.metadata.basis,
-                .formulaDerived,
-                "\(stock) at 10 sec must remain formula-derived."
+                .tableLogLogDerived,
+                "\(stock) at 10 sec must be table-derived."
             )
             XCTAssertNotNil(result.correctedExposureSeconds)
         }

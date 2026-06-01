@@ -1,33 +1,81 @@
 import XCTest
 @testable import PTimer
 
-/// Behavior contract for T-MAX 400's formula-based reciprocity
+/// Behavior contract for T-MAX 400's table-interpolation reciprocity
 /// profile. Locks the invariants:
 ///
-/// - The 1/10,000 sec to 1 sec no-correction threshold band is
-///   preserved verbatim — Kodak's "no adjustment required" range
-///   carries through unchanged.
-/// - The long-exposure formula is a threshold-anchored constrained
-///   log-log fit through Kodak's published 10 s → 15 s and
-///   100 s → 300 s corrected-time rows. The fit pins continuity
-///   at the 1 sec threshold endpoint so the corrected exposure
-///   never reads as less than the metered value at the boundary.
-/// - Both published source rows stay visible as source evidence
-///   carrying the stop delta AND the published corrected time.
-/// - Above the 100 sec upper anchor the formula continues as
-///   numeric continuation outside the published source range
-///   (basis = `.unsupportedOutOfPolicyRange`).
-final class TMax400FormulaProfileTests: XCTestCase {
+/// - The 1/10,000 sec to 1 sec no-correction band is preserved —
+///   Kodak's "no adjustment required" range carries through unchanged
+///   (basis `.officialThresholdNoCorrection`).
+/// - Above 1 sec (noCorrectionThroughSeconds) the table-interpolation
+///   rule fires (basis `.tableLogLogDerived`). At each anchor the
+///   corrected time matches exactly: 10→15, 100→300.
+/// - Above 100 sec (sourceRangeThroughSeconds) the evaluator returns
+///   `.unsupportedOutOfPolicyRange`; a log-log extrapolation value is
+///   still provided (non-nil, greater than the last anchor corrected time).
+/// - Both published source rows stay visible as source evidence carrying
+///   the stop delta AND the published corrected time.
+/// - The profile carries a `.tableInterpolation` rule; NO `.formula`
+///   rule remains.
+final class TMax400TableProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
-    private let expectedExponent: Double = 1.2261
+
+    // MARK: - Rule structure
+
+    func testTMax400HasTableInterpolationRuleAndNoFormulaRule() throws {
+        let profile = try tmax400Profile()
+
+        let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+            if case let .tableInterpolation(r) = rule { return r } else { return nil }
+        }.first
+        XCTAssertNotNil(tableRule, "T-MAX 400 must carry a .tableInterpolation rule after migration.")
+
+        let hasFormulaRule = profile.rules.contains { rule in
+            if case .formula = rule { return true } else { return false }
+        }
+        XCTAssertFalse(hasFormulaRule, "T-MAX 400 must NOT carry a .formula rule after migration to table.")
+    }
+
+    func testTMax400TableRuleParametersMatchPublishedAnchors() throws {
+        let profile = try tmax400Profile()
+        let tableRule = try XCTUnwrap(
+            profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+                if case let .tableInterpolation(r) = rule { return r } else { return nil }
+            }.first,
+            "tableInterpolation rule must be present."
+        )
+
+        XCTAssertEqual(tableRule.noCorrectionThroughSeconds, 1, accuracy: 1e-6,
+            "noCorrectionThroughSeconds must be 1.")
+        XCTAssertEqual(tableRule.sourceRangeThroughSeconds, 100, accuracy: 1e-6,
+            "sourceRangeThroughSeconds must be 100.")
+
+        let anchorMetereds = tableRule.anchors.map { $0.meteredSeconds }
+        XCTAssertEqual(anchorMetereds, [10, 100],
+            "Table must have anchors at 10/100 sec.")
+
+        let anchorCorrected = tableRule.anchors.map { $0.correctedSeconds }
+        XCTAssertEqual(anchorCorrected[0], 15, accuracy: 1e-4,
+            "Anchor at 10 sec must map to 15 sec corrected.")
+        XCTAssertEqual(anchorCorrected[1], 300, accuracy: 1e-4,
+            "Anchor at 100 sec must map to 300 sec corrected.")
+    }
+
+    func testTMax400ModelBasisIsManufacturerTableLogLogInterpolation() throws {
+        let profile = try tmax400Profile()
+        let basis = try XCTUnwrap(profile.modelBasis,
+            "T-MAX 400 profile must carry a modelBasis after migration.")
+        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
+        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
+    }
 
     // MARK: - Threshold band edges (1/10000 sec … 1 sec, inclusive)
 
     func testTMax400AtThresholdBandBoundariesReturnsOfficialNoCorrection() throws {
         let profile = try tmax400Profile()
         // Lower edge (1/10000 sec) and upper edge (1 sec inclusive —
-        // the formula picks up strictly above 1 sec).
+        // the table picks up strictly above 1 sec).
         for metered in [0.0001, 1.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -40,85 +88,33 @@ final class TMax400FormulaProfileTests: XCTestCase {
         }
     }
 
-    // MARK: - Formula range (> 1 sec, up to 100 sec)
+    // MARK: - Table range (> 1 sec, up to 100 sec)
 
-    func testTMax400InsideFormulaRangeIsFormulaDerived() throws {
+    func testTMax400InsideTableRangeIsTableLogLogDerived() throws {
         let profile = try tmax400Profile()
         for metered in [2.0, 5.0, 10.0, 30.0, 100.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
-                .formulaDerived,
-                "Metered \(metered) sec sits inside the source-backed formula range."
+                .tableLogLogDerived,
+                "Metered \(metered) sec sits inside the source-backed table range."
             )
         }
     }
 
-    func testTMax400FormulaTracksPublishedCorrectedTimesWithinSixthStop() throws {
-        // Kodak rounds T-MAX 400's published corrected times for
-        // practical use (the 10 sec row reads "+1/2 stop, 15 sec"
-        // even though +1/2 stop literally derives to 14.14 sec, and
-        // the 100 sec row reads "+1 1/2 stops, 300 sec" even though
-        // +1.5 stops literally derives to 282.84 sec). The threshold
-        // -anchored log-log fit balances those two rounded points,
-        // landing within ~1/6 stop of each.
+    func testTMax400TableReproducesPublishedAnchorCorrectedTimesExactly() throws {
         let profile = try tmax400Profile()
         let samples: [(Double, Double)] = [(10, 15), (100, 300)]
         for (metered, published) in samples {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            let stopError = log2(corrected / published)
             XCTAssertEqual(
-                stopError,
-                0,
-                accuracy: 0.2,
-                "Metered \(metered) sec should land within 1/5 stop of the published corrected time (\(published) sec); got \(corrected) (err \(stopError) stop)."
+                corrected,
+                published,
+                accuracy: 1e-4,
+                "Anchor at metered \(metered) sec must reproduce the published corrected time of \(published) sec exactly."
             )
         }
-    }
-
-    func testTMax400FormulaIsThresholdAnchoredLogLogFit() throws {
-        let profile = try tmax400Profile()
-        let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(rule) = rule else { return nil }
-            return rule
-        }.first)
-
-        XCTAssertEqual(formulaRule.formula.exponent, expectedExponent, accuracy: 1e-3)
-        // Anchored at the 1 sec threshold endpoint so the coefficient
-        // collapses to 1 and the equation is the bare power form.
-        XCTAssertEqual(formulaRule.formula.coefficientSeconds, 1, accuracy: 0.001)
-
-        let note = try XCTUnwrap(formulaRule.notes.first)
-        XCTAssertTrue(
-            note.lowercased().contains("threshold-anchored"),
-            "Formula note must label the fit as threshold-anchored; got: \(note)"
-        )
-        XCTAssertTrue(
-            note.lowercased().contains("log-log"),
-            "Formula note must label the fit as log-log; got: \(note)"
-        )
-    }
-
-    // MARK: - Continuity at the 1 sec threshold handoff
-
-    func testTMax400AtFormulaRangeStartProducesContinuityWithThreshold() throws {
-        // The formula range begins at 1.000001 sec so the formula
-        // never returns a corrected exposure less than the metered
-        // value at the boundary. At Tm = 1.000001 the formula
-        // evaluates to ~1 sec (the threshold anchor), staying above
-        // the no-correction value of 1 sec by less than 1/100 stop.
-        let profile = try tmax400Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.000001)
-        guard case let .quantified(payload) = result else {
-            return XCTFail("Tm just above 1 sec must remain quantified, got \(result).")
-        }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        XCTAssertGreaterThanOrEqual(
-            payload.correctedExposureSeconds,
-            1,
-            "Formula handoff must not reduce exposure below the no-correction baseline at the boundary."
-        )
     }
 
     // MARK: - Beyond the published source range (> 100 sec)
@@ -134,10 +130,10 @@ final class TMax400FormulaProfileTests: XCTestCase {
             )
             let corrected = try XCTUnwrap(
                 result.correctedExposureSeconds,
-                "Metered \(metered) sec must keep a numeric continuation past the source range."
+                "Metered \(metered) sec must keep a log-log extrapolation value past the source range."
             )
-            let expected = pow(metered, expectedExponent)
-            XCTAssertEqual(corrected, expected, accuracy: expected * 0.005)
+            XCTAssertGreaterThan(corrected, 300,
+                "Extrapolated value past 100 sec must exceed the last anchor corrected time of 300 sec.")
         }
     }
 
@@ -179,7 +175,7 @@ final class TMax400FormulaProfileTests: XCTestCase {
         let displayState = try makeDisplayState(meteredExposureSeconds: 10)
         let sourceReferenceSection = try XCTUnwrap(
             displayState.sections.first(where: { $0.title == "Source reference" }),
-            "T-MAX 400 must surface a Source reference section for its converted profile."
+            "T-MAX 400 must surface a Source reference section for its table-origin profile."
         )
         let block = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
         XCTAssertTrue(block.contains("10.0s"))
@@ -188,7 +184,7 @@ final class TMax400FormulaProfileTests: XCTestCase {
         XCTAssertTrue(block.contains("300"))
         XCTAssertFalse(
             displayState.sections.contains(where: { $0.title == "Reference" }),
-            "Converted T-MAX 400 must not surface the legacy Reference section."
+            "T-MAX 400 must not surface the legacy Reference section."
         )
         XCTAssertFalse(
             displayState.sections.contains(where: { $0.title == "Guidance boundary" }),
@@ -197,10 +193,31 @@ final class TMax400FormulaProfileTests: XCTestCase {
     }
 
     @MainActor
+    func testTMax400SummaryTextIsLogLogInterpolationInsideRange() throws {
+        let displayState = try makeDisplayState(meteredExposureSeconds: 10)
+        XCTAssertEqual(
+            displayState.summary.summaryText,
+            "Log-log interpolation of the official table",
+            "Summary inside the source range must describe table log-log interpolation."
+        )
+    }
+
+    @MainActor
+    func testTMax400SummaryTextIsBeyondSourceRangeAbove100Seconds() throws {
+        let displayState = try makeDisplayState(meteredExposureSeconds: 400)
+        XCTAssertEqual(
+            displayState.summary.summaryText,
+            "Beyond source range",
+            "Summary above 100 sec must read 'Beyond source range'."
+        )
+    }
+
+    @MainActor
     func testTMax400GraphCarriesSourceReferenceMarkersAtPublishedCorrectedTimes() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 10)
         let graph = try XCTUnwrap(displayState.graph)
-        XCTAssertEqual(graph.kind, .formula)
+        XCTAssertEqual(graph.kind, .formula,
+            "Table models render as .formula graph kind (matching Fomapan 100 Classic behavior).")
 
         let markerMetereds = graph.sourceReferenceMarkers.map { $0.point.meteredExposureSeconds.rounded() }
         XCTAssertEqual(
@@ -236,8 +253,8 @@ final class TMax400FormulaProfileTests: XCTestCase {
         let graph = try XCTUnwrap(displayState.graph)
         let explanation = try XCTUnwrap(graph.unsupportedExplanation)
         XCTAssertTrue(
-            explanation.lowercased().contains("source range"),
-            "Graph explanation must surface source-range wording past 100 sec; got: \(explanation)"
+            explanation.lowercased().contains("source table"),
+            "Graph explanation must surface source-table wording past 100 sec; got: \(explanation)"
         )
     }
 

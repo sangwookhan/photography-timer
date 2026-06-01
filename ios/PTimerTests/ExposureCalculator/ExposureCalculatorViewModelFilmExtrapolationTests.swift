@@ -22,7 +22,10 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXAtOneSecondReturnsCorrectedExposureFromFormulaPrediction() throws {
+    func testTriXAtOneSecondReturnsCorrectedExposureFromTablePrediction() throws {
+        // PTIMER-168: Tri-X 400 evaluates through the official Kodak
+        // table; the 1 sec published row (corrected 2 sec) is a table
+        // anchor reproduced exactly, surfaced as a Table-derived badge.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -32,18 +35,18 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-derived")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 0.05)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 1e-4)
         XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.05)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 1e-4)
     }
 
     @MainActor
     func testCorrectedExposureNumericDisplayUsesRestoredTimeFormatting() throws {
         // CHS 100 II's 2024 published rows top out at 15 sec, so 8 sec
-        // is firmly inside its formula domain. A converted formula
+        // is firmly inside its source table range. A source-backed
         // profile inside its source range does not prefix the numeric
         // corrected exposure with "≈" — that marker is reserved for
         // outside-guidance numeric continuations.
@@ -183,7 +186,9 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXBeyondSourceRangeKeepsFormulaPredictionAsQuantifiedResult() throws {
+    func testTriXBeyondSourceRangeKeepsTablePredictionAsQuantifiedResult() throws {
+        // PTIMER-168: past the published table the Tri-X profile keeps a
+        // log-log extrapolated value, surfaced as Beyond source range.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -202,7 +207,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .unsupportedOutOfPolicyRange)
         XCTAssertEqual(bindingState.presentation.category, .unsupported)
-        XCTAssertTrue(bindingState.profile.isConvertedFormulaProfile)
+        XCTAssertTrue(bindingState.profile.usesTableInterpolation)
     }
 
     @MainActor

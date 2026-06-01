@@ -51,50 +51,26 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
             aboveSourceRangeSample: 2000
         ),
         ConvertedFormulaProfileCase(
-            canonicalStockName: "CHS 100 II",
-            belowThresholdSample: 0.5,
-            insideFormulaRangeSample: 4,
-            aboveSourceRangeSample: 30
-        ),
-        ConvertedFormulaProfileCase(
             canonicalStockName: "CMS 20 II",
             belowThresholdSample: 0.5,
             insideFormulaRangeSample: 5,
             aboveSourceRangeSample: 200
         ),
         // PTIMER-159: Fomapan 100 Classic migrated to the official
-        // log-log table model — it is no longer a converted-formula
-        // profile. Its behavior is covered by Fomapan100TableModelTests.
-        // Fomapan 200/400 remain formula profiles (out of PTIMER-159 scope).
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "Fomapan 200 Creative",
-            belowThresholdSample: 0.1,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 300
-        ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "Fomapan 400 Action",
-            belowThresholdSample: 0.1,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 300
-        ),
+        // log-log table model. PTIMER-168 migrated the remaining
+        // straightforward official table-origin profiles — Fomapan 200
+        // Creative, Fomapan 400 Action, Tri-X 400, T-MAX 100, T-MAX 400,
+        // RPX 100, RPX 400, and CHS 100 II — to the same table model, so
+        // none of them are converted-formula profiles any more. Their
+        // table-origin contract lives in their per-film test files and in
+        // the PTIMER-168 catalog migration invariant test. The rows that
+        // remain here are the films still awaiting follow-up (PTIMER-169)
+        // plus CMS 20 II.
         ConvertedFormulaProfileCase(
             canonicalStockName: "Provia 100F",
             belowThresholdSample: 60,
             insideFormulaRangeSample: 240,
             aboveSourceRangeSample: 600
-        ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "RPX 100",
-            belowThresholdSample: 0.5,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 90
-        ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "RPX 400",
-            belowThresholdSample: 0.25,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 60
         ),
         ConvertedFormulaProfileCase(
             canonicalStockName: "RETRO 80S",
@@ -107,24 +83,6 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
             belowThresholdSample: 0.25,
             insideFormulaRangeSample: 15,
             aboveSourceRangeSample: 90
-        ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "T-MAX 100",
-            belowThresholdSample: 0.05,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 300
-        ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "T-MAX 400",
-            belowThresholdSample: 0.5,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 200
-        ),
-        ConvertedFormulaProfileCase(
-            canonicalStockName: "Tri-X 400",
-            belowThresholdSample: 0.5,
-            insideFormulaRangeSample: 10,
-            aboveSourceRangeSample: 200
         ),
         ConvertedFormulaProfileCase(
             canonicalStockName: "Velvia 100",

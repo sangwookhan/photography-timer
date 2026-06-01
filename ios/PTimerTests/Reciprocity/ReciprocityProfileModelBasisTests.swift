@@ -20,11 +20,13 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         XCTAssertEqual(basis.calculationModel, .guardedFormula)
     }
 
-    func testBundledTriX400ProfileDeclaresTableSourceWithGuardedFormulaCalculation() throws {
+    func testBundledTriX400ProfileDeclaresTableSourceWithLogLogCalculation() throws {
+        // PTIMER-168: Tri-X 400 migrated from the app-derived guarded
+        // formula to the official Kodak table log-log model.
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let basis = try XCTUnwrap(film.profiles[0].modelBasis)
         XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .guardedFormula)
+        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
     }
 
     func testBundledFomapan100ProfileDeclaresTableSourceWithLogLogCalculation() throws {
@@ -57,7 +59,10 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, pow(4.0, 1.31), accuracy: 0.0001)
     }
 
-    func testAddingModelBasisDoesNotChangeTriX400FormulaCalculation() throws {
+    func testTriX400TableModelReproducesPublishedAnchorAtOneSecond() throws {
+        // PTIMER-168: Tri-X 400 now evaluates through the official table
+        // log-log model. At the published 1 sec anchor it reproduces the
+        // Kodak corrected time (2 sec) exactly, with the table basis.
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: film.profiles[0], meteredExposureSeconds: 1)
@@ -65,8 +70,8 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         guard case let .quantified(payload) = result else {
             return XCTFail("Expected quantified result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 0.05)
+        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
+        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 1e-4)
     }
 
     func testAddingModelBasisDoesNotChangeEktar100LimitedGuidanceCalculation() throws {
@@ -82,12 +87,13 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
 
     // MARK: - `sourceEvidence` remains display-only
 
-    func testTriX400SourceEvidenceIsNotPromotedToCalculationAnchor() throws {
-        // Source evidence rows publish the 1 sec / 10 sec / 100 sec
-        // anchors; the metered/corrected mappings shall never be
-        // consumed by the policy. The 10 sec input still evaluates
-        // through the formula (≈ 50 sec is the published row, but the
-        // free LSQ fit predicts a nearby value, never the row itself).
+    func testTriX400SourceEvidenceRemainsDisplayOnlyAlongsideTableModel() throws {
+        // PTIMER-168: the calculation reads the table rule's own anchors,
+        // never the display-only `sourceEvidence` rows. For Tri-X the
+        // published rows and the table anchors coincide, so the 10 sec
+        // input reproduces Kodak's 50 sec corrected time exactly through
+        // the table log-log model while `sourceEvidence` stays populated
+        // purely for the Source reference surface.
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         XCTAssertFalse(film.profiles[0].sourceEvidence.isEmpty)
 
@@ -96,10 +102,8 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         guard case let .quantified(payload) = result else {
             return XCTFail("Expected quantified result, got \(result).")
         }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        // Formula prediction at 10 s: 2.013654 × 10^1.3891 ≈ 49.4 s.
-        let expected = 2.013654 * pow(10.0, 1.3891)
-        XCTAssertEqual(payload.correctedExposureSeconds, expected, accuracy: 0.01)
+        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
+        XCTAssertEqual(payload.correctedExposureSeconds, 50, accuracy: 1e-4)
     }
 
     // MARK: - Optional / inferred basis behavior
@@ -120,11 +124,13 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
     }
 
     func testEffectiveModelBasisInfersManufacturerTableForFormulaWithSourceEvidence() throws {
-        // T-MAX 100 ships as a converted-formula profile with
-        // `sourceEvidence` but does not yet declare `modelBasis`.
-        // The inferred basis treats source-evidence + formula as a
+        // Provia 100F ships as a converted-formula profile with
+        // `sourceEvidence` but does not declare `modelBasis`. The
+        // inferred basis treats source-evidence + formula as a
         // table-origin source converted to a derived guarded formula.
-        let film = try XCTUnwrap(film(named: "T-MAX 100"))
+        // (T-MAX 100 previously covered this case but migrated to an
+        // explicit table model in PTIMER-168.)
+        let film = try XCTUnwrap(film(named: "Provia 100F"))
         XCTAssertNil(film.profiles[0].modelBasis)
         XCTAssertFalse(film.profiles[0].sourceEvidence.isEmpty)
 

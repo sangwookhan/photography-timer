@@ -1,6 +1,6 @@
   ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
     ▿ activeCalculatorContext: PTimer.ActiveExposureCalculatorContext
-      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-tri-x-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-tri-x-official-formula", name: "Official log-log formula fit through published 1/10/100 sec rows", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimer.ReciprocityRule.formula(PTimer.FormulaReciprocityRule(formula: PTimer.ReciprocityFormula(formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild, coefficientSeconds: 2.013654, referenceMeteredTimeSeconds: 1.0, exponent: 1.3891, offsetSeconds: 0.0, noCorrectionThroughSeconds: 0.999999, sourceRangeThroughSeconds: Optional(100.0)), additionalAdjustments: [], notes: ["Tc = 2.0137 × Tm^p, p ≈ 1.3891. Free log-log least squares fit through Kodak\'s published corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to ≈ 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."]))], notes: [], userMetadata: nil, sourceEvidence: [PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 1.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: ["1 sec → +1 stop, corrected 2 sec, develop -10%."], isSourceEvidenceOnly: false), PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 2.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: ["10 sec → +2 stops, corrected 50 sec, develop -20%."], isSourceEvidenceOnly: false), PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 3.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: ["100 sec → +3 stops, corrected 1200 sec, develop -30%."], isSourceEvidenceOnly: false)], modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula)), selectorLabel: nil)], userMetadata: nil))
+      ▿ selectedPresetFilm: Optional(PTimer.FilmIdentity(id: "kodak-tri-x-400", kind: PTimer.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimer.FilmProductionStatus.current, profiles: [PTimer.ReciprocityProfile(id: "kodak-tri-x-official-table", name: "Official Kodak table", source: PTimer.ReciprocitySourceProvenance(kind: PTimer.ReciprocitySourceKind.manufacturerPublished, authority: PTimer.ReciprocityAuthority.official, confidence: PTimer.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimer.ReciprocityRule.tableInterpolation(PTimer.TableInterpolationReciprocityRule(anchors: [PTimer.TableAnchor(meteredSeconds: 1.0, correctedSeconds: 2.0), PTimer.TableAnchor(meteredSeconds: 10.0, correctedSeconds: 50.0), PTimer.TableAnchor(meteredSeconds: 100.0, correctedSeconds: 1200.0)], additionalAdjustments: [], notes: ["Official Kodak corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. At the 1 sec boundary the table steps from the no-correction band to 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Published stop deltas and development adjustments stay visible as source evidence. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."], noCorrectionThroughSeconds: 0.999999, sourceRangeThroughSeconds: 100.0))], notes: [], userMetadata: nil, sourceEvidence: [PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 1.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: ["1 sec → +1 stop, corrected 2 sec, develop -10%."], isSourceEvidenceOnly: false), PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 2.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: ["10 sec → +2 stops, corrected 50 sec, develop -20%."], isSourceEvidenceOnly: false), PTimer.ReciprocitySourceEvidenceRow(meteredExposure: PTimer.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.stopDelta(PTimer.StopDeltaAdjustment(stopDelta: 3.0))), PTimer.ReciprocityAdjustment.exposure(PTimer.ExposureAdjustment.correctedTime(PTimer.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimer.ReciprocityAdjustment.development(PTimer.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: ["100 sec → +3 stops, corrected 1200 sec, develop -30%."], isSourceEvidenceOnly: false)], modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation)), selectorLabel: nil)], userMetadata: nil))
         ▿ some: PTimer.FilmIdentity
           - id: "kodak-tri-x-400"
           - kind: PTimer.FilmIdentityKind.preset
@@ -16,8 +16,8 @@
           - productionStatus: PTimer.FilmProductionStatus.current
           ▿ profiles: 1 element
             ▿ PTimer.ReciprocityProfile
-              - id: "kodak-tri-x-official-formula"
-              - name: "Official log-log formula fit through published 1/10/100 sec rows"
+              - id: "kodak-tri-x-official-table"
+              - name: "Official Kodak table"
               ▿ source: PTimer.ReciprocitySourceProvenance
                 - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
                 - authority: PTimer.ReciprocityAuthority.official
@@ -29,20 +29,23 @@
                   - some: "Publication F-4017"
                 - sourceVersion: nil
               ▿ rules: 1 element
-                ▿ PTimer.ReciprocityRule.formula
-                  ▿ formula: PTimer.FormulaReciprocityRule
-                    ▿ formula: PTimer.ReciprocityFormula
-                      - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
-                      - coefficientSeconds: 2.013654
-                      - referenceMeteredTimeSeconds: 1.0
-                      - exponent: 1.3891
-                      - offsetSeconds: 0.0
-                      - noCorrectionThroughSeconds: 0.999999
-                      ▿ sourceRangeThroughSeconds: Optional(100.0)
-                        - some: 100.0
+                ▿ PTimer.ReciprocityRule.tableInterpolation
+                  ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+                    ▿ anchors: 3 elements
+                      ▿ PTimer.TableAnchor
+                        - meteredSeconds: 1.0
+                        - correctedSeconds: 2.0
+                      ▿ PTimer.TableAnchor
+                        - meteredSeconds: 10.0
+                        - correctedSeconds: 50.0
+                      ▿ PTimer.TableAnchor
+                        - meteredSeconds: 100.0
+                        - correctedSeconds: 1200.0
                     - additionalAdjustments: 0 elements
                     ▿ notes: 1 element
-                      - "Tc = 2.0137 × Tm^p, p ≈ 1.3891. Free log-log least squares fit through Kodak\'s published corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to ≈ 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
+                      - "Official Kodak corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. At the 1 sec boundary the table steps from the no-correction band to 2 sec, matching Kodak\'s published step from 0 stops to +1 stop. Published stop deltas and development adjustments stay visible as source evidence. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+                    - noCorrectionThroughSeconds: 0.999999
+                    - sourceRangeThroughSeconds: 100.0
               - notes: 0 elements
               - userMetadata: nil
               ▿ sourceEvidence: 3 elements
@@ -112,32 +115,32 @@
                   ▿ notes: 1 element
                     - "100 sec → +3 stops, corrected 1200 sec, develop -30%."
                   - isSourceEvidenceOnly: false
-              ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula))
+              ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
                 ▿ some: PTimer.ReciprocityProfileModelBasis
                   - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-                  - calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula
+                  - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
               - selectorLabel: nil
           - userMetadata: nil
       - selectedProfileOverride: nil
     - isFilmWorkflowActive: true
     - canResetFilmModeWorkingContext: true
-    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "formulaDerived", correctedExposureSeconds: Optional(2.013654), presentationCategory: "formulaDerived", presentationBadgeStyle: "measured"))
+    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "tableLogLogDerived", correctedExposureSeconds: Optional(2.0), presentationCategory: "formulaDerived", presentationBadgeStyle: "measured"))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump
         - filmStockName: "Tri-X 400"
         - profileAuthority: "official"
-        - policyResultBasis: "formulaDerived"
-        ▿ correctedExposureSeconds: Optional(2.013654)
-          - some: 2.013654
+        - policyResultBasis: "tableLogLogDerived"
+        ▿ correctedExposureSeconds: Optional(2.0)
+          - some: 2.0
         - presentationCategory: "formulaDerived"
         - presentationBadgeStyle: "measured"
-    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 1.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(2.013654), correctedPrimary: "2s", correctedSecondary: "", correctedExposureCanStart: true))
+    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 1.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(2.0), correctedPrimary: "2s", correctedSecondary: "", correctedExposureCanStart: true))
       ▿ some: PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump
         - adjustedShutterSeconds: 1.0
         - reciprocityStateTone: "measured"
         - adjustedShutterCanStart: true
         - correctedKind: "quantified"
-        ▿ correctedSeconds: Optional(2.013654)
-          - some: 2.013654
+        ▿ correctedSeconds: Optional(2.0)
+          - some: 2.0
         - correctedPrimary: "2s"
         - correctedSecondary: ""
         - correctedExposureCanStart: true

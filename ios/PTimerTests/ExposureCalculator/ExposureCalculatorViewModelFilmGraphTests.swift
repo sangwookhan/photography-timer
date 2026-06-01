@@ -166,15 +166,17 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
 
     @MainActor
     func testFilmModeTMax100SubSecondGraphShowsNoCorrectionRegion() throws {
-        // T-MAX 100's published no-correction threshold runs from
-        // 1/1000 s to 1/10 s. Sub-1/10 s inputs must produce a
-        // graph whose viewport extends below 1 s so the published
-        // no-correction band reads as a visible region instead of
-        // collapsing onto the left edge.
+        // PTIMER-168: the official Kodak table applies no correction
+        // through 0.5 sec (Kodak's 1 sec +1/3 stop row marks 1 sec as
+        // already outside the no-correction band, and publishes no
+        // corrected time there, so the table neither anchors at 1 sec nor
+        // extends the band to it). A sub-second input must still produce a
+        // graph whose viewport extends below the band so it reads as a
+        // visible region instead of collapsing onto the left edge.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
 
-        viewModel.baseShutter = 1.0 / 60.0      // 0.0167 s, inside T-MAX 100's 1/1000…1/10 s no-correction range
+        viewModel.baseShutter = 1.0 / 60.0      // 0.0167 s, inside T-MAX 100's no-correction range
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
 
@@ -182,12 +184,12 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         let graph = try XCTUnwrap(details.graph)
 
         XCTAssertLessThan(graph.xRange.lowerBound, 0.1,
-                          "Viewport must expand below T-MAX 100's 1/10 s no-correction upper bound so the band is visible.")
+                          "Viewport must expand well below T-MAX 100's 0.5 s no-correction upper bound so the band is visible.")
         let upper = try XCTUnwrap(graph.noCorrectionRangeUpperBoundSeconds)
-        XCTAssertEqual(upper, 0.1, accuracy: 1e-6,
-                       "T-MAX 100's published no-correction range ends at 1/10 s.")
+        XCTAssertEqual(upper, 0.5, accuracy: 1e-6,
+                       "T-MAX 100's table no-correction range ends at 0.5 sec.")
         XCTAssertGreaterThan(upper, graph.xRange.lowerBound,
-                             "Published no-correction upper bound must sit above the viewport's lower bound so the overlay has a visible width.")
+                             "No-correction upper bound must sit above the viewport's lower bound so the overlay has a visible width.")
         XCTAssertFalse(graph.isBelowVisibleRange)
         XCTAssertEqual(graph.currentPoint?.style, .noCorrection)
     }
@@ -239,8 +241,8 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // current input lands. Only the current-result marker
         // moves between sub-second, near-1 s, and long-exposure
         // inputs. T-MAX 100 across 1/60 s (No correction), 1 s
-        // (handoff edge), and 30 s (formula-derived) must share
-        // identical xRange / yRange.
+        // (table-derived correction), and 30 s (table-derived correction)
+        // must share identical xRange / yRange.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
         viewModel.ndStop = 0
@@ -363,12 +365,13 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     @MainActor
     func testFilmModeFormulaGraphLegendShowsCalculationCurveAcrossProfileAuthorities() throws {
         // The "Calculation curve" wording must surface consistently
-        // for every formula-graph profile authority: official
-        // converted formula (Provia 100F, T-MAX 100), source-less
-        // official formula (HP5 Plus), and unofficial practical
-        // (Portra 400 unofficial). Official limited-guidance
-        // profiles (Portra 400 official) produce no formula graph
-        // and are excluded from this loop.
+        // across every model type that renders a formula-kind graph:
+        // an official table-origin / table-derived profile (T-MAX 100,
+        // PTIMER-168), an official converted-formula profile
+        // (Provia 100F), a source-less official formula (HP5 Plus), and
+        // an unofficial practical profile (Portra 400 unofficial).
+        // Official limited-guidance profiles (Portra 400 official)
+        // produce no formula graph and are excluded from this loop.
         let viewModel = makeFilmModeViewModel()
         viewModel.ndStop = 0
 

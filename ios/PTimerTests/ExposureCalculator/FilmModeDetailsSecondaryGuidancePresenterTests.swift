@@ -196,7 +196,10 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
-        XCTAssertEqual(displayState.subtitle, "Tri-X 400 · Official guidance")
+        // PTIMER-159/168: the log-log table model names itself in the
+        // subtitle, so the migrated Tri-X profile reads "Official Kodak
+        // table" rather than the generic "Official guidance".
+        XCTAssertEqual(displayState.subtitle, "Tri-X 400 · Official Kodak table")
 
         let legend = try XCTUnwrap(displayState.legend)
         XCTAssertTrue(

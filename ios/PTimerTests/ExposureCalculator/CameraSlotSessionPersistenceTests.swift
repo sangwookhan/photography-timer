@@ -342,6 +342,62 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(camera1Page.filmSelectionDisplayState.primaryText, "No film")
     }
 
+    /// PTIMER-168 renamed the migrated default profile ids from
+    /// `…-official-formula` to `…-official-table`. A session persisted by
+    /// an older build could still carry the stale id as a selected
+    /// profile override. Restore must treat the unknown id as a dropped
+    /// override and fall back to the film's current default (table)
+    /// profile, keeping the film selected rather than crashing or losing
+    /// it. (The 8 migrated stocks are single-profile, so in practice
+    /// their id is never persisted as an override — but the fallback
+    /// guard must hold regardless.)
+    func testStaleMigratedProfileIDFallsBackToDefaultTableProfile() throws {
+        let film = try XCTUnwrap(
+            makeViewModel().availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        let sessionStore = InMemorySessionStore()
+        sessionStore.saveSnapshot(
+            PersistentCameraSlotSessionSnapshot(
+                schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
+                activeSlotIDRaw: "camera1",
+                slots: [
+                    PersistentCameraSlotCalculatorSnapshot(
+                        slotIDRaw: "camera1",
+                        selectedPresetFilmID: film.id,
+                        selectedProfileID: "kodak-tri-x-official-formula", // stale pre-PTIMER-168 id
+                        baseShutterSeconds: 1,
+                        ndStop: 0,
+                        ndStopThirds: nil,
+                        exposureScaleMode: nil
+                    ),
+                ]
+            )
+        )
+
+        let restored = makeViewModel(sessionStore: sessionStore)
+
+        let page = restored.cameraSlotPageState(for: .camera1)
+        XCTAssertEqual(
+            page.selectedFilm?.id,
+            film.id,
+            "Tri-X 400 must survive restore despite the stale profile override id."
+        )
+        XCTAssertNil(
+            page.selectedProfileOverride,
+            "An unknown stale profile id must be dropped as an override, not retained."
+        )
+        XCTAssertEqual(
+            page.selectedFilm?.profiles.first?.id,
+            "kodak-tri-x-official-table",
+            "The active profile must fall back to the current default table profile."
+        )
+        XCTAssertEqual(
+            restored.filmModeExposureResultState?.reciprocityState.badgeText,
+            "Table-derived",
+            "Restored Tri-X must evaluate through the official table model."
+        )
+    }
+
     func testSchemaVersionMismatchIsIgnoredOnLoad() {
         let sessionStore = InMemorySessionStore()
         // Persist a snapshot with a future schema version. The store

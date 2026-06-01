@@ -2161,25 +2161,31 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "rollei-rpx-100-official-formula",
-        "name": "Official log-log formula fit through published corrected-time rows",
+        "id": "rollei-rpx-100-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 0.9248,
-                "exponent": 1.4652,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 1.0,
-                "sourceRangeThroughSeconds": 30.0
-              },
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 2 },
+                { "correctedSeconds": 8, "meteredSeconds": 5 },
+                { "correctedSeconds": 25, "meteredSeconds": 10 },
+                { "correctedSeconds": 75, "meteredSeconds": 20 },
+                { "correctedSeconds": 150, "meteredSeconds": 30 }
+              ],
+              "noCorrectionThroughSeconds": 1.0,
               "notes": [
-                "Tc = 0.9248 × Tm^p, p ≈ 1.4652. Free log-log fit through Rollei's published 2/5/10/20/30 sec corrected-time rows. Rollei's published rows do not lie on a single power law, so residuals reach ~0.3 stop at the 2/5 sec rows; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Official Rollei corrected-time rows (2 sec → 3 sec, 5 sec → 8 sec, 10 sec → 25 sec, 20 sec → 75 sec, 30 sec → 150 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 30 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 30.0
+            }
           }
         ],
         "source": {
@@ -2311,25 +2317,31 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "rollei-rpx-400-official-formula",
-        "name": "Official log-log formula fit through published corrected-time rows",
+        "id": "rollei-rpx-400-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 1.7708,
-                "exponent": 1.2404,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 0.5,
-                "sourceRangeThroughSeconds": 20.0
-              },
+              "anchors": [
+                { "correctedSeconds": 2, "meteredSeconds": 1 },
+                { "correctedSeconds": 10, "meteredSeconds": 5 },
+                { "correctedSeconds": 30, "meteredSeconds": 10 },
+                { "correctedSeconds": 55, "meteredSeconds": 15 },
+                { "correctedSeconds": 80, "meteredSeconds": 20 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
               "notes": [
-                "Tc = 1.7708 × Tm^p, p ≈ 1.2404. Free log-log fit through Rollei's published 1/5/10/15/20 sec corrected-time rows. Residuals reach ~0.4 stop at the 5 sec row where the published step is largest; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 20 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Official Rollei corrected-time rows (1 sec → 2 sec, 5 sec → 10 sec, 10 sec → 30 sec, 15 sec → 55 sec, 20 sec → 80 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 20 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 20.0
+            }
           }
         ],
         "source": {

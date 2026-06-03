@@ -342,6 +342,62 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(camera1Page.filmSelectionDisplayState.primaryText, "No film")
     }
 
+    /// PTIMER-168 renamed the migrated default profile ids from
+    /// `…-official-formula` to `…-official-table`. A session persisted by
+    /// an older build could still carry the stale id as a selected
+    /// profile override. Restore must treat the unknown id as a dropped
+    /// override and fall back to the film's current default (table)
+    /// profile, keeping the film selected rather than crashing or losing
+    /// it. (The 8 migrated stocks are single-profile, so in practice
+    /// their id is never persisted as an override — but the fallback
+    /// guard must hold regardless.)
+    func testStaleMigratedProfileIDFallsBackToDefaultTableProfile() throws {
+        let film = try XCTUnwrap(
+            makeViewModel().availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        let sessionStore = InMemorySessionStore()
+        sessionStore.saveSnapshot(
+            PersistentCameraSlotSessionSnapshot(
+                schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
+                activeSlotIDRaw: "camera1",
+                slots: [
+                    PersistentCameraSlotCalculatorSnapshot(
+                        slotIDRaw: "camera1",
+                        selectedPresetFilmID: film.id,
+                        selectedProfileID: "kodak-tri-x-official-formula", // stale pre-PTIMER-168 id
+                        baseShutterSeconds: 1,
+                        ndStop: 0,
+                        ndStopThirds: nil,
+                        exposureScaleMode: nil
+                    ),
+                ]
+            )
+        )
+
+        let restored = makeViewModel(sessionStore: sessionStore)
+
+        let page = restored.cameraSlotPageState(for: .camera1)
+        XCTAssertEqual(
+            page.selectedFilm?.id,
+            film.id,
+            "Tri-X 400 must survive restore despite the stale profile override id."
+        )
+        XCTAssertNil(
+            page.selectedProfileOverride,
+            "An unknown stale profile id must be dropped as an override, not retained."
+        )
+        XCTAssertEqual(
+            page.selectedFilm?.profiles.first?.id,
+            "kodak-tri-x-official-graph-table",
+            "The active profile must fall back to the current default table profile."
+        )
+        XCTAssertEqual(
+            restored.filmModeExposureResultState?.reciprocityState.badgeText,
+            "Table-derived",
+            "Restored Tri-X must evaluate through the official table model."
+        )
+    }
+
     func testSchemaVersionMismatchIsIgnoredOnLoad() {
         let sessionStore = InMemorySessionStore()
         // Persist a snapshot with a future schema version. The store
@@ -508,6 +564,90 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
             restored.cameraSlotIdentity(for: .camera4).displayName,
             "Camera 4"
         )
+    }
+
+    // MARK: - PTIMER-168: film + model selection survives relaunch
+    //
+    // Regression coverage for the manual-test failure where a film /
+    // reciprocity-model selection reverted to a previous or default
+    // model after kill/relaunch. Root cause: selection mutations wrote
+    // only the legacy single-context snapshot (no profile id); the
+    // multi-slot session store — the restore source of truth — was
+    // refreshed only when a later calc-input change happened to run.
+    // These assert the restored film id AND profile/model id, not just
+    // corrected exposure.
+
+    /// Selects `filmStockName` on a fresh ViewModel (optionally flipping
+    /// the model to `firstProfileID` then to `profileID`), then
+    /// "relaunches" against the same session store and returns the
+    /// restored active-slot page. No calc-input change is performed —
+    /// the selection itself must be enough to persist the choice.
+    private func restoredActiveSlotPage(
+        selecting filmStockName: String,
+        firstSelectingProfileID firstProfileID: String? = nil,
+        thenSelectingProfileID profileID: String? = nil,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> CameraSlotPageState {
+        let sessionStore = InMemorySessionStore()
+        let viewModel = makeViewModel(sessionStore: sessionStore)
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == filmStockName },
+            "Film '\(filmStockName)' must exist in the catalog.",
+            file: file, line: line
+        )
+        viewModel.selectPresetFilm(film)
+        if let firstProfileID {
+            viewModel.selectProfileVariant(profileID: firstProfileID)
+        }
+        if let profileID {
+            viewModel.selectProfileVariant(profileID: profileID)
+        }
+        return makeViewModel(sessionStore: sessionStore).cameraSlotPageState(for: .camera1)
+    }
+
+    /// Reported failure: Portra Official reverting to Unofficial after
+    /// relaunch. Selecting Unofficial first writes it to the session;
+    /// switching back to Official must overwrite that, not leave a
+    /// stale Unofficial id behind. Official is the catalog default, so
+    /// the restored override clears to nil.
+    func testPortra400OfficialSurvivesRelaunchAfterPreviouslyChoosingUnofficial() throws {
+        let page = try restoredActiveSlotPage(
+            selecting: "Portra 400",
+            firstSelectingProfileID: "kodak-portra-400-unofficial-practical",
+            thenSelectingProfileID: "kodak-portra-400-official-threshold"
+        )
+        XCTAssertEqual(page.selectedFilm?.canonicalStockName, "Portra 400")
+        XCTAssertNil(
+            page.selectedProfileOverride,
+            "Official is the catalog default; the override must clear instead of restoring a stale Unofficial."
+        )
+        XCTAssertEqual(page.selectedFilm?.profiles.first?.id, "kodak-portra-400-official-threshold")
+    }
+
+    /// Alternate-model persistence path: a selected alternate's profile
+    /// id must round-trip through the session store. One representative
+    /// (Tri-X App formula) covers every alternate — Tri-X Table,
+    /// Fomapan Ohzart/App formula, Portra Unofficial — since they all
+    /// flow through the same `selectProfileVariant` → session-save path.
+    func testTriX400AppFormulaAlternateSurvivesRelaunch() throws {
+        let page = try restoredActiveSlotPage(
+            selecting: "Tri-X 400",
+            thenSelectingProfileID: "kodak-tri-x-app-formula"
+        )
+        XCTAssertEqual(page.selectedFilm?.canonicalStockName, "Tri-X 400")
+        XCTAssertEqual(page.selectedProfileOverride?.id, "kodak-tri-x-app-formula")
+    }
+
+    /// Film-identity persistence path: a single-profile film must
+    /// survive when selecting it is the only mutation (no calc-input
+    /// change to incidentally trigger a session write). One
+    /// representative (Kentmere) covers the other single-profile films
+    /// (T-MAX, RPX, ADOX) — same film-id-only path.
+    func testKentmere400SelectionSurvivesRelaunch() throws {
+        let page = try restoredActiveSlotPage(selecting: "Kentmere 400")
+        XCTAssertEqual(page.selectedFilm?.canonicalStockName, "Kentmere 400")
+        XCTAssertNil(page.selectedProfileOverride)
     }
 
     // MARK: - Helpers

@@ -44,14 +44,16 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
         .init(stock: "Velvia 100", kind: .formula, sampleMeteredSeconds: 30),
         .init(stock: "Provia 100F", kind: .formula, sampleMeteredSeconds: 240),
 
-        // FOMA — Fomapan 100 Classic uses the log-log table model
-        // (PTIMER-159); it renders a graph (kind .formula) sampled from
-        // the table curve rather than a closed-form formula.
+        // FOMA — all three Fomapan stocks use the log-log table model
+        // (Fomapan 100 via PTIMER-159; 200/400 via PTIMER-168). Table
+        // models still render a graph of kind .formula sampled from the
+        // table curve rather than a closed-form formula.
         .init(stock: "Fomapan 100 Classic", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "Fomapan 200 Creative", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "Fomapan 400 Action", kind: .formula, sampleMeteredSeconds: 10),
 
-        // Kodak — B/W formula films
+        // Kodak — B/W table-origin films (PTIMER-168); the table model
+        // renders a graph of kind .formula sampled from the table curve.
         .init(stock: "Tri-X 400", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "T-MAX 100", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "T-MAX 400", kind: .formula, sampleMeteredSeconds: 10),

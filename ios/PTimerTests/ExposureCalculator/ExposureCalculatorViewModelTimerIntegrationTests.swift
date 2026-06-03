@@ -21,14 +21,14 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         viewModel.startFilmCorrectedExposureTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        // Tri-X 400's free log-log formula fit lands at 2.014 s at
-        // Tm = 1 s (within ~1/100 stop of Kodak's published 2 s row);
-        // the duration formatter renders that as "2.0s".
-        XCTAssertEqual(timer.duration, 2, accuracy: 0.05)
-        XCTAssertEqual(timer.name, "Tri-X 400 - 2.0s")
+        // PTIMER-168: Tri-X 400's official table reproduces Kodak's
+        // published 1 s → 2 s anchor exactly; the duration formatter
+        // renders the whole-second value as "2s".
+        XCTAssertEqual(timer.duration, 2, accuracy: 1e-4)
+        XCTAssertEqual(timer.name, "Tri-X 400 - 2s")
         XCTAssertEqual(
             timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2.0s"
+            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400 · Corrected 2s"
         )
     }
 

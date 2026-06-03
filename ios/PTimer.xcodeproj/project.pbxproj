@@ -240,6 +240,7 @@
 		A00000000000000000000C0D /* AlternateReciprocityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0E /* AlternateReciprocityModels.swift */; };
 		A00000000000000000000C0F /* TableInterpolationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C10 /* TableInterpolationModelTests.swift */; };
 		A00000000000000000000C11 /* Fomapan100TableModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C12 /* Fomapan100TableModelTests.swift */; };
+		A00000000000000000000F00 /* OfficialTableMigrationInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000F01 /* OfficialTableMigrationInvariantTests.swift */; };
 		A00000000001600000000001 /* GuardedReciprocityFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */; };
 		A00000000001700000000001 /* ReciprocityProfileModelBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */; };
 /* End PBXBuildFile section */
@@ -512,6 +513,7 @@
 		A00000000000000000000C0E /* AlternateReciprocityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlternateReciprocityModels.swift; sourceTree = "<group>"; };
 		A00000000000000000000C10 /* TableInterpolationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableInterpolationModelTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000C12 /* Fomapan100TableModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100TableModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000F01 /* OfficialTableMigrationInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficialTableMigrationInvariantTests.swift; sourceTree = "<group>"; };
 		A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardedReciprocityFormulaTests.swift; sourceTree = "<group>"; };
 		A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityProfileModelBasisTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
@@ -809,6 +811,7 @@
 				A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */,
 				A00000000000000000000C10 /* TableInterpolationModelTests.swift */,
 				A00000000000000000000C12 /* Fomapan100TableModelTests.swift */,
+				A00000000000000000000F01 /* OfficialTableMigrationInvariantTests.swift */,
 				A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */,
 				A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */,
 				A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */,
@@ -1280,6 +1283,7 @@
 				A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */,
 				A00000000000000000000C0F /* TableInterpolationModelTests.swift in Sources */,
 				A00000000000000000000C11 /* Fomapan100TableModelTests.swift in Sources */,
+				A00000000000000000000F00 /* OfficialTableMigrationInvariantTests.swift in Sources */,
 				A00000000000000000000C05 /* ReciprocityModelMetadataPresenterTests.swift in Sources */,
 				A00000000000000000000C07 /* ReciprocityModelComparisonPresenterTests.swift in Sources */,
 				A00000000000000000000C09 /* ReciprocityModelSelectionTests.swift in Sources */,

@@ -13,7 +13,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-derived")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
         XCTAssertEqual(resultState.reciprocityState.tone, .measured)
         XCTAssertEqual(resultState.adjustedShutterAction.targetSeconds ?? 0, 1, accuracy: 0.0001)
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
@@ -49,21 +49,22 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertTrue(viewModel.filmModeExposureResultState?.reciprocityState.showsInfoAffordance == true)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
         XCTAssertEqual(details.title, "Reciprocity Details")
-        XCTAssertEqual(details.summary.badgeText, "Formula-derived")
-        XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
+        XCTAssertEqual(details.summary.badgeText, "Table-derived")
+        XCTAssertEqual(details.summary.summaryText, "Log-log interpolation of the official table")
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "8s")
         XCTAssertNil(details.currentResult.adjustedShutter.detailText)
         XCTAssertEqual(details.currentResult.correctedExposure.title, "Corrected Exposure")
-        // Free log-log fit at Tm = 8 sec predicts ≈ 36.2 sec; the
-        // duration formatter rounds whole seconds for values >= 10 s.
-        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "36s")
+        // PTIMER-168: the official Kodak graph/table model interpolates ≈ 37.8 sec
+        // at Tm = 8 sec (11-anchor table); the duration formatter rounds whole
+        // seconds for values >= 10 s.
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "38s")
         XCTAssertNil(details.currentResult.correctedExposure.detailText)
         XCTAssertTrue(details.currentResult.correctedExposure.emphasizesValue)
-        // Tri-X 400 is an official converted-formula profile, not an
-        // app-derived model, so it shows no App-derived comparison
-        // (PTIMER-159 gate).
+        // Tri-X 400 is an official table-origin profile (PTIMER-168),
+        // not an app-derived model, so it shows no App-derived
+        // comparison (PTIMER-159 gate).
         XCTAssertEqual(details.sections.map(\.title), [
             "Reciprocity model",
             "Source reference",
@@ -91,17 +92,17 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         // stop correction, the published corrected time, and the
         // published development hint so the user reads exactly what
         // Kodak prints in F-4017. The threshold row reconciles
-        // Kodak's "1 sec" boundary by reading "< 1s" — the 1 sec
-        // anchor itself is the start of the corrected range.
+        // Kodak's "1/10s" boundary reading "<= 1/10s" — the table now
+        // has 11 anchors with the no-correction band ending at 0.1 s.
         XCTAssertEqual(referenceSection.rows.map(\.value), [
             """
-            < 1s    No correction range
-            1s      +1 stop · 2s           Dev -10%
-            10s     +2 stops · 50s         Dev -20%
-            100s    +3 stops · 1200s       Dev -30%
+            <= 1/10s    No correction range
+            1s          +1 stop · 2s           Dev -10%
+            10s         +2 stops · 50s         Dev -20%
+            100s        +3 stops · 1200s       Dev -30%
             """,
         ])
-        XCTAssertEqual(details.summary.summaryText, "Formula-based correction on the active curve")
+        XCTAssertEqual(details.summary.summaryText, "Log-log interpolation of the official table")
         // Sources are now an unlabeled list (one row per item); the
         // legacy Reference / Citation sub-labels are gone.
         XCTAssertEqual(sourcesSection.rows.map(\.title), ["", ""])
@@ -115,14 +116,15 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
 
     @MainActor
     func testFilmModeSourceReferenceShowsBothStopAndCorrectedTimeForKodakTMax100() throws {
-        // Source reference panel rule for converted formula profiles:
+        // Source reference panel rule for source-backed profiles:
         // when a row carries both a stop correction and a published
         // corrected time, show both. Kodak's T-MAX 100 publishes a
         // corrected time at 10 sec (15 sec) and 100 sec (200 sec) so
         // both rows render the combined "stop · corrected" column.
-        // The 1 sec row publishes only the +1/3 stop delta, so the
-        // catalog does not synthesize a corrected time — that row
-        // shows the stop delta alone.
+        // PTIMER-168: the 1 sec row now also shows an aperture-guidance
+        // equivalent corrected time alongside the +0.33 stop delta —
+        // the ≈ approximate marker flags that this is a stop-derived
+        // conversion, not a directly published corrected time.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
 
@@ -147,9 +149,13 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
             oneSecLine.contains("+0.33 stop"),
             "T-MAX 100 1s row must surface the published +1/3 stop delta; got: \(oneSecLine)"
         )
-        XCTAssertFalse(
-            oneSecLine.contains("·"),
-            "T-MAX 100 1s row publishes stop delta only; the formatter must not synthesize a corrected-time column for it; got: \(oneSecLine)"
+        // PTIMER-168: the 1 s row now shows the aperture-guidance equivalent
+        // corrected time with the ≈ approximate marker ("≈1.3s"), because the
+        // product decision is to surface the stop-derived corrected-time
+        // alongside the stop delta for the 1 s anchor.
+        XCTAssertTrue(
+            oneSecLine.contains("≈1.3s"),
+            "T-MAX 100 1s row must show the approximate corrected-time equivalent '≈1.3s'; got: \(oneSecLine)"
         )
     }
 
@@ -196,7 +202,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertEqual(details.sections.last?.title, "Sources")
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
-        XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-1s    No correction"])
+        XCTAssertEqual(referenceSection.rows.map(\.value), ["1/10000s-10s    No correction"])
         XCTAssertEqual(details.summary.badgeText, "No quantified prediction")
         XCTAssertEqual(details.summary.summaryText, "Beyond published no-correction range")
         // Every case shares the same comparison-card layout now,
@@ -248,12 +254,12 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
 
         XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
         XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-derived")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
         XCTAssertEqual(resultState.reciprocityState.tone, .measured)
         // Details lead with the active-model metadata section
-        // (PTIMER-159), followed by the converted-formula Source
-        // reference section that pairs the threshold band with the
-        // published source rows.
+        // (PTIMER-159), followed by the table-origin Source reference
+        // section that pairs the no-correction band with the published
+        // source rows.
         XCTAssertEqual(details.sections.first?.title, "Reciprocity model")
         XCTAssertEqual(details.sections.dropFirst().first?.title, "Source reference")
         XCTAssertEqual(
@@ -378,7 +384,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
 
         XCTAssertNil(details.graph)
-        XCTAssertEqual(details.sections.first(where: { $0.title == "Reference" })?.rows.first?.value, "1/10000s-1s    No correction")
+        XCTAssertEqual(details.sections.first(where: { $0.title == "Reference" })?.rows.first?.value, "1/10000s-10s    No correction")
     }
 
     @MainActor

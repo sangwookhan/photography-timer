@@ -585,15 +585,28 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func selectEntry(_ entry: FilmSelectorEntry) {
         filmSelectionModel.selectEntry(entry)
+        // The multi-slot session store is the restore source of truth;
+        // `FilmSelectionModel` only writes the legacy single-context
+        // snapshot (which carries no profile id). Persist here so the
+        // chosen film AND profile/model variant reach the session store
+        // immediately, instead of surviving only when a later
+        // calc-input change happens to rewrite it (PTIMER-168 relaunch
+        // persistence fix).
+        persistCalculatorContext()
     }
 
     /// Switches the active reciprocity profile/model within the
     /// currently selected film (PTIMER-159). The Details model picker
     /// calls this; the film stays selected while the profile override
-    /// flips. Reuses the existing override plumbing — setting the
-    /// override on `filmSelectionModel` persists the calculator context
-    /// and, through the `$activeContext` subscription, refreshes the
-    /// derived binding state and the camera-slot session snapshot.
+    /// flips.
+    ///
+    /// Persists through `persistCalculatorContext()` so the multi-slot
+    /// session store — the restore source of truth — captures the
+    /// chosen model immediately. `FilmSelectionModel.selectProfileOverride`
+    /// only writes the legacy single-context snapshot, which has no
+    /// profile id; relying on it alone dropped the model selection on
+    /// relaunch (e.g. Tri-X "Table"/"App formula" or Portra
+    /// "Official" reverting to a stale session value) (PTIMER-168).
     func selectProfileVariant(profileID: String) {
         guard let film = selectedPresetFilm else { return }
         if let alternate = AlternateReciprocityModels
@@ -605,6 +618,7 @@ final class ExposureCalculatorViewModel: ObservableObject {
             // profile, cleared back to the no-override default.
             filmSelectionModel.selectProfileOverride(nil)
         }
+        persistCalculatorContext()
     }
 
     /// Profile/model picker state for Reciprocity Details. `nil` for a
@@ -696,10 +710,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
 
     func selectPresetFilm(_ film: FilmIdentity) {
         filmSelectionModel.selectPresetFilm(film)
+        // Capture the selection in the session store (see `selectEntry`).
+        persistCalculatorContext()
     }
 
     func clearSelectedPresetFilm() {
         filmSelectionModel.clearSelectedPresetFilm()
+        // Capture the cleared selection in the session store too, so a
+        // deselect survives relaunch instead of resurfacing a stale film.
+        persistCalculatorContext()
     }
 
     func resetFilmModeWorkingContext() {

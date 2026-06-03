@@ -4,6 +4,9 @@ import XCTest
 final class FilmModeFormulaExtrapolationTests: XCTestCase {
     @MainActor
     func testTriXBelowOneSecondDoesNotShowUnsupported() throws {
+        // PTIMER-168: at 0.5 s Tri-X 400 is now table-derived (the
+        // no-correction band ends at 0.1 s), not no-correction. The
+        // result is still quantified and not unsupported.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -13,16 +16,19 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 0.5, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "No correction")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
         XCTAssertNotEqual(resultState.reciprocityState.badgeText, "Unsupported")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 0.812, accuracy: 0.01)
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 0.812, accuracy: 0.01)
     }
 
     @MainActor
-    func testTriXAtOneSecondReturnsCorrectedExposureFromFormulaPrediction() throws {
+    func testTriXAtOneSecondReturnsCorrectedExposureFromTablePrediction() throws {
+        // PTIMER-168: Tri-X 400 evaluates through the official Kodak
+        // table; the 1 sec published row (corrected 2 sec) is a table
+        // anchor reproduced exactly, surfaced as a Table-derived badge.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -32,18 +38,18 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
 
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Formula-derived")
+        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 0.05)
+        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 1e-4)
         XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 0.05)
+        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 1e-4)
     }
 
     @MainActor
     func testCorrectedExposureNumericDisplayUsesRestoredTimeFormatting() throws {
         // CHS 100 II's 2024 published rows top out at 15 sec, so 8 sec
-        // is firmly inside its formula domain. A converted formula
+        // is firmly inside its source table range. A source-backed
         // profile inside its source range does not prefix the numeric
         // corrected exposure with "≈" — that marker is reserved for
         // outside-guidance numeric continuations.
@@ -125,40 +131,43 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
 
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "14s")
+        XCTAssertEqual(resultState.correctedExposure.primaryText, "15s")
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "4s")
-        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "14s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "15s")
     }
 
     @MainActor
     func testNoCorrectionDetailsUseSharedComparisonLayoutAndPlotIdentityCurrentPoint() throws {
+        // PTIMER-168: Tri-X 400's no-correction band ends at 0.1 s; use
+        // a sub-0.1 s base (snaps to 1/15 ≈ 0.067 s on the full-stop
+        // scale) so the result is genuinely no-correction.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
-        viewModel.baseShutter = 1.0 / 30.0
-        viewModel.ndStop = 4
+        viewModel.baseShutter = 0.05
+        viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
 
         let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
 
         XCTAssertEqual(details.summary.badgeText, "No correction")
-        XCTAssertEqual(details.summary.summaryText, "No correction at 0.5s")
+        XCTAssertEqual(details.summary.summaryText, "No correction at 0.067s")
         // No-correction now shares the comparison layout with every
         // other case; the legacy `compactValue` variant is gone.
         XCTAssertEqual(details.currentResult.layout, .comparison)
-        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "0.5s")
-        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "0.5s")
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "0.067s")
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "0.067s")
         XCTAssertEqual(details.currentResult.statusText, "No correction")
         // No-correction current point sits on the identity line with
         // the `.noCorrection` marker so it does not read as a formula
         // prediction.
         let currentPoint = try XCTUnwrap(details.graph?.currentPoint)
         XCTAssertEqual(currentPoint.style, .noCorrection)
-        XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 0.5, accuracy: 1e-6)
-        XCTAssertEqual(currentPoint.point.correctedExposureSeconds, 0.5, accuracy: 1e-6)
+        XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 0.0667, accuracy: 1e-3)
+        XCTAssertEqual(currentPoint.point.correctedExposureSeconds, 0.0667, accuracy: 1e-3)
     }
 
     @MainActor
@@ -183,7 +192,9 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXBeyondSourceRangeKeepsFormulaPredictionAsQuantifiedResult() throws {
+    func testTriXBeyondSourceRangeKeepsTablePredictionAsQuantifiedResult() throws {
+        // PTIMER-168: past the published table the Tri-X profile keeps a
+        // log-log extrapolated value, surfaced as Beyond source range.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -202,7 +213,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .unsupportedOutOfPolicyRange)
         XCTAssertEqual(bindingState.presentation.category, .unsupported)
-        XCTAssertTrue(bindingState.profile.isConvertedFormulaProfile)
+        XCTAssertTrue(bindingState.profile.usesTableInterpolation)
     }
 
     @MainActor

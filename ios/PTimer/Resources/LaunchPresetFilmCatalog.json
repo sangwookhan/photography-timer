@@ -1070,11 +1070,11 @@
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 1,
+                "maximumSeconds": 10,
                 "minimumSeconds": 0.0001
               },
               "notes": [
-                "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+                "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
               ]
             }
           },
@@ -1085,12 +1085,12 @@
                 {
                   "kind": "note",
                   "note": {
-                    "text": "Longer exposures: test under your conditions."
+                    "text": "Beyond 10 sec is not recommended; test under your conditions."
                   }
                 }
               ],
               "appliesWhenMetered": {
-                "minimumSeconds": 1
+                "minimumSeconds": 10
               },
               "notes": []
             }
@@ -1129,11 +1129,11 @@
             "threshold": {
               "adjustments": [],
               "noCorrectionRange": {
-                "maximumSeconds": 1,
+                "maximumSeconds": 10,
                 "minimumSeconds": 0.0001
               },
               "notes": [
-                "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+                "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
               ]
             }
           },
@@ -1144,12 +1144,12 @@
                 {
                   "kind": "note",
                   "note": {
-                    "text": "Longer exposures: test under your conditions."
+                    "text": "Beyond 10 sec is not recommended; test under your conditions."
                   }
                 }
               ],
               "appliesWhenMetered": {
-                "minimumSeconds": 1
+                "minimumSeconds": 10
               },
               "notes": []
             }

@@ -1014,21 +1014,21 @@
               ▿ threshold: PTimer.ThresholdReciprocityRule
                 ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
-                  ▿ maximumSeconds: Optional(1.0)
-                    - some: 1.0
+                  ▿ maximumSeconds: Optional(10.0)
+                    - some: 10.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
-                  - "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+                  - "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
             ▿ PTimer.ReciprocityRule.limitedGuidance
               ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
+                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
                   ▿ some: PTimer.ReciprocityTimeRange
-                    - minimumSeconds: 1.0
+                    - minimumSeconds: 10.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
                   ▿ PTimer.ReciprocityAdjustment.note
                     ▿ note: PTimer.ReciprocityNote
-                      - text: "Longer exposures: test under your conditions."
+                      - text: "Beyond 10 sec is not recommended; test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
           - userMetadata: nil
@@ -1067,21 +1067,21 @@
               ▿ threshold: PTimer.ThresholdReciprocityRule
                 ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
-                  ▿ maximumSeconds: Optional(1.0)
-                    - some: 1.0
+                  ▿ maximumSeconds: Optional(10.0)
+                    - some: 10.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
-                  - "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+                  - "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
             ▿ PTimer.ReciprocityRule.limitedGuidance
               ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
+                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
                   ▿ some: PTimer.ReciprocityTimeRange
-                    - minimumSeconds: 1.0
+                    - minimumSeconds: 10.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
                   ▿ PTimer.ReciprocityAdjustment.note
                     ▿ note: PTimer.ReciprocityNote
-                      - text: "Longer exposures: test under your conditions."
+                      - text: "Beyond 10 sec is not recommended; test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
           - userMetadata: nil

@@ -1875,25 +1875,29 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-200-official-formula",
-        "name": "Official log-log formula fit through published multiplier rows",
+        "id": "foma-fomapan-200-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official FOMA table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 3.2107,
-                "exponent": 1.3891,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 0.5,
-                "sourceRangeThroughSeconds": 100.0
-              },
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 1 },
+                { "correctedSeconds": 90, "meteredSeconds": 10 },
+                { "correctedSeconds": 1800, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
               "notes": [
-                "Tc = 3.2107 × Tm^p, p ≈ 1.3891. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (×3 / ×9 / ×18). Residuals stay within ~1/5 stop at every published row; the source rows stay visible as evidence so the fit is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Official FOMA BOHEMIA multiplier rows at 1/10/100 sec (×3 / ×9 / ×18 → 3 / 90 / 1800 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
           }
         ],
         "source": {
@@ -2012,25 +2016,29 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "foma-fomapan-400-official-formula",
-        "name": "Official log-log formula fit through published multiplier rows",
+        "id": "foma-fomapan-400-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official FOMA table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 1.8022,
-                "exponent": 1.3635,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 0.5,
-                "sourceRangeThroughSeconds": 100.0
-              },
+              "anchors": [
+                { "correctedSeconds": 1.5, "meteredSeconds": 1 },
+                { "correctedSeconds": 60, "meteredSeconds": 10 },
+                { "correctedSeconds": 800, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
               "notes": [
-                "Tc = 1.8022 × Tm^p, p ≈ 1.3635. Free log-log fit through FOMA BOHEMIA's published multiplier rows at 1/10/100 sec (×1.5 / ×6 / ×8). FOMAPAN 400's published rows step ×1.5 → ×6 → ×8 — the 10 sec row sits roughly half a stop above the curve while the 1 and 100 sec rows sit roughly a quarter stop below; the source rows stay visible as evidence so the deviation is reviewable. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Official FOMA BOHEMIA multiplier rows at 1/10/100 sec (×1.5 / ×6 / ×8 → 1.5 / 60 / 800 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. FOMA's published rows do not lie on a single power law, so the curve bends between the 10 sec and 100 sec anchors; the published rows stay visible as source evidence. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
           }
         ],
         "source": {

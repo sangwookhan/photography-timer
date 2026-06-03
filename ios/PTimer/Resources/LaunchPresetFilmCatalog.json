@@ -2853,25 +2853,30 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "adox-chs-100-ii-official-formula",
-        "name": "Official log-log formula fit through published 2/4/8/15 sec rows",
+        "id": "adox-chs-100-ii-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official ADOX table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 1.2102,
-                "exponent": 1.3423,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 1,
-                "sourceRangeThroughSeconds": 15.0
-              },
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 2 },
+                { "correctedSeconds": 8, "meteredSeconds": 4 },
+                { "correctedSeconds": 20, "meteredSeconds": 8 },
+                { "correctedSeconds": 45, "meteredSeconds": 15 }
+              ],
+              "noCorrectionThroughSeconds": 1,
               "notes": [
-                "Tc = 1.2102 × Tm^p, p ≈ 1.3423. Log-log fit through the four published multiplier rows in ADOX's 2024 CHS 100 II technical sheet (2 / 4 / 8 / 15 sec). The sheet does not publish reciprocity rows past 15 sec; inputs above 15 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Official ADOX corrected-time rows from the 2024 CHS 100 II technical sheet (2 sec → 3 sec, 4 sec → 8 sec, 8 sec → 20 sec, 15 sec → 45 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. The published multiplier rows stay visible as source evidence. The sheet does not publish reciprocity rows past 15 sec; inputs above 15 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 15.0
+            }
           }
         ],
         "source": {

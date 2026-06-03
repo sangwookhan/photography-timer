@@ -542,29 +542,37 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tri-x-official-formula",
+        "id": "kodak-tri-x-official-graph-table",
         "modelBasis": {
-          "calculationModel": "guardedFormula",
+          "calculationModel": "tableLogLogInterpolation",
           "sourceModel": "manufacturerTable"
         },
-        "name": "Official log-log formula fit through published 1/10/100 sec rows",
+        "name": "Official Kodak graph/table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 2.013654,
-                "exponent": 1.3891,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 0.999999,
-                "sourceRangeThroughSeconds": 100.0
-              },
+              "anchors": [
+                { "correctedSeconds": 2, "meteredSeconds": 1 },
+                { "correctedSeconds": 5, "meteredSeconds": 2 },
+                { "correctedSeconds": 10, "meteredSeconds": 3 },
+                { "correctedSeconds": 20, "meteredSeconds": 5 },
+                { "correctedSeconds": 32, "meteredSeconds": 7 },
+                { "correctedSeconds": 50, "meteredSeconds": 10 },
+                { "correctedSeconds": 120, "meteredSeconds": 20 },
+                { "correctedSeconds": 200, "meteredSeconds": 30 },
+                { "correctedSeconds": 420, "meteredSeconds": 50 },
+                { "correctedSeconds": 720, "meteredSeconds": 70 },
+                { "correctedSeconds": 1200, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.1,
               "notes": [
-                "Tc = 2.0137 × Tm^p, p ≈ 1.3891. Free log-log least squares fit through Kodak's published corrected-time rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). At the 1 sec boundary the formula intentionally jumps from the no-correction band to ≈ 2 sec, matching Kodak's published step from 0 stops to +1 stop. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Default Kodak model for Tri-X 400. Combines the published E-31 table rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec; Dev -10/-20/-30%) with points sampled from Kodak's adjusted-exposure graph between them (2/3/5/7/20/30/50/70 sec). Kodak lists no adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec and corrected exposure interpolates in log-log space from the 0.1 sec knee through the anchors (the three published rows reproduce exactly; the intermediate points are graph estimates, not published table values). Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
           }
         ],
         "source": {
@@ -702,29 +710,32 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tmax-100-official-formula",
-        "name": "Official log-log formula fit through published 10/100 sec corrected times",
+        "id": "kodak-tmax-100-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Kodak table",
         "notes": [
           "Source data sheet states no exposure adjustment is required from 1/1,000 sec to 1/10 sec.",
-          "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity formula deliberately excludes that short-exposure anchor — it is preserved as a profile-level note only."
+          "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity table deliberately excludes that short-exposure anchor — it is preserved as a profile-level note only."
         ],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "coefficientSeconds": 0.1,
-                "exponent": 1.0966,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 0.1,
-                "referenceMeteredTimeSeconds": 0.1,
-                "sourceRangeThroughSeconds": 100.0
-              },
+              "anchors": [
+                { "correctedSeconds": 1.2599210498948732, "meteredSeconds": 1 },
+                { "correctedSeconds": 15, "meteredSeconds": 10 },
+                { "correctedSeconds": 200, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.1,
               "notes": [
-                "Tc = 0.1 × (Tm / 0.1)^p, p ≈ 1.0966. Threshold-anchored constrained log-log fit through the 1/10 sec no-correction boundary and Kodak's published 10 sec → 15 sec / 100 sec → 200 sec corrected-time rows. The 1 sec +1/3 stop row is preserved as source evidence (stop delta only — Kodak publishes no corrected time at 1 sec, so the catalog does not synthesize one) and does not act as a fitting point; the 1/10,000 sec short-exposure guidance is preserved as a profile note and deliberately excluded from the long-exposure curve. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Kodak lists no exposure adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec. At 1 sec Kodak's table gives +1/3 stop as an aperture/stop adjustment (no published corrected shutter time); the table uses the time-equivalent ≈1.26 sec (1 × 2^(1/3)) as a calculation anchor only — it is not presented as a Kodak-published corrected time. The 10 sec → 15 sec and 100 sec → 200 sec published corrected times reproduce exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
           }
         ],
         "source": {
@@ -746,6 +757,17 @@
                   }
                 },
                 "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.2599210498948732,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
               }
             ],
             "meteredExposure": {
@@ -753,7 +775,7 @@
               "kind": "exactSeconds"
             },
             "notes": [
-              "1 sec → +1/3 stop. Source publishes only the stop delta; the derived corrected time (≈ 1.26 sec) tracks the formula curve within ~1/80 stop, so this row is kept as source evidence rather than a fitting point."
+              "1 sec → +1/3 stop. Kodak publishes this as an aperture/stop adjustment, not a corrected shutter time; the ≈1.26 sec shown is the derived time-equivalent (1 × 2^(1/3)) used as a calculation anchor, not a Kodak-published corrected time."
             ]
           },
           {
@@ -834,24 +856,29 @@
     "productionStatus": "current",
     "profiles": [
       {
-        "id": "kodak-tmax-400-official-formula",
-        "name": "Official log-log formula fit through published 10/100 sec corrected times",
+        "id": "kodak-tmax-400-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Kodak table",
         "notes": [],
         "rules": [
           {
-            "formula": {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
               "additionalAdjustments": [],
-              "formula": {
-                "exponent": 1.2261,
-                "formulaFamily": "modifiedSchwarzschild",
-                "noCorrectionThroughSeconds": 1,
-                "sourceRangeThroughSeconds": 100.0
-              },
+              "anchors": [
+                { "correctedSeconds": 1.2599210498948732, "meteredSeconds": 1 },
+                { "correctedSeconds": 15, "meteredSeconds": 10 },
+                { "correctedSeconds": 300, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.1,
               "notes": [
-                "Tc = Tm^p, p ≈ 1.2261. Threshold-anchored constrained log-log fit through the 1 sec no-correction boundary and Kodak's published 10 sec → 15 sec / 100 sec → 300 sec corrected-time rows. Kodak rounds the published corrected times for practical use, so the curve sits ~1/6 stop above the 10 sec row and ~1/12 stop below the 100 sec row; the markers stay visible as source evidence so users can verify the deviation. Inputs above 100 sec continue on the same curve as numeric continuation outside the published source range."
-              ]
-            },
-            "kind": "formula"
+                "Kodak lists no exposure adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec. At 1 sec Kodak's table gives +1/3 stop as an aperture/stop adjustment (no published corrected shutter time); the table uses the time-equivalent ≈1.26 sec (1 × 2^(1/3)) as a calculation anchor only — it is not presented as a Kodak-published corrected time. The 10 sec → 15 sec and 100 sec → 300 sec published corrected times reproduce exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
           }
         ],
         "source": {
@@ -863,6 +890,37 @@
           "title": "KODAK PROFESSIONAL T-MAX 400 Film — Technical Data"
         },
         "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.2599210498948732,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → +1/3 stop. Kodak publishes this as an aperture/stop adjustment, not a corrected shutter time; the ≈1.26 sec shown is the derived time-equivalent (1 × 2^(1/3)) used as a calculation anchor, not a Kodak-published corrected time."
+            ]
+          },
           {
             "adjustments": [
               {

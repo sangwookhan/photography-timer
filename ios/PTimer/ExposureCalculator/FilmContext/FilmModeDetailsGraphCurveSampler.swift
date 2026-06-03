@@ -32,7 +32,7 @@ struct FilmModeDetailsGraphCurveSampler {
     /// Formula segment starts strictly above that boundary
     /// (`noCorrectionThroughSeconds × 1.001`) and runs up to the
     /// canonical upper sample — formulas with an open boundary at
-    /// the threshold (Tri-X, Acros II) intentionally jump from the
+    /// the threshold (e.g. Acros II) intentionally jump from the
     /// identity line to the formula curve at the boundary, so the
     /// formula's first sample is NOT anchored at
     /// `(threshold, threshold)`. The seam-deduplication guard below

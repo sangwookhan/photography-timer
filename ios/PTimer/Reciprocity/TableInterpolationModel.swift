@@ -73,7 +73,10 @@ extension TableInterpolationReciprocityRule {
         guard hasValidParameters else {
             return .invalidRule
         }
-        if meteredExposureSeconds <= noCorrectionThroughSeconds {
+        if ReciprocityNoCorrectionBoundary.isWithinNoCorrection(
+            meteredSeconds: meteredExposureSeconds,
+            throughSeconds: noCorrectionThroughSeconds
+        ) {
             return .noCorrection
         }
 

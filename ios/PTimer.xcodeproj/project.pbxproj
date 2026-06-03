@@ -123,9 +123,9 @@
 		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
 		A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */; };
 		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
-		A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400FormulaProfileTests.swift */; };
-		A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100FormulaProfileTests.swift */; };
-		A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400FormulaProfileTests.swift */; };
+		A00000000000000000000244 /* TriX400TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400TableProfileTests.swift */; };
+		A00000000000000000000246 /* TMax100TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100TableProfileTests.swift */; };
+		A00000000000000000000248 /* TMax400TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400TableProfileTests.swift */; };
 		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
 		A00000000000000000000252 /* FomaTableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaTableProfileTests.swift */; };
 		A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000255 /* RolleiFormulaProfileTests.swift */; };
@@ -396,9 +396,9 @@
 		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcrosIIFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
-		A00000000000000000000245 /* TriX400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000247 /* TMax100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000249 /* TMax400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000245 /* TriX400TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400TableProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000247 /* TMax100TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100TableProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000249 /* TMax400TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400TableProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000253 /* FomaTableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaTableProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000255 /* RolleiFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolleiFormulaProfileTests.swift; sourceTree = "<group>"; };
@@ -812,9 +812,9 @@
 				A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */,
 				A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */,
 				A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */,
-				A00000000000000000000245 /* TriX400FormulaProfileTests.swift */,
-				A00000000000000000000247 /* TMax100FormulaProfileTests.swift */,
-				A00000000000000000000249 /* TMax400FormulaProfileTests.swift */,
+				A00000000000000000000245 /* TriX400TableProfileTests.swift */,
+				A00000000000000000000247 /* TMax100TableProfileTests.swift */,
+				A00000000000000000000249 /* TMax400TableProfileTests.swift */,
 				A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */,
 				A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */,
 				A00000000000000000000253 /* FomaTableProfileTests.swift */,
@@ -1260,9 +1260,9 @@
 				A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */,
 				A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */,
 				A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */,
-				A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */,
-				A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */,
-				A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */,
+				A00000000000000000000244 /* TriX400TableProfileTests.swift in Sources */,
+				A00000000000000000000246 /* TMax100TableProfileTests.swift in Sources */,
+				A00000000000000000000248 /* TMax400TableProfileTests.swift in Sources */,
 				A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */,
 				A00000000000000000000602 /* UnofficialPracticalProfilesShapeTests.swift in Sources */,
 				A00000000000000000000252 /* FomaTableProfileTests.swift in Sources */,

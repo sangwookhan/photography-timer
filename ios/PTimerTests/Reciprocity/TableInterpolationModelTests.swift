@@ -24,6 +24,59 @@ final class TableInterpolationModelTests: XCTestCase {
         XCTAssertEqual(fomapanRule().evaluate(meteredExposureSeconds: 0.25), .noCorrection)
     }
 
+    /// A `0.1 s` (nominal 1/10 s) boundary rule, matching the migrated
+    /// Kodak Tri-X / T-MAX profiles.
+    private func tenthSecondRule() -> TableInterpolationReciprocityRule {
+        TableInterpolationReciprocityRule(
+            anchors: [
+                TableAnchor(meteredSeconds: 1, correctedSeconds: 2),
+                TableAnchor(meteredSeconds: 10, correctedSeconds: 50),
+                TableAnchor(meteredSeconds: 100, correctedSeconds: 1200),
+            ],
+            noCorrectionThroughSeconds: 0.1,
+            sourceRangeThroughSeconds: 100
+        )
+    }
+
+    /// PTIMER-168: a nominal 1/10 s UI input can evaluate to ~0.102 s
+    /// after Base Shutter / ND stop arithmetic. The boundary tolerance
+    /// must keep that classified as no correction while values clearly
+    /// above the threshold stay corrected.
+    func testNoCorrectionBoundaryTolerance() {
+        let rule = tenthSecondRule()
+        // Below and exactly at the published threshold.
+        XCTAssertEqual(rule.evaluate(meteredExposureSeconds: 0.084), .noCorrection)
+        XCTAssertEqual(rule.evaluate(meteredExposureSeconds: 0.1), .noCorrection)
+        // Nominal 1/10 s drifted upward by stop arithmetic.
+        XCTAssertEqual(rule.evaluate(meteredExposureSeconds: 0.102), .noCorrection)
+        // Top of the tolerance band (0.1 × 1.10).
+        XCTAssertEqual(rule.evaluate(meteredExposureSeconds: 0.11), .noCorrection)
+    }
+
+    func testValuesAboveToleranceRemainCorrected() {
+        let rule = tenthSecondRule()
+        for metered in [0.12, 0.15] {
+            guard case let .withinSourceRange(corrected) =
+                rule.evaluate(meteredExposureSeconds: metered) else {
+                return XCTFail("\(metered)s must be corrected, not no-correction.")
+            }
+            XCTAssertGreaterThan(corrected, metered)
+        }
+    }
+
+    /// The tolerance is relative, so a `0.5 s` threshold band never
+    /// stretches anywhere near `1 s`.
+    func testToleranceDoesNotExpandBandTowardOneSecond() {
+        let rule = fomapanRule() // noCorrectionThroughSeconds: 0.5
+        XCTAssertEqual(rule.evaluate(meteredExposureSeconds: 0.55), .noCorrection)
+        guard case .withinSourceRange = rule.evaluate(meteredExposureSeconds: 0.7) else {
+            return XCTFail("0.7s must be corrected for a 0.5s threshold.")
+        }
+        guard case .withinSourceRange = rule.evaluate(meteredExposureSeconds: 1.0) else {
+            return XCTFail("1.0s must be corrected for a 0.5s threshold.")
+        }
+    }
+
     func testAnchorsReproduceExactly() {
         assertWithin(fomapanRule().evaluate(meteredExposureSeconds: 1), expected: 2)
         assertWithin(fomapanRule().evaluate(meteredExposureSeconds: 10), expected: 80)

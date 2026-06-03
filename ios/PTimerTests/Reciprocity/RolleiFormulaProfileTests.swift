@@ -1,39 +1,71 @@
 import XCTest
 @testable import PTimer
 
-/// Behavior contract for Rollei's four still-film reciprocity
-/// profiles (RPX 100, RPX 400, RETRO 80S, SUPERPAN 200) after
-/// conversion from corrected-time tables to formula-based
-/// prediction. Locks the invariants:
+/// Behavior contract for Rollei still-film reciprocity profiles.
 ///
-/// - `noCorrectionThroughSeconds` mirrors the manufacturer-published
-///   no-correction marker (0.5 sec for RETRO 80S / SUPERPAN 200,
-///   1 sec for RPX 100 / RPX 400). For three of these films
-///   (RETRO 80S, SUPERPAN 200, RPX 100) the fitted formula's
-///   natural Tc = Tm crossover lies above the source marker, so
-///   inputs in (source marker, crossover] route through the policy
-///   evaluator's runtime safety net rather than the formula curve
-///   itself. The source marker is preserved as published; the gap
-///   is tracked by
-///   `GuardedReciprocityFormulaTests.knownFormulaFitGapsRequiringRuntimeHandoff`.
-/// - Above the no-correction boundary and up to and including the
-///   highest published row, the formula wins
-///   (basis == `.formulaDerived`). Above the upper-published row
-///   the formula continues as numeric continuation outside the
-///   published source range.
-/// - RETRO 80S and SUPERPAN 200 publish corrected exposure as a
-///   range at 1 sec and 2 sec. Those range-valued rows live as
-///   source-evidence notes — they MUST NOT enter the formula as
-///   exact fitting points.
-/// - All published rows stay visible as `sourceEvidence`.
+/// **RPX 100 / RPX 400** (PTIMER-168): migrated from a formula fit to
+/// a `.tableInterpolation` rule backed by the manufacturer's published
+/// corrected-time table. Anchors reproduce exactly; log-log
+/// interpolation is used between anchors; inputs above the last anchor
+/// are classified `.unsupportedOutOfPolicyRange` with a non-nil
+/// log-log-extrapolated value.
+///
+/// **RETRO 80S / SUPERPAN 200**: still use the original
+/// formula-based profile (`.formula` rule, `isConvertedFormulaProfile`
+/// == true). Range-valued rows at 1 s and 2 s live as source-evidence
+/// notes and must never enter the formula as exact fitting points.
 final class RolleiFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
+
+    // MARK: - Shared data types
 
     private struct RolleiPublishedRow {
         let metered: Double
         let corrected: Double
     }
+
+    // MARK: - RPX table profiles (PTIMER-168)
+
+    private struct RPXTableFit {
+        let canonicalStockName: String
+        let profileID: String
+        let noCorrectionThroughSeconds: Double
+        let sourceRangeThroughSeconds: Double
+        let anchors: [RolleiPublishedRow]
+    }
+
+    private let rpx100Table = RPXTableFit(
+        canonicalStockName: "RPX 100",
+        profileID: "rollei-rpx-100-official-table",
+        noCorrectionThroughSeconds: 1.0,
+        sourceRangeThroughSeconds: 30,
+        anchors: [
+            RolleiPublishedRow(metered: 2, corrected: 3),
+            RolleiPublishedRow(metered: 5, corrected: 8),
+            RolleiPublishedRow(metered: 10, corrected: 25),
+            RolleiPublishedRow(metered: 20, corrected: 75),
+            RolleiPublishedRow(metered: 30, corrected: 150),
+        ]
+    )
+
+    private let rpx400Table = RPXTableFit(
+        canonicalStockName: "RPX 400",
+        profileID: "rollei-rpx-400-official-table",
+        noCorrectionThroughSeconds: 0.5,
+        sourceRangeThroughSeconds: 20,
+        anchors: [
+            RolleiPublishedRow(metered: 1, corrected: 2),
+            RolleiPublishedRow(metered: 5, corrected: 10),
+            RolleiPublishedRow(metered: 10, corrected: 30),
+            RolleiPublishedRow(metered: 15, corrected: 55),
+            RolleiPublishedRow(metered: 20, corrected: 80),
+        ]
+    )
+
+    private var allRPXFits: [RPXTableFit] { [rpx100Table, rpx400Table] }
+
+    // MARK: - Formula profiles (unchanged from PTIMER-168 scope)
 
     private struct RolleiFit {
         let canonicalStockName: String
@@ -45,40 +77,6 @@ final class RolleiFormulaProfileTests: XCTestCase {
         let rangeNoteRows: [(metered: Double, marker: String)]
         let stopTolerancePerQuantifiedRow: Double
     }
-
-    private let rpx100 = RolleiFit(
-        canonicalStockName: "RPX 100",
-        coefficient: 0.9248,
-        exponent: 1.4652,
-        thresholdMaximumSeconds: 1,
-        formulaUpperBoundSeconds: 30,
-        quantifiedRows: [
-            RolleiPublishedRow(metered: 2, corrected: 3),
-            RolleiPublishedRow(metered: 5, corrected: 8),
-            RolleiPublishedRow(metered: 10, corrected: 25),
-            RolleiPublishedRow(metered: 20, corrected: 75),
-            RolleiPublishedRow(metered: 30, corrected: 150),
-        ],
-        rangeNoteRows: [],
-        stopTolerancePerQuantifiedRow: 0.35
-    )
-
-    private let rpx400 = RolleiFit(
-        canonicalStockName: "RPX 400",
-        coefficient: 1.7708,
-        exponent: 1.2404,
-        thresholdMaximumSeconds: 0.5,
-        formulaUpperBoundSeconds: 20,
-        quantifiedRows: [
-            RolleiPublishedRow(metered: 1, corrected: 2),
-            RolleiPublishedRow(metered: 5, corrected: 10),
-            RolleiPublishedRow(metered: 10, corrected: 30),
-            RolleiPublishedRow(metered: 15, corrected: 55),
-            RolleiPublishedRow(metered: 20, corrected: 80),
-        ],
-        rangeNoteRows: [],
-        stopTolerancePerQuantifiedRow: 0.45
-    )
 
     private let retro80s = RolleiFit(
         canonicalStockName: "RETRO 80S",
@@ -118,45 +116,251 @@ final class RolleiFormulaProfileTests: XCTestCase {
         stopTolerancePerQuantifiedRow: 0.05
     )
 
-    private var allFits: [RolleiFit] { [rpx100, rpx400, retro80s, superpan200] }
+    private var allFormulaFits: [RolleiFit] { [retro80s, superpan200] }
 
-    // MARK: - Formula range — quantified rows are source-backed predictions
+    // MARK: - PTIMER-168 migration invariant
 
-    func testRolleiProfilesQuantifiedPublishedRowsAreFormulaDerived() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            for row in fit.quantifiedRows {
-                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: row.metered)
+    /// RPX 100 and RPX 400 were migrated to table interpolation.
+    /// RETRO 80S and SUPERPAN 200 were NOT — they must still be
+    /// converted-formula profiles, not table-interpolation profiles.
+    func testRPXProfilesAreNowTableInterpolationAndRetroRemainsFormula() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+            XCTAssertTrue(
+                profile.usesTableInterpolation,
+                "\(fit.canonicalStockName) must be a table-interpolation profile after PTIMER-168."
+            )
+            XCTAssertFalse(
+                profile.isConvertedFormulaProfile,
+                "\(fit.canonicalStockName) must not still read as a converted-formula profile."
+            )
+        }
+
+        // At least RETRO 80S remains formula-based (out of scope for PTIMER-168).
+        let retro80sProfile = try profile(for: retro80s)
+        XCTAssertTrue(
+            retro80sProfile.isConvertedFormulaProfile,
+            "RETRO 80S must remain a converted-formula profile; PTIMER-168 only migrated RPX."
+        )
+        XCTAssertFalse(
+            retro80sProfile.usesTableInterpolation,
+            "RETRO 80S must not be a table profile."
+        )
+    }
+
+    // MARK: - RPX table rule structure
+
+    func testRPXProfilesHaveTableInterpolationRuleAndNoFormulaRule() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+
+            let hasFormula = profile.rules.contains { rule in
+                if case .formula = rule { return true }
+                return false
+            }
+            XCTAssertFalse(
+                hasFormula,
+                "\(fit.canonicalStockName) must have no .formula rule after migration."
+            )
+
+            let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+                if case let .tableInterpolation(r) = rule { return r }
+                return nil
+            }.first
+            XCTAssertNotNil(
+                tableRule,
+                "\(fit.canonicalStockName) must carry a .tableInterpolation rule."
+            )
+        }
+    }
+
+    func testRPXTableRuleNoCorrectionAndSourceRangeBoundaries() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+            let rule = try XCTUnwrap(
+                profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+                    if case let .tableInterpolation(r) = rule { return r }
+                    return nil
+                }.first,
+                "\(fit.canonicalStockName) must have a tableInterpolation rule."
+            )
+
+            XCTAssertEqual(
+                rule.noCorrectionThroughSeconds,
+                fit.noCorrectionThroughSeconds,
+                accuracy: 1e-9,
+                "\(fit.canonicalStockName) noCorrectionThroughSeconds mismatch."
+            )
+            XCTAssertEqual(
+                rule.sourceRangeThroughSeconds,
+                fit.sourceRangeThroughSeconds,
+                accuracy: 1e-9,
+                "\(fit.canonicalStockName) sourceRangeThroughSeconds mismatch."
+            )
+            XCTAssertEqual(
+                rule.anchors.count,
+                fit.anchors.count,
+                "\(fit.canonicalStockName) must have \(fit.anchors.count) anchors."
+            )
+        }
+    }
+
+    func testRPXTableRuleModelBasis() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+            let basis = try XCTUnwrap(
+                profile.modelBasis,
+                "\(fit.canonicalStockName) must declare an explicit modelBasis."
+            )
+            XCTAssertEqual(
+                basis.sourceModel,
+                .manufacturerTable,
+                "\(fit.canonicalStockName) sourceModel must be .manufacturerTable."
+            )
+            XCTAssertEqual(
+                basis.calculationModel,
+                .tableLogLogInterpolation,
+                "\(fit.canonicalStockName) calculationModel must be .tableLogLogInterpolation."
+            )
+        }
+    }
+
+    func testRPXProfileIDAndName() throws {
+        let rpx100 = try rpxProfile(for: rpx100Table)
+        XCTAssertEqual(rpx100.id, "rollei-rpx-100-official-table")
+        XCTAssertEqual(rpx100.name, "Official Rollei table")
+
+        let rpx400 = try rpxProfile(for: rpx400Table)
+        XCTAssertEqual(rpx400.id, "rollei-rpx-400-official-table")
+        XCTAssertEqual(rpx400.name, "Official Rollei table")
+    }
+
+    // MARK: - RPX evaluator: no-correction boundary
+
+    func testRPXNoCorrectionBelowAndAtThreshold() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+
+            let atThreshold = evaluator.evaluate(
+                profile: profile,
+                meteredExposureSeconds: fit.noCorrectionThroughSeconds
+            )
+            XCTAssertEqual(
+                atThreshold.metadata.basis,
+                .officialThresholdNoCorrection,
+                "\(fit.canonicalStockName) at \(fit.noCorrectionThroughSeconds) s must be .officialThresholdNoCorrection."
+            )
+            XCTAssertEqual(
+                try XCTUnwrap(atThreshold.correctedExposureSeconds),
+                fit.noCorrectionThroughSeconds,
+                accuracy: 1e-9,
+                "\(fit.canonicalStockName) corrected must equal metered within no-correction band."
+            )
+
+            let belowThreshold = evaluator.evaluate(
+                profile: profile,
+                meteredExposureSeconds: fit.noCorrectionThroughSeconds * 0.5
+            )
+            XCTAssertEqual(
+                belowThreshold.metadata.basis,
+                .officialThresholdNoCorrection,
+                "\(fit.canonicalStockName) below threshold must also be .officialThresholdNoCorrection."
+            )
+        }
+    }
+
+    // MARK: - RPX evaluator: anchor rows reproduce exactly
+
+    func testRPXAnchorsAreReproducedExactlyWithTableLogLogDerivedBasis() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+            for anchor in fit.anchors {
+                let result = evaluator.evaluate(
+                    profile: profile,
+                    meteredExposureSeconds: anchor.metered
+                )
                 XCTAssertEqual(
                     result.metadata.basis,
-                    .formulaDerived,
-                    "\(fit.canonicalStockName) at quantified row \(row.metered) s must be formula-derived, never resurrected as an exact-table point."
+                    .tableLogLogDerived,
+                    "\(fit.canonicalStockName) at anchor \(anchor.metered) s must be .tableLogLogDerived."
+                )
+                let corrected = try XCTUnwrap(
+                    result.correctedExposureSeconds,
+                    "\(fit.canonicalStockName) corrected exposure must be non-nil at anchor \(anchor.metered) s."
+                )
+                XCTAssertEqual(
+                    corrected,
+                    anchor.corrected,
+                    accuracy: 1e-4,
+                    "\(fit.canonicalStockName) anchor at \(anchor.metered) s must reproduce \(anchor.corrected) s exactly."
                 )
             }
         }
     }
 
-    func testRolleiProfilesFormulaTracksPublishedQuantifiedRowsWithinDocumentedTolerance() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
+    // MARK: - RPX evaluator: beyond source range
+
+    func testRPXAboveSourceRangeIsBeyondPolicyWithNonNilExtrapolatedValue() throws {
+        for fit in allRPXFits {
+            let profile = try rpxProfile(for: fit)
+            let metered = fit.sourceRangeThroughSeconds * 3
+            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+
+            XCTAssertEqual(
+                result.metadata.basis,
+                .unsupportedOutOfPolicyRange,
+                "\(fit.canonicalStockName) at \(metered) s must be classified .unsupportedOutOfPolicyRange."
+            )
+            let corrected = try XCTUnwrap(
+                result.correctedExposureSeconds,
+                "\(fit.canonicalStockName) corrected must be non-nil (log-log extrapolation) past source range."
+            )
+            let lastAnchorCorrected = fit.anchors.last!.corrected
+            XCTAssertGreaterThan(
+                corrected,
+                lastAnchorCorrected,
+                "\(fit.canonicalStockName) beyond-range extrapolation must exceed the last anchor corrected time."
+            )
+        }
+    }
+
+    // MARK: - RETRO 80S / SUPERPAN 200: formula range (unchanged)
+
+    func testFormulaProfilesQuantifiedPublishedRowsAreFormulaDerived() throws {
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
             for row in fit.quantifiedRows {
-                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: row.metered)
+                let result = evaluator.evaluate(profile: p, meteredExposureSeconds: row.metered)
+                XCTAssertEqual(
+                    result.metadata.basis,
+                    .formulaDerived,
+                    "\(fit.canonicalStockName) at quantified row \(row.metered) s must be formula-derived."
+                )
+            }
+        }
+    }
+
+    func testFormulaProfilesFormulaTracksPublishedQuantifiedRowsWithinDocumentedTolerance() throws {
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
+            for row in fit.quantifiedRows {
+                let result = evaluator.evaluate(profile: p, meteredExposureSeconds: row.metered)
                 let corrected = try XCTUnwrap(result.correctedExposureSeconds)
                 let stopError = log2(corrected / row.corrected)
                 XCTAssertEqual(
                     stopError,
                     0,
                     accuracy: fit.stopTolerancePerQuantifiedRow,
-                    "\(fit.canonicalStockName) at \(row.metered) s formula prediction (\(corrected) s) must stay within \(fit.stopTolerancePerQuantifiedRow) stop of Rollei's published row (\(row.corrected) s); got error \(stopError) stop."
+                    "\(fit.canonicalStockName) at \(row.metered) s formula prediction (\(corrected) s) must stay within \(fit.stopTolerancePerQuantifiedRow) stop of \(row.corrected) s; got error \(stopError) stop."
                 )
             }
         }
     }
 
-    func testRolleiProfilesFormulaUsesFreeLogLogCoefficient() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+    func testFormulaProfilesFormulaUsesFreeLogLogCoefficient() throws {
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
+            let formulaRule = try XCTUnwrap(p.rules.compactMap { rule -> FormulaReciprocityRule? in
                 guard case let .formula(rule) = rule else { return nil }
                 return rule
             }.first)
@@ -177,17 +381,17 @@ final class RolleiFormulaProfileTests: XCTestCase {
         }
     }
 
-    // MARK: - Beyond the published source range (continuation)
+    // MARK: - Beyond the published source range — formula profiles
 
-    func testRolleiProfilesAboveUpperPublishedRowBecomesBeyondSourceNumericGuidance() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
+    func testFormulaProfilesAboveUpperPublishedRowBecomesBeyondSourceNumericGuidance() throws {
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
             let metered = fit.formulaUpperBoundSeconds * 3
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
+            let result = evaluator.evaluate(profile: p, meteredExposureSeconds: metered)
             XCTAssertEqual(
                 result.metadata.basis,
                 .unsupportedOutOfPolicyRange,
-                "\(fit.canonicalStockName) at \(metered) s sits above the published \(fit.formulaUpperBoundSeconds) s upper row and must be marked outside manufacturer guidance."
+                "\(fit.canonicalStockName) at \(metered) s must be marked outside manufacturer guidance."
             )
             let corrected = try XCTUnwrap(
                 result.correctedExposureSeconds,
@@ -202,14 +406,10 @@ final class RolleiFormulaProfileTests: XCTestCase {
 
     func testRetro80SAndSuperpan200RangeValuedRowsAreSourceEvidenceNotFormulaFittingPoints() throws {
         for fit in [retro80s, superpan200] {
-            let profile = try profile(for: fit)
-            // Each range-valued row is preserved as a sourceEvidence
-            // row carrying ONLY a .note adjustment — never as a
-            // quantified exposure adjustment that the formula could
-            // pick up as a fitting point.
+            let p = try profile(for: fit)
             for rangeRow in fit.rangeNoteRows {
                 let evidenceRow = try XCTUnwrap(
-                    profile.sourceEvidence.first(where: { row in
+                    p.sourceEvidence.first(where: { row in
                         if case let .exactSeconds(seconds) = row.meteredExposure {
                             return abs(seconds - rangeRow.metered) < 1e-6
                         }
@@ -226,7 +426,7 @@ final class RolleiFormulaProfileTests: XCTestCase {
                 }
                 XCTAssertFalse(
                     hasQuantifiedExposure,
-                    "\(fit.canonicalStockName) range-valued row at \(rangeRow.metered) s must not carry a quantified exposure adjustment (the corrected exposure is a range, not a single value)."
+                    "\(fit.canonicalStockName) range-valued row at \(rangeRow.metered) s must not carry a quantified exposure adjustment."
                 )
 
                 let hasMatchingNote = evidenceRow.adjustments.contains { adjustment in
@@ -244,14 +444,9 @@ final class RolleiFormulaProfileTests: XCTestCase {
     }
 
     func testRetro80SAndSuperpan200FormulaIsFitOnlyFromQuantifiedRows() throws {
-        // The formula coefficient/exponent must match the fit
-        // through the four quantified rows (4/8/15/30 sec). If the
-        // range-valued rows had been forced into the fit, the
-        // exponent and coefficient would drift visibly. This locks
-        // the contract that range rows stay source-only.
         for fit in [retro80s, superpan200] {
-            let profile = try profile(for: fit)
-            let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+            let p = try profile(for: fit)
+            let formulaRule = try XCTUnwrap(p.rules.compactMap { rule -> FormulaReciprocityRule? in
                 guard case let .formula(rule) = rule else { return nil }
                 return rule
             }.first)
@@ -260,29 +455,29 @@ final class RolleiFormulaProfileTests: XCTestCase {
         }
     }
 
-    // MARK: - Source-evidence preservation
+    // MARK: - Source-evidence preservation (all four Rollei films)
 
-    func testRolleiProfilesSourceEvidencePreservesEveryPublishedRowInOrder() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            let exactMetereds = profile.sourceEvidence.compactMap { row -> Double? in
+    func testRPXProfilesSourceEvidencePreservesEveryAnchorInOrder() throws {
+        for fit in allRPXFits {
+            let p = try rpxProfile(for: fit)
+            let exactMetereds = p.sourceEvidence.compactMap { row -> Double? in
                 if case let .exactSeconds(seconds) = row.meteredExposure { return seconds }
                 return nil
             }
-            let expected = (fit.rangeNoteRows.map { $0.metered } + fit.quantifiedRows.map { $0.metered }).sorted()
+            let expected = fit.anchors.map { $0.metered }.sorted()
             XCTAssertEqual(
                 exactMetereds.sorted(),
                 expected,
-                "\(fit.canonicalStockName) must keep every Rollei-published row as source evidence (quantified and range-valued combined)."
+                "\(fit.canonicalStockName) must keep every published anchor row as source evidence."
             )
         }
     }
 
-    func testRolleiProfilesSourceEvidenceQuantifiedRowsKeepCorrectedTime() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            let expected = Dictionary(uniqueKeysWithValues: fit.quantifiedRows.map { ($0.metered, $0.corrected) })
-            for row in profile.sourceEvidence {
+    func testRPXProfilesSourceEvidenceAnchorRowsKeepCorrectedTime() throws {
+        for fit in allRPXFits {
+            let p = try rpxProfile(for: fit)
+            let expected = Dictionary(uniqueKeysWithValues: fit.anchors.map { ($0.metered, $0.corrected) })
+            for row in p.sourceEvidence {
                 guard case let .exactSeconds(metered) = row.meteredExposure else { continue }
                 guard let expectedCorrected = expected[metered] else { continue }
                 let correctedSeconds = row.adjustments.compactMap { adjustment -> Double? in
@@ -299,20 +494,162 @@ final class RolleiFormulaProfileTests: XCTestCase {
         }
     }
 
-    func testRolleiProfilesKeepOfficialManufacturerPublishedSource() throws {
-        for fit in allFits {
-            let profile = try profile(for: fit)
-            XCTAssertEqual(profile.source.kind, .manufacturerPublished)
-            XCTAssertEqual(profile.source.authority, .official)
-            XCTAssertEqual(profile.source.publisher, "Rollei")
+    func testFormulaProfilesSourceEvidencePreservesEveryPublishedRowInOrder() throws {
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
+            let exactMetereds = p.sourceEvidence.compactMap { row -> Double? in
+                if case let .exactSeconds(seconds) = row.meteredExposure { return seconds }
+                return nil
+            }
+            let expected = (fit.rangeNoteRows.map { $0.metered } + fit.quantifiedRows.map { $0.metered }).sorted()
+            XCTAssertEqual(
+                exactMetereds.sorted(),
+                expected,
+                "\(fit.canonicalStockName) must keep every Rollei-published row as source evidence."
+            )
         }
     }
 
-    // MARK: - UI surfacing
+    func testFormulaProfilesSourceEvidenceQuantifiedRowsKeepCorrectedTime() throws {
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
+            let expected = Dictionary(uniqueKeysWithValues: fit.quantifiedRows.map { ($0.metered, $0.corrected) })
+            for row in p.sourceEvidence {
+                guard case let .exactSeconds(metered) = row.meteredExposure else { continue }
+                guard let expectedCorrected = expected[metered] else { continue }
+                let correctedSeconds = row.adjustments.compactMap { adjustment -> Double? in
+                    guard case let .exposure(.correctedTime(mapping)) = adjustment else { return nil }
+                    return mapping.correctedSeconds
+                }.first
+                XCTAssertEqual(
+                    correctedSeconds ?? -1,
+                    expectedCorrected,
+                    accuracy: 1e-6,
+                    "\(fit.canonicalStockName) source evidence at \(metered) s must keep the published corrected time (\(expectedCorrected) s)."
+                )
+            }
+        }
+    }
+
+    func testAllRolleiProfilesKeepOfficialManufacturerPublishedSource() throws {
+        for fit in allRPXFits {
+            let p = try rpxProfile(for: fit)
+            XCTAssertEqual(p.source.kind, .manufacturerPublished)
+            XCTAssertEqual(p.source.authority, .official)
+            XCTAssertEqual(p.source.publisher, "Rollei")
+        }
+        for fit in allFormulaFits {
+            let p = try profile(for: fit)
+            XCTAssertEqual(p.source.kind, .manufacturerPublished)
+            XCTAssertEqual(p.source.authority, .official)
+            XCTAssertEqual(p.source.publisher, "Rollei")
+        }
+    }
+
+    // MARK: - UI surfacing — RPX table profiles
 
     @MainActor
-    func testRolleiProfilesDetailsSurfaceShowsSourceReferenceWithCorrectedTimeRows() throws {
-        for fit in allFits {
+    func testRPXProfilesDetailsSurfaceShowsSourceReferenceWithCorrectedTimeRows() throws {
+        for fit in allRPXFits {
+            let displayState = try makeDisplayState(
+                film: fit.canonicalStockName,
+                meteredExposureSeconds: fit.anchors.first?.metered ?? 2
+            )
+
+            let sourceReferenceSection = try XCTUnwrap(
+                displayState.sections.first(where: { $0.title == "Source reference" }),
+                "\(fit.canonicalStockName) must surface a Source reference section."
+            )
+            let sourceBlock = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
+
+            for anchor in fit.anchors {
+                let correctedToken = formatDurationToken(anchor.corrected)
+                XCTAssertTrue(
+                    sourceBlock.contains(correctedToken),
+                    "\(fit.canonicalStockName) source block must surface the published corrected time '\(correctedToken)'. Got:\n\(sourceBlock)"
+                )
+            }
+            XCTAssertFalse(
+                displayState.sections.contains(where: { $0.title == "Reference" }),
+                "\(fit.canonicalStockName) must not surface the legacy Reference section."
+            )
+            XCTAssertFalse(
+                displayState.sections.contains(where: { $0.title == "Guidance boundary" }),
+                "RPX profiles publish no not-recommended row; Guidance boundary section must be absent."
+            )
+        }
+    }
+
+    @MainActor
+    func testRPXProfilesInRangeSummaryTextIsLogLogInterpolationOfOfficialTable() throws {
+        for fit in allRPXFits {
+            let displayState = try makeDisplayState(
+                film: fit.canonicalStockName,
+                meteredExposureSeconds: fit.anchors.first?.metered ?? 2
+            )
+            XCTAssertEqual(
+                displayState.summary.summaryText,
+                "Log-log interpolation of the official table",
+                "\(fit.canonicalStockName) within-range summary text mismatch."
+            )
+        }
+    }
+
+    @MainActor
+    func testRPXProfilesAboveSourceRangeSummaryTextIsBeyondSourceRange() throws {
+        for fit in allRPXFits {
+            let metered = fit.sourceRangeThroughSeconds * 2
+            let displayState = try makeDisplayState(
+                film: fit.canonicalStockName,
+                meteredExposureSeconds: metered
+            )
+            XCTAssertEqual(
+                displayState.summary.summaryText,
+                "Beyond source range",
+                "\(fit.canonicalStockName) beyond-range summary text mismatch."
+            )
+        }
+    }
+
+    @MainActor
+    func testRPXProfilesGraphCarriesSourceReferenceMarkersAtAnchorRowsAndFormulaKind() throws {
+        for fit in allRPXFits {
+            let displayState = try makeDisplayState(
+                film: fit.canonicalStockName,
+                meteredExposureSeconds: fit.anchors.first?.metered ?? 2
+            )
+            let graph = try XCTUnwrap(displayState.graph)
+            XCTAssertEqual(
+                graph.kind,
+                .formula,
+                "\(fit.canonicalStockName) table models must render as the .formula graph kind."
+            )
+
+            let markerMetereds = graph.sourceReferenceMarkers.map { $0.point.meteredExposureSeconds.rounded() }
+            XCTAssertEqual(
+                Set(markerMetereds),
+                Set(fit.anchors.map { $0.metered }),
+                "\(fit.canonicalStockName) graph must mark all published anchor rows."
+            )
+
+            XCTAssertNil(
+                graph.notRecommendedBoundarySeconds,
+                "\(fit.canonicalStockName) has no published not-recommended boundary."
+            )
+
+            let beyondStart = try XCTUnwrap(
+                graph.beyondSourceRangeStartSeconds,
+                "\(fit.canonicalStockName) graph must shade the region above the published \(fit.sourceRangeThroughSeconds) s upper row."
+            )
+            XCTAssertEqual(beyondStart, fit.sourceRangeThroughSeconds, accuracy: 1e-3)
+        }
+    }
+
+    // MARK: - UI surfacing — RETRO 80S / SUPERPAN 200 (formula, unchanged)
+
+    @MainActor
+    func testFormulaProfilesDetailsSurfaceShowsSourceReferenceWithCorrectedTimeRows() throws {
+        for fit in allFormulaFits {
             let displayState = try makeDisplayState(
                 film: fit.canonicalStockName,
                 meteredExposureSeconds: fit.quantifiedRows.first?.metered ?? 4
@@ -344,12 +681,6 @@ final class RolleiFormulaProfileTests: XCTestCase {
 
     @MainActor
     func testRetro80SAndSuperpan200SourceReferenceSurfacesPublishedRangeNotes() throws {
-        // RETRO 80S and SUPERPAN 200 publish corrected exposure as a
-        // range at 1 sec ("1 to 2 sec") and 2 sec ("3 to 4 sec").
-        // Those rows live as note-only source evidence and never
-        // enter the formula as exact fitting points, but the
-        // published range guidance must still be visible to the user
-        // in the Source reference block.
         for fit in [retro80s, superpan200] {
             let displayState = try makeDisplayState(
                 film: fit.canonicalStockName,
@@ -377,19 +708,16 @@ final class RolleiFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testRolleiProfilesGraphCarriesSourceReferenceMarkersAtQuantifiedRows() throws {
-        for fit in allFits {
+    func testFormulaProfilesGraphCarriesSourceReferenceMarkersAtQuantifiedRows() throws {
+        for fit in allFormulaFits {
             let displayState = try makeDisplayState(
                 film: fit.canonicalStockName,
                 meteredExposureSeconds: fit.quantifiedRows.first?.metered ?? 4
             )
             let graph = try XCTUnwrap(displayState.graph)
-            XCTAssertEqual(graph.kind, .formula, "\(fit.canonicalStockName) must render the formula graph kind after conversion.")
+            XCTAssertEqual(graph.kind, .formula, "\(fit.canonicalStockName) must render the formula graph kind.")
 
             let markerMetereds = graph.sourceReferenceMarkers.map { $0.point.meteredExposureSeconds.rounded() }
-            // Only the quantified rows surface as graph markers (the
-            // range-valued rows have no single corrected exposure to
-            // plot and must never be invented as exact fitting points).
             XCTAssertEqual(
                 Set(markerMetereds),
                 Set(fit.quantifiedRows.map { $0.metered }),
@@ -410,6 +738,10 @@ final class RolleiFormulaProfileTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private func rpxProfile(for fit: RPXTableFit) throws -> ReciprocityProfile {
+        try FormulaProfileTestSupport.profile(for: fit.canonicalStockName)
+    }
 
     private func profile(for fit: RolleiFit) throws -> ReciprocityProfile {
         try FormulaProfileTestSupport.profile(for: fit.canonicalStockName)

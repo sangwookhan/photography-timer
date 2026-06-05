@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class Provia100FScalePolicyTests: XCTestCase {
     // MARK: - Scale policy (tier-based domain)

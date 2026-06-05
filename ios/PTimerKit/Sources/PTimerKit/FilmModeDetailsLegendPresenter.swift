@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Pure presenter for the Film Details legend block. Derives the
 /// short list of legend lines (color correction, development
@@ -7,9 +6,11 @@ import PTimerKit
 /// rule + source-evidence adjustments. Kept separate from the main
 /// details presenter so the legend wording does not drift when a new
 /// secondary-guidance kind is added to the catalog.
-struct FilmModeDetailsLegendPresenter {
+public struct FilmModeDetailsLegendPresenter {
 
-    func legendDisplayState(for profile: ReciprocityProfile) -> FilmModeDetailsLegendState? {
+    public init() {}
+
+    public func legendDisplayState(for profile: ReciprocityProfile) -> FilmModeDetailsLegendState? {
         let ruleAdjustments = profile.rules.flatMap { rule -> [ReciprocityAdjustment] in
             switch rule {
             case let .threshold(thresholdRule):

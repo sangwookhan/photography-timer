@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// FilmModeDetailsGraphView owns the reciprocity formula graph that
 /// renders inside `FilmModeDetailsSheet`. The struct body keeps the

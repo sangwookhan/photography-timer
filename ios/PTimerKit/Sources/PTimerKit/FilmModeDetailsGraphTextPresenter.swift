@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// State-aware text for the formula graph: caption, unsupported
 /// explanation, description lines, plus the persistent
@@ -7,14 +6,16 @@ import PTimerKit
 /// drive shaded overlays. Pure value presenter: no state, branches
 /// on `FilmModeReciprocityBindingState` plus a handful of plain
 /// inputs.
-struct FilmModeDetailsGraphTextPresenter {
+public struct FilmModeDetailsGraphTextPresenter {
+
+    public init() {}
 
     /// Returns at most one short, state-aware note for the formula
     /// graph. The marker/region legend already names each visible
     /// element, so the note is reserved for the cases that need a
     /// brief sentence: outside the visible range, and the formula
     /// prediction outside the published source range.
-    func descriptionLines(
+    public func descriptionLines(
         for bindingState: FilmModeReciprocityBindingState,
         isBeyondVisibleRange: Bool,
         isBelowVisibleRange: Bool
@@ -40,7 +41,7 @@ struct FilmModeDetailsGraphTextPresenter {
     /// persistent pink shading on the formula graph so the user can
     /// always see which region of the curve is the formula prediction
     /// outside the published source range.
-    func beyondSourceRangeStartSeconds(
+    public func beyondSourceRangeStartSeconds(
         profile: ReciprocityProfile,
         supportedUpperBoundSeconds: Double?
     ) -> Double? {
@@ -59,7 +60,7 @@ struct FilmModeDetailsGraphTextPresenter {
     ///
     /// Caption strings omit a trailing period to match the rest of
     /// the graph caption surface, which renders as banner text.
-    func caption(
+    public func caption(
         for bindingState: FilmModeReciprocityBindingState,
         noCorrectionRangeUpperBoundSeconds: Double?
     ) -> String {
@@ -84,7 +85,7 @@ struct FilmModeDetailsGraphTextPresenter {
     /// prediction available" from "outside guidance with no value
     /// at all"; identical copy in both cases would mask the
     /// timer-start affordance for the numeric path.
-    func unsupportedExplanation(
+    public func unsupportedExplanation(
         for bindingState: FilmModeReciprocityBindingState
     ) -> String? {
         guard bindingState.presentation.category == .unsupported else {
@@ -108,7 +109,7 @@ struct FilmModeDetailsGraphTextPresenter {
     /// begins. Returns `nil` when the current input is inside the
     /// supported range or when the profile is not flagged as
     /// unsupported.
-    func unsupportedRegionStartSeconds(
+    public func unsupportedRegionStartSeconds(
         supportedUpperBoundSeconds: Double?,
         currentMeteredExposureSeconds: Double,
         isUnsupported: Bool

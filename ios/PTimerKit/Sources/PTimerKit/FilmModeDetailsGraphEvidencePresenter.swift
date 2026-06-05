@@ -1,12 +1,13 @@
 import Foundation
-import PTimerKit
 
 /// Surfaces the manufacturer-published source-evidence rows on
 /// the formula graph: open-ring markers for rows that publish a
 /// quantified exposure adjustment, plus the seconds value for
 /// the "not-recommended" guidance boundary. Pure value presenter:
 /// no state, no model references.
-struct FilmModeDetailsGraphEvidencePresenter {
+public struct FilmModeDetailsGraphEvidencePresenter {
+
+    public init() {}
 
     /// Produces markers for manufacturer source-evidence rows that
     /// publish a quantified exposure adjustment (e.g. Provia 100F's
@@ -16,7 +17,7 @@ struct FilmModeDetailsGraphEvidencePresenter {
     /// point. Each marker carries an adjacent text label (e.g.
     /// "240s") so the user reads the published metered value
     /// directly off the graph.
-    func markers(
+    public func markers(
         for profile: ReciprocityProfile,
         formatDuration: (Double) -> String
     ) -> [FilmModeDetailsGraphSourceReference] {
@@ -49,7 +50,7 @@ struct FilmModeDetailsGraphEvidencePresenter {
     /// Returns the seconds value of the manufacturer's
     /// not-recommended boundary if a guidance-boundary row exists
     /// in the profile's source evidence.
-    func notRecommendedBoundarySeconds(for profile: ReciprocityProfile) -> Double? {
+    public func notRecommendedBoundarySeconds(for profile: ReciprocityProfile) -> Double? {
         for row in profile.sourceEvidence {
             guard case let .exactSeconds(seconds) = row.meteredExposure,
                   seconds > 0,

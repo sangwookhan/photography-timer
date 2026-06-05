@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Pure presenter for the "App-derived comparison" section in
 /// Reciprocity Details (PTIMER-159).
@@ -17,11 +16,13 @@ import PTimerKit
 /// Returns `nil` when the profile has no formula rule or no
 /// corrected-time anchors — today only Fomapan 100 qualifies, so no
 /// other film gains the section.
-struct ReciprocityModelComparisonPresenter {
+public struct ReciprocityModelComparisonPresenter {
 
-    static let sectionTitle = "App-derived comparison"
+    public static let sectionTitle = "App-derived comparison"
 
-    func comparisonSection(
+    public init() {}
+
+    public func comparisonSection(
         for profile: ReciprocityProfile,
         formatDuration: (Double) -> String
     ) -> FilmModeDetailsSectionState? {
@@ -76,7 +77,7 @@ struct ReciprocityModelComparisonPresenter {
     /// Left-aligns every column to the widest cell (header included)
     /// so the monospaced reference-block renders as an aligned table.
     /// The trailing (Error) column is not padded.
-    static func formattedTable(header: [String], rows: [[String]]) -> String {
+    public static func formattedTable(header: [String], rows: [[String]]) -> String {
         let allRows = [header] + rows
         let columnCount = header.count
         var widths = [Int](repeating: 0, count: columnCount)

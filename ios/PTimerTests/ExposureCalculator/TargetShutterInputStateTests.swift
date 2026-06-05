@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Pins the draft / input-source contract for the Target Shutter
 /// input sheet. The state model isolates these rules from the

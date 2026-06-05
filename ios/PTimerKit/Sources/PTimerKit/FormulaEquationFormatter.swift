@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Renders the user-facing equation text shown next to a formula
 /// graph for the shared guarded formula model.
@@ -31,9 +30,9 @@ import PTimerKit
 /// Tc = 2s × (Tm / 10s)^1.45
 /// Tc = 2s × (Tm / 10s)^1.45 + 0.3s
 /// ```
-enum FormulaEquationFormatter {
+public enum FormulaEquationFormatter {
 
-    static func userFacingText(for formula: ReciprocityFormula) -> String {
+    public static func userFacingText(for formula: ReciprocityFormula) -> String {
         // Exhaustive switch on the formula family. PTIMER-162's
         // `.kronHalmContinuous` family will need its own display
         // surface; the compiler enforces that addition rather than

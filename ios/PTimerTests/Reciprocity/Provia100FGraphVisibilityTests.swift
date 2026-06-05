@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class Provia100FGraphVisibilityTests: XCTestCase {
     // MARK: - Sub-second no-correction visibility

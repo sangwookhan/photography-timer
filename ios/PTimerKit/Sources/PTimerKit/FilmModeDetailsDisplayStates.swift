@@ -1,18 +1,18 @@
 import Foundation
 
-enum FilmModeDetailsRowStyle: Equatable {
+public enum FilmModeDetailsRowStyle: Equatable {
     case standard
     case referenceBlock
     case formulaExpression
 }
 
-struct FilmModeDetailsRowState: Equatable, Identifiable {
-    let title: String
-    let value: String
-    let destinationURL: URL?
-    let style: FilmModeDetailsRowStyle
+public struct FilmModeDetailsRowState: Equatable, Identifiable {
+    public let title: String
+    public let value: String
+    public let destinationURL: URL?
+    public let style: FilmModeDetailsRowStyle
 
-    init(
+    public init(
         title: String,
         value: String,
         destinationURL: URL? = nil,
@@ -24,21 +24,29 @@ struct FilmModeDetailsRowState: Equatable, Identifiable {
         self.style = style
     }
 
-    var id: String {
+    public var id: String {
         [title, value, destinationURL?.absoluteString ?? "", String(describing: style)].joined(separator: "|")
     }
 }
 
-struct FilmModeDetailsSectionState: Equatable, Identifiable {
-    let title: String
-    let rows: [FilmModeDetailsRowState]
+public struct FilmModeDetailsSectionState: Equatable, Identifiable {
+    public let title: String
+    public let rows: [FilmModeDetailsRowState]
 
-    var id: String {
+    public init(
+        title: String,
+        rows: [FilmModeDetailsRowState]
+    ) {
+        self.title = title
+        self.rows = rows
+    }
+
+    public var id: String {
         ([title] + rows.map(\.id)).joined(separator: "|")
     }
 }
 
-enum FilmModeDetailsGraphKind: Equatable {
+public enum FilmModeDetailsGraphKind: Equatable {
     case formula
 }
 
@@ -56,14 +64,14 @@ enum FilmModeDetailsGraphKind: Equatable {
 /// - `t3` extends to 100h and is the largest visible domain. Values
 ///   above the `t3` upper bound trigger `isBeyondVisibleRange` on the
 ///   graph state rather than pushing the domain higher.
-enum FilmModeDetailsGraphScaleTier: Equatable {
+public enum FilmModeDetailsGraphScaleTier: Equatable {
     case t1
     case t2
     case t3
 
-    var lowerBoundSeconds: Double { 1 }
+    public var lowerBoundSeconds: Double { 1 }
 
-    var upperBoundSeconds: Double {
+    public var upperBoundSeconds: Double {
         switch self {
         case .t1: return 3_600          // 1 hour
         case .t2: return 36_000         // 10 hours
@@ -71,7 +79,7 @@ enum FilmModeDetailsGraphScaleTier: Equatable {
         }
     }
 
-    var range: ClosedRange<Double> {
+    public var range: ClosedRange<Double> {
         lowerBoundSeconds...upperBoundSeconds
     }
 
@@ -79,7 +87,7 @@ enum FilmModeDetailsGraphScaleTier: Equatable {
     /// axes use the same tick set because both render durations.
     /// Label density is calibrated for phone-width plots so the
     /// labels do not overlap.
-    var axisTicks: [FilmModeDetailsGraphAxisTick] {
+    public var axisTicks: [FilmModeDetailsGraphAxisTick] {
         switch self {
         case .t1:
             return [
@@ -116,12 +124,12 @@ enum FilmModeDetailsGraphScaleTier: Equatable {
 /// free-standing enum (rather than a method on the tier) so it is
 /// trivially testable in isolation and can be called from the
 /// presenter without instantiating a struct.
-enum FilmModeDetailsGraphScalePolicy {
+public enum FilmModeDetailsGraphScalePolicy {
     /// Picks the smallest tier whose `upperBoundSeconds` accommodates
     /// every plotted value. Values greater than the `t3` upper bound
     /// still return `t3`; callers should check
     /// `isBeyondVisibleRange(maxPlottedSeconds:)` separately.
-    static func selectTier(
+    public static func selectTier(
         maxPlottedSeconds: Double
     ) -> FilmModeDetailsGraphScaleTier {
         guard maxPlottedSeconds.isFinite, maxPlottedSeconds > 0 else {
@@ -140,7 +148,7 @@ enum FilmModeDetailsGraphScalePolicy {
     /// bound. The graph still uses `t3` for its domain; the view
     /// surfaces an overflow indicator instead of expanding into
     /// multi-day labels.
-    static func isBeyondVisibleRange(
+    public static func isBeyondVisibleRange(
         maxPlottedSeconds: Double
     ) -> Bool {
         guard maxPlottedSeconds.isFinite else { return false }
@@ -148,7 +156,7 @@ enum FilmModeDetailsGraphScalePolicy {
     }
 }
 
-enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
+public enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
     /// Current result sits on the formula curve inside the
     /// manufacturer-supported range.
     case formulaDerived
@@ -164,42 +172,86 @@ enum FilmModeDetailsGraphCurrentPointStyle: Equatable {
     case noCorrection
 }
 
-struct FilmModeDetailsGraphPoint: Equatable {
-    let meteredExposureSeconds: Double
-    let correctedExposureSeconds: Double
+public struct FilmModeDetailsGraphPoint: Equatable {
+    public let meteredExposureSeconds: Double
+    public let correctedExposureSeconds: Double
+
+    public init(
+        meteredExposureSeconds: Double,
+        correctedExposureSeconds: Double
+    ) {
+        self.meteredExposureSeconds = meteredExposureSeconds
+        self.correctedExposureSeconds = correctedExposureSeconds
+    }
 }
 
 /// Open-ring marker pinned to a manufacturer-published reference
 /// point. The label is rendered next to the marker so the user can
 /// see which metered exposure (e.g. "240s") the reference matches
 /// without consulting an external legend.
-struct FilmModeDetailsGraphSourceReference: Equatable {
-    let point: FilmModeDetailsGraphPoint
-    let label: String
+public struct FilmModeDetailsGraphSourceReference: Equatable {
+    public let point: FilmModeDetailsGraphPoint
+    public let label: String
+
+    public init(
+        point: FilmModeDetailsGraphPoint,
+        label: String
+    ) {
+        self.point = point
+        self.label = label
+    }
 }
 
-struct FilmModeDetailsGraphCurrentPoint: Equatable {
-    let point: FilmModeDetailsGraphPoint
-    let style: FilmModeDetailsGraphCurrentPointStyle
+public struct FilmModeDetailsGraphCurrentPoint: Equatable {
+    public let point: FilmModeDetailsGraphPoint
+    public let style: FilmModeDetailsGraphCurrentPointStyle
+
+    public init(
+        point: FilmModeDetailsGraphPoint,
+        style: FilmModeDetailsGraphCurrentPointStyle
+    ) {
+        self.point = point
+        self.style = style
+    }
 }
 
-struct FilmModeDetailsGraphAxisTick: Equatable, Identifiable {
-    let value: Double
-    let label: String
+public struct FilmModeDetailsGraphAxisTick: Equatable, Identifiable {
+    public let value: Double
+    public let label: String
 
-    var id: String {
+    public init(
+        value: Double,
+        label: String
+    ) {
+        self.value = value
+        self.label = label
+    }
+
+    public var id: String {
         "\(value)|\(label)"
     }
 }
 
-struct FilmModeDetailsSummaryState: Equatable {
-    let badgeText: String
-    let tone: FilmModeReciprocityStateTone
-    let summaryText: String
-    let detailText: String?
+public struct FilmModeDetailsSummaryState: Equatable {
+    public let badgeText: String
+    public let tone: FilmModeReciprocityStateTone
+    public let summaryText: String
+    public let detailText: String?
+
+    public init(
+        badgeText: String,
+        tone: FilmModeReciprocityStateTone,
+        summaryText: String,
+        detailText: String?
+    ) {
+        self.badgeText = badgeText
+        self.tone = tone
+        self.summaryText = summaryText
+        self.detailText = detailText
+    }
 }
 
-enum FilmModeDetailsCurrentResultLayout: Equatable {
+public enum FilmModeDetailsCurrentResultLayout: Equatable {
     /// Single comparison-card layout used by every reciprocity
     /// state (no correction, formula-derived, beyond source range,
     /// limited guidance, unsupported). Every case reads the same
@@ -207,27 +259,39 @@ enum FilmModeDetailsCurrentResultLayout: Equatable {
     case comparison
 }
 
-struct FilmModeDetailsCurrentResultValueState: Equatable {
-    let title: String
-    let valueText: String
-    let detailText: String?
-    let emphasizesValue: Bool
+public struct FilmModeDetailsCurrentResultValueState: Equatable {
+    public let title: String
+    public let valueText: String
+    public let detailText: String?
+    public let emphasizesValue: Bool
+
+    public init(
+        title: String,
+        valueText: String,
+        detailText: String?,
+        emphasizesValue: Bool
+    ) {
+        self.title = title
+        self.valueText = valueText
+        self.detailText = detailText
+        self.emphasizesValue = emphasizesValue
+    }
 }
 
-struct FilmModeDetailsCurrentResultState: Equatable {
-    let layout: FilmModeDetailsCurrentResultLayout
-    let adjustedShutter: FilmModeDetailsCurrentResultValueState
-    let correctedExposure: FilmModeDetailsCurrentResultValueState
+public struct FilmModeDetailsCurrentResultState: Equatable {
+    public let layout: FilmModeDetailsCurrentResultLayout
+    public let adjustedShutter: FilmModeDetailsCurrentResultValueState
+    public let correctedExposure: FilmModeDetailsCurrentResultValueState
     /// Short, fixed-vocabulary status string rendered next to the
     /// active values. Replaces the big top heading so every case
     /// surfaces the same shape: Adjusted / Corrected / Status.
-    let statusText: String
+    public let statusText: String
     /// Tone used to color the status text. Mirrors the summary tone
     /// so the colour cue stays consistent if both surfaces show the
     /// same row.
-    let statusTone: FilmModeReciprocityStateTone
+    public let statusTone: FilmModeReciprocityStateTone
 
-    init(
+    public init(
         layout: FilmModeDetailsCurrentResultLayout,
         adjustedShutter: FilmModeDetailsCurrentResultValueState,
         correctedExposure: FilmModeDetailsCurrentResultValueState,
@@ -242,19 +306,19 @@ struct FilmModeDetailsCurrentResultState: Equatable {
     }
 }
 
-struct FilmModeDetailsGraphDisplayState: Equatable {
-    let kind: FilmModeDetailsGraphKind
-    let title: String
-    let sourcePoints: [FilmModeDetailsGraphPoint]
-    let currentPoint: FilmModeDetailsGraphCurrentPoint?
-    let currentMeteredExposureSeconds: Double?
-    let usesCurrentInputGuideOnly: Bool
-    let caption: String
-    let unsupportedExplanation: String?
-    let xAxisLabel: String
-    let yAxisLabel: String
-    let xAxisTicks: [FilmModeDetailsGraphAxisTick]
-    let yAxisTicks: [FilmModeDetailsGraphAxisTick]
+public struct FilmModeDetailsGraphDisplayState: Equatable {
+    public let kind: FilmModeDetailsGraphKind
+    public let title: String
+    public let sourcePoints: [FilmModeDetailsGraphPoint]
+    public let currentPoint: FilmModeDetailsGraphCurrentPoint?
+    public let currentMeteredExposureSeconds: Double?
+    public let usesCurrentInputGuideOnly: Bool
+    public let caption: String
+    public let unsupportedExplanation: String?
+    public let xAxisLabel: String
+    public let yAxisLabel: String
+    public let xAxisTicks: [FilmModeDetailsGraphAxisTick]
+    public let yAxisTicks: [FilmModeDetailsGraphAxisTick]
     /// Upper bound of the manufacturer-supported region — for formula
     /// graphs this is the formula's
     /// `sourceRangeThroughSeconds` (the source/fitting confidence
@@ -262,8 +326,8 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// `.formulaDerived` to `.unsupportedOutOfPolicyRange` while the
     /// formula keeps producing a numeric prediction. Drives the
     /// dashed boundary guide in the view.
-    let supportedRangeUpperBoundSeconds: Double?
-    let unsupportedRegionStartSeconds: Double?
+    public let supportedRangeUpperBoundSeconds: Double?
+    public let unsupportedRegionStartSeconds: Double?
     /// Upper bound of the threshold no-correction range, when the
     /// active profile carries one (e.g. Provia 100F's 128 s threshold).
     /// Drives the light-green no-correction shading and the threshold
@@ -271,7 +335,7 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// no-correction region as policy-derived rather than as a formula
     /// prediction outside the source range. `nil` for profiles without
     /// a threshold rule (HP5 Plus etc.).
-    let noCorrectionRangeUpperBoundSeconds: Double?
+    public let noCorrectionRangeUpperBoundSeconds: Double?
     /// Open-ring markers (with adjacent labels) showing manufacturer
     /// source reference points that anchor a formula curve (e.g.
     /// Provia 100F's 240 s +1/3 stop reference). Distinct from
@@ -280,35 +344,35 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// predicted curve passing through it. 480 s "not recommended"
     /// boundary entries are never placed here — see
     /// `notRecommendedBoundarySeconds`.
-    let sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference]
+    public let sourceReferenceMarkers: [FilmModeDetailsGraphSourceReference]
     /// Metered-exposure x-position at which the manufacturer signals
     /// "not recommended" (e.g. Provia 100F's 480 s). Drives the red
     /// dashed vertical boundary distinct from the source-reference
     /// markers above.
-    let notRecommendedBoundarySeconds: Double?
+    public let notRecommendedBoundarySeconds: Double?
     /// Metered-exposure x at which the manufacturer-published source
     /// range ends. Drives the persistent pink shading on converted
     /// formula graphs (everything to the right is the formula
     /// prediction outside the published source range). `nil` for
     /// profiles without a defined source range upper bound.
-    let beyondSourceRangeStartSeconds: Double?
+    public let beyondSourceRangeStartSeconds: Double?
     /// User-facing formula expression rendered next to the graph
     /// (e.g. "Tc = 128 × (Tm / 128)^1.3676") so the curve is read
     /// alongside its equation.
-    let formulaDisplayText: String?
+    public let formulaDisplayText: String?
     /// Descriptive bullet-style notes shown below the graph when the
     /// profile pairs a formula curve with manufacturer source-evidence
     /// markers and a not-recommended boundary. Empty when nothing
     /// extra needs to be called out, in which case the view falls back
     /// to the state-aware caption.
-    let descriptionLines: [String]
+    public let descriptionLines: [String]
     /// Tier driving `xRange`, `yRange`, and the axis tick set.
-    let scaleTier: FilmModeDetailsGraphScaleTier?
+    public let scaleTier: FilmModeDetailsGraphScaleTier?
     /// `true` when the current input (or its corrected exposure)
     /// exceeds the `t3` upper bound, i.e. > 100h. The graph stays
     /// pinned to `t3` and the view shows an overflow indicator instead
     /// of expanding the domain.
-    let isBeyondVisibleRange: Bool
+    public let isBeyondVisibleRange: Bool
     /// `true` when the current input (or its corrected exposure)
     /// sits below the stable viewport lower bound. The viewport
     /// itself already extends below 1 s so the no-correction band
@@ -316,11 +380,11 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     /// inputs that fall below the viewport's leading edge
     /// entirely, in which case the view suppresses the marker
     /// and surfaces an outside-visible-range chip instead.
-    let isBelowVisibleRange: Bool
-    let xRange: ClosedRange<Double>
-    let yRange: ClosedRange<Double>
+    public let isBelowVisibleRange: Bool
+    public let xRange: ClosedRange<Double>
+    public let yRange: ClosedRange<Double>
 
-    init(
+    public init(
         kind: FilmModeDetailsGraphKind,
         title: String,
         sourcePoints: [FilmModeDetailsGraphPoint],
@@ -375,8 +439,12 @@ struct FilmModeDetailsGraphDisplayState: Equatable {
     }
 }
 
-struct FilmModeDetailsLegendState: Equatable {
-    let lines: [String]
+public struct FilmModeDetailsLegendState: Equatable {
+    public let lines: [String]
+
+    public init(lines: [String]) {
+        self.lines = lines
+    }
 }
 
 extension FilmModeDetailsGraphDisplayState {
@@ -385,7 +453,7 @@ extension FilmModeDetailsGraphDisplayState {
     /// chip text exists in a testable, value-only layer instead of
     /// living only in the view tree. Tests assert against this
     /// directly without instantiating the view.
-    var legendChipLabels: [String] {
+    public var legendChipLabels: [String] {
         if usesCurrentInputGuideOnly {
             return ["Calculation curve", "Current input"]
         }
@@ -412,51 +480,77 @@ extension FilmModeDetailsGraphDisplayState {
 /// One selectable reciprocity profile/model option shown in the
 /// Details model picker (PTIMER-159). `id` is the profile id the view
 /// model resolves back to an active override.
-struct FilmModeDetailsModelOption: Equatable, Identifiable {
-    let id: String
+public struct FilmModeDetailsModelOption: Equatable, Identifiable {
+    public let id: String
     /// Full model name, e.g. "Official FOMA table" / "App-derived
     /// formula" / "Official threshold guidance". Used for subtitle,
     /// summary, and accessibility — anywhere with room for clarity.
-    let name: String
+    public let name: String
     /// Short label for the segmented selectors where horizontal space is
     /// tight, e.g. "Official table" / "App formula" / "Official" /
     /// "Unofficial". Never misleading — just a concise form of `name`.
-    let selectorLabel: String
+    public let selectorLabel: String
+
+    public init(
+        id: String,
+        name: String,
+        selectorLabel: String
+    ) {
+        self.id = id
+        self.name = name
+        self.selectorLabel = selectorLabel
+    }
 }
 
 /// Two-line active-model summary for the main calculation screen
 /// (PTIMER-159): the model name on the first line, the calculation
 /// method on the second.
-struct FilmModeActiveModelSummary: Equatable {
-    let name: String
-    let calculation: String
+public struct FilmModeActiveModelSummary: Equatable {
+    public let name: String
+    public let calculation: String
+
+    public init(
+        name: String,
+        calculation: String
+    ) {
+        self.name = name
+        self.calculation = calculation
+    }
 }
 
 /// Drives the Details profile/model picker. Present only when a film
 /// stock exposes more than one reciprocity profile/model; `nil` keeps
 /// single-profile films frictionless (no picker rendered).
-struct FilmModeDetailsModelSelectionState: Equatable, Identifiable {
-    let options: [FilmModeDetailsModelOption]
-    let activeOptionID: String
+public struct FilmModeDetailsModelSelectionState: Equatable, Identifiable {
+    public let options: [FilmModeDetailsModelOption]
+    public let activeOptionID: String
+
+    public init(
+        options: [FilmModeDetailsModelOption],
+        activeOptionID: String
+    ) {
+        self.options = options
+        self.activeOptionID = activeOptionID
+    }
 
     /// Identity for `.sheet(item:)`. Folds in every option id plus the
     /// active id so re-presenting after a switch refreshes the sheet.
-    var id: String {
+    public var id: String {
         (options.map(\.id) + [activeOptionID]).joined(separator: "|")
     }
 }
 
-struct FilmModeDetailsDisplayState: Equatable, Identifiable {
-    let title: String
-    let subtitle: String?
-    let summary: FilmModeDetailsSummaryState
-    let currentResult: FilmModeDetailsCurrentResultState
-    let modelSelection: FilmModeDetailsModelSelectionState?
-    let sections: [FilmModeDetailsSectionState]
-    let graph: FilmModeDetailsGraphDisplayState?
-    let legend: FilmModeDetailsLegendState?
+public struct FilmModeDetailsDisplayState: Equatable, Identifiable {
+    public let title: String
+    public let subtitle: String?
+    public let summary: FilmModeDetailsSummaryState
+    public let currentResult: FilmModeDetailsCurrentResultState
+    public let modelSelection: FilmModeDetailsModelSelectionState?
+    public let sections: [FilmModeDetailsSectionState]
+    public let graph: FilmModeDetailsGraphDisplayState?
+    public let legend: FilmModeDetailsLegendState?
 
-    init(
+    public init(
         title: String,
         subtitle: String? = nil,
         summary: FilmModeDetailsSummaryState,
@@ -476,7 +570,7 @@ struct FilmModeDetailsDisplayState: Equatable, Identifiable {
         self.legend = legend
     }
 
-    var id: String {
+    public var id: String {
         let graphID = graph.map {
             "\($0.kind)|\($0.sourcePoints.count)|\($0.currentPoint.map { String(describing: $0.style) } ?? "none")"
         } ?? "no-graph"

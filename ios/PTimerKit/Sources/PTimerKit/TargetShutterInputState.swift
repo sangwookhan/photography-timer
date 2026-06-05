@@ -32,43 +32,43 @@ import Foundation
 /// does not match the current `activeMode`, this kills the bug
 /// where a late Fine emit (fired after the user already swiped to
 /// Quick) would yank the sheet back to Fine.
-struct TargetShutterInputState: Equatable {
+public struct TargetShutterInputState: Equatable {
     /// Largest duration the wheels can express: 23h 59m 59s.
-    static let maxTotalSeconds = 23 * 3600 + 59 * 60 + 59
+    public static let maxTotalSeconds = 23 * 3600 + 59 * 60 + 59
 
     /// Default seed when the sheet has neither a per-slot target
     /// nor a recent value: 1 minute.
-    static let defaultSeedSeconds = 60
+    public static let defaultSeedSeconds = 60
 
-    enum InputMode: Hashable {
+    public enum InputMode: Hashable {
         case quick
         case fine
     }
 
     /// The draft target in whole seconds. Single source of truth
     /// for what **Set** will commit.
-    var draftSeconds: Int
+    public var draftSeconds: Int
 
     /// Mode the user is currently editing in.
-    var activeMode: InputMode
+    public var activeMode: InputMode
 
     /// Preset the user most recently chose via the Quick wheel.
     /// `nil` means no preset is bright. Set only by `applyQuickTap`,
     /// cleared by Fine adjustments and by entering Fine mode.
-    var quickSelectedPreset: TimeInterval?
+    public var quickSelectedPreset: TimeInterval?
 
     /// Quick wheel parking position. Stored, not derived. Resyncs
     /// from `draftSeconds` only when the user enters Quick mode, so
     /// while the user is scrolling Fine Tune the Quick wheel stays
     /// still even when its peek is visible.
-    var quickWheelAnchor: TimeInterval
+    public var quickWheelAnchor: TimeInterval
 
     /// Fine Tune wheel components. Stored, not derived. Resync from
     /// `draftSeconds` only when the user enters Fine mode, so while
     /// the user is scrolling Quick the Fine wheels stay still.
-    var fineHours: Int
-    var fineMinutes: Int
-    var fineSeconds: Int
+    public var fineHours: Int
+    public var fineMinutes: Int
+    public var fineSeconds: Int
 
     /// Set when the photographer flips the sheet's `Use Target
     /// Shutter` switch Off — the draft is intentionally disabled,
@@ -85,15 +85,35 @@ struct TargetShutterInputState: Equatable {
     /// by `reArmDraft(...)` (the toggle-On path). The flag also
     /// survives mode transitions so a user can switch Off in Fine,
     /// swipe to Quick, and still see the disabled state.
-    var isDraftCleared: Bool
+    public var isDraftCleared: Bool
+
+    public init(
+        draftSeconds: Int,
+        activeMode: InputMode,
+        quickSelectedPreset: TimeInterval?,
+        quickWheelAnchor: TimeInterval,
+        fineHours: Int,
+        fineMinutes: Int,
+        fineSeconds: Int,
+        isDraftCleared: Bool
+    ) {
+        self.draftSeconds = draftSeconds
+        self.activeMode = activeMode
+        self.quickSelectedPreset = quickSelectedPreset
+        self.quickWheelAnchor = quickWheelAnchor
+        self.fineHours = fineHours
+        self.fineMinutes = fineMinutes
+        self.fineSeconds = fineSeconds
+        self.isDraftCleared = isDraftCleared
+    }
 
     /// Total seconds derived from the draft.
-    var totalSeconds: Int { draftSeconds }
+    public var totalSeconds: Int { draftSeconds }
 
     /// True when the draft equals one of the configured presets.
     /// Drives the optional "· Custom" header marker — value-based,
     /// independent of input source.
-    func quickIsExactMatch(in presets: [TimeInterval]) -> Bool {
+    public func quickIsExactMatch(in presets: [TimeInterval]) -> Bool {
         presets.contains(TimeInterval(draftSeconds))
     }
 
@@ -115,7 +135,7 @@ struct TargetShutterInputState: Equatable {
     /// This means re-opening the sheet on a custom value drops the
     /// user directly into Fine Tune so the wheels they need are
     /// front and centre.
-    static func initial(
+    public static func initial(
         seedSeconds: TimeInterval?,
         quickPresets: [TimeInterval],
         initialEnabled: Bool = true
@@ -161,7 +181,7 @@ struct TargetShutterInputState: Equatable {
     /// observer callbacks — that variant deliberately skips the
     /// wheel-anchor write so UIPickerView's deceleration is not
     /// interrupted by a SwiftUI-driven `selectRow(_:animated:)`.
-    mutating func applyQuickTap(_ newPreset: TimeInterval) {
+    public mutating func applyQuickTap(_ newPreset: TimeInterval) {
         guard !isDraftCleared else { return }
         let clamped = min(max(1, Int(newPreset.rounded())), Self.maxTotalSeconds)
         draftSeconds = clamped
@@ -180,7 +200,7 @@ struct TargetShutterInputState: Equatable {
     ///
     /// **No-ops when `isDraftCleared`.** Same rationale as
     /// `applyQuickTap`.
-    mutating func applyQuickContinuousScroll(_ newPreset: TimeInterval) {
+    public mutating func applyQuickContinuousScroll(_ newPreset: TimeInterval) {
         guard !isDraftCleared else { return }
         let clamped = min(max(1, Int(newPreset.rounded())), Self.maxTotalSeconds)
         draftSeconds = clamped
@@ -200,7 +220,7 @@ struct TargetShutterInputState: Equatable {
     ///
     /// Use `applyFineContinuousScroll(hours:minutes:seconds:)`
     /// instead for mid-scroll observer callbacks.
-    mutating func applyFineChange(hours: Int, minutes: Int, seconds: Int) {
+    public mutating func applyFineChange(hours: Int, minutes: Int, seconds: Int) {
         guard !isDraftCleared else { return }
         let raw = hours * 3600 + minutes * 60 + seconds
         let clamped = max(0, min(raw, Self.maxTotalSeconds))
@@ -219,7 +239,7 @@ struct TargetShutterInputState: Equatable {
     /// `applyFineChange`.
     ///
     /// **No-ops when `isDraftCleared`.**
-    mutating func applyFineContinuousScroll(hours: Int, minutes: Int, seconds: Int) {
+    public mutating func applyFineContinuousScroll(hours: Int, minutes: Int, seconds: Int) {
         guard !isDraftCleared else { return }
         let raw = hours * 3600 + minutes * 60 + seconds
         let clamped = max(0, min(raw, Self.maxTotalSeconds))
@@ -238,7 +258,7 @@ struct TargetShutterInputState: Equatable {
     /// `quickWheelAnchor`, and `fineHours / fineMinutes / fineSeconds`
     /// are intentionally preserved so toggling the switch back On
     /// can restore the previous draft without a snap.
-    mutating func clearDraft() {
+    public mutating func clearDraft() {
         quickSelectedPreset = nil
         isDraftCleared = true
     }
@@ -250,7 +270,7 @@ struct TargetShutterInputState: Equatable {
     /// seeds the draft from the provided seed value (e.g. the
     /// initial committed target / last-used memory) or falls back
     /// to the default seed.
-    mutating func reArmDraft(seedSeconds: TimeInterval?, quickPresets: [TimeInterval]) {
+    public mutating func reArmDraft(seedSeconds: TimeInterval?, quickPresets: [TimeInterval]) {
         isDraftCleared = false
         guard draftSeconds == 0 else {
             return
@@ -278,7 +298,7 @@ struct TargetShutterInputState: Equatable {
     /// highlight must not persist while Fine is the active source);
     /// switching to Quick does **not** auto-select — selection
     /// returns only when the user actually taps a preset.
-    mutating func setActiveMode(_ mode: InputMode, quickPresets: [TimeInterval]) {
+    public mutating func setActiveMode(_ mode: InputMode, quickPresets: [TimeInterval]) {
         activeMode = mode
         switch mode {
         case .quick:
@@ -298,7 +318,7 @@ struct TargetShutterInputState: Equatable {
 
     /// Closest preset to `value` by absolute distance, or `nil` for
     /// an empty preset list.
-    static func nearestPreset(
+    public static func nearestPreset(
         to value: TimeInterval,
         in presets: [TimeInterval]
     ) -> TimeInterval? {

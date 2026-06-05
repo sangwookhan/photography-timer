@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// FilmModeDetailsGraphRendering owns the path geometry and region
 /// drawing for the reciprocity formula graph. Splitting it out of

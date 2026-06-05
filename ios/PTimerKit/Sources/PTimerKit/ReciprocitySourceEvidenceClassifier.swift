@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Presentation-only classifier for `ReciprocitySourceEvidenceRow`.
 /// Recognizes the manufacturer stop-signal pattern — a row whose only
@@ -11,8 +10,8 @@ import PTimerKit
 ///
 /// Kept distinct from the reciprocity domain so domain rules are not
 /// expanded for presentation needs.
-enum ReciprocitySourceEvidenceClassifier {
-    static func isGuidanceBoundary(_ row: ReciprocitySourceEvidenceRow) -> Bool {
+public enum ReciprocitySourceEvidenceClassifier {
+    public static func isGuidanceBoundary(_ row: ReciprocitySourceEvidenceRow) -> Bool {
         let hasNotRecommendedWarning = row.adjustments.contains { adjustment in
             if case let .warning(warning) = adjustment, warning.severity == .notRecommended {
                 return true

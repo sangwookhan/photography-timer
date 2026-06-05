@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Selector-facing reciprocity prediction support state for one film
 /// selector row. Pure value transform produced by
@@ -10,7 +9,7 @@ import PTimerKit
 /// The four meaningful cases differ both by shape (icon vs. text
 /// badge) and by accessibility wording so a row's support state is
 /// readable independent of color.
-enum FilmSelectorSupportDisplayState: Equatable {
+public enum FilmSelectorSupportDisplayState: Equatable {
     /// No indicator. Used by the "No film" sentinel row and by
     /// catalog-less profile sources whose authority is `.unknown`.
     case none
@@ -47,7 +46,7 @@ enum FilmSelectorSupportDisplayState: Equatable {
     /// SF Symbol rendered alongside official-profile rows. `nil`
     /// for the unofficial / custom badge cases (rendered as text)
     /// and for `.none`.
-    var iconSystemName: String? {
+    public var iconSystemName: String? {
         switch self {
         case .officialQuantifiedPrediction:
             return "chart.line.uptrend.xyaxis"
@@ -64,7 +63,7 @@ enum FilmSelectorSupportDisplayState: Equatable {
     /// unofficial and custom cases. `nil` for every other state.
     /// Both badges are textual so a row cannot be misread as
     /// official from icon shape or color alone.
-    var unofficialBadgeText: String? {
+    public var unofficialBadgeText: String? {
         switch self {
         case .unofficialPractical:
             return "Unofficial"
@@ -82,7 +81,7 @@ enum FilmSelectorSupportDisplayState: Equatable {
     /// composed VoiceOver label so users hear the full meaning of
     /// the indicator instead of a generic icon description. `nil`
     /// for `.none` (no indicator → nothing to announce).
-    var accessibilityLabel: String? {
+    public var accessibilityLabel: String? {
         switch self {
         case .none:
             return nil
@@ -113,7 +112,7 @@ enum FilmSelectorSupportDisplayState: Equatable {
 /// `.official` authorities, the rule set decides between quantified
 /// prediction, limited guidance, and no quantified prediction.
 /// `.unknown` collapses to `.none`.
-enum FilmSelectorSupportPresenter {
+public enum FilmSelectorSupportPresenter {
     /// Classifies a film / profile-override pair for the selector
     /// row. When a `profileOverride` is supplied (the unofficial
     /// practical row variant), the override's authority drives the
@@ -121,7 +120,7 @@ enum FilmSelectorSupportPresenter {
     /// not leak through. When no override is supplied, the film's
     /// first profile (the launch catalog's official primary, or the
     /// single user-defined profile on a custom film) is inspected.
-    static func makeSupportState(
+    public static func makeSupportState(
         for film: FilmIdentity?,
         profileOverride: ReciprocityProfile? = nil
     ) -> FilmSelectorSupportDisplayState {

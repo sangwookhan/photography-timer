@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Samples the formula graph's calculation curve — the identity
 /// segment through the no-correction zone joined to the formula
@@ -11,15 +10,33 @@ import PTimerKit
 /// no-correction-bound time; those callers reach them through the
 /// `static` surface so the sampler stays the single home for
 /// every formula-curve calculation.
-struct FilmModeDetailsGraphCurveSampler {
+public struct FilmModeDetailsGraphCurveSampler {
 
-    struct Inputs {
-        let rule: FormulaReciprocityRule
-        let profile: ReciprocityProfile
-        let currentMeteredExposureSeconds: Double
-        let tierUpperBoundSeconds: Double
-        let viewportLowerBoundSeconds: Double
-        let noCorrectionRangeUpperBoundSeconds: Double?
+    public init() {}
+
+    public struct Inputs {
+        public let rule: FormulaReciprocityRule
+        public let profile: ReciprocityProfile
+        public let currentMeteredExposureSeconds: Double
+        public let tierUpperBoundSeconds: Double
+        public let viewportLowerBoundSeconds: Double
+        public let noCorrectionRangeUpperBoundSeconds: Double?
+
+        public init(
+            rule: FormulaReciprocityRule,
+            profile: ReciprocityProfile,
+            currentMeteredExposureSeconds: Double,
+            tierUpperBoundSeconds: Double,
+            viewportLowerBoundSeconds: Double,
+            noCorrectionRangeUpperBoundSeconds: Double?
+        ) {
+            self.rule = rule
+            self.profile = profile
+            self.currentMeteredExposureSeconds = currentMeteredExposureSeconds
+            self.tierUpperBoundSeconds = tierUpperBoundSeconds
+            self.viewportLowerBoundSeconds = viewportLowerBoundSeconds
+            self.noCorrectionRangeUpperBoundSeconds = noCorrectionRangeUpperBoundSeconds
+        }
     }
 
     /// Source path drawn by the formula graph: identity (Tc = Tm)
@@ -39,7 +56,7 @@ struct FilmModeDetailsGraphCurveSampler {
     /// `(threshold, threshold)`. The seam-deduplication guard below
     /// still drops a duplicate point in the rare case where the two
     /// segments happen to land on the same (x, y).
-    func sourcePoints(_ inputs: Inputs) -> [FilmModeDetailsGraphPoint] {
+    public func sourcePoints(_ inputs: Inputs) -> [FilmModeDetailsGraphPoint] {
         let formulaPoints = formulaSegmentPoints(
             for: inputs.rule,
             profile: inputs.profile,
@@ -175,19 +192,33 @@ struct FilmModeDetailsGraphCurveSampler {
 
     // MARK: - Table log-log curve (PTIMER-159)
 
-    struct TableInputs {
-        let rule: TableInterpolationReciprocityRule
-        let profile: ReciprocityProfile
-        let currentMeteredExposureSeconds: Double
-        let tierUpperBoundSeconds: Double
-        let viewportLowerBoundSeconds: Double
+    public struct TableInputs {
+        public let rule: TableInterpolationReciprocityRule
+        public let profile: ReciprocityProfile
+        public let currentMeteredExposureSeconds: Double
+        public let tierUpperBoundSeconds: Double
+        public let viewportLowerBoundSeconds: Double
+
+        public init(
+            rule: TableInterpolationReciprocityRule,
+            profile: ReciprocityProfile,
+            currentMeteredExposureSeconds: Double,
+            tierUpperBoundSeconds: Double,
+            viewportLowerBoundSeconds: Double
+        ) {
+            self.rule = rule
+            self.profile = profile
+            self.currentMeteredExposureSeconds = currentMeteredExposureSeconds
+            self.tierUpperBoundSeconds = tierUpperBoundSeconds
+            self.viewportLowerBoundSeconds = viewportLowerBoundSeconds
+        }
     }
 
     /// Source path for a log-log table profile: identity through the
     /// no-correction zone joined to the interpolated table curve. Mirrors
     /// `sourcePoints(_:)` so the graph view renders a table model the same
     /// way it renders a formula model.
-    func tableSourcePoints(_ inputs: TableInputs) -> [FilmModeDetailsGraphPoint] {
+    public func tableSourcePoints(_ inputs: TableInputs) -> [FilmModeDetailsGraphPoint] {
         let curvePoints = tableSegmentPoints(
             for: inputs.rule,
             currentMeteredExposureSeconds: inputs.currentMeteredExposureSeconds,
@@ -262,7 +293,7 @@ struct FilmModeDetailsGraphCurveSampler {
 
     /// Corrected exposure for a table rule at a metered value, using the
     /// shared evaluator so the graph curve agrees with the policy result.
-    static func tableCorrectedExposureSeconds(
+    public static func tableCorrectedExposureSeconds(
         for rule: TableInterpolationReciprocityRule,
         meteredExposureSeconds: Double
     ) -> Double? {
@@ -278,7 +309,7 @@ struct FilmModeDetailsGraphCurveSampler {
 
     /// No-correction upper bounds carried by the profile's table rules,
     /// so the graph overlay can draw the green band for a table model.
-    static func profileTableNoCorrectionUpperBounds(
+    public static func profileTableNoCorrectionUpperBounds(
         in profile: ReciprocityProfile
     ) -> [Double] {
         profile.rules.compactMap { rule -> Double? in
@@ -295,7 +326,7 @@ struct FilmModeDetailsGraphCurveSampler {
     /// green no-correction band even though the formula now owns its
     /// own guard (the threshold rule was retired from formula
     /// profiles in PTIMER-160).
-    static func profileFormulaNoCorrectionUpperBounds(
+    public static func profileFormulaNoCorrectionUpperBounds(
         in profile: ReciprocityProfile
     ) -> [Double] {
         profile.rules.compactMap { rule -> Double? in
@@ -310,7 +341,7 @@ struct FilmModeDetailsGraphCurveSampler {
     /// Source-range upper bound for the profile's first formula rule
     /// (if any). Shared by the graph presenter so the beyond-source
     /// region matches the calculation policy.
-    static func profileFormulaSourceRangeUpperBoundSeconds(
+    public static func profileFormulaSourceRangeUpperBoundSeconds(
         in profile: ReciprocityProfile
     ) -> Double? {
         for rule in profile.rules {
@@ -321,7 +352,7 @@ struct FilmModeDetailsGraphCurveSampler {
         return nil
     }
 
-    static func formulaCorrectedExposureSeconds(
+    public static func formulaCorrectedExposureSeconds(
         for formula: ReciprocityFormula,
         meteredExposureSeconds: Double
     ) -> Double? {
@@ -342,7 +373,7 @@ struct FilmModeDetailsGraphCurveSampler {
         }
     }
 
-    static func logInterpolatedValue(
+    public static func logInterpolatedValue(
         minimum: Double,
         maximum: Double,
         progress: Double
@@ -352,7 +383,7 @@ struct FilmModeDetailsGraphCurveSampler {
         return pow(10, minimumLog + ((maximumLog - minimumLog) * progress))
     }
 
-    static func profileUsesFormula(_ profile: ReciprocityProfile) -> Bool {
+    public static func profileUsesFormula(_ profile: ReciprocityProfile) -> Bool {
         profile.rules.contains(where: {
             if case .formula = $0 { return true }
             return false

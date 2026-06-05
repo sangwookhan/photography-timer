@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Pure presenter for the Film Details reciprocity graph.
 ///
@@ -20,17 +19,29 @@ import PTimerKit
 /// (Kodak limited-guidance profiles). Returning `nil` is the same
 /// signal the legacy table-graph kind used; consumers treat a `nil`
 /// graph as "no graph".
-struct FilmModeDetailsGraphPresenter {
+public struct FilmModeDetailsGraphPresenter {
 
-    struct Input {
-        let bindingState: FilmModeReciprocityBindingState
-        let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
-        let formatDuration: (Double) -> String
+    public init() {}
+
+    public struct Input {
+        public let bindingState: FilmModeReciprocityBindingState
+        public let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
+        public let formatDuration: (Double) -> String
+
+        public init(
+            bindingState: FilmModeReciprocityBindingState,
+            calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>,
+            formatDuration: @escaping (Double) -> String
+        ) {
+            self.bindingState = bindingState
+            self.calculationResult = calculationResult
+            self.formatDuration = formatDuration
+        }
     }
 
     // MARK: - Public entry point
 
-    func graphDisplayState(for input: Input) -> FilmModeDetailsGraphDisplayState? {
+    public func graphDisplayState(for input: Input) -> FilmModeDetailsGraphDisplayState? {
         guard case .success(let result) = input.calculationResult,
               result.resultShutterSeconds > 0 else {
             return nil

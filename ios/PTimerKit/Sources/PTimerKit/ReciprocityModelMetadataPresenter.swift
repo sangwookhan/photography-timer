@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Pure presenter for the "Reciprocity model" metadata section in
 /// Reciprocity Details (PTIMER-159).
@@ -12,15 +11,17 @@ import PTimerKit
 /// corrected exposure. Rendered for every film so the absence of a
 /// quantified prediction reads as "nothing special here" rather than
 /// missing information.
-struct ReciprocityModelMetadataPresenter {
+public struct ReciprocityModelMetadataPresenter {
 
-    static let sectionTitle = "Reciprocity model"
+    public static let sectionTitle = "Reciprocity model"
+
+    public init() {}
 
     /// Compact 2-row summary (PTIMER-159): Source + Calculation. The
     /// film name is the sheet header and the authority is the subtitle,
     /// so they are not repeated here — this keeps Details readable
     /// rather than a large per-film metadata table.
-    func metadataSection(
+    public func metadataSection(
         film: FilmIdentity,
         profile: ReciprocityProfile
     ) -> FilmModeDetailsSectionState {

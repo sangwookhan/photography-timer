@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Pure-value transform from raw Target Shutter inputs (target seconds
 /// + active comparison form) into the display-state the SwiftUI card
@@ -15,7 +14,7 @@ import PTimerKit
 /// comparison value; negative means shorter. Values within
 /// `matchEpsilon` collapse to `Target matches calculated exposure`
 /// so a 0.0001-stop drift never renders as `+0.00 stops`.
-enum TargetShutterPresenter {
+public enum TargetShutterPresenter {
     /// Threshold below which a stop difference is considered a match.
     /// Reserved for backwards compatibility with callers that read
     /// `matchEpsilon` directly; the canonical match check inside the
@@ -23,7 +22,7 @@ enum TargetShutterPresenter {
     /// gives a slightly larger match band (≈ 0–1/6 stop) and
     /// eliminates the awkward `+0 stops` / `−0 stops` outputs that
     /// happen when an off-match value still rounds to 0 thirds.
-    static let matchEpsilon = 1.0 / 24.0
+    public static let matchEpsilon = 1.0 / 24.0
 
     /// Source for the comparison value the presenter receives from
     /// the facade. Carrying the source as input (not `nil` /
@@ -31,7 +30,7 @@ enum TargetShutterPresenter {
     /// `available(comparison: nil)` state when the photographer has
     /// set a target but no comparison is meaningful, distinct from
     /// the inactive state.
-    enum ComparisonSource: Equatable {
+    public enum ComparisonSource: Equatable {
         /// Digital workflow — compare against Adjusted Shutter.
         case adjustedShutter(TimeInterval)
         /// Film workflow with a quantified corrected exposure.
@@ -48,7 +47,7 @@ enum TargetShutterPresenter {
     /// `unavailable` produces the `noComparisonAvailable` state with
     /// the target preserved; otherwise the available form with a
     /// quantified stop difference.
-    static func makeDisplayState(
+    public static func makeDisplayState(
         targetSeconds: TimeInterval?,
         comparisonSource: ComparisonSource
     ) -> TargetShutterDisplayState {
@@ -88,7 +87,7 @@ enum TargetShutterPresenter {
     /// pair the number with the `equal` arrow and stay compact; the
     /// long-sentence "Target matches calculated exposure" is no
     /// longer the canonical form.
-    static func formatStopDifference(_ stops: Double) -> TargetShutterStopDifference {
+    public static func formatStopDifference(_ stops: Double) -> TargetShutterStopDifference {
         guard stops.isFinite else {
             return TargetShutterStopDifference(
                 stops: 0,

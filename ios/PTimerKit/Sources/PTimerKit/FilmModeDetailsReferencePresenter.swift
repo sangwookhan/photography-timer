@@ -1,5 +1,4 @@
 import Foundation
-import PTimerKit
 
 /// Pure presenter for the Film Details "Reference" / "Source
 /// reference" / "Guidance boundary" / "Sources" sections.
@@ -10,16 +9,28 @@ import PTimerKit
 /// citation footer. Kept distinct from the graph presenter so a new
 /// secondary-guidance kind (color filter, development directive,
 /// note) can be added with no risk of disturbing the graph geometry.
-struct FilmModeDetailsReferencePresenter {
+public struct FilmModeDetailsReferencePresenter {
+
+    public init() {}
 
     /// Bundle of input passed by the orchestrating presenter. Re-uses
     /// the closure-driven formatters owned by `ReciprocityModel` so
     /// the reference rows agree with the corrected-exposure card on
     /// duration formatting.
-    struct Input {
-        let bindingState: FilmModeReciprocityBindingState
-        let formatDuration: (Double) -> String
-        let formatDurationCoarse: (Double) -> String
+    public struct Input {
+        public let bindingState: FilmModeReciprocityBindingState
+        public let formatDuration: (Double) -> String
+        public let formatDurationCoarse: (Double) -> String
+
+        public init(
+            bindingState: FilmModeReciprocityBindingState,
+            formatDuration: @escaping (Double) -> String,
+            formatDurationCoarse: @escaping (Double) -> String
+        ) {
+            self.bindingState = bindingState
+            self.formatDuration = formatDuration
+            self.formatDurationCoarse = formatDurationCoarse
+        }
     }
 
     // MARK: - Public entry points
@@ -29,7 +40,7 @@ struct FilmModeDetailsReferencePresenter {
     /// (quantified anchors + the no-correction band) and "Guidance
     /// boundary" (stop-signal-only rows). Always appends the
     /// "Sources" citation rows when the profile carries any.
-    func formulaSections(for input: Input) -> [FilmModeDetailsSectionState] {
+    public func formulaSections(for input: Input) -> [FilmModeDetailsSectionState] {
         let evidenceSections = sourceEvidenceSections(for: input)
         let sourceRows = sourceDetailsRows(for: input.bindingState.profile)
 
@@ -43,7 +54,7 @@ struct FilmModeDetailsReferencePresenter {
 
     /// Builds the sections for non-formula (limited-guidance preset)
     /// profiles: a single "Reference" block plus the citation footer.
-    func limitedGuidanceSections(for input: Input) -> [FilmModeDetailsSectionState] {
+    public func limitedGuidanceSections(for input: Input) -> [FilmModeDetailsSectionState] {
         let referenceRows = limitedGuidanceReferenceRows(for: input)
         let sourceRows = sourceDetailsRows(for: input.bindingState.profile)
 

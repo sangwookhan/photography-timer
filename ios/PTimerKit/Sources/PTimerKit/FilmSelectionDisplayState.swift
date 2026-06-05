@@ -1,33 +1,32 @@
 import Foundation
-import PTimerKit
 
-struct FilmSelectorEntry: Equatable, Identifiable {
-    let id: String
-    let primaryText: String
-    let secondaryText: String?
-    let manufacturer: String?
-    let film: FilmIdentity?
-    let profileOverride: ReciprocityProfile?
+public struct FilmSelectorEntry: Equatable, Identifiable {
+    public let id: String
+    public let primaryText: String
+    public let secondaryText: String?
+    public let manufacturer: String?
+    public let film: FilmIdentity?
+    public let profileOverride: ReciprocityProfile?
     /// Selector-facing support state. Drives the row's compact
     /// indicator (icon or "Unofficial" badge) and the accessibility
     /// label fragment.
-    let supportState: FilmSelectorSupportDisplayState
+    public let supportState: FilmSelectorSupportDisplayState
     /// `true` when the row is the explicit "New custom film" action
     /// rendered near the top of the selector. The view routes a tap
     /// on this row to the editor instead of through
     /// `selectEntry(_:)`; it is never marked selected.
-    let isCreateCustomFilmAction: Bool
+    public let isCreateCustomFilmAction: Bool
 
     /// Canonical `FilmIdentity.id` for the custom film backing
     /// this row, or `nil` when the row is not a custom film.
     /// Edit/delete actions read this helper to address the custom
     /// library when the row id differs from the film id.
-    var canonicalCustomFilmID: String? {
+    public var canonicalCustomFilmID: String? {
         guard let film, film.kind == .custom else { return nil }
         return film.id
     }
 
-    init(
+    public init(
         id: String,
         primaryText: String,
         secondaryText: String? = nil,
@@ -48,9 +47,17 @@ struct FilmSelectorEntry: Equatable, Identifiable {
     }
 }
 
-struct FilmSelectionDisplayState: Equatable {
-    let primaryText: String
-    let secondaryText: String?
+public struct FilmSelectionDisplayState: Equatable {
+    public let primaryText: String
+    public let secondaryText: String?
+
+    public init(
+        primaryText: String,
+        secondaryText: String?
+    ) {
+        self.primaryText = primaryText
+        self.secondaryText = secondaryText
+    }
 }
 
 /// One manufacturer-grouped section of the film selector overlay.
@@ -61,19 +68,41 @@ struct FilmSelectionDisplayState: Equatable {
 /// row outside of any card. Future fold/unfold UX can be added without
 /// changing the section data shape — the model already partitions
 /// entries the way a grouped list expects them.
-struct FilmSelectorSection: Equatable, Identifiable {
+public struct FilmSelectorSection: Equatable, Identifiable {
     /// Stable identity used by SwiftUI's `ForEach`. `"no-film"` for the
     /// sentinel section, otherwise the manufacturer label.
-    let id: String
+    public let id: String
     /// `nil` for the "No film" sentinel section; otherwise the
     /// manufacturer label rendered as the group card header.
-    let manufacturer: String?
-    let entries: [FilmSelectorEntry]
+    public let manufacturer: String?
+    public let entries: [FilmSelectorEntry]
+
+    public init(
+        id: String,
+        manufacturer: String?,
+        entries: [FilmSelectorEntry]
+    ) {
+        self.id = id
+        self.manufacturer = manufacturer
+        self.entries = entries
+    }
 }
 
-struct FilmModeReciprocityBindingState: Equatable {
-    let film: FilmIdentity
-    let profile: ReciprocityProfile
-    let policyResult: ReciprocityResult
-    let presentation: ReciprocityConfidencePresentation
+public struct FilmModeReciprocityBindingState: Equatable {
+    public let film: FilmIdentity
+    public let profile: ReciprocityProfile
+    public let policyResult: ReciprocityResult
+    public let presentation: ReciprocityConfidencePresentation
+
+    public init(
+        film: FilmIdentity,
+        profile: ReciprocityProfile,
+        policyResult: ReciprocityResult,
+        presentation: ReciprocityConfidencePresentation
+    ) {
+        self.film = film
+        self.profile = profile
+        self.policyResult = policyResult
+        self.presentation = presentation
+    }
 }

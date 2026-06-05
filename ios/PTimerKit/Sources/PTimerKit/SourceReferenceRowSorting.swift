@@ -8,7 +8,7 @@ import Foundation
 /// without the ordering depending on label text or column count.
 /// (`pointAnchor` before `range` is the recommended priority; see
 /// `SourceReferenceRowSortKey`.)
-enum SourceReferenceRowKind: Int, Comparable {
+public enum SourceReferenceRowKind: Int, Comparable {
     /// A single published exposure anchor (`exactSeconds` metered
     /// exposure). Example: ADOX CMS 20 II's 1 s +1/2 stop row,
     /// FOMA's published multiplier rows at 1 / 10 / 100 s, Provia's
@@ -56,12 +56,18 @@ enum SourceReferenceRowKind: Int, Comparable {
 ///
 /// This struct is deliberately presentation-only — calculation and
 /// graph rendering do not depend on row order.
-struct SourceReferenceRowSortKey: Comparable {
-    let sortValue: Double
-    let kind: SourceReferenceRowKind
-    let catalogOffset: Int
+public struct SourceReferenceRowSortKey: Comparable {
+    public let sortValue: Double
+    public let kind: SourceReferenceRowKind
+    public let catalogOffset: Int
 
-    static func < (lhs: Self, rhs: Self) -> Bool {
+    public init(sortValue: Double, kind: SourceReferenceRowKind, catalogOffset: Int) {
+        self.sortValue = sortValue
+        self.kind = kind
+        self.catalogOffset = catalogOffset
+    }
+
+    public static func < (lhs: Self, rhs: Self) -> Bool {
         if lhs.sortValue != rhs.sortValue {
             return lhs.sortValue < rhs.sortValue
         }

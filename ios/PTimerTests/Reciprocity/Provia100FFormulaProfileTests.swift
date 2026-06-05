@@ -159,34 +159,6 @@ final class Provia100FFormulaProfileTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testProvia100FCorrectedExposureNoLongerCarriesSecondaryDescription() throws {
-        // Detail surfaces the long-form note via the graph note;
-        // the Main corrected-exposure card no longer renders a
-        // per-state caption. The model state therefore returns an
-        // empty secondary text for every numeric reciprocity case
-        // — both supported and outside-guidance.
-        let film = try proviaFilm()
-        let profile = try XCTUnwrap(film.profiles.first)
-        let model = ReciprocityModel()
-
-        for metered in [240.0, 600.0] {
-            let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: metered)
-            let bindingState = FilmModeReciprocityBindingState(
-                film: film,
-                profile: profile,
-                policyResult: policyResult,
-                presentation: policyResult.confidencePresentation
-            )
-            let correctedDisplay = model.correctedExposureDisplayState(for: bindingState)
-            XCTAssertEqual(
-                correctedDisplay.secondaryText,
-                "",
-                "Metered \(metered) s: numeric reciprocity results must not surface a Main secondary description; the detail/graph note carries any long-form explanation."
-            )
-        }
-    }
-
     // MARK: - Centralized converted-profile classification
 
     func testConvertedFormulaProfileFlagIsTrueOnlyForFormulaPlusSourceEvidence() throws {

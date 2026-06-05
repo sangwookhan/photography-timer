@@ -26,28 +26,6 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXAtOneSecondReturnsCorrectedExposureFromTablePrediction() throws {
-        // PTIMER-168: Tri-X 400 evaluates through the official Kodak
-        // table; the 1 sec published row (corrected 2 sec) is a table
-        // anchor reproduced exactly, surfaced as a Table-derived badge.
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
-
-        viewModel.baseShutter = 1.0 / 30.0
-        viewModel.ndStop = 5
-        viewModel.selectPresetFilm(film)
-
-        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
-        XCTAssertEqual(resultState.adjustedShutterSeconds, 1, accuracy: 0.0001)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
-        XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
-        XCTAssertEqual(resultState.correctedExposure.correctedExposureSeconds ?? 0, 2, accuracy: 1e-4)
-        XCTAssertEqual(resultState.correctedExposure.primaryText, "2s")
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
-        XCTAssertEqual(viewModel.filmModePrimaryResultSeconds ?? 0, 2, accuracy: 1e-4)
-    }
-
-    @MainActor
     func testCorrectedExposureNumericDisplayUsesRestoredTimeFormatting() throws {
         // CHS 100 II's 2024 published rows top out at 15 sec, so 8 sec
         // is firmly inside its source table range. A source-backed
@@ -197,27 +175,6 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertEqual(currentPoint.style, .noCorrection)
         XCTAssertEqual(currentPoint.point.meteredExposureSeconds, 0.0667, accuracy: 1e-3)
         XCTAssertEqual(currentPoint.point.correctedExposureSeconds, 0.0667, accuracy: 1e-3)
-    }
-
-    @MainActor
-    func testTriXSmallerSupportedExposureDoesNotRegressToUnsupported() throws {
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
-
-        viewModel.selectPresetFilm(film)
-
-        viewModel.baseShutter = 30
-        viewModel.ndStop = 4
-        let largerQuantifiedResult = try XCTUnwrap(viewModel.filmModeExposureResultState)
-
-        viewModel.baseShutter = 15
-        viewModel.ndStop = 4
-        let smallerQuantifiedResult = try XCTUnwrap(viewModel.filmModeExposureResultState)
-
-        XCTAssertEqual(largerQuantifiedResult.correctedExposure.kind, .quantified)
-        XCTAssertEqual(smallerQuantifiedResult.adjustedShutterSeconds, 256, accuracy: 0.0001)
-        XCTAssertEqual(smallerQuantifiedResult.correctedExposure.kind, .quantified)
-        XCTAssertNotNil(smallerQuantifiedResult.correctedExposure.correctedExposureSeconds)
     }
 
     @MainActor

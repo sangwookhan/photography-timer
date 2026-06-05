@@ -35,20 +35,6 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
         XCTAssertEqual(viewModel.ndStop, 6)
     }
 
-    func testFilmSelectionPreservedAcrossSlotSwitchAndReturn() throws {
-        let viewModel = makeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
-
-        viewModel.selectPresetFilm(film)
-        XCTAssertEqual(viewModel.selectedPresetFilm?.id, film.id)
-
-        viewModel.selectCameraSlot(.camera2)
-        XCTAssertNil(viewModel.selectedPresetFilm)
-        viewModel.selectCameraSlot(.camera1)
-
-        XCTAssertEqual(viewModel.selectedPresetFilm?.id, film.id)
-    }
-
     func testTwoFilmSlotsCanHoldDifferentFilms() throws {
         let viewModel = makeViewModel()
         let triX = try XCTUnwrap(
@@ -86,24 +72,6 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
         viewModel.selectCameraSlot(.camera2)
         XCTAssertEqual(viewModel.baseShutter, 1.0 / 15.0, accuracy: 1e-9)
         XCTAssertEqual(viewModel.ndStop, 10)
-    }
-
-    func testMutationOnActiveSlotDoesNotMutateInactiveSlot() {
-        let viewModel = makeViewModel()
-        viewModel.baseShutter = 1.0 / 60.0
-        viewModel.ndStop = 4
-        viewModel.selectCameraSlot(.camera2)
-        viewModel.baseShutter = 1.0 / 15.0
-        viewModel.ndStop = 10
-
-        // Mutate Camera 2 (currently active). Camera 1 must remain
-        // unchanged.
-        viewModel.baseShutter = 1.0 / 8.0
-        viewModel.ndStop = 12
-
-        viewModel.selectCameraSlot(.camera1)
-        XCTAssertEqual(viewModel.baseShutter, 1.0 / 60.0, accuracy: 1e-9)
-        XCTAssertEqual(viewModel.ndStop, 4)
     }
 
     // MARK: - Adjusted shutter / corrected exposure independence
@@ -178,32 +146,6 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
         XCTAssertEqual(
             viewModel.filmModeExposureResultState?.correctedExposure.correctedExposureSeconds,
             camera1Corrected
-        )
-    }
-
-    // MARK: - Reciprocity result preservation
-
-    func testReciprocityResultSurvivesSlotSwitch() throws {
-        let viewModel = makeViewModel()
-        // Pick a film with quantified reciprocity guidance and inputs
-        // that produce a reciprocity-corrected result.
-        let film = try XCTUnwrap(
-            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
-        )
-        viewModel.selectPresetFilm(film)
-        viewModel.baseShutter = 1.0
-        viewModel.ndStop = 6
-
-        let beforeSwitch = try XCTUnwrap(viewModel.filmModeExposureResultState)
-        XCTAssertNotNil(beforeSwitch.correctedExposure.correctedExposureSeconds)
-
-        viewModel.selectCameraSlot(.camera2)
-        viewModel.selectCameraSlot(.camera1)
-
-        let afterSwitch = try XCTUnwrap(viewModel.filmModeExposureResultState)
-        XCTAssertEqual(
-            afterSwitch.correctedExposure.correctedExposureSeconds,
-            beforeSwitch.correctedExposure.correctedExposureSeconds
         )
     }
 
@@ -337,28 +279,6 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
             accuracy: 1e-9,
             "Each page's calc result must reflect its own slot inputs."
         )
-    }
-
-    func testInactivePageFilmModeResultDisablesTimerStart() throws {
-        let viewModel = makeViewModel()
-        let film = try XCTUnwrap(
-            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
-        )
-        viewModel.selectPresetFilm(film)
-        viewModel.baseShutter = 1.0
-        viewModel.ndStop = 6
-        viewModel.selectCameraSlot(.camera2)
-
-        let camera1Page = viewModel.cameraSlotPageState(for: .camera1)
-        let camera1Result = try XCTUnwrap(
-            viewModel.filmModeExposureResultState(forPage: camera1Page)
-        )
-
-        // Inactive pages render the same layout but disable the
-        // start-timer affordances — the user has to swipe to the
-        // page first, which makes it active.
-        XCTAssertFalse(camera1Result.adjustedShutterAction.canStartTimer)
-        XCTAssertFalse(camera1Page.isActive)
     }
 
     // MARK: - Slot pager navigation

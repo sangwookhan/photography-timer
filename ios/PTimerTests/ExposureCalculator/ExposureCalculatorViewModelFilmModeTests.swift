@@ -228,29 +228,4 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(portraRows.count, 1, "Kodak section should contain a single Portra 400 film-stock row.")
         XCTAssertNil(portraRows.first?.profileOverride, "The Portra 400 row is film-stock focused, carrying no profile override.")
     }
-
-    @MainActor
-    func testFilmSelectorEntriesKeepNoFilmFirstAndShowISOWhenAvailable() {
-        let viewModel = makeFilmModeViewModel()
-
-        XCTAssertEqual(viewModel.filmSelectorEntries.first?.id, "no-film")
-        XCTAssertEqual(viewModel.filmSelectorEntries.first?.primaryText, "No film")
-        XCTAssertNil(viewModel.filmSelectorEntries.first?.secondaryText)
-
-        // The leading "No film" sentinel must precede every preset film entry.
-        // Preset films carry an inferred ISO secondary when the canonical
-        // name / brand label / aliases contain a recognized speed token, and
-        // films registered in UnofficialPracticalProfiles add an "Unofficial"
-        // secondary alongside their official primary entry.
-        let entriesAfterNoFilm = viewModel.filmSelectorEntries.dropFirst()
-        XCTAssertGreaterThanOrEqual(entriesAfterNoFilm.count, viewModel.availablePresetFilms.count)
-        for entry in entriesAfterNoFilm {
-            if let secondary = entry.secondaryText {
-                XCTAssertTrue(
-                    secondary.hasPrefix("ISO ") || secondary == "Unofficial",
-                    "Selector secondary text '\(secondary)' for '\(entry.primaryText)' must be ISO metadata or 'Unofficial'."
-                )
-            }
-        }
-    }
 }

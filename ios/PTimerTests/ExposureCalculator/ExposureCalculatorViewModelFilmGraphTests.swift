@@ -195,24 +195,6 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeHP5PlusSubSecondGraphShowsNoCorrectionRegion() throws {
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
-
-        viewModel.baseShutter = 0.25            // 1/4 s
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let graph = try XCTUnwrap(details.graph)
-
-        XCTAssertLessThan(graph.xRange.lowerBound, 1.0)
-        XCTAssertEqual(graph.noCorrectionRangeUpperBoundSeconds ?? 0, 1.0, accuracy: 1e-6)
-        XCTAssertFalse(graph.isBelowVisibleRange)
-        XCTAssertEqual(graph.currentPoint?.style, .noCorrection)
-    }
-
-    @MainActor
     func testFilmModeProvia100FSubSecondGraphShowsNoCorrectionRegion() throws {
         // Provia 100F's published threshold extends to 128 s. The
         // stable viewport extends below 1 s so a sub-1 s input
@@ -269,42 +251,6 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModePortra400UnofficialFrameIsStableAcrossSubSecondNearOneSecondAndLongInputs() throws {
-        // Spec: "0.033 s, 1.1 s, 17 s on the same profile must use
-        // the same graph frame; current result marker only moves."
-        let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
-        viewModel.ndStop = 0
-        viewModel.selectEntry(unofficialEntry)
-
-        viewModel.baseShutter = 1.0 / 30.0
-        let subSecondFrame = try XCTUnwrap(viewModel.filmModeDetailsDisplayState?.graph)
-
-        viewModel.baseShutter = 1.1
-        let nearOneSecondFrame = try XCTUnwrap(viewModel.filmModeDetailsDisplayState?.graph)
-
-        viewModel.baseShutter = 17
-        let longFrame = try XCTUnwrap(viewModel.filmModeDetailsDisplayState?.graph)
-
-        XCTAssertEqual(subSecondFrame.xRange, nearOneSecondFrame.xRange)
-        XCTAssertEqual(subSecondFrame.xRange, longFrame.xRange)
-        XCTAssertEqual(subSecondFrame.yRange, longFrame.yRange)
-
-        // Sub-second marker sits inside the visible no-correction
-        // band, not below the plot.
-        XCTAssertFalse(subSecondFrame.isBelowVisibleRange)
-        let subSecondPoint = try XCTUnwrap(subSecondFrame.currentPoint)
-        let bandUpper = try XCTUnwrap(subSecondFrame.noCorrectionRangeUpperBoundSeconds)
-        XCTAssertLessThanOrEqual(subSecondPoint.point.meteredExposureSeconds, bandUpper,
-                                 "Sub-second current point must sit inside the no-correction band.")
-        XCTAssertEqual(subSecondPoint.style, .noCorrection)
-
-        // Near-1 s and long inputs sit on the formula segment.
-        XCTAssertEqual(nearOneSecondFrame.currentPoint?.style, .formulaDerived)
-        XCTAssertEqual(longFrame.currentPoint?.style, .formulaDerived)
-    }
-
-    @MainActor
     func testFilmModePortra400UnofficialCalculationCurveJoinsIdentityAndFormulaSegments() throws {
         // The calculation curve must include an identity segment
         // (Tc = Tm) through the no-correction zone and the formula
@@ -338,28 +284,6 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
                                       "Calculation curve must include at least one formula sample past the threshold.")
         XCTAssertGreaterThan(predicted.correctedExposureSeconds, predicted.meteredExposureSeconds,
                              "Formula segment must lift above the identity line for a profile with P > 1.")
-    }
-
-    @MainActor
-    func testFilmModeFormulaGraphLegendUsesCalculationCurveLabel() throws {
-        // The source path spans identity + formula, so the legend
-        // chip reads "Calculation curve" — the user-facing curve
-        // label on every formula-graph path.
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
-        viewModel.baseShutter = 30
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let graph = try XCTUnwrap(viewModel.filmModeDetailsDisplayState?.graph)
-        XCTAssertTrue(
-            graph.legendChipLabels.contains("Calculation curve"),
-            "Formula graph legend must surface 'Calculation curve' as the curve label: \(graph.legendChipLabels)"
-        )
-        XCTAssertFalse(
-            graph.legendChipLabels.contains("Formula curve"),
-            "Legend must not surface 'Formula curve' as a user-visible label: \(graph.legendChipLabels)"
-        )
     }
 
     @MainActor

@@ -136,7 +136,34 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.title, "Adjusted Shutter")
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "4s")
+        // Both values stay below one minute, so no seconds comparison
+        // line is shown on the Detail card (PTIMER-172).
+        XCTAssertNil(details.currentResult.adjustedShutter.detailText)
         XCTAssertEqual(details.currentResult.correctedExposure.valueText, "15s")
+        XCTAssertNil(details.currentResult.correctedExposure.detailText)
+    }
+
+    /// PTIMER-172: the Adjusted Shutter Main card pairs a clock primary
+    /// with a whole-seconds secondary so a long exposure can be compared
+    /// against manufacturer source rows; shorter values stay seconds-only.
+    @MainActor
+    func testFormatReciprocityTimeDisplayPairsClockPrimaryWithSecondsComparison() {
+        let viewModel = makeFilmModeViewModel()
+
+        // Minutes band: "01:40" + "100s".
+        let minutesBand = viewModel.formatReciprocityTimeDisplay(100)
+        XCTAssertEqual(minutesBand.primary, "01:40")
+        XCTAssertEqual(minutesBand.secondary, "100s")
+
+        // Hours band: "02:29:43" + "8983s".
+        let hoursBand = viewModel.formatReciprocityTimeDisplay(8_983)
+        XCTAssertEqual(hoursBand.primary, "02:29:43")
+        XCTAssertEqual(hoursBand.secondary, "8983s")
+
+        // Below one minute keeps the concise seconds-only primary.
+        let shortValue = viewModel.formatReciprocityTimeDisplay(27)
+        XCTAssertEqual(shortValue.primary, "27s")
+        XCTAssertEqual(shortValue.secondary, "")
     }
 
     @MainActor
@@ -210,7 +237,11 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertEqual(resultState.reciprocityState.tone, .unsupported)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
+        // PTIMER-172: the ≈ 33,583 s (≈ 09:19:43) corrected exposure
+        // sits in the clock band, so the Main card pairs the clock
+        // primary with the matching whole-seconds value; the
+        // outside-guidance marker carries onto the seconds value.
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "≈33583s")
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .unsupportedOutOfPolicyRange)
         XCTAssertEqual(bindingState.presentation.category, .unsupported)
         XCTAssertTrue(bindingState.profile.usesTableInterpolation)
@@ -233,6 +264,10 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertEqual(resultState.reciprocityState.tone, .unsupported)
         XCTAssertEqual(resultState.correctedExposure.kind, .quantified)
         XCTAssertNotNil(resultState.correctedExposure.correctedExposureSeconds)
+        // PTIMER-172: this corrected exposure exceeds one day, so the
+        // primary coarsens to a "≈Nmo"/"≈Ny" bucket and no whole-seconds
+        // comparison line is shown (a raw seconds count is not a useful
+        // source-table comparison at that scale).
         XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
         XCTAssertEqual(bindingState.policyResult.metadata.basis, .unsupportedOutOfPolicyRange)
     }
@@ -339,7 +374,10 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
             resultState.correctedExposure.primaryText.hasPrefix("≈"),
             "Outside-guidance numeric values must be marked approximate; got: \(resultState.correctedExposure.primaryText)"
         )
-        XCTAssertEqual(resultState.correctedExposure.secondaryText, "")
+        // PTIMER-172: the ≈ 310 s (≈ 05:10) corrected exposure is in
+        // the clock band, so the Main card carries the matching
+        // whole-seconds value, marked approximate like the primary.
+        XCTAssertEqual(resultState.correctedExposure.secondaryText, "≈310s")
         XCTAssertTrue(resultState.hasQuantifiedCorrectedExposure)
 
         let bindingState = try XCTUnwrap(viewModel.filmReciprocityBindingState)

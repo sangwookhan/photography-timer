@@ -558,7 +558,14 @@ final class ExposureCalculatorViewModel: ObservableObject {
                 modelSelection: filmDetailsModelSelection,
                 formatDuration: { [self] in formatDuration($0) },
                 formatDurationCoarse: { [self] in formatReciprocityDurationCoarse($0) },
-                formatAxisDuration: { [self] in formatReciprocityAxisDuration($0) }
+                formatAxisDuration: { [self] in formatReciprocityAxisDuration($0) },
+                formatSecondsComparison: { [self] in
+                    // The Detail current-result card renders the coarse
+                    // duration without the Main card's outside-guidance
+                    // "≈" prefix, so the seconds comparison matches that
+                    // (non-approximate) treatment (PTIMER-172).
+                    reciprocityModel.formatReciprocitySecondsComparison($0, approximate: false)
+                }
             )
         )
     }
@@ -1395,7 +1402,15 @@ final class ExposureCalculatorViewModel: ObservableObject {
         // instead of raw day counts.
         let safeSeconds = max(seconds, 0)
         let primary = formatReciprocityDurationCoarse(safeSeconds)
-        return TimeDisplay(primary: primary, secondary: "")
+        // PTIMER-172: clock-band values (one minute up to one day)
+        // carry the matching whole-seconds value as a subdued secondary
+        // line for source-table comparison; shorter values already read
+        // as concise seconds, so the secondary stays empty.
+        let secondary = reciprocityModel.formatReciprocitySecondsComparison(
+            safeSeconds,
+            approximate: primary.hasPrefix("≈")
+        ) ?? ""
+        return TimeDisplay(primary: primary, secondary: secondary)
     }
 
     func formatReciprocityDuration(_ seconds: TimeInterval) -> String {

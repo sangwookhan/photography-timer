@@ -73,6 +73,36 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertEqual(details.graph?.kind, .formula)
     }
 
+    /// PTIMER-172: clock-band values on the Detail current-result card
+    /// carry a whole-seconds comparison line in the free caption slot.
+    /// The Detail card omits the Main card's outside-guidance "≈"
+    /// prefix on both the clock value and the seconds line, so the two
+    /// stay consistent within the sheet.
+    @MainActor
+    func testFilmModeDetailsCurrentResultShowsSecondsComparisonInClockBand() throws {
+        let viewModel = makeFilmModeViewModel()
+        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+
+        viewModel.selectPresetFilm(film)
+        viewModel.baseShutter = 15
+        viewModel.ndStop = 6
+
+        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
+        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+
+        // Adjusted shutter 1024 s → "17:04" + "1024s".
+        XCTAssertEqual(resultState.adjustedShutterSeconds, 1024, accuracy: 0.0001)
+        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "17:04")
+        XCTAssertEqual(details.currentResult.adjustedShutter.detailText, "1024s")
+
+        // Corrected exposure ≈ 33,583 s → "09:19:43" + "33583s"
+        // (no "≈" on the Detail card, unlike the Main card).
+        let corrected = try XCTUnwrap(resultState.correctedExposure.correctedExposureSeconds)
+        XCTAssertEqual(corrected, 33_583, accuracy: 1.0)
+        XCTAssertEqual(details.currentResult.correctedExposure.valueText, "09:19:43")
+        XCTAssertEqual(details.currentResult.correctedExposure.detailText, "33583s")
+    }
+
     @MainActor
     func testFilmModeDetailsPrioritizeReferenceBeforeSources() throws {
         let viewModel = makeFilmModeViewModel()

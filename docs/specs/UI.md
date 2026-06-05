@@ -115,6 +115,8 @@ Time values follow a single hierarchy. Two display modes apply at the **day-scal
 
 Thousands grouping in coarse mode shall use a comma separator with grouping size 3, applied deterministically regardless of device locale.
 
+**Seconds comparison line (film workflow).** In film workflow, the **Adjusted Shutter** row and a **quantified Corrected Exposure** pair their clock-format primary with a subdued secondary line showing the same duration as a whole-seconds value (e.g. `24:40` paired with `1480s`, `02:29:43` paired with `8983s`). This lets a long exposure be compared against manufacturer source rows, which are usually written in seconds. The secondary line appears only when the primary reads as a clock value — that is, for `60 s ≤ t < 1 d`. Below `60 s` the primary already reads as concise seconds, so no secondary line is shown; at and above `1 d` the primary coarsens and a raw seconds count is no longer a useful comparison, so no secondary line is shown. When the primary carries an approximation marker for an outside-guidance numeric result, the seconds value carries the marker as well (e.g. `≈05:10` paired with `≈310s`); the Detail current-result card omits the marker on both its clock value and its seconds line so the two stay consistent within the sheet. This applies on both the main result section and the Reciprocity Details current-result card; the digital workflow's existing precise-time secondary line (§2.2) is unchanged.
+
 The **calculated** value (precise) and the **notation** value (conventional) are kept distinct internally. The result section shows notation; downstream timer logic uses calculated. (See [Calculator Spec](Calculator.md) §2.4.)
 
 ### 2.5 Start Timer affordance

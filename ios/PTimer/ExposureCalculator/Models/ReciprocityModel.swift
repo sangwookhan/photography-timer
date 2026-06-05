@@ -142,6 +142,37 @@ final class ReciprocityModel {
         return "\(days)d"
     }
 
+    /// Secondary "seconds" string for the dual-duration display
+    /// (PTIMER-172). The Main and Detail film-mode cards render a
+    /// clock value (e.g. `24:40`, `02:29:43`) as the primary; this
+    /// produces the matching whole-seconds value (`1480s`, `8983s`)
+    /// so a long exposure can be compared against manufacturer source
+    /// rows, which are usually written in seconds (`90s`, `1800s`, …).
+    ///
+    /// Returns `nil` below one minute — where the primary already
+    /// reads as concise seconds, so a second seconds line would be
+    /// redundant — and at one day and above, where the primary leaves
+    /// clock notation for the coarse `Nd` / `≈Nmo` / `≈Ny` buckets and
+    /// a raw seconds count is no longer a useful source-table
+    /// comparison. Whole-second rounding matches the clock primary,
+    /// which also rounds to whole seconds at this scale. `approximate`
+    /// carries the primary's `≈` marker onto the seconds value when the
+    /// primary is approximate (outside-guidance numeric results).
+    func formatReciprocitySecondsComparison(
+        _ seconds: TimeInterval,
+        approximate: Bool
+    ) -> String? {
+        let safeSeconds = max(seconds, 0)
+        let roundedSeconds = Int(safeSeconds.rounded())
+        let secondsPerDay = 86_400
+
+        guard roundedSeconds >= 60, roundedSeconds < secondsPerDay else {
+            return nil
+        }
+
+        return approximate ? "≈\(roundedSeconds)s" : "\(roundedSeconds)s"
+    }
+
     /// Tight, axis-friendly variant. Sub-second values keep one decimal,
     /// tens of seconds round to integers, minutes/hours/days use a
     /// single-letter suffix.
@@ -228,16 +259,23 @@ final class ReciprocityModel {
             } else {
                 primaryText = formattedDuration
             }
-            // The Main card no longer carries a per-state caption —
-            // detailed wording lives in the Detail graph note. The
-            // model still produces a non-empty `secondaryText` would
-            // be a regression on the Main card, so keep it empty for
-            // every numeric path.
+            // PTIMER-172: when the primary reads as a clock value
+            // (one minute up to one day), the Main card carries the
+            // matching whole-seconds value as a subdued secondary line
+            // so the exposure can be compared against source-table rows
+            // written in seconds. Below one minute the primary already
+            // reads as concise seconds and the helper returns `nil`, so
+            // `secondaryText` stays empty. The approximation marker
+            // tracks the primary so an `≈01:47:03` reads `≈6423s`.
+            let secondaryText = formatReciprocitySecondsComparison(
+                correctedExposureSeconds,
+                approximate: primaryText.hasPrefix("≈")
+            ) ?? ""
             return FilmModeCorrectedExposureDisplayState(
                 kind: .quantified,
                 correctedExposureSeconds: correctedExposureSeconds,
                 primaryText: primaryText,
-                secondaryText: "",
+                secondaryText: secondaryText,
                 usesNumericExposure: true
             )
         }

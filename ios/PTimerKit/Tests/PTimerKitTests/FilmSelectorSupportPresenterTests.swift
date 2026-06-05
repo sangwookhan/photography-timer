@@ -1,6 +1,5 @@
 import XCTest
-@testable import PTimer
-import PTimerKit
+@testable import PTimerKit
 
 /// Focused tests for `FilmSelectorSupportPresenter` — the pure value
 /// transform that classifies a film / profile-override pair into a

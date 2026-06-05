@@ -242,16 +242,10 @@ final class FilmSelectionModel: ObservableObject {
     /// Returns nil for unknown sources so only official, unofficial,
     /// and user-defined films carry a visible qualifier.
     nonisolated static func filmRowAuthorityLabel(for profile: ReciprocityProfile?) -> String? {
-        // App-derived alternate models (e.g. the Fomapan 100 app
-        // formula) are fitted by the app from official source data, so
-        // they must not read as official manufacturer guidance on the
-        // film-row / camera-slot subtitle. They name themselves
-        // ("App-derived formula") instead. Only the official table
-        // model keeps the "Official guidance" label.
-        if let profile, AlternateReciprocityModels.isAppDerivedModel(id: profile.id) {
-            return profile.name
-        }
-        return filmRowAuthorityLabel(forAuthority: profile?.source.authority)
+        // Logic now lives in PTimerKit's `FilmRowAuthorityLabel` so the
+        // non-MainActor presentation layer can share it (PTIMER-174);
+        // this forwarder keeps existing call sites unchanged.
+        FilmRowAuthorityLabel.label(for: profile)
     }
 
     /// Authority-only variant so other surfaces (the Details subtitle)
@@ -263,12 +257,7 @@ final class FilmSelectionModel: ObservableObject {
     /// `nil`-literal call site is not ambiguous with the profile
     /// overload above.
     nonisolated static func filmRowAuthorityLabel(forAuthority authority: ReciprocityAuthority?) -> String? {
-        switch authority {
-        case .official: return "Official guidance"
-        case .unofficial: return "Unofficial practical"
-        case .userDefined: return "Custom"
-        case .unknown, nil: return nil
-        }
+        FilmRowAuthorityLabel.label(forAuthority: authority)
     }
 
     /// ISO secondary text for a preset film identity. The launch

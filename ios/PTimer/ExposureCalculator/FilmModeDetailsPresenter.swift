@@ -345,7 +345,7 @@ struct FilmModeDetailsPresenter {
         if profile.effectiveModelBasis.calculationModel == .tableLogLogInterpolation {
             return profile.name
         }
-        return FilmSelectionModel.filmRowAuthorityLabel(forAuthority: profile.source.authority)
+        return FilmRowAuthorityLabel.label(forAuthority: profile.source.authority)
     }
 
     // MARK: - Helpers

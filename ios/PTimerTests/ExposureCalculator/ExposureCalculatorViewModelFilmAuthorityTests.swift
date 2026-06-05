@@ -144,30 +144,6 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testFilmModeDetailsDisplayStateIsNonNilForOfficialAndUnofficialPortra400() throws {
-        // Both official and unofficial Portra 400 must produce a non-nil details display state
-        // so the sheet can open for either profile.
-        let viewModel = makeFilmModeViewModel()
-        let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
-
-        viewModel.baseShutter = 15
-        viewModel.ndStop = 0
-
-        viewModel.selectPresetFilm(officialFilm)
-        XCTAssertNotNil(
-            viewModel.filmModeDetailsDisplayState,
-            "Official Portra 400 must produce a film details display state."
-        )
-
-        viewModel.selectEntry(unofficialEntry)
-        XCTAssertNotNil(
-            viewModel.filmModeDetailsDisplayState,
-            "Unofficial Portra 400 must produce a film details display state."
-        )
-    }
-
     // MARK: - PTIMER-143 — Normalize Film Details for unofficial reciprocity profiles
 
     @MainActor

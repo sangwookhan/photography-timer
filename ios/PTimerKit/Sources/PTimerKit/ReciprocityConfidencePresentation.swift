@@ -1,13 +1,13 @@
 import Foundation
 
-enum ReciprocityConfidenceCategory: String, Codable, Equatable {
+public enum ReciprocityConfidenceCategory: String, Codable, Equatable {
     case noCorrection
     case formulaDerived
     case limitedGuidance
     case unsupported
 }
 
-enum ReciprocityConfidenceLevel: String, Codable, Equatable {
+public enum ReciprocityConfidenceLevel: String, Codable, Equatable {
     case high
     case medium
     case low
@@ -15,7 +15,7 @@ enum ReciprocityConfidenceLevel: String, Codable, Equatable {
     case none
 }
 
-enum ReciprocityConfidenceBadgeStyle: String, Codable, Equatable {
+public enum ReciprocityConfidenceBadgeStyle: String, Codable, Equatable {
     case trusted
     case measured
     case caution
@@ -23,21 +23,21 @@ enum ReciprocityConfidenceBadgeStyle: String, Codable, Equatable {
     case unsupported
 }
 
-enum ReciprocityConfidenceWarningEmphasis: String, Codable, Equatable {
+public enum ReciprocityConfidenceWarningEmphasis: String, Codable, Equatable {
     case none
     case note
     case caution
     case strong
 }
 
-enum ReciprocityConfidenceResultKind: String, Codable, Equatable {
+public enum ReciprocityConfidenceResultKind: String, Codable, Equatable {
     case noCorrection
     case formulaDerived
     case limitedGuidance
     case unsupported
 }
 
-enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
+public enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
     case thresholdGuidanceOnly
     case formulaDerived
     case currentOfficialSource
@@ -53,7 +53,7 @@ enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
     case calculatedExposureReturned
     case noCalculatedExposureReturned
 
-    var defaultText: String {
+    public var defaultText: String {
         switch self {
         case .thresholdGuidanceOnly:
             return "Uses threshold-only official no-correction guidance."
@@ -87,29 +87,29 @@ enum ReciprocityConfidenceExplanationToken: String, Codable, Equatable {
     }
 }
 
-struct ReciprocityConfidencePresentation: Codable, Equatable {
-    let category: ReciprocityConfidenceCategory
-    let level: ReciprocityConfidenceLevel
-    let badgeStyle: ReciprocityConfidenceBadgeStyle
-    let warningEmphasis: ReciprocityConfidenceWarningEmphasis
-    let resultKind: ReciprocityConfidenceResultKind
+public struct ReciprocityConfidencePresentation: Codable, Equatable {
+    public let category: ReciprocityConfidenceCategory
+    public let level: ReciprocityConfidenceLevel
+    public let badgeStyle: ReciprocityConfidenceBadgeStyle
+    public let warningEmphasis: ReciprocityConfidenceWarningEmphasis
+    public let resultKind: ReciprocityConfidenceResultKind
     /// Compact presentation text intended for badges or summary UI. This is a
     /// convenience field, not the source of truth for structured meaning.
-    let shortLabel: String
+    public let shortLabel: String
     /// Structured presentation-facing explanation categories. These are the
     /// stable contract fields that future UI can key from.
-    let explanationTokens: [ReciprocityConfidenceExplanationToken]
+    public let explanationTokens: [ReciprocityConfidenceExplanationToken]
     /// Passthrough explanatory text from policy-layer notes when present. These
     /// help with readable fallback output, but are intentionally less stable
     /// than the structured explanation tokens.
-    let supportingNotes: [String]
+    public let supportingNotes: [String]
     /// Default fallback explanation text for non-finalized UI. This is a
     /// convenience field derived from `supportingNotes` when available, or from
     /// token defaults when no note text is present.
-    let defaultExplanation: String
-    let returnsCalculatedExposureTime: Bool
+    public let defaultExplanation: String
+    public let returnsCalculatedExposureTime: Bool
 
-    init(
+    public init(
         category: ReciprocityConfidenceCategory,
         level: ReciprocityConfidenceLevel,
         badgeStyle: ReciprocityConfidenceBadgeStyle,
@@ -155,7 +155,7 @@ struct ReciprocityConfidencePresentation: Codable, Equatable {
         case returnsCalculatedExposureTime
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let category = try container.decode(ReciprocityConfidenceCategory.self, forKey: .category)
         let level = try container.decode(ReciprocityConfidenceLevel.self, forKey: .level)
@@ -359,8 +359,10 @@ private extension ReciprocityConfidencePresentation {
 /// Maps calculation-layer result metadata into presentation-facing confidence
 /// structure. This type intentionally consumes only policy output and does not
 /// inspect raw domain rules or re-run calculation-policy decisions.
-struct ReciprocityConfidencePresentationMapper {
-    func map(
+public struct ReciprocityConfidencePresentationMapper {
+    public init() {}
+
+    public func map(
         result: ReciprocityResult
     ) -> ReciprocityConfidencePresentation {
         let payload = payload(for: result)
@@ -601,7 +603,7 @@ struct ReciprocityConfidencePresentationMapper {
 }
 
 extension ReciprocityResult {
-    var confidencePresentation: ReciprocityConfidencePresentation {
+    public var confidencePresentation: ReciprocityConfidencePresentation {
         ReciprocityConfidencePresentationMapper().map(result: self)
     }
 }

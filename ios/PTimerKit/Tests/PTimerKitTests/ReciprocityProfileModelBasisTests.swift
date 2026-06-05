@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// PTIMER-163: catalog-level vocabulary distinguishing the
 /// manufacturer's source data shape from the app's calculation

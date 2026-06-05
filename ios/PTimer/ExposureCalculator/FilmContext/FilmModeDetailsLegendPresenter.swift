@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 
 /// Pure presenter for the Film Details legend block. Derives the
 /// short list of legend lines (color correction, development

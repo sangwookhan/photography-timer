@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// PTIMER-159: the log-log table interpolation evaluator. Anchors must
 /// reproduce exactly, intermediate values follow log-log interpolation,

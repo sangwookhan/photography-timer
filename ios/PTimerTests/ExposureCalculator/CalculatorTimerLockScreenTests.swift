@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class CalculatorTimerLockScreenTests: XCTestCase {
     @MainActor

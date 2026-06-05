@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// PTIMER-88 follow-up regression: drives the secondary-guidance formatter
 /// directly off `LaunchPresetFilmCatalog.films` so the wire from real

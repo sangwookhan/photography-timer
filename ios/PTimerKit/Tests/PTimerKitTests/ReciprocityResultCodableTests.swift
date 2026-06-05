@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// Covers the `ReciprocityResult` Codable surface for the
 /// tagged-union representation. Each case round-trips through

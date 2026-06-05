@@ -1,19 +1,19 @@
-  ▿ PTimer.ReciprocityResult.unsupported
-    ▿ unsupported: PTimer.ReciprocityResult.UnsupportedPayload
+  ▿ PTimerKit.ReciprocityResult.unsupported
+    ▿ unsupported: PTimerKit.ReciprocityResult.UnsupportedPayload
       - meteredExposureSeconds: 1500.0
       ▿ correctedExposureSeconds: Optional(14477.032499949642)
         - some: 14477.032499949642
-      ▿ metadata: PTimer.ReciprocityResultMetadata
-        - basis: PTimer.ReciprocityCalculationBasis.unsupportedOutOfPolicyRange
-        - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
-        - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.beyondPolicyLimit
-        - warningLevel: PTimer.ReciprocityCalculationWarningLevel.strongWarning
+      ▿ metadata: PTimerKit.ReciprocityResultMetadata
+        - basis: PTimerKit.ReciprocityCalculationBasis.unsupportedOutOfPolicyRange
+        - sourceAuthorityImpact: PTimerKit.ReciprocitySourceAuthorityImpact.currentOfficial
+        - rangeStatus: PTimerKit.ReciprocityCalculationRangeStatus.beyondPolicyLimit
+        - warningLevel: PTimerKit.ReciprocityCalculationWarningLevel.strongWarning
         ▿ notes: 2 elements
-          ▿ PTimer.ReciprocityPolicyNote
-            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
-              - some: PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
+          ▿ PTimerKit.ReciprocityPolicyNote
+            ▿ token: Optional(PTimerKit.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
+              - some: PTimerKit.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
             - text: "Manufacturer source range ends at 600 sec."
-          ▿ PTimer.ReciprocityPolicyNote
-            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.unsupportedByPolicy)
-              - some: PTimer.ReciprocityPolicyNoteToken.unsupportedByPolicy
+          ▿ PTimerKit.ReciprocityPolicyNote
+            ▿ token: Optional(PTimerKit.ReciprocityPolicyNoteToken.unsupportedByPolicy)
+              - some: PTimerKit.ReciprocityPolicyNoteToken.unsupportedByPolicy
             - text: "Outside manufacturer source range — value is a formula prediction outside the published source range."

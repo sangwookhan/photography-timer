@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 
 /// State-aware text for the formula graph: caption, unsupported
 /// explanation, description lines, plus the persistent

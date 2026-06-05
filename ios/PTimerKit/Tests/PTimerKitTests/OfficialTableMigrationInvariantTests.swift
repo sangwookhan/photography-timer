@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// PTIMER-168 catalog-wide regression coverage for the official
 /// table-origin migration batch.

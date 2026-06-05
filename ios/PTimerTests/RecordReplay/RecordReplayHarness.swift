@@ -1,5 +1,6 @@
 import Foundation
 @testable import PTimer
+import PTimerKit
 
 /// Scenario runner with deterministic time. Builds a fully-spied
 /// `ViewModelDependencies` whose collaborators all funnel into a

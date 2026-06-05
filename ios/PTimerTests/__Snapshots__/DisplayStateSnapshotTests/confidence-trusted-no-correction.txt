@@ -1,15 +1,15 @@
-  ▿ PTimer.ReciprocityConfidencePresentation
-    - category: PTimer.ReciprocityConfidenceCategory.noCorrection
-    - level: PTimer.ReciprocityConfidenceLevel.high
-    - badgeStyle: PTimer.ReciprocityConfidenceBadgeStyle.trusted
-    - warningEmphasis: PTimer.ReciprocityConfidenceWarningEmphasis.none
-    - resultKind: PTimer.ReciprocityConfidenceResultKind.noCorrection
+  ▿ PTimerKit.ReciprocityConfidencePresentation
+    - category: PTimerKit.ReciprocityConfidenceCategory.noCorrection
+    - level: PTimerKit.ReciprocityConfidenceLevel.high
+    - badgeStyle: PTimerKit.ReciprocityConfidenceBadgeStyle.trusted
+    - warningEmphasis: PTimerKit.ReciprocityConfidenceWarningEmphasis.none
+    - resultKind: PTimerKit.ReciprocityConfidenceResultKind.noCorrection
     - shortLabel: "No correction"
     ▿ explanationTokens: 4 elements
-      - PTimer.ReciprocityConfidenceExplanationToken.thresholdGuidanceOnly
-      - PTimer.ReciprocityConfidenceExplanationToken.currentOfficialSource
-      - PTimer.ReciprocityConfidenceExplanationToken.withinStatedRange
-      - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
+      - PTimerKit.ReciprocityConfidenceExplanationToken.thresholdGuidanceOnly
+      - PTimerKit.ReciprocityConfidenceExplanationToken.currentOfficialSource
+      - PTimerKit.ReciprocityConfidenceExplanationToken.withinStatedRange
+      - PTimerKit.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
     ▿ supportingNotes: 1 element
       - "Reciprocity correction is not applied within the formula\'s no-correction range (≤ 1 sec)."
     - defaultExplanation: "Reciprocity correction is not applied within the formula\'s no-correction range (≤ 1 sec)."

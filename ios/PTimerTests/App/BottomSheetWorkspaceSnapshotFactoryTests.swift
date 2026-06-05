@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
     @MainActor

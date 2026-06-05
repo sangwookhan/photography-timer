@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReciprocityCalculationBasis: String, Codable, Equatable {
+public enum ReciprocityCalculationBasis: String, Codable, Equatable {
     case officialThresholdNoCorrection
     case limitedGuidanceNoQuantifiedPrediction
     case unsupportedOutOfPolicyRange
@@ -12,27 +12,27 @@ enum ReciprocityCalculationBasis: String, Codable, Equatable {
     case tableLogLogDerived
 }
 
-enum ReciprocitySourceAuthorityImpact: String, Codable, Equatable {
+public enum ReciprocitySourceAuthorityImpact: String, Codable, Equatable {
     case currentOfficial
     case archivalOfficial
     case unofficialSecondary
     case userDefined
 }
 
-enum ReciprocityCalculationRangeStatus: String, Codable, Equatable {
+public enum ReciprocityCalculationRangeStatus: String, Codable, Equatable {
     case withinStatedRange
     case beyondLastRepresentativePoint
     case beyondPolicyLimit
 }
 
-enum ReciprocityCalculationWarningLevel: String, Codable, Equatable {
+public enum ReciprocityCalculationWarningLevel: String, Codable, Equatable {
     case none
     case note
     case caution
     case strongWarning
 }
 
-enum ReciprocityPolicyNoteToken: String, Codable, Equatable {
+public enum ReciprocityPolicyNoteToken: String, Codable, Equatable {
     case thresholdGuidanceOnly
     case limitedGuidanceContinuationOnly
     case beyondOfficialQuantifiedRange
@@ -42,24 +42,24 @@ enum ReciprocityPolicyNoteToken: String, Codable, Equatable {
     case unsupportedByPolicy
 }
 
-struct ReciprocityPolicyNote: Codable, Equatable {
-    let token: ReciprocityPolicyNoteToken?
-    let text: String
+public struct ReciprocityPolicyNote: Codable, Equatable {
+    public let token: ReciprocityPolicyNoteToken?
+    public let text: String
 
-    init(token: ReciprocityPolicyNoteToken? = nil, text: String) {
+    public init(token: ReciprocityPolicyNoteToken? = nil, text: String) {
         self.token = token
         self.text = text
     }
 }
 
-struct ReciprocityResultMetadata: Codable, Equatable {
-    let basis: ReciprocityCalculationBasis
-    let sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
-    let rangeStatus: ReciprocityCalculationRangeStatus
-    let warningLevel: ReciprocityCalculationWarningLevel
-    let notes: [ReciprocityPolicyNote]
+public struct ReciprocityResultMetadata: Codable, Equatable {
+    public let basis: ReciprocityCalculationBasis
+    public let sourceAuthorityImpact: ReciprocitySourceAuthorityImpact
+    public let rangeStatus: ReciprocityCalculationRangeStatus
+    public let warningLevel: ReciprocityCalculationWarningLevel
+    public let notes: [ReciprocityPolicyNote]
 
-    init(
+    public init(
         basis: ReciprocityCalculationBasis,
         sourceAuthorityImpact: ReciprocitySourceAuthorityImpact,
         rangeStatus: ReciprocityCalculationRangeStatus,
@@ -81,7 +81,7 @@ struct ReciprocityResultMetadata: Codable, Equatable {
         case notes
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.basis = try container.decode(ReciprocityCalculationBasis.self, forKey: .basis)
         self.sourceAuthorityImpact = try container.decode(
@@ -102,17 +102,17 @@ struct ReciprocityResultMetadata: Codable, Equatable {
 /// - `limitedGuidance` and `unsupported` lack the field entirely
 ///   (unsupported may optionally carry a formula prediction outside
 ///   the source range).
-enum ReciprocityResult: Equatable {
+public enum ReciprocityResult: Equatable {
     case quantified(QuantifiedPayload)
     case limitedGuidance(LimitedGuidancePayload)
     case unsupported(UnsupportedPayload)
 
-    struct QuantifiedPayload: Equatable {
-        let meteredExposureSeconds: Double
-        let correctedExposureSeconds: Double
-        let metadata: ReciprocityResultMetadata
+    public struct QuantifiedPayload: Equatable {
+        public let meteredExposureSeconds: Double
+        public let correctedExposureSeconds: Double
+        public let metadata: ReciprocityResultMetadata
 
-        init(
+        public init(
             meteredExposureSeconds: Double,
             correctedExposureSeconds: Double,
             metadata: ReciprocityResultMetadata
@@ -130,11 +130,11 @@ enum ReciprocityResult: Equatable {
         }
     }
 
-    struct LimitedGuidancePayload: Equatable {
-        let meteredExposureSeconds: Double
-        let metadata: ReciprocityResultMetadata
+    public struct LimitedGuidancePayload: Equatable {
+        public let meteredExposureSeconds: Double
+        public let metadata: ReciprocityResultMetadata
 
-        init(
+        public init(
             meteredExposureSeconds: Double,
             metadata: ReciprocityResultMetadata
         ) {
@@ -148,8 +148,8 @@ enum ReciprocityResult: Equatable {
         }
     }
 
-    struct UnsupportedPayload: Equatable {
-        let meteredExposureSeconds: Double
+    public struct UnsupportedPayload: Equatable {
+        public let meteredExposureSeconds: Double
         /// Optional formula prediction (outside the source range) in
         /// corrected-exposure seconds. Present only when a formula-backed
         /// profile can still produce a numeric value beyond the
@@ -158,10 +158,10 @@ enum ReciprocityResult: Equatable {
         /// presenter must mark numeric values as approximate / outside
         /// manufacturer guidance — they are calculation-derived, never
         /// published guidance.
-        let correctedExposureSeconds: Double?
-        let metadata: ReciprocityResultMetadata
+        public let correctedExposureSeconds: Double?
+        public let metadata: ReciprocityResultMetadata
 
-        init(
+        public init(
             meteredExposureSeconds: Double,
             correctedExposureSeconds: Double? = nil,
             metadata: ReciprocityResultMetadata
@@ -201,7 +201,7 @@ enum ReciprocityResult: Equatable {
 
 extension ReciprocityResult {
     /// Metered exposure seconds — present in every case.
-    var meteredExposureSeconds: Double {
+    public var meteredExposureSeconds: Double {
         switch self {
         case let .quantified(payload):
             return payload.meteredExposureSeconds
@@ -217,7 +217,7 @@ extension ReciprocityResult {
     /// optional formula prediction outside the source range when
     /// present, or `nil` for limited-guidance and value-less unsupported
     /// results.
-    var correctedExposureSeconds: Double? {
+    public var correctedExposureSeconds: Double? {
         switch self {
         case let .quantified(payload):
             return payload.correctedExposureSeconds
@@ -229,7 +229,7 @@ extension ReciprocityResult {
     }
 
     /// Metadata block — present in every case.
-    var metadata: ReciprocityResultMetadata {
+    public var metadata: ReciprocityResultMetadata {
         switch self {
         case let .quantified(payload):
             return payload.metadata
@@ -244,7 +244,7 @@ extension ReciprocityResult {
     /// numeric corrected exposure was returned — either from a quantified
     /// path, or from a formula-backed unsupported payload that carries a
     /// formula prediction outside the source range.
-    var hasCalculatedExposureTime: Bool {
+    public var hasCalculatedExposureTime: Bool {
         switch self {
         case .quantified:
             return true
@@ -320,7 +320,7 @@ extension ReciprocityResult: Codable {
         }
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let discriminatorContainer = try decoder.container(keyedBy: DiscriminatorKeys.self)
         let kind = try discriminatorContainer.decode(Kind.self, forKey: .kind)
 
@@ -380,7 +380,7 @@ extension ReciprocityResult: Codable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: DiscriminatorKeys.self)
 
         switch self {
@@ -611,14 +611,16 @@ private extension ReciprocityResult {
     }
 }
 
-struct ReciprocityCalculationPolicyEvaluator {
+public struct ReciprocityCalculationPolicyEvaluator {
+    public init() {}
+
     /// Evaluation order is part of the policy contract:
     /// formula rules win when present (they own their no-correction
     /// and source-range guards via the shared
     /// `ReciprocityFormula` contract), then threshold-only
     /// no-correction guidance, then limited-guidance continuation,
     /// and finally unsupported.
-    func evaluate(
+    public func evaluate(
         profile: ReciprocityProfile,
         meteredExposureSeconds: Double
     ) -> ReciprocityResult {

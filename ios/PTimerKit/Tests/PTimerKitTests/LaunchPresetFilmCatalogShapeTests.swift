@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// Structural guard on the bundled `LaunchPresetFilmCatalog`. The
 /// launch catalog ships only official manufacturer profiles, so the

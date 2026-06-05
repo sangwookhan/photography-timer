@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-84 polish: covers the Calculation Basis section the
 /// Details presenter inserts between the reciprocity graph and the

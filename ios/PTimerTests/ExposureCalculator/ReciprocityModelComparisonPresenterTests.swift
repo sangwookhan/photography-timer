@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-159: the app-derived / fitted comparison section is separate
 /// from Source reference. It compares the app's guarded formula against

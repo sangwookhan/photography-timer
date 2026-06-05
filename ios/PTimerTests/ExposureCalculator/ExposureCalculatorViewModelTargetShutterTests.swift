@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - State and display

@@ -1,28 +1,42 @@
 import Foundation
 
-struct ReciprocitySecondaryGuidancePresentation: Equatable {
-    enum Kind: String, Equatable {
+public struct ReciprocitySecondaryGuidancePresentation: Equatable {
+    public enum Kind: String, Equatable {
         case colorCorrection
         case developmentAdjustment
         case warning
         case note
     }
 
-    enum Severity: String, Equatable {
+    public enum Severity: String, Equatable {
         case neutral
         case caution
         case stop
     }
 
-    let kind: Kind
-    let title: String
-    let valueText: String?
-    let detailText: String
-    let severity: Severity
+    public let kind: Kind
+    public let title: String
+    public let valueText: String?
+    public let detailText: String
+    public let severity: Severity
+
+    public init(
+        kind: Kind,
+        title: String,
+        valueText: String? = nil,
+        detailText: String,
+        severity: Severity
+    ) {
+        self.kind = kind
+        self.title = title
+        self.valueText = valueText
+        self.detailText = detailText
+        self.severity = severity
+    }
 }
 
-enum ReciprocitySecondaryGuidanceFormatter {
-    static func format(_ adjustments: [ReciprocityAdjustment]) -> [ReciprocitySecondaryGuidancePresentation] {
+public enum ReciprocitySecondaryGuidanceFormatter {
+    public static func format(_ adjustments: [ReciprocityAdjustment]) -> [ReciprocitySecondaryGuidancePresentation] {
         adjustments.compactMap { adjustment in
             switch adjustment {
             case let .colorFilter(recommendation):

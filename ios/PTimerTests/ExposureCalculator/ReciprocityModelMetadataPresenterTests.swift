@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-159: the compact "Reciprocity model" Details section reports
 /// Source + Calculation for the active model. Film is the sheet header

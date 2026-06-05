@@ -15,7 +15,7 @@ extension TableInterpolationReciprocityRule {
     /// Outcome of a single table evaluation. Same shape as
     /// `ReciprocityFormula.EvaluationResult` minus the formula-specific
     /// failure cases that cannot arise for a validated table.
-    enum EvaluationResult: Equatable {
+    public enum EvaluationResult: Equatable {
         /// `Tm` sat inside the no-correction band. `Tc = Tm`.
         case noCorrection
         /// Interpolated corrected exposure within the published table range.
@@ -32,7 +32,7 @@ extension TableInterpolationReciprocityRule {
     }
 
     /// Anchors sorted ascending by metered exposure.
-    var sortedAnchors: [TableAnchor] {
+    public var sortedAnchors: [TableAnchor] {
         anchors.sorted { $0.meteredSeconds < $1.meteredSeconds }
     }
 
@@ -43,7 +43,7 @@ extension TableInterpolationReciprocityRule {
     /// - each corrected ≥ its metered (a reciprocity correction never shortens);
     /// - `noCorrectionThroughSeconds` finite, ≥ 0, and below the first anchor;
     /// - `sourceRangeThroughSeconds` finite and ≥ the last anchor's metered value.
-    var hasValidParameters: Bool {
+    public var hasValidParameters: Bool {
         let sorted = sortedAnchors
         guard sorted.count >= 2 else { return false }
         guard noCorrectionThroughSeconds.isFinite, noCorrectionThroughSeconds >= 0 else { return false }
@@ -66,7 +66,7 @@ extension TableInterpolationReciprocityRule {
         return true
     }
 
-    func evaluate(meteredExposureSeconds: Double) -> EvaluationResult {
+    public func evaluate(meteredExposureSeconds: Double) -> EvaluationResult {
         guard meteredExposureSeconds.isFinite, meteredExposureSeconds > 0 else {
             return .invalidInput
         }

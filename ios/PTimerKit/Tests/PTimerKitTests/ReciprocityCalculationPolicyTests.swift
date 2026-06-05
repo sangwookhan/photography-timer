@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// Exercises every surviving evaluator path for the formula /
 /// threshold / limited-guidance rule set. Table-rule tests were

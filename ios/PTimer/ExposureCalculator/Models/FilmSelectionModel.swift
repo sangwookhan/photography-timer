@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PTimerKit
 
 /// `FilmSelectionModel` owns the film-selection slice. The model owns:
 /// - the preset film catalog (`presetFilms: [FilmIdentity]`)

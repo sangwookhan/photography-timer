@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Timer-start + identity-snapshot coverage for the custom film
 /// path. Exercises the full chain: ViewModel →

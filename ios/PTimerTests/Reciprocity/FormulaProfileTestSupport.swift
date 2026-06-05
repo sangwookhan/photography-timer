@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Shared fixtures for the per-film formula-profile test suites.
 /// Kept in one place so each per-film test file (Velvia 50,

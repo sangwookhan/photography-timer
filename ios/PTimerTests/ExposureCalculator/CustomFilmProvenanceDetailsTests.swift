@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Details provenance coverage. Asserts the custom-only
 /// multi-line provenance block exposes source type, formula

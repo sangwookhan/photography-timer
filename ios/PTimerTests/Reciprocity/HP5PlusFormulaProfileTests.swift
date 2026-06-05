@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Regression coverage for the legacy source-less HP5 Plus formula
 /// profile. Confirms the converted-formula presentation surfaces

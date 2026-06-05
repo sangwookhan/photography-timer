@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 final class ReciprocityConfidencePresentationTests: XCTestCase {
     private let evaluator = ReciprocityCalculationPolicyEvaluator()

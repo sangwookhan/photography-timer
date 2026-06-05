@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 extension XCTestCase {
     func proviaProfile() throws -> ReciprocityProfile {

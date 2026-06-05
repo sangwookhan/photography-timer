@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Behavior contract for Velvia 50's formula-based reciprocity
 /// profile. Locks the invariants:
@@ -20,28 +21,7 @@ final class Velvia50FormulaProfileTests: XCTestCase {
 
     // MARK: - Threshold boundary (inclusive at 1 s)
 
-    func testVelvia50AtThresholdBoundaryReturnsOfficialNoCorrection() throws {
-        let profile = try velvia50Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1)
-
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 1, accuracy: 1e-6)
-    }
-
     // MARK: - Source-backed formula range (1 s … 32 s inclusive)
-
-    func testVelvia50InsideSourceBackedRangeIsFormulaDerivedNotExactTablePoint() throws {
-        let profile = try velvia50Profile()
-        for metered in [2.0, 4.0, 8.0, 16.0, 24.0, 32.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .formulaDerived,
-                "Metered \(metered) s must be formula-derived even at published source rows (4/8/16/32 s)."
-            )
-        }
-    }
 
     func testVelvia50FormulaIsAnchoredLogLogFit() throws {
         let profile = try velvia50Profile()

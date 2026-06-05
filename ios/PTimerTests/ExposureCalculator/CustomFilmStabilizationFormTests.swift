@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Covers the form-validation + preview parsing + duration
 /// parser invariants. All checks operate on the pure-value form

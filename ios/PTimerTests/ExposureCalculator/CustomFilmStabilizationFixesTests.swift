@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Pins the custom-film stabilization invariants: canonical id
 /// for custom entries, Details graph formula, analytic shortening

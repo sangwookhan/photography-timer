@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Integration coverage for the calculation path when a custom
 /// power-law profile is selected. The existing

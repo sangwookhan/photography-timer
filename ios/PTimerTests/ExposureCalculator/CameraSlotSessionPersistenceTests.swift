@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// End-to-end tests for the multi-slot persistence layer:
 /// `CameraSlotSessionPersistenceController`, the

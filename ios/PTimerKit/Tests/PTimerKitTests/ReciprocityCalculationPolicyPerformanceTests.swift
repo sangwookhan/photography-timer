@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// Performance baseline for the reciprocity policy evaluator.
 ///

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PTimerKit
 
 private let defaultFilmModeBaseShutter = CalculatorDefaults.baseShutterSeconds
 private let defaultFilmModeNDStop = CalculatorDefaults.ndStop

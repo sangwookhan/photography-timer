@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import AudioToolbox
 import UIKit
+import PTimerKit
 
 private let timerStabilityEpsilon: TimeInterval = ExposureCalculator.stabilityEpsilon
 

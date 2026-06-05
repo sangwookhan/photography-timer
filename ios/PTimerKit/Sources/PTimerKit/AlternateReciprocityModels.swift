@@ -16,11 +16,11 @@ import Foundation
 ///   community anchors exactly) and an APP-DERIVED formula fitted to the
 ///   official FOMA table. Both are clearly labelled and never presented
 ///   as the official source/model.
-enum AlternateReciprocityModels {
+public enum AlternateReciprocityModels {
 
     /// Alternate models for a film stock, in display order. Empty when
     /// the film has only its single catalog profile.
-    static func alternates(forFilmID filmID: String) -> [ReciprocityProfile] {
+    public static func alternates(forFilmID filmID: String) -> [ReciprocityProfile] {
         switch filmID {
         case "kodak-portra-400":
             return [UnofficialPracticalProfiles.kodakPortra400UnofficialPractical]
@@ -46,14 +46,14 @@ enum AlternateReciprocityModels {
     /// Official Kodak graph/table) or converted-formula profiles (e.g.
     /// Provia). Any future app-derived alternate must be enrolled here
     /// to surface its comparison (PTIMER-159).
-    static func isAppDerivedModel(id: String) -> Bool {
+    public static func isAppDerivedModel(id: String) -> Bool {
         id == fomapan100AppDerivedFormula.id
             || id == triX400AppDerivedFormula.id
     }
 
     /// Resolves an alternate profile by its id (used by session restore
     /// to reconstruct a persisted profile override).
-    static func profile(withID profileID: String) -> ReciprocityProfile? {
+    public static func profile(withID profileID: String) -> ReciprocityProfile? {
         let all = [
             UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
             fomapan100OhzartCommunityTable,
@@ -75,7 +75,7 @@ enum AlternateReciprocityModels {
     /// the value as beyond source range. Kept non-default and labelled
     /// "Ohzart"; its source rows stay separate from the official FOMA
     /// table and never read as manufacturer data.
-    static let fomapan100OhzartCommunityTable = ReciprocityProfile(
+    public static let fomapan100OhzartCommunityTable = ReciprocityProfile(
         id: "foma-fomapan-100-ohzart-community-table",
         name: "Ohzart community table",
         source: ReciprocitySourceProvenance(
@@ -148,7 +148,7 @@ enum AlternateReciprocityModels {
     /// own fitted formula, not manufacturer-published guidance. Kept
     /// non-default and clearly labelled; selecting it surfaces the
     /// app-derived comparison against the official anchors.
-    static let fomapan100AppDerivedFormula = ReciprocityProfile(
+    public static let fomapan100AppDerivedFormula = ReciprocityProfile(
         id: "foma-fomapan-100-app-formula",
         name: "App-derived formula",
         source: ReciprocitySourceProvenance(
@@ -211,7 +211,7 @@ enum AlternateReciprocityModels {
     /// ends at 1/10 sec; corrected exposure is log-log interpolated
     /// between the published anchors. Offered as a non-default alternate
     /// to the graph/table model — never presented as a formula.
-    static let triX400OfficialTable = ReciprocityProfile(
+    public static let triX400OfficialTable = ReciprocityProfile(
         id: "kodak-tri-x-official-table",
         name: "Official Kodak table",
         source: ReciprocitySourceProvenance(
@@ -250,7 +250,7 @@ enum AlternateReciprocityModels {
     /// Kodak-published formula. Kept non-default and clearly labelled; it
     /// is enrolled in `isAppDerivedModel` so it surfaces the app-derived
     /// comparison rather than reading as manufacturer guidance.
-    static let triX400AppDerivedFormula = ReciprocityProfile(
+    public static let triX400AppDerivedFormula = ReciprocityProfile(
         id: "kodak-tri-x-app-formula",
         name: "App formula",
         source: ReciprocitySourceProvenance(

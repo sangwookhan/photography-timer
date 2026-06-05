@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Lifecycle correctness coverage. Pins selection restore,
 /// inactive-slot scrub on delete, and persistence sanitation so

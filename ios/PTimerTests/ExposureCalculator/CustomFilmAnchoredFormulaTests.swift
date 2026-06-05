@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Covers the anchored
 /// `Tc = baseTc · (Tm / baseTm)^exponent + offset` shape

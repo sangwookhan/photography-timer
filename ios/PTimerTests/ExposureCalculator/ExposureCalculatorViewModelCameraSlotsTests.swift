@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Integration tests for camera-slot behavior through the
 /// `ExposureCalculatorViewModel` facade. Exercises slot independence

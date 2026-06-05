@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// Result-section views for the Exposure Calculator. Hosts the
 /// digital-mode block (one read), the film-mode 3-row hierarchy

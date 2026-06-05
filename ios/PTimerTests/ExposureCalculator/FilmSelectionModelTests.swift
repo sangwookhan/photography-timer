@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Direct unit tests for `FilmSelectionModel`. These cover the
 /// film-selection slice in isolation;

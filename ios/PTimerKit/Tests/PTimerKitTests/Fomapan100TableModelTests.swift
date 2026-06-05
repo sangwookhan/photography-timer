@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// PTIMER-159: Fomapan 100 Classic's default official model is the
 /// log-log table (not the old p-formula), reproduces the official

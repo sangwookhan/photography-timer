@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Edit flow + selector top-of-list affordances. Covers the
 /// prefilled editor, upsert-on-save behavior, the explicit

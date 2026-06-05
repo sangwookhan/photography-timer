@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// Locks the JSON shape of the surviving reciprocity rule kinds.
 /// PTIMER-140 removed the table rule so this file no longer

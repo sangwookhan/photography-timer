@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-168: Behavior contract for Fomapan 200 Creative and
 /// Fomapan 400 Action after their migration from a formula-based
@@ -59,75 +60,6 @@ final class FomaTableProfileTests: XCTestCase {
 
     // MARK: - Profile structure
 
-    func testFomapanProfilesCarryTableInterpolationRuleWithCorrectAnchors() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-
-            let tableRule = try XCTUnwrap(
-                profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-                    if case let .tableInterpolation(r) = rule { return r } else { return nil }
-                }.first,
-                "\(spec.canonicalStockName) must carry a .tableInterpolation rule after migration."
-            )
-
-            XCTAssertEqual(
-                tableRule.noCorrectionThroughSeconds,
-                spec.noCorrectionThroughSeconds,
-                accuracy: 1e-6,
-                "\(spec.canonicalStockName) noCorrectionThroughSeconds mismatch."
-            )
-            XCTAssertEqual(
-                tableRule.sourceRangeThroughSeconds,
-                spec.sourceRangeThroughSeconds,
-                accuracy: 1e-6,
-                "\(spec.canonicalStockName) sourceRangeThroughSeconds mismatch."
-            )
-            XCTAssertEqual(
-                tableRule.anchors.count,
-                spec.anchors.count,
-                "\(spec.canonicalStockName) anchor count mismatch."
-            )
-            for (anchor, expected) in zip(tableRule.anchors, spec.anchors) {
-                XCTAssertEqual(anchor.meteredSeconds, expected.metered, accuracy: 1e-6)
-                XCTAssertEqual(anchor.correctedSeconds, expected.corrected, accuracy: 1e-6)
-            }
-        }
-    }
-
-    func testFomapanProfilesCarryNoFormulaRule() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-            let formulaRules = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-                guard case let .formula(r) = rule else { return nil }
-                return r
-            }
-            XCTAssertTrue(
-                formulaRules.isEmpty,
-                "\(spec.canonicalStockName) must not carry any .formula rule after migration to the official table model."
-            )
-        }
-    }
-
-    func testFomapanProfilesModelBasisIsManufacturerTableLogLog() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-            let basis = try XCTUnwrap(
-                profile.modelBasis,
-                "\(spec.canonicalStockName) must declare a modelBasis after migration."
-            )
-            XCTAssertEqual(
-                basis.sourceModel,
-                .manufacturerTable,
-                "\(spec.canonicalStockName) sourceModel must be .manufacturerTable."
-            )
-            XCTAssertEqual(
-                basis.calculationModel,
-                .tableLogLogInterpolation,
-                "\(spec.canonicalStockName) calculationModel must be .tableLogLogInterpolation."
-            )
-        }
-    }
-
     func testFomapanProfilesHaveOfficialTableId() throws {
         for spec in allSpecs {
             let profile = try profile(for: spec)
@@ -145,83 +77,9 @@ final class FomaTableProfileTests: XCTestCase {
 
     // MARK: - Threshold boundary (inclusive at 1/2 sec)
 
-    func testFomapanProfilesAtThresholdBoundaryReturnOfficialNoCorrection() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "\(spec.canonicalStockName)'s 1/2 sec threshold is inclusive — 0.5 s itself must read as no-correction."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, 0.5, accuracy: 1e-6)
-        }
-    }
-
     // MARK: - Table range (> 1/2 sec, up to and including 100 sec)
 
-    func testFomapanProfilesInsideTableRangeAreTableLogLogDerivedAtAllPublishedAnchors() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-            for anchor in spec.anchors {
-                let result = evaluator.evaluate(
-                    profile: profile,
-                    meteredExposureSeconds: anchor.metered
-                )
-                XCTAssertEqual(
-                    result.metadata.basis,
-                    .tableLogLogDerived,
-                    "\(spec.canonicalStockName) at \(anchor.metered) s must be .tableLogLogDerived inside the published table range."
-                )
-            }
-        }
-    }
-
-    func testFomapanProfilesTableReproducesPublishedAnchorCorrectedTimesExactly() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-            for anchor in spec.anchors {
-                let result = evaluator.evaluate(
-                    profile: profile,
-                    meteredExposureSeconds: anchor.metered
-                )
-                let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-                XCTAssertEqual(
-                    corrected,
-                    anchor.corrected,
-                    accuracy: 1e-4,
-                    "\(spec.canonicalStockName) at \(anchor.metered) s: table must reproduce the published anchor time exactly."
-                )
-            }
-        }
-    }
-
     // MARK: - Beyond the published source range (> 100 sec)
-
-    func testFomapanProfilesAbove100SecondsBecomesBeyondSourceRange() throws {
-        for spec in allSpecs {
-            let profile = try profile(for: spec)
-            for metered in [150.0, 300.0, 1000.0] {
-                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-                XCTAssertEqual(
-                    result.metadata.basis,
-                    .unsupportedOutOfPolicyRange,
-                    "\(spec.canonicalStockName) at \(metered) s sits above FOMA's 100 sec upper anchor and must be marked outside manufacturer guidance."
-                )
-                let corrected = try XCTUnwrap(
-                    result.correctedExposureSeconds,
-                    "\(spec.canonicalStockName) at \(metered) s must still return a log-log extrapolated value past the source range."
-                )
-                let lastAnchorCorrected = try XCTUnwrap(spec.anchors.last?.corrected)
-                XCTAssertGreaterThan(
-                    corrected,
-                    lastAnchorCorrected,
-                    "\(spec.canonicalStockName): extrapolated value at \(metered) s must exceed the last anchor's corrected time."
-                )
-            }
-        }
-    }
 
     // MARK: - Source-evidence preservation (multiplier + corrected time)
 

@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 /// Structural guard on the `UnofficialPracticalProfiles` registry —
 /// the supplementary, non-launch profiles described in DomainSchema

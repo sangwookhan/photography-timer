@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Display-state baseline tests for the cross-cutting orchestration
 /// surface that the `ExposureCalculatorViewModel` facade exposes. Each

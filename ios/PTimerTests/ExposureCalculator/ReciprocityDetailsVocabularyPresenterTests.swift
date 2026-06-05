@@ -41,8 +41,10 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
 
     func testLimitedGuidanceBadgeReadsNoQuantifiedPrediction() throws {
         // Portra 400 published preset has no formula and lands on
-        // `.limitedGuidance` past its threshold.
-        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 5)
+        // `.limitedGuidance` past its threshold. PTIMER-168: the
+        // no-correction band now ends at 10 s, so use 30 s to ensure
+        // the input is beyond the band.
+        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 30)
         XCTAssertEqual(presenter.badgeText(for: bindingState), "No quantified prediction")
     }
 
@@ -88,11 +90,13 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
     }
 
     func testLimitedGuidanceSummaryReadsBeyondPublishedNoCorrectionRange() throws {
-        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 5)
+        // PTIMER-168: Portra 400 no-correction band now ends at 10 s;
+        // use 30 s so the input is beyond the band.
+        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 30)
         XCTAssertEqual(
             presenter.summaryText(
                 for: bindingState,
-                calculationResult: successCalc(at: 5),
+                calculationResult: successCalc(at: 30),
                 formatDurationCoarse: { "\($0)s" }
             ),
             "Beyond published no-correction range"

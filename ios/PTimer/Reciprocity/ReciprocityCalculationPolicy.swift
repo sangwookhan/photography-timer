@@ -911,11 +911,11 @@ private extension ReciprocityCalculationPolicyEvaluator {
             formulaRule: FormulaReciprocityRule
         ) -> ReciprocityResult {
             let boundary = formulaRule.formula.noCorrectionThroughSeconds
-            // Detect epsilon-encoded open boundaries (e.g. Tri-X's
-            // 0.999999, Acros II's 119.999999): the manufacturer's
-            // semantic is "Tm < integer s no correction, Tm ≥
-            // integer s formula", so the note reads as "< X sec",
-            // not the rounded inclusive "≤ X sec" form.
+            // Detect epsilon-encoded open boundaries (e.g. Acros II's
+            // 119.999999): the manufacturer's semantic is "Tm <
+            // integer s no correction, Tm ≥ integer s formula", so the
+            // note reads as "< X sec", not the rounded inclusive
+            // "≤ X sec" form.
             let comparison = noCorrectionBoundaryComparisonText(for: boundary)
             return .thresholdNoCorrection(
                 meteredExposureSeconds: meteredExposureSeconds,
@@ -1106,7 +1106,7 @@ private extension ReciprocityCalculationPolicyEvaluator {
         /// boundary is an epsilon-encoded open boundary (the
         /// manufacturer's semantic is "no correction strictly below
         /// integer X sec; the formula picks up at exactly X sec",
-        /// e.g. Tri-X's 0.999999 → "< 1 sec"). Otherwise returns
+        /// e.g. Acros II's 119.999999 → "< 120 sec"). Otherwise returns
         /// "≤ X sec" — the inclusive case where the boundary value
         /// itself is part of the no-correction band.
         private func noCorrectionBoundaryComparisonText(for value: Double) -> String {

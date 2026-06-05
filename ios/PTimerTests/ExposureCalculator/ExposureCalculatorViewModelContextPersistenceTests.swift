@@ -69,7 +69,7 @@ final class CalculatorContextPersistenceTests: XCTestCase {
         XCTAssertEqual(bindingState.profile.id, film.profiles.first?.id)
         XCTAssertTrue(bindingState.policyResult.hasCalculatedExposureTime)
         XCTAssertTrue(bindingState.presentation.returnsCalculatedExposureTime)
-        XCTAssertEqual(relaunchedViewModel.filmModeExposureResultState?.reciprocityState.badgeText, "Formula-derived")
+        XCTAssertEqual(relaunchedViewModel.filmModeExposureResultState?.reciprocityState.badgeText, "Table-derived")
     }
 
     @MainActor

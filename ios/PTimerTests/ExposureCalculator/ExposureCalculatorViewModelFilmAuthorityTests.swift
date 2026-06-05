@@ -276,11 +276,12 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     func testFilmModeDetailsOfficialPortra400KeepsOfficialLimitedGuidanceBeyondThreshold() throws {
         // The official Portra 400 profile must remain the default
         // official limited-guidance profile and must not expose any
-        // quantified prediction beyond the published 1 s threshold.
+        // quantified prediction beyond the published 10 s threshold
+        // (PTIMER-168 corrected the Portra no-correction band to 10 s).
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
-        viewModel.baseShutter = 8       // metered exposure well beyond the 1 s no-correction threshold
+        viewModel.baseShutter = 30      // metered exposure well beyond the 10 s no-correction threshold
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(officialFilm)
 
@@ -300,15 +301,14 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsConvertedFormulaProfilesStillShowSourceRangeWordingBeyondSupportedBound() throws {
-        // Regression guard for the converted formula profiles
-        // (Provia 100F, Tri-X 400, T-MAX 100, T-MAX 400, Velvia 50,
-        // Velvia 100, Acros II): an input beyond their supported range
-        // must still produce "Beyond source range" wording, which is
-        // the converted-formula-profile vocabulary established by
-        // PTIMER-128 / PTIMER-129. The unofficial-profile changes
-        // must not regress this.
-        let convertedFormulaStockNames = [
+    func testFilmModeDetailsSourceBackedProfilesStillShowSourceRangeWordingBeyondSupportedBound() throws {
+        // Regression guard for manufacturer source-backed profiles —
+        // both still-converted-formula profiles (Provia 100F, Velvia 50,
+        // Velvia 100, Acros II) and the PTIMER-168 table-origin profiles
+        // (Tri-X 400, T-MAX 100, T-MAX 400): an input beyond their
+        // supported range must still produce "Beyond source range"
+        // wording. The unofficial-profile changes must not regress this.
+        let sourceBackedStockNames = [
             "Provia 100F",
             "Tri-X 400",
             "T-MAX 100",
@@ -317,18 +317,17 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
             "Velvia 100",
             "Acros II",
         ]
-        for stockName in convertedFormulaStockNames {
+        for stockName in sourceBackedStockNames {
             let viewModel = makeFilmModeViewModel()
-            // A missing catalog entry is a real regression — a
-            // silent `continue` would hide a converted formula
-            // profile that disappeared from the launch catalog. The
-            // assertion fails the test instead so PTIMER-134 /
-            // PTIMER-135 coverage stays honest.
+            // A missing catalog entry is a real regression — a silent
+            // `continue` would hide a source-backed profile that
+            // disappeared from the launch catalog. The assertion fails
+            // the test instead so coverage stays honest.
             let film = try XCTUnwrap(
                 viewModel.availablePresetFilms.first(where: { $0.canonicalStockName == stockName }),
-                "Converted formula profile '\(stockName)' must remain in the launch catalog."
+                "Source-backed profile '\(stockName)' must remain in the launch catalog."
             )
-            viewModel.baseShutter = 4_000     // pushed past every converted formula's supported bound
+            viewModel.baseShutter = 4_000     // pushed past every profile's supported bound
             viewModel.ndStop = 0
             viewModel.selectPresetFilm(film)
 
@@ -336,7 +335,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
             XCTAssertEqual(
                 details.summary.badgeText,
                 "Beyond source range",
-                "Converted formula profile '\(stockName)' must still surface 'Beyond source range' wording past its supported bound."
+                "Source-backed profile '\(stockName)' must still surface 'Beyond source range' wording past its supported bound."
             )
         }
     }

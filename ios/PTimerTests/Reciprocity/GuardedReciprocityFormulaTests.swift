@@ -402,31 +402,14 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
 
     // MARK: - Open-boundary wording in policy notes
 
-    /// PTIMER-160: Tri-X's `noCorrectionThroughSeconds = 0.999999`
-    /// encodes an OPEN boundary (Kodak's table starts at 1 s as the
-    /// +1 stop formula row). The no-correction policy note must read
-    /// as "< 1 sec", never the rounded inclusive "≤ 1 sec".
-    func testTriX400NoCorrectionNoteUsesOpenBoundaryWording() throws {
-        let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Tri-X 400" }
-        )
-        let profile = try XCTUnwrap(film.profiles.first)
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
-        let noteText = result.metadata.notes
-            .first(where: { $0.text.lowercased().contains("no-correction range") })?.text
-        let resolved = try XCTUnwrap(noteText, "Tri-X must surface a no-correction range note.")
-        XCTAssertTrue(
-            resolved.contains("< 1 sec"),
-            "Tri-X no-correction note must use open-boundary wording '< 1 sec'; got: \(resolved)"
-        )
-        XCTAssertFalse(
-            resolved.contains("≤ 1 sec"),
-            "Tri-X note must NOT use the inclusive '≤ 1 sec' wording; got: \(resolved)"
-        )
-    }
-
+    /// PTIMER-168 migrated Tri-X 400 (the former
+    /// `noCorrectionThroughSeconds = 0.999999` open-boundary formula
+    /// case) to the table model, so the epsilon-encoded open-boundary
+    /// formula wording is now exercised on Acros II below.
+    ///
     /// Acros II's `noCorrectionThroughSeconds = 119.999999` is the
-    /// same open-boundary case at 120 s.
+    /// open-boundary case at 120 s: the note must read "< 120 sec",
+    /// never the rounded inclusive "≤ 120 sec".
     func testAcrosIINoCorrectionNoteUsesOpenBoundaryWording() throws {
         let film = try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Acros II" }
@@ -439,6 +422,10 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
         XCTAssertTrue(
             resolved.contains("< 120 sec"),
             "Acros II no-correction note must use open-boundary wording '< 120 sec'; got: \(resolved)"
+        )
+        XCTAssertFalse(
+            resolved.contains("≤ 120 sec"),
+            "Acros II note must NOT use the inclusive '≤ 120 sec' wording; got: \(resolved)"
         )
     }
 

@@ -1,5 +1,40 @@
 import Foundation
 
+/// Boundary policy for the no-correction band.
+///
+/// A profile whose source says "no correction through `T`" must
+/// treat a UI input nominally equal to `T` as no correction even
+/// when Base Shutter / ND stop arithmetic produces a value a few
+/// percent above `T`. For a `0.1 s` (nominal 1/10 s) boundary the
+/// adjusted shutter can land near `0.102 s`; a strict `<= 0.1`
+/// comparison would misclassify it as table-derived.
+///
+/// A small relative tolerance keeps the boundary robust for
+/// shutter/stop-derived values while staying well below the next
+/// meaningful step: `0.1 × 1.10 = 0.11 s` admits the nominal
+/// `~0.102 s` with margin yet leaves `0.12 s` and `0.15 s`
+/// corrected. The tolerance is relative, so it never widens a band
+/// anywhere near `1 s` for a `0.1 s` threshold.
+///
+/// Used by the **table** evaluator only. The formula evaluator keeps
+/// a strict boundary because formula films (e.g. Acros II) encode an
+/// exact-epsilon `noCorrectionThroughSeconds` that a tolerance would
+/// break.
+enum ReciprocityNoCorrectionBoundary {
+    /// Relative tolerance applied above `noCorrectionThroughSeconds`
+    /// when classifying an input as no correction.
+    static let relativeTolerance = 0.10
+
+    /// Whether `meteredSeconds` falls within the no-correction band
+    /// for the given threshold, including the boundary tolerance.
+    static func isWithinNoCorrection(
+        meteredSeconds: Double,
+        throughSeconds: Double
+    ) -> Bool {
+        meteredSeconds <= throughSeconds * (1 + relativeTolerance)
+    }
+}
+
 struct FilmIdentity: Codable, Equatable {
     let id: String
     let kind: FilmIdentityKind
@@ -920,6 +955,14 @@ extension ReciprocityFormula {
         guard hasValidParameters else {
             return .invalidFormula
         }
+        // Strict, inclusive boundary. The formula evaluator must NOT
+        // apply the nominal-shutter tolerance: formula films such as
+        // Acros II encode an exact-epsilon boundary
+        // (`noCorrectionThroughSeconds = 119.999999`) so that exactly
+        // 120 s starts the corrected range, and the guard contract
+        // requires any input strictly above the threshold to leave the
+        // no-correction band. The tolerance lives only in the table
+        // evaluator (see `ReciprocityNoCorrectionBoundary`).
         if meteredExposureSeconds <= noCorrectionThroughSeconds {
             return .noCorrection
         }

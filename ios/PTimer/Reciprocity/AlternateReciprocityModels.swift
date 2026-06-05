@@ -28,6 +28,11 @@ enum AlternateReciprocityModels {
             // Display order after the default official table:
             // Ohzart community table, then the app-derived formula.
             return [fomapan100OhzartCommunityTable, fomapan100AppDerivedFormula]
+        case "kodak-tri-x-400":
+            // Display order after the default official graph/table:
+            // the published-rows-only official table, then the
+            // app-derived formula fitted to those three rows.
+            return [triX400OfficialTable, triX400AppDerivedFormula]
         default:
             return []
         }
@@ -36,12 +41,14 @@ enum AlternateReciprocityModels {
     /// `true` for explicitly app-derived alternate models (a formula the
     /// app fitted to a manufacturer table). The "App-derived comparison"
     /// section is intentionally limited to these enrolled models, so it
-    /// never leaks onto official converted-formula profiles (Tri-X,
-    /// Provia, etc.) that merely carry source anchors. Any future
-    /// app-derived alternate must be enrolled here to surface its
-    /// comparison (PTIMER-159).
+    /// never leaks onto non-app-derived profiles that merely carry
+    /// source anchors — source-backed table/graph models (e.g. Tri-X's
+    /// Official Kodak graph/table) or converted-formula profiles (e.g.
+    /// Provia). Any future app-derived alternate must be enrolled here
+    /// to surface its comparison (PTIMER-159).
     static func isAppDerivedModel(id: String) -> Bool {
         id == fomapan100AppDerivedFormula.id
+            || id == triX400AppDerivedFormula.id
     }
 
     /// Resolves an alternate profile by its id (used by session restore
@@ -51,6 +58,8 @@ enum AlternateReciprocityModels {
             UnofficialPracticalProfiles.kodakPortra400UnofficialPractical,
             fomapan100OhzartCommunityTable,
             fomapan100AppDerivedFormula,
+            triX400OfficialTable,
+            triX400AppDerivedFormula,
         ]
         return all.first { $0.id == profileID }
     }
@@ -190,6 +199,112 @@ enum AlternateReciprocityModels {
             adjustments: [
                 .exposure(.multiplier(MultiplierAdjustment(factor: multiplier))),
                 .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: metered, correctedSeconds: corrected))),
+            ],
+            notes: [note]
+        )
+    }
+
+    // MARK: - Kodak Tri-X 400 alternate models (PTIMER-168)
+
+    /// Official Kodak table model for Tri-X 400 using ONLY the three
+    /// published E-31 table rows (1/10/100 sec). The no-correction band
+    /// ends at 1/10 sec; corrected exposure is log-log interpolated
+    /// between the published anchors. Offered as a non-default alternate
+    /// to the graph/table model — never presented as a formula.
+    static let triX400OfficialTable = ReciprocityProfile(
+        id: "kodak-tri-x-official-table",
+        name: "Official Kodak table",
+        source: ReciprocitySourceProvenance(
+            kind: .manufacturerPublished,
+            authority: .official,
+            confidence: .high,
+            publisher: "Kodak",
+            title: "KODAK PROFESSIONAL TRI-X 400 Film — Technical Data",
+            citation: "Publication F-4017"
+        ),
+        rules: [
+            .tableInterpolation(TableInterpolationReciprocityRule(
+                anchors: [
+                    TableAnchor(meteredSeconds: 1, correctedSeconds: 2),
+                    TableAnchor(meteredSeconds: 10, correctedSeconds: 50),
+                    TableAnchor(meteredSeconds: 100, correctedSeconds: 1200),
+                ],
+                notes: [
+                    "Published Kodak E-31 table rows only (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec). No adjustment through 1/10 sec; log-log interpolation between the published anchors. Inputs above 100 sec are flagged beyond the published source range.",
+                ],
+                noCorrectionThroughSeconds: 0.1,
+                sourceRangeThroughSeconds: 100
+            )),
+        ],
+        sourceEvidence: triX400OfficialAnchorEvidence,
+        modelBasis: ReciprocityProfileModelBasis(
+            sourceModel: .manufacturerTable,
+            calculationModel: .tableLogLogInterpolation
+        ),
+        selectorLabel: "Table"
+    )
+
+    /// App-derived formula for Tri-X 400 — `Tc = 2 × Tm^1.3891`, fitted to
+    /// Kodak's three published table rows. Source is the Kodak table (so
+    /// it cites Kodak), but the calculation is the app's own fit, NOT a
+    /// Kodak-published formula. Kept non-default and clearly labelled; it
+    /// is enrolled in `isAppDerivedModel` so it surfaces the app-derived
+    /// comparison rather than reading as manufacturer guidance.
+    static let triX400AppDerivedFormula = ReciprocityProfile(
+        id: "kodak-tri-x-app-formula",
+        name: "App formula",
+        source: ReciprocitySourceProvenance(
+            kind: .manufacturerPublished,
+            authority: .official,
+            confidence: .high,
+            publisher: "Kodak",
+            title: "KODAK PROFESSIONAL TRI-X 400 Film — Technical Data",
+            citation: "Publication F-4017"
+        ),
+        rules: [
+            .formula(FormulaReciprocityRule(
+                formula: ReciprocityFormula(
+                    formulaFamily: .modifiedSchwarzschild,
+                    coefficientSeconds: 2,
+                    exponent: 1.3891,
+                    noCorrectionThroughSeconds: 0.1,
+                    sourceRangeThroughSeconds: 100.0
+                ),
+                notes: [
+                    "App-derived: Tc = 2 × Tm^1.3891, fitted to Kodak's published 1/10/100 sec table rows (no correction through 1/10 sec). Not a Kodak-published formula; the official graph/table model is the default.",
+                ]
+            )),
+        ],
+        sourceEvidence: triX400OfficialAnchorEvidence,
+        modelBasis: ReciprocityProfileModelBasis(
+            sourceModel: .manufacturerTable,
+            calculationModel: .guardedFormula
+        )
+    )
+
+    /// The three official Kodak Tri-X 400 published rows preserved as
+    /// source evidence (stop delta + corrected time + development),
+    /// shared by the table-only alternate and the app-derived formula
+    /// comparison.
+    private static let triX400OfficialAnchorEvidence: [ReciprocitySourceEvidenceRow] = [
+        triX400AnchorEvidence(metered: 1, stopDelta: 1, corrected: 2, development: "-10% development", note: "1 sec → +1 stop, corrected 2 sec, develop -10%."),
+        triX400AnchorEvidence(metered: 10, stopDelta: 2, corrected: 50, development: "-20% development", note: "10 sec → +2 stops, corrected 50 sec, develop -20%."),
+        triX400AnchorEvidence(metered: 100, stopDelta: 3, corrected: 1200, development: "-30% development", note: "100 sec → +3 stops, corrected 1200 sec, develop -30%."),
+    ]
+
+    private static func triX400AnchorEvidence(
+        metered: Double,
+        stopDelta: Double,
+        corrected: Double,
+        development: String,
+        note: String
+    ) -> ReciprocitySourceEvidenceRow {
+        ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(metered),
+            adjustments: [
+                .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: stopDelta))),
+                .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: metered, correctedSeconds: corrected))),
+                .development(DevelopmentAdjustment(instruction: development, note: nil)),
             ],
             notes: [note]
         )

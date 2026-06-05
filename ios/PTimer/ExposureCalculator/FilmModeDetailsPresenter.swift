@@ -155,9 +155,10 @@ struct FilmModeDetailsPresenter {
 
         // App-derived / fitted comparison (PTIMER-159). Gated to
         // explicitly app-derived alternate models (e.g. Fomapan 100's
-        // app-derived formula) so it never leaks onto official
-        // converted-formula profiles (Tri-X, Provia, …) that merely
-        // carry source anchors. Kept separate from the source-only
+        // app-derived formula) so it never leaks onto non-app-derived
+        // profiles that merely carry source anchors — source-backed
+        // table/graph models, or converted-formula profiles (e.g.
+        // Provia). Kept separate from the source-only
         // reference sections and inserted ahead of "Sources" so that
         // citation footer stays last.
         if AlternateReciprocityModels.isAppDerivedModel(id: input.bindingState.profile.id),

@@ -123,15 +123,15 @@
 		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
 		A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */; };
 		A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000243 /* FormulaProfileTestSupport.swift */; };
-		A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400FormulaProfileTests.swift */; };
-		A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100FormulaProfileTests.swift */; };
-		A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400FormulaProfileTests.swift */; };
+		A00000000000000000000244 /* TriX400TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000245 /* TriX400TableProfileTests.swift */; };
+		A00000000000000000000246 /* TMax100TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000247 /* TMax100TableProfileTests.swift */; };
+		A00000000000000000000248 /* TMax400TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000249 /* TMax400TableProfileTests.swift */; };
 		A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */; };
-		A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaFormulaProfileTests.swift */; };
+		A00000000000000000000252 /* FomaTableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000253 /* FomaTableProfileTests.swift */; };
 		A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000255 /* RolleiFormulaProfileTests.swift */; };
 		A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000257 /* AdoxFormulaProfileTests.swift */; };
 		A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */; };
-		A0000000000000000000025A /* AdoxChs100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */; };
+		A0000000000000000000025A /* AdoxChs100TableProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025B /* AdoxChs100TableProfileTests.swift */; };
 		A0000000000000000000025C /* SourceReferenceRowSorting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025D /* SourceReferenceRowSorting.swift */; };
 		A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */; };
 		A00000000000000000000261 /* FilmSelectorSupportPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */; };
@@ -240,6 +240,7 @@
 		A00000000000000000000C0D /* AlternateReciprocityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C0E /* AlternateReciprocityModels.swift */; };
 		A00000000000000000000C0F /* TableInterpolationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C10 /* TableInterpolationModelTests.swift */; };
 		A00000000000000000000C11 /* Fomapan100TableModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000C12 /* Fomapan100TableModelTests.swift */; };
+		A00000000000000000000F00 /* OfficialTableMigrationInvariantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000F01 /* OfficialTableMigrationInvariantTests.swift */; };
 		A00000000001600000000001 /* GuardedReciprocityFormulaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */; };
 		A00000000001700000000001 /* ReciprocityProfileModelBasisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */; };
 /* End PBXBuildFile section */
@@ -396,15 +397,15 @@
 		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcrosIIFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000243 /* FormulaProfileTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormulaProfileTestSupport.swift; sourceTree = "<group>"; };
-		A00000000000000000000245 /* TriX400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000247 /* TMax100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100FormulaProfileTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000249 /* TMax400FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000245 /* TriX400TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriX400TableProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000247 /* TMax100TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax100TableProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000249 /* TMax400TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMax400TableProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KodakLimitedGuidanceProfilesTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000253 /* FomaFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaFormulaProfileTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000253 /* FomaTableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FomaTableProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000255 /* RolleiFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolleiFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000257 /* AdoxFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmDetailsGraphKindInvariantTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxChs100FormulaProfileTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000025B /* AdoxChs100TableProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdoxChs100TableProfileTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000025D /* SourceReferenceRowSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSorting.swift; sourceTree = "<group>"; };
 		A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceRowSortingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000260 /* FilmSelectorSupportPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorSupportPresenter.swift; sourceTree = "<group>"; };
@@ -512,6 +513,7 @@
 		A00000000000000000000C0E /* AlternateReciprocityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlternateReciprocityModels.swift; sourceTree = "<group>"; };
 		A00000000000000000000C10 /* TableInterpolationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableInterpolationModelTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000C12 /* Fomapan100TableModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fomapan100TableModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000F01 /* OfficialTableMigrationInvariantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficialTableMigrationInvariantTests.swift; sourceTree = "<group>"; };
 		A00000000001600000000002 /* GuardedReciprocityFormulaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardedReciprocityFormulaTests.swift; sourceTree = "<group>"; };
 		A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityProfileModelBasisTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
@@ -809,20 +811,21 @@
 				A00000000001700000000002 /* ReciprocityProfileModelBasisTests.swift */,
 				A00000000000000000000C10 /* TableInterpolationModelTests.swift */,
 				A00000000000000000000C12 /* Fomapan100TableModelTests.swift */,
+				A00000000000000000000F01 /* OfficialTableMigrationInvariantTests.swift */,
 				A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */,
 				A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */,
 				A00000000000000000000241 /* AcrosIIFormulaProfileTests.swift */,
-				A00000000000000000000245 /* TriX400FormulaProfileTests.swift */,
-				A00000000000000000000247 /* TMax100FormulaProfileTests.swift */,
-				A00000000000000000000249 /* TMax400FormulaProfileTests.swift */,
+				A00000000000000000000245 /* TriX400TableProfileTests.swift */,
+				A00000000000000000000247 /* TMax100TableProfileTests.swift */,
+				A00000000000000000000249 /* TMax400TableProfileTests.swift */,
 				A00000000000000000000251 /* KodakLimitedGuidanceProfilesTests.swift */,
 				A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */,
-				A00000000000000000000253 /* FomaFormulaProfileTests.swift */,
+				A00000000000000000000253 /* FomaTableProfileTests.swift */,
 				A00000000000000000000BA7 /* Fomapan100ModelReviewTests.swift */,
 				A00000000000000000000255 /* RolleiFormulaProfileTests.swift */,
 				A00000000000000000000257 /* AdoxFormulaProfileTests.swift */,
 				A00000000000000000000259 /* FilmDetailsGraphKindInvariantTests.swift */,
-				A0000000000000000000025B /* AdoxChs100FormulaProfileTests.swift */,
+				A0000000000000000000025B /* AdoxChs100TableProfileTests.swift */,
 				A0000000000000000000025F /* SourceReferenceRowSortingTests.swift */,
 				A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */,
 				A00000000000000000000243 /* FormulaProfileTestSupport.swift */,
@@ -1260,17 +1263,17 @@
 				A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */,
 				A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */,
 				A00000000000000000000240 /* AcrosIIFormulaProfileTests.swift in Sources */,
-				A00000000000000000000244 /* TriX400FormulaProfileTests.swift in Sources */,
-				A00000000000000000000246 /* TMax100FormulaProfileTests.swift in Sources */,
-				A00000000000000000000248 /* TMax400FormulaProfileTests.swift in Sources */,
+				A00000000000000000000244 /* TriX400TableProfileTests.swift in Sources */,
+				A00000000000000000000246 /* TMax100TableProfileTests.swift in Sources */,
+				A00000000000000000000248 /* TMax400TableProfileTests.swift in Sources */,
 				A00000000000000000000250 /* KodakLimitedGuidanceProfilesTests.swift in Sources */,
 				A00000000000000000000602 /* UnofficialPracticalProfilesShapeTests.swift in Sources */,
-				A00000000000000000000252 /* FomaFormulaProfileTests.swift in Sources */,
+				A00000000000000000000252 /* FomaTableProfileTests.swift in Sources */,
 				A00000000000000000000BA6 /* Fomapan100ModelReviewTests.swift in Sources */,
 				A00000000000000000000254 /* RolleiFormulaProfileTests.swift in Sources */,
 				A00000000000000000000256 /* AdoxFormulaProfileTests.swift in Sources */,
 				A00000000000000000000258 /* FilmDetailsGraphKindInvariantTests.swift in Sources */,
-				A0000000000000000000025A /* AdoxChs100FormulaProfileTests.swift in Sources */,
+				A0000000000000000000025A /* AdoxChs100TableProfileTests.swift in Sources */,
 				A0000000000000000000025E /* SourceReferenceRowSortingTests.swift in Sources */,
 				A00000000000000000000600 /* ConvertedFormulaProfileTemplateTests.swift in Sources */,
 				A00000000000000000000242 /* FormulaProfileTestSupport.swift in Sources */,
@@ -1280,6 +1283,7 @@
 				A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */,
 				A00000000000000000000C0F /* TableInterpolationModelTests.swift in Sources */,
 				A00000000000000000000C11 /* Fomapan100TableModelTests.swift in Sources */,
+				A00000000000000000000F00 /* OfficialTableMigrationInvariantTests.swift in Sources */,
 				A00000000000000000000C05 /* ReciprocityModelMetadataPresenterTests.swift in Sources */,
 				A00000000000000000000C07 /* ReciprocityModelComparisonPresenterTests.swift in Sources */,
 				A00000000000000000000C09 /* ReciprocityModelSelectionTests.swift in Sources */,

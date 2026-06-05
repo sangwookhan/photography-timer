@@ -1,7 +1,7 @@
 import XCTest
 @testable import PTimer
 
-/// Behavior contract for ADOX CHS 100 II's formula profile (PTIMER-139).
+/// Behavior contract for ADOX CHS 100 II's official table profile (PTIMER-168).
 ///
 /// ADOX's 2024 CHS 100 II technical sheet publishes reciprocity
 /// guidance only through 15 sec; older / community / derived
@@ -17,22 +17,22 @@ import XCTest
 ///    8 s       ×2.5   →  20 s
 ///   15 s       ×3     →  45 s
 ///
-/// The CHS 100 II profile uses the formula graph path (same grammar
-/// as FOMA, Provia, HP5 Plus, etc.):
+/// The CHS 100 II profile now uses a table-interpolation rule
+/// (migrated from formula in PTIMER-168). The table graph path is
+/// rendered with graph.kind == .formula (same grammar as converted
+/// table profiles such as Fomapan 100 Classic):
 ///
 /// - Threshold 0 … 1 sec is unchanged (No correction band).
-/// - `Tc = 1.2102 × Tm^1.3423` anchors a log-log fit through the
-///   four published multiplier rows (2 / 4 / 8 / 15 sec).
+/// - Log-log interpolation between the four anchor rows (2/4/8/15 s)
+///   gives exact corrected times at the anchor points.
 /// - The 15 sec row marks the upper boundary of the published
-///   source range; inputs above 15 sec keep the formula numeric
-///   continuation and surface as "Beyond source range" with the
-///   standard converted-formula-profile wording.
+///   source range; inputs above 15 sec use log-log extrapolation of
+///   the last two anchors and surface as "Beyond source range".
 ///
 /// Calculation/UI policy on CHS 100 II must NOT borrow CMS 20 II's
 /// stop-signal vocabulary (no `Not-recommended boundary`, no
-/// `Current input` chip, no `Unavailable` corrected exposure). It
-/// also must not retain table-graph vocabulary (no `Exact` chip).
-final class AdoxChs100FormulaProfileTests: XCTestCase {
+/// `Current input` chip, no `Unavailable` corrected exposure).
+final class AdoxChs100TableProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -50,58 +50,90 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 1.0, accuracy: 1e-6)
     }
 
-    // MARK: - Formula range (1 s … 15 s)
+    // MARK: - Table interpolation range (1 s … 15 s)
 
-    func testChs100IIInsideFormulaRangeIsFormulaDerivedAtAllPublishedAnchorRows() throws {
+    func testChs100IIInsideTableRangeIsTableLogLogDerivedAtAllPublishedAnchorRows() throws {
         let profile = try chs100Profile()
-        let publishedRows: [(metered: Double, published: Double)] = [
+        let anchorRows: [(metered: Double, corrected: Double)] = [
             (2, 3),
             (4, 8),
             (8, 20),
             (15, 45),
         ]
-        for row in publishedRows {
+        for row in anchorRows {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: row.metered)
             XCTAssertEqual(
                 result.metadata.basis,
-                .formulaDerived,
-                "CHS 100 II at \(row.metered) s must be formula-derived, never resurrected as an exact-table point."
+                .tableLogLogDerived,
+                "CHS 100 II at \(row.metered) s must be table-log-log-derived."
             )
             let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            let stopError = log2(corrected / row.published)
             XCTAssertEqual(
-                stopError,
-                0,
-                accuracy: 0.2,
-                "CHS 100 II formula at \(row.metered) s (\(corrected) sec) must stay within 0.2 stop of the published row \(row.published) sec; got error \(stopError) stop."
+                corrected,
+                row.corrected,
+                accuracy: 1e-4,
+                "CHS 100 II at anchor \(row.metered) s must return the exact published corrected time \(row.corrected) sec; got \(corrected) sec."
             )
         }
     }
 
-    func testChs100IIFormulaRuleExposesPublishedCoefficientAndExponent() throws {
+    func testChs100IITableInterpolationRuleExposesAnchorsAndBoundaries() throws {
         let profile = try chs100Profile()
-        let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(rule) = rule else { return nil }
-            return rule
-        }.first)
+        let tableRule = try XCTUnwrap(
+            profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+                if case let .tableInterpolation(r) = rule { return r }
+                return nil
+            }.first,
+            "CHS 100 II must contain a tableInterpolation rule after migration."
+        )
 
-        XCTAssertEqual(formulaRule.formula.exponent, 1.3423, accuracy: 1e-4)
-        let coefficient = formulaRule.formula.coefficientSeconds
-        XCTAssertEqual(coefficient, 1.2102, accuracy: 1e-4)
+        // No-correction threshold
+        XCTAssertEqual(tableRule.noCorrectionThroughSeconds, 1, accuracy: 1e-6)
 
-        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-6)
-        let sourceRange = try XCTUnwrap(formulaRule.formula.sourceRangeThroughSeconds)
+        // Source range
         XCTAssertEqual(
-            sourceRange,
+            tableRule.sourceRangeThroughSeconds,
             15,
             accuracy: 1e-6,
-            "CHS 100 II's formula domain must end at the last 2024 published row (15 sec)."
+            "CHS 100 II's table domain must end at the last 2024 published row (15 sec)."
+        )
+
+        // Anchors: (metered → corrected)
+        let expectedAnchors: [(Double, Double)] = [(2, 3), (4, 8), (8, 20), (15, 45)]
+        for (metered, corrected) in expectedAnchors {
+            let anchor = tableRule.anchors.first { abs($0.meteredSeconds - metered) < 1e-6 }
+            XCTAssertNotNil(anchor, "Missing anchor at metered \(metered) s.")
+            XCTAssertEqual(
+                anchor?.correctedSeconds ?? -1,
+                corrected,
+                accuracy: 1e-6,
+                "Anchor at \(metered) s must have corrected time \(corrected) s."
+            )
+        }
+    }
+
+    func testChs100IITableRuleModelBasisIsManufacturerTableLogLogInterpolation() throws {
+        let profile = try chs100Profile()
+        let basis = try XCTUnwrap(profile.modelBasis)
+        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
+        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
+    }
+
+    func testChs100IIHasNoFormulaRuleAfterMigration() throws {
+        let profile = try chs100Profile()
+        let formulaRules = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
+            guard case let .formula(r) = rule else { return nil }
+            return r
+        }
+        XCTAssertTrue(
+            formulaRules.isEmpty,
+            "CHS 100 II must not retain any .formula rule after migration to tableInterpolation; found \(formulaRules.count)."
         )
     }
 
     // MARK: - Beyond the published source range (> 15 s)
 
-    func testChs100IIAboveFifteenSecondsBecomesBeyondSourceNumericGuidance() throws {
+    func testChs100IIAboveFifteenSecondsBecomesBeyondSourceRange() throws {
         let profile = try chs100Profile()
         for metered in [16.0, 30.0, 60.0, 200.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
@@ -114,8 +146,13 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
                 result.correctedExposureSeconds,
                 "CHS 100 II at \(metered) s must keep a numeric continuation past the source range — Beyond source range is not Unavailable."
             )
-            let expected = 1.2102 * pow(metered, 1.3423)
-            XCTAssertEqual(corrected, expected, accuracy: expected * 0.01)
+            // Log-log extrapolation of the last two anchors (8→20 and 15→45).
+            // Assert direction and non-nil only; do not assert any formula-coefficient value.
+            XCTAssertGreaterThan(
+                corrected,
+                45,
+                "CHS 100 II at \(metered) s corrected time must exceed the last anchor corrected time (45 s)."
+            )
         }
     }
 
@@ -195,7 +232,7 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
 
             XCTAssertFalse(
                 row.isSourceEvidenceOnly,
-                "CHS 100 II rows are fitting/anchor points, not source-evidence-only. The * mark is reserved for CMS 20 II's 1/1000 s row."
+                "CHS 100 II rows are anchor points, not source-evidence-only. The * mark is reserved for CMS 20 II's 1/1000 s row."
             )
         }
     }
@@ -210,7 +247,7 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
             XCTAssertEqual(
                 graph.kind,
                 .formula,
-                "CHS 100 II at \(metered) s must render the formula Detail graph; got \(graph.kind)."
+                "CHS 100 II at \(metered) s must render the formula Detail graph (table models use the formula graph path); got \(graph.kind)."
             )
         }
     }
@@ -229,21 +266,17 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testChs100IIGraphExposesFormulaText() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 4)
-        let graph = try XCTUnwrap(displayState.graph)
-        let formula = try XCTUnwrap(
-            graph.formulaDisplayText,
-            "CHS 100 II must expose the formula expression next to the graph."
+    func testChs100IIProfileIdAndNameReflectOfficialTableMigration() throws {
+        let profile = try chs100Profile()
+        XCTAssertEqual(
+            profile.id,
+            "adox-chs-100-ii-official-table",
+            "Profile id must be updated to adox-chs-100-ii-official-table after migration."
         )
-        XCTAssertTrue(
-            formula.contains("1.2102"),
-            "Formula text must surface the published coefficient 1.2102; got: \(formula)"
-        )
-        XCTAssertTrue(
-            formula.contains("1.3423"),
-            "Formula text must surface the published exponent 1.3423; got: \(formula)"
+        XCTAssertEqual(
+            profile.name,
+            "Official ADOX table",
+            "Profile name must read 'Official ADOX table' after migration."
         )
     }
 
@@ -293,20 +326,20 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testChs100IIFormulaInputProducesFormulaDerivedStatusAndMarker() throws {
+    func testChs100IITableAnchorInputProducesTableLogLogDerivedStatusAndMarker() throws {
         for metered in [2.0, 4.0, 8.0, 15.0] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             let currentPoint = try XCTUnwrap(graph.currentPoint)
-            XCTAssertEqual(
+            XCTAssertNotEqual(
                 currentPoint.style,
-                .formulaDerived,
-                "CHS 100 II at \(metered) s must mark the current point as formula-derived, not Exact."
+                .noCorrection,
+                "CHS 100 II at anchor \(metered) s must not be marked as no-correction."
             )
             XCTAssertEqual(
-                displayState.currentResult.statusText,
-                "Formula-derived",
-                "CHS 100 II at \(metered) s status must read Formula-derived, not Exact or Estimated."
+                displayState.summary.summaryText,
+                "Log-log interpolation of the official table",
+                "CHS 100 II at anchor \(metered) s summary must read 'Log-log interpolation of the official table'."
             )
         }
     }
@@ -331,8 +364,8 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
             )
             let explanation = try XCTUnwrap(graph.unsupportedExplanation)
             XCTAssertTrue(
-                explanation.lowercased().contains("source range"),
-                "CHS 100 II beyond-source explanation must use source-range wording; got: \(explanation)"
+                explanation.lowercased().contains("source table"),
+                "CHS 100 II beyond-source explanation must use source-table wording; got: \(explanation)"
             )
         }
     }
@@ -345,10 +378,6 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             let labels = graph.legendChipLabels
-            XCTAssertFalse(
-                labels.contains("Exact"),
-                "CHS 100 II legend must not contain the table-graph Exact chip; got \(labels) at \(metered) s."
-            )
             XCTAssertFalse(
                 labels.contains("Estimated"),
                 "CHS 100 II legend must not contain the table-graph Estimated chip; got \(labels) at \(metered) s."
@@ -365,14 +394,32 @@ final class AdoxChs100FormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testChs100IIInsideSourceRangeLegendShowsFormulaGraphChips() throws {
+    func testChs100IIInsideSourceRangeLegendShowsExpectedChips() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 4)
         let graph = try XCTUnwrap(displayState.graph)
         let labels = graph.legendChipLabels
         for required in ["Calculation curve", "Current result", "Source reference", "No-correction range"] {
             XCTAssertTrue(
                 labels.contains(required),
-                "CHS 100 II formula legend must contain `\(required)`; got \(labels)."
+                "CHS 100 II table legend must contain `\(required)`; got \(labels)."
+            )
+        }
+    }
+
+    // MARK: - Source reference section
+
+    @MainActor
+    func testChs100IISourceReferenceSectionContainsPublishedMultiplierTokens() throws {
+        let displayState = try makeDisplayState(meteredExposureSeconds: 4)
+        let sourceReferenceSection = try XCTUnwrap(
+            displayState.sections.first(where: { $0.title == "Source reference" }),
+            "CHS 100 II must surface a Source reference section."
+        )
+        let sourceBlock = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
+        for token in ["1.5x", "2x", "2.5x", "3x"] {
+            XCTAssertTrue(
+                sourceBlock.contains(token),
+                "Source reference block must surface the published multiplier token '\(token)'; got: \(sourceBlock)"
             )
         }
     }

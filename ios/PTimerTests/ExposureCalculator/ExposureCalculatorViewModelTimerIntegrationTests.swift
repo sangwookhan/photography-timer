@@ -34,33 +34,80 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeAdjustedShutterTimerStartsFromAdjustedValueWhenCorrectedIsQuantified() throws {
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { Date(timeIntervalSince1970: 100) }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
+    func testFilmModeAdjustedShutterTimerStartsFromAdjustedValueAcrossResultKinds() throws {
+        // Merged from three structurally identical adjusted-shutter timer
+        // tests (PTIMER-174): the adjusted-shutter affordance must enable
+        // and stamp the timer with the adjusted value regardless of the
+        // corrected-exposure result kind — quantified (Tri-X 400),
+        // limited guidance (Portra 400), or unsupported/beyond-source
+        // (Velvia 50). Each case carries the union of the original
+        // assertions: canStart, duration, name, basisSummary.
+        struct Case {
+            let stockName: String
+            let baseShutter: Double
+            let ndStop: Int
+            let duration: Double
+            let name: String
+            let basisSummary: String
+        }
+        let cases: [Case] = [
+            Case(
+                stockName: "Tri-X 400",
+                baseShutter: 1,
+                ndStop: 0,
+                duration: 1,
+                name: "0 stops - 1s",
+                basisSummary: "Base 1s · 0 stops · Adjusted 1s · Tri-X 400"
+            ),
+            Case(
+                stockName: "Portra 400",
+                baseShutter: 15,
+                ndStop: 0,
+                duration: 15,
+                name: "0 stops - 15s",
+                basisSummary: "Base 15s · 0 stops · Adjusted 15s · Portra 400"
+            ),
+            Case(
+                stockName: "Velvia 50",
+                baseShutter: 8,
+                ndStop: 3,
+                duration: 64,
+                name: "3 stops - 64s",
+                basisSummary: "Base 8s · 3 stops · Adjusted 64s · Velvia 50"
+            ),
+        ]
 
-        viewModel.baseShutter = 1
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
+        for testCase in cases {
+            let timerManager = TimerManager(
+                tickInterval: 60,
+                dateProvider: { Date(timeIntervalSince1970: 100) }
+            )
+            let viewModel = ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerManager: timerManager
+            )
+            viewModel.scaleMode = .fullStop
+            let film = try XCTUnwrap(
+                viewModel.availablePresetFilms.first { $0.canonicalStockName == testCase.stockName },
+                "[\(testCase.stockName)] Missing preset film."
+            )
 
-        XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
+            viewModel.baseShutter = testCase.baseShutter
+            viewModel.ndStop = testCase.ndStop
+            viewModel.selectPresetFilm(film)
 
-        viewModel.startFilmAdjustedShutterTimer()
+            XCTAssertTrue(
+                viewModel.canStartFilmAdjustedShutterTimer,
+                "[\(testCase.stockName)] Adjusted-shutter timer must be startable."
+            )
 
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 1, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "0 stops - 1s")
-        XCTAssertEqual(
-            timer.basisSummary,
-            "Base 1s · 0 stops · Adjusted 1s · Tri-X 400"
-        )
+            viewModel.startFilmAdjustedShutterTimer()
+
+            let timer = try XCTUnwrap(viewModel.timers.first, "[\(testCase.stockName)] Missing started timer.")
+            XCTAssertEqual(timer.duration, testCase.duration, accuracy: 0.0001, "[\(testCase.stockName)] duration mismatch.")
+            XCTAssertEqual(timer.name, testCase.name, "[\(testCase.stockName)] name mismatch.")
+            XCTAssertEqual(timer.basisSummary, testCase.basisSummary, "[\(testCase.stockName)] basisSummary mismatch.")
+        }
     }
 
     @MainActor
@@ -87,33 +134,6 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
         XCTAssertTrue(viewModel.timers.isEmpty)
         XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .limitedGuidance)
-    }
-
-    @MainActor
-    func testFilmModeAdjustedShutterTimerStartsForLimitedGuidanceResult() throws {
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { Date(timeIntervalSince1970: 100) }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-
-        viewModel.baseShutter = 15
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
-
-        viewModel.startFilmAdjustedShutterTimer()
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 15, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "0 stops - 15s")
-        XCTAssertEqual(timer.basisSummary, "Base 15s · 0 stops · Adjusted 15s · Portra 400")
     }
 
     @MainActor
@@ -150,33 +170,6 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(timer.duration, expectedCorrected, accuracy: 0.5)
         XCTAssertEqual(viewModel.filmModeExposureResultState?.correctedExposure.kind, .quantified)
-    }
-
-    @MainActor
-    func testFilmModeAdjustedShutterTimerStartsForUnsupportedResult() throws {
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { Date(timeIntervalSince1970: 100) }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
-
-        viewModel.baseShutter = 8
-        viewModel.ndStop = 3
-        viewModel.selectPresetFilm(film)
-
-        XCTAssertTrue(viewModel.canStartFilmAdjustedShutterTimer)
-
-        viewModel.startFilmAdjustedShutterTimer()
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 64, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "3 stops - 64s")
-        XCTAssertEqual(timer.basisSummary, "Base 8s · 3 stops · Adjusted 64s · Velvia 50")
     }
 
     @MainActor

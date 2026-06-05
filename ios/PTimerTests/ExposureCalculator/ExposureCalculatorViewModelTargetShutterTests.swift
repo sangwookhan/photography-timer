@@ -407,14 +407,19 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - Long target durations
 
     @MainActor
-    func testTargetShutterAcceptsOneHourDuration() {
-        let viewModel = makeViewModel()
+    func testTargetShutterAcceptsLongAndShortDurations() {
+        // Acceptance is uniform across the supported range; the
+        // distinct quantified-comparison case is the eight-hour test
+        // below.
+        for seconds in [1.0, 3600.0] {
+            let viewModel = makeViewModel()
 
-        viewModel.setTargetShutter(3600)
+            viewModel.setTargetShutter(seconds)
 
-        XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, 3600, accuracy: 0.0001)
-        XCTAssertTrue(viewModel.isTargetShutterActive)
-        XCTAssertTrue(viewModel.canStartTargetShutterTimer)
+            XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, seconds, accuracy: 0.0001, "target \(seconds)s accepted")
+            XCTAssertTrue(viewModel.isTargetShutterActive, "target \(seconds)s active")
+            XCTAssertTrue(viewModel.canStartTargetShutterTimer, "target \(seconds)s can start timer")
+        }
     }
 
     @MainActor
@@ -432,16 +437,6 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
         // log2(28800 / 64) = log2(450) ≈ 8.81 stops
         XCTAssertEqual(stopDifference.stops, log2(28_800.0 / 64.0), accuracy: 0.001)
         XCTAssertEqual(stopDifference.kind, .longerThanComparison)
-    }
-
-    @MainActor
-    func testTargetShutterAcceptsOneSecondDuration() {
-        let viewModel = makeViewModel()
-
-        viewModel.setTargetShutter(1)
-
-        XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, 1, accuracy: 0.0001)
-        XCTAssertTrue(viewModel.canStartTargetShutterTimer)
     }
 
     // MARK: - Last-used target memory

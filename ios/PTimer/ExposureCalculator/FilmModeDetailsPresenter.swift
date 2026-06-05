@@ -10,9 +10,16 @@ struct FilmModeDetailsPresenterInput {
     let formatDuration: (Double) -> String
     let formatDurationCoarse: (Double) -> String
     let formatAxisDuration: (Double) -> String
+    /// Whole-seconds source-table comparison for a clock-band value
+    /// (PTIMER-172). Returns `nil` outside the clock band (below one
+    /// minute, one day and above), where no secondary seconds line is
+    /// shown. Defaults to a no-op so call sites that predate the
+    /// dual-duration display (presenter unit tests) compile unchanged.
+    let formatSecondsComparison: (Double) -> String?
 
-    /// `modelSelection` carries a default so call sites that predate
-    /// the PTIMER-159 picker (presenter unit tests) compile unchanged.
+    /// `modelSelection` and `formatSecondsComparison` carry defaults so
+    /// call sites that predate the PTIMER-159 picker and the PTIMER-172
+    /// dual-duration display (presenter unit tests) compile unchanged.
     init(
         bindingState: FilmModeReciprocityBindingState,
         calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>,
@@ -20,7 +27,8 @@ struct FilmModeDetailsPresenterInput {
         modelSelection: FilmModeDetailsModelSelectionState? = nil,
         formatDuration: @escaping (Double) -> String,
         formatDurationCoarse: @escaping (Double) -> String,
-        formatAxisDuration: @escaping (Double) -> String
+        formatAxisDuration: @escaping (Double) -> String,
+        formatSecondsComparison: @escaping (Double) -> String? = { _ in nil }
     ) {
         self.bindingState = bindingState
         self.calculationResult = calculationResult
@@ -29,6 +37,7 @@ struct FilmModeDetailsPresenterInput {
         self.formatDuration = formatDuration
         self.formatDurationCoarse = formatDurationCoarse
         self.formatAxisDuration = formatAxisDuration
+        self.formatSecondsComparison = formatSecondsComparison
     }
 }
 
@@ -280,7 +289,11 @@ struct FilmModeDetailsPresenter {
                 valueText: input.formatDurationCoarse(
                     filmModeExposureResultState.adjustedShutterSeconds
                 ),
-                detailText: nil,
+                // PTIMER-172: surface the matching whole-seconds value
+                // under the clock primary for source-table comparison.
+                detailText: input.formatSecondsComparison(
+                    filmModeExposureResultState.adjustedShutterSeconds
+                ),
                 emphasizesValue: false
             ),
             correctedExposure: FilmModeDetailsCurrentResultValueState(
@@ -288,7 +301,12 @@ struct FilmModeDetailsPresenter {
                 valueText: filmModeExposureResultState.correctedExposure.correctedExposureSeconds
                     .map { input.formatDurationCoarse($0) }
                     ?? filmModeExposureResultState.correctedExposure.primaryText,
-                detailText: correctedExposureNoteText,
+                // For a quantified result the note text is nil, so the
+                // free slot carries the seconds comparison (PTIMER-172);
+                // non-quantified results keep their guidance note.
+                detailText: correctedExposureNoteText
+                    ?? filmModeExposureResultState.correctedExposure.correctedExposureSeconds
+                        .flatMap(input.formatSecondsComparison),
                 emphasizesValue: filmModeExposureResultState.correctedExposure.usesNumericExposure
             ),
             statusText: statusText,

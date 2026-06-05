@@ -150,7 +150,7 @@ final class ReciprocityModel {
     /// rows, which are usually written in seconds (`90s`, `1800s`, …).
     ///
     /// Returns `nil` below one minute — where the primary already
-    /// reads as concise seconds, so a second seconds line would be
+    /// reads as concise seconds, so a second seconds value would be
     /// redundant — and at one day and above, where the primary leaves
     /// clock notation for the coarse `Nd` / `≈Nmo` / `≈Ny` buckets and
     /// a raw seconds count is no longer a useful source-table
@@ -260,10 +260,11 @@ final class ReciprocityModel {
                 primaryText = formattedDuration
             }
             // PTIMER-172: when the primary reads as a clock value
-            // (one minute up to one day), the Main card carries the
-            // matching whole-seconds value as a subdued secondary line
-            // so the exposure can be compared against source-table rows
-            // written in seconds. Below one minute the primary already
+            // (one minute up to one day), the result row carries the
+            // matching whole-seconds value as a subdued same-row seconds
+            // comparison so the exposure can be compared against
+            // source-table rows written in seconds. Below one minute the
+            // primary already
             // reads as concise seconds and the helper returns `nil`, so
             // `secondaryText` stays empty. The approximation marker
             // tracks the primary so an `≈01:47:03` reads `≈6423s`.

@@ -143,25 +143,26 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
         XCTAssertNil(details.currentResult.correctedExposure.detailText)
     }
 
-    /// PTIMER-172: the Adjusted Shutter Main card pairs a clock primary
-    /// with a whole-seconds secondary so a long exposure can be compared
-    /// against manufacturer source rows; shorter values stay seconds-only.
+    /// PTIMER-172: the shared result-row duration policy pairs a clock
+    /// primary with a whole-seconds secondary so a long exposure can be
+    /// compared against manufacturer source rows; shorter values stay
+    /// seconds-only. Used by both No Film and Film result rows.
     @MainActor
-    func testFormatReciprocityTimeDisplayPairsClockPrimaryWithSecondsComparison() {
+    func testResultDurationDisplayPairsClockPrimaryWithSecondsComparison() {
         let viewModel = makeFilmModeViewModel()
 
         // Minutes band: "01:40" + "100s".
-        let minutesBand = viewModel.formatReciprocityTimeDisplay(100)
+        let minutesBand = viewModel.resultDurationDisplay(100)
         XCTAssertEqual(minutesBand.primary, "01:40")
         XCTAssertEqual(minutesBand.secondary, "100s")
 
         // Hours band: "02:29:43" + "8983s".
-        let hoursBand = viewModel.formatReciprocityTimeDisplay(8_983)
+        let hoursBand = viewModel.resultDurationDisplay(8_983)
         XCTAssertEqual(hoursBand.primary, "02:29:43")
         XCTAssertEqual(hoursBand.secondary, "8983s")
 
         // Below one minute keeps the concise seconds-only primary.
-        let shortValue = viewModel.formatReciprocityTimeDisplay(27)
+        let shortValue = viewModel.resultDurationDisplay(27)
         XCTAssertEqual(shortValue.primary, "27s")
         XCTAssertEqual(shortValue.secondary, "")
     }

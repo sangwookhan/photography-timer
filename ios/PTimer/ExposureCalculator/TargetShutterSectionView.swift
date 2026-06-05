@@ -125,10 +125,14 @@ struct TargetShutterSectionView: View {
             Button {
                 inputSheetVisible = true
             } label: {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     Text("Target Shutter")
-                        .font(.subheadline.weight(.semibold))
+                        // PTIMER-172: keep the label on one line so the
+                        // row never grows to two lines on a narrow phone.
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     Spacer(minLength: 8)
                     Text(targetText(state.targetSeconds))
                         .font(.subheadline.weight(.semibold))
@@ -307,11 +311,17 @@ private struct TargetTimerActionView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
+        // PTIMER-172: the Target Shutter row is a secondary affordance in
+        // a vertically constrained screen, so its play button is smaller
+        // than the result-row buttons (which previously it exceeded by
+        // +4). Trading a little tap area here keeps the row to one line.
+        let diameter = style.timerActionSize - 8
+
         Button(action: onStart) {
             Image(systemName: "play.fill")
-                .font(.system(size: style.timerActionIconSize + 1, weight: .semibold))
+                .font(.system(size: style.timerActionIconSize - 1, weight: .semibold))
                 .foregroundStyle(canStart ? Color.accentColor : Color.secondary.opacity(0.8))
-                .frame(width: style.timerActionSize + 4, height: style.timerActionSize + 4)
+                .frame(width: diameter, height: diameter)
                 .background(
                     Circle()
                         .fill(canStart ? Color.accentColor.opacity(0.14) : Color(.tertiarySystemFill))
@@ -320,6 +330,7 @@ private struct TargetTimerActionView: View {
                     Circle()
                         .stroke(Color(.separator).opacity(0.55), lineWidth: 0.8)
                 )
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!canStart)

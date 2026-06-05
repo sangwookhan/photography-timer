@@ -589,8 +589,7 @@ private struct CameraSlotCalculatorPage: View {
                 calculationResult: viewModel.calculationResult(forPage: pageState),
                 filmModeExposureResultState: viewModel.filmModeExposureResultState(forPage: pageState),
                 canShowFilmDetails: pageState.isActive && viewModel.canShowFilmDetails,
-                formatTimeDisplay: viewModel.formatTimeDisplay,
-                formatReciprocityTimeDisplay: viewModel.formatReciprocityTimeDisplay,
+                resultDurationDisplay: viewModel.resultDurationDisplay,
                 canStartTimer: pageState.isActive && viewModel.canStartTimer,
                 onStartTimer: pageState.isActive ? viewModel.startTimer : {},
                 onStartFilmAdjustedShutterTimer: pageState.isActive
@@ -677,13 +676,32 @@ private struct HeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.headerContentSpacing) {
-            slotTitleView
-                .font(style.headerTitleFont)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .contentTransition(.opacity)
-                .animation(.easeInOut(duration: 0.18), value: activeCameraSlotID)
-                .accessibilityIdentifier("camera-slot-title")
+            HStack(spacing: 8) {
+                slotTitleView
+                    .font(style.headerTitleFont)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .contentTransition(.opacity)
+                    .animation(.easeInOut(duration: 0.18), value: activeCameraSlotID)
+                    .accessibilityIdentifier("camera-slot-title")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // PTIMER-172: Reset moved onto the title row so the Film
+                // card no longer reserves a trailing strip of vertical
+                // space at the bottom solely to hold it. Kept in the tree
+                // (opacity/hit-testing gated) rather than conditionally
+                // removed so its presence is stable for assistive tech.
+                Button("Reset") {
+                    onResetFilmModeContext()
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .opacity(showsResetAction ? 1 : 0)
+                .allowsHitTesting(showsResetAction)
+                .accessibilityHidden(!showsResetAction)
+                .accessibilityHint("Clears the restored Film mode setup")
+                .accessibilityIdentifier("film-mode-reset-button")
+            }
 
             FilmSelectionRow(
                 selectorEntries: selectorEntries,
@@ -704,22 +722,6 @@ private struct HeaderView: View {
                 // Single-model film: one compact line, no selector.
                 ReciprocityModelCompactLabel(summary: activeModelSummary)
             }
-
-            HStack {
-                Spacer()
-
-                Button("Reset") {
-                    onResetFilmModeContext()
-                }
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .opacity(showsResetAction ? 1 : 0)
-                .allowsHitTesting(showsResetAction)
-                .accessibilityHidden(!showsResetAction)
-                .accessibilityHint("Clears the restored Film mode setup")
-                .accessibilityIdentifier("film-mode-reset-button")
-            }
-            .frame(maxWidth: .infinity, minHeight: 18, alignment: .trailing)
         }
         .sectionCardStyle(style: style)
     }

@@ -193,7 +193,7 @@ final class ReciprocityModelTests: XCTestCase {
         let model = ReciprocityModel()
 
         // Below one minute the primary already reads as concise
-        // seconds, so no secondary line is produced.
+        // seconds, so no secondary seconds value is produced.
         XCTAssertNil(model.formatReciprocitySecondsComparison(0, approximate: false))
         XCTAssertNil(model.formatReciprocitySecondsComparison(3.3, approximate: false))
         XCTAssertNil(model.formatReciprocitySecondsComparison(27, approximate: false))
@@ -279,7 +279,7 @@ final class ReciprocityModelTests: XCTestCase {
         let corrected = try XCTUnwrap(state.correctedExposureSeconds)
         XCTAssertLessThan(corrected, 60, "Scenario precondition: corrected value below one minute")
         // Below one minute the primary already reads as concise
-        // seconds, so the Main card carries no secondary line.
+        // seconds, so the Main card carries no secondary seconds value.
         XCTAssertEqual(state.secondaryText, "")
     }
 

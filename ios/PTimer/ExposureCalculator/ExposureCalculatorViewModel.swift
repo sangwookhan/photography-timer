@@ -1394,18 +1394,18 @@ final class ExposureCalculatorViewModel: ObservableObject {
         calculator.formatTimeDisplay(seconds)
     }
 
-    func formatReciprocityTimeDisplay(_ seconds: TimeInterval) -> TimeDisplay {
-        // Use the coarse formatter so Main and Detail render the
-        // same string for the Adjusted Shutter and Corrected Exposure
-        // cards. Sub-day values still fall through to the fine
-        // formatter; multi-day values now read as "≈Nmo" / "≈Ny"
-        // instead of raw day counts.
+    /// Shared result-row duration policy for BOTH No Film and Film
+    /// (PTIMER-172). One policy so the two modes never differ:
+    /// - `< 60 s` → concise seconds primary, no secondary
+    /// - `60 s ≤ t < 1 d` → clock primary + whole-seconds secondary
+    /// - `≥ 1 d` → coarse ("Nd" / "≈Nmo" / "≈Ny") primary, no secondary
+    /// The coarse formatter also keeps Main and Detail rendering the same
+    /// primary string. This deliberately uses whole seconds for the
+    /// secondary in both modes (the timer panel keeps its own decimal
+    /// `formatTimeDisplay`).
+    func resultDurationDisplay(_ seconds: TimeInterval) -> TimeDisplay {
         let safeSeconds = max(seconds, 0)
         let primary = formatReciprocityDurationCoarse(safeSeconds)
-        // PTIMER-172: clock-band values (one minute up to one day)
-        // carry the matching whole-seconds value as a subdued secondary
-        // line for source-table comparison; shorter values already read
-        // as concise seconds, so the secondary stays empty.
         let secondary = reciprocityModel.formatReciprocitySecondsComparison(
             safeSeconds,
             approximate: primary.hasPrefix("≈")

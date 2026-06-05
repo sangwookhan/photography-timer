@@ -12,7 +12,7 @@ struct FilmModeDetailsPresenterInput {
     let formatAxisDuration: (Double) -> String
     /// Whole-seconds source-table comparison for a clock-band value
     /// (PTIMER-172). Returns `nil` outside the clock band (below one
-    /// minute, one day and above), where no secondary seconds line is
+    /// minute, one day and above), where no secondary seconds value is
     /// shown. Defaults to a no-op so call sites that predate the
     /// dual-duration display (presenter unit tests) compile unchanged.
     let formatSecondsComparison: (Double) -> String?

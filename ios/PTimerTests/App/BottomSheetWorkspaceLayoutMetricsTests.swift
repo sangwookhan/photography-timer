@@ -192,17 +192,17 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
         includesTargetShutterRow: Bool,
         includesResetRow: Bool
     ) -> CGFloat {
-        // HeaderView card: title line + film selector row + optional
-        // reset row + inter-row spacings + outer card padding.
+        // HeaderView card: title line + film selector row + inter-row
+        // spacings + outer card padding. PTIMER-172 moved Reset onto the
+        // title row (beside the title), so it no longer contributes a
+        // separate row of height. `includesResetRow` is retained for
+        // call-site clarity / worst-case intent but adds no height.
+        _ = includesResetRow
         let titleApprox: CGFloat = 30
         let filmRowApprox: CGFloat = 75
-        let resetRowContribution: CGFloat = includesResetRow
-            ? (18 + style.headerContentSpacing)
-            : 0
         let headerInner = titleApprox
             + style.headerContentSpacing
             + filmRowApprox
-            + resetRowContribution
         let headerCard = headerInner + 2 * style.sectionCardPadding
 
         // VariableSectionView: label + label spacing + picker + outer
@@ -223,8 +223,9 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
 
         // TargetShutterSectionView active row: HStack height ≈
         // max(label line, timer-action button) + outer card padding.
+        // PTIMER-172 shrank the row's play button to timerActionSize - 8.
         let targetRowApprox: CGFloat = includesTargetShutterRow
-            ? (max(17, style.timerActionSize + 4))
+            ? (max(17, style.timerActionSize - 8))
             : 0
         let targetCard = includesTargetShutterRow
             ? (targetRowApprox + 2 * style.sectionCardPadding)

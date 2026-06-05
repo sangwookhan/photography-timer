@@ -197,6 +197,54 @@ enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
+    /// Primary duration font for the single-line result rows shared by
+    /// No Film and Film modes (PTIMER-172). Smaller than
+    /// `resultPrimaryFont` because the value now shares one horizontal
+    /// line with a leading label, an optional seconds comparison, and
+    /// the trailing timer affordance.
+    var unifiedResultPrimaryFont: Font {
+        switch self {
+        case .regular:
+            return .system(size: 21, weight: .semibold, design: .rounded)
+        case .compact:
+            return .system(size: 19, weight: .semibold, design: .rounded)
+        case .dense:
+            return .system(size: 18, weight: .semibold, design: .rounded)
+        }
+    }
+
+    /// Fixed width of the leading label column in the shared result row
+    /// (PTIMER-172). Sized to hold the intentional two-line labels
+    /// ("Adjusted / Shutter", "Corrected / Exposure") so the label never
+    /// competes with the value area for width and the primary duration
+    /// gets a stable, dominant column.
+    var resultLabelColumnWidth: CGFloat {
+        switch self {
+        case .regular:
+            return 86
+        case .compact:
+            return 80
+        case .dense:
+            return 76
+        }
+    }
+
+    /// Fixed width of the secondary seconds-comparison column in the
+    /// shared result row (PTIMER-172). Reserved even when no seconds are
+    /// shown so the primary duration's right edge stays anchored as wheel
+    /// values cross the 60 s / 1 d thresholds; the seconds value shrinks
+    /// or truncates within this column rather than pushing the primary.
+    var resultSecondsColumnWidth: CGFloat {
+        switch self {
+        case .regular:
+            return 64
+        case .compact:
+            return 58
+        case .dense:
+            return 54
+        }
+    }
+
     var resultBlockPadding: CGFloat {
         switch self {
         case .regular:
@@ -220,13 +268,16 @@ enum ExposureWorkspaceMainLayoutStyle {
     }
 
     var filmResultRowMinHeight: CGFloat {
+        // PTIMER-172: result rows are now a single horizontal line, so
+        // the floor only needs to clear the trailing timer button
+        // rather than reserve room for a stacked label-over-value.
         switch self {
         case .regular:
-            return 52
-        case .compact:
-            return 48
-        case .dense:
             return 44
+        case .compact:
+            return 40
+        case .dense:
+            return 38
         }
     }
 
@@ -249,23 +300,10 @@ enum ExposureWorkspaceMainLayoutStyle {
         return innerContent + 2 * resultBlockPadding
     }
 
-    var correctedExposurePrimaryFont: Font {
-        resultPrimaryFont
-    }
-
-    var correctedExposureSecondaryFont: Font {
-        .footnote
-    }
-
     var correctedExposureValueMinHeight: CGFloat {
-        switch self {
-        case .regular:
-            return 56
-        case .compact:
-            return 50
-        case .dense:
-            return 44
-        }
+        // PTIMER-172: the corrected-exposure row is single-line like the
+        // others, so it no longer needs extra height over a result row.
+        filmResultRowMinHeight
     }
 
     var timerActionSize: CGFloat {
@@ -288,10 +326,6 @@ enum ExposureWorkspaceMainLayoutStyle {
         case .dense:
             return 13
         }
-    }
-
-    var resultActionFootprint: CGFloat {
-        timerActionSize
     }
 
     var resultTopSpacerMinLength: CGFloat {

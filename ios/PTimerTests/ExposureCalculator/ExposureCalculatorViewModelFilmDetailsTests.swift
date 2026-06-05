@@ -74,9 +74,9 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     }
 
     /// PTIMER-172: clock-band values on the Detail current-result card
-    /// carry a whole-seconds comparison line in the free caption slot.
+    /// carry a whole-seconds comparison in the free caption slot.
     /// The Detail card omits the Main card's outside-guidance "≈"
-    /// prefix on both the clock value and the seconds line, so the two
+    /// prefix on both the clock value and the seconds caption, so the two
     /// stay consistent within the sheet.
     @MainActor
     func testFilmModeDetailsCurrentResultShowsSecondsComparisonInClockBand() throws {

@@ -83,16 +83,16 @@ The picker pair is the only entry path for these variables; there is no free-tex
 
 ### 2.3 Result section
 
-The result section displays the computed exposure:
+The result section displays the computed exposure. No Film and Film render their result values through **one shared result-row pattern** (see §2.4): a stable label, a dominant formatted duration as the primary value, an optional subdued same-row whole-seconds comparison, and a trailing Start affordance.
 
-- **Digital workflow** — one primary line with the Output Shutter using the conventional notation rule from [Calculator Spec](Calculator.md) §2.4, plus a secondary line with the precise time (formatted by the time-display rules below) when meaningful.
+- **No Film (digital) workflow** — a single **Adjusted Shutter** row showing the ND-adjusted exposure, formatted by the shared duration-display rules below.
 - **Film workflow** — a fixed two-row hierarchy. The first row shows the **Adjusted Shutter** (ND-applied, pre-reciprocity). The second row shows the **Corrected Exposure**. The two-row layout shall remain stable across all reciprocity result categories.
 
 The Corrected Exposure row shall always be visible in film workflow. Its content is determined by the reciprocity result category:
 
 - **Quantified** (`No correction`, `Formula-derived`, or `Table-derived`, per [Calculator Spec](Calculator.md) §3.5) — show the corrected time using the same time-display rules as the Adjusted Shutter, plus a status badge.
 - **Quantified with warning** (a numeric continuation outside the supported range — a formula prediction or a table-derived extrapolation; surfaces as `Beyond source range` for converted-formula and table-log-log profiles, or `Outside guidance` otherwise) — show the numeric value with a warning-toned badge so the user can tell the prediction is outside manufacturer guidance.
-- **Non-quantified** (`No quantified prediction` for limited-guidance results, or `No corrected value` when the unsupported case has no numeric continuation) — show calm explanatory text in place of a number. The UI shall not fabricate a numeric value.
+- **Non-quantified** (`No quantified prediction` for limited-guidance results, or `No corrected value` when the unsupported case has no numeric continuation) — show a short status in place of a number. The main result card stays compact: it shall not carry a long explanatory sentence; the fuller explanation remains available through the Reciprocity Details / info path. The UI shall not fabricate a numeric value.
 
 A **reciprocity state badge** sits with the row to convey the result category at a glance. The badge wording shall match the vocabulary above; legacy table-era wording (`Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`) shall not appear on launch preset reciprocity presentation.
 
@@ -115,7 +115,17 @@ Time values follow a single hierarchy. Two display modes apply at the **day-scal
 
 Thousands grouping in coarse mode shall use a comma separator with grouping size 3, applied deterministically regardless of device locale.
 
-**Seconds comparison line (film workflow).** In film workflow, the **Adjusted Shutter** row and a **quantified Corrected Exposure** pair their clock-format primary with a subdued secondary line showing the same duration as a whole-seconds value (e.g. `24:40` paired with `1480s`, `02:29:43` paired with `8983s`). This lets a long exposure be compared against manufacturer source rows, which are usually written in seconds. The secondary line appears only when the primary reads as a clock value — that is, for `60 s ≤ t < 1 d`. Below `60 s` the primary already reads as concise seconds, so no secondary line is shown; at and above `1 d` the primary coarsens and a raw seconds count is no longer a useful comparison, so no secondary line is shown. When the primary carries an approximation marker for an outside-guidance numeric result, the seconds value carries the marker as well (e.g. `≈05:10` paired with `≈310s`); the Detail current-result card omits the marker on both its clock value and its seconds line so the two stay consistent within the sheet. This applies on both the main result section and the Reciprocity Details current-result card; the digital workflow's existing precise-time secondary line (§2.2) is unchanged.
+**Shared result row and seconds comparison.** No Film and Film render their result values through one shared row pattern, so the two modes never diverge in structure or duration policy. The row is, left to right: a stable two-line label (e.g. `Adjusted / Shutter`, `Corrected / Exposure`), the **primary formatted duration** (dominant, right-aligned), an optional **subdued whole-seconds comparison on the same row**, and a trailing Start affordance. The same pattern applies to the No Film Adjusted Shutter, the Film Adjusted Shutter, and the Film Corrected Exposure when quantified.
+
+The whole-seconds comparison lets a long exposure be read against manufacturer source rows, which are usually written in seconds. It follows one policy for both modes:
+
+- `< 60 s` — primary formatted duration only; no seconds comparison (the primary already reads as concise seconds).
+- `60 s ≤ t < 1 d` — primary clock duration plus a subdued **whole-seconds** comparison (e.g. `24:40` with `1480s`, `02:29:43` with `8983s`). Both modes use whole seconds.
+- `≥ 1 d` — coarse primary duration only (`Nd` / `≈Nmo` / `≈Ny`); the raw seconds comparison is hidden, since a raw seconds count is no longer a useful comparison at that scale.
+
+The seconds comparison is visually secondary — smaller and lighter than the primary — and gives way first (shrinks, truncates, or hides) before the primary duration is compressed. When the primary carries an approximation marker for an outside-guidance numeric result, the seconds value carries it too (e.g. `≈05:10` with `≈310s`). The same duration policy also drives the Reciprocity Details current-result card (where the comparison sits in the value caption); that card omits the outside-guidance marker so its clock value and seconds caption stay consistent within the sheet.
+
+A **non-quantified** Film Corrected Exposure uses the same row but shows a short status instead of a duration, with no seconds comparison; the main card stays compact and the fuller explanation lives in Reciprocity Details (§2.2).
 
 The **calculated** value (precise) and the **notation** value (conventional) are kept distinct internally. The result section shows notation; downstream timer logic uses calculated. (See [Calculator Spec](Calculator.md) §2.4.)
 
@@ -150,7 +160,7 @@ A secondary affordance opens a **Reciprocity Details sheet** that shows referenc
 
 ### 2.7 Target Shutter row
 
-The Target Shutter row (see [Calculator Spec](Calculator.md) §3.6) is an optional, compact surface in the main shooting calculator. It does not replace the calculator's primary result hierarchy — Adjusted Shutter, Reciprocity status, and Corrected Exposure remain the photographer's primary read in film workflow, and the Output Shutter remains primary in digital workflow.
+The Target Shutter row (see [Calculator Spec](Calculator.md) §3.6) is an optional, compact surface in the main shooting calculator. It does not replace the calculator's primary result hierarchy — Adjusted Shutter, Reciprocity status, and Corrected Exposure remain the photographer's primary read in film workflow, and the Adjusted Shutter remains primary in digital workflow.
 
 **Row states.** The row presents two states:
 

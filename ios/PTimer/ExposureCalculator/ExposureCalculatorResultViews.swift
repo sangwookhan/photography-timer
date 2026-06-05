@@ -10,8 +10,10 @@ struct ResultSectionView: View {
     let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError>
     let filmModeExposureResultState: FilmModeExposureResultState?
     let canShowFilmDetails: Bool
-    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
-    let formatReciprocityTimeDisplay: (TimeInterval) -> TimeDisplay
+    /// Single shared result-row duration policy used by both No Film and
+    /// Film rows (PTIMER-172): coarse primary + whole-seconds secondary
+    /// shown only in the 60 s–1 d band.
+    let resultDurationDisplay: (TimeInterval) -> TimeDisplay
     let canStartTimer: Bool
     let onStartTimer: () -> Void
     let onStartFilmAdjustedShutterTimer: () -> Void
@@ -27,7 +29,7 @@ struct ResultSectionView: View {
                     FilmModeResultHierarchyView(
                         resultState: filmModeExposureResultState,
                         canShowDetails: canShowFilmDetails,
-                        formatReciprocityTimeDisplay: formatReciprocityTimeDisplay,
+                        resultDurationDisplay: resultDurationDisplay,
                         onStartAdjustedShutterTimer: onStartFilmAdjustedShutterTimer,
                         onStartCorrectedExposureTimer: onStartFilmCorrectedExposureTimer,
                         onShowDetails: onShowFilmDetails,
@@ -36,7 +38,7 @@ struct ResultSectionView: View {
                 } else if case .success(let result) = calculationResult {
                     DigitalModeResultView(
                         resultShutterSeconds: result.resultShutterSeconds,
-                        formatTimeDisplay: formatTimeDisplay,
+                        resultDurationDisplay: resultDurationDisplay,
                         canStartTimer: canStartTimer,
                         onStartTimer: onStartTimer,
                         style: style
@@ -69,7 +71,7 @@ struct ResultSectionView: View {
     private var primaryResultText: String {
         switch calculationResult {
         case .success(let result):
-            return formatTimeDisplay(result.resultShutterSeconds).primary
+            return resultDurationDisplay(result.resultShutterSeconds).primary
         case .failure:
             return "Result unavailable"
         }
@@ -87,44 +89,40 @@ struct ResultSectionView: View {
 
 private struct DigitalModeResultView: View {
     let resultShutterSeconds: TimeInterval
-    let formatTimeDisplay: (TimeInterval) -> TimeDisplay
+    let resultDurationDisplay: (TimeInterval) -> TimeDisplay
     let canStartTimer: Bool
     let onStartTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        let display = formatTimeDisplay(resultShutterSeconds)
+        let display = resultDurationDisplay(resultShutterSeconds)
 
-        HStack(alignment: .center, spacing: style.resultActionSpacing) {
-            Color.clear
-                .frame(width: style.resultActionFootprint, height: 1)
-                .accessibilityHidden(true)
-
-            DurationDisplayBlock(
-                primaryText: display.primary,
-                secondaryText: display.secondary,
-                primaryColor: .primary,
-                primaryFont: style.resultPrimaryFont,
-                secondaryFont: .footnote
-            )
-            .frame(maxWidth: .infinity)
-
-            TimerActionView(
-                canStartTimer: canStartTimer,
-                onStart: onStartTimer,
-                style: style,
-                accessibilityIdentifier: "digital-result-start-timer-button",
-                accessibilityLabel: "Start timer from calculated result",
-                accessibilityHint: "Starts a timer using the calculated result"
-            )
-        }
+        // PTIMER-172: No Film uses the same shared row + duration policy
+        // as Film mode — leading label, dominant right-aligned duration,
+        // subdued whole-seconds (60 s–1 d only), trailing timer.
+        ResultValueRow(
+            title: "Adjusted\nShutter",
+            value: .duration(
+                primary: display.primary,
+                seconds: display.secondary,
+                color: .primary
+            ),
+            valueAccessibilityIdentifier: "digital-result-primary",
+            secondaryAccessibilityIdentifier: "digital-result-secondary",
+            canStartTimer: canStartTimer,
+            onStartTimer: onStartTimer,
+            timerAccessibilityIdentifier: "digital-result-start-timer-button",
+            timerAccessibilityLabel: "Start timer from calculated result",
+            timerAccessibilityHint: "Starts a timer using the calculated result",
+            style: style
+        )
     }
 }
 
 private struct FilmModeResultHierarchyView: View {
     let resultState: FilmModeExposureResultState
     let canShowDetails: Bool
-    let formatReciprocityTimeDisplay: (TimeInterval) -> TimeDisplay
+    let resultDurationDisplay: (TimeInterval) -> TimeDisplay
     let onStartAdjustedShutterTimer: () -> Void
     let onStartCorrectedExposureTimer: () -> Void
     let onShowDetails: () -> Void
@@ -132,14 +130,21 @@ private struct FilmModeResultHierarchyView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
-            FilmModeResultRow(
-                title: "Adjusted Shutter",
-                display: formatReciprocityTimeDisplay(resultState.adjustedShutterSeconds),
-                primaryFont: .headline.weight(.semibold),
-                secondaryFont: .footnote,
-                primaryColor: .primary.opacity(0.88),
-                actionState: resultState.adjustedShutterAction,
+            let adjustedDisplay = resultDurationDisplay(resultState.adjustedShutterSeconds)
+            ResultValueRow(
+                title: "Adjusted\nShutter",
+                value: .duration(
+                    primary: adjustedDisplay.primary,
+                    seconds: adjustedDisplay.secondary,
+                    color: .primary.opacity(0.88)
+                ),
+                valueAccessibilityIdentifier: "adjusted-shutter-primary",
+                secondaryAccessibilityIdentifier: "adjusted-shutter-secondary",
+                canStartTimer: resultState.adjustedShutterAction.canStartTimer,
                 onStartTimer: onStartAdjustedShutterTimer,
+                timerAccessibilityIdentifier: "adjusted-shutter-start-timer-button",
+                timerAccessibilityLabel: resultState.adjustedShutterAction.accessibilityLabel,
+                timerAccessibilityHint: resultState.adjustedShutterAction.accessibilityHint,
                 style: style
             )
 
@@ -165,43 +170,117 @@ private struct FilmModeResultHierarchyView: View {
     }
 }
 
-private struct FilmModeResultRow: View {
+/// Intentional two-line label for the shared result row (PTIMER-172).
+/// The caller passes the two words separated by a newline ("Adjusted\n
+/// Shutter"); the explicit break plus a fixed-width column keeps the
+/// label stable and prevents it from competing with the value area.
+private struct ResultRowLabel: View {
     let title: String
-    let display: TimeDisplay
-    let primaryFont: Font
-    let secondaryFont: Font
-    let primaryColor: Color
-    let actionState: FilmModeTimerActionState
-    let onStartTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        HStack(alignment: .top, spacing: style.resultActionSpacing) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(2)
+            .minimumScaleFactor(0.8)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: style.resultLabelColumnWidth, alignment: .leading)
+    }
+}
 
-                DurationDisplayBlock(
-                    primaryText: display.primary,
-                    secondaryText: display.secondary,
-                    primaryColor: primaryColor,
-                    primaryFont: primaryFont,
-                    secondaryFont: secondaryFont
-                )
+/// Shared result row used across No Film and Film modes (PTIMER-172),
+/// laid out as fixed structured columns so the primary duration stays
+/// stable and dominant:
+///
+///   [ label column ] [ primary duration ] [ seconds ] [ play ]
+///
+/// - The label column and seconds column have fixed widths; the primary
+///   fills the flexible middle and is right-aligned, so its right edge is
+///   anchored at the seconds column regardless of whether a seconds value
+///   is currently shown — the value no longer jumps as wheel values cross
+///   the 60 s / 1 d thresholds.
+/// - The seconds column is reserved even when empty and renders subdued,
+///   smaller, and lighter than the primary; it shrinks/truncates within
+///   its own column and never competes with or dominates the primary.
+private struct ResultValueRow: View {
+    /// The value area of the row. `duration` renders the dominant
+    /// right-aligned primary plus the subdued seconds column; `status`
+    /// (non-quantified corrected exposure) renders a short status that
+    /// spans the value area, with no seconds column.
+    enum Value {
+        case duration(primary: String, seconds: String, color: Color)
+        case status(text: String, color: Color)
+    }
+
+    let title: String
+    let value: Value
+    let valueAccessibilityIdentifier: String
+    let secondaryAccessibilityIdentifier: String
+    let canStartTimer: Bool
+    let onStartTimer: () -> Void
+    let timerAccessibilityIdentifier: String
+    let timerAccessibilityLabel: String
+    let timerAccessibilityHint: String
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ResultRowLabel(title: title, style: style)
+
+            switch value {
+            case let .duration(primary, seconds, color):
+                Text(primary)
+                    .font(style.unifiedResultPrimaryFont)
+                    .foregroundStyle(color)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .accessibilityIdentifier(valueAccessibilityIdentifier)
+
+                // Subdued seconds column, reserved even when empty so the
+                // primary's right edge stays anchored as wheel values
+                // cross the 60 s / 1 d thresholds. Hidden when empty or
+                // identical to the primary; shrinks/truncates within its
+                // own column and never competes with the primary.
+                Text(showsSeconds(primary: primary, seconds: seconds) ? seconds : "")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(width: style.resultSecondsColumnWidth, alignment: .trailing)
+                    .accessibilityIdentifier(secondaryAccessibilityIdentifier)
+
+            case let .status(text, color):
+                // Short status spans the full value area (no seconds
+                // column) so it stays readable. The long explanation
+                // lives in Reciprocity Details — never in the main card.
+                Text(text)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(color)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .accessibilityIdentifier(valueAccessibilityIdentifier)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
             TimerActionView(
-                canStartTimer: actionState.canStartTimer,
+                canStartTimer: canStartTimer,
                 onStart: onStartTimer,
                 style: style,
-                accessibilityIdentifier: "adjusted-shutter-start-timer-button",
-                accessibilityLabel: actionState.accessibilityLabel,
-                accessibilityHint: actionState.accessibilityHint
+                accessibilityIdentifier: timerAccessibilityIdentifier,
+                accessibilityLabel: timerAccessibilityLabel,
+                accessibilityHint: timerAccessibilityHint
             )
         }
-        .frame(minHeight: style.filmResultRowMinHeight, alignment: .top)
+        .frame(minHeight: style.filmResultRowMinHeight, alignment: .center)
+    }
+
+    private func showsSeconds(primary: String, seconds: String) -> Bool {
+        !seconds.isEmpty && seconds != primary
     }
 }
 
@@ -313,81 +392,50 @@ private struct FilmModeCorrectedExposureRow: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
-        HStack(alignment: .top, spacing: style.resultActionSpacing) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Corrected Exposure")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+        // PTIMER-172: a quantified corrected exposure uses the same
+        // single-line labeled row as Adjusted Shutter (duration +
+        // optional seconds comparison + timer). Non-quantified states
+        // stay compact — a short status sits inline with the label and
+        // the long explanation lives in Reciprocity Details, so the
+        // main card never grows to fit a wrapped sentence.
+        ResultValueRow(
+            title: "Corrected\nExposure",
+            value: rowValue,
+            valueAccessibilityIdentifier: "film-mode-corrected-exposure-primary",
+            secondaryAccessibilityIdentifier: "film-mode-corrected-exposure-secondary",
+            canStartTimer: actionState.canStartTimer,
+            onStartTimer: onStartTimer,
+            timerAccessibilityIdentifier: "corrected-exposure-start-timer-button",
+            timerAccessibilityLabel: actionState.accessibilityLabel,
+            timerAccessibilityHint: actionState.accessibilityHint,
+            style: style
+        )
+    }
 
-                CorrectedExposureDisplayBlock(
-                    kind: correctedExposure.kind,
-                    primaryText: correctedExposure.primaryText,
-                    secondaryText: correctedExposure.secondaryText,
-                    style: style
-                )
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: style.filmResultRowMinHeight, alignment: .topLeading)
-
-            TimerActionView(
-                canStartTimer: actionState.canStartTimer,
-                onStart: onStartTimer,
-                style: style,
-                accessibilityIdentifier: "corrected-exposure-start-timer-button",
-                accessibilityLabel: actionState.accessibilityLabel,
-                accessibilityHint: actionState.accessibilityHint
+    private var rowValue: ResultValueRow.Value {
+        // Quantified → dominant duration + subdued seconds (shared
+        // policy). Non-quantified → a short status; the long explanation
+        // stays in Reciprocity Details, never in the main card.
+        if correctedExposure.kind == .quantified {
+            return .duration(
+                primary: correctedExposure.primaryText,
+                seconds: correctedExposure.secondaryText,
+                color: .primary
             )
         }
-    }
-}
-
-private struct CorrectedExposureDisplayBlock: View {
-    let kind: FilmModeCorrectedExposureDisplayKind
-    let primaryText: String
-    let secondaryText: String
-    let style: ExposureWorkspaceMainLayoutStyle
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(primaryText)
-                .font(primaryFont)
-                .foregroundStyle(primaryColor)
-                .monospacedDigit()
-                .lineLimit(kind == .quantified ? 1 : 2)
-                .minimumScaleFactor(0.7)
-                .accessibilityIdentifier("film-mode-corrected-exposure-primary")
-
-            if !secondaryText.isEmpty {
-                Text(secondaryText)
-                    .font(style.correctedExposureSecondaryFont)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
-                    .accessibilityIdentifier("film-mode-corrected-exposure-secondary")
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: style.correctedExposureValueMinHeight, alignment: .topLeading)
+        return .status(text: correctedExposure.primaryText, color: nonQuantifiedColor)
     }
 
-    private var primaryFont: Font {
-        switch kind {
-        case .quantified:
-            return style.correctedExposurePrimaryFont
-        case .limitedGuidance, .unsupported, .noFilmSelected:
-            return .headline.weight(.semibold)
-        }
-    }
-
-    private var primaryColor: Color {
-        switch kind {
-        case .quantified:
-            return .primary
+    private var nonQuantifiedColor: Color {
+        switch correctedExposure.kind {
         case .limitedGuidance:
             return Color(.systemOrange)
         case .unsupported:
             return Color(.systemRed)
         case .noFilmSelected:
             return .secondary
+        case .quantified:
+            return .primary
         }
     }
 }

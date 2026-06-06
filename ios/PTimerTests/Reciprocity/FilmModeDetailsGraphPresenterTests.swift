@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Direct regression tests for `FilmModeDetailsGraphPresenter`.
 /// Existing graph coverage runs indirectly through profile-level

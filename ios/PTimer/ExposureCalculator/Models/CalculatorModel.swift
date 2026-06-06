@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PTimerKit
 
 /// `CalculatorModel` owns the calculator slice: the pure ND exposure
 /// math engine, the user's calculation inputs (`baseShutterSeconds`,

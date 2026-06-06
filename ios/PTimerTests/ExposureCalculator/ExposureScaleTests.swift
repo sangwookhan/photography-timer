@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Focused tests for the `ExposureScale` abstraction. Coverage:
 ///

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Behavior contract for Acros II's formula-based reciprocity
 /// profile. Fujifilm's published guidance is a constant +1/2 stop

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-84 selector-flow behaviors:
 ///   * New custom film save flow auto-selects the saved film

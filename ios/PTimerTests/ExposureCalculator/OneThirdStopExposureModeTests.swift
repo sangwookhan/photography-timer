@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Focused tests for the one-third-stop exposure calculation mode.
 /// The shipping calculator runs on `.oneThirdStop` (Base Shutter

@@ -1,6 +1,7 @@
 import XCTest
 @testable import PTimer
 import PTimerCore
+import PTimerKit
 
 /// PTIMER-36: tests for the Start Again surface (completed-row clone)
 /// extracted from BottomSheetWorkspaceSnapshotFactoryTests so the

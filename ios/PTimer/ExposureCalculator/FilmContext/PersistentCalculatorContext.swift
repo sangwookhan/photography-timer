@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 
 /// Legacy single-context calculator persistence. **No longer the
 /// source of truth** for camera-slot state — that role belongs to

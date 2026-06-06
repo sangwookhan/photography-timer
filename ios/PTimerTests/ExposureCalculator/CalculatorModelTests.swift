@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Direct unit tests for `CalculatorModel`.
 /// These cover the calculation slice in isolation; integration tests

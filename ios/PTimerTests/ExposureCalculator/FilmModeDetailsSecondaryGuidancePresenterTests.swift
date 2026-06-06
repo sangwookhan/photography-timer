@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 @MainActor
 final class FilmModeSecondaryGuidanceTests: XCTestCase {

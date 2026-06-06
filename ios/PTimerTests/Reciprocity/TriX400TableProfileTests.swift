@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Behavior contract for Kodak Tri-X 400's default table-interpolation
 /// reciprocity profile and its two alternate models.
@@ -34,83 +35,7 @@ final class TriX400TableProfileTests: XCTestCase {
 
     // MARK: - Rule structure
 
-    func testTriX400HasTableInterpolationRuleAndNoFormulaRule() throws {
-        let profile = try triX400Profile()
-
-        let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-            if case let .tableInterpolation(r) = rule { return r } else { return nil }
-        }.first
-        XCTAssertNotNil(tableRule, "Tri-X 400 must carry a .tableInterpolation rule after migration.")
-
-        let hasFormulaRule = profile.rules.contains { rule in
-            if case .formula = rule { return true } else { return false }
-        }
-        XCTAssertFalse(hasFormulaRule, "Tri-X 400 must NOT carry a .formula rule after migration to table.")
-    }
-
-    func testTriX400TableRuleParametersMatchPublishedAnchors() throws {
-        let profile = try triX400Profile()
-        XCTAssertEqual(profile.id, "kodak-tri-x-official-graph-table",
-            "Default profile id must be 'kodak-tri-x-official-graph-table'.")
-        XCTAssertEqual(profile.name, "Official Kodak graph/table",
-            "Default profile name must be 'Official Kodak graph/table'.")
-
-        let tableRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-                if case let .tableInterpolation(r) = rule { return r } else { return nil }
-            }.first,
-            "tableInterpolation rule must be present."
-        )
-
-        XCTAssertEqual(tableRule.noCorrectionThroughSeconds, 0.1, accuracy: 1e-9,
-            "noCorrectionThroughSeconds must be 0.1 (Kodak E-31 lists no adjustment through 1/10 sec).")
-        XCTAssertEqual(tableRule.sourceRangeThroughSeconds, 100, accuracy: 1e-6,
-            "sourceRangeThroughSeconds must be 100.")
-
-        // 11 anchors: 3 published rows + 8 graph-sampled points.
-        XCTAssertEqual(tableRule.anchors.count, 11,
-            "Default graph/table profile must carry 11 anchors (3 published + 8 graph samples).")
-
-        // The three published rows must be present.
-        let anchors = Dictionary(uniqueKeysWithValues: tableRule.anchors.map { ($0.meteredSeconds, $0.correctedSeconds) })
-        XCTAssertEqual(anchors[1] ?? -1, 2, accuracy: 1e-4, "Published anchor: 1 s → 2 s.")
-        XCTAssertEqual(anchors[10] ?? -1, 50, accuracy: 1e-4, "Published anchor: 10 s → 50 s.")
-        XCTAssertEqual(anchors[100] ?? -1, 1200, accuracy: 1e-4, "Published anchor: 100 s → 1200 s.")
-
-        // The graph-sampled points must also be present.
-        XCTAssertEqual(anchors[2] ?? -1, 5, accuracy: 1e-4, "Graph sample: 2 s → 5 s.")
-        XCTAssertEqual(anchors[3] ?? -1, 10, accuracy: 1e-4, "Graph sample: 3 s → 10 s.")
-        XCTAssertEqual(anchors[5] ?? -1, 20, accuracy: 1e-4, "Graph sample: 5 s → 20 s.")
-        XCTAssertEqual(anchors[7] ?? -1, 32, accuracy: 1e-4, "Graph sample: 7 s → 32 s.")
-        XCTAssertEqual(anchors[20] ?? -1, 120, accuracy: 1e-4, "Graph sample: 20 s → 120 s.")
-        XCTAssertEqual(anchors[30] ?? -1, 200, accuracy: 1e-4, "Graph sample: 30 s → 200 s.")
-        XCTAssertEqual(anchors[50] ?? -1, 420, accuracy: 1e-4, "Graph sample: 50 s → 420 s.")
-        XCTAssertEqual(anchors[70] ?? -1, 720, accuracy: 1e-4, "Graph sample: 70 s → 720 s.")
-    }
-
-    func testTriX400ModelBasisIsManufacturerTableLogLogInterpolation() throws {
-        let profile = try triX400Profile()
-        let basis = try XCTUnwrap(profile.modelBasis,
-            "Tri-X 400 profile must carry a modelBasis after migration.")
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
-    }
-
     // MARK: - No-correction boundary (inclusive at 1/10 sec)
-
-    func testTriX400AtAndBelowTenthSecondReturnsOfficialNoCorrection() throws {
-        let profile = try triX400Profile()
-        for metered in [0.01, 0.05, 0.1] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "\(metered) sec is within the 1/10 sec no-correction band and must not pick up a table correction."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, metered, accuracy: 1e-6)
-        }
-    }
 
     /// PTIMER-168 boundary tolerance: a nominal 1/10 sec UI input can
     /// evaluate to ~0.102 sec after Base Shutter / ND stop arithmetic.
@@ -195,56 +120,7 @@ final class TriX400TableProfileTests: XCTestCase {
 
     // MARK: - Table range (1 sec … 100 sec, source-backed)
 
-    func testTriX400InsideTableRangeIsTableLogLogDerivedAcrossPublishedRows() throws {
-        let profile = try triX400Profile()
-        for metered in [1.0, 5.0, 10.0, 25.0, 50.0, 100.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .tableLogLogDerived,
-                "Metered \(metered) s sits inside the published 1–100 sec range and must be table-log-log-derived."
-            )
-        }
-    }
-
-    func testTriX400TableReproducesAllElevenAnchorsExactly() throws {
-        let profile = try triX400Profile()
-        // All 11 anchors: 3 published rows + 8 graph samples.
-        let allAnchors: [(Double, Double)] = [
-            (1, 2), (2, 5), (3, 10), (5, 20), (7, 32),
-            (10, 50), (20, 120), (30, 200), (50, 420), (70, 720), (100, 1200),
-        ]
-        for (metered, published) in allAnchors {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(
-                corrected,
-                published,
-                accuracy: 1e-4,
-                "Anchor at metered \(metered) s must reproduce corrected time \(published) s exactly."
-            )
-        }
-    }
-
     // MARK: - Beyond the published source range (> 100 sec)
-
-    func testTriX400Above100SecondsBecomesBeyondSourceNumericGuidance() throws {
-        let profile = try triX400Profile()
-        for metered in [150.0, 300.0, 1000.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .unsupportedOutOfPolicyRange,
-                "Metered \(metered) s sits above Kodak's 100 sec upper published row and must be marked outside manufacturer guidance."
-            )
-            let corrected = try XCTUnwrap(
-                result.correctedExposureSeconds,
-                "Metered \(metered) s must keep a log-log extrapolation value past the source range."
-            )
-            XCTAssertGreaterThan(corrected, 1200,
-                "Extrapolated value past 100 sec must exceed the last anchor corrected time of 1200 sec.")
-        }
-    }
 
     // MARK: - Source evidence preservation (corrected time + stop delta + development)
 

@@ -1,0 +1,130 @@
+From f08bf507b8a3138d00129ae17e7108e034a32da8 Mon Sep 17 00:00:00 2001
+From: Sangwook Han <sangwook.han@gmail.com>
+Date: Sat, 6 Jun 2026 11:52:44 +0900
+Subject: [PATCH 2/2] Run pure timer-core tests off-simulator (step 2/2)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+What: relocate the two pure timer-core test suites — the TimerState
+pause/resume/complete/remaining-time transitions and
+CompletedRelativeTimeFormatter (10 tests) — from the app-hosted
+PTimerTests target into PTimerCoreTests, where they run on macOS via
+`swift test` with no simulator. Removed from the app target.
+
+Why: completes PTIMER-177. The pure timer rules now have off-simulator
+unit tests; the TimerManager coordinator tests (RunLoop ticking, UIKit
+feedback, notifications, persistence wiring) stay app-hosted because
+they exercise the OS-facing layer that legitimately needs the app host.
+
+Verified: PTimerCore `swift test` = 10 tests, no simulator; app-hosted
+suite = 1464, 0 failures (was 1474 with the 10 still app-hosted).
+
+PTIMER-177 Decouple the pure timer state machine from the UIKit-bound
+           TimerManager
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+---
+ ios/PTimer.xcodeproj/project.pbxproj                      | 8 --------
+ .../CompletedRelativeTimeFormatterTests.swift             | 3 +--
+ .../TimerManagerPauseResumeStateTests.swift               | 3 +--
+ 3 files changed, 2 insertions(+), 12 deletions(-)
+ rename ios/{PTimerTests/Timers => PTimerKit/Tests/PTimerCoreTests}/CompletedRelativeTimeFormatterTests.swift (98%)
+ rename ios/{PTimerTests/Timers => PTimerKit/Tests/PTimerCoreTests}/TimerManagerPauseResumeStateTests.swift (99%)
+
+diff --git a/ios/PTimer.xcodeproj/project.pbxproj b/ios/PTimer.xcodeproj/project.pbxproj
+index 8587ee9..a4e0568 100644
+--- a/ios/PTimer.xcodeproj/project.pbxproj
++++ b/ios/PTimer.xcodeproj/project.pbxproj
+@@ -25,7 +25,6 @@
+ 		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
+ 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
+ 		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+-		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
+ 		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
+ 		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
+ 		A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */; };
+@@ -158,7 +157,6 @@
+ 		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
+ 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
+ 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
+-		A0000000000000000000090C /* TimerManagerPauseResumeStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */; };
+ 		A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */; };
+ 		A00000000000000000000912 /* ExposureCalculatorViewModelFilmDetailsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */; };
+ 		A00000000000000000000914 /* ExposureCalculatorViewModelFilmAuthorityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */; };
+@@ -297,7 +295,6 @@
+ 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
+ 		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
+ 		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+-		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
+ 		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
+ 		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
+ 		A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicy.swift; sourceTree = "<group>"; };
+@@ -430,7 +427,6 @@
+ 		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
+ 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
+ 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
+-		A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeStateTests.swift; sourceTree = "<group>"; };
+ 		A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTestSupport.swift; sourceTree = "<group>"; };
+ 		A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmDetailsTests.swift; sourceTree = "<group>"; };
+ 		A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmAuthorityTests.swift; sourceTree = "<group>"; };
+@@ -842,10 +838,8 @@
+ 				A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */,
+ 				A00000000000000000000907 /* TimerManagerReconcileTests.swift */,
+ 				A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */,
+-				A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */,
+ 				A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */,
+ 				A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */,
+-				A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */,
+ 				A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */,
+ 			);
+ 			path = Timers;
+@@ -1227,7 +1221,6 @@
+ 				A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */,
+ 				A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */,
+ 				A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */,
+-				A0000000000000000000090C /* TimerManagerPauseResumeStateTests.swift in Sources */,
+ 				A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */,
+ 				A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */,
+ 				A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */,
+@@ -1260,7 +1253,6 @@
+ 				A00000000000000000000934 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift in Sources */,
+ 				A000000000000000000000FD /* BottomSheetWorkspaceOrderingTests.swift in Sources */,
+ 				A000000000000000000000FF /* BottomSheetIdentityPaletteTests.swift in Sources */,
+-				A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */,
+ 				A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */,
+ 				A000000000000000000000AF /* ReciprocityCalculationPolicyTests.swift in Sources */,
+ 				A0000000000000000000010B /* ReciprocityCalculationPolicyPerformanceTests.swift in Sources */,
+diff --git a/ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift b/ios/PTimerKit/Tests/PTimerCoreTests/CompletedRelativeTimeFormatterTests.swift
+similarity index 98%
+rename from ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift
+rename to ios/PTimerKit/Tests/PTimerCoreTests/CompletedRelativeTimeFormatterTests.swift
+index 0a41d20..4109e5b 100644
+--- a/ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift
++++ b/ios/PTimerKit/Tests/PTimerCoreTests/CompletedRelativeTimeFormatterTests.swift
+@@ -1,6 +1,5 @@
+ import XCTest
+-@testable import PTimer
+-import PTimerCore
++@testable import PTimerCore
+ 
+ final class CompletedRelativeTimeFormatterTests: XCTestCase {
+     func testFormatterSupportsRequiredMinuteAndHourStrings() {
+diff --git a/ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift b/ios/PTimerKit/Tests/PTimerCoreTests/TimerManagerPauseResumeStateTests.swift
+similarity index 99%
+rename from ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift
+rename to ios/PTimerKit/Tests/PTimerCoreTests/TimerManagerPauseResumeStateTests.swift
+index 0d33585..f40e074 100644
+--- a/ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift
++++ b/ios/PTimerKit/Tests/PTimerCoreTests/TimerManagerPauseResumeStateTests.swift
+@@ -1,6 +1,5 @@
+ import XCTest
+-@testable import PTimer
+-import PTimerCore
++@testable import PTimerCore
+ 
+ final class TimerManagerPauseResumeStateTests: XCTestCase {
+     @MainActor
+-- 
+2.50.1 (Apple Git-155)
+

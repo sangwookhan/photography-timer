@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-84 pre-smoke polish suite. Covers four small policy
 /// changes:

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Catalog-wide invariant for the Film Details graph kind.
 ///

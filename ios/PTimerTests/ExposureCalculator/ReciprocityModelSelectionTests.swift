@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-159: the film selector stays film-stock focused; a film with
 /// more than one profile/model is switched through the model selector —

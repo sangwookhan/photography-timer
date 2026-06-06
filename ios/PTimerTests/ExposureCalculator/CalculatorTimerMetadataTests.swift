@@ -1,6 +1,7 @@
 import XCTest
 @testable import PTimer
 import PTimerCore
+import PTimerKit
 
 final class CalculatorTimerMetadataTests: XCTestCase {
     @MainActor

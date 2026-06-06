@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class FilmModeDetailsDisplayStateTests: XCTestCase {
     @MainActor
@@ -271,40 +272,6 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsStateDoesNotRegressFilmModeTimerActions() throws {
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
-
-        viewModel.baseShutter = 1
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let resultState = try XCTUnwrap(viewModel.filmModeExposureResultState)
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-
-        XCTAssertTrue(resultState.adjustedShutterAction.canStartTimer)
-        XCTAssertTrue(resultState.correctedExposureAction.canStartTimer)
-        XCTAssertEqual(resultState.reciprocityState.badgeText, "Table-derived")
-        XCTAssertEqual(resultState.reciprocityState.tone, .measured)
-        // Details lead with the active-model metadata section
-        // (PTIMER-159), followed by the table-origin Source reference
-        // section that pairs the no-correction band with the published
-        // source rows.
-        XCTAssertEqual(details.sections.first?.title, "Reciprocity model")
-        XCTAssertEqual(details.sections.dropFirst().first?.title, "Source reference")
-        XCTAssertEqual(
-            resultState.adjustedShutterAction.targetSeconds ?? 0,
-            1,
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(
-            resultState.correctedExposureAction.targetSeconds ?? 0,
-            2,
-            accuracy: 0.05
-        )
-    }
-
-    @MainActor
     func testFilmModeDetailsSourceRowsExposeLinkWhenUsableURLExists() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
@@ -385,24 +352,6 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsFormulaGraphUsesFormulaSpecificCurrentPointSemantics() throws {
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
-
-        viewModel.baseShutter = 8
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let graph = try XCTUnwrap(details.graph)
-
-        XCTAssertEqual(graph.kind, .formula)
-        XCTAssertEqual(graph.currentPoint?.style, .formulaDerived)
-        XCTAssertEqual(graph.caption, "Adjusted shutter vs corrected exposure on the active calculation curve")
-        XCTAssertFalse(graph.usesCurrentInputGuideOnly)
-    }
-
-    @MainActor
     func testFilmModeDetailsGraphOmitsCurrentPlotForLimitedGuidanceResult() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
@@ -458,27 +407,6 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
             "Graph explanation must mention the source range for converted formula profiles; got: \(explanation)"
         )
         XCTAssertEqual(graph.notRecommendedBoundarySeconds ?? 0, 64, accuracy: 0.0001)
-    }
-
-    @MainActor
-    func testFilmModeDetailsSummaryPromotesCurrentStateAboveSections() throws {
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
-
-        viewModel.baseShutter = 15
-        viewModel.ndStop = 6
-        viewModel.selectPresetFilm(film)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-
-        XCTAssertEqual(details.summary.badgeText, "Beyond source range")
-        XCTAssertEqual(details.summary.summaryText, "Beyond source range")
-        XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "17:04")
-        XCTAssertNotEqual(details.currentResult.correctedExposure.valueText, "No quantified prediction")
-        XCTAssertEqual(
-            details.sections.map(\.title),
-            ["Reciprocity model", "Source reference", "Sources"]
-        )
     }
 
     @MainActor

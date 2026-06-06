@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
     @MainActor
@@ -50,7 +51,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testFormatTimerClockUsesLeadingZeroMinutesAndSeconds() {
+    func testFormatTimerClockProducesExpectedStrings() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -60,20 +61,34 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
         viewModel.scaleMode = .fullStop
 
-        XCTAssertEqual(viewModel.formatTimerClock(0), "0s")
-        XCTAssertEqual(viewModel.formatTimerClock(5), "5s")
-        XCTAssertEqual(viewModel.formatTimerClock(59), "59s")
-        XCTAssertEqual(viewModel.formatTimerClock(60), "01:00")
-        XCTAssertEqual(viewModel.formatTimerClock(65), "01:05")
-        XCTAssertEqual(viewModel.formatTimerClock(3599), "59:59")
-        XCTAssertEqual(viewModel.formatTimerClock(3600), "01:00:00")
-        XCTAssertEqual(viewModel.formatTimerClock(90_000), "1d 01:00:00")
-        XCTAssertEqual(viewModel.formatTimerClock(2_592_000), "1mo 00:00:00")
-        XCTAssertEqual(viewModel.formatTimerClock(31_536_000), "1y 00:00:00")
+        let cases: [(input: TimeInterval, expected: String)] = [
+            // Leading-zero minutes and seconds across the clock range.
+            (0, "0s"),
+            (5, "5s"),
+            (59, "59s"),
+            (60, "01:00"),
+            (65, "01:05"),
+            (3599, "59:59"),
+            (3600, "01:00:00"),
+            (90_000, "1d 01:00:00"),
+            (2_592_000, "1mo 00:00:00"),
+            (31_536_000, "1y 00:00:00"),
+            // Subsecond and negative clamping.
+            (0.9, "0.9s"),
+            (-3, "0s")
+        ]
+
+        for testCase in cases {
+            XCTAssertEqual(
+                viewModel.formatTimerClock(testCase.input),
+                testCase.expected,
+                "formatTimerClock(\(testCase.input))"
+            )
+        }
     }
 
     @MainActor
-    func testFormatTimerClockClampsSubsecondAndNegativeValuesToZero() {
+    func testFormatTimeDisplayProducesExpectedPrimaryAndSecondary() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(
@@ -83,70 +98,39 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         )
         viewModel.scaleMode = .fullStop
 
-        XCTAssertEqual(viewModel.formatTimerClock(0.9), "0.9s")
-        XCTAssertEqual(viewModel.formatTimerClock(-3), "0s")
-    }
+        let cases: [(input: TimeInterval, expected: TimeDisplay)] = [
+            // Raw seconds and clock, including negative clamp.
+            (-3, TimeDisplay(primary: "0s", secondary: "0s")),
+            (0, TimeDisplay(primary: "0s", secondary: "0s")),
+            (0.033, TimeDisplay(primary: "0.033s", secondary: "0.033s")),
+            (0.125, TimeDisplay(primary: "0.125s", secondary: "0.125s")),
+            (0.9, TimeDisplay(primary: "0.9s", secondary: "0.9s")),
+            (1, TimeDisplay(primary: "1s", secondary: "1s")),
+            (5, TimeDisplay(primary: "5s", secondary: "5s")),
+            (12.345, TimeDisplay(primary: "12.345s", secondary: "12.345s")),
+            (21.158, TimeDisplay(primary: "21.158s", secondary: "21.158s")),
+            (59.9, TimeDisplay(primary: "59.9s", secondary: "59.9s")),
+            (60, TimeDisplay(primary: "01:00", secondary: "60s")),
+            (61, TimeDisplay(primary: "01:01", secondary: "61s")),
+            (128, TimeDisplay(primary: "02:08", secondary: "128s")),
+            // Precision policy.
+            (128.25, TimeDisplay(primary: "02:08.250", secondary: "128.25s")),
+            (3599, TimeDisplay(primary: "59:59", secondary: "3599s")),
+            (3600, TimeDisplay(primary: "01:00:00", secondary: "3600s")),
+            (86_399, TimeDisplay(primary: "23:59:59", secondary: "86399s")),
+            (86_400, TimeDisplay(primary: "1d 00:00:00", secondary: "86400s")),
+            // Large durations in readable format.
+            (2_592_000, TimeDisplay(primary: "1mo 00:00:00", secondary: "2592000s")),
+            (31_536_000, TimeDisplay(primary: "1y 00:00:00", secondary: "31536000s"))
+        ]
 
-    @MainActor
-    func testFormatTimeDisplayAlwaysShowsRawSecondsAndClock() {
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+        for testCase in cases {
+            XCTAssertEqual(
+                viewModel.formatTimeDisplay(testCase.input),
+                testCase.expected,
+                "formatTimeDisplay(\(testCase.input))"
             )
-        )
-        viewModel.scaleMode = .fullStop
-
-        XCTAssertEqual(viewModel.formatTimeDisplay(0), TimeDisplay(primary: "0s", secondary: "0s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(-3), TimeDisplay(primary: "0s", secondary: "0s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(5), TimeDisplay(primary: "5s", secondary: "5s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(128), TimeDisplay(primary: "02:08", secondary: "128s"))
-    }
-
-    @MainActor
-    func testFormatTimeDisplayBoundaryCases() {
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
-        )
-        viewModel.scaleMode = .fullStop
-
-        XCTAssertEqual(viewModel.formatTimeDisplay(0), TimeDisplay(primary: "0s", secondary: "0s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(0.033), TimeDisplay(primary: "0.033s", secondary: "0.033s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(0.125), TimeDisplay(primary: "0.125s", secondary: "0.125s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(0.9), TimeDisplay(primary: "0.9s", secondary: "0.9s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(1), TimeDisplay(primary: "1s", secondary: "1s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(5), TimeDisplay(primary: "5s", secondary: "5s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(21.158), TimeDisplay(primary: "21.158s", secondary: "21.158s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(59.9), TimeDisplay(primary: "59.9s", secondary: "59.9s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(60), TimeDisplay(primary: "01:00", secondary: "60s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(61), TimeDisplay(primary: "01:01", secondary: "61s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(3599), TimeDisplay(primary: "59:59", secondary: "3599s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(3600), TimeDisplay(primary: "01:00:00", secondary: "3600s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(86_399), TimeDisplay(primary: "23:59:59", secondary: "86399s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(86_400), TimeDisplay(primary: "1d 00:00:00", secondary: "86400s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(2_592_000), TimeDisplay(primary: "1mo 00:00:00", secondary: "2592000s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(31_536_000), TimeDisplay(primary: "1y 00:00:00", secondary: "31536000s"))
-    }
-
-    @MainActor
-    func testFormatTimeDisplayPrecisionPolicy() {
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
-        )
-        viewModel.scaleMode = .fullStop
-
-        XCTAssertEqual(viewModel.formatTimeDisplay(128.25), TimeDisplay(primary: "02:08.250", secondary: "128.25s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(12.345), TimeDisplay(primary: "12.345s", secondary: "12.345s"))
-        XCTAssertEqual(viewModel.formatTimeDisplay(0.033), TimeDisplay(primary: "0.033s", secondary: "0.033s"))
+        }
     }
 
     @MainActor
@@ -210,27 +194,6 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
         XCTAssertEqual(
             viewModel.timerTimeContext(for: completed),
             "Completed \(viewModel.formatDateTime(pausedDate)) · just now"
-        )
-    }
-
-    @MainActor
-    func testTimerDisplayHandlesLargeDurationsInReadableFormat() {
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
-        )
-        viewModel.scaleMode = .fullStop
-
-        XCTAssertEqual(
-            viewModel.formatTimeDisplay(2_592_000),
-            TimeDisplay(primary: "1mo 00:00:00", secondary: "2592000s")
-        )
-        XCTAssertEqual(
-            viewModel.formatTimeDisplay(31_536_000),
-            TimeDisplay(primary: "1y 00:00:00", secondary: "31536000s")
         )
     }
 

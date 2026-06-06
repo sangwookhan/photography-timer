@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Range + guard coverage exercised through the calculator's
 /// reciprocity binding. Asserts the custom-profile policy result

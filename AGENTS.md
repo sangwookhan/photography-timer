@@ -252,8 +252,17 @@ stay at the repo root under `shared/test-fixtures/`.
 
 ### iOS
 
+The pure-domain layer (reciprocity policy, exposure calculator,
+launch catalog, formula/table profile model) lives in the
+`ios/PTimerKit` Swift package and is tested off-simulator on the host
+Mac — fast, no simulator boot. The remaining app/view-model/UI tests
+stay in the app-hosted `PTimerTests` target on the Simulator.
+
 ```bash
-# Run all tests
+# Pure-domain tests — runs on macOS, NO simulator (seconds)
+cd ios/PTimerKit && swift test
+
+# Run all app-hosted tests
 cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test

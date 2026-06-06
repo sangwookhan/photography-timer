@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Cross-film behavior contract for every **converted formula**
 /// reciprocity film shipped in the launch catalog.

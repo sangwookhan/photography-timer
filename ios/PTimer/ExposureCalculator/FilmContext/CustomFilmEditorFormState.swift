@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 
 /// Photographer-facing input mode for the formula editor.
 /// Drives which fields are visible in the editor; the underlying

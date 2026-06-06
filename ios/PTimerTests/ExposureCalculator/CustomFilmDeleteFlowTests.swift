@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Delete flow coverage. Asserts the `deleteCustomFilm` surface
 /// drops the entry, falls back safely when the deleted profile

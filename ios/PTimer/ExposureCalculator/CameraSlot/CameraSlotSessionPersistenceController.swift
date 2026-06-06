@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 
 /// Bridges the runtime camera-slot session and the on-disk
 /// `PersistentCameraSlotSessionSnapshot` format. Owns the

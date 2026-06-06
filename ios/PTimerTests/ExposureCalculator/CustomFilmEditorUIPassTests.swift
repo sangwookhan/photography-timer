@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Covers the manufacturer field, optional valid-through
 /// (Unlimited), reference URL round-trip, and the

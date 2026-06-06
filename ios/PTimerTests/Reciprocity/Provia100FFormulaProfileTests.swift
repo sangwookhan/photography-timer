@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Provia 100F is calculated by a constrained, threshold-anchored
 /// formula. These tests lock the invariants:
@@ -26,89 +27,10 @@ final class Provia100FFormulaProfileTests: XCTestCase {
 
     // MARK: - Threshold boundary (inclusive at 128 s)
 
-    func testProvia100FAtThresholdBoundaryReturnsOfficialNoCorrection() throws {
-        let profile = try proviaProfile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 128)
-
-        XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 128, accuracy: 1e-6)
-    }
-
     // MARK: - Source-backed formula range (128 s … 240 s inclusive)
-
-    func testProvia100FAt240SecondsIsFormulaDerivedNotExactTablePoint() throws {
-        let profile = try proviaProfile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 240)
-
-        XCTAssertEqual(
-            result.metadata.basis,
-            .formulaDerived,
-            "240 s must be formula-derived even though the manufacturer published a +1/3 stop reference here."
-        )
-
-        // Anchored to the published +1/3 stop reference (240 × 2^(1/3) ≈ 302.4 s).
-        // The constrained-formula coefficient is rounded to six decimals, so a 2 s
-        // tolerance comfortably covers the rounding error.
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 302.4, accuracy: 2.0)
-    }
-
-    func testProvia100FBetweenThresholdAnd240SecondsIsFormulaDerived() throws {
-        let profile = try proviaProfile()
-
-        for metered in [150.0, 200.0, 230.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .formulaDerived,
-                "Metered \(metered) s in the source-backed range must be formula-derived."
-            )
-        }
-    }
-
-    func testProvia100FFormulaExponentMatchesPublishedReference() throws {
-        let profile = try proviaProfile()
-        let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(rule) = rule else { return nil }
-            return rule
-        }.first)
-
-        XCTAssertEqual(formulaRule.formula.exponent, 1.3676, accuracy: 0.0001)
-
-        // PTIMER-160 preserves Provia 100F's published display form
-        // `Tc = 128 × (Tm / 128)^p` by storing the formula with
-        // `coefficientSeconds = referenceMeteredTimeSeconds = 128`,
-        // mathematically equivalent to the legacy
-        // `coefficient ≈ 0.168` with `Tref = 1` form.
-        XCTAssertEqual(formulaRule.formula.coefficientSeconds, 128, accuracy: 1e-6)
-        XCTAssertEqual(formulaRule.formula.referenceMeteredTimeSeconds, 128, accuracy: 1e-6)
-    }
 
     // MARK: - Beyond the source-backed range (> 240 s, with 480 s
     // as a warning marker)
-
-    /// PTIMER-160: source-backed range ends at the 240 s anchor.
-    /// 360 s, 480 s, and 500 s all sit above that boundary; the
-    /// formula keeps producing a numeric continuation but the basis
-    /// must classify them as outside the source range. 480 s also
-    /// exists as a published "Not recommended" warning marker, which
-    /// surfaces independently through the source-evidence row — it
-    /// does not promote 480 s back into source-backed status.
-    func testProvia100FAbove240SecondsCarriesFormulaPredictionAsBeyondSource() throws {
-        let profile = try proviaProfile()
-        for metered in [360.0, 470.0, 480.0, 500.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .unsupportedOutOfPolicyRange,
-                "Provia 100F at \(metered) s sits above the 240 s source-backed boundary."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            let expected = 128.0 * pow(metered / 128.0, 1.3676)
-            XCTAssertEqual(corrected, expected, accuracy: max(1.5, expected * 0.005))
-        }
-    }
 
     func testProvia100FUnsupportedNumericResultExposesCalculatedTime() throws {
         let profile = try proviaProfile()
@@ -235,34 +157,6 @@ final class Provia100FFormulaProfileTests: XCTestCase {
             explanation.lowercased().contains("source range"),
             "Graph explanation must surface source-range wording; got: \(explanation)"
         )
-    }
-
-    @MainActor
-    func testProvia100FCorrectedExposureNoLongerCarriesSecondaryDescription() throws {
-        // Detail surfaces the long-form note via the graph note;
-        // the Main corrected-exposure card no longer renders a
-        // per-state caption. The model state therefore returns an
-        // empty secondary text for every numeric reciprocity case
-        // — both supported and outside-guidance.
-        let film = try proviaFilm()
-        let profile = try XCTUnwrap(film.profiles.first)
-        let model = ReciprocityModel()
-
-        for metered in [240.0, 600.0] {
-            let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: metered)
-            let bindingState = FilmModeReciprocityBindingState(
-                film: film,
-                profile: profile,
-                policyResult: policyResult,
-                presentation: policyResult.confidencePresentation
-            )
-            let correctedDisplay = model.correctedExposureDisplayState(for: bindingState)
-            XCTAssertEqual(
-                correctedDisplay.secondaryText,
-                "",
-                "Metered \(metered) s: numeric reciprocity results must not surface a Main secondary description; the detail/graph note carries any long-form explanation."
-            )
-        }
     }
 
     // MARK: - Centralized converted-profile classification

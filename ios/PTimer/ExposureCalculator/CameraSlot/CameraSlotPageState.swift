@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 
 /// Per-slot snapshot the workspace TabView consumes for a single
 /// page. Combines the slot identity, the calculator inputs (live for

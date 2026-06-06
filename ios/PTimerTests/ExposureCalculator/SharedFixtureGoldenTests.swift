@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Cross-platform parity gate on the iOS side. Drives the
 /// shipped `ExposureCalculator` and `LaunchPresetFilmCatalog` against

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Locks the vocabulary surface produced by
 /// `ReciprocityDetailsVocabularyPresenter` so the Film Details badge,

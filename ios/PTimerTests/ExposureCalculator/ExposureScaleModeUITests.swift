@@ -1,6 +1,7 @@
 import Combine
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// ViewModel-level coverage for the shipping one-third-stop
 /// calculator scale (per `docs/specs/Calculator.md` §1.4). The

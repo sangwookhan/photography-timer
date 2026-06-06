@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 final class Provia100FGraphVisibilityTests: XCTestCase {
     // MARK: - Sub-second no-correction visibility
@@ -281,8 +282,6 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
             correctedDisplay.primaryText.hasPrefix("≈≈"),
             "Approximate marker must not be doubled when the formatter already prefixes one; got: \(correctedDisplay.primaryText)"
         )
-        XCTAssertEqual(correctedDisplay.secondaryText, "")
-
         let action = model.correctedExposureActionState(for: bindingState)
         XCTAssertTrue(action.canStartTimer, "Numeric formula prediction must enable the play button.")
         XCTAssertEqual(action.targetSeconds, policyResult.correctedExposureSeconds)

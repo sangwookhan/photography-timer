@@ -1,17 +1,17 @@
-  ▿ PTimer.ReciprocityResult.limitedGuidance
-    ▿ limitedGuidance: PTimer.ReciprocityResult.LimitedGuidancePayload
+  ▿ PTimerKit.ReciprocityResult.limitedGuidance
+    ▿ limitedGuidance: PTimerKit.ReciprocityResult.LimitedGuidancePayload
       - meteredExposureSeconds: 4.0
-      ▿ metadata: PTimer.ReciprocityResultMetadata
-        - basis: PTimer.ReciprocityCalculationBasis.limitedGuidanceNoQuantifiedPrediction
-        - sourceAuthorityImpact: PTimer.ReciprocitySourceAuthorityImpact.currentOfficial
-        - rangeStatus: PTimer.ReciprocityCalculationRangeStatus.beyondLastRepresentativePoint
-        - warningLevel: PTimer.ReciprocityCalculationWarningLevel.note
+      ▿ metadata: PTimerKit.ReciprocityResultMetadata
+        - basis: PTimerKit.ReciprocityCalculationBasis.limitedGuidanceNoQuantifiedPrediction
+        - sourceAuthorityImpact: PTimerKit.ReciprocitySourceAuthorityImpact.currentOfficial
+        - rangeStatus: PTimerKit.ReciprocityCalculationRangeStatus.beyondLastRepresentativePoint
+        - warningLevel: PTimerKit.ReciprocityCalculationWarningLevel.note
         ▿ notes: 2 elements
-          ▿ PTimer.ReciprocityPolicyNote
-            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.limitedGuidanceContinuationOnly)
-              - some: PTimer.ReciprocityPolicyNoteToken.limitedGuidanceContinuationOnly
+          ▿ PTimerKit.ReciprocityPolicyNote
+            ▿ token: Optional(PTimerKit.ReciprocityPolicyNoteToken.limitedGuidanceContinuationOnly)
+              - some: PTimerKit.ReciprocityPolicyNoteToken.limitedGuidanceContinuationOnly
             - text: "Only limited guidance is available for this metered exposure."
-          ▿ PTimer.ReciprocityPolicyNote
-            ▿ token: Optional(PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
-              - some: PTimer.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
+          ▿ PTimerKit.ReciprocityPolicyNote
+            ▿ token: Optional(PTimerKit.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange)
+              - some: PTimerKit.ReciprocityPolicyNoteToken.beyondOfficialQuantifiedRange
             - text: "Longer exposures: test under your conditions."

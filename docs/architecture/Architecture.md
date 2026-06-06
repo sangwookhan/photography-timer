@@ -129,6 +129,16 @@ into details display state — no lifecycle, no async dependency.
 This layer is platform-neutral and pure-function-flavored. It does not
 import UIKit/SwiftUI and (per fitness rule) shall continue not to.
 
+Since PTIMER-174 this layer is extracted into the `ios/PTimerKit`
+Swift package (product `PTimerKit`) instead of living inside the app
+target. The app depends on the package and consumes its `public` API;
+the launch catalog JSON ships as a package resource loaded via
+`Bundle.module`. Because the package is platform-neutral, its tests
+(`PTimerKitTests`) run on the host Mac via `swift test` with no
+simulator. The `@MainActor`/`@Observable` child models (§1.4) and all
+UI stay in the app target. This is the dependency floor: PTimerKit
+depends on nothing else in the project.
+
 ### 1.6 Timer runtime
 
 Directory: `Timers/`.

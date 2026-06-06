@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Save / reload coverage for the custom film library.
 /// Exercises the persistence boundary in both the in-memory +

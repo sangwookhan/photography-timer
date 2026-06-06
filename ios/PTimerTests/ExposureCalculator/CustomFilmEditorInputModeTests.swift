@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Covers the Basic / Scaled / Advanced editor input modes added
 /// in the PTIMER-84 UX pass. Mode is a pure UI affordance over the

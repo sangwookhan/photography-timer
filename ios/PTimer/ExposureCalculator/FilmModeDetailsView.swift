@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import PTimerKit
 
 /// FilmModeDetailsView contains the bottom-sheet rendering for the
 /// film mode reciprocity details surface (UI Spec §2.6). The graph

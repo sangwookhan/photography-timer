@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-164: the Ohzart community practical table is a separate
 /// unofficial, table-derived alternate model under the single Fomapan

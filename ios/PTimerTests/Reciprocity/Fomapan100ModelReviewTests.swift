@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// PTIMER-161: review fixture that pins the data used by
 /// `docs/tasks/PTIMER-161/fomapan-100-multi-profile-review.md`.

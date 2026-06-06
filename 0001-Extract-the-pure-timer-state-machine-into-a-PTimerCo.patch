@@ -1,0 +1,1595 @@
+From f8fd884a9df2e88f2237e25b51329d98fef93106 Mon Sep 17 00:00:00 2001
+From: Sangwook Han <sangwook.han@gmail.com>
+Date: Sat, 6 Jun 2026 11:50:42 +0900
+Subject: [PATCH 1/2] Extract the pure timer state machine into a PTimerCore
+ package (step 1/2)
+
+What: move the platform-neutral timer logic out of the app's
+TimerManager.swift into a new `PTimerKit` package (`PTimerCore` target):
+- TimerState sum type + RunningTimer/PausedTimer/CompletedTimer and the
+  pause/resume/complete/remaining-time transitions
+- PersistentTimerSnapshot/collection + persistence store protocol & impls
+- CompletedRelativeTimeFormatter
+TimerManager stays in the app target as the OS coordinator (RunLoop
+ticking, UIKit feedback, UserNotifications, ActivityKit, @Published,
+persistence wiring) and now depends on PTimerCore.
+
+Why: TimerManager conflated the pure timer rules with UIKit/notification
+I/O, so timer behavior could not be reasoned about or tested in
+isolation. Separating the pure core is a standalone structural
+improvement; it also unblocks running timer-dependent tests without the
+simulator (step 2). The stability epsilon is mirrored as a local
+constant so the core has no dependency on the exposure engine.
+
+Behavior preserved: full app suite stays green (1474 tests, 0 failures);
+the PTimerCore package builds with `swift test`.
+
+Step 2/2 will relocate the pure timer-core tests into PTimerCoreTests so
+they run on macOS without a simulator.
+
+PTIMER-177 Decouple the pure timer state machine from the UIKit-bound
+           TimerManager
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+---
+ ios/PTimer.xcodeproj/project.pbxproj          |  25 +-
+ .../Workspace/BottomSheetWorkspaceShell.swift |   1 +
+ .../BottomSheetWorkspaceSnapshot.swift        |   1 +
+ .../Models/RunningTimerItem.swift             |   1 +
+ .../Models/TimerWorkspaceModel.swift          |   1 +
+ .../ViewModelDependencyFactory.swift          |   1 +
+ ...TimerCompletionNotificationScheduler.swift |   1 +
+ ios/PTimer/Timers/TimerManager.swift          | 514 +-----------------
+ .../Timers/TimerMetadataPersistence.swift     |   1 +
+ ios/PTimerKit/Package.swift                   |  20 +
+ .../CompletedRelativeTimeFormatter.swift      |  10 +-
+ .../Sources/PTimerCore/TimerPersistence.swift | 218 ++++++++
+ .../Sources/PTimerCore/TimerState.swift       | 345 ++++++++++++
+ .../App/BottomSheetIdentityPaletteTests.swift |   1 +
+ .../BottomSheetWorkspaceOrderingTests.swift   |   1 +
+ ...BottomSheetWorkspaceShellTestSupport.swift |   1 +
+ ...omSheetWorkspaceSnapshotFactoryTests.swift |   1 +
+ ...heetWorkspaceSnapshotStartAgainTests.swift |   1 +
+ ...CalculatorTimerDisplaySemanticsTests.swift |   1 +
+ .../CalculatorTimerMetadataTests.swift        |   1 +
+ ...atorViewModelContextPersistenceTests.swift |   1 +
+ .../RecordReplay/RecordReplaySpies.swift      |   1 +
+ .../B4TimerLifecycleBaselineTests.swift       |   1 +
+ .../CompletedRelativeTimeFormatterTests.swift |   1 +
+ .../TimerManagerPauseResumeStateTests.swift   |   1 +
+ .../Timers/TimerManagerPauseResumeTests.swift |   1 +
+ .../TimerManagerPersistenceRestoreTests.swift |   1 +
+ .../Timers/TimerManagerTestSupport.swift      |   1 +
+ .../Timers/TimerManagerTests.swift            |   1 +
+ 29 files changed, 634 insertions(+), 521 deletions(-)
+ create mode 100644 ios/PTimerKit/Package.swift
+ rename ios/{PTimer/Timers => PTimerKit/Sources/PTimerCore}/CompletedRelativeTimeFormatter.swift (87%)
+ create mode 100644 ios/PTimerKit/Sources/PTimerCore/TimerPersistence.swift
+ create mode 100644 ios/PTimerKit/Sources/PTimerCore/TimerState.swift
+
+diff --git a/ios/PTimer.xcodeproj/project.pbxproj b/ios/PTimer.xcodeproj/project.pbxproj
+index 837c2c0..8587ee9 100644
+--- a/ios/PTimer.xcodeproj/project.pbxproj
++++ b/ios/PTimer.xcodeproj/project.pbxproj
+@@ -7,6 +7,7 @@
+ 	objects = {
+ 
+ /* Begin PBXBuildFile section */
++		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
+ 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
+ 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
+ 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
+@@ -24,7 +25,6 @@
+ 		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
+ 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
+ 		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+-		A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */; };
+ 		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
+ 		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
+ 		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
+@@ -297,7 +297,6 @@
+ 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
+ 		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
+ 		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+-		A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatter.swift; sourceTree = "<group>"; };
+ 		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
+ 		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
+ 		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
+@@ -524,6 +523,7 @@
+ 			isa = PBXFrameworksBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
++				EE0000000000000000000003 /* PTimerCore in Frameworks */,
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 		};
+@@ -753,7 +753,6 @@
+ 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
+ 				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
+ 				A00000000000000000000109 /* LockScreenTimerCoordinator.swift */,
+-				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
+ 				A00000000000000000000145 /* TimerMetadataPersistence.swift */,
+ 			);
+ 			path = Timers;
+@@ -980,6 +979,7 @@
+ 			);
+ 			name = PTimer;
+ 			packageProductDependencies = (
++				EE0000000000000000000002 /* PTimerCore */,
+ 			);
+ 			productName = PTimer;
+ 			productReference = A00000000000000000000010 /* PTimer.app */;
+@@ -1029,6 +1029,21 @@
+ 		};
+ /* End PBXNativeTarget section */
+ 
++/* Begin XCLocalSwiftPackageReference section */
++		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */ = {
++			isa = XCLocalSwiftPackageReference;
++			relativePath = PTimerKit;
++		};
++/* End XCLocalSwiftPackageReference section */
++
++/* Begin XCSwiftPackageProductDependency section */
++		EE0000000000000000000002 /* PTimerCore */ = {
++			isa = XCSwiftPackageProductDependency;
++			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
++			productName = PTimerCore;
++		};
++/* End XCSwiftPackageProductDependency section */
++
+ /* Begin PBXProject section */
+ 		A00000000000000000000060 /* Project object */ = {
+ 			isa = PBXProject;
+@@ -1057,6 +1072,9 @@
+ 				Base,
+ 			);
+ 			mainGroup = A00000000000000000000030;
++			packageReferences = (
++				EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */,
++			);
+ 			minimizedProjectReferenceProxies = 1;
+ 			preferredProjectObjectVersion = 77;
+ 			productRefGroup = A00000000000000000000032 /* Products */;
+@@ -1125,7 +1143,6 @@
+ 				A00000000000000000000944 /* CalculatorContextRestorePlanBuilder.swift in Sources */,
+ 				A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */,
+ 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,
+-				A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */,
+ 				A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */,
+ 				A000000000000000000000D4 /* BottomSheetWorkspaceStateStore.swift in Sources */,
+ 				A000000000000000000000D6 /* BottomSheetWorkspaceMetrics.swift in Sources */,
+diff --git a/ios/PTimer/App/Workspace/BottomSheetWorkspaceShell.swift b/ios/PTimer/App/Workspace/BottomSheetWorkspaceShell.swift
+index b253e5a..02476d6 100644
+--- a/ios/PTimer/App/Workspace/BottomSheetWorkspaceShell.swift
++++ b/ios/PTimer/App/Workspace/BottomSheetWorkspaceShell.swift
+@@ -1,5 +1,6 @@
+ import Combine
+ import SwiftUI
++import PTimerCore
+ 
+ /// PTIMER-126 redesign: the closed-state Timers UI is no longer a
+ /// custom bottom-sheet dock. Timers surface in two screen-level
+diff --git a/ios/PTimer/App/Workspace/BottomSheetWorkspaceSnapshot.swift b/ios/PTimer/App/Workspace/BottomSheetWorkspaceSnapshot.swift
+index 29cf0e0..70ff55b 100644
+--- a/ios/PTimer/App/Workspace/BottomSheetWorkspaceSnapshot.swift
++++ b/ios/PTimer/App/Workspace/BottomSheetWorkspaceSnapshot.swift
+@@ -1,5 +1,6 @@
+ import Combine
+ import SwiftUI
++import PTimerCore
+ 
+ struct CompactRemainingScaleLayer: Equatable {
+     let fraction: Double
+diff --git a/ios/PTimer/ExposureCalculator/Models/RunningTimerItem.swift b/ios/PTimer/ExposureCalculator/Models/RunningTimerItem.swift
+index a7ecbe6..9e58c04 100644
+--- a/ios/PTimer/ExposureCalculator/Models/RunningTimerItem.swift
++++ b/ios/PTimer/ExposureCalculator/Models/RunningTimerItem.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import PTimerCore
+ 
+ /// View-facing snapshot of a single running/paused/completed timer, the
+ /// emission shape consumed by the workspace UI (compact dock + large
+diff --git a/ios/PTimer/ExposureCalculator/Models/TimerWorkspaceModel.swift b/ios/PTimer/ExposureCalculator/Models/TimerWorkspaceModel.swift
+index 704ffcf..41de9a7 100644
+--- a/ios/PTimer/ExposureCalculator/Models/TimerWorkspaceModel.swift
++++ b/ios/PTimer/ExposureCalculator/Models/TimerWorkspaceModel.swift
+@@ -1,5 +1,6 @@
+ import Combine
+ import Foundation
++import PTimerCore
+ 
+ /// `TimerWorkspaceModel` owns the timer-workspace slice. The model owns:
+ /// - the `TimerManager` instance (the live timer state machine)
+diff --git a/ios/PTimer/ExposureCalculator/ViewModelDependencyFactory.swift b/ios/PTimer/ExposureCalculator/ViewModelDependencyFactory.swift
+index 640844d..7798ed6 100644
+--- a/ios/PTimer/ExposureCalculator/ViewModelDependencyFactory.swift
++++ b/ios/PTimer/ExposureCalculator/ViewModelDependencyFactory.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import PTimerCore
+ 
+ struct ViewModelDependencies {
+     let calculator: ExposureCalculator
+diff --git a/ios/PTimer/Timers/TimerCompletionNotificationScheduler.swift b/ios/PTimer/Timers/TimerCompletionNotificationScheduler.swift
+index 023ce17..3ee83d7 100644
+--- a/ios/PTimer/Timers/TimerCompletionNotificationScheduler.swift
++++ b/ios/PTimer/Timers/TimerCompletionNotificationScheduler.swift
+@@ -1,5 +1,6 @@
+ import Foundation
+ import UserNotifications
++import PTimerCore
+ 
+ protocol UserNotificationCentering: AnyObject {
+     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
+diff --git a/ios/PTimer/Timers/TimerManager.swift b/ios/PTimer/Timers/TimerManager.swift
+index 6ee38c3..dea48be 100644
+--- a/ios/PTimer/Timers/TimerManager.swift
++++ b/ios/PTimer/Timers/TimerManager.swift
+@@ -2,8 +2,7 @@ import Combine
+ import Foundation
+ import AudioToolbox
+ import UIKit
+-
+-private let timerStabilityEpsilon: TimeInterval = ExposureCalculator.stabilityEpsilon
++import PTimerCore
+ 
+ struct TimerCompletionEvent: Equatable {
+     let timerID: UUID
+@@ -41,202 +40,6 @@ struct NoOpTimerCompletionScheduler: TimerCompletionNotificationScheduling {
+     func cancelCompletionNotification(forTimerID timerID: UUID) {}
+ }
+ 
+-// Snapshot schema is intentionally minimal:
+-// - id keeps timer identity stable across relaunch.
+-// - status selects the restore rule for running/paused/completed.
+-//   In this model, `paused` means a frozen, later-resumable timer rather
+-//   than a terminal "done" state.
+-// - duration/startDate preserve the original timer semantics and UI context.
+-// - expectedCompletionAt lets relaunch restore reconcile running timers to wall-clock time.
+-// - pausedRemainingDuration/pausedAt keep paused timers frozen without drifting.
+-// - completedAt preserves the final timestamp for completed timers.
+-struct PersistentTimerSnapshot: Codable, Equatable {
+-    let id: UUID
+-    let status: SnapshotStatus
+-    let duration: TimeInterval
+-    let startDate: Date
+-    let expectedCompletionAt: Date?
+-    let pausedRemainingDuration: TimeInterval?
+-    let pausedAt: Date?
+-    let completedAt: Date?
+-
+-    init(timer: TimerState) {
+-        self.id = timer.id
+-        self.duration = timer.duration
+-        self.startDate = timer.startDate
+-        self.pausedRemainingDuration = timer.pausedRemainingTime
+-        self.pausedAt = timer.pausedAt
+-
+-        switch timer.status {
+-        case .running:
+-            self.status = .running
+-            self.expectedCompletionAt = timer.endDate
+-            self.completedAt = nil
+-        case .paused:
+-            // Per Timer Spec §3.1, `expectedCompletionAt` is meaningful for
+-            // `running` status only. A paused snapshot carries the freeze
+-            // metadata (`pausedRemainingDuration` + `pausedAt`); the
+-            // hypothetical completion date is reconstructed on read by the
+-            // computed `PausedTimer.endDate` so it never needs to be
+-            // stored on disk.
+-            self.status = .paused
+-            self.expectedCompletionAt = nil
+-            self.completedAt = nil
+-        case .completed:
+-            self.status = .completed
+-            self.expectedCompletionAt = nil
+-            self.completedAt = timer.endDate
+-        }
+-    }
+-
+-    func restore(at now: Date) -> TimerState {
+-        switch status {
+-        case .running:
+-            guard let expectedCompletionAt else {
+-                return makeCompletedTimer(completionDate: now)
+-            }
+-
+-            if now.addingTimeInterval(timerStabilityEpsilon) >= expectedCompletionAt {
+-                return makeCompletedTimer(completionDate: expectedCompletionAt)
+-            }
+-
+-            return TimerState(
+-                id: id,
+-                duration: duration,
+-                startDate: startDate,
+-                endDate: expectedCompletionAt,
+-                pausedRemainingTime: nil,
+-                pausedAt: nil,
+-                status: .running
+-            )
+-        case .paused:
+-            // `paused` restores as the same frozen, resumable state. It
+-            // must not consume wall-clock time or auto-complete while
+-            // the app was dead. `expectedCompletionAt` is ignored on
+-            // this path: legacy snapshots may carry a non-nil value
+-            // while current snapshots write `nil`;
+-            // either way the sum-type init for `.paused` discards the
+-            // parameter and the computed `PausedTimer.endDate`
+-            // reconstructs the hypothetical completion date from
+-            // `pausedAt + pausedRemainingDuration`.
+-            //
+-            // A paused snapshot whose freeze metadata is missing is
+-            // structurally invalid (the back-compat init would otherwise
+-            // fabricate `pausedAt = startDate`, `pausedRemainingTime = 0`,
+-            // producing a fictitious "paused at startDate" timestamp).
+-            // Treat the corrupt input as completed instead, mirroring
+-            // the `.running` branch's missing-`expectedCompletionAt`
+-            // fallback above.
+-            guard let pausedAt, let pausedRemainingDuration else {
+-                return makeCompletedTimer(completionDate: completedAt)
+-            }
+-            return TimerState(
+-                id: id,
+-                duration: duration,
+-                startDate: startDate,
+-                endDate: nil,
+-                pausedRemainingTime: pausedRemainingDuration,
+-                pausedAt: pausedAt,
+-                status: .paused
+-            )
+-        case .completed:
+-            return makeCompletedTimer(completionDate: completedAt)
+-        }
+-    }
+-
+-    private func makeCompletedTimer(completionDate: Date?) -> TimerState {
+-        TimerState(
+-            id: id,
+-            duration: duration,
+-            startDate: startDate,
+-            endDate: completionDate ?? expectedCompletionAt ?? pausedAt ?? startDate.addingTimeInterval(duration),
+-            pausedRemainingTime: nil,
+-            pausedAt: nil,
+-            status: .completed
+-        )
+-    }
+-
+-    enum SnapshotStatus: String, Codable, Equatable {
+-        case running
+-        case paused
+-        case completed
+-
+-        init(from decoder: Decoder) throws {
+-            let container = try decoder.singleValueContainer()
+-            let rawValue = try container.decode(String.self)
+-
+-            switch rawValue {
+-            case "running":
+-                self = .running
+-            case "paused", "stopped":
+-                self = .paused
+-            case "completed":
+-                self = .completed
+-            default:
+-                throw DecodingError.dataCorruptedError(
+-                    in: container,
+-                    debugDescription: "Unsupported snapshot status: \(rawValue)"
+-                )
+-            }
+-        }
+-    }
+-}
+-
+-struct PersistentTimerCollectionSnapshot: Codable, Equatable {
+-    let timers: [PersistentTimerSnapshot]
+-
+-    init(timers: [TimerState]) {
+-        self.timers = timers.map(PersistentTimerSnapshot.init)
+-    }
+-}
+-
+-protocol TimerPersistenceStoring {
+-    func loadSnapshot() -> PersistentTimerCollectionSnapshot?
+-    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot)
+-    func clearSnapshot()
+-}
+-
+-struct NoOpTimerPersistenceStore: TimerPersistenceStoring {
+-    func loadSnapshot() -> PersistentTimerCollectionSnapshot? { nil }
+-    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {}
+-    func clearSnapshot() {}
+-}
+-
+-struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
+-    private let userDefaults: UserDefaults
+-    private let snapshotKey: String
+-    private let encoder = JSONEncoder()
+-    private let decoder = JSONDecoder()
+-
+-    init(
+-        userDefaults: UserDefaults = .standard,
+-        snapshotKey: String = "ptimer.timer-state.snapshot"
+-    ) {
+-        self.userDefaults = userDefaults
+-        self.snapshotKey = snapshotKey
+-    }
+-
+-    func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
+-        guard let data = userDefaults.data(forKey: snapshotKey) else {
+-            return nil
+-        }
+-
+-        return try? decoder.decode(PersistentTimerCollectionSnapshot.self, from: data)
+-    }
+-
+-    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
+-        guard let data = try? encoder.encode(snapshot) else {
+-            return
+-        }
+-
+-        userDefaults.set(data, forKey: snapshotKey)
+-    }
+-
+-    func clearSnapshot() {
+-        userDefaults.removeObject(forKey: snapshotKey)
+-    }
+-}
+-
+ struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
+     func playCompletionFeedback() {
+         let generator = UINotificationFeedbackGenerator()
+@@ -272,321 +75,6 @@ final class ForegroundTimerCompletionAlertService: TimerCompletionAlerting {
+     }
+ }
+ 
+-enum TimerStatus: String, Equatable {
+-    case running
+-    // `paused` is a frozen, resumable state that preserves remaining time.
+-    case paused
+-    case completed
+-}
+-
+-/// Payload of a `running` timer. Holds only the fields valid in the
+-/// `running` state: identity, duration, creation time, and the
+-/// expected end date.
+-struct RunningTimer: Equatable {
+-    let id: UUID
+-    let duration: TimeInterval
+-    let startDate: Date
+-    let endDate: Date
+-}
+-
+-/// Payload of a `paused` timer. Holds only the freeze metadata
+-/// (`pausedRemainingTime` + `pausedAt`); the hypothetical completion
+-/// date is derived from `pausedAt + pausedRemainingTime` rather than
+-/// stored, matching Timer Spec §3.1 ("expectedCompletionAt — running
+-/// status only"). Mathematically equivalent to the previous stored
+-/// `endDate` because `pausing(at:)` always set `pausedRemainingTime
+-/// = endDate - pausedAt`.
+-struct PausedTimer: Equatable {
+-    let id: UUID
+-    let duration: TimeInterval
+-    let startDate: Date
+-    let pausedRemainingTime: TimeInterval
+-    let pausedAt: Date
+-
+-    /// Hypothetical completion date for display purposes. Derived from
+-    /// the freeze metadata so the field disappears from the persisted
+-    /// schema (Timer Spec §3.1) while UI consumers can still read it.
+-    var endDate: Date {
+-        pausedAt.addingTimeInterval(pausedRemainingTime)
+-    }
+-}
+-
+-/// Payload of a `completed` timer. Holds the recorded completion
+-/// timestamp; surfaced via `endDate` for backward-compatible callers
+-/// that read the legacy field.
+-struct CompletedTimer: Equatable {
+-    let id: UUID
+-    let duration: TimeInterval
+-    let startDate: Date
+-    let completedAt: Date
+-}
+-
+-/// Sum-type representation of a timer's lifecycle state. Each case
+-/// carries only the fields valid for that state, so invalid
+-/// combinations (e.g. running with a `pausedAt`) cannot be
+-/// constructed.
+-///
+-/// Backward-compatible computed properties (`endDate`,
+-/// `pausedRemainingTime`, `pausedAt`, `status`) preserve the legacy
+-/// struct surface so existing call sites and the persisted snapshot
+-/// schema stay byte-identical.
+-enum TimerState: Identifiable, Equatable {
+-    case running(RunningTimer)
+-    case paused(PausedTimer)
+-    case completed(CompletedTimer)
+-
+-    /// Compatibility initializer that mirrors the historical struct
+-    /// `TimerState(id:duration:startDate:endDate:pausedRemainingTime:pausedAt:status:)`
+-    /// constructor used by tests and the `PersistentTimerSnapshot`
+-    /// restore path. The initializer dispatches on `status` and
+-    /// constructs the appropriate sum case from the supplied legacy
+-    /// fields.
+-    ///
+-    /// Trusted-callsite contract: callers shall supply the fields
+-    /// required by the chosen status:
+-    /// - `.running` ⇒ `endDate` non-nil
+-    /// - `.paused` ⇒ `pausedRemainingTime` and `pausedAt` non-nil
+-    /// - `.completed` ⇒ `endDate` non-nil (= completion timestamp)
+-    /// `endDate` is intentionally ignored for `.paused`; the sum-type
+-    /// representation derives it from `pausedAt + pausedRemainingTime`
+-    /// (Timer Spec §3.1 "expectedCompletionAt — running status only").
+-    /// Other missing fields debug-trap so corrupt inputs from a
+-    /// persisted snapshot are caught early; the production fallback
+-    /// constructs a degenerate but type-valid case so a debug crash
+-    /// does not become a release crash. `PersistentTimerSnapshot.restore`
+-    /// guards the `.paused` corrupt-input case at its caller boundary
+-    /// instead, surfacing such snapshots as completed.
+-    init(
+-        id: UUID,
+-        duration: TimeInterval,
+-        startDate: Date,
+-        endDate: Date?,
+-        pausedRemainingTime: TimeInterval?,
+-        pausedAt: Date?,
+-        status: TimerStatus
+-    ) {
+-        switch status {
+-        case .running:
+-            assert(endDate != nil, "TimerState(.running) requires a non-nil endDate")
+-            self = .running(
+-                RunningTimer(
+-                    id: id,
+-                    duration: duration,
+-                    startDate: startDate,
+-                    endDate: endDate ?? startDate.addingTimeInterval(duration)
+-                )
+-            )
+-        case .paused:
+-            assert(
+-                pausedRemainingTime != nil && pausedAt != nil,
+-                "TimerState(.paused) requires non-nil pausedRemainingTime and pausedAt"
+-            )
+-            self = .paused(
+-                PausedTimer(
+-                    id: id,
+-                    duration: duration,
+-                    startDate: startDate,
+-                    pausedRemainingTime: pausedRemainingTime ?? 0,
+-                    pausedAt: pausedAt ?? startDate
+-                )
+-            )
+-        case .completed:
+-            assert(endDate != nil, "TimerState(.completed) requires a non-nil endDate (completion timestamp)")
+-            self = .completed(
+-                CompletedTimer(
+-                    id: id,
+-                    duration: duration,
+-                    startDate: startDate,
+-                    completedAt: endDate ?? startDate.addingTimeInterval(duration)
+-                )
+-            )
+-        }
+-    }
+-
+-    var id: UUID {
+-        switch self {
+-        case .running(let payload): return payload.id
+-        case .paused(let payload): return payload.id
+-        case .completed(let payload): return payload.id
+-        }
+-    }
+-
+-    var duration: TimeInterval {
+-        switch self {
+-        case .running(let payload): return payload.duration
+-        case .paused(let payload): return payload.duration
+-        case .completed(let payload): return payload.duration
+-        }
+-    }
+-
+-    var startDate: Date {
+-        switch self {
+-        case .running(let payload): return payload.startDate
+-        case .paused(let payload): return payload.startDate
+-        case .completed(let payload): return payload.startDate
+-        }
+-    }
+-
+-    /// Backward-compatible field surface. `endDate` is non-nil for
+-    /// every case in the sum-type representation; the optional return
+-    /// type is preserved so callers reading the legacy field continue
+-    /// to compile and behave identically.
+-    var endDate: Date? {
+-        switch self {
+-        case .running(let payload): return payload.endDate
+-        case .paused(let payload): return payload.endDate
+-        case .completed(let payload): return payload.completedAt
+-        }
+-    }
+-
+-    var pausedRemainingTime: TimeInterval? {
+-        if case .paused(let payload) = self {
+-            return payload.pausedRemainingTime
+-        }
+-        return nil
+-    }
+-
+-    var pausedAt: Date? {
+-        if case .paused(let payload) = self {
+-            return payload.pausedAt
+-        }
+-        return nil
+-    }
+-
+-    /// Derived status accessor preserving the legacy `status`
+-    /// property. External callers (display state mappers, lock-
+-    /// screen coordinator, view models) keep reading this without
+-    /// switching on case.
+-    var status: TimerStatus {
+-        switch self {
+-        case .running: return .running
+-        case .paused: return .paused
+-        case .completed: return .completed
+-        }
+-    }
+-
+-    var remainingTime: TimeInterval {
+-        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
+-        switch self {
+-        case .running(let payload):
+-            return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSinceNow)
+-        case .paused(let payload):
+-            return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
+-        case .completed:
+-            return 0
+-        }
+-    }
+-
+-    func remainingTime(at now: Date) -> TimeInterval {
+-        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
+-        switch self {
+-        case .running(let payload):
+-            return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSince(now))
+-        case .paused(let payload):
+-            return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
+-        case .completed:
+-            return 0
+-        }
+-    }
+-
+-    func status(at now: Date) -> TimerStatus {
+-        guard case .running(let payload) = self,
+-              now.addingTimeInterval(timerStabilityEpsilon) >= payload.endDate else {
+-            return status
+-        }
+-
+-        return .completed
+-    }
+-
+-    func updatingStatus(at now: Date) -> TimerState {
+-        guard case .running(let payload) = self,
+-              now.addingTimeInterval(timerStabilityEpsilon) >= payload.endDate else {
+-            return self
+-        }
+-
+-        return completed(at: payload.endDate)
+-    }
+-
+-    func pausing(at now: Date) -> TimerState {
+-        let remaining = remainingTime(at: now)
+-
+-        guard remaining > 0 else {
+-            // Preserve the legacy short-circuit: pausing while remaining
+-            // time has reached zero immediately completes using the
+-            // existing endDate (or `now` as the fallback only if endDate
+-            // is somehow absent — unreachable in the sum-type
+-            // representation but kept for shape parity).
+-            return completed(at: endDate ?? now)
+-        }
+-
+-        // Freeze the timer with its remaining duration intact so it can be
+-        // resumed later from the same logical point. The hypothetical
+-        // completion date stays accessible via the computed
+-        // `PausedTimer.endDate` (= `pausedAt + pausedRemainingTime`),
+-        // matching the legacy stored value exactly.
+-        return .paused(
+-            PausedTimer(
+-                id: id,
+-                duration: duration,
+-                startDate: startDate,
+-                pausedRemainingTime: remaining,
+-                pausedAt: now
+-            )
+-        )
+-    }
+-
+-    func resume(at now: Date) -> TimerState {
+-        let remaining = Self.sanitizeRemainingTime(pausedRemainingTime ?? 0)
+-        guard remaining > 0 else {
+-            return completed(at: resolvedCompletionDate())
+-        }
+-
+-        // Resume recalculates the end date from "now" because `paused`
+-        // preserves remaining time as a frozen resumable state.
+-        return .running(
+-            RunningTimer(
+-                id: id,
+-                duration: duration,
+-                startDate: startDate,
+-                endDate: now.addingTimeInterval(remaining)
+-            )
+-        )
+-    }
+-
+-    func completed(at completionDate: Date? = nil) -> TimerState {
+-        .completed(
+-            CompletedTimer(
+-                id: id,
+-                duration: duration,
+-                startDate: startDate,
+-                completedAt: completionDate ?? resolvedCompletionDate()
+-            )
+-        )
+-    }
+-
+-    private func resolvedCompletionDate() -> Date {
+-        // Mirrors the legacy `endDate ?? pausedAt + remaining ??
+-        // startDate + duration` resolution exactly. In the sum-type
+-        // representation `endDate` is non-nil for running and paused
+-        // and `completedAt` is the recorded completion timestamp,
+-        // so the legacy fallback chain collapses to a direct case
+-        // dispatch without changing observable behavior.
+-        switch self {
+-        case .running(let payload):
+-            return payload.endDate
+-        case .paused(let payload):
+-            return payload.endDate
+-        case .completed(let payload):
+-            return payload.completedAt
+-        }
+-    }
+-
+-    private static func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
+-        let clamped = max(0, value)
+-        return clamped < timerStabilityEpsilon ? 0 : clamped
+-    }
+-}
+-
+ @MainActor
+ final class TimerManager: ObservableObject {
+     @Published private(set) var timers: [TimerState] = []
+diff --git a/ios/PTimer/Timers/TimerMetadataPersistence.swift b/ios/PTimer/Timers/TimerMetadataPersistence.swift
+index 9c10202..bb31d02 100644
+--- a/ios/PTimer/Timers/TimerMetadataPersistence.swift
++++ b/ios/PTimer/Timers/TimerMetadataPersistence.swift
+@@ -1,4 +1,5 @@
+ import Foundation
++import PTimerCore
+ 
+ /// Persisted-with-the-workspace metadata that the runtime `TimerState`
+ /// does not carry: human-readable `name`, `basisSummary` text, and the
+diff --git a/ios/PTimerKit/Package.swift b/ios/PTimerKit/Package.swift
+new file mode 100644
+index 0000000..e90accc
+--- /dev/null
++++ b/ios/PTimerKit/Package.swift
+@@ -0,0 +1,20 @@
++// swift-tools-version:5.9
++import PackageDescription
++
++let package = Package(
++    name: "PTimerKit",
++    platforms: [
++        .iOS(.v17),
++        .macOS(.v14),
++    ],
++    products: [
++        .library(name: "PTimerCore", targets: ["PTimerCore"]),
++    ],
++    targets: [
++        .target(name: "PTimerCore"),
++        .testTarget(
++            name: "PTimerCoreTests",
++            dependencies: ["PTimerCore"]
++        ),
++    ]
++)
+diff --git a/ios/PTimer/Timers/CompletedRelativeTimeFormatter.swift b/ios/PTimerKit/Sources/PTimerCore/CompletedRelativeTimeFormatter.swift
+similarity index 87%
+rename from ios/PTimer/Timers/CompletedRelativeTimeFormatter.swift
+rename to ios/PTimerKit/Sources/PTimerCore/CompletedRelativeTimeFormatter.swift
+index 2c6d809..f52a45b 100644
+--- a/ios/PTimer/Timers/CompletedRelativeTimeFormatter.swift
++++ b/ios/PTimerKit/Sources/PTimerCore/CompletedRelativeTimeFormatter.swift
+@@ -1,16 +1,18 @@
+ import Foundation
+ 
+-struct CompletedRelativeTimeFormatter {
++public struct CompletedRelativeTimeFormatter {
+     enum Style {
+         case regular
+         case compact
+     }
+ 
+-    func string(from completionDate: Date, relativeTo referenceDate: Date) -> String {
++    public init() {}
++
++    public func string(from completionDate: Date, relativeTo referenceDate: Date) -> String {
+         string(from: completionDate, relativeTo: referenceDate, style: .regular)
+     }
+ 
+-    func compactString(from completionDate: Date, relativeTo referenceDate: Date) -> String {
++    public func compactString(from completionDate: Date, relativeTo referenceDate: Date) -> String {
+         string(from: completionDate, relativeTo: referenceDate, style: .compact)
+     }
+ 
+@@ -32,7 +34,7 @@ struct CompletedRelativeTimeFormatter {
+         }
+     }
+ 
+-    func nextRefreshDate(from completionDate: Date, relativeTo referenceDate: Date) -> Date? {
++    public func nextRefreshDate(from completionDate: Date, relativeTo referenceDate: Date) -> Date? {
+         let elapsedSeconds = max(0, referenceDate.timeIntervalSince(completionDate))
+         let nextBoundary: TimeInterval
+ 
+diff --git a/ios/PTimerKit/Sources/PTimerCore/TimerPersistence.swift b/ios/PTimerKit/Sources/PTimerCore/TimerPersistence.swift
+new file mode 100644
+index 0000000..731ccc7
+--- /dev/null
++++ b/ios/PTimerKit/Sources/PTimerCore/TimerPersistence.swift
+@@ -0,0 +1,218 @@
++import Foundation
++
++// Snapshot schema is intentionally minimal:
++// - id keeps timer identity stable across relaunch.
++// - status selects the restore rule for running/paused/completed.
++//   In this model, `paused` means a frozen, later-resumable timer rather
++//   than a terminal "done" state.
++// - duration/startDate preserve the original timer semantics and UI context.
++// - expectedCompletionAt lets relaunch restore reconcile running timers to wall-clock time.
++// - pausedRemainingDuration/pausedAt keep paused timers frozen without drifting.
++// - completedAt preserves the final timestamp for completed timers.
++public struct PersistentTimerSnapshot: Codable, Equatable {
++    public let id: UUID
++    public let status: SnapshotStatus
++    public let duration: TimeInterval
++    public let startDate: Date
++    public let expectedCompletionAt: Date?
++    public let pausedRemainingDuration: TimeInterval?
++    public let pausedAt: Date?
++    public let completedAt: Date?
++
++    public init(
++        id: UUID,
++        status: SnapshotStatus,
++        duration: TimeInterval,
++        startDate: Date,
++        expectedCompletionAt: Date?,
++        pausedRemainingDuration: TimeInterval?,
++        pausedAt: Date?,
++        completedAt: Date?
++    ) {
++        self.id = id
++        self.status = status
++        self.duration = duration
++        self.startDate = startDate
++        self.expectedCompletionAt = expectedCompletionAt
++        self.pausedRemainingDuration = pausedRemainingDuration
++        self.pausedAt = pausedAt
++        self.completedAt = completedAt
++    }
++
++    public init(timer: TimerState) {
++        self.id = timer.id
++        self.duration = timer.duration
++        self.startDate = timer.startDate
++        self.pausedRemainingDuration = timer.pausedRemainingTime
++        self.pausedAt = timer.pausedAt
++
++        switch timer.status {
++        case .running:
++            self.status = .running
++            self.expectedCompletionAt = timer.endDate
++            self.completedAt = nil
++        case .paused:
++            // Per Timer Spec §3.1, `expectedCompletionAt` is meaningful for
++            // `running` status only. A paused snapshot carries the freeze
++            // metadata (`pausedRemainingDuration` + `pausedAt`); the
++            // hypothetical completion date is reconstructed on read by the
++            // computed `PausedTimer.endDate` so it never needs to be
++            // stored on disk.
++            self.status = .paused
++            self.expectedCompletionAt = nil
++            self.completedAt = nil
++        case .completed:
++            self.status = .completed
++            self.expectedCompletionAt = nil
++            self.completedAt = timer.endDate
++        }
++    }
++
++    public func restore(at now: Date) -> TimerState {
++        switch status {
++        case .running:
++            guard let expectedCompletionAt else {
++                return makeCompletedTimer(completionDate: now)
++            }
++
++            if now.addingTimeInterval(timerStabilityEpsilon) >= expectedCompletionAt {
++                return makeCompletedTimer(completionDate: expectedCompletionAt)
++            }
++
++            return TimerState(
++                id: id,
++                duration: duration,
++                startDate: startDate,
++                endDate: expectedCompletionAt,
++                pausedRemainingTime: nil,
++                pausedAt: nil,
++                status: .running
++            )
++        case .paused:
++            // `paused` restores as the same frozen, resumable state. It
++            // must not consume wall-clock time or auto-complete while
++            // the app was dead. `expectedCompletionAt` is ignored on
++            // this path: legacy snapshots may carry a non-nil value
++            // while current snapshots write `nil`;
++            // either way the sum-type init for `.paused` discards the
++            // parameter and the computed `PausedTimer.endDate`
++            // reconstructs the hypothetical completion date from
++            // `pausedAt + pausedRemainingDuration`.
++            //
++            // A paused snapshot whose freeze metadata is missing is
++            // structurally invalid (the back-compat init would otherwise
++            // fabricate `pausedAt = startDate`, `pausedRemainingTime = 0`,
++            // producing a fictitious "paused at startDate" timestamp).
++            // Treat the corrupt input as completed instead, mirroring
++            // the `.running` branch's missing-`expectedCompletionAt`
++            // fallback above.
++            guard let pausedAt, let pausedRemainingDuration else {
++                return makeCompletedTimer(completionDate: completedAt)
++            }
++            return TimerState(
++                id: id,
++                duration: duration,
++                startDate: startDate,
++                endDate: nil,
++                pausedRemainingTime: pausedRemainingDuration,
++                pausedAt: pausedAt,
++                status: .paused
++            )
++        case .completed:
++            return makeCompletedTimer(completionDate: completedAt)
++        }
++    }
++
++    private func makeCompletedTimer(completionDate: Date?) -> TimerState {
++        TimerState(
++            id: id,
++            duration: duration,
++            startDate: startDate,
++            endDate: completionDate ?? expectedCompletionAt ?? pausedAt ?? startDate.addingTimeInterval(duration),
++            pausedRemainingTime: nil,
++            pausedAt: nil,
++            status: .completed
++        )
++    }
++
++    public enum SnapshotStatus: String, Codable, Equatable {
++        case running
++        case paused
++        case completed
++
++        public init(from decoder: Decoder) throws {
++            let container = try decoder.singleValueContainer()
++            let rawValue = try container.decode(String.self)
++
++            switch rawValue {
++            case "running":
++                self = .running
++            case "paused", "stopped":
++                self = .paused
++            case "completed":
++                self = .completed
++            default:
++                throw DecodingError.dataCorruptedError(
++                    in: container,
++                    debugDescription: "Unsupported snapshot status: \(rawValue)"
++                )
++            }
++        }
++    }
++}
++
++public struct PersistentTimerCollectionSnapshot: Codable, Equatable {
++    public let timers: [PersistentTimerSnapshot]
++
++    public init(timers: [TimerState]) {
++        self.timers = timers.map(PersistentTimerSnapshot.init)
++    }
++}
++
++public protocol TimerPersistenceStoring {
++    func loadSnapshot() -> PersistentTimerCollectionSnapshot?
++    func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot)
++    func clearSnapshot()
++}
++
++public struct NoOpTimerPersistenceStore: TimerPersistenceStoring {
++    public init() {}
++    public func loadSnapshot() -> PersistentTimerCollectionSnapshot? { nil }
++    public func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {}
++    public func clearSnapshot() {}
++}
++
++public struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
++    private let userDefaults: UserDefaults
++    private let snapshotKey: String
++    private let encoder = JSONEncoder()
++    private let decoder = JSONDecoder()
++
++    public init(
++        userDefaults: UserDefaults = .standard,
++        snapshotKey: String = "ptimer.timer-state.snapshot"
++    ) {
++        self.userDefaults = userDefaults
++        self.snapshotKey = snapshotKey
++    }
++
++    public func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
++        guard let data = userDefaults.data(forKey: snapshotKey) else {
++            return nil
++        }
++
++        return try? decoder.decode(PersistentTimerCollectionSnapshot.self, from: data)
++    }
++
++    public func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
++        guard let data = try? encoder.encode(snapshot) else {
++            return
++        }
++
++        userDefaults.set(data, forKey: snapshotKey)
++    }
++
++    public func clearSnapshot() {
++        userDefaults.removeObject(forKey: snapshotKey)
++    }
++}
+diff --git a/ios/PTimerKit/Sources/PTimerCore/TimerState.swift b/ios/PTimerKit/Sources/PTimerCore/TimerState.swift
+new file mode 100644
+index 0000000..ac1cee8
+--- /dev/null
++++ b/ios/PTimerKit/Sources/PTimerCore/TimerState.swift
+@@ -0,0 +1,345 @@
++import Foundation
++
++/// Stability epsilon for timer wall-clock comparisons. Mirrors
++/// `ExposureCalculator.stabilityEpsilon` (1e-6); kept as a local
++/// constant so the pure timer core has no dependency on the exposure
++/// engine. The value must stay in sync with the exposure engine's
++/// epsilon for boundary behavior to match.
++let timerStabilityEpsilon: TimeInterval = 0.000_001
++
++public enum TimerStatus: String, Equatable {
++    case running
++    // `paused` is a frozen, resumable state that preserves remaining time.
++    case paused
++    case completed
++}
++
++/// Payload of a `running` timer. Holds only the fields valid in the
++/// `running` state: identity, duration, creation time, and the
++/// expected end date.
++public struct RunningTimer: Equatable {
++    public let id: UUID
++    public let duration: TimeInterval
++    public let startDate: Date
++    public let endDate: Date
++
++    public init(id: UUID, duration: TimeInterval, startDate: Date, endDate: Date) {
++        self.id = id
++        self.duration = duration
++        self.startDate = startDate
++        self.endDate = endDate
++    }
++}
++
++/// Payload of a `paused` timer. Holds only the freeze metadata
++/// (`pausedRemainingTime` + `pausedAt`); the hypothetical completion
++/// date is derived from `pausedAt + pausedRemainingTime` rather than
++/// stored, matching Timer Spec §3.1 ("expectedCompletionAt — running
++/// status only"). Mathematically equivalent to the previous stored
++/// `endDate` because `pausing(at:)` always set `pausedRemainingTime
++/// = endDate - pausedAt`.
++public struct PausedTimer: Equatable {
++    public let id: UUID
++    public let duration: TimeInterval
++    public let startDate: Date
++    public let pausedRemainingTime: TimeInterval
++    public let pausedAt: Date
++
++    public init(id: UUID, duration: TimeInterval, startDate: Date, pausedRemainingTime: TimeInterval, pausedAt: Date) {
++        self.id = id
++        self.duration = duration
++        self.startDate = startDate
++        self.pausedRemainingTime = pausedRemainingTime
++        self.pausedAt = pausedAt
++    }
++
++    /// Hypothetical completion date for display purposes. Derived from
++    /// the freeze metadata so the field disappears from the persisted
++    /// schema (Timer Spec §3.1) while UI consumers can still read it.
++    public var endDate: Date {
++        pausedAt.addingTimeInterval(pausedRemainingTime)
++    }
++}
++
++/// Payload of a `completed` timer. Holds the recorded completion
++/// timestamp; surfaced via `endDate` for backward-compatible callers
++/// that read the legacy field.
++public struct CompletedTimer: Equatable {
++    public let id: UUID
++    public let duration: TimeInterval
++    public let startDate: Date
++    public let completedAt: Date
++
++    public init(id: UUID, duration: TimeInterval, startDate: Date, completedAt: Date) {
++        self.id = id
++        self.duration = duration
++        self.startDate = startDate
++        self.completedAt = completedAt
++    }
++}
++
++/// Sum-type representation of a timer's lifecycle state. Each case
++/// carries only the fields valid for that state, so invalid
++/// combinations (e.g. running with a `pausedAt`) cannot be
++/// constructed.
++///
++/// Backward-compatible computed properties (`endDate`,
++/// `pausedRemainingTime`, `pausedAt`, `status`) preserve the legacy
++/// struct surface so existing call sites and the persisted snapshot
++/// schema stay byte-identical.
++public enum TimerState: Identifiable, Equatable {
++    case running(RunningTimer)
++    case paused(PausedTimer)
++    case completed(CompletedTimer)
++
++    /// Compatibility initializer that mirrors the historical struct
++    /// `TimerState(id:duration:startDate:endDate:pausedRemainingTime:pausedAt:status:)`
++    /// constructor used by tests and the `PersistentTimerSnapshot`
++    /// restore path. The initializer dispatches on `status` and
++    /// constructs the appropriate sum case from the supplied legacy
++    /// fields.
++    ///
++    /// Trusted-callsite contract: callers shall supply the fields
++    /// required by the chosen status:
++    /// - `.running` ⇒ `endDate` non-nil
++    /// - `.paused` ⇒ `pausedRemainingTime` and `pausedAt` non-nil
++    /// - `.completed` ⇒ `endDate` non-nil (= completion timestamp)
++    /// `endDate` is intentionally ignored for `.paused`; the sum-type
++    /// representation derives it from `pausedAt + pausedRemainingTime`
++    /// (Timer Spec §3.1 "expectedCompletionAt — running status only").
++    /// Other missing fields debug-trap so corrupt inputs from a
++    /// persisted snapshot are caught early; the production fallback
++    /// constructs a degenerate but type-valid case so a debug crash
++    /// does not become a release crash. `PersistentTimerSnapshot.restore`
++    /// guards the `.paused` corrupt-input case at its caller boundary
++    /// instead, surfacing such snapshots as completed.
++    public init(
++        id: UUID,
++        duration: TimeInterval,
++        startDate: Date,
++        endDate: Date?,
++        pausedRemainingTime: TimeInterval?,
++        pausedAt: Date?,
++        status: TimerStatus
++    ) {
++        switch status {
++        case .running:
++            assert(endDate != nil, "TimerState(.running) requires a non-nil endDate")
++            self = .running(
++                RunningTimer(
++                    id: id,
++                    duration: duration,
++                    startDate: startDate,
++                    endDate: endDate ?? startDate.addingTimeInterval(duration)
++                )
++            )
++        case .paused:
++            assert(
++                pausedRemainingTime != nil && pausedAt != nil,
++                "TimerState(.paused) requires non-nil pausedRemainingTime and pausedAt"
++            )
++            self = .paused(
++                PausedTimer(
++                    id: id,
++                    duration: duration,
++                    startDate: startDate,
++                    pausedRemainingTime: pausedRemainingTime ?? 0,
++                    pausedAt: pausedAt ?? startDate
++                )
++            )
++        case .completed:
++            assert(endDate != nil, "TimerState(.completed) requires a non-nil endDate (completion timestamp)")
++            self = .completed(
++                CompletedTimer(
++                    id: id,
++                    duration: duration,
++                    startDate: startDate,
++                    completedAt: endDate ?? startDate.addingTimeInterval(duration)
++                )
++            )
++        }
++    }
++
++    public var id: UUID {
++        switch self {
++        case .running(let payload): return payload.id
++        case .paused(let payload): return payload.id
++        case .completed(let payload): return payload.id
++        }
++    }
++
++    public var duration: TimeInterval {
++        switch self {
++        case .running(let payload): return payload.duration
++        case .paused(let payload): return payload.duration
++        case .completed(let payload): return payload.duration
++        }
++    }
++
++    public var startDate: Date {
++        switch self {
++        case .running(let payload): return payload.startDate
++        case .paused(let payload): return payload.startDate
++        case .completed(let payload): return payload.startDate
++        }
++    }
++
++    /// Backward-compatible field surface. `endDate` is non-nil for
++    /// every case in the sum-type representation; the optional return
++    /// type is preserved so callers reading the legacy field continue
++    /// to compile and behave identically.
++    public var endDate: Date? {
++        switch self {
++        case .running(let payload): return payload.endDate
++        case .paused(let payload): return payload.endDate
++        case .completed(let payload): return payload.completedAt
++        }
++    }
++
++    public var pausedRemainingTime: TimeInterval? {
++        if case .paused(let payload) = self {
++            return payload.pausedRemainingTime
++        }
++        return nil
++    }
++
++    public var pausedAt: Date? {
++        if case .paused(let payload) = self {
++            return payload.pausedAt
++        }
++        return nil
++    }
++
++    /// Derived status accessor preserving the legacy `status`
++    /// property. External callers (display state mappers, lock-
++    /// screen coordinator, view models) keep reading this without
++    /// switching on case.
++    public var status: TimerStatus {
++        switch self {
++        case .running: return .running
++        case .paused: return .paused
++        case .completed: return .completed
++        }
++    }
++
++    public var remainingTime: TimeInterval {
++        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
++        switch self {
++        case .running(let payload):
++            return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSinceNow)
++        case .paused(let payload):
++            return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
++        case .completed:
++            return 0
++        }
++    }
++
++    public func remainingTime(at now: Date) -> TimeInterval {
++        assert(duration.isFinite && duration > 0, "Timer duration must be finite and positive.")
++        switch self {
++        case .running(let payload):
++            return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSince(now))
++        case .paused(let payload):
++            return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
++        case .completed:
++            return 0
++        }
++    }
++
++    public func status(at now: Date) -> TimerStatus {
++        guard case .running(let payload) = self,
++              now.addingTimeInterval(timerStabilityEpsilon) >= payload.endDate else {
++            return status
++        }
++
++        return .completed
++    }
++
++    public func updatingStatus(at now: Date) -> TimerState {
++        guard case .running(let payload) = self,
++              now.addingTimeInterval(timerStabilityEpsilon) >= payload.endDate else {
++            return self
++        }
++
++        return completed(at: payload.endDate)
++    }
++
++    public func pausing(at now: Date) -> TimerState {
++        let remaining = remainingTime(at: now)
++
++        guard remaining > 0 else {
++            // Preserve the legacy short-circuit: pausing while remaining
++            // time has reached zero immediately completes using the
++            // existing endDate (or `now` as the fallback only if endDate
++            // is somehow absent — unreachable in the sum-type
++            // representation but kept for shape parity).
++            return completed(at: endDate ?? now)
++        }
++
++        // Freeze the timer with its remaining duration intact so it can be
++        // resumed later from the same logical point. The hypothetical
++        // completion date stays accessible via the computed
++        // `PausedTimer.endDate` (= `pausedAt + pausedRemainingTime`),
++        // matching the legacy stored value exactly.
++        return .paused(
++            PausedTimer(
++                id: id,
++                duration: duration,
++                startDate: startDate,
++                pausedRemainingTime: remaining,
++                pausedAt: now
++            )
++        )
++    }
++
++    public func resume(at now: Date) -> TimerState {
++        let remaining = Self.sanitizeRemainingTime(pausedRemainingTime ?? 0)
++        guard remaining > 0 else {
++            return completed(at: resolvedCompletionDate())
++        }
++
++        // Resume recalculates the end date from "now" because `paused`
++        // preserves remaining time as a frozen resumable state.
++        return .running(
++            RunningTimer(
++                id: id,
++                duration: duration,
++                startDate: startDate,
++                endDate: now.addingTimeInterval(remaining)
++            )
++        )
++    }
++
++    public func completed(at completionDate: Date? = nil) -> TimerState {
++        .completed(
++            CompletedTimer(
++                id: id,
++                duration: duration,
++                startDate: startDate,
++                completedAt: completionDate ?? resolvedCompletionDate()
++            )
++        )
++    }
++
++    private func resolvedCompletionDate() -> Date {
++        // Mirrors the legacy `endDate ?? pausedAt + remaining ??
++        // startDate + duration` resolution exactly. In the sum-type
++        // representation `endDate` is non-nil for running and paused
++        // and `completedAt` is the recorded completion timestamp,
++        // so the legacy fallback chain collapses to a direct case
++        // dispatch without changing observable behavior.
++        switch self {
++        case .running(let payload):
++            return payload.endDate
++        case .paused(let payload):
++            return payload.endDate
++        case .completed(let payload):
++            return payload.completedAt
++        }
++    }
++
++    private static func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
++        let clamped = max(0, value)
++        return clamped < timerStabilityEpsilon ? 0 : clamped
++    }
++}
+diff --git a/ios/PTimerTests/App/BottomSheetIdentityPaletteTests.swift b/ios/PTimerTests/App/BottomSheetIdentityPaletteTests.swift
+index c7e484a..eaa8f53 100644
+--- a/ios/PTimerTests/App/BottomSheetIdentityPaletteTests.swift
++++ b/ios/PTimerTests/App/BottomSheetIdentityPaletteTests.swift
+@@ -2,6 +2,7 @@ import SwiftUI
+ import UIKit
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class BottomSheetIdentityPaletteTests: XCTestCase {
+     func testIdentityCueStaysConsistentAcrossCompactAndLargePresentations() {
+diff --git a/ios/PTimerTests/App/BottomSheetWorkspaceOrderingTests.swift b/ios/PTimerTests/App/BottomSheetWorkspaceOrderingTests.swift
+index 498c4d0..b8d73f1 100644
+--- a/ios/PTimerTests/App/BottomSheetWorkspaceOrderingTests.swift
++++ b/ios/PTimerTests/App/BottomSheetWorkspaceOrderingTests.swift
+@@ -2,6 +2,7 @@ import SwiftUI
+ import UIKit
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/App/BottomSheetWorkspaceShellTestSupport.swift b/ios/PTimerTests/App/BottomSheetWorkspaceShellTestSupport.swift
+index 78e5e65..36b0e04 100644
+--- a/ios/PTimerTests/App/BottomSheetWorkspaceShellTestSupport.swift
++++ b/ios/PTimerTests/App/BottomSheetWorkspaceShellTestSupport.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ extension XCTestCase {
+     func bottomSheetSampleTimers() -> [RunningTimerItem] {
+diff --git a/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotFactoryTests.swift b/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotFactoryTests.swift
+index ac72839..c2add59 100644
+--- a/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotFactoryTests.swift
++++ b/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotFactoryTests.swift
+@@ -2,6 +2,7 @@ import SwiftUI
+ import UIKit
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotStartAgainTests.swift b/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotStartAgainTests.swift
+index b6ce49a..80bde20 100644
+--- a/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotStartAgainTests.swift
++++ b/ios/PTimerTests/App/BottomSheetWorkspaceSnapshotStartAgainTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ /// PTIMER-36: tests for the Start Again surface (completed-row clone)
+ /// extracted from BottomSheetWorkspaceSnapshotFactoryTests so the
+diff --git a/ios/PTimerTests/ExposureCalculator/CalculatorTimerDisplaySemanticsTests.swift b/ios/PTimerTests/ExposureCalculator/CalculatorTimerDisplaySemanticsTests.swift
+index 42f517c..bf57810 100644
+--- a/ios/PTimerTests/ExposureCalculator/CalculatorTimerDisplaySemanticsTests.swift
++++ b/ios/PTimerTests/ExposureCalculator/CalculatorTimerDisplaySemanticsTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/ExposureCalculator/CalculatorTimerMetadataTests.swift b/ios/PTimerTests/ExposureCalculator/CalculatorTimerMetadataTests.swift
+index 5c20874..09a4d65 100644
+--- a/ios/PTimerTests/ExposureCalculator/CalculatorTimerMetadataTests.swift
++++ b/ios/PTimerTests/ExposureCalculator/CalculatorTimerMetadataTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class CalculatorTimerMetadataTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/ExposureCalculator/ExposureCalculatorViewModelContextPersistenceTests.swift b/ios/PTimerTests/ExposureCalculator/ExposureCalculatorViewModelContextPersistenceTests.swift
+index ce68ad5..a759fde 100644
+--- a/ios/PTimerTests/ExposureCalculator/ExposureCalculatorViewModelContextPersistenceTests.swift
++++ b/ios/PTimerTests/ExposureCalculator/ExposureCalculatorViewModelContextPersistenceTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class CalculatorContextPersistenceTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/RecordReplay/RecordReplaySpies.swift b/ios/PTimerTests/RecordReplay/RecordReplaySpies.swift
+index 084b248..97a49c9 100644
+--- a/ios/PTimerTests/RecordReplay/RecordReplaySpies.swift
++++ b/ios/PTimerTests/RecordReplay/RecordReplaySpies.swift
+@@ -1,5 +1,6 @@
+ import Foundation
+ @testable import PTimer
++import PTimerCore
+ 
+ // Trace-recording implementations of the collaborator protocols
+ // the ViewModel and TimerManager talk to. Each spy forwards the
+diff --git a/ios/PTimerTests/Timers/B4TimerLifecycleBaselineTests.swift b/ios/PTimerTests/Timers/B4TimerLifecycleBaselineTests.swift
+index 2740411..fa7679a 100644
+--- a/ios/PTimerTests/Timers/B4TimerLifecycleBaselineTests.swift
++++ b/ios/PTimerTests/Timers/B4TimerLifecycleBaselineTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ /// Record-replay baselines for timer lifecycle scenarios. Each
+ /// scenario drives `RecordReplayHarness.underlyingTimerManager`
+diff --git a/ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift b/ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift
+index 95a0d02..0a41d20 100644
+--- a/ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift
++++ b/ios/PTimerTests/Timers/CompletedRelativeTimeFormatterTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class CompletedRelativeTimeFormatterTests: XCTestCase {
+     func testFormatterSupportsRequiredMinuteAndHourStrings() {
+diff --git a/ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift b/ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift
+index 283fe89..0d33585 100644
+--- a/ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift
++++ b/ios/PTimerTests/Timers/TimerManagerPauseResumeStateTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class TimerManagerPauseResumeStateTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/Timers/TimerManagerPauseResumeTests.swift b/ios/PTimerTests/Timers/TimerManagerPauseResumeTests.swift
+index 36cb0ce..c51a5e3 100644
+--- a/ios/PTimerTests/Timers/TimerManagerPauseResumeTests.swift
++++ b/ios/PTimerTests/Timers/TimerManagerPauseResumeTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class TimerManagerPauseResumeTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/Timers/TimerManagerPersistenceRestoreTests.swift b/ios/PTimerTests/Timers/TimerManagerPersistenceRestoreTests.swift
+index f6a0876..871b14f 100644
+--- a/ios/PTimerTests/Timers/TimerManagerPersistenceRestoreTests.swift
++++ b/ios/PTimerTests/Timers/TimerManagerPersistenceRestoreTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class TimerManagerPersistenceRestoreTests: XCTestCase {
+     @MainActor
+diff --git a/ios/PTimerTests/Timers/TimerManagerTestSupport.swift b/ios/PTimerTests/Timers/TimerManagerTestSupport.swift
+index c38b90f..998f508 100644
+--- a/ios/PTimerTests/Timers/TimerManagerTestSupport.swift
++++ b/ios/PTimerTests/Timers/TimerManagerTestSupport.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ @MainActor
+ final class CompletionAlertSpy: TimerCompletionAlerting {
+diff --git a/ios/PTimerTests/Timers/TimerManagerTests.swift b/ios/PTimerTests/Timers/TimerManagerTests.swift
+index 488e294..08f0d1d 100644
+--- a/ios/PTimerTests/Timers/TimerManagerTests.swift
++++ b/ios/PTimerTests/Timers/TimerManagerTests.swift
+@@ -1,5 +1,6 @@
+ import XCTest
+ @testable import PTimer
++import PTimerCore
+ 
+ final class TimerManagerTests: XCTestCase {
+     @MainActor
+-- 
+2.50.1 (Apple Git-155)
+

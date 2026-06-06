@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Behavior contract for Kodak still-film profiles whose official
 /// guidance is limited to a no-correction threshold band plus a

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Tc >= Tm across the usable range, not just at the
 /// no-correction boundary. Covers validation, persistence

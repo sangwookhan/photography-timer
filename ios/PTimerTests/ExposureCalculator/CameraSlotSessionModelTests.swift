@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Direct unit tests for `CameraSlotSessionModel`. The session model
 /// holds only the slot-switching state (active id + inactive

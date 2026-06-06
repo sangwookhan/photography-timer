@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Behavior contract for ADOX CHS 100 II's official table profile (PTIMER-168).
 ///
@@ -38,138 +39,11 @@ final class AdoxChs100TableProfileTests: XCTestCase {
 
     // MARK: - Threshold boundary (inclusive at 1 s)
 
-    func testChs100IIAtOneSecondBoundaryReturnsOfficialNoCorrection() throws {
-        let profile = try chs100Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.0)
-        XCTAssertEqual(
-            result.metadata.basis,
-            .officialThresholdNoCorrection,
-            "CHS 100 II's 1 s threshold is inclusive — 1.0 s itself must read as no-correction."
-        )
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 1.0, accuracy: 1e-6)
-    }
-
     // MARK: - Table interpolation range (1 s … 15 s)
-
-    func testChs100IIInsideTableRangeIsTableLogLogDerivedAtAllPublishedAnchorRows() throws {
-        let profile = try chs100Profile()
-        let anchorRows: [(metered: Double, corrected: Double)] = [
-            (2, 3),
-            (4, 8),
-            (8, 20),
-            (15, 45),
-        ]
-        for row in anchorRows {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: row.metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .tableLogLogDerived,
-                "CHS 100 II at \(row.metered) s must be table-log-log-derived."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(
-                corrected,
-                row.corrected,
-                accuracy: 1e-4,
-                "CHS 100 II at anchor \(row.metered) s must return the exact published corrected time \(row.corrected) sec; got \(corrected) sec."
-            )
-        }
-    }
-
-    func testChs100IITableInterpolationRuleExposesAnchorsAndBoundaries() throws {
-        let profile = try chs100Profile()
-        let tableRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-                if case let .tableInterpolation(r) = rule { return r }
-                return nil
-            }.first,
-            "CHS 100 II must contain a tableInterpolation rule after migration."
-        )
-
-        // No-correction threshold
-        XCTAssertEqual(tableRule.noCorrectionThroughSeconds, 1, accuracy: 1e-6)
-
-        // Source range
-        XCTAssertEqual(
-            tableRule.sourceRangeThroughSeconds,
-            15,
-            accuracy: 1e-6,
-            "CHS 100 II's table domain must end at the last 2024 published row (15 sec)."
-        )
-
-        // Anchors: (metered → corrected)
-        let expectedAnchors: [(Double, Double)] = [(2, 3), (4, 8), (8, 20), (15, 45)]
-        for (metered, corrected) in expectedAnchors {
-            let anchor = tableRule.anchors.first { abs($0.meteredSeconds - metered) < 1e-6 }
-            XCTAssertNotNil(anchor, "Missing anchor at metered \(metered) s.")
-            XCTAssertEqual(
-                anchor?.correctedSeconds ?? -1,
-                corrected,
-                accuracy: 1e-6,
-                "Anchor at \(metered) s must have corrected time \(corrected) s."
-            )
-        }
-    }
-
-    func testChs100IITableRuleModelBasisIsManufacturerTableLogLogInterpolation() throws {
-        let profile = try chs100Profile()
-        let basis = try XCTUnwrap(profile.modelBasis)
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
-    }
-
-    func testChs100IIHasNoFormulaRuleAfterMigration() throws {
-        let profile = try chs100Profile()
-        let formulaRules = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(r) = rule else { return nil }
-            return r
-        }
-        XCTAssertTrue(
-            formulaRules.isEmpty,
-            "CHS 100 II must not retain any .formula rule after migration to tableInterpolation; found \(formulaRules.count)."
-        )
-    }
 
     // MARK: - Beyond the published source range (> 15 s)
 
-    func testChs100IIAboveFifteenSecondsBecomesBeyondSourceRange() throws {
-        let profile = try chs100Profile()
-        for metered in [16.0, 30.0, 60.0, 200.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .unsupportedOutOfPolicyRange,
-                "CHS 100 II at \(metered) s sits above the 15 sec last published row and must be marked outside manufacturer guidance."
-            )
-            let corrected = try XCTUnwrap(
-                result.correctedExposureSeconds,
-                "CHS 100 II at \(metered) s must keep a numeric continuation past the source range — Beyond source range is not Unavailable."
-            )
-            // Log-log extrapolation of the last two anchors (8→20 and 15→45).
-            // Assert direction and non-nil only; do not assert any formula-coefficient value.
-            XCTAssertGreaterThan(
-                corrected,
-                45,
-                "CHS 100 II at \(metered) s corrected time must exceed the last anchor corrected time (45 s)."
-            )
-        }
-    }
-
     // MARK: - Source evidence preservation
-
-    func testChs100IISourceEvidencePreservesFour2024PublishedRows() throws {
-        let profile = try chs100Profile()
-        let metereds = profile.sourceEvidence.compactMap { row -> Double? in
-            if case let .exactSeconds(seconds) = row.meteredExposure { return seconds }
-            return nil
-        }
-        XCTAssertEqual(
-            metereds,
-            [2, 4, 8, 15],
-            "CHS 100 II must preserve only the four 2024-published multiplier rows as source evidence; 30 sec and 60 sec are not part of the current official source."
-        )
-    }
 
     func testChs100IIDropsLegacyThirtyAndSixtySecondRowsFromSourceEvidence() throws {
         let profile = try chs100Profile()

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerKit
 
 /// Behavior contract for T-MAX 100's table-interpolation reciprocity
 /// profile. Locks the invariants:
@@ -28,73 +29,9 @@ final class TMax100TableProfileTests: XCTestCase {
 
     // MARK: - Rule structure
 
-    func testTMax100HasTableInterpolationRuleAndNoFormulaRule() throws {
-        let profile = try tmax100Profile()
-
-        let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-            if case let .tableInterpolation(r) = rule { return r } else { return nil }
-        }.first
-        XCTAssertNotNil(tableRule, "T-MAX 100 must carry a .tableInterpolation rule after migration.")
-
-        let hasFormulaRule = profile.rules.contains { rule in
-            if case .formula = rule { return true } else { return false }
-        }
-        XCTAssertFalse(hasFormulaRule, "T-MAX 100 must NOT carry a .formula rule after migration to table.")
-    }
-
-    func testTMax100TableRuleParametersMatchPublishedAnchors() throws {
-        let profile = try tmax100Profile()
-        let tableRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-                if case let .tableInterpolation(r) = rule { return r } else { return nil }
-            }.first,
-            "tableInterpolation rule must be present."
-        )
-
-        XCTAssertEqual(tableRule.noCorrectionThroughSeconds, 0.1, accuracy: 1e-6,
-            "noCorrectionThroughSeconds must be 0.1 — the no-correction band ends at 1/10 sec (PTIMER-168).")
-        XCTAssertEqual(tableRule.sourceRangeThroughSeconds, 100, accuracy: 1e-6,
-            "sourceRangeThroughSeconds must be 100.")
-
-        let anchorMetereds = tableRule.anchors.map { $0.meteredSeconds }
-        XCTAssertEqual(anchorMetereds, [1, 10, 100],
-            "Table must have exactly three anchors at 1/10/100 sec.")
-
-        let anchorCorrected = tableRule.anchors.map { $0.correctedSeconds }
-        XCTAssertEqual(anchorCorrected[0], 1.2599210498948732, accuracy: 1e-4,
-            "Anchor at 1 sec must map to ≈1.2599 sec corrected (1 × 2^(1/3)).")
-        XCTAssertEqual(anchorCorrected[1], 15, accuracy: 1e-4,
-            "Anchor at 10 sec must map to 15 sec corrected.")
-        XCTAssertEqual(anchorCorrected[2], 200, accuracy: 1e-4,
-            "Anchor at 100 sec must map to 200 sec corrected.")
-    }
-
-    func testTMax100ModelBasisIsManufacturerTableLogLogInterpolation() throws {
-        let profile = try tmax100Profile()
-        let basis = try XCTUnwrap(profile.modelBasis,
-            "T-MAX 100 profile must carry a modelBasis after migration.")
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
-    }
-
     // MARK: - Threshold boundary (0.1 sec, inclusive)
     // IMPORTANT (PTIMER-168): noCorrectionThroughSeconds == 0.1. The no-correction
     // band ends at 1/10 sec; 1 sec is now a corrected anchor (≈1.2599 sec).
-
-    func testTMax100AtAndBelowOneTenthSecondReturnsOfficialNoCorrection() throws {
-        let profile = try tmax100Profile()
-        for metered in [0.01, 0.05, 0.1] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .officialThresholdNoCorrection,
-                "T-MAX 100 at \(metered) sec must read as no-correction — the no-correction band runs through 0.1 sec inclusive."
-            )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(corrected, metered, accuracy: 1e-6,
-                "Corrected exposure at \(metered) sec must equal metered (identity).")
-        }
-    }
 
     /// PTIMER-168 boundary tolerance: a nominal 1/10 sec UI input can
     /// evaluate to ~0.102 sec after Base Shutter / ND stop arithmetic and
@@ -185,33 +122,6 @@ final class TMax100TableProfileTests: XCTestCase {
 
     // MARK: - Table range (> 0.1 sec, up to 100 sec)
 
-    func testTMax100InsideTableRangeIsTableLogLogDerivedThroughPublishedRows() throws {
-        let profile = try tmax100Profile()
-        for metered in [1.0, 2.0, 5.0, 10.0, 50.0, 100.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .tableLogLogDerived,
-                "Metered \(metered) sec sits inside the source-backed table range."
-            )
-        }
-    }
-
-    func testTMax100TableReproducesPublishedAnchorCorrectedTimesExactly() throws {
-        let profile = try tmax100Profile()
-        let samples: [(Double, Double)] = [(1, 1.2599210498948732), (10, 15), (100, 200)]
-        for (metered, published) in samples {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-            XCTAssertEqual(
-                corrected,
-                published,
-                accuracy: 1e-4,
-                "Anchor at metered \(metered) sec must reproduce the published corrected time of \(published) sec exactly."
-            )
-        }
-    }
-
     // MARK: - Short-exposure guidance is excluded from the long-exposure table
 
     func testTMax100Short1Over10000ExposureIsNotALongExposureTablePoint() throws {
@@ -277,24 +187,6 @@ final class TMax100TableProfileTests: XCTestCase {
     }
 
     // MARK: - Beyond the published source range (> 100 sec)
-
-    func testTMax100Above100SecondsBecomesBeyondSourceNumericGuidance() throws {
-        let profile = try tmax100Profile()
-        for metered in [150.0, 300.0, 1000.0] {
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .unsupportedOutOfPolicyRange,
-                "Metered \(metered) sec sits above Kodak's published 100 sec upper anchor."
-            )
-            let corrected = try XCTUnwrap(
-                result.correctedExposureSeconds,
-                "Metered \(metered) sec must keep a log-log extrapolation value past the source range."
-            )
-            XCTAssertGreaterThan(corrected, 200,
-                "Extrapolated value past 100 sec must exceed the last anchor corrected time of 200 sec.")
-        }
-    }
 
     // MARK: - Source evidence preservation
 

@@ -1,5 +1,6 @@
 import Foundation
 import PTimerCore
+import PTimerKit
 
 /// View-facing snapshot of a single running/paused/completed timer, the
 /// emission shape consumed by the workspace UI (compact dock + large

@@ -1,8 +1,7 @@
 import XCTest
 @testable import PTimerCore
 
-final class TimerManagerPauseResumeStateTests: XCTestCase {
-    @MainActor
+final class TimerStateTransitionTests: XCTestCase {
     func testTimerStateResumeReturnsCompletedWhenNoRemainingTime() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(5)
@@ -32,7 +31,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertEqual(resumed.endDate, pausedAt)
     }
 
-    @MainActor
     func testTimerStateResumeReturnsRunningWhenPauseWindowHasExpired() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(4)
@@ -57,7 +55,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remainingTime))
     }
 
-    @MainActor
     func testTimerStateResumeReturnsRunningWithNewEndDateWhenStillResumable() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(4)
@@ -81,7 +78,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remainingTime))
     }
 
-    @MainActor
     func testPausingWhenRemainingIsZeroImmediatelyCompletes() {
         let startDate = Date(timeIntervalSince1970: 100)
         let endDate = startDate.addingTimeInterval(10)
@@ -102,7 +98,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertNil(paused.pausedRemainingTime)
     }
 
-    @MainActor
     func testResumeBranch_remainingZero() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(5)
@@ -126,7 +121,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertNil(resumed.pausedRemainingTime)
     }
 
-    @MainActor
     func testResumeBranch_expiredWhilePausedRestartsFromRemainingTime() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(4)
@@ -149,7 +143,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertNil(resumed.pausedRemainingTime)
     }
 
-    @MainActor
     func testResumeBranch_validResume() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(4)
@@ -171,7 +164,6 @@ final class TimerManagerPauseResumeStateTests: XCTestCase {
         XCTAssertEqual(resumed.endDate, now.addingTimeInterval(remaining))
     }
 
-    @MainActor
     func testResumeAfterExpirationRestartsFromRemainingTime() {
         let startDate = Date(timeIntervalSince1970: 100)
         let pausedAt = startDate.addingTimeInterval(4)

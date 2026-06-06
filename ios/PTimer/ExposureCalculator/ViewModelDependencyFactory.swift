@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 struct ViewModelDependencies {
     let calculator: ExposureCalculator

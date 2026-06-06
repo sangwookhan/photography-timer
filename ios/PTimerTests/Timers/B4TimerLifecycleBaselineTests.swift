@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerCore
 
 /// Record-replay baselines for timer lifecycle scenarios. Each
 /// scenario drives `RecordReplayHarness.underlyingTimerManager`

@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerCore
 
 extension XCTestCase {
     func bottomSheetSampleTimers() -> [RunningTimerItem] {

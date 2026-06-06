@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PTimerCore
 
 /// `TimerWorkspaceModel` owns the timer-workspace slice. The model owns:
 /// - the `TimerManager` instance (the live timer state machine)

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
@@ -24,7 +25,6 @@
 		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
 		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */; };
 		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
 		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
 		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
@@ -297,7 +297,6 @@
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
 		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
 		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatter.swift; sourceTree = "<group>"; };
 		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
 		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
@@ -524,6 +523,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE0000000000000000000003 /* PTimerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -753,7 +753,6 @@
 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
 				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
 				A00000000000000000000109 /* LockScreenTimerCoordinator.swift */,
-				A000000000000000000000A6 /* CompletedRelativeTimeFormatter.swift */,
 				A00000000000000000000145 /* TimerMetadataPersistence.swift */,
 			);
 			path = Timers;
@@ -980,6 +979,7 @@
 			);
 			name = PTimer;
 			packageProductDependencies = (
+				EE0000000000000000000002 /* PTimerCore */,
 			);
 			productName = PTimer;
 			productReference = A00000000000000000000010 /* PTimer.app */;
@@ -1029,6 +1029,21 @@
 		};
 /* End PBXNativeTarget section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PTimerKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EE0000000000000000000002 /* PTimerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
+			productName = PTimerCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin PBXProject section */
 		A00000000000000000000060 /* Project object */ = {
 			isa = PBXProject;
@@ -1057,6 +1072,9 @@
 				Base,
 			);
 			mainGroup = A00000000000000000000030;
+			packageReferences = (
+				EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */,
+			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A00000000000000000000032 /* Products */;
@@ -1125,7 +1143,6 @@
 				A00000000000000000000944 /* CalculatorContextRestorePlanBuilder.swift in Sources */,
 				A00000000000000000000108 /* FilmModeDetailsPresenter.swift in Sources */,
 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,
-				A000000000000000000000A5 /* CompletedRelativeTimeFormatter.swift in Sources */,
 				A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */,
 				A000000000000000000000D4 /* BottomSheetWorkspaceStateStore.swift in Sources */,
 				A000000000000000000000D6 /* BottomSheetWorkspaceMetrics.swift in Sources */,

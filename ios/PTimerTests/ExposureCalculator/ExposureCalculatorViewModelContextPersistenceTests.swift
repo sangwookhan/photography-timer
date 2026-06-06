@@ -1,5 +1,6 @@
 import XCTest
 @testable import PTimer
+import PTimerCore
 
 final class CalculatorContextPersistenceTests: XCTestCase {
     @MainActor

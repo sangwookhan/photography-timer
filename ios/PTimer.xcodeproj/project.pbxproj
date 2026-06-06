@@ -25,7 +25,6 @@
 		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
 		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */; };
 		A000000000000000000000A9 /* ReciprocityDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AA /* ReciprocityDomain.swift */; };
 		A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AC /* ReciprocityDomainTests.swift */; };
 		A000000000000000000000AD /* ReciprocityCalculationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */; };
@@ -158,7 +157,6 @@
 		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
-		A0000000000000000000090C /* TimerManagerPauseResumeStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */; };
 		A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */; };
 		A00000000000000000000912 /* ExposureCalculatorViewModelFilmDetailsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */; };
 		A00000000000000000000914 /* ExposureCalculatorViewModelFilmAuthorityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */; };
@@ -297,7 +295,6 @@
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
 		A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerTargetWidget.swift; sourceTree = "<group>"; };
 		A0000000000000000000009D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRelativeTimeFormatterTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000AA /* ReciprocityDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomain.swift; sourceTree = "<group>"; };
 		A000000000000000000000AC /* ReciprocityDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDomainTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000AE /* ReciprocityCalculationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityCalculationPolicy.swift; sourceTree = "<group>"; };
@@ -430,7 +427,6 @@
 		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
-		A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeStateTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000913 /* ExposureCalculatorViewModelFilmDetailsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmDetailsTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000915 /* ExposureCalculatorViewModelFilmAuthorityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmAuthorityTests.swift; sourceTree = "<group>"; };
@@ -842,10 +838,8 @@
 				A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */,
 				A00000000000000000000907 /* TimerManagerReconcileTests.swift */,
 				A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */,
-				A0000000000000000000090D /* TimerManagerPauseResumeStateTests.swift */,
 				A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */,
 				A0000000000000000000010E /* LockScreenTimerCoordinatorTests.swift */,
-				A000000000000000000000A8 /* CompletedRelativeTimeFormatterTests.swift */,
 				A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */,
 			);
 			path = Timers;
@@ -1227,7 +1221,6 @@
 				A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */,
 				A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */,
 				A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */,
-				A0000000000000000000090C /* TimerManagerPauseResumeStateTests.swift in Sources */,
 				A0000000000000000000010D /* LockScreenTimerCoordinatorTests.swift in Sources */,
 				A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */,
 				A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */,
@@ -1260,7 +1253,6 @@
 				A00000000000000000000934 /* BottomSheetWorkspaceSnapshotStartAgainTests.swift in Sources */,
 				A000000000000000000000FD /* BottomSheetWorkspaceOrderingTests.swift in Sources */,
 				A000000000000000000000FF /* BottomSheetIdentityPaletteTests.swift in Sources */,
-				A000000000000000000000A7 /* CompletedRelativeTimeFormatterTests.swift in Sources */,
 				A000000000000000000000AB /* ReciprocityDomainTests.swift in Sources */,
 				A000000000000000000000AF /* ReciprocityCalculationPolicyTests.swift in Sources */,
 				A0000000000000000000010B /* ReciprocityCalculationPolicyPerformanceTests.swift in Sources */,

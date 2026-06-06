@@ -1024,16 +1024,16 @@
 /* End PBXNativeTarget section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */ = {
+		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = PTimerKit;
+			relativePath = PTimerCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		EE0000000000000000000002 /* PTimerCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
+			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerCore" */;
 			productName = PTimerCore;
 		};
 /* End XCSwiftPackageProductDependency section */
@@ -1067,7 +1067,7 @@
 			);
 			mainGroup = A00000000000000000000030;
 			packageReferences = (
-				EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */,
+				EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerCore" */,
 			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;

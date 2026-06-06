@@ -1,6 +1,5 @@
 import XCTest
-@testable import PTimer
-import PTimerCore
+@testable import PTimerCore
 
 final class TimerManagerPauseResumeStateTests: XCTestCase {
     @MainActor

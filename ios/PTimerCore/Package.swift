@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "PTimerKit",
+    name: "PTimerCore",
     platforms: [
         .iOS(.v17),
         .macOS(.v14),

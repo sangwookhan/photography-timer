@@ -1,10 +1,17 @@
 import Foundation
 
-/// Stability epsilon for timer wall-clock comparisons. Mirrors
-/// `ExposureCalculator.stabilityEpsilon` (1e-6); kept as a local
-/// constant so the pure timer core has no dependency on the exposure
-/// engine. The value must stay in sync with the exposure engine's
-/// epsilon for boundary behavior to match.
+/// Numerical tolerance (1 microsecond) for the timer state machine's
+/// wall-clock comparisons: deciding when a running timer has reached
+/// its end date, and when a remaining-time value is effectively zero.
+/// It absorbs floating-point drift at those boundaries so a timer
+/// within 1 µs of its end is treated as completed rather than lingering
+/// as `running`, and sub-microsecond remaining times snap to exactly 0.
+///
+/// This is the timer core's own constant. It is intentionally
+/// independent of the exposure engine's `stabilityEpsilon`: the two
+/// share the 1e-6 magnitude by coincidence but serve unrelated domains
+/// (time vs. exposure-stop comparisons), so the timer core carries no
+/// dependency on — and no sync obligation with — the exposure engine.
 let timerStabilityEpsilon: TimeInterval = 0.000_001
 
 public enum TimerStatus: String, Equatable {

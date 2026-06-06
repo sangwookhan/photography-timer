@@ -184,4 +184,31 @@ final class TimerStateTransitionTests: XCTestCase {
         XCTAssertNil(resumed.pausedAt)
         XCTAssertNil(resumed.pausedRemainingTime)
     }
+
+    // MARK: - Stability epsilon boundary
+
+    /// Locks the 1 µs `timerStabilityEpsilon` tolerance: a running timer
+    /// within the epsilon of its end date completes, just outside it
+    /// stays running, and a sub-epsilon remaining time snaps to zero.
+    func testRunningTimerCompletesWithinStabilityEpsilonOfEnd() {
+        let startDate = Date(timeIntervalSince1970: 100)
+        let endDate = startDate.addingTimeInterval(10)
+        let timer = TimerState(
+            id: UUID(),
+            duration: 10,
+            startDate: startDate,
+            endDate: endDate,
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .running
+        )
+
+        // 0.5 µs before the end → within tolerance → completed.
+        XCTAssertEqual(timer.status(at: endDate.addingTimeInterval(-0.000_000_5)), .completed)
+        XCTAssertEqual(timer.updatingStatus(at: endDate.addingTimeInterval(-0.000_000_5)).status, .completed)
+        XCTAssertEqual(timer.remainingTime(at: endDate.addingTimeInterval(-0.000_000_5)), 0, accuracy: 0)
+
+        // 2 µs before the end → outside tolerance → still running.
+        XCTAssertEqual(timer.status(at: endDate.addingTimeInterval(-0.000_002)), .running)
+    }
 }

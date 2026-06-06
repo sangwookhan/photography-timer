@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import PTimerCore
 
 /// PTIMER-126 redesign: the closed-state Timers UI is no longer a
 /// custom bottom-sheet dock. Timers surface in two screen-level

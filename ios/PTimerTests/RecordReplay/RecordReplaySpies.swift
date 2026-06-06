@@ -1,5 +1,6 @@
 import Foundation
 @testable import PTimer
+import PTimerCore
 
 // Trace-recording implementations of the collaborator protocols
 // the ViewModel and TimerManager talk to. Each spy forwards the

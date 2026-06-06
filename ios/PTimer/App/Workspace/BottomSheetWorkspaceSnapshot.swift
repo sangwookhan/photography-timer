@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import PTimerCore
 
 struct CompactRemainingScaleLayer: Equatable {
     let fraction: Double

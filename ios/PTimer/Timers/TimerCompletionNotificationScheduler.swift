@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import PTimerCore
 
 protocol UserNotificationCentering: AnyObject {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool

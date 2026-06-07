@@ -16,8 +16,6 @@ public struct PTimerComponentTheme: Sendable {
     public var surfaceSecondary: Color
     /// Inset surface nested inside a secondary surface.
     public var surfaceTertiary: Color
-    /// Grouped-list background.
-    public var surfaceGrouped: Color
     /// Recessed control fill (e.g. a value chip background).
     public var recessedFill: Color
     /// Hairline divider / border.
@@ -28,10 +26,6 @@ public struct PTimerComponentTheme: Sendable {
     public var accentInfo: Color
     /// Accent for a caution / paused state.
     public var accentWarning: Color
-    /// Accent for an error / destructive state.
-    public var accentError: Color
-    /// Neutral accent for secondary identity tints.
-    public var accentNeutral: Color
     /// Accent for an interactive action control (e.g. a start-timer glyph
     /// and its tinted background).
     public var timerActionAccent: Color
@@ -44,14 +38,11 @@ public struct PTimerComponentTheme: Sendable {
         surface: Color,
         surfaceSecondary: Color,
         surfaceTertiary: Color,
-        surfaceGrouped: Color,
         recessedFill: Color,
         separator: Color,
         accentRunning: Color,
         accentInfo: Color,
         accentWarning: Color,
-        accentError: Color,
-        accentNeutral: Color,
         timerActionAccent: Color = .accentColor,
         timerActionDisabledGlyph: Color = .secondary,
         graph: GraphPalette = .default
@@ -59,14 +50,11 @@ public struct PTimerComponentTheme: Sendable {
         self.surface = surface
         self.surfaceSecondary = surfaceSecondary
         self.surfaceTertiary = surfaceTertiary
-        self.surfaceGrouped = surfaceGrouped
         self.recessedFill = recessedFill
         self.separator = separator
         self.accentRunning = accentRunning
         self.accentInfo = accentInfo
         self.accentWarning = accentWarning
-        self.accentError = accentError
-        self.accentNeutral = accentNeutral
         self.timerActionAccent = timerActionAccent
         self.timerActionDisabledGlyph = timerActionDisabledGlyph
         self.graph = graph
@@ -158,14 +146,11 @@ public struct PTimerComponentTheme: Sendable {
         surface: Color(white: 1.0),
         surfaceSecondary: Color(white: 0.95),
         surfaceTertiary: Color(white: 0.92),
-        surfaceGrouped: Color(white: 0.95),
         recessedFill: Color.gray.opacity(0.12),
         separator: Color.gray.opacity(0.30),
         accentRunning: .green,
         accentInfo: .blue,
-        accentWarning: .orange,
-        accentError: .red,
-        accentNeutral: .brown
+        accentWarning: .orange
     )
 }
 

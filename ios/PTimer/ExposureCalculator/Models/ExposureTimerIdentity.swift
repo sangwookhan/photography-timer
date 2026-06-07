@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 import PTimerCore
 
 /// Which exposure stream a timer was started from. Stored on

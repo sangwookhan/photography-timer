@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
+		EE0000000000000000000005 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
+		EE0000000000000000000006 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
+		EE0000000000000000000007 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
@@ -524,6 +528,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE0000000000000000000003 /* PTimerCore in Frameworks */,
+				EE0000000000000000000005 /* PTimerKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -531,6 +537,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE0000000000000000000006 /* PTimerCore in Frameworks */,
+				EE0000000000000000000007 /* PTimerKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -980,6 +988,8 @@
 			);
 			name = PTimer;
 			packageProductDependencies = (
+				EE0000000000000000000002 /* PTimerCore */,
+				EE0000000000000000000004 /* PTimerKit */,
 			);
 			productName = PTimer;
 			productReference = A00000000000000000000010 /* PTimer.app */;
@@ -1000,6 +1010,8 @@
 			);
 			name = PTimerTests;
 			packageProductDependencies = (
+				EE0000000000000000000002 /* PTimerCore */,
+				EE0000000000000000000004 /* PTimerKit */,
 			);
 			productName = PTimerTests;
 			productReference = A00000000000000000000018 /* PTimerTests.xctest */;
@@ -1058,6 +1070,9 @@
 			);
 			mainGroup = A00000000000000000000030;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A00000000000000000000032 /* Products */;
 			projectDirPath = "";
@@ -1069,6 +1084,26 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PTimerKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EE0000000000000000000002 /* PTimerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
+			productName = PTimerCore;
+		};
+		EE0000000000000000000004 /* PTimerKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
+			productName = PTimerKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A00000000000000000000022 /* Resources */ = {

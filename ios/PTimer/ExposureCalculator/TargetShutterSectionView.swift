@@ -192,7 +192,7 @@ struct TargetShutterInputSheet: View {
                 // `isDraftCleared`; Confirm then routes through
                 // `onClearTarget`. Cancel after Off discards the draft
                 // change, preserving the previously-committed target.
-                enabledToggleRow
+                TargetShutterEnabledToggleRow(isOn: targetShutterEnabledBinding)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
@@ -204,8 +204,12 @@ struct TargetShutterInputSheet: View {
                 // the duration the user committed last is what the Off
                 // state's Confirm would *remove*, so seeing it dimmed
                 // matches the action they're about to take.
-                targetNumbersDisplay
-                    .padding(.bottom, 6)
+                TargetShutterDraftReadout(
+                    text: formattedDraft,
+                    isCleared: state.isDraftCleared,
+                    accessibilityLabel: targetNumbersAccessibilityLabel
+                )
+                .padding(.bottom, 6)
 
                 // `.disabled` blocks wheel interaction and auto-dims
                 // the pager (including the teaser tap targets) when
@@ -218,25 +222,19 @@ struct TargetShutterInputSheet: View {
 
                 Spacer(minLength: 0)
 
-                actionButtons
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                TargetShutterSheetFooter(
+                    confirmLabel: confirmButtonLabel,
+                    canConfirm: canConfirm,
+                    onCancel: cancel,
+                    onConfirm: confirm
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
             }
             .navigationTitle("Target Shutter")
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
-    }
-
-    private var enabledToggleRow: some View {
-        Toggle(isOn: targetShutterEnabledBinding) {
-            Text("Use Target Shutter")
-                .font(.body)
-                .foregroundStyle(.primary)
-        }
-        .tint(.accentColor)
-        .accessibilityIdentifier("target-shutter-enabled-switch")
-        .accessibilityHint("When off, Confirm removes the Target Shutter; Cancel restores the previously committed value.")
     }
 
     /// Toggle binding for the sheet-header On/Off switch.
@@ -413,10 +411,10 @@ struct TargetShutterInputSheet: View {
             .padding(.horizontal, 4)
 
             HStack(spacing: 0) {
-                fineColumn(
+                TargetShutterFineColumn(
                     title: "h",
                     range: 0...23,
-                    binding: fineHoursBinding,
+                    value: fineHoursBinding,
                     accessibilityID: "target-shutter-hours-picker",
                     onContinuousRowChange: { row in
                         // Drop late Fine emits arriving after the user
@@ -438,10 +436,10 @@ struct TargetShutterInputSheet: View {
                         )
                     }
                 )
-                fineColumn(
+                TargetShutterFineColumn(
                     title: "m",
                     range: 0...59,
-                    binding: fineMinutesBinding,
+                    value: fineMinutesBinding,
                     accessibilityID: "target-shutter-minutes-picker",
                     onContinuousRowChange: { row in
                         guard !state.isDraftCleared,
@@ -454,10 +452,10 @@ struct TargetShutterInputSheet: View {
                         )
                     }
                 )
-                fineColumn(
+                TargetShutterFineColumn(
                     title: "s",
                     range: 0...59,
-                    binding: fineSecondsBinding,
+                    value: fineSecondsBinding,
                     accessibilityID: "target-shutter-seconds-picker",
                     onContinuousRowChange: { row in
                         guard !state.isDraftCleared,
@@ -475,97 +473,11 @@ struct TargetShutterInputSheet: View {
         }
     }
 
-    private func fineColumn(
-        title: String,
-        range: ClosedRange<Int>,
-        binding: Binding<Int>,
-        accessibilityID: String,
-        onContinuousRowChange: @escaping (Int) -> Void
-    ) -> some View {
-        VStack(spacing: 2) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Picker(title, selection: binding) {
-                ForEach(range, id: \.self) { value in
-                    Text("\(value)")
-                        .monospacedDigit()
-                        .tag(value)
-                }
-            }
-            .pickerStyle(.wheel)
-            .frame(maxWidth: .infinity)
-            .clipped()
-            // Same display-link mid-scroll observer pattern as Base
-            // Shutter / ND Filter on the main calculator. Each Fine
-            // column attaches its own observer; `locatePicker` walks
-            // up from the observation view's frame so the observer
-            // reliably binds to the local h / m / s picker rather
-            // than a sibling column.
-            .background {
-                WheelPickerContinuousObserver(
-                    onSelectedRowChange: onContinuousRowChange,
-                    onInteractionEnd: {}
-                )
-            }
-            .accessibilityIdentifier(accessibilityID)
-        }
-    }
-
     // MARK: - Target numbers + actions
-
-    /// Large, monospaced read-out of the current draft. The single
-    /// visible source of truth while editing — both Quick and Fine
-    /// edits update it immediately because both write to
-    /// `state.draftSeconds` directly. Off state dims the readout
-    /// rather than replacing it with `None` — the duration is what
-    /// Confirm would remove, so seeing it dimmed previews the action.
-    private var targetNumbersDisplay: some View {
-        Text(formattedDraft)
-            .font(.system(size: 36, weight: .bold, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(state.isDraftCleared ? .tertiary : .primary)
-            .frame(maxWidth: .infinity)
-            .accessibilityIdentifier("target-shutter-draft-readout")
-            .accessibilityLabel(targetNumbersAccessibilityLabel)
-    }
 
     private var targetNumbersAccessibilityLabel: String {
         let base = "Draft target \(formattedDraft)"
         return state.isDraftCleared ? "\(base), Target Shutter off" : base
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button(action: cancel) {
-                Text("Cancel")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color(.tertiarySystemFill))
-                    )
-                    .foregroundStyle(.primary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("target-shutter-cancel-button")
-
-            Button(action: confirm) {
-                Text(confirmButtonLabel)
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(canConfirm ? Color.accentColor : Color.accentColor.opacity(0.3))
-                    )
-                    .foregroundStyle(.white)
-            }
-            .buttonStyle(.plain)
-            .disabled(!canConfirm)
-            .accessibilityIdentifier("target-shutter-set-button-confirm")
-        }
     }
 
     // MARK: - Bindings
@@ -698,6 +610,130 @@ struct TargetShutterInputSheet: View {
         if m > 0 { parts.append("\(m)m") }
         if s > 0 { parts.append("\(s)s") }
         return parts.isEmpty ? "0s" : parts.joined(separator: " ")
+    }
+}
+
+// MARK: - Input sheet leaf components
+
+/// Sheet-header On/Off switch. The binding routes to the parent's
+/// draft clear / re-arm logic; this leaf only renders the row.
+private struct TargetShutterEnabledToggleRow: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            Text("Use Target Shutter")
+                .font(.body)
+                .foregroundStyle(.primary)
+        }
+        .tint(.accentColor)
+        .accessibilityIdentifier("target-shutter-enabled-switch")
+        .accessibilityHint("When off, Confirm removes the Target Shutter; Cancel restores the previously committed value.")
+    }
+}
+
+/// Large, monospaced read-out of the current draft. The single
+/// visible source of truth while editing — both Quick and Fine
+/// edits update it immediately because both write to the draft.
+/// Off state dims the readout rather than replacing it with `None` —
+/// the duration is what Confirm would remove, so seeing it dimmed
+/// previews the action.
+private struct TargetShutterDraftReadout: View {
+    let text: String
+    let isCleared: Bool
+    let accessibilityLabel: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 36, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(isCleared ? .tertiary : .primary)
+            .frame(maxWidth: .infinity)
+            .accessibilityIdentifier("target-shutter-draft-readout")
+            .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+/// A single Fine Tune wheel column (h / m / s). Renders a wheel
+/// `Picker` plus the display-link mid-scroll observer that matches
+/// the Base Shutter / ND Filter responsiveness on the main
+/// calculator; the parent owns the draft and the late-emit guards.
+private struct TargetShutterFineColumn: View {
+    let title: String
+    let range: ClosedRange<Int>
+    @Binding var value: Int
+    let accessibilityID: String
+    let onContinuousRowChange: (Int) -> Void
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Picker(title, selection: $value) {
+                ForEach(range, id: \.self) { value in
+                    Text("\(value)")
+                        .monospacedDigit()
+                        .tag(value)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .clipped()
+            // Each Fine column attaches its own observer; `locatePicker`
+            // walks up from the observation view's frame so the observer
+            // reliably binds to the local h / m / s picker rather than a
+            // sibling column.
+            .background {
+                WheelPickerContinuousObserver(
+                    onSelectedRowChange: onContinuousRowChange,
+                    onInteractionEnd: {}
+                )
+            }
+            .accessibilityIdentifier(accessibilityID)
+        }
+    }
+}
+
+/// Confirm / Cancel footer. The parent owns the confirm/cancel flow
+/// and the enabled state; this leaf only renders the two buttons.
+private struct TargetShutterSheetFooter: View {
+    let confirmLabel: String
+    let canConfirm: Bool
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: onCancel) {
+                Text("Cancel")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(.tertiarySystemFill))
+                    )
+                    .foregroundStyle(.primary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("target-shutter-cancel-button")
+
+            Button(action: onConfirm) {
+                Text(confirmLabel)
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(canConfirm ? Color.accentColor : Color.accentColor.opacity(0.3))
+                    )
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canConfirm)
+            .accessibilityIdentifier("target-shutter-set-button-confirm")
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Timer-start + identity-snapshot coverage for the custom film

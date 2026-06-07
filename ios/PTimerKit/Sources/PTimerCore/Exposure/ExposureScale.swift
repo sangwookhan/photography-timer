@@ -10,7 +10,7 @@ import Foundation
 /// `.fullStop` is retained as a reserved scale for tests and a future
 /// Settings preference; the shipping calculator does not surface a
 /// runtime scale selector.
-enum ExposureScaleMode: String, Codable, CaseIterable, Sendable {
+public enum ExposureScaleMode: String, Codable, CaseIterable, Sendable {
     case fullStop
     case oneThirdStop
 }
@@ -18,7 +18,7 @@ enum ExposureScaleMode: String, Codable, CaseIterable, Sendable {
 extension ExposureScaleMode {
     /// Stops covered by one step on this scale.
     /// `fullStop` → 1.0; `oneThirdStop` → 1/3.
-    var stopsPerStep: Double {
+    public var stopsPerStep: Double {
         switch self {
         case .fullStop:
             return 1.0
@@ -32,8 +32,12 @@ extension ExposureScaleMode {
 /// `seconds` is the value the picker displays and the calc engine
 /// consumes; the type is intentionally narrow so future scales can
 /// evolve formatting metadata independently of seconds storage.
-struct ShutterStep: Equatable, Hashable, Sendable {
-    let seconds: Double
+public struct ShutterStep: Equatable, Hashable, Sendable {
+    public let seconds: Double
+
+    public init(seconds: Double) {
+        self.seconds = seconds
+    }
 }
 
 /// One ND-filter entry on an exposure scale's ND ladder, expressed
@@ -46,18 +50,18 @@ struct ShutterStep: Equatable, Hashable, Sendable {
 /// is what the legacy integer calc API
 /// (`ExposureCalculator.calculate(baseShutterSeconds:stop: Int)`)
 /// consumes.
-struct NDStep: Equatable, Hashable, Sendable {
-    let stops: Double
+public struct NDStep: Equatable, Hashable, Sendable {
+    public let stops: Double
 
-    init(stops: Double) {
+    public init(stops: Double) {
         self.stops = stops
     }
 
-    var isWholeStop: Bool {
+    public var isWholeStop: Bool {
         abs(stops - stops.rounded()) <= ExposureCalculator.stabilityEpsilon
     }
 
-    var wholeStops: Int? {
+    public var wholeStops: Int? {
         isWholeStop ? Int(stops.rounded()) : nil
     }
 }
@@ -70,10 +74,16 @@ struct NDStep: Equatable, Hashable, Sendable {
 /// The scale is the single source of truth for "what values does
 /// the user pick from": picker rows shall not maintain a parallel
 /// list.
-struct ExposureScale: Equatable, Sendable {
-    let mode: ExposureScaleMode
-    let shutterSteps: [ShutterStep]
-    let ndSteps: [NDStep]
+public struct ExposureScale: Equatable, Sendable {
+    public let mode: ExposureScaleMode
+    public let shutterSteps: [ShutterStep]
+    public let ndSteps: [NDStep]
+
+    public init(mode: ExposureScaleMode, shutterSteps: [ShutterStep], ndSteps: [NDStep]) {
+        self.mode = mode
+        self.shutterSteps = shutterSteps
+        self.ndSteps = ndSteps
+    }
 }
 
 extension ExposureScale {
@@ -83,7 +93,7 @@ extension ExposureScale {
     /// duplication, and an integer ND ladder spanning 0…30 stops to
     /// match the picker range that's been in production since
     /// PTIMER-19.
-    static let fullStop: ExposureScale = ExposureScale(
+    public static let fullStop: ExposureScale = ExposureScale(
         mode: .fullStop,
         shutterSteps: ExposureCalculator.fullStopShutterSpeeds.map(ShutterStep.init(seconds:)),
         ndSteps: (0...maximumWholeNDStops).map { NDStep(stops: Double($0)) }
@@ -101,7 +111,7 @@ extension ExposureScale {
     /// path without redesigning the model layer; that capability
     /// shall not surface in the shipping ND picker.
     /// (Per Calculator spec §2.2, §2.3.)
-    static let oneThirdStop: ExposureScale = ExposureScale(
+    public static let oneThirdStop: ExposureScale = ExposureScale(
         mode: .oneThirdStop,
         shutterSteps: oneThirdStopShutterSteps(
             fromFullStops: ExposureCalculator.fullStopShutterSpeeds
@@ -113,12 +123,12 @@ extension ExposureScale {
     /// ladders; the full-stop scale (`.fullStop`) is kept in the model
     /// only for tests and the future Settings preference described in
     /// `docs/specs/Calculator.md` §1.4.
-    static let `default`: ExposureScale = .oneThirdStop
+    public static let `default`: ExposureScale = .oneThirdStop
 
     /// Maximum whole ND stops the calculator supports. Hoisted to a
     /// single constant so the full-stop scale and the one-third-stop
     /// scale stay in lockstep instead of repeating `0...30`.
-    static let maximumWholeNDStops: Int = 30
+    public static let maximumWholeNDStops: Int = 30
 }
 
 extension ExposureScale {
@@ -130,14 +140,14 @@ extension ExposureScale {
     /// fractional-aware calc routing has a single conversion site
     /// when the reserved fractional path is exercised by tests or
     /// a future workflow.
-    static func ndStep(forWholeStops stop: Int) -> NDStep {
+    public static func ndStep(forWholeStops stop: Int) -> NDStep {
         NDStep(stops: Double(stop))
     }
 
     /// Returns the canonical scale for a given mode. Single conversion
     /// site so the ViewModel and persistence boundaries can flip
     /// `ExposureScaleMode` without re-deriving the ladder data.
-    static func scale(for mode: ExposureScaleMode) -> ExposureScale {
+    public static func scale(for mode: ExposureScaleMode) -> ExposureScale {
         switch mode {
         case .fullStop:
             return .fullStop
@@ -150,16 +160,16 @@ extension ExposureScale {
 extension NDStep {
     /// Count of one-third-stop increments this step represents. Exact
     /// integer identity for any third-stop value (0, 1/3, 2/3, 1, …).
-    /// Used by the persistence layer so fractional ND survives a
-    /// round-trip without `Double` becoming the source of truth.
-    var thirdStopCount: Int {
+    /// Stable integer representation for serialized or persisted
+    /// third-stop values, so fractional ND can round-trip without
+    /// `Double` becoming the source of truth.
+    public var thirdStopCount: Int {
         Int((stops * 3).rounded())
     }
 
     /// Builds an `NDStep` from a count of one-third-stops. Inverse of
-    /// `thirdStopCount` for any value the persistence layer is allowed
-    /// to write.
-    static func fromThirdStopCount(_ thirds: Int) -> NDStep {
+    /// `thirdStopCount` for any value that may be serialized.
+    public static func fromThirdStopCount(_ thirds: Int) -> NDStep {
         NDStep(stops: Double(thirds) / 3.0)
     }
 }
@@ -223,7 +233,7 @@ extension ExposureScale {
     /// are unchanged; calculation continues to advance by stop-step
     /// index so a transition like `1/10 + 3 stops` lands on the row
     /// labeled `1/1.3`.
-    static let oneThirdStopShutterCameraLabels: [String] = [
+    public static let oneThirdStopShutterCameraLabels: [String] = [
         // 1/8000 anchor + 2 intermediates → 1/4000 anchor + 2 → …
         "1/8000", "1/6400", "1/5000",
         "1/4000", "1/3200", "1/2500",
@@ -250,7 +260,7 @@ extension ExposureScale {
     /// value if the value sits on the canonical 1/3-stop ladder. Falls
     /// back to `nil` for values that aren't on the ladder so callers
     /// can use the standard formatter.
-    static func oneThirdStopShutterCameraLabel(forSeconds seconds: Double) -> String? {
+    public static func oneThirdStopShutterCameraLabel(forSeconds seconds: Double) -> String? {
         let ladder = oneThirdStop.shutterSteps
         guard ladder.count == oneThirdStopShutterCameraLabels.count else {
             return nil

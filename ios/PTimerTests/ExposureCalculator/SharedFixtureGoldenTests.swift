@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Cross-platform parity gate on the iOS side. Drives the

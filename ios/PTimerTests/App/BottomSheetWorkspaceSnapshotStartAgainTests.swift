@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// PTIMER-36: tests for the Start Again surface (completed-row clone)

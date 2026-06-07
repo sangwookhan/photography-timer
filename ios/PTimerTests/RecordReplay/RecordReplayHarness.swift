@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 @testable import PTimer
 
 /// Scenario runner with deterministic time. Builds a fully-spied

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Delete flow coverage. Asserts the `deleteCustomFilm` surface

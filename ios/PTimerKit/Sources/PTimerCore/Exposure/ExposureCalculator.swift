@@ -1,11 +1,11 @@
 import Foundation
 
-struct ExposureCalculationResult: Equatable {
-    let baseShutterSeconds: Double
-    let ndStep: NDStep
-    let resultShutterSeconds: Double
+public struct ExposureCalculationResult: Equatable {
+    public let baseShutterSeconds: Double
+    public let ndStep: NDStep
+    public let resultShutterSeconds: Double
 
-    init(
+    public init(
         baseShutterSeconds: Double,
         ndStep: NDStep,
         resultShutterSeconds: Double
@@ -20,7 +20,7 @@ struct ExposureCalculationResult: Equatable {
     /// `(baseShutterSeconds:, stop:, resultShutterSeconds:)` constructor
     /// keeps working byte-for-byte after PTIMER-80 routes the model
     /// state through `NDStep`.
-    init(
+    public init(
         baseShutterSeconds: Double,
         stop: Int,
         resultShutterSeconds: Double
@@ -35,24 +35,29 @@ struct ExposureCalculationResult: Equatable {
     /// Whole-stop view of the ND input. Returns the rounded integer for
     /// any fractional `ndStep`; callers that need the exact fractional
     /// identity must read `ndStep` directly.
-    var stop: Int {
+    public var stop: Int {
         ndStep.wholeStops ?? Int(ndStep.stops.rounded())
     }
 }
 
-struct TimeDisplay: Equatable {
-    let primary: String
-    let secondary: String
+public struct TimeDisplay: Equatable {
+    public let primary: String
+    public let secondary: String
+
+    public init(primary: String, secondary: String) {
+        self.primary = primary
+        self.secondary = secondary
+    }
 }
 
-enum ExposureCalculatorError: LocalizedError, Equatable {
+public enum ExposureCalculatorError: LocalizedError, Equatable {
     case emptyBaseShutter
     case invalidBaseShutter
     case nonPositiveBaseShutter
     case nonPositiveND
     case overflow
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .emptyBaseShutter:
             return "Base shutter is required."
@@ -68,16 +73,18 @@ enum ExposureCalculatorError: LocalizedError, Equatable {
     }
 }
 
-struct ExposureCalculator {
-    static let stabilityEpsilon = 0.000_001
-    static let fullStopShutterSpeeds: [Double] = [
+public struct ExposureCalculator {
+    public static let stabilityEpsilon = 0.000_001
+    public static let fullStopShutterSpeeds: [Double] = [
         1.0 / 8000, 1.0 / 4000, 1.0 / 2000, 1.0 / 1000,
         1.0 / 500, 1.0 / 250, 1.0 / 125, 1.0 / 60,
         1.0 / 30, 1.0 / 15, 1.0 / 8, 1.0 / 4,
         1.0 / 2, 1, 2, 4, 8, 15, 30,
     ]
 
-    func parseBaseShutter(_ input: String) throws -> Double {
+    public init() {}
+
+    public func parseBaseShutter(_ input: String) throws -> Double {
         let trimmed = normalize(input)
         guard !trimmed.isEmpty else {
             throw ExposureCalculatorError.emptyBaseShutter
@@ -109,7 +116,7 @@ struct ExposureCalculator {
         return seconds
     }
 
-    func calculate(baseShutterSeconds: Double, stop: Int) throws -> Double {
+    public func calculate(baseShutterSeconds: Double, stop: Int) throws -> Double {
         try calculate(
             baseShutterSeconds: baseShutterSeconds,
             ndStep: NDStep(stops: Double(stop)),
@@ -124,7 +131,7 @@ struct ExposureCalculator {
     /// active scale and the ND step's whole-stop status, so a
     /// 1/3-stop shutter input never collapses to the full-stop
     /// ladder when ND happens to be whole.
-    func calculate(baseShutterSeconds: Double, ndStep: NDStep) throws -> Double {
+    public func calculate(baseShutterSeconds: Double, ndStep: NDStep) throws -> Double {
         try calculate(
             baseShutterSeconds: baseShutterSeconds,
             ndStep: ndStep,
@@ -138,7 +145,7 @@ struct ExposureCalculator {
     /// `.oneThirdStop` mode the result is returned untouched so a
     /// 1/3-stop shutter value (e.g. `(1/30) · 2^(1/3)`) can survive
     /// even when ND is `0` or another whole stop.
-    func calculate(
+    public func calculate(
         baseShutterSeconds: Double,
         ndStep: NDStep,
         scaleMode: ExposureScaleMode
@@ -160,7 +167,7 @@ struct ExposureCalculator {
         return snapAllowed ? snapToFullStop(result) : result
     }
 
-    func formatShutter(_ seconds: Double) -> String {
+    public func formatShutter(_ seconds: Double) -> String {
         guard seconds.isFinite, seconds > 0 else {
             return "-"
         }
@@ -168,7 +175,7 @@ struct ExposureCalculator {
         return formatRawSeconds(seconds)
     }
 
-    func formatTimeDisplay(_ seconds: Double) -> TimeDisplay {
+    public func formatTimeDisplay(_ seconds: Double) -> TimeDisplay {
         let safeSeconds = normalizeDuration(seconds)
         return TimeDisplay(
             primary: formatExtendedClock(safeSeconds),
@@ -176,7 +183,7 @@ struct ExposureCalculator {
         )
     }
 
-    func formatExtendedClock(_ seconds: Double) -> String {
+    public func formatExtendedClock(_ seconds: Double) -> String {
         let safeSeconds = normalizeDuration(seconds)
 
         if safeSeconds < 1 {
@@ -375,7 +382,7 @@ struct ExposureCalculator {
         return abs(normalized - lower) <= abs(upper - normalized) ? lower : upper
     }
 
-    func reconstructedStop(
+    public func reconstructedStop(
         baseShutterSeconds: Double,
         resultShutterSeconds: Double,
         maxStop: Int = 64

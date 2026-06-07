@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Unit-tests for the semantic ordering rule that drives the Film

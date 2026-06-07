@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Pure projection helper that assembles per-page display state for
 /// the workspace TabView. Holds no child model references; receives

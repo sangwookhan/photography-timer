@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+import PTimerCore
 
 final class ExposureCalculationAccuracyTests: XCTestCase {
     private let tolerance = 0.0001

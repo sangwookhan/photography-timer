@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Behavior contract for ADOX CMS 20 II's formula profile (PTIMER-139,

@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Pure presenter for the Film Details reciprocity graph.
 ///

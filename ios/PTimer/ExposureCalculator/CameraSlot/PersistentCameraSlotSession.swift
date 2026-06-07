@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// On-disk shape of the camera-slot session. Captures every slot's
 /// calculator snapshot plus which slot was active at save time so a

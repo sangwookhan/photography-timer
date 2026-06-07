@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Per-slot snapshot of the calculator working state. This carries the
 /// fields the active slot would otherwise hold on `CalculatorModel` and

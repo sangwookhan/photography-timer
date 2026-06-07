@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// End-to-end tests for the multi-slot persistence layer:

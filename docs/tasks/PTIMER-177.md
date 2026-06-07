@@ -451,6 +451,11 @@ To resolve during the relevant commit, reporting the call + reason first:
   unnatural dependency.*
 - `WheelPickerContinuousObserver` UIKit usage: if it requires UIKit
   introspection it **cannot** enter Kit and stays in the app.
+- **`ExposureCalculator.fullStopShutterSpeeds` / `stabilityEpsilon` public
+  surface** — extracted as `public` in commit 2 to preserve current usage
+  (`ExposureScale` reads the ladder). Revisit in a later API-hardening pass
+  whether these constants should stay public or be hidden behind a narrower
+  exposure facade.
 
 ---
 

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Display-state baseline tests for the cross-cutting orchestration

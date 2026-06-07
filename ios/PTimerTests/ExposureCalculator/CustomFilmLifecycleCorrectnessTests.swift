@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Lifecycle correctness coverage. Pins selection restore,

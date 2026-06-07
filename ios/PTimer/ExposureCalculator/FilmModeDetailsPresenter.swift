@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 struct FilmModeDetailsPresenterInput {
     let bindingState: FilmModeReciprocityBindingState

@@ -1,5 +1,5 @@
 import XCTest
-@testable import PTimer
+import PTimerCore
 
 final class ExposureCalculatorTests: XCTestCase {
     private struct ExposureCase {

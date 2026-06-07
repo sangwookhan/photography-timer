@@ -1,4 +1,5 @@
 import Combine
+import PTimerCore
 import Foundation
 
 private let defaultFilmModeBaseShutter = CalculatorDefaults.baseShutterSeconds

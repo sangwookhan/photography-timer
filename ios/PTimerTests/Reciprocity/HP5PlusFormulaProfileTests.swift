@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Regression coverage for the legacy source-less HP5 Plus formula

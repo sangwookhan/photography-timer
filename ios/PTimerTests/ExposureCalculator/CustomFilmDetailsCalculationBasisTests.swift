@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// PTIMER-84 polish: covers the Calculation Basis section the

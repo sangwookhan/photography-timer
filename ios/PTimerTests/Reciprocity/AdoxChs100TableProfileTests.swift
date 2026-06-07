@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Behavior contract for ADOX CHS 100 II's official table profile (PTIMER-168).

@@ -36,4 +36,42 @@ final class PTimerComponentThemeTests: XCTestCase {
         XCTAssertEqual(theme.accentRunning, .green)
         XCTAssertEqual(theme.separator, .gray)
     }
+
+    func testDefaultGraphPaletteReproducesShippingColors() {
+        let graph = PTimerComponentTheme.GraphPalette.default
+        // The graph's domain colors shipped as SwiftUI-native values; the
+        // default palette must reproduce them so the host needs no UIKit map.
+        XCTAssertEqual(graph.calculationCurve, .accentColor)
+        XCTAssertEqual(graph.currentResultPoint, .blue)
+        XCTAssertEqual(graph.currentInputGuide, .red)
+        XCTAssertEqual(graph.sourceReference, .green)
+        XCTAssertEqual(graph.beyondSourceRegion, .pink)
+        XCTAssertEqual(graph.outOfRangeMarker, .orange)
+        XCTAssertEqual(graph.textSecondary, .secondary)
+    }
+
+    func testCustomGraphPaletteRoundTripsThroughTheme() {
+        var theme = PTimerComponentTheme.default
+        theme.graph = PTimerComponentTheme.GraphPalette(
+            calculationCurve: .mint,
+            currentResultPoint: .teal,
+            currentInputGuide: .pink,
+            sourceReference: .indigo,
+            noCorrectionRegion: .cyan,
+            supportedRegion: .cyan,
+            beyondSourceRegion: .purple,
+            unsupportedRegion: .red,
+            notRecommendedBoundary: .orange,
+            outOfRangeMarker: .yellow,
+            guideLine: .gray,
+            textPrimary: .black,
+            textSecondary: .gray
+        )
+        // A reusable component reads these tokens through the theme; the
+        // override must survive intact.
+        XCTAssertEqual(theme.graph.calculationCurve, .mint)
+        XCTAssertEqual(theme.graph.currentResultPoint, .teal)
+        XCTAssertEqual(theme.graph.outOfRangeMarker, .yellow)
+        XCTAssertEqual(theme.graph.textPrimary, .black)
+    }
 }

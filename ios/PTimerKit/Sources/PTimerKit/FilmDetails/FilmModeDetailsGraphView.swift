@@ -1,5 +1,4 @@
 import SwiftUI
-import PTimerKit
 
 /// FilmModeDetailsGraphView owns the reciprocity formula graph that
 /// renders inside `FilmModeDetailsSheet`. The struct body keeps the
@@ -9,19 +8,25 @@ import PTimerKit
 /// `FilmModeDetailsGraphRendering.swift` as an extension so the
 /// struct body itself stays focused on layout composition.
 
-struct FilmModeDetailsGraph: View {
-    let graph: FilmModeDetailsGraphDisplayState
+public struct FilmModeDetailsGraph: View {
+    public let graph: FilmModeDetailsGraphDisplayState
+
+    @Environment(\.ptimerComponentTheme) var theme
+
+    public init(graph: FilmModeDetailsGraphDisplayState) {
+        self.graph = graph
+    }
 
     let graphHeight: CGFloat = 196
     let plotInset: CGFloat = 28
     let yAxisColumnWidth: CGFloat = 28
     let yTickLabelInset: CGFloat = 28
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(graph.title)
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.graph.textSecondary)
                 .textCase(.uppercase)
 
             if let formulaDisplayText = graph.formulaDisplayText {
@@ -43,10 +48,10 @@ struct FilmModeDetailsGraph: View {
 
                             ZStack {
                                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
+                                    .fill(theme.surfaceSecondary)
 
                                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                                    .strokeBorder(theme.graph.guideLine.opacity(0.06), lineWidth: 1)
 
                                 if let supportedRangeUpperBoundSeconds = graph.supportedRangeUpperBoundSeconds,
                                    graph.usesCurrentInputGuideOnly {
@@ -92,7 +97,7 @@ struct FilmModeDetailsGraph: View {
                                 }
 
                                 graphGrid(in: plotSize)
-                                    .stroke(Color.primary.opacity(0.08), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                                    .stroke(theme.graph.guideLine.opacity(0.08), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
                                     .padding(plotInset)
 
                                 yAxisTickLabels(in: plotSize)
@@ -100,7 +105,7 @@ struct FilmModeDetailsGraph: View {
 
                                 sourcePath(in: plotSize)
                                     .stroke(
-                                        Color.accentColor.opacity(0.9),
+                                        theme.graph.calculationCurve.opacity(0.9),
                                         style: StrokeStyle(
                                             lineWidth: 2.4,
                                             lineCap: .round,
@@ -255,23 +260,23 @@ struct FilmModeDetailsGraph: View {
     ) -> (symbol: String, color: Color) {
         switch label {
         case "Calculation curve":
-            return ("line.horizontal.3", .accentColor)
+            return ("line.horizontal.3", theme.graph.calculationCurve)
         case "Current result":
-            return ("circle.fill", .blue)
+            return ("circle.fill", theme.graph.currentResultPoint)
         case "Current input":
-            return ("line.diagonal", .red)
+            return ("line.diagonal", theme.graph.currentInputGuide)
         case "Source reference":
-            return ("circle", .green)
+            return ("circle", theme.graph.sourceReference)
         case "No-correction range":
-            return ("square.fill", .green.opacity(0.5))
+            return ("square.fill", theme.graph.noCorrectionRegion.opacity(0.5))
         case "Not-recommended boundary":
-            return ("minus", .red)
+            return ("minus", theme.graph.notRecommendedBoundary)
         case "Beyond source range":
-            return ("triangle.fill", .orange)
+            return ("triangle.fill", theme.graph.outOfRangeMarker)
         case "Outside visible range":
-            return ("triangle.fill", .orange)
+            return ("triangle.fill", theme.graph.outOfRangeMarker)
         default:
-            return ("circle", .secondary)
+            return ("circle", theme.graph.textSecondary)
         }
     }
 
@@ -298,22 +303,22 @@ struct FilmModeDetailsGraph: View {
 
     var graphExplanationTint: Color {
         if graph.usesCurrentInputGuideOnly {
-            return .orange
+            return theme.graph.outOfRangeMarker
         }
 
         if shouldRenderDescriptionLines {
-            return .secondary
+            return theme.graph.textSecondary
         }
 
         switch graph.currentPoint?.style {
         case .noCorrection:
-            return .green
+            return theme.graph.noCorrectionRegion
         case .formulaDerived:
-            return .blue
+            return theme.graph.currentResultPoint
         case .beyondSourceRange:
-            return .orange
+            return theme.graph.outOfRangeMarker
         case .none:
-            return .secondary
+            return theme.graph.textSecondary
         }
     }
 
@@ -343,6 +348,8 @@ private struct FilmModeDetailsLegendChip: View {
     let color: Color
     let text: String
 
+    @Environment(\.ptimerComponentTheme) private var theme
+
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: symbol)
@@ -351,7 +358,7 @@ private struct FilmModeDetailsLegendChip: View {
 
             Text(text)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.graph.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -359,11 +366,11 @@ private struct FilmModeDetailsLegendChip: View {
         .padding(.vertical, 6)
         .background(
             Capsule(style: .continuous)
-                .fill(Color(.tertiarySystemBackground))
+                .fill(theme.surfaceTertiary)
         )
         .overlay(
             Capsule(style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(theme.graph.guideLine.opacity(0.05), lineWidth: 1)
         )
     }
 }
@@ -424,10 +431,12 @@ private struct FilmModeDetailsLegendFlow: View {
 /// `^` — typically the ` + 0.3s` offset segment the Advanced
 /// formula prints — renders at the normal baseline so the
 /// expression stays readable.
-struct FilmModeDetailsFormulaExpressionText: View {
+public struct FilmModeDetailsFormulaExpressionText: View {
     private let value: String
 
-    init(_ value: String) {
+    @Environment(\.ptimerComponentTheme) private var theme
+
+    public init(_ value: String) {
         self.value = value
     }
 
@@ -458,9 +467,9 @@ struct FilmModeDetailsFormulaExpressionText: View {
         )
     }
 
-    var body: some View {
+    public var body: some View {
         text
-            .foregroundStyle(.primary.opacity(0.84))
+            .foregroundStyle(theme.graph.textPrimary.opacity(0.84))
     }
 
     private var text: Text {
@@ -482,10 +491,12 @@ private struct FilmModeDetailsGraphAxisLabel: View {
     let text: String
     let vertical: Bool
 
+    @Environment(\.ptimerComponentTheme) private var theme
+
     var body: some View {
         Text(text)
             .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(theme.graph.textSecondary)
             .rotationEffect(vertical ? .degrees(-90) : .zero)
             .fixedSize()
             .frame(
@@ -501,6 +512,8 @@ private struct FilmModeDetailsGraphStateNote: View {
     let tint: Color
     let text: String
 
+    @Environment(\.ptimerComponentTheme) private var theme
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: symbol)
@@ -510,7 +523,7 @@ private struct FilmModeDetailsGraphStateNote: View {
 
             Text(text)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.graph.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

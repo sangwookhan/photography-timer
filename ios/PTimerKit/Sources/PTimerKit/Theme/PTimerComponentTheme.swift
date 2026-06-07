@@ -32,6 +32,8 @@ public struct PTimerComponentTheme: Sendable {
     public var accentError: Color
     /// Neutral accent for secondary identity tints.
     public var accentNeutral: Color
+    /// Domain colors for the reciprocity graph component.
+    public var graph: GraphPalette
 
     public init(
         surface: Color,
@@ -44,7 +46,8 @@ public struct PTimerComponentTheme: Sendable {
         accentInfo: Color,
         accentWarning: Color,
         accentError: Color,
-        accentNeutral: Color
+        accentNeutral: Color,
+        graph: GraphPalette = .default
     ) {
         self.surface = surface
         self.surfaceSecondary = surfaceSecondary
@@ -57,6 +60,87 @@ public struct PTimerComponentTheme: Sendable {
         self.accentWarning = accentWarning
         self.accentError = accentError
         self.accentNeutral = accentNeutral
+        self.graph = graph
+    }
+
+    /// Semantic colors for the reciprocity graph. Kept as SwiftUI-native values
+    /// so the kit stays platform-neutral; the host app may override them. The
+    /// graph's domain colors were always SwiftUI-native (no UIKit), so the
+    /// defaults below reproduce the shipping appearance.
+    public struct GraphPalette: Sendable {
+        /// The plotted reciprocity calculation curve.
+        public var calculationCurve: Color
+        /// Marker for the current result point.
+        public var currentResultPoint: Color
+        /// Guide line / shading for the current input.
+        public var currentInputGuide: Color
+        /// Source-reference data point markers.
+        public var sourceReference: Color
+        /// No-correction region shading and boundary.
+        public var noCorrectionRegion: Color
+        /// In-range supported region shading.
+        public var supportedRegion: Color
+        /// Region beyond the published source range.
+        public var beyondSourceRegion: Color
+        /// Region outside supported policy (unsupported).
+        public var unsupportedRegion: Color
+        /// Not-recommended boundary line.
+        public var notRecommendedBoundary: Color
+        /// Marker for values outside the visible range.
+        public var outOfRangeMarker: Color
+        /// Grid / axis / hairline guide lines.
+        public var guideLine: Color
+        /// Primary graph text.
+        public var textPrimary: Color
+        /// Secondary graph text (axis labels, captions).
+        public var textSecondary: Color
+
+        public init(
+            calculationCurve: Color,
+            currentResultPoint: Color,
+            currentInputGuide: Color,
+            sourceReference: Color,
+            noCorrectionRegion: Color,
+            supportedRegion: Color,
+            beyondSourceRegion: Color,
+            unsupportedRegion: Color,
+            notRecommendedBoundary: Color,
+            outOfRangeMarker: Color,
+            guideLine: Color,
+            textPrimary: Color,
+            textSecondary: Color
+        ) {
+            self.calculationCurve = calculationCurve
+            self.currentResultPoint = currentResultPoint
+            self.currentInputGuide = currentInputGuide
+            self.sourceReference = sourceReference
+            self.noCorrectionRegion = noCorrectionRegion
+            self.supportedRegion = supportedRegion
+            self.beyondSourceRegion = beyondSourceRegion
+            self.unsupportedRegion = unsupportedRegion
+            self.notRecommendedBoundary = notRecommendedBoundary
+            self.outOfRangeMarker = outOfRangeMarker
+            self.guideLine = guideLine
+            self.textPrimary = textPrimary
+            self.textSecondary = textSecondary
+        }
+
+        /// SwiftUI-native defaults reproducing the shipping graph appearance.
+        public static let `default` = GraphPalette(
+            calculationCurve: .accentColor,
+            currentResultPoint: .blue,
+            currentInputGuide: .red,
+            sourceReference: .green,
+            noCorrectionRegion: .green,
+            supportedRegion: .green,
+            beyondSourceRegion: .pink,
+            unsupportedRegion: .red,
+            notRecommendedBoundary: .red,
+            outOfRangeMarker: .orange,
+            guideLine: .primary,
+            textPrimary: .primary,
+            textSecondary: .secondary
+        )
     }
 
     /// SwiftUI-native fallback. Adaptive system colors are supplied by the host

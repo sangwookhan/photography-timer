@@ -171,7 +171,7 @@ struct FilmModeDetailsSheet: View {
     private func detailRowText(for row: FilmModeDetailsRowState) -> some View {
         switch row.style {
         case .formulaExpression:
-            formulaExpressionText(row.value)
+            FilmModeDetailsFormulaExpressionText(row.value)
         case .referenceBlock:
             Text(row.value)
                 .font(.system(.footnote, design: .monospaced))
@@ -183,23 +183,6 @@ struct FilmModeDetailsSheet: View {
         }
     }
 
-    private func formulaExpressionText(_ value: String) -> Text {
-        // Share the whitespace-bounded splitter with the graph's
-        // standalone renderer so an Advanced formula's trailing
-        // ` + 0.3s` offset never bleeds into the superscript on
-        // either surface.
-        guard let parts = FilmModeDetailsFormulaExpressionText.split(value) else {
-            return Text(value).font(.callout.weight(.medium))
-        }
-        let head = Text(parts.base).font(.callout.weight(.medium))
-            + Text(parts.exponent)
-                .font(.caption.weight(.semibold))
-                .baselineOffset(7)
-        if parts.remainder.isEmpty {
-            return head
-        }
-        return head + Text(parts.remainder).font(.callout.weight(.medium))
-    }
 
     private func sectionDisplayTitle(for title: String) -> String {
         switch title {

@@ -1,5 +1,4 @@
 import SwiftUI
-import PTimerKit
 
 /// FilmModeDetailsGraphRendering owns the path geometry and region
 /// drawing for the reciprocity formula graph. Splitting it out of
@@ -48,7 +47,7 @@ extension FilmModeDetailsGraph {
         let x = scaledValue(startSeconds, within: graph.xRange, size: size.width)
 
         return Rectangle()
-            .fill(Color.red.opacity(0.08))
+            .fill(theme.graph.unsupportedRegion.opacity(0.08))
             .frame(width: max(size.width - x, 0), height: size.height)
             .position(x: x + max(size.width - x, 0) / 2, y: size.height / 2)
     }
@@ -60,7 +59,7 @@ extension FilmModeDetailsGraph {
         let x = scaledValue(endSeconds, within: graph.xRange, size: size.width)
 
         return Rectangle()
-            .fill(Color.green.opacity(0.06))
+            .fill(theme.graph.supportedRegion.opacity(0.06))
             .frame(width: max(x, 0), height: size.height)
             .position(x: max(x, 0) / 2, y: size.height / 2)
     }
@@ -77,7 +76,7 @@ extension FilmModeDetailsGraph {
         let x = scaledValue(startSeconds, within: graph.xRange, size: size.width)
 
         return Rectangle()
-            .fill(Color.pink.opacity(0.10))
+            .fill(theme.graph.beyondSourceRegion.opacity(0.10))
             .frame(width: max(size.width - x, 0), height: size.height)
             .position(x: x + max(size.width - x, 0) / 2, y: size.height / 2)
     }
@@ -92,7 +91,7 @@ extension FilmModeDetailsGraph {
             path.move(to: CGPoint(x: x, y: 0))
             path.addLine(to: CGPoint(x: x, y: size.height))
         }
-        .stroke(Color.primary.opacity(0.22), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+        .stroke(theme.graph.guideLine.opacity(0.22), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
     }
 
     /// Light-green band covering the no-correction shutter range —
@@ -117,7 +116,7 @@ extension FilmModeDetailsGraph {
         let x = scaledValue(endSeconds, within: graph.xRange, size: size.width)
 
         return Rectangle()
-            .fill(Color.green.opacity(0.10))
+            .fill(theme.graph.noCorrectionRegion.opacity(0.10))
             .frame(width: max(x, 0), height: size.height)
             .position(x: max(x, 0) / 2, y: size.height / 2)
     }
@@ -136,7 +135,7 @@ extension FilmModeDetailsGraph {
             path.move(to: CGPoint(x: x, y: 0))
             path.addLine(to: CGPoint(x: x, y: size.height))
         }
-        .stroke(Color.green.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [2, 3]))
+        .stroke(theme.graph.noCorrectionRegion.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [2, 3]))
     }
 
     /// Small open green rings (with attached labels) drawn over the
@@ -157,22 +156,22 @@ extension FilmModeDetailsGraph {
                 )
 
                 Circle()
-                    .fill(Color(.systemBackground))
+                    .fill(theme.surface)
                     .frame(width: 6, height: 6)
                     .overlay {
                         Circle()
-                            .stroke(Color.green, lineWidth: 1)
+                            .stroke(theme.graph.sourceReference, lineWidth: 1)
                     }
                     .position(plotted)
 
                 Text(marker.label)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.green)
+                    .foregroundStyle(theme.graph.sourceReference)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 0.5)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color(.systemBackground).opacity(0.9))
+                            .fill(theme.surface.opacity(0.9))
                     )
                     .fixedSize()
                     .position(labelPosition)
@@ -229,7 +228,7 @@ extension FilmModeDetailsGraph {
             path.move(to: CGPoint(x: x, y: 0))
             path.addLine(to: CGPoint(x: x, y: size.height))
         }
-        .stroke(Color.red.opacity(0.75), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+        .stroke(theme.graph.notRecommendedBoundary.opacity(0.75), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
     }
 
     func shouldSuppressSupportedBoundary(at seconds: Double) -> Bool {
@@ -257,7 +256,7 @@ extension FilmModeDetailsGraph {
 
         return ZStack {
             Rectangle()
-                .fill(Color.red.opacity(0.08))
+                .fill(theme.graph.currentInputGuide.opacity(0.08))
                 .frame(width: 14, height: size.height)
                 .position(x: x, y: size.height / 2)
 
@@ -265,7 +264,7 @@ extension FilmModeDetailsGraph {
                 path.move(to: CGPoint(x: x, y: 0))
                 path.addLine(to: CGPoint(x: x, y: size.height))
             }
-            .stroke(Color.red.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [6, 5]))
+            .stroke(theme.graph.currentInputGuide.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [6, 5]))
         }
     }
 
@@ -282,11 +281,11 @@ extension FilmModeDetailsGraph {
         let plotted = plottedPoint(for: currentPoint.point, in: size)
 
         return Circle()
-            .fill(Color.blue)
+            .fill(theme.graph.currentResultPoint)
             .frame(width: 13, height: 13)
             .overlay {
                 Circle()
-                    .stroke(Color(.systemBackground), lineWidth: 2)
+                    .stroke(theme.surface, lineWidth: 2)
             }
             .position(plotted)
     }
@@ -299,17 +298,17 @@ extension FilmModeDetailsGraph {
     func outsideVisibleRangeIndicator(in size: CGSize) -> some View {
         if graph.isBeyondVisibleRange {
             FilmModeDetailsGraphOutsideRangeTriangle()
-                .fill(Color.orange)
+                .fill(theme.graph.outOfRangeMarker)
                 .frame(width: 14, height: 12)
-                .overlay { FilmModeDetailsGraphOutsideRangeTriangle().stroke(Color(.systemBackground), lineWidth: 2) }
+                .overlay { FilmModeDetailsGraphOutsideRangeTriangle().stroke(theme.surface, lineWidth: 2) }
                 .rotationEffect(.degrees(90))
                 .position(x: size.width - 10, y: size.height / 2)
                 .accessibilityIdentifier("film-mode-details-graph-outside-visible")
         } else if graph.isBelowVisibleRange {
             FilmModeDetailsGraphOutsideRangeTriangle()
-                .fill(Color.orange)
+                .fill(theme.graph.outOfRangeMarker)
                 .frame(width: 14, height: 12)
-                .overlay { FilmModeDetailsGraphOutsideRangeTriangle().stroke(Color(.systemBackground), lineWidth: 2) }
+                .overlay { FilmModeDetailsGraphOutsideRangeTriangle().stroke(theme.surface, lineWidth: 2) }
                 .rotationEffect(.degrees(-90))
                 .position(x: 10, y: size.height / 2)
                 .accessibilityIdentifier("film-mode-details-graph-outside-visible")
@@ -322,7 +321,7 @@ extension FilmModeDetailsGraph {
             ForEach(graph.yAxisTicks) { tick in
                 Text(tick.label)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.graph.textSecondary)
                     .frame(width: yTickLabelInset, alignment: .leading)
                     .position(
                         x: yTickLabelInset / 2,
@@ -337,7 +336,7 @@ extension FilmModeDetailsGraph {
             ForEach(graph.xAxisTicks) { tick in
                 Text(tick.label)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.graph.textSecondary)
                     .position(
                         x: scaledValue(tick.value, within: graph.xRange, size: width),
                         y: 7

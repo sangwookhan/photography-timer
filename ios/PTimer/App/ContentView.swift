@@ -23,6 +23,11 @@ private extension PTimerComponentTheme {
         accentInfo: Color(.systemBlue),
         accentWarning: Color(.systemOrange),
         accentError: Color(.systemRed),
-        accentNeutral: Color(.systemBrown)
+        accentNeutral: Color(.systemBrown),
+        // The graph's domain colors shipped as SwiftUI-native values
+        // (.accentColor / .blue / .red / .green / .orange / .pink / .primary /
+        // .secondary), so the kit's GraphPalette default reproduces the exact
+        // shipping appearance — no UIKit-backed mapping is required here.
+        graph: .default
     )
 }

@@ -102,8 +102,6 @@
 		A00000000000000000000600 /* ConvertedFormulaProfileTemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */; };
 		A00000000000000000000602 /* UnofficialPracticalProfilesShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */; };
 		A0000000000000000000070A /* ReciprocityDetailsVocabularyPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */; };
-		A00000000000000000000801 /* FilmModeDetailsGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000800 /* FilmModeDetailsGraphView.swift */; };
-		A00000000000000000000803 /* FilmModeDetailsGraphRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */; };
 		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
 		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
 		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
@@ -307,8 +305,6 @@
 		A00000000000000000000601 /* ConvertedFormulaProfileTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvertedFormulaProfileTemplateTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000603 /* UnofficialPracticalProfilesShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnofficialPracticalProfilesShapeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000070B /* ReciprocityDetailsVocabularyPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReciprocityDetailsVocabularyPresenterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000800 /* FilmModeDetailsGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphView.swift; sourceTree = "<group>"; };
-		A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsGraphRendering.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
 		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
 		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
@@ -484,8 +480,6 @@
 				A00000000000000000000013 /* ExposureCalculatorScreen.swift */,
 				A00000000000000000000814 /* ExposureCalculatorResultViews.swift */,
 				A00000000000000000000148 /* FilmModeDetailsView.swift */,
-				A00000000000000000000800 /* FilmModeDetailsGraphView.swift */,
-				A00000000000000000000802 /* FilmModeDetailsGraphRendering.swift */,
 				A00000000000000000000812 /* FilmSelectorOverlayView.swift */,
 				A00000000000000000000961 /* CustomFilmEditorView.swift */,
 				A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */,
@@ -951,8 +945,6 @@
 				A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */,
 				A00000000000000000000147 /* UserDefaultsTimerMetadataStore.swift in Sources */,
 				A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */,
-				A00000000000000000000801 /* FilmModeDetailsGraphView.swift in Sources */,
-				A00000000000000000000803 /* FilmModeDetailsGraphRendering.swift in Sources */,
 				A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */,
 				A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */,
 				A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */,

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// Pins the draft / input-source contract for the Target Shutter

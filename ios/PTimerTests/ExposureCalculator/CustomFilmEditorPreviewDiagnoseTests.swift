@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// PTIMER-84 follow-up: covers

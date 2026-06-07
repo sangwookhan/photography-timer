@@ -271,22 +271,22 @@ extension ReciprocityResult: Codable {
     }
 
     private struct QuantifiedPayloadDTO: Codable {
-        public let meteredExposureSeconds: Double
-        public let correctedExposureSeconds: Double
-        public let metadata: ReciprocityResultMetadata
+        let meteredExposureSeconds: Double
+        let correctedExposureSeconds: Double
+        let metadata: ReciprocityResultMetadata
     }
 
     private struct LimitedGuidancePayloadDTO: Codable {
-        public let meteredExposureSeconds: Double
-        public let metadata: ReciprocityResultMetadata
+        let meteredExposureSeconds: Double
+        let metadata: ReciprocityResultMetadata
     }
 
     private struct UnsupportedPayloadDTO: Codable {
-        public let meteredExposureSeconds: Double
-        public let correctedExposureSeconds: Double?
-        public let metadata: ReciprocityResultMetadata
+        let meteredExposureSeconds: Double
+        let correctedExposureSeconds: Double?
+        let metadata: ReciprocityResultMetadata
 
-        public init(
+        init(
             meteredExposureSeconds: Double,
             correctedExposureSeconds: Double?,
             metadata: ReciprocityResultMetadata
@@ -302,7 +302,7 @@ extension ReciprocityResult: Codable {
             case metadata
         }
 
-        public init(from decoder: Decoder) throws {
+        init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.meteredExposureSeconds = try container.decode(Double.self, forKey: .meteredExposureSeconds)
             self.correctedExposureSeconds = try container.decodeIfPresent(Double.self, forKey: .correctedExposureSeconds)
@@ -312,7 +312,7 @@ extension ReciprocityResult: Codable {
             )
         }
 
-        public func encode(to encoder: Encoder) throws {
+        func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(meteredExposureSeconds, forKey: .meteredExposureSeconds)
             try container.encodeIfPresent(correctedExposureSeconds, forKey: .correctedExposureSeconds)

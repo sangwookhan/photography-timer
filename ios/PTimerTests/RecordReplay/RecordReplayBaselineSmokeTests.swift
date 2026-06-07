@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// End-to-end smoke test for the record-replay infrastructure.

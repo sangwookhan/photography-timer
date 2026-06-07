@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// Covers the editor preview presenter's Tm→Tc evaluation and

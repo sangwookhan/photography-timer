@@ -1,4 +1,5 @@
 import Combine
+import PTimerKit
 import PTimerCore
 import SwiftUI
 
@@ -923,7 +924,6 @@ private enum StatusChipSize {
 }
 
 enum BottomSheetIdentityPalette {
-    static let slotCount = 6
 
     static func color(for slot: Int) -> Color {
         switch normalized(slot) {
@@ -943,7 +943,7 @@ enum BottomSheetIdentityPalette {
     }
 
     private static func normalized(_ slot: Int) -> Int {
-        ((slot % slotCount) + slotCount) % slotCount
+        ((slot % BottomSheetIdentityCue.tintSlotCount) + BottomSheetIdentityCue.tintSlotCount) % BottomSheetIdentityCue.tintSlotCount
     }
 }
 

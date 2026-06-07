@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 final class Provia100FPresentationTests: XCTestCase {

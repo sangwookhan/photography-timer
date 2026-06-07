@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// PTIMER-84 polish: covers the formula token model the Formula

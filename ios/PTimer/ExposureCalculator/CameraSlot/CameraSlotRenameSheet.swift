@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// Lightweight sheet that lets the photographer rename a camera slot
 /// or reset its custom name back to the canonical `Camera N` default.

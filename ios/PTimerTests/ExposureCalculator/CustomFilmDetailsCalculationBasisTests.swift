@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 import PTimerCore
 @testable import PTimer
 

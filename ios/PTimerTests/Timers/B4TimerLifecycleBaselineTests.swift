@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 import PTimerCore
 @testable import PTimer
 
@@ -18,7 +19,7 @@ import PTimerCore
 ///   which deletes every timer whose `status(at:)` is `.completed`.
 ///   Scenario `completed-clear-then-restart` uses that.
 /// - The reactivation reconciliation hook is
-///   `reconcileAfterAppBecomesActive(now:)`. Per its contract, it does
+///   `reconcile(now:)`. Per its contract, it does
 ///   *not* emit foreground completion alerts, so scenario
 ///   `reactivation-reconciliation` exercises that branch directly.
 final class B4TimerLifecycleBaselineTests: XCTestCase {
@@ -183,7 +184,7 @@ final class B4TimerLifecycleBaselineTests: XCTestCase {
         harness.advance(by: 120)
         // Reactivation hook reconciles running timers → completed
         // without firing foreground alerts.
-        harness.underlyingTimerManager.reconcileAfterAppBecomesActive(
+        harness.underlyingTimerManager.reconcile(
             now: harness.virtualNow
         )
 

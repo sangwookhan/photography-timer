@@ -18,5 +18,5 @@ public protocol TimerManaging: AnyObject {
     func resume(id: UUID)
     func remove(id: UUID)
     func removeCompletedTimers()
-    func reconcileAfterAppBecomesActive(now: Date?)
+    func reconcile(now: Date?)
 }

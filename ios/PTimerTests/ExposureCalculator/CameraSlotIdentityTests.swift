@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// Unit tests for the camera-slot identity domain type. The display

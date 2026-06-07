@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 import UIKit
 
 /// FilmModeDetailsView contains the bottom-sheet rendering for the

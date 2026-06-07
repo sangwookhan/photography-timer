@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// Result-area card that surfaces the optional Target Shutter feature.
 /// Renders a compact single row in both states:

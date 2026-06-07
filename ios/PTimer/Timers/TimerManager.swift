@@ -107,8 +107,8 @@ final class TimerManager: ObservableObject, TimerManaging {
         reconcileTickingLoop(now: now)
     }
 
-    func reconcileAfterAppBecomesActive(now: Date? = nil) {
-        runtime.reconcileAfterAppBecomesActive(now: now)
+    func reconcile(now: Date? = nil) {
+        runtime.reconcile(now: now)
         reconcileTickingLoop(now: now)
     }
 

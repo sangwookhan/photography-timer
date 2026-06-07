@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 import PTimerCore
 
 /// Result-section views for the Exposure Calculator. Hosts the

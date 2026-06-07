@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// Compact `Tm → Tc` snapshot rendered inside the Formula card of
 /// `CustomFilmEditorView`. Reuses

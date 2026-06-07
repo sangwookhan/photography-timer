@@ -361,7 +361,7 @@ final class TimerManagerPersistenceRestoreTests: XCTestCase {
         XCTAssertEqual(store.loadCallCount, 2)
 
         currentDate = startDate.addingTimeInterval(2)
-        restoredManager.reconcileAfterAppBecomesActive()
+        restoredManager.reconcile()
         restoredManager.tick(now: currentDate)
 
         XCTAssertEqual(store.loadCallCount, 2)

@@ -122,7 +122,7 @@ public final class TimerRuntime: ObservableObject {
         )
     }
 
-    public func reconcileAfterAppBecomesActive(now: Date? = nil) {
+    public func reconcile(now: Date? = nil) {
         guard !timers.isEmpty else {
             return
         }

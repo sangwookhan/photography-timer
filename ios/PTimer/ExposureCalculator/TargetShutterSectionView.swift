@@ -107,24 +107,23 @@ struct TargetShutterSectionView: View {
 ///
 /// Layout (top → bottom):
 ///
-///   • Horizontal pager: [ Quick wheel ] [ Fine Tune wheels ]
-///     The currently active page snaps centred; the other peeks
-///     so the photographer can see "you can swipe for precision".
+///   • Horizontal pager: [ Quick wheel ] | [ Fine Tune wheels ]
+///     The currently active page is shown; the other side shows a
+///     labelled teaser tap target, not live inactive wheels.
 ///   • Target numbers: large, monospaced read-out of the draft
-///     duration. Updates immediately from either Quick or Fine
-///     edits and is the visible source of truth while editing.
+///     duration. Updates from either Quick or Fine edits and is the
+///     visible source of truth while editing.
 ///   • Confirm + Cancel buttons.
 ///
-/// Quick and Fine **do not** live-couple. Both modes write to a
-/// single `state.draftSeconds`, and each mode's wheel state is
-/// derived from the draft via computed bindings (`get` reads from
-/// the draft, `set` mutates the draft). When the photographer
-/// taps Quick, only the Quick setter fires; the Fine wheels'
-/// bindings re-render via SwiftUI's state observation, but their
-/// setters are *not* invoked. The same applies in reverse, so
-/// there is no Quick→Fine→Quick feedback loop and no need for
-/// `DispatchQueue.main.async` flag dances. `quickSelectedPreset`
-/// is only ever set by `applyQuickTap` (direct user choice).
+/// Both modes are *views* of one `state.draftSeconds`: the Quick
+/// anchor and the Fine h/m/s are derived from it, so a Quick change
+/// is reflected in Fine immediately and vice versa. Each picker
+/// binding's `set` routes through the draft model, which drops the
+/// emit unless that picker's mode is the active armed mode — so a
+/// wheel still settling after a swap to the other mode cannot
+/// overwrite the draft (no feedback loop, no `DispatchQueue` dances,
+/// no UIKit observer). `quickSelectedPreset` (the bright highlight)
+/// is set only by a direct Quick selection.
 ///
 /// `state.draftSeconds` is the input session's draft. Confirm
 /// commits it via `onSet`; Cancel discards it via `onCancel` —
@@ -248,10 +247,7 @@ struct TargetShutterInputSheet: View {
             get: { !state.isDraftCleared },
             set: { isOn in
                 if isOn {
-                    state.reArmDraft(
-                        seedSeconds: initialSeconds,
-                        quickPresets: Self.quickPresets
-                    )
+                    state.reArmDraft(seedSeconds: initialSeconds)
                 } else {
                     state.clearDraft()
                 }
@@ -297,7 +293,7 @@ struct TargetShutterInputSheet: View {
                 label: "Fine\nTune",
                 direction: .right,
                 onTap: {
-                    state.setActiveMode(.fine, quickPresets: Self.quickPresets)
+                    state.setActiveMode(.fine)
                 }
             )
             .frame(width: 64)
@@ -344,36 +340,6 @@ struct TargetShutterInputSheet: View {
             .pickerStyle(.wheel)
             .frame(maxHeight: .infinity)
             .clipped()
-            // Display-link-driven mid-scroll observer matches the Base
-            // Shutter / ND Filter responsiveness on the main calculator.
-            // Without this, the Picker only reports a new value on snap,
-            // so Target numbers visibly lag behind the wheel.
-            .background {
-                WheelPickerContinuousObserver(
-                    onSelectedRowChange: { row in
-                        // Drop emits arriving after the user already
-                        // swiped to Fine or flipped the target switch
-                        // Off. Without these guards a late observer
-                        // pulse would mutate the draft and (before
-                        // the model-level changes) yank `activeMode`
-                        // back to `.quick` or silently re-arm the
-                        // cleared draft.
-                        guard !state.isDraftCleared,
-                              state.activeMode == .quick,
-                              Self.quickPresets.indices.contains(row) else {
-                            return
-                        }
-                        // Use the continuous-scroll variant so we do
-                        // not write back to `quickWheelAnchor` while
-                        // the wheel is decelerating — that write
-                        // would re-fire `UIPickerView.selectRow(...)`
-                        // and kill momentum. The anchor catches up on
-                        // settle via `quickAnchorBinding`.
-                        state.applyQuickContinuousScroll(Self.quickPresets[row])
-                    },
-                    onInteractionEnd: {}
-                )
-            }
             .accessibilityIdentifier("target-shutter-quick-picker")
         }
     }
@@ -388,7 +354,7 @@ struct TargetShutterInputSheet: View {
                 label: "Quick",
                 direction: .left,
                 onTap: {
-                    state.setActiveMode(.quick, quickPresets: Self.quickPresets)
+                    state.setActiveMode(.quick)
                 }
             )
             .frame(width: 64)
@@ -415,58 +381,19 @@ struct TargetShutterInputSheet: View {
                     title: "h",
                     range: 0...23,
                     value: fineHoursBinding,
-                    accessibilityID: "target-shutter-hours-picker",
-                    onContinuousRowChange: { row in
-                        // Drop late Fine emits arriving after the user
-                        // already swiped to Quick or flipped the
-                        // switch Off — see `quickAnchorBinding` for
-                        // the symmetric case.
-                        guard !state.isDraftCleared,
-                              state.activeMode == .fine,
-                              (0...23).contains(row) else { return }
-                        // Continuous-scroll variant updates draft only,
-                        // not `state.fineHours`, so the column's own
-                        // Picker binding does not see a state change
-                        // mid-deceleration. The h field catches up on
-                        // settle via `fineHoursBinding`.
-                        state.applyFineContinuousScroll(
-                            hours: row,
-                            minutes: state.fineMinutes,
-                            seconds: state.fineSeconds
-                        )
-                    }
+                    accessibilityID: "target-shutter-hours-picker"
                 )
                 TargetShutterFineColumn(
                     title: "m",
                     range: 0...59,
                     value: fineMinutesBinding,
-                    accessibilityID: "target-shutter-minutes-picker",
-                    onContinuousRowChange: { row in
-                        guard !state.isDraftCleared,
-                              state.activeMode == .fine,
-                              (0...59).contains(row) else { return }
-                        state.applyFineContinuousScroll(
-                            hours: state.fineHours,
-                            minutes: row,
-                            seconds: state.fineSeconds
-                        )
-                    }
+                    accessibilityID: "target-shutter-minutes-picker"
                 )
                 TargetShutterFineColumn(
                     title: "s",
                     range: 0...59,
                     value: fineSecondsBinding,
-                    accessibilityID: "target-shutter-seconds-picker",
-                    onContinuousRowChange: { row in
-                        guard !state.isDraftCleared,
-                              state.activeMode == .fine,
-                              (0...59).contains(row) else { return }
-                        state.applyFineContinuousScroll(
-                            hours: state.fineHours,
-                            minutes: state.fineMinutes,
-                            seconds: row
-                        )
-                    }
+                    accessibilityID: "target-shutter-seconds-picker"
                 )
             }
             .frame(maxHeight: .infinity)
@@ -482,37 +409,26 @@ struct TargetShutterInputSheet: View {
 
     // MARK: - Bindings
 
-    /// Mode-switch binding for the `TabView` selection. Routes
-    /// through `setActiveMode(_:quickPresets:)` so the entering
-    /// wheel reseeds from the current draft (and Quick selection is
-    /// cleared when Fine becomes active).
+    /// Mode-switch binding for the `TabView` selection.
     private var activeModeBinding: Binding<TargetShutterInputState.InputMode> {
         Binding(
             get: { state.activeMode },
             set: { newMode in
-                state.setActiveMode(newMode, quickPresets: Self.quickPresets)
+                state.setActiveMode(newMode)
             }
         )
     }
 
-    /// Quick wheel binding. Reads/writes the *stored* Quick wheel
-    /// anchor — independent of Fine state, so the Fine peek view
-    /// stays still while the user is scrolling Quick.
-    ///
-    /// The setter guards on `state.activeMode == .quick` so a stale
-    /// Picker emit fired after the user already swiped to Fine
-    /// cannot mutate the draft. Combined with the matching guard on
-    /// the continuous observer below, this is what prevents the
-    /// "user swipes from Fine to Quick mid-scroll, sheet jumps back
-    /// to Fine" bug — the late Fine emit reaches this setter after
-    /// `activeMode` is already `.quick`, and the guard drops it.
+    /// Quick wheel binding. `get` derives the parking position (the
+    /// nearest preset to the draft); `set` routes every selection
+    /// through the model, which drops the emit unless Quick is the
+    /// active armed mode — so a wheel still settling after a swap to
+    /// Fine cannot mutate the draft.
     private var quickAnchorBinding: Binding<TimeInterval> {
         Binding(
-            get: { state.quickWheelAnchor },
+            get: { state.quickWheelAnchor(in: Self.quickPresets) },
             set: { newPreset in
-                guard !state.isDraftCleared,
-                      state.activeMode == .quick else { return }
-                state.applyQuickTap(newPreset)
+                state.applyQuickSelection(newPreset)
             }
         )
     }
@@ -521,9 +437,7 @@ struct TargetShutterInputSheet: View {
         Binding(
             get: { state.fineHours },
             set: { newH in
-                guard !state.isDraftCleared,
-                      state.activeMode == .fine else { return }
-                state.applyFineChange(
+                state.applyFineSelection(
                     hours: newH,
                     minutes: state.fineMinutes,
                     seconds: state.fineSeconds
@@ -536,9 +450,7 @@ struct TargetShutterInputSheet: View {
         Binding(
             get: { state.fineMinutes },
             set: { newM in
-                guard !state.isDraftCleared,
-                      state.activeMode == .fine else { return }
-                state.applyFineChange(
+                state.applyFineSelection(
                     hours: state.fineHours,
                     minutes: newM,
                     seconds: state.fineSeconds
@@ -551,9 +463,7 @@ struct TargetShutterInputSheet: View {
         Binding(
             get: { state.fineSeconds },
             set: { newS in
-                guard !state.isDraftCleared,
-                      state.activeMode == .fine else { return }
-                state.applyFineChange(
+                state.applyFineSelection(
                     hours: state.fineHours,
                     minutes: state.fineMinutes,
                     seconds: newS
@@ -655,15 +565,13 @@ private struct TargetShutterDraftReadout: View {
 }
 
 /// A single Fine Tune wheel column (h / m / s). Renders a wheel
-/// `Picker` plus the display-link mid-scroll observer that matches
-/// the Base Shutter / ND Filter responsiveness on the main
-/// calculator; the parent owns the draft and the late-emit guards.
+/// `Picker` bound through the parent's draft model; the model drops
+/// stale emits, so no external observer is needed.
 private struct TargetShutterFineColumn: View {
     let title: String
     let range: ClosedRange<Int>
     @Binding var value: Int
     let accessibilityID: String
-    let onContinuousRowChange: (Int) -> Void
 
     var body: some View {
         VStack(spacing: 2) {
@@ -680,16 +588,6 @@ private struct TargetShutterFineColumn: View {
             .pickerStyle(.wheel)
             .frame(maxWidth: .infinity)
             .clipped()
-            // Each Fine column attaches its own observer; `locatePicker`
-            // walks up from the observation view's frame so the observer
-            // reliably binds to the local h / m / s picker rather than a
-            // sibling column.
-            .background {
-                WheelPickerContinuousObserver(
-                    onSelectedRowChange: onContinuousRowChange,
-                    onInteractionEnd: {}
-                )
-            }
             .accessibilityIdentifier(accessibilityID)
         }
     }

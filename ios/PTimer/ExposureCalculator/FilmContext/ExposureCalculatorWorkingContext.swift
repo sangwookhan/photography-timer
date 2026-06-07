@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 struct ActiveExposureCalculatorContext: Equatable {
     var selectedPresetFilm: FilmIdentity?

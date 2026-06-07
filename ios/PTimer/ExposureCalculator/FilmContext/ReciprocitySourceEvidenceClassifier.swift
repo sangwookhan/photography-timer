@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Presentation-only classifier for `ReciprocitySourceEvidenceRow`.
 /// Recognizes the manufacturer stop-signal pattern — a row whose only

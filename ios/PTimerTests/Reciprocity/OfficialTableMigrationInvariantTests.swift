@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// PTIMER-168 catalog-wide regression coverage for the official

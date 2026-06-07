@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// PTIMER-159: Fomapan 100 Classic's default official model is the

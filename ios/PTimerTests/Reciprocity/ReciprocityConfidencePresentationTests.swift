@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 final class ReciprocityConfidencePresentationTests: XCTestCase {

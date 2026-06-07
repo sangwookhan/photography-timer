@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Pure presenter for the "Reciprocity model" metadata section in
 /// Reciprocity Details (PTIMER-159).

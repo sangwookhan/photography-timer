@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Samples the formula graph's calculation curve — the identity
 /// segment through the no-correction zone joined to the formula

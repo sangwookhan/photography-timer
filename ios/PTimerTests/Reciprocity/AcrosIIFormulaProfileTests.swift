@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Behavior contract for Acros II's formula-based reciprocity

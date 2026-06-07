@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Provia 100F is calculated by a constrained, threshold-anchored

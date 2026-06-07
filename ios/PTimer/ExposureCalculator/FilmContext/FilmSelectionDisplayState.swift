@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 struct FilmSelectorEntry: Equatable, Identifiable {
     let id: String

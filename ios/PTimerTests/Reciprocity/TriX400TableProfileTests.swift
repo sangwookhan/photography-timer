@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Behavior contract for Kodak Tri-X 400's default table-interpolation

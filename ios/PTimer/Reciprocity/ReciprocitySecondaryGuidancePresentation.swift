@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 struct ReciprocitySecondaryGuidancePresentation: Equatable {
     enum Kind: String, Equatable {

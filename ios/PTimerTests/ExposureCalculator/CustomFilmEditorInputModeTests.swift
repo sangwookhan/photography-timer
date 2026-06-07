@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Covers the Basic / Scaled / Advanced editor input modes added

@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Shared correctness helpers for the custom-film formula model.
 /// The editor validate path, the persistence sanitation path, and

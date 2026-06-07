@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Renders the user-facing equation text shown next to a formula
 /// graph for the shared guarded formula model.

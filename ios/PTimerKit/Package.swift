@@ -21,7 +21,12 @@ let package = Package(
         .library(name: "PTimerKit", targets: ["PTimerKit"]),
     ],
     targets: [
-        .target(name: "PTimerCore"),
+        .target(
+            name: "PTimerCore",
+            resources: [
+                .process("Catalog/LaunchPresetFilmCatalog.json"),
+            ]
+        ),
         .target(
             name: "PTimerKit",
             dependencies: ["PTimerCore"]

@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Pure presenter for the "App-derived comparison" section in
 /// Reciprocity Details (PTIMER-159).

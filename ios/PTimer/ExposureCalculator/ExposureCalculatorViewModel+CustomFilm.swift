@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Custom-film glue split from the main facade so the
 /// view-model file does not grow past its size budget when this

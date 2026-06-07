@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Locks the JSON shape of the surviving reciprocity rule kinds.

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Covers the `ReciprocityResult` Codable surface for the

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Structural guard on the bundled `LaunchPresetFilmCatalog`. The

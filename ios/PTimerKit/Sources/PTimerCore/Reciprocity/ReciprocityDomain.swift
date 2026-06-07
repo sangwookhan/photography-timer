@@ -20,14 +20,14 @@ import Foundation
 /// a strict boundary because formula films (e.g. Acros II) encode an
 /// exact-epsilon `noCorrectionThroughSeconds` that a tolerance would
 /// break.
-enum ReciprocityNoCorrectionBoundary {
+public enum ReciprocityNoCorrectionBoundary {
     /// Relative tolerance applied above `noCorrectionThroughSeconds`
     /// when classifying an input as no correction.
-    static let relativeTolerance = 0.10
+    public static let relativeTolerance = 0.10
 
     /// Whether `meteredSeconds` falls within the no-correction band
     /// for the given threshold, including the boundary tolerance.
-    static func isWithinNoCorrection(
+    public static func isWithinNoCorrection(
         meteredSeconds: Double,
         throughSeconds: Double
     ) -> Bool {
@@ -35,35 +35,59 @@ enum ReciprocityNoCorrectionBoundary {
     }
 }
 
-struct FilmIdentity: Codable, Equatable {
-    let id: String
-    let kind: FilmIdentityKind
-    let canonicalStockName: String
-    let manufacturer: String?
-    let brandLabel: String?
-    let aliases: [String]
-    let iso: Int
-    let productionStatus: FilmProductionStatus
-    let profiles: [ReciprocityProfile]
-    let userMetadata: UserEditableMetadata?
+public struct FilmIdentity: Codable, Equatable {
+    public let id: String
+    public let kind: FilmIdentityKind
+    public let canonicalStockName: String
+    public let manufacturer: String?
+    public let brandLabel: String?
+    public let aliases: [String]
+    public let iso: Int
+    public let productionStatus: FilmProductionStatus
+    public let profiles: [ReciprocityProfile]
+    public let userMetadata: UserEditableMetadata?
+
+    public init(
+        id: String,
+        kind: FilmIdentityKind,
+        canonicalStockName: String,
+        manufacturer: String? = nil,
+        brandLabel: String? = nil,
+        aliases: [String],
+        iso: Int,
+        productionStatus: FilmProductionStatus,
+        profiles: [ReciprocityProfile],
+        userMetadata: UserEditableMetadata? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.canonicalStockName = canonicalStockName
+        self.manufacturer = manufacturer
+        self.brandLabel = brandLabel
+        self.aliases = aliases
+        self.iso = iso
+        self.productionStatus = productionStatus
+        self.profiles = profiles
+        self.userMetadata = userMetadata
+    }
 }
 
-enum FilmIdentityKind: String, Codable, Equatable {
+public enum FilmIdentityKind: String, Codable, Equatable {
     case preset
     case custom
     case unknown
 }
 
-enum FilmProductionStatus: String, Codable, Equatable {
+public enum FilmProductionStatus: String, Codable, Equatable {
     case current
     case discontinued
     case unknown
 }
 
-struct UserEditableMetadata: Codable, Equatable {
-    let displayNameOverride: String?
-    let tags: [String]
-    let notes: [String]
+public struct UserEditableMetadata: Codable, Equatable {
+    public let displayNameOverride: String?
+    public let tags: [String]
+    public let notes: [String]
     /// User-supplied classification of a custom (`.userDefined`-
     /// authority) profile's origin. Optional so preset films and
     /// legacy user metadata decode unchanged. The calculation
@@ -71,21 +95,21 @@ struct UserEditableMetadata: Codable, Equatable {
     /// surfaced in the selector subtitle, Film Details, and timer
     /// identity snapshot so a custom profile cannot be mistaken for
     /// manufacturer data.
-    let customSourceType: CustomProfileSourceType?
+    public let customSourceType: CustomProfileSourceType?
     /// Photographer-entered manufacturer string for a custom film
     /// (e.g. `"Kodak"`).
     /// Stored separately from `FilmIdentity.manufacturer` because
     /// the latter drives the selector's manufacturer-grouping pass;
     /// custom films must stay in the dedicated "Custom films"
     /// section regardless of what the photographer typed.
-    let customManufacturer: String?
+    public let customManufacturer: String?
     /// Optional reference URL the photographer can attach so a
     /// later edit recalls the formula's source. Additive Optional
     /// field — older `UserEditableMetadata` payloads decode
     /// unchanged.
-    let referenceURL: String?
+    public let referenceURL: String?
 
-    init(
+    public init(
         displayNameOverride: String? = nil,
         tags: [String] = [],
         notes: [String] = [],
@@ -110,7 +134,7 @@ struct UserEditableMetadata: Codable, Equatable {
         case referenceURL
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.displayNameOverride = try container.decodeIfPresent(String.self, forKey: .displayNameOverride)
         self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
@@ -124,19 +148,19 @@ struct UserEditableMetadata: Codable, Equatable {
     }
 }
 
-struct ReciprocityProfile: Codable, Equatable {
-    let id: String
-    let name: String
-    let source: ReciprocitySourceProvenance
-    let rules: [ReciprocityRule]
-    let notes: [String]
-    let userMetadata: UserEditableMetadata?
+public struct ReciprocityProfile: Codable, Equatable {
+    public let id: String
+    public let name: String
+    public let source: ReciprocitySourceProvenance
+    public let rules: [ReciprocityRule]
+    public let notes: [String]
+    public let userMetadata: UserEditableMetadata?
     /// Published manufacturer reference points the user can verify
     /// against. Display-only — the calculation policy evaluator does
     /// not consume this field, so source-evidence rows cannot enter
     /// the calculation as table anchors even when the profile keeps a
     /// manufacturer reference table on display.
-    let sourceEvidence: [ReciprocitySourceEvidenceRow]
+    public let sourceEvidence: [ReciprocitySourceEvidenceRow]
     /// PTIMER-163 vocabulary distinguishing the manufacturer's source
     /// data shape (`sourceModel`) from the app's calculation strategy
     /// (`calculationModel`). Optional so older preset entries and
@@ -144,7 +168,7 @@ struct ReciprocityProfile: Codable, Equatable {
     /// returns a conservative inferred value when this field is absent.
     /// The runtime calculation policy does NOT read this field — it
     /// is descriptive catalog metadata, not a calculation discriminator.
-    let modelBasis: ReciprocityProfileModelBasis?
+    public let modelBasis: ReciprocityProfileModelBasis?
     /// Optional short label for the compact model selectors (PTIMER-159).
     /// When present it is preferred over the heuristic label derived from
     /// authority / calculation; source-named unofficial / community /
@@ -154,9 +178,9 @@ struct ReciprocityProfile: Codable, Equatable {
     /// in `source` / the Sources section. Optional so every existing
     /// catalog and custom profile decodes unchanged (Fomapan/Portra keep
     /// their derived labels).
-    let selectorLabel: String?
+    public let selectorLabel: String?
 
-    init(
+    public init(
         id: String,
         name: String,
         source: ReciprocitySourceProvenance,
@@ -190,7 +214,7 @@ struct ReciprocityProfile: Codable, Equatable {
         case selectorLabel
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(String.self, forKey: .id)
         self.name = try container.decode(String.self, forKey: .name)
@@ -216,10 +240,10 @@ struct ReciprocityProfile: Codable, Equatable {
 /// renders so users can verify formula-based predictions against the
 /// published data. The calculation policy never consumes these rows,
 /// so source evidence cannot enter the calculation as a table anchor.
-struct ReciprocitySourceEvidenceRow: Codable, Equatable {
-    let meteredExposure: MeteredExposureSelector
-    let adjustments: [ReciprocityAdjustment]
-    let notes: [String]
+public struct ReciprocitySourceEvidenceRow: Codable, Equatable {
+    public let meteredExposure: MeteredExposureSelector
+    public let adjustments: [ReciprocityAdjustment]
+    public let notes: [String]
     /// `true` for rows preserved as published reference only — the
     /// renderer omits the row from formula-graph fitting markers and
     /// prefixes it with `*` in the Source reference block so the user
@@ -228,9 +252,9 @@ struct ReciprocitySourceEvidenceRow: Codable, Equatable {
     /// preserved as published evidence but does not participate in
     /// the formula fit (the calculation path stays no-correction
     /// across the entire sub-1 s band).
-    let isSourceEvidenceOnly: Bool
+    public let isSourceEvidenceOnly: Bool
 
-    init(
+    public init(
         meteredExposure: MeteredExposureSelector,
         adjustments: [ReciprocityAdjustment],
         notes: [String] = [],
@@ -249,7 +273,7 @@ struct ReciprocitySourceEvidenceRow: Codable, Equatable {
         case isSourceEvidenceOnly
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.meteredExposure = try container.decode(MeteredExposureSelector.self, forKey: .meteredExposure)
         self.adjustments = try container.decode([ReciprocityAdjustment].self, forKey: .adjustments)
@@ -266,7 +290,7 @@ extension ReciprocityProfile {
     /// presentation surfaces use "Beyond source range" language for
     /// inputs past the published reference without affecting
     /// source-less formula profiles (HP5 Plus etc.).
-    var isConvertedFormulaProfile: Bool {
+    public var isConvertedFormulaProfile: Bool {
         let hasFormulaRule = rules.contains { rule in
             if case .formula = rule { return true }
             return false
@@ -276,7 +300,7 @@ extension ReciprocityProfile {
 
     /// `true` when the profile evaluates via the log-log table model
     /// (PTIMER-159).
-    var usesTableInterpolation: Bool {
+    public var usesTableInterpolation: Bool {
         rules.contains { rule in
             if case .tableInterpolation = rule { return true }
             return false
@@ -287,7 +311,7 @@ extension ReciprocityProfile {
     /// they can exceed — converted formula profiles and table profiles.
     /// Presentation reads "Beyond source range" for inputs past the
     /// boundary on these profiles (and never on source-less profiles).
-    var presentsBeyondSourceRange: Bool {
+    public var presentsBeyondSourceRange: Bool {
         isConvertedFormulaProfile || usesTableInterpolation
     }
 
@@ -298,7 +322,7 @@ extension ReciprocityProfile {
     /// profiles) behave as if the basis had always been present.
     /// Descriptive only — the calculation policy evaluator does not
     /// branch on this value.
-    var effectiveModelBasis: ReciprocityProfileModelBasis {
+    public var effectiveModelBasis: ReciprocityProfileModelBasis {
         modelBasis ?? inferredModelBasis
     }
 
@@ -372,7 +396,7 @@ extension ReciprocityProfile {
 /// evaluator never reads this value. Custom (`userDefined`) and
 /// older catalog entries decode unchanged because the field is
 /// optional on `ReciprocityProfile`.
-enum ReciprocitySourceModel: String, Codable, Equatable, CaseIterable {
+public enum ReciprocitySourceModel: String, Codable, Equatable, CaseIterable {
     /// Source publishes a closed-form reciprocity formula (e.g.
     /// Ilford / Harman exponent rule).
     case manufacturerFormula
@@ -405,7 +429,7 @@ enum ReciprocitySourceModel: String, Codable, Equatable, CaseIterable {
 /// this enum is catalog vocabulary that lets the entry say "source
 /// published a table, app uses a guarded formula" without re-deriving
 /// the answer from rule shape.
-enum ReciprocityCalculationModel: String, Codable, Equatable, CaseIterable {
+public enum ReciprocityCalculationModel: String, Codable, Equatable, CaseIterable {
     /// PTIMER-160 guarded reciprocity formula
     /// (`ReciprocityFormula`).
     case guardedFormula
@@ -433,21 +457,29 @@ enum ReciprocityCalculationModel: String, Codable, Equatable, CaseIterable {
 /// calculated for a profile. PTIMER-163 introduced this struct so the
 /// catalog can distinguish the source data shape from the calculation
 /// strategy without changing calculation behavior.
-struct ReciprocityProfileModelBasis: Codable, Equatable {
-    let sourceModel: ReciprocitySourceModel
-    let calculationModel: ReciprocityCalculationModel
+public struct ReciprocityProfileModelBasis: Codable, Equatable {
+    public let sourceModel: ReciprocitySourceModel
+    public let calculationModel: ReciprocityCalculationModel
+
+    public init(
+        sourceModel: ReciprocitySourceModel,
+        calculationModel: ReciprocityCalculationModel
+    ) {
+        self.sourceModel = sourceModel
+        self.calculationModel = calculationModel
+    }
 }
 
-struct ReciprocitySourceProvenance: Codable, Equatable {
-    let kind: ReciprocitySourceKind
-    let authority: ReciprocityAuthority
-    let confidence: ReciprocityConfidence
-    let publisher: String
-    let title: String?
-    let citation: String?
-    let sourceVersion: String?
+public struct ReciprocitySourceProvenance: Codable, Equatable {
+    public let kind: ReciprocitySourceKind
+    public let authority: ReciprocityAuthority
+    public let confidence: ReciprocityConfidence
+    public let publisher: String
+    public let title: String?
+    public let citation: String?
+    public let sourceVersion: String?
 
-    init(
+    public init(
         kind: ReciprocitySourceKind,
         authority: ReciprocityAuthority,
         confidence: ReciprocityConfidence = .unknown,
@@ -466,7 +498,7 @@ struct ReciprocitySourceProvenance: Codable, Equatable {
     }
 }
 
-enum ReciprocitySourceKind: String, Codable, Equatable {
+public enum ReciprocitySourceKind: String, Codable, Equatable {
     case manufacturerPublished
     case manufacturerArchive
     case thirdPartyPublication
@@ -474,14 +506,14 @@ enum ReciprocitySourceKind: String, Codable, Equatable {
     case unknown
 }
 
-enum ReciprocityAuthority: String, Codable, Equatable {
+public enum ReciprocityAuthority: String, Codable, Equatable {
     case official
     case unofficial
     case userDefined
     case unknown
 }
 
-enum ReciprocityConfidence: String, Codable, Equatable {
+public enum ReciprocityConfidence: String, Codable, Equatable {
     case high
     case medium
     case low
@@ -499,13 +531,13 @@ enum ReciprocityConfidence: String, Codable, Equatable {
 /// this enum with a new rule case and the profile validator + decoder
 /// alongside; PTIMER-160's scope is limited to defining the formula
 /// model and does not close that door.
-enum ReciprocityRule: Codable, Equatable {
+public enum ReciprocityRule: Codable, Equatable {
     case threshold(ThresholdReciprocityRule)
     case formula(FormulaReciprocityRule)
     case limitedGuidance(LimitedGuidanceReciprocityRule)
     case tableInterpolation(TableInterpolationReciprocityRule)
 
-    var kind: ReciprocityRuleKind {
+    public var kind: ReciprocityRuleKind {
         switch self {
         case .threshold:
             return .threshold
@@ -526,7 +558,7 @@ enum ReciprocityRule: Codable, Equatable {
         case tableInterpolation
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let kind = try container.decode(ReciprocityRuleKind.self, forKey: .kind)
 
@@ -546,7 +578,7 @@ enum ReciprocityRule: Codable, Equatable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(kind, forKey: .kind)
 
@@ -563,19 +595,19 @@ enum ReciprocityRule: Codable, Equatable {
     }
 }
 
-enum ReciprocityRuleKind: String, Codable, Equatable {
+public enum ReciprocityRuleKind: String, Codable, Equatable {
     case threshold
     case formula
     case limitedGuidance
     case tableInterpolation
 }
 
-struct ThresholdReciprocityRule: Codable, Equatable {
-    let noCorrectionRange: ReciprocityTimeRange
-    let adjustments: [ReciprocityAdjustment]
-    let notes: [String]
+public struct ThresholdReciprocityRule: Codable, Equatable {
+    public let noCorrectionRange: ReciprocityTimeRange
+    public let adjustments: [ReciprocityAdjustment]
+    public let notes: [String]
 
-    init(
+    public init(
         noCorrectionRange: ReciprocityTimeRange,
         adjustments: [ReciprocityAdjustment] = [],
         notes: [String] = []
@@ -586,12 +618,12 @@ struct ThresholdReciprocityRule: Codable, Equatable {
     }
 }
 
-struct FormulaReciprocityRule: Codable, Equatable {
-    let formula: ReciprocityFormula
-    let additionalAdjustments: [ReciprocityAdjustment]
-    let notes: [String]
+public struct FormulaReciprocityRule: Codable, Equatable {
+    public let formula: ReciprocityFormula
+    public let additionalAdjustments: [ReciprocityAdjustment]
+    public let notes: [String]
 
-    init(
+    public init(
         formula: ReciprocityFormula,
         additionalAdjustments: [ReciprocityAdjustment] = [],
         notes: [String] = []
@@ -607,7 +639,7 @@ struct FormulaReciprocityRule: Codable, Equatable {
         case notes
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.formula = try container.decode(ReciprocityFormula.self, forKey: .formula)
         self.additionalAdjustments = try container.decodeIfPresent(
@@ -623,12 +655,12 @@ struct FormulaReciprocityRule: Codable, Equatable {
 /// Kodak Portra / Ektar / Ektachrome). The rule never yields a
 /// quantified corrected exposure; presentation surfaces the result as
 /// "No quantified prediction".
-struct LimitedGuidanceReciprocityRule: Codable, Equatable {
-    let appliesWhenMetered: ReciprocityTimeRange?
-    let adjustments: [ReciprocityAdjustment]
-    let notes: [String]
+public struct LimitedGuidanceReciprocityRule: Codable, Equatable {
+    public let appliesWhenMetered: ReciprocityTimeRange?
+    public let adjustments: [ReciprocityAdjustment]
+    public let notes: [String]
 
-    init(
+    public init(
         appliesWhenMetered: ReciprocityTimeRange? = nil,
         adjustments: [ReciprocityAdjustment] = [],
         notes: [String] = []
@@ -641,9 +673,17 @@ struct LimitedGuidanceReciprocityRule: Codable, Equatable {
 
 /// One published anchor in a manufacturer reciprocity table: a metered
 /// exposure mapped to its published corrected exposure (PTIMER-159).
-struct TableAnchor: Codable, Equatable {
-    let meteredSeconds: Double
-    let correctedSeconds: Double
+public struct TableAnchor: Codable, Equatable {
+    public let meteredSeconds: Double
+    public let correctedSeconds: Double
+
+    public init(
+        meteredSeconds: Double,
+        correctedSeconds: Double
+    ) {
+        self.meteredSeconds = meteredSeconds
+        self.correctedSeconds = correctedSeconds
+    }
 }
 
 /// PTIMER-159 calculation rule: convert a manufacturer reciprocity
@@ -660,14 +700,14 @@ struct TableAnchor: Codable, Equatable {
 /// - `sourceRangeThroughSeconds`: the published table's upper bound (the
 ///   last anchor's metered value). Inputs above it still compute a value by
 ///   extrapolating the last log-log segment, classified beyond source range.
-struct TableInterpolationReciprocityRule: Codable, Equatable {
-    let anchors: [TableAnchor]
-    let additionalAdjustments: [ReciprocityAdjustment]
-    let notes: [String]
-    let noCorrectionThroughSeconds: Double
-    let sourceRangeThroughSeconds: Double
+public struct TableInterpolationReciprocityRule: Codable, Equatable {
+    public let anchors: [TableAnchor]
+    public let additionalAdjustments: [ReciprocityAdjustment]
+    public let notes: [String]
+    public let noCorrectionThroughSeconds: Double
+    public let sourceRangeThroughSeconds: Double
 
-    init(
+    public init(
         anchors: [TableAnchor],
         additionalAdjustments: [ReciprocityAdjustment] = [],
         notes: [String] = [],
@@ -689,7 +729,7 @@ struct TableInterpolationReciprocityRule: Codable, Equatable {
         case sourceRangeThroughSeconds
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.anchors = try container.decode([TableAnchor].self, forKey: .anchors)
         self.additionalAdjustments = try container.decodeIfPresent(
@@ -708,13 +748,13 @@ struct TableInterpolationReciprocityRule: Codable, Equatable {
     }
 }
 
-struct ReciprocityTimeRange: Codable, Equatable {
+public struct ReciprocityTimeRange: Codable, Equatable {
     // Validation-facing semantics are inclusive at both ends.
     // A missing maximum means the range continues upward from minimumSeconds.
-    let minimumSeconds: Double
-    let maximumSeconds: Double?
+    public let minimumSeconds: Double
+    public let maximumSeconds: Double?
 
-    init(minimumSeconds: Double, maximumSeconds: Double? = nil) {
+    public init(minimumSeconds: Double, maximumSeconds: Double? = nil) {
         self.minimumSeconds = minimumSeconds
         self.maximumSeconds = maximumSeconds
     }
@@ -726,7 +766,7 @@ struct ReciprocityTimeRange: Codable, Equatable {
 /// add the next family. Downstream consumers MUST switch on this
 /// enum exhaustively (no `default` branch) so adding a future case
 /// surfaces as a compile error rather than a silent fall-through.
-enum FormulaFamily: String, Codable, Equatable, CaseIterable {
+public enum FormulaFamily: String, Codable, Equatable, CaseIterable {
     case modifiedSchwarzschild
 }
 
@@ -757,28 +797,28 @@ enum FormulaFamily: String, Codable, Equatable, CaseIterable {
 /// (table-converted formula refit), and PTIMER-162 (next formula
 /// family). Custom and shipped formula profiles both use this struct
 /// so downstream surfaces only have one shape to consume.
-struct ReciprocityFormula: Codable, Equatable {
+public struct ReciprocityFormula: Codable, Equatable {
     /// Required. See `FormulaFamily` for current scope. The custom
     /// decoder rejects missing or unknown values so a future family
     /// cannot silently fall through.
-    let formulaFamily: FormulaFamily
+    public let formulaFamily: FormulaFamily
     /// Scale coefficient `a` (in seconds). At `Tm = Tref` the power
     /// term equals `a`, so the corrected exposure is `a + b` — the
     /// offset is always added on top. Default `1` is the neutral
     /// coefficient; `a` is NOT the corrected time when `b ≠ 0`.
-    let coefficientSeconds: Double
+    public let coefficientSeconds: Double
     /// Reference metered time `Tref` used to scale the input. Default
     /// `1s` reduces `Tc = a × (Tm / Tref)^p + b` to the legacy power
     /// form `Tc = a × Tm^p + b`.
-    let referenceMeteredTimeSeconds: Double
+    public let referenceMeteredTimeSeconds: Double
     /// Exponent `p` driving curve steepness. Required.
-    let exponent: Double
+    public let exponent: Double
     /// Constant offset `b` (in seconds) added after the power term.
     /// Default `0` (no offset).
-    let offsetSeconds: Double
+    public let offsetSeconds: Double
     /// Upper bound (inclusive) of the no-correction band. At or
     /// below this metered exposure the formula returns `Tc = Tm`.
-    let noCorrectionThroughSeconds: Double
+    public let noCorrectionThroughSeconds: Double
     /// Upper bound (inclusive) of the manufacturer-supported source
     /// / fitting range. Inputs strictly above this value still
     /// compute a corrected exposure; the presentation layer
@@ -786,14 +826,14 @@ struct ReciprocityFormula: Codable, Equatable {
     /// formula carries no published source boundary and every
     /// formula-domain input stays classified as within the stated
     /// range.
-    let sourceRangeThroughSeconds: Double?
+    public let sourceRangeThroughSeconds: Double?
 
     /// `formulaFamily` defaults to `.modifiedSchwarzschild` for
     /// Swift-side construction convenience only (test fixtures,
     /// in-code factories). The serialized form has no such default —
     /// `init(from:)` `decode`s the field so a missing or unknown
     /// value throws.
-    init(
+    public init(
         formulaFamily: FormulaFamily = .modifiedSchwarzschild,
         coefficientSeconds: Double = 1,
         referenceMeteredTimeSeconds: Double = 1,
@@ -821,7 +861,7 @@ struct ReciprocityFormula: Codable, Equatable {
         case sourceRangeThroughSeconds
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         // `formulaFamily` is required in the on-disk schema. Decoding
         // intentionally throws when missing or unknown so an unknown
@@ -855,7 +895,7 @@ struct ReciprocityFormula: Codable, Equatable {
 
 extension ReciprocityFormula {
     /// Outcome of a single formula evaluation.
-    enum EvaluationResult: Equatable {
+    public enum EvaluationResult: Equatable {
         /// `Tm` sat inside the no-correction band. `Tc = Tm`.
         case noCorrection
         /// Formula produced a finite, positive corrected exposure
@@ -909,7 +949,7 @@ extension ReciprocityFormula {
     ///   strictly greater than `noCorrectionThroughSeconds` so the
     ///   formula has a non-empty source range above the
     ///   no-correction band.
-    var hasValidParameters: Bool {
+    public var hasValidParameters: Bool {
         guard coefficientSeconds.isFinite, coefficientSeconds > 0 else { return false }
         guard referenceMeteredTimeSeconds.isFinite, referenceMeteredTimeSeconds > 0 else { return false }
         guard exponent.isFinite else { return false }
@@ -939,7 +979,7 @@ extension ReciprocityFormula {
     /// with no `default` branch: PTIMER-162 will add a new family
     /// `case` and the compiler must surface the omission here rather
     /// than silently falling back to Modified Schwarzschild.
-    func evaluate(meteredExposureSeconds: Double) -> EvaluationResult {
+    public func evaluate(meteredExposureSeconds: Double) -> EvaluationResult {
         // Bad input flows to a distinct case so the policy can
         // surface it as unsupported instead of silently returning
         // "no correction needed" — important for PTIMER-84 custom
@@ -996,7 +1036,7 @@ extension ReciprocityFormula {
     }
 }
 
-enum MeteredExposureSelector: Codable, Equatable {
+public enum MeteredExposureSelector: Codable, Equatable {
     case exactSeconds(Double)
     case range(ReciprocityTimeRange)
 
@@ -1011,7 +1051,7 @@ enum MeteredExposureSelector: Codable, Equatable {
         case range
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let kind = try container.decode(SelectorKind.self, forKey: .kind)
 
@@ -1023,7 +1063,7 @@ enum MeteredExposureSelector: Codable, Equatable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
         switch self {
@@ -1037,7 +1077,7 @@ enum MeteredExposureSelector: Codable, Equatable {
     }
 }
 
-enum ReciprocityAdjustment: Codable, Equatable {
+public enum ReciprocityAdjustment: Codable, Equatable {
     case exposure(ExposureAdjustment)
     case colorFilter(ColorFilterRecommendation)
     case development(DevelopmentAdjustment)
@@ -1061,7 +1101,7 @@ enum ReciprocityAdjustment: Codable, Equatable {
         case note
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let kind = try container.decode(AdjustmentKind.self, forKey: .kind)
 
@@ -1079,7 +1119,7 @@ enum ReciprocityAdjustment: Codable, Equatable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
         switch self {
@@ -1102,7 +1142,7 @@ enum ReciprocityAdjustment: Codable, Equatable {
     }
 }
 
-enum ExposureAdjustment: Codable, Equatable {
+public enum ExposureAdjustment: Codable, Equatable {
     case correctedTime(CorrectedTimeMapping)
     case stopDelta(StopDeltaAdjustment)
     case multiplier(MultiplierAdjustment)
@@ -1120,7 +1160,7 @@ enum ExposureAdjustment: Codable, Equatable {
         case multiplier
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let kind = try container.decode(ExposureKind.self, forKey: .kind)
 
@@ -1134,7 +1174,7 @@ enum ExposureAdjustment: Codable, Equatable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
         switch self {
@@ -1151,9 +1191,9 @@ enum ExposureAdjustment: Codable, Equatable {
     }
 }
 
-struct CorrectedTimeMapping: Codable, Equatable {
-    let meteredSeconds: Double?
-    let correctedSeconds: Double
+public struct CorrectedTimeMapping: Codable, Equatable {
+    public let meteredSeconds: Double?
+    public let correctedSeconds: Double
     /// `true` when `correctedSeconds` should be displayed as a rounded
     /// approximation of an irrational conversion — typically a
     /// fractional-stop derivation `metered × 2^stopDelta` on a row
@@ -1164,9 +1204,9 @@ struct CorrectedTimeMapping: Codable, Equatable {
     /// tell rounded values from published or exactly-converted ones at
     /// a glance. `false` for source-published rows and for exact-
     /// arithmetic catalog conversions.
-    let isApproximate: Bool
+    public let isApproximate: Bool
 
-    init(
+    public init(
         meteredSeconds: Double? = nil,
         correctedSeconds: Double,
         isApproximate: Bool = false
@@ -1182,7 +1222,7 @@ struct CorrectedTimeMapping: Codable, Equatable {
         case isApproximate
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         meteredSeconds = try container.decodeIfPresent(Double.self, forKey: .meteredSeconds)
         correctedSeconds = try container.decode(Double.self, forKey: .correctedSeconds)
@@ -1192,42 +1232,69 @@ struct CorrectedTimeMapping: Codable, Equatable {
     }
 }
 
-struct StopDeltaAdjustment: Codable, Equatable {
-    let stopDelta: Double
+public struct StopDeltaAdjustment: Codable, Equatable {
+    public let stopDelta: Double
+
+    public init(stopDelta: Double) {
+        self.stopDelta = stopDelta
+    }
 }
 
-struct MultiplierAdjustment: Codable, Equatable {
-    let factor: Double
+public struct MultiplierAdjustment: Codable, Equatable {
+    public let factor: Double
+
+    public init(factor: Double) {
+        self.factor = factor
+    }
 }
 
-struct ColorFilterRecommendation: Codable, Equatable {
-    let filterName: String
-    let note: String?
+public struct ColorFilterRecommendation: Codable, Equatable {
+    public let filterName: String
+    public let note: String?
+
+    public init(filterName: String, note: String? = nil) {
+        self.filterName = filterName
+        self.note = note
+    }
 }
 
-struct DevelopmentAdjustment: Codable, Equatable {
-    let instruction: String
-    let note: String?
+public struct DevelopmentAdjustment: Codable, Equatable {
+    public let instruction: String
+    public let note: String?
+
+    public init(instruction: String, note: String? = nil) {
+        self.instruction = instruction
+        self.note = note
+    }
 }
 
-struct ReciprocityWarning: Codable, Equatable {
-    let severity: ReciprocityWarningSeverity
-    let message: String
+public struct ReciprocityWarning: Codable, Equatable {
+    public let severity: ReciprocityWarningSeverity
+    public let message: String
+
+    public init(severity: ReciprocityWarningSeverity, message: String) {
+        self.severity = severity
+        self.message = message
+    }
 }
 
-enum ReciprocityWarningSeverity: String, Codable, Equatable {
+public enum ReciprocityWarningSeverity: String, Codable, Equatable {
     case caution
     case notRecommended
 }
 
-struct ReciprocityNote: Codable, Equatable {
-    let text: String
+public struct ReciprocityNote: Codable, Equatable {
+    public let text: String
+
+    public init(text: String) {
+        self.text = text
+    }
 }
 
 // Unofficial practical profiles defined separately from the launch preset catalog.
 // The launch catalog enforces exactly one official manufacturer profile per film identity.
 // Profiles in this registry are lower-authority supplementary data for future UI exposure.
-enum UnofficialPracticalProfiles {
+public enum UnofficialPracticalProfiles {
 
     // Unofficial practical approximation profile for Kodak Portra 400.
     //
@@ -1235,7 +1302,7 @@ enum UnofficialPracticalProfiles {
     // "kodak-portra-official-threshold" in the launch preset catalog and must never
     // replace or shadow it.
     //
-    static func profile(forFilmID filmID: String) -> ReciprocityProfile? {
+    public static func profile(forFilmID filmID: String) -> ReciprocityProfile? {
         switch filmID {
         case "kodak-portra-400": return kodakPortra400UnofficialPractical
         default: return nil
@@ -1248,7 +1315,7 @@ enum UnofficialPracticalProfiles {
     // presenter does not surface a Sources section that would imply an
     // external citation. The unofficial-authority subtitle plus the
     // caveat note carry the user-facing disclosure.
-    static let kodakPortra400UnofficialPractical = ReciprocityProfile(
+    public static let kodakPortra400UnofficialPractical = ReciprocityProfile(
         id: "kodak-portra-400-unofficial-practical",
         name: "Unofficial practical approximation",
         source: ReciprocitySourceProvenance(

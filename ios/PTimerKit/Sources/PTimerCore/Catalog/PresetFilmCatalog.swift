@@ -1,10 +1,10 @@
 import Foundation
 
-enum LaunchPresetFilmCatalog {
-    static let resourceName = "LaunchPresetFilmCatalog"
-    static let resourceExtension = "json"
+public enum LaunchPresetFilmCatalog {
+    public static let resourceName = "LaunchPresetFilmCatalog"
+    public static let resourceExtension = "json"
 
-    static let films: [FilmIdentity] = {
+    public static let films: [FilmIdentity] = {
         do {
             return try LaunchPresetFilmCatalogLoader().loadBundledCatalog()
         } catch {
@@ -13,23 +13,16 @@ enum LaunchPresetFilmCatalog {
         }
     }()
 
-    static func defaultResourceBundles() -> [Bundle] {
-        let candidates = [Bundle.main, Bundle(for: LaunchPresetFilmCatalogBundleMarker.self)]
-            + Bundle.allBundles
-            + Bundle.allFrameworks
-
-        var seenBundlePaths: Set<String> = []
-        return candidates.filter { bundle in
-            let path = bundle.bundleURL.standardizedFileURL.path
-            return seenBundlePaths.insert(path).inserted
-        }
+    public static func defaultResourceBundles() -> [Bundle] {
+        [.module]
     }
 }
 
-struct LaunchPresetFilmCatalogLoader {
+public struct LaunchPresetFilmCatalogLoader {
+    public init() {}
     private let decoder = JSONDecoder()
 
-    func loadBundledCatalog(
+    public func loadBundledCatalog(
         resourceName: String = LaunchPresetFilmCatalog.resourceName,
         resourceExtension: String = LaunchPresetFilmCatalog.resourceExtension,
         bundleCandidates: [Bundle] = LaunchPresetFilmCatalog.defaultResourceBundles()
@@ -48,7 +41,7 @@ struct LaunchPresetFilmCatalogLoader {
         )
     }
 
-    func loadCatalog(from url: URL) throws -> [FilmIdentity] {
+    public func loadCatalog(from url: URL) throws -> [FilmIdentity] {
         do {
             let data = try Data(contentsOf: url)
             return try loadCatalog(from: data)
@@ -59,7 +52,7 @@ struct LaunchPresetFilmCatalogLoader {
         }
     }
 
-    func loadCatalog(from data: Data) throws -> [FilmIdentity] {
+    public func loadCatalog(from data: Data) throws -> [FilmIdentity] {
         let films: [FilmIdentity]
 
         do {
@@ -394,7 +387,7 @@ struct LaunchPresetFilmCatalogLoader {
     }
 }
 
-enum LaunchPresetFilmCatalogLoaderError: Error, Equatable {
+public enum LaunchPresetFilmCatalogLoaderError: Error, Equatable {
     case missingBundledResource(name: String, fileExtension: String)
     case unreadableResource(String)
     case malformedResource(String)
@@ -412,7 +405,7 @@ enum LaunchPresetFilmCatalogLoaderError: Error, Equatable {
 }
 
 extension LaunchPresetFilmCatalogLoaderError: LocalizedError {
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case let .missingBundledResource(name, fileExtension):
             return "Bundled launch preset film catalog resource '\(name).\(fileExtension)' was not found."

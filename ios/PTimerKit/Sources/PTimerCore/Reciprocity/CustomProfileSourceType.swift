@@ -13,7 +13,7 @@ import Foundation
 /// never be mistaken for official manufacturer data: every case
 /// renders with a "Custom" badge on the selector row and a
 /// source-type subtitle in the Details surface.
-enum CustomProfileSourceType: String, Codable, Equatable, CaseIterable, Hashable {
+public enum CustomProfileSourceType: String, Codable, Equatable, CaseIterable, Hashable {
     /// Catch-all for a custom profile whose origin the user did not
     /// classify further. Default for new entries.
     case userDefined
@@ -32,7 +32,7 @@ enum CustomProfileSourceType: String, Codable, Equatable, CaseIterable, Hashable
 
     /// Short user-facing label rendered in the selector subtitle
     /// and in the Details source-type row.
-    var displayLabel: String {
+    public var displayLabel: String {
         switch self {
         case .userDefined: return "User-defined"
         case .personalTest: return "Personal test"

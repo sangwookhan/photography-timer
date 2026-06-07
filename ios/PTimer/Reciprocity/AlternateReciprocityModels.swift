@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Registry of alternate reciprocity profiles/models that live OUTSIDE
 /// the launch preset catalog (which enforces exactly one official

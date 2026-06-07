@@ -1,4 +1,5 @@
 import Foundation
+import PTimerKit
 import PTimerCore
 @testable import PTimer
 

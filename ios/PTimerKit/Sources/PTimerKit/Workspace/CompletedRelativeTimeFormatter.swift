@@ -1,16 +1,18 @@
 import Foundation
+import PTimerCore
 
-struct CompletedRelativeTimeFormatter {
-    enum Style {
+public struct CompletedRelativeTimeFormatter {
+    public init() {}
+    public enum Style {
         case regular
         case compact
     }
 
-    func string(from completionDate: Date, relativeTo referenceDate: Date) -> String {
+    public func string(from completionDate: Date, relativeTo referenceDate: Date) -> String {
         string(from: completionDate, relativeTo: referenceDate, style: .regular)
     }
 
-    func compactString(from completionDate: Date, relativeTo referenceDate: Date) -> String {
+    public func compactString(from completionDate: Date, relativeTo referenceDate: Date) -> String {
         string(from: completionDate, relativeTo: referenceDate, style: .compact)
     }
 
@@ -32,7 +34,7 @@ struct CompletedRelativeTimeFormatter {
         }
     }
 
-    func nextRefreshDate(from completionDate: Date, relativeTo referenceDate: Date) -> Date? {
+    public func nextRefreshDate(from completionDate: Date, relativeTo referenceDate: Date) -> Date? {
         let elapsedSeconds = max(0, referenceDate.timeIntervalSince(completionDate))
         let nextBoundary: TimeInterval
 

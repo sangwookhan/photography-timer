@@ -14,9 +14,8 @@ final class PTimerComponentThemeTests: XCTestCase {
             theme.accentRunning,
             theme.accentInfo,
             theme.accentWarning,
-            theme.accentError,
         ]
-        XCTAssertEqual(accents.count, 4)
+        XCTAssertEqual(accents.count, 3)
     }
 
     func testCustomThemeRoundTripsTokens() {
@@ -24,14 +23,11 @@ final class PTimerComponentThemeTests: XCTestCase {
             surface: .white,
             surfaceSecondary: .gray,
             surfaceTertiary: .gray,
-            surfaceGrouped: .gray,
             recessedFill: .gray,
             separator: .gray,
             accentRunning: .green,
             accentInfo: .blue,
-            accentWarning: .orange,
-            accentError: .red,
-            accentNeutral: .brown
+            accentWarning: .orange
         )
         XCTAssertEqual(theme.accentRunning, .green)
         XCTAssertEqual(theme.separator, .gray)

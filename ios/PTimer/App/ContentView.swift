@@ -16,14 +16,11 @@ private extension PTimerComponentTheme {
         surface: Color(.systemBackground),
         surfaceSecondary: Color(.secondarySystemBackground),
         surfaceTertiary: Color(.tertiarySystemBackground),
-        surfaceGrouped: Color(.systemGroupedBackground),
         recessedFill: Color(.tertiarySystemFill),
         separator: Color(.separator),
         accentRunning: Color(.systemGreen),
         accentInfo: Color(.systemBlue),
         accentWarning: Color(.systemOrange),
-        accentError: Color(.systemRed),
-        accentNeutral: Color(.systemBrown),
         // The graph's domain colors shipped as SwiftUI-native values
         // (.accentColor / .blue / .red / .green / .orange / .pink / .primary /
         // .secondary), so the kit's GraphPalette default reproduces the exact

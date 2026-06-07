@@ -79,7 +79,6 @@
 		A00000000000000000000228 /* TargetShutterModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000229 /* TargetShutterModelTests.swift */; };
 		A0000000000000000000022A /* TargetShutterPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022B /* TargetShutterPresenterTests.swift */; };
 		A0000000000000000000022C /* ExposureCalculatorViewModelTargetShutterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */; };
-		A00000000000000000000230 /* TargetShutterInputStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000231 /* TargetShutterInputStateTests.swift */; };
 		A00000000000000000000232 /* Provia100FFormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */; };
 		A00000000000000000000236 /* Velvia50FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */; };
 		A00000000000000000000238 /* Velvia100FormulaProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */; };
@@ -283,7 +282,6 @@
 		A00000000000000000000229 /* TargetShutterModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterModelTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000022B /* TargetShutterPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterPresenterTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelTargetShutterTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000231 /* TargetShutterInputStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterInputStateTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000233 /* Provia100FFormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provia100FFormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000237 /* Velvia50FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia50FormulaProfileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000239 /* Velvia100FormulaProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Velvia100FormulaProfileTests.swift; sourceTree = "<group>"; };
@@ -537,7 +535,6 @@
 				A00000000000000000000229 /* TargetShutterModelTests.swift */,
 				A0000000000000000000022B /* TargetShutterPresenterTests.swift */,
 				A0000000000000000000022D /* ExposureCalculatorViewModelTargetShutterTests.swift */,
-				A00000000000000000000231 /* TargetShutterInputStateTests.swift */,
 				A00000000000000000000963 /* CustomFilmEditorFormStateTests.swift */,
 				A00000000000000000000965 /* CustomFilmLibraryTests.swift */,
 				A00000000000000000000967 /* ExposureCalculatorViewModelCustomFilmTests.swift */,
@@ -1061,7 +1058,6 @@
 				A00000000000000000000228 /* TargetShutterModelTests.swift in Sources */,
 				A0000000000000000000022A /* TargetShutterPresenterTests.swift in Sources */,
 				A0000000000000000000022C /* ExposureCalculatorViewModelTargetShutterTests.swift in Sources */,
-				A00000000000000000000230 /* TargetShutterInputStateTests.swift in Sources */,
 				A00000000000000000000962 /* CustomFilmEditorFormStateTests.swift in Sources */,
 				A00000000000000000000964 /* CustomFilmLibraryTests.swift in Sources */,
 				A00000000000000000000966 /* ExposureCalculatorViewModelCustomFilmTests.swift in Sources */,

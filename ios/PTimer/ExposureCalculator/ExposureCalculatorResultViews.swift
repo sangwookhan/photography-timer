@@ -269,13 +269,17 @@ private struct ResultValueRow: View {
                     .accessibilityIdentifier(valueAccessibilityIdentifier)
             }
 
-            TimerActionView(
-                canStartTimer: canStartTimer,
-                onStart: onStartTimer,
-                style: style,
-                accessibilityIdentifier: timerAccessibilityIdentifier,
+            TimerActionButton(
+                isEnabled: canStartTimer,
+                metrics: TimerActionMetrics(
+                    diameter: style.timerActionSize,
+                    iconPointSize: style.timerActionIconSize
+                ),
+                style: .recessed,
                 accessibilityLabel: timerAccessibilityLabel,
-                accessibilityHint: timerAccessibilityHint
+                accessibilityHint: timerAccessibilityHint,
+                accessibilityIdentifier: timerAccessibilityIdentifier,
+                action: onStartTimer
             )
         }
         .frame(minHeight: style.filmResultRowMinHeight, alignment: .center)
@@ -442,35 +446,4 @@ private struct FilmModeCorrectedExposureRow: View {
     }
 }
 
-private struct TimerActionView: View {
-    let canStartTimer: Bool
-    let onStart: () -> Void
-    let style: ExposureWorkspaceMainLayoutStyle
-    let accessibilityIdentifier: String
-    let accessibilityLabel: String
-    let accessibilityHint: String
 
-    var body: some View {
-        Button {
-            onStart()
-        } label: {
-            Image(systemName: "play.fill")
-                .font(.system(size: style.timerActionIconSize, weight: .semibold))
-                .foregroundStyle(canStartTimer ? Color.accentColor : Color.secondary.opacity(0.8))
-                .frame(width: style.timerActionSize, height: style.timerActionSize)
-                .background(
-                    Circle()
-                        .fill(Color(.tertiarySystemFill))
-                )
-                .overlay(
-                    Circle()
-                        .stroke(Color(.separator).opacity(0.55), lineWidth: 0.8)
-                )
-        }
-        .buttonStyle(.plain)
-        .disabled(!canStartTimer)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
-        .accessibilityIdentifier(accessibilityIdentifier)
-    }
-}

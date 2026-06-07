@@ -159,10 +159,17 @@ struct TargetShutterSectionView: View {
             .accessibilityHint("Opens a sheet to change the target duration")
             .accessibilityIdentifier("target-shutter-edit-button")
 
-            TargetTimerActionView(
-                canStart: canStartTimer,
-                onStart: onStartTargetTimer,
-                style: style
+            TimerActionButton(
+                isEnabled: canStartTimer,
+                metrics: TimerActionMetrics(
+                    diameter: style.timerActionSize - 8,
+                    iconPointSize: style.timerActionIconSize - 1
+                ),
+                style: .tintedWhenEnabled,
+                accessibilityLabel: "Start target shutter timer",
+                accessibilityHint: "Starts a timer using the photographer-supplied target duration",
+                accessibilityIdentifier: "target-shutter-start-timer-button",
+                action: onStartTargetTimer
             )
         }
     }
@@ -306,40 +313,6 @@ struct TargetShutterSectionView: View {
     }
 }
 
-private struct TargetTimerActionView: View {
-    let canStart: Bool
-    let onStart: () -> Void
-    let style: ExposureWorkspaceMainLayoutStyle
-
-    var body: some View {
-        // PTIMER-172: the Target Shutter row is a secondary affordance in
-        // a vertically constrained screen, so its play button is smaller
-        // than the result-row buttons (which previously it exceeded by
-        // +4). Trading a little tap area here keeps the row to one line.
-        let diameter = style.timerActionSize - 8
-
-        Button(action: onStart) {
-            Image(systemName: "play.fill")
-                .font(.system(size: style.timerActionIconSize - 1, weight: .semibold))
-                .foregroundStyle(canStart ? Color.accentColor : Color.secondary.opacity(0.8))
-                .frame(width: diameter, height: diameter)
-                .background(
-                    Circle()
-                        .fill(canStart ? Color.accentColor.opacity(0.14) : Color(.tertiarySystemFill))
-                )
-                .overlay(
-                    Circle()
-                        .stroke(Color(.separator).opacity(0.55), lineWidth: 0.8)
-                )
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!canStart)
-        .accessibilityIdentifier("target-shutter-start-timer-button")
-        .accessibilityLabel("Start target shutter timer")
-        .accessibilityHint("Starts a timer using the photographer-supplied target duration")
-    }
-}
 
 /// Input sheet built around a horizontally paged Quick / Fine Tune
 /// pair plus a prominent draft-target readout.

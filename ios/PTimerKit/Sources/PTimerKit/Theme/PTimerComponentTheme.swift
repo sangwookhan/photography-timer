@@ -32,6 +32,11 @@ public struct PTimerComponentTheme: Sendable {
     public var accentError: Color
     /// Neutral accent for secondary identity tints.
     public var accentNeutral: Color
+    /// Accent for an interactive action control (e.g. a start-timer glyph
+    /// and its tinted background).
+    public var timerActionAccent: Color
+    /// Glyph color for a disabled action control.
+    public var timerActionDisabledGlyph: Color
     /// Domain colors for the reciprocity graph component.
     public var graph: GraphPalette
 
@@ -47,6 +52,8 @@ public struct PTimerComponentTheme: Sendable {
         accentWarning: Color,
         accentError: Color,
         accentNeutral: Color,
+        timerActionAccent: Color = .accentColor,
+        timerActionDisabledGlyph: Color = .secondary,
         graph: GraphPalette = .default
     ) {
         self.surface = surface
@@ -60,6 +67,8 @@ public struct PTimerComponentTheme: Sendable {
         self.accentWarning = accentWarning
         self.accentError = accentError
         self.accentNeutral = accentNeutral
+        self.timerActionAccent = timerActionAccent
+        self.timerActionDisabledGlyph = timerActionDisabledGlyph
         self.graph = graph
     }
 

@@ -116,7 +116,7 @@ private struct DigitalModeResultView: View {
             timerAccessibilityIdentifier: "digital-result-start-timer-button",
             timerAccessibilityLabel: "Start timer from calculated result",
             timerAccessibilityHint: "Starts a timer using the calculated result",
-            style: style
+            layout: ResultRowLayout(style)
         )
     }
 }
@@ -147,7 +147,7 @@ private struct FilmModeResultHierarchyView: View {
                 timerAccessibilityIdentifier: "adjusted-shutter-start-timer-button",
                 timerAccessibilityLabel: resultState.adjustedShutterAction.accessibilityLabel,
                 timerAccessibilityHint: resultState.adjustedShutterAction.accessibilityHint,
-                style: style
+                layout: ResultRowLayout(style)
             )
 
             Divider()
@@ -176,119 +176,6 @@ private struct FilmModeResultHierarchyView: View {
 /// The caller passes the two words separated by a newline ("Adjusted\n
 /// Shutter"); the explicit break plus a fixed-width column keeps the
 /// label stable and prevents it from competing with the value area.
-private struct ResultRowLabel: View {
-    let title: String
-    let style: ExposureWorkspaceMainLayoutStyle
-
-    var body: some View {
-        Text(title)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .lineLimit(2)
-            .minimumScaleFactor(0.8)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(width: style.resultLabelColumnWidth, alignment: .leading)
-    }
-}
-
-/// Shared result row used across No Film and Film modes (PTIMER-172),
-/// laid out as fixed structured columns so the primary duration stays
-/// stable and dominant:
-///
-///   [ label column ] [ primary duration ] [ seconds ] [ play ]
-///
-/// - The label column and seconds column have fixed widths; the primary
-///   fills the flexible middle and is right-aligned, so its right edge is
-///   anchored at the seconds column regardless of whether a seconds value
-///   is currently shown — the value no longer jumps as wheel values cross
-///   the 60 s / 1 d thresholds.
-/// - The seconds column is reserved even when empty and renders subdued,
-///   smaller, and lighter than the primary; it shrinks/truncates within
-///   its own column and never competes with or dominates the primary.
-private struct ResultValueRow: View {
-    /// The value area of the row. `duration` renders the dominant
-    /// right-aligned primary plus the subdued seconds column; `status`
-    /// (non-quantified corrected exposure) renders a short status that
-    /// spans the value area, with no seconds column.
-    enum Value {
-        case duration(primary: String, seconds: String, color: Color)
-        case status(text: String, color: Color)
-    }
-
-    let title: String
-    let value: Value
-    let valueAccessibilityIdentifier: String
-    let secondaryAccessibilityIdentifier: String
-    let canStartTimer: Bool
-    let onStartTimer: () -> Void
-    let timerAccessibilityIdentifier: String
-    let timerAccessibilityLabel: String
-    let timerAccessibilityHint: String
-    let style: ExposureWorkspaceMainLayoutStyle
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ResultRowLabel(title: title, style: style)
-
-            switch value {
-            case let .duration(primary, seconds, color):
-                Text(primary)
-                    .font(style.unifiedResultPrimaryFont)
-                    .foregroundStyle(color)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .accessibilityIdentifier(valueAccessibilityIdentifier)
-
-                // Subdued seconds column, reserved even when empty so the
-                // primary's right edge stays anchored as wheel values
-                // cross the 60 s / 1 d thresholds. Hidden when empty or
-                // identical to the primary; shrinks/truncates within its
-                // own column and never competes with the primary.
-                Text(showsSeconds(primary: primary, seconds: seconds) ? seconds : "")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .frame(width: style.resultSecondsColumnWidth, alignment: .trailing)
-                    .accessibilityIdentifier(secondaryAccessibilityIdentifier)
-
-            case let .status(text, color):
-                // Short status spans the full value area (no seconds
-                // column) so it stays readable. The long explanation
-                // lives in Reciprocity Details — never in the main card.
-                Text(text)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(color)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .accessibilityIdentifier(valueAccessibilityIdentifier)
-            }
-
-            TimerActionButton(
-                isEnabled: canStartTimer,
-                metrics: TimerActionMetrics(
-                    diameter: style.timerActionSize,
-                    iconPointSize: style.timerActionIconSize
-                ),
-                style: .recessed,
-                accessibilityLabel: timerAccessibilityLabel,
-                accessibilityHint: timerAccessibilityHint,
-                accessibilityIdentifier: timerAccessibilityIdentifier,
-                action: onStartTimer
-            )
-        }
-        .frame(minHeight: style.filmResultRowMinHeight, alignment: .center)
-    }
-
-    private func showsSeconds(primary: String, seconds: String) -> Bool {
-        !seconds.isEmpty && seconds != primary
-    }
-}
 
 private struct FilmModeReciprocityStateRow: View {
     let reciprocityState: FilmModeReciprocityStateDisplayState
@@ -414,7 +301,7 @@ private struct FilmModeCorrectedExposureRow: View {
             timerAccessibilityIdentifier: "corrected-exposure-start-timer-button",
             timerAccessibilityLabel: actionState.accessibilityLabel,
             timerAccessibilityHint: actionState.accessibilityHint,
-            style: style
+            layout: ResultRowLayout(style)
         )
     }
 
@@ -446,4 +333,20 @@ private struct FilmModeCorrectedExposureRow: View {
     }
 }
 
-
+private extension ResultRowLayout {
+    /// Builds the reusable row layout from the app's workspace layout style.
+    /// Keeps `ExposureWorkspaceMainLayoutStyle` in the app; the kit only sees
+    /// the small config.
+    init(_ style: ExposureWorkspaceMainLayoutStyle) {
+        self.init(
+            labelColumnWidth: style.resultLabelColumnWidth,
+            primaryFont: style.unifiedResultPrimaryFont,
+            secondsColumnWidth: style.resultSecondsColumnWidth,
+            rowMinHeight: style.filmResultRowMinHeight,
+            timerAction: TimerActionMetrics(
+                diameter: style.timerActionSize,
+                iconPointSize: style.timerActionIconSize
+            )
+        )
+    }
+}

@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 import UserNotifications
 
 protocol UserNotificationCentering: AnyObject {

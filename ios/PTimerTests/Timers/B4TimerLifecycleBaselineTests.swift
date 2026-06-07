@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Record-replay baselines for timer lifecycle scenarios. Each

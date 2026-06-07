@@ -1,4 +1,5 @@
 import Foundation
+import PTimerCore
 
 /// Persisted-with-the-workspace metadata that the runtime `TimerState`
 /// does not carry: human-readable `name`, `basisSummary` text, and the

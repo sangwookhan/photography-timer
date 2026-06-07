@@ -1,4 +1,5 @@
 import Combine
+import PTimerCore
 import SwiftUI
 
 struct CompactRemainingScaleLayer: Equatable {

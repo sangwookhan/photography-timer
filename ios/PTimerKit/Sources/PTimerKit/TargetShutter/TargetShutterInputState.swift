@@ -74,7 +74,10 @@ public struct TargetShutterInputState: Equatable {
     /// `draftSeconds`) stay still during a spin and the wheel's momentum is
     /// not interrupted. Committed into `draftSeconds` on settle, on a mode
     /// switch, and on confirm; `nil` when no spin is in progress.
-    public private(set) var liveDraftSeconds: Int?
+    ///
+    /// Internal: a transient assist consumed only within the kit (the sheet)
+    /// and tests, not part of the host-facing API.
+    private(set) var liveDraftSeconds: Int?
 
     /// Fine Tune hours, derived from the draft.
     public var fineHours: Int { draftSeconds / 3600 }
@@ -89,6 +92,15 @@ public struct TargetShutterInputState: Equatable {
     /// Value to show in the readout: the live mid-spin value when a wheel is
     /// moving, otherwise the committed draft.
     public var displaySeconds: Int { liveDraftSeconds ?? draftSeconds }
+
+    /// Fine components of the *displayed* value (live during a spin, otherwise
+    /// the draft). Used to compose a Fine live update from one moving column
+    /// against the other columns' latest live values, so spinning two wheels
+    /// at once does not make the third reading flip back to its settled value.
+    /// Internal — a kit-side composition helper.
+    var liveFineHours: Int { displaySeconds / 3600 }
+    var liveFineMinutes: Int { (displaySeconds % 3600) / 60 }
+    var liveFineSeconds: Int { displaySeconds % 60 }
 
     /// Quick wheel parking position: the nearest preset to the draft.
     /// Derived so the wheel always reflects the current value.
@@ -173,14 +185,14 @@ public struct TargetShutterInputState: Equatable {
     /// so the spinning wheel keeps its momentum. No-ops unless Quick is the
     /// active armed mode, so a stale emit from the inactive Quick wheel after
     /// a swap to Fine, or any emit while Off, is ignored.
-    public mutating func applyLiveQuick(_ preset: TimeInterval) {
+    mutating func applyLiveQuick(_ preset: TimeInterval) {
         guard !isDraftCleared, activeMode == .quick else { return }
         liveDraftSeconds = Self.clampValue(preset)
     }
 
     /// Live Fine telemetry (host wheel observer, mid-spin). Symmetric to
     /// `applyLiveQuick`.
-    public mutating func applyLiveFine(hours: Int, minutes: Int, seconds: Int) {
+    mutating func applyLiveFine(hours: Int, minutes: Int, seconds: Int) {
         guard !isDraftCleared, activeMode == .fine else { return }
         liveDraftSeconds = Self.clampTotal(hours * 3600 + minutes * 60 + seconds)
     }
@@ -188,7 +200,7 @@ public struct TargetShutterInputState: Equatable {
     /// Commits any in-progress live value into the draft (used before a mode
     /// switch and on confirm so the latest mid-spin value is not lost). A
     /// no-op while Off; always clears the live value.
-    public mutating func commitLiveIntoDraft() {
+    mutating func commitLiveIntoDraft() {
         defer { liveDraftSeconds = nil }
         guard !isDraftCleared, let live = liveDraftSeconds else { return }
         draftSeconds = live

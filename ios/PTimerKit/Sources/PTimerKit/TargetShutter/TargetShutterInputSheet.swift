@@ -51,8 +51,8 @@ public struct TargetShutterInputSheet: View {
     /// edit `draftSeconds`; their wheel bindings derive from it.
     @State private var state: TargetShutterInputState
 
-    /// Host-supplied live wheel telemetry (UIKit observer lives in the app).
-    /// `.none` by default — wheels update on settle only.
+    /// Host-supplied live wheel telemetry (the observer implementation lives
+    /// in the app). `.none` by default — wheels update on settle only.
     @Environment(\.wheelTelemetry) private var wheelTelemetry
 
     /// Quick presets — values the photographer is most likely to dial
@@ -95,13 +95,13 @@ public struct TargetShutterInputSheet: View {
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // `Use Target Shutter` row hosts the native iOS
-                // switch. Placed inline (not in the toolbar) so SwiftUI
-                // renders the standard `UISwitch` rather than the
-                // toolbar's compact pill button. Off sets
-                // `isDraftCleared`; Confirm then routes through
-                // `onClearTarget`. Cancel after Off discards the draft
-                // change, preserving the previously-committed target.
+                // `Use Target Shutter` row hosts the system switch.
+                // Placed inline (not in the toolbar) so SwiftUI renders
+                // the standard inline switch rather than the toolbar's
+                // compact pill button. Off sets `isDraftCleared`;
+                // Confirm then routes through `onClearTarget`. Cancel
+                // after Off discards the draft change, preserving the
+                // previously-committed target.
                 TargetShutterEnabledToggleRow(isOn: targetShutterEnabledBinding)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -170,9 +170,9 @@ public struct TargetShutterInputSheet: View {
 
     /// Horizontal pager containing the Quick page and the Fine Tune
     /// page. Uses `TabView` with the page style — same idiom as the
-    /// camera-slot pager on the main calculator — because
-    /// `UIPageViewController`'s gesture model defers cleanly to the
-    /// nested `UIPickerView`'s vertical pan. A `ScrollView`-based
+    /// camera-slot pager on the main calculator — because the paged
+    /// container's gesture model defers cleanly to the nested wheel's
+    /// vertical pan. A `ScrollView`-based
     /// pager with peek would fight the wheel for the touch and slide
     /// the page sideways during a vertical wheel scroll, so we trade
     /// the peek affordance for reliable scrolling. The page-dot
@@ -303,10 +303,14 @@ public struct TargetShutterInputSheet: View {
                     value: fineHoursBinding,
                     accessibilityID: "target-shutter-hours-picker",
                     onLiveRow: { row in
+                        // Compose against the *live* other-column values, not
+                        // the settled draft, so spinning two wheels at once
+                        // does not make the third reading flip back to its
+                        // settled value between emits.
                         state.applyLiveFine(
                             hours: row,
-                            minutes: state.fineMinutes,
-                            seconds: state.fineSeconds
+                            minutes: state.liveFineMinutes,
+                            seconds: state.liveFineSeconds
                         )
                     }
                 )
@@ -317,9 +321,9 @@ public struct TargetShutterInputSheet: View {
                     accessibilityID: "target-shutter-minutes-picker",
                     onLiveRow: { row in
                         state.applyLiveFine(
-                            hours: state.fineHours,
+                            hours: state.liveFineHours,
                             minutes: row,
-                            seconds: state.fineSeconds
+                            seconds: state.liveFineSeconds
                         )
                     }
                 )
@@ -330,8 +334,8 @@ public struct TargetShutterInputSheet: View {
                     accessibilityID: "target-shutter-seconds-picker",
                     onLiveRow: { row in
                         state.applyLiveFine(
-                            hours: state.fineHours,
-                            minutes: state.fineMinutes,
+                            hours: state.liveFineHours,
+                            minutes: state.liveFineMinutes,
                             seconds: row
                         )
                     }

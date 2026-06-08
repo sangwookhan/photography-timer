@@ -394,4 +394,29 @@ final class TargetShutterInputStateTests: XCTestCase {
         XCTAssertEqual(state.draftSeconds, 195, "Confirm-time flush commits the live value")
         XCTAssertNil(state.liveDraftSeconds)
     }
+
+    /// C8h6: composing a Fine live update from the *live* other-column values
+    /// (`liveFine*`) — the way the sheet wires its columns — keeps both moving
+    /// wheels' values present instead of flipping the third reading back to
+    /// the settled draft between emits.
+    func testConcurrentFineWheelsComposeFromLiveValues() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.setActiveMode(.fine) // draft 60 = 0h 1m 0s
+
+        // Minutes wheel → 5, composed against the live other columns.
+        state.applyLiveFine(hours: state.liveFineHours, minutes: 5, seconds: state.liveFineSeconds)
+        XCTAssertEqual(state.displaySeconds, 5 * 60)
+
+        // Seconds wheel → 30 must preserve the live 5 minutes, not revert to
+        // the settled 1 minute.
+        state.applyLiveFine(hours: state.liveFineHours, minutes: state.liveFineMinutes, seconds: 30)
+        XCTAssertEqual(state.displaySeconds, 5 * 60 + 30, "Seconds update keeps the live minutes")
+
+        // Minutes wheel → 6 must preserve the live 30 seconds.
+        state.applyLiveFine(hours: state.liveFineHours, minutes: 6, seconds: state.liveFineSeconds)
+        XCTAssertEqual(state.displaySeconds, 6 * 60 + 30, "Minutes update keeps the live seconds")
+
+        // Committed draft stays put through the whole live sequence.
+        XCTAssertEqual(state.draftSeconds, 60)
+    }
 }

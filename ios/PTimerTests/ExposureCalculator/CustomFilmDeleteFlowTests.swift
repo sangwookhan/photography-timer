@@ -12,7 +12,7 @@ final class CustomFilmDeleteFlowTests: XCTestCase {
 
     func test_deleteCustomFilm_removesFromSelectorEntries() {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "to-delete", stockName: "To delete")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "to-delete", stockName: "To delete")
         viewModel.addCustomFilm(film)
         XCTAssertTrue(viewModel.customFilms.map(\.id).contains("to-delete"))
 
@@ -24,7 +24,7 @@ final class CustomFilmDeleteFlowTests: XCTestCase {
 
     func test_deleteCurrentlySelectedCustomFilm_clearsSelection() {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "selected", stockName: "Selected")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "selected", stockName: "Selected")
         viewModel.addCustomFilm(film)
         let entry = viewModel.filmSelectorEntries.first { $0.id == "selected" }!
         viewModel.selectEntry(entry)
@@ -39,8 +39,8 @@ final class CustomFilmDeleteFlowTests: XCTestCase {
 
     func test_deleteUnselectedCustomFilm_doesNotChangeActiveSelection() {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
-        let stays = CustomFilmLibraryTests.makeCustomFilm(id: "stays", stockName: "Stays")
-        let drops = CustomFilmLibraryTests.makeCustomFilm(id: "drops", stockName: "Drops")
+        let stays = CustomFilmTestSupport.makeCustomFilm(id: "stays", stockName: "Stays")
+        let drops = CustomFilmTestSupport.makeCustomFilm(id: "drops", stockName: "Drops")
         viewModel.addCustomFilm(stays)
         viewModel.addCustomFilm(drops)
         let staysEntry = viewModel.filmSelectorEntries.first { $0.id == "stays" }!
@@ -54,8 +54,8 @@ final class CustomFilmDeleteFlowTests: XCTestCase {
     func test_deletionPersists_acrossLibraryReload() {
         let store = SharedInMemoryStore()
         let viewModelA = makeViewModel(library: CustomFilmLibrary(store: store))
-        viewModelA.addCustomFilm(CustomFilmLibraryTests.makeCustomFilm(id: "keep", stockName: "Keep"))
-        viewModelA.addCustomFilm(CustomFilmLibraryTests.makeCustomFilm(id: "drop", stockName: "Drop"))
+        viewModelA.addCustomFilm(CustomFilmTestSupport.makeCustomFilm(id: "keep", stockName: "Keep"))
+        viewModelA.addCustomFilm(CustomFilmTestSupport.makeCustomFilm(id: "drop", stockName: "Drop"))
         viewModelA.deleteCustomFilm(id: "drop")
 
         // Build a fresh ViewModel against the same store — the
@@ -93,7 +93,7 @@ final class CustomFilmDeleteFlowTests: XCTestCase {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
         let presetCountBefore = viewModel.availablePresetFilms.count
 
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "custom", stockName: "Custom")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "custom", stockName: "Custom")
         viewModel.addCustomFilm(film)
         viewModel.deleteCustomFilm(id: "custom")
 

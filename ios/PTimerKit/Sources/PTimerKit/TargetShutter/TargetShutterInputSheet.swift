@@ -51,6 +51,10 @@ public struct TargetShutterInputSheet: View {
     /// edit `draftSeconds`; their wheel bindings derive from it.
     @State private var state: TargetShutterInputState
 
+    /// Host-supplied live wheel telemetry (UIKit observer lives in the app).
+    /// `.none` by default — wheels update on settle only.
+    @Environment(\.wheelTelemetry) private var wheelTelemetry
+
     /// Quick presets — values the photographer is most likely to dial
     /// in for long-exposure work. The first half follows the photo
     /// shutter ladder (1, 2, 4, 8, 15, 30 seconds, 1, 2 minutes); the
@@ -247,6 +251,15 @@ public struct TargetShutterInputSheet: View {
             .pickerStyle(.wheel)
             .frame(maxHeight: .infinity)
             .clipped()
+            // Host-owned live telemetry: reports the wheel's centre row while
+            // it moves so the readout tracks the spin. Updates only the live
+            // value, never the picker's bound selection, so momentum is kept.
+            .background {
+                wheelTelemetry.makeObserver { row in
+                    guard Self.quickPresets.indices.contains(row) else { return }
+                    state.applyLiveQuick(Self.quickPresets[row])
+                }
+            }
             .accessibilityIdentifier("target-shutter-quick-picker")
         }
     }
@@ -288,19 +301,40 @@ public struct TargetShutterInputSheet: View {
                     title: "h",
                     range: 0...23,
                     value: fineHoursBinding,
-                    accessibilityID: "target-shutter-hours-picker"
+                    accessibilityID: "target-shutter-hours-picker",
+                    onLiveRow: { row in
+                        state.applyLiveFine(
+                            hours: row,
+                            minutes: state.fineMinutes,
+                            seconds: state.fineSeconds
+                        )
+                    }
                 )
                 TargetShutterFineColumn(
                     title: "m",
                     range: 0...59,
                     value: fineMinutesBinding,
-                    accessibilityID: "target-shutter-minutes-picker"
+                    accessibilityID: "target-shutter-minutes-picker",
+                    onLiveRow: { row in
+                        state.applyLiveFine(
+                            hours: state.fineHours,
+                            minutes: row,
+                            seconds: state.fineSeconds
+                        )
+                    }
                 )
                 TargetShutterFineColumn(
                     title: "s",
                     range: 0...59,
                     value: fineSecondsBinding,
-                    accessibilityID: "target-shutter-seconds-picker"
+                    accessibilityID: "target-shutter-seconds-picker",
+                    onLiveRow: { row in
+                        state.applyLiveFine(
+                            hours: state.fineHours,
+                            minutes: state.fineMinutes,
+                            seconds: row
+                        )
+                    }
                 )
             }
             .frame(maxHeight: .infinity)
@@ -385,12 +419,14 @@ public struct TargetShutterInputSheet: View {
         // Cleared draft is always confirmable — Confirm commits the
         // removal of the Target Shutter. A non-cleared draft requires
         // a positive duration (Fine wheels can park on 0/0/0 mid-edit
-        // and that intermediate state must not be committable).
-        state.isDraftCleared || state.draftSeconds > 0
+        // and that intermediate state must not be committable). Uses the
+        // displayed value so a confirm tapped mid-spin reflects what the
+        // user sees in the readout.
+        state.isDraftCleared || state.displaySeconds > 0
     }
 
     private var formattedDraft: String {
-        formattedDuration(state.draftSeconds)
+        formattedDuration(state.displaySeconds)
     }
 
     private var confirmButtonLabel: String {
@@ -402,6 +438,9 @@ public struct TargetShutterInputSheet: View {
             onClearTarget()
             return
         }
+        // Fold any in-progress live value into the draft so a confirm tapped
+        // before the wheel settles commits the value the user is seeing.
+        state.commitLiveIntoDraft()
         guard state.draftSeconds > 0 else { return }
         onSet(TimeInterval(state.draftSeconds))
     }
@@ -472,13 +511,17 @@ private struct TargetShutterDraftReadout: View {
 }
 
 /// A single Fine Tune wheel column (h / m / s). Renders a wheel
-/// `Picker` bound through the parent's draft model; the model drops
-/// stale emits, so no external observer is needed.
+/// `Picker` bound through the parent's draft model. The picker's
+/// settled value commits on settle; the host's live telemetry (if
+/// injected) reports the centre row mid-spin via `onLiveRow`.
 private struct TargetShutterFineColumn: View {
+    @Environment(\.wheelTelemetry) private var wheelTelemetry
+
     let title: String
     let range: ClosedRange<Int>
     @Binding var value: Int
     let accessibilityID: String
+    let onLiveRow: (Int) -> Void
 
     var body: some View {
         VStack(spacing: 2) {
@@ -495,6 +538,12 @@ private struct TargetShutterFineColumn: View {
             .pickerStyle(.wheel)
             .frame(maxWidth: .infinity)
             .clipped()
+            .background {
+                wheelTelemetry.makeObserver { row in
+                    guard range.contains(row) else { return }
+                    onLiveRow(row)
+                }
+            }
             .accessibilityIdentifier(accessibilityID)
         }
     }

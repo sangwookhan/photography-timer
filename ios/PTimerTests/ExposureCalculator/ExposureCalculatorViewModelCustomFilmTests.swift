@@ -11,7 +11,7 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
         let viewModel = makeViewModel(library: library)
         let initialCount = viewModel.filmSelectorEntries.count
 
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "test-1", stockName: "My Test Film")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "test-1", stockName: "My Test Film")
         viewModel.addCustomFilm(film)
 
         XCTAssertEqual(viewModel.customFilms.map(\.id), ["test-1"])
@@ -26,10 +26,10 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
         let library = CustomFilmLibrary()
         let viewModel = makeViewModel(library: library)
         viewModel.addCustomFilm(
-            CustomFilmLibraryTests.makeCustomFilm(id: "alpha", stockName: "Alpha")
+            CustomFilmTestSupport.makeCustomFilm(id: "alpha", stockName: "Alpha")
         )
         viewModel.addCustomFilm(
-            CustomFilmLibraryTests.makeCustomFilm(id: "beta", stockName: "Beta")
+            CustomFilmTestSupport.makeCustomFilm(id: "beta", stockName: "Beta")
         )
 
         let customSection = viewModel.filmSelectorSections.first {
@@ -43,7 +43,7 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
     func test_filmSelectorEntries_customFilmsAppearAheadOfManufacturerSections() {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
         viewModel.addCustomFilm(
-            CustomFilmLibraryTests.makeCustomFilm(id: "alpha", stockName: "Alpha")
+            CustomFilmTestSupport.makeCustomFilm(id: "alpha", stockName: "Alpha")
         )
 
         let entries = viewModel.filmSelectorEntries
@@ -63,7 +63,7 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
     func test_filmSelectorEntries_customEntry_usesCustomSupportState() {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
         viewModel.addCustomFilm(
-            CustomFilmLibraryTests.makeCustomFilm(id: "custom-1", stockName: "Custom")
+            CustomFilmTestSupport.makeCustomFilm(id: "custom-1", stockName: "Custom")
         )
 
         let entry = viewModel.filmSelectorEntries.first { $0.id == "custom-1" }
@@ -80,7 +80,7 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
             }
 
         viewModel.addCustomFilm(
-            CustomFilmLibraryTests.makeCustomFilm(id: "custom-1", stockName: "Custom")
+            CustomFilmTestSupport.makeCustomFilm(id: "custom-1", stockName: "Custom")
         )
 
         let presetEntriesWithCustom = viewModel.filmSelectorEntries
@@ -97,7 +97,7 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
 
     func test_selectCustomFilm_marksItAsSelectedSelectorEntry() {
         let viewModel = makeViewModel(library: CustomFilmLibrary())
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "selected", stockName: "Selected")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "selected", stockName: "Selected")
         viewModel.addCustomFilm(film)
         let entry = viewModel.filmSelectorEntries.first { $0.id == "selected" }
         XCTAssertNotNil(entry, "Custom film entry must exist before selection")

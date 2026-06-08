@@ -64,6 +64,10 @@ struct TargetShutterSectionView: View {
                 },
                 onCancel: { inputSheetVisible = false }
             )
+            // Supply the app-owned (UIKit) wheel observer so the Kit sheet's
+            // readout tracks the wheels live during a spin. The kit stays
+            // UIKit-free; the observer implementation lives in the app.
+            .wheelTelemetry(.uiKitWheelObserver)
         }
     }
 
@@ -99,5 +103,20 @@ struct TargetShutterSectionView: View {
     /// sheet from an inactive row is the implicit edit-intent path.
     private var initialSheetEnabled: Bool {
         true
+    }
+}
+
+extension WheelTelemetry {
+    /// App-owned live wheel telemetry backed by `WheelPickerContinuousObserver`
+    /// (UIKit `UIPickerView` + `CADisplayLink`). Injected into the Kit sheet so
+    /// it can report the wheel's centre row mid-spin without the kit importing
+    /// UIKit. The same observer drives the Base Shutter / ND Filter wheels.
+    static let uiKitWheelObserver = WheelTelemetry { onRow in
+        AnyView(
+            WheelPickerContinuousObserver(
+                onSelectedRowChange: onRow,
+                onInteractionEnd: {}
+            )
+        )
     }
 }

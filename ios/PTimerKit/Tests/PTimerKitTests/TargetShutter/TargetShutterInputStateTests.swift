@@ -285,4 +285,113 @@ final class TargetShutterInputStateTests: XCTestCase {
         state.applyFineSelection(hours: 0, minutes: 1, seconds: 5)
         XCTAssertFalse(state.quickIsExactMatch(in: presets))
     }
+
+    // MARK: - C8h5: live wheel telemetry
+
+    /// Active Quick live telemetry updates the displayed (readout) value but
+    /// deliberately leaves the committed draft and the picker anchor still,
+    /// so the spinning wheel keeps its momentum.
+    func testActiveQuickLiveTelemetryUpdatesDisplayNotDraft() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        let anchorBefore = state.quickWheelAnchor(in: presets)
+
+        state.applyLiveQuick(480)
+
+        XCTAssertEqual(state.displaySeconds, 480, "Readout follows the live wheel value")
+        XCTAssertEqual(state.draftSeconds, 60, "Committed draft stays put mid-spin")
+        XCTAssertEqual(state.quickWheelAnchor(in: presets), anchorBefore,
+                       "Picker anchor stays put mid-spin (momentum preserved)")
+    }
+
+    /// Active Fine live telemetry updates the displayed value only.
+    func testActiveFineLiveTelemetryUpdatesDisplayNotDraft() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.setActiveMode(.fine)
+
+        state.applyLiveFine(hours: 1, minutes: 30, seconds: 15)
+
+        XCTAssertEqual(state.displaySeconds, 1 * 3600 + 30 * 60 + 15)
+        XCTAssertEqual(state.draftSeconds, 60, "Committed draft stays put mid-spin")
+    }
+
+    /// A settled selection supersedes and clears the live value.
+    func testSettleClearsLiveValue() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.applyLiveQuick(480)
+        XCTAssertEqual(state.liveDraftSeconds, 480)
+
+        state.applyQuickSelection(900) // settle
+        XCTAssertNil(state.liveDraftSeconds, "Settle clears the transient live value")
+        XCTAssertEqual(state.draftSeconds, 900)
+        XCTAssertEqual(state.displaySeconds, 900)
+    }
+
+    /// Inactive Quick live telemetry (a stale emit after switching to Fine)
+    /// is ignored — it must not touch the draft or the displayed value.
+    func testInactiveQuickLiveTelemetryIgnoredAfterSwitchToFine() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.setActiveMode(.fine)
+        state.applyFineSelection(hours: 0, minutes: 3, seconds: 0) // 180s
+
+        state.applyLiveQuick(28_800) // stale Quick spin still decelerating
+
+        XCTAssertNil(state.liveDraftSeconds, "Inactive Quick live emit recorded nothing")
+        XCTAssertEqual(state.displaySeconds, 180, "Readout unaffected by stale Quick emit")
+        XCTAssertEqual(state.draftSeconds, 180)
+    }
+
+    /// Symmetric: inactive Fine live telemetry after switching to Quick.
+    func testInactiveFineLiveTelemetryIgnoredAfterSwitchToQuick() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.applyQuickSelection(120)
+
+        state.applyLiveFine(hours: 5, minutes: 0, seconds: 0) // stale Fine spin
+
+        XCTAssertNil(state.liveDraftSeconds)
+        XCTAssertEqual(state.displaySeconds, 120)
+        XCTAssertEqual(state.draftSeconds, 120)
+    }
+
+    /// Cleared / Off state ignores live telemetry (no silent re-arm).
+    func testClearedStateIgnoresLiveTelemetry() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.clearDraft()
+
+        state.applyLiveQuick(480)
+        state.setActiveMode(.fine)
+        state.applyLiveFine(hours: 2, minutes: 0, seconds: 0)
+
+        XCTAssertNil(state.liveDraftSeconds)
+        XCTAssertTrue(state.isDraftCleared)
+        XCTAssertEqual(state.displaySeconds, 60, "Off ignores live emits; readout shows preserved draft")
+    }
+
+    /// Switching mode mid-spin flushes the latest live value into the draft,
+    /// so the entering mode opens from the live value, not the old one.
+    func testModeSwitchMidSpinFlushesLiveValueIntoDraft() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+
+        // Quick fling in progress: live value ahead of the committed draft.
+        state.applyLiveQuick(900) // 15m, not yet settled
+        XCTAssertEqual(state.draftSeconds, 60)
+
+        state.setActiveMode(.fine) // switch before settle
+
+        XCTAssertEqual(state.draftSeconds, 900, "Latest live value carried into the draft on switch")
+        XCTAssertNil(state.liveDraftSeconds)
+        XCTAssertEqual(state.fineMinutes, 15, "Fine opens from the flushed live value")
+    }
+
+    /// Confirm folds an in-progress live value into the draft so a confirm
+    /// tapped before settle commits what the user sees.
+    func testCommitLiveIntoDraftUsesLiveValue() {
+        var state = TargetShutterInputState.initial(seedSeconds: 60, quickPresets: presets)
+        state.setActiveMode(.fine)
+        state.applyLiveFine(hours: 0, minutes: 3, seconds: 15) // 195s, not settled
+
+        state.commitLiveIntoDraft()
+
+        XCTAssertEqual(state.draftSeconds, 195, "Confirm-time flush commits the live value")
+        XCTAssertNil(state.liveDraftSeconds)
+    }
 }

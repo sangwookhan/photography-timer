@@ -67,6 +67,15 @@ public struct TargetShutterInputState: Equatable {
     /// `reArmDraft(seedSeconds:)`.
     public private(set) var isDraftCleared: Bool
 
+    /// Transient live value reported by the host's wheel telemetry while a
+    /// wheel is moving (see `WheelTelemetry`). It feeds the readout only —
+    /// `displaySeconds` prefers it — and is deliberately kept *separate* from
+    /// `draftSeconds` so the picker bindings (which derive from
+    /// `draftSeconds`) stay still during a spin and the wheel's momentum is
+    /// not interrupted. Committed into `draftSeconds` on settle, on a mode
+    /// switch, and on confirm; `nil` when no spin is in progress.
+    public private(set) var liveDraftSeconds: Int?
+
     /// Fine Tune hours, derived from the draft.
     public var fineHours: Int { draftSeconds / 3600 }
     /// Fine Tune minutes, derived from the draft.
@@ -76,6 +85,10 @@ public struct TargetShutterInputState: Equatable {
 
     /// Total seconds derived from the draft.
     public var totalSeconds: Int { draftSeconds }
+
+    /// Value to show in the readout: the live mid-spin value when a wheel is
+    /// moving, otherwise the committed draft.
+    public var displaySeconds: Int { liveDraftSeconds ?? draftSeconds }
 
     /// Quick wheel parking position: the nearest preset to the draft.
     /// Derived so the wheel always reflects the current value.
@@ -101,6 +114,7 @@ public struct TargetShutterInputState: Equatable {
         self.activeMode = activeMode
         self.quickSelectedPreset = quickSelectedPreset
         self.isDraftCleared = isDraftCleared
+        self.liveDraftSeconds = nil
     }
 
     /// Builds the initial state from a seed value.
@@ -139,6 +153,7 @@ public struct TargetShutterInputState: Equatable {
         guard !isDraftCleared, activeMode == .quick else { return }
         draftSeconds = Self.clampValue(preset)
         quickSelectedPreset = preset
+        liveDraftSeconds = nil
     }
 
     /// Applies a Fine Tune wheel change. Writes the new total to the
@@ -150,13 +165,43 @@ public struct TargetShutterInputState: Equatable {
         guard !isDraftCleared, activeMode == .fine else { return }
         draftSeconds = Self.clampTotal(hours * 3600 + minutes * 60 + seconds)
         quickSelectedPreset = nil
+        liveDraftSeconds = nil
     }
 
-    /// Mode switch entry point. The entering mode's wheels read
-    /// directly from the (derived) draft, so no reseed is needed.
-    /// Switching to Fine clears any Quick selection; switching to
-    /// Quick does not auto-select.
+    /// Live Quick telemetry (host wheel observer, mid-spin). Updates the
+    /// readout value only — never `draftSeconds` or the picker selection —
+    /// so the spinning wheel keeps its momentum. No-ops unless Quick is the
+    /// active armed mode, so a stale emit from the inactive Quick wheel after
+    /// a swap to Fine, or any emit while Off, is ignored.
+    public mutating func applyLiveQuick(_ preset: TimeInterval) {
+        guard !isDraftCleared, activeMode == .quick else { return }
+        liveDraftSeconds = Self.clampValue(preset)
+    }
+
+    /// Live Fine telemetry (host wheel observer, mid-spin). Symmetric to
+    /// `applyLiveQuick`.
+    public mutating func applyLiveFine(hours: Int, minutes: Int, seconds: Int) {
+        guard !isDraftCleared, activeMode == .fine else { return }
+        liveDraftSeconds = Self.clampTotal(hours * 3600 + minutes * 60 + seconds)
+    }
+
+    /// Commits any in-progress live value into the draft (used before a mode
+    /// switch and on confirm so the latest mid-spin value is not lost). A
+    /// no-op while Off; always clears the live value.
+    public mutating func commitLiveIntoDraft() {
+        defer { liveDraftSeconds = nil }
+        guard !isDraftCleared, let live = liveDraftSeconds else { return }
+        draftSeconds = live
+        quickSelectedPreset = nil
+    }
+
+    /// Mode switch entry point. Flushes any in-progress live value into the
+    /// draft first, so switching while a wheel is still in flight carries the
+    /// latest value across. The entering mode's wheels then read directly
+    /// from the (derived) draft. Switching to Fine clears any Quick
+    /// selection; switching to Quick does not auto-select.
     public mutating func setActiveMode(_ mode: InputMode) {
+        commitLiveIntoDraft()
         activeMode = mode
         if mode == .fine {
             quickSelectedPreset = nil
@@ -170,6 +215,7 @@ public struct TargetShutterInputState: Equatable {
     public mutating func clearDraft() {
         quickSelectedPreset = nil
         isDraftCleared = true
+        liveDraftSeconds = nil
     }
 
     /// Re-arms the draft when the user flips the switch back On. If
@@ -178,6 +224,7 @@ public struct TargetShutterInputState: Equatable {
     /// default.
     public mutating func reArmDraft(seedSeconds: TimeInterval?) {
         isDraftCleared = false
+        liveDraftSeconds = nil
         guard draftSeconds == 0 else { return }
         draftSeconds = Self.sanitizedSeed(seedSeconds)
     }

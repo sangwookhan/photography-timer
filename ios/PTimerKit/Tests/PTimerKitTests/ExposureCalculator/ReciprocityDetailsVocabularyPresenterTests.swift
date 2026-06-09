@@ -17,36 +17,23 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
 
     // MARK: - badgeText
 
-    func testFormulaDerivedBadgeReadsFormulaDerived() throws {
-        // Provia 100F (converted formula) at 240 s — inside the
-        // supported source range; presentation is `.formulaDerived`.
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 240)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "Formula-derived")
-    }
-
-    func testNoCorrectionBadgeReadsNoCorrection() throws {
-        // HP5 Plus at 0.5 s sits inside the formula-only profile's
-        // synthesized no-correction band — presentation is
-        // `.noCorrection`.
-        let bindingState = try makeBindingState(stock: "HP5 Plus", meteredSeconds: 0.5)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "No correction")
-    }
-
-    func testConvertedFormulaUnsupportedBadgeReadsBeyondSourceRange() throws {
-        // Provia 100F past the manufacturer-supported boundary (480 s).
-        // Converted formula profiles label this state as
-        // "Beyond source range" rather than "Outside guidance".
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 1_800)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "Beyond source range")
-    }
-
-    func testLimitedGuidanceBadgeReadsNoQuantifiedPrediction() throws {
-        // Portra 400 published preset has no formula and lands on
-        // `.limitedGuidance` past its threshold. PTIMER-168: the
-        // no-correction band now ends at 10 s, so use 30 s to ensure
-        // the input is beyond the band.
-        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 30)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "No quantified prediction")
+    // Same contract — badge wording reflects the presentation state.
+    // Film stock + metered seconds are case data (not test-name
+    // structure); each case names the state it exercises and the
+    // failure message carries the stock and metered input.
+    func testBadgeTextReflectsPresentationState() throws {
+        struct Case { let scenario: String; let stock: String; let metered: Double; let expected: String }
+        let cases: [Case] = [
+            Case(scenario: "formula-derived inside source range", stock: "Provia 100F", metered: 240, expected: "Formula-derived"),
+            Case(scenario: "synthesized no-correction band", stock: "HP5 Plus", metered: 0.5, expected: "No correction"),
+            Case(scenario: "converted formula beyond source range", stock: "Provia 100F", metered: 1_800, expected: "Beyond source range"),
+            Case(scenario: "limited guidance past threshold", stock: "Portra 400", metered: 30, expected: "No quantified prediction"),
+        ]
+        for c in cases {
+            let bindingState = try makeBindingState(stock: c.stock, meteredSeconds: c.metered)
+            XCTAssertEqual(presenter.badgeText(for: bindingState), c.expected,
+                           "\(c.scenario) [\(c.stock) @ \(c.metered)s]")
+        }
     }
 
     // MARK: - statusText
@@ -66,42 +53,28 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
 
     // MARK: - summaryText
 
-    func testFormulaSupportedSummaryReadsFormulaDerivedForConvertedProfile() throws {
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 240)
-        XCTAssertEqual(
-            presenter.summaryText(
-                for: bindingState,
-                calculationResult: successCalc(at: 240),
-                formatDurationCoarse: { "\($0)s" }
-            ),
-            "Formula-based correction on the active curve"
-        )
-    }
-
-    func testUnsupportedSummaryReadsBeyondSourceRangeForConvertedProfile() throws {
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 1_800)
-        XCTAssertEqual(
-            presenter.summaryText(
-                for: bindingState,
-                calculationResult: successCalc(at: 1_800),
-                formatDurationCoarse: { "\($0)s" }
-            ),
-            "Beyond source range"
-        )
-    }
-
-    func testLimitedGuidanceSummaryReadsBeyondPublishedNoCorrectionRange() throws {
-        // PTIMER-168: Portra 400 no-correction band now ends at 10 s;
-        // use 30 s so the input is beyond the band.
-        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 30)
-        XCTAssertEqual(
-            presenter.summaryText(
-                for: bindingState,
-                calculationResult: successCalc(at: 30),
-                formatDurationCoarse: { "\($0)s" }
-            ),
-            "Beyond published no-correction range"
-        )
+    // Same contract — summary wording reflects the presentation state.
+    // Stock + metered seconds are case data; the scenario names the
+    // state and the failure message carries the stock/metered input.
+    func testSummaryTextReflectsPresentationState() throws {
+        struct Case { let scenario: String; let stock: String; let metered: Double; let expected: String }
+        let cases: [Case] = [
+            Case(scenario: "formula-derived (converted profile)", stock: "Provia 100F", metered: 240, expected: "Formula-based correction on the active curve"),
+            Case(scenario: "beyond source range (converted profile)", stock: "Provia 100F", metered: 1_800, expected: "Beyond source range"),
+            Case(scenario: "limited guidance beyond no-correction range", stock: "Portra 400", metered: 30, expected: "Beyond published no-correction range"),
+        ]
+        for c in cases {
+            let bindingState = try makeBindingState(stock: c.stock, meteredSeconds: c.metered)
+            XCTAssertEqual(
+                presenter.summaryText(
+                    for: bindingState,
+                    calculationResult: successCalc(at: c.metered),
+                    formatDurationCoarse: { "\($0)s" }
+                ),
+                c.expected,
+                "\(c.scenario) [\(c.stock) @ \(c.metered)s]"
+            )
+        }
     }
 
     // MARK: - summaryDetailText

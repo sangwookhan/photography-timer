@@ -54,62 +54,34 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
 
     // MARK: - Official quantified prediction (formula-backed)
 
-    func testProvia100FOfficialFormulaIsQuantifiedPrediction() throws {
-        let film = try film(named: "Provia 100F")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialQuantifiedPrediction
-        )
-    }
-
-    func testTriX400OfficialFormulaIsQuantifiedPrediction() throws {
-        let film = try film(named: "Tri-X 400")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialQuantifiedPrediction
-        )
-    }
-
-    func testFomapan100ClassicOfficialFormulaIsQuantifiedPrediction() throws {
-        let film = try film(named: "Fomapan 100 Classic")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialQuantifiedPrediction
-        )
-    }
-
-    func testHP5PlusOfficialFormulaIsQuantifiedPrediction() throws {
-        let film = try film(named: "HP5 Plus")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialQuantifiedPrediction
-        )
-    }
-
-    // MARK: - Official limited guidance
-
-    func testPortra400OfficialIsLimitedGuidance() throws {
-        let film = try film(named: "Portra 400")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialLimitedGuidance
-        )
-    }
-
-    func testEktar100OfficialIsLimitedGuidance() throws {
-        let film = try film(named: "Ektar 100")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialLimitedGuidance
-        )
-    }
-
-    func testEktachromeE100OfficialIsLimitedGuidance() throws {
-        let film = try film(named: "Ektachrome E100")
-        XCTAssertEqual(
-            FilmSelectorSupportPresenter.makeSupportState(for: film),
-            .officialLimitedGuidance
-        )
+    // Same contract — each official catalog film maps to its support
+    // display state — as an explicit film→state case table. The
+    // distinction between quantified-prediction and limited-guidance
+    // films is preserved per case, with the film named in each failure.
+    func testOfficialFilmsMapToExpectedSupportState() throws {
+        struct Case {
+            let film: String
+            let expected: FilmSelectorSupportDisplayState
+        }
+        let cases: [Case] = [
+            // Official quantified-prediction (formula) films.
+            Case(film: "Provia 100F", expected: .officialQuantifiedPrediction),
+            Case(film: "Tri-X 400", expected: .officialQuantifiedPrediction),
+            Case(film: "Fomapan 100 Classic", expected: .officialQuantifiedPrediction),
+            Case(film: "HP5 Plus", expected: .officialQuantifiedPrediction),
+            // Official limited-guidance films.
+            Case(film: "Portra 400", expected: .officialLimitedGuidance),
+            Case(film: "Ektar 100", expected: .officialLimitedGuidance),
+            Case(film: "Ektachrome E100", expected: .officialLimitedGuidance),
+        ]
+        for c in cases {
+            let film = try film(named: c.film)
+            XCTAssertEqual(
+                FilmSelectorSupportPresenter.makeSupportState(for: film),
+                c.expected,
+                "\(c.film) must map to \(c.expected)"
+            )
+        }
     }
 
     // MARK: - No quantified prediction

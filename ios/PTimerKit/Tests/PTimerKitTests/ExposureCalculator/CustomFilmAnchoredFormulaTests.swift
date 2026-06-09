@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Covers the anchored
 /// `Tc = baseTc · (Tm / baseTm)^exponent + offset` shape
@@ -187,7 +186,7 @@ final class CustomFilmAnchoredFormulaTests: XCTestCase {
         let library = CustomFilmLibrary()
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: library
         )
         viewModel.addCustomFilm(film)

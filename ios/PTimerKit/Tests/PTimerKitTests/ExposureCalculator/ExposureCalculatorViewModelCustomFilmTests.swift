@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 @MainActor
 final class CalculatorViewModelCustomFilmTests: XCTestCase {
@@ -114,7 +113,7 @@ final class CalculatorViewModelCustomFilmTests: XCTestCase {
     private func makeViewModel(library: CustomFilmLibrary) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: library
         )
     }

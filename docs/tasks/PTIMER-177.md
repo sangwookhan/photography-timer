@@ -4,13 +4,20 @@
 
 - Ticket: `PTIMER-177` (carries `PTIMER-174` goal)
 - Epic: `PTIMER-176` (Test suite scale, redundancy, execution cost)
-- Feature Branch: `feature/PTIMER-177-reusable-kit-architecture`
-- Base commit: `e6a3004` (latest `main` / `github/main`)
+- Base commit: `e6a3004` (the `main` this work started from)
 - Target Platform: `iPhone / SwiftUI / Xcode`
 - Prior work (reference only, do not patch):
   - `feature/PTIMER-174-test-suite-rationalization`
   - `feature/PTIMER-177-timer-state-machine`
   - `feature/PTIMER-177-timer-runtime` (latest combined exploration; abandoned at WIP `798403d`)
+
+**Status (2026-06-10).** The three-layer architecture (§§1–8) has
+landed. Phases C8 (SwiftUI component kit) and C9 (off-simulator test
+relocation) merged to `main` via PR #2. Active branch
+`feature/PTIMER-177-c10-viewmodel-testability` carries C10 (ViewModel
+testability seam) and the in-progress C11 (reciprocity test
+re-architecture by archetype). Current state, metrics, and the remaining
+plan are in **§15**; that section supersedes §§9–10 where they differ.
 
 ---
 
@@ -468,3 +475,100 @@ To resolve during the relevant commit, reporting the call + reason first:
 - PTimerKit may import SwiftUI, but **not** UIKit / UserNotifications /
   ActivityKit / AudioToolbox.
 - Off-simulator ratio is an **outcome**, not the acceptance criterion.
+
+---
+
+## 15. Progress & C11 Reciprocity Test Re-Architecture (2026-06-10)
+
+This section records the work done after the architecture (§§1–8) landed
+and the live plan. Where it differs from §§9–10, this section wins.
+
+### 15.1 Phases delivered
+
+- **C8 — reusable SwiftUI component kit.** Component theme, result row,
+  timer action button, film-details graph, target-shutter card + input
+  sheet (moved into Kit under `#if os(iOS)`), and an app-owned
+  `WheelTelemetry` seam so the live wheel readout stays app-side while
+  the sheet lives in Kit. Merged via PR #2.
+- **C9 — off-simulator test relocation.** Pure reciprocity,
+  ExposureCalculator, and timer/workspace suites moved (not copied) from
+  app-hosted `PTimerTests` into `PTimerCoreTests` / `PTimerKitTests`;
+  shared pure helpers duplicated where remaining app tests still need
+  them. Merged via PR #2.
+- **C10 — ViewModel testability seam.** A package-safe
+  `FakeTimerManaging` plus the `TimerManaging` protocol let ViewModel
+  suites whose only off-sim blocker was constructing a concrete
+  `TimerManager` move to `PTimerKitTests` with no production change.
+- **C11 — reciprocity test re-architecture.** Express repeated behavior
+  as table-driven contracts and reorganize the reciprocity suite by
+  **archetype**. Batch 1: same-file near-duplicates → case tables. Batch
+  2: cross-file table-log-log invariants → `TableLogLogReciprocityContractTests`
+  (+ a follow-up cleanup commit). Batch 3 (in progress): the full
+  archetype re-architecture below.
+
+### 15.2 Metrics (fixed denominator)
+
+- **Baseline total TC = 1502** — the count at `eed873c`, the last commit
+  before the PTimerKit package was stood up (100% app-hosted).
+- **app-hosted ratio = remaining app-hosted ÷ 1502.** This is the
+  primary readout for C8–C10 (how much is still simulator-bound).
+  Currently 435 / 1502 ≈ **29.0%** (down from 100%).
+- **executable TC reduction = current executable total − 1502.** This is
+  the primary readout for C11 (consolidation removing duplicate
+  executable functions). Coverage location (the app-hosted ratio) is
+  unchanged by C11 because consolidation happens inside the package.
+
+### 15.3 Reciprocity archetype model
+
+An *archetype* is the film's mid-region reciprocity behavior. Films in
+one archetype share the same behavior contracts and differ only by case
+data, so they are tested as a film-case table, **never** one suite or
+one function per film.
+
+**Hard naming rule: a film name must not appear in a test-function
+name.** Film identity lives only as case-table data or, for a genuinely
+single-film suite, a single `private let film` constant. Function names
+describe the behavior contract.
+
+| Archetype | Members | Contract suite(s) |
+|---|---|---|
+| Source-less bare power-law (ILFORD / HARMAN, `Tc = Tm^p`, no source data) | HP5, Pan F, FP4, Delta 100/400/3200, Kentmere 100/200/400, Ortho, SFX 200, XP2 (12) | `BarePowerLawReciprocityContractTests` |
+| Converted guarded formula (inclusive threshold, bounded source range) | Velvia 50, Velvia 100, Provia 100F, ADOX CMS 20 II, Rollei RETRO 80S, SUPERPAN 200 | `GuardedFormula{RegionBasis,Fit,SourceEvidence,Presentation}ContractTests` |
+| Constant-multiplier converted formula (open boundary, `< 120 s`) | Acros II | single-film suite, film as a constant |
+| Table log-log | T-MAX 100/400, Tri-X 400, Foma 200/400, Fomapan 100 (+ Ohzart community), RPX 100/400, ADOX CHS 100 | `TableLogLogReciprocityContractTests` + a source-data contract |
+| Limited guidance | Portra 160/400, Ektar 100, Ektachrome E100 | `LimitedGuidanceReciprocityContractTests` |
+
+Rollei splits across two archetypes: **RPX 100 / RPX 400 → table
+log-log**; **RETRO 80S / SUPERPAN 200 → converted guarded formula**.
+Authority / provenance (official / community / app-derived / user) is a
+case-data column, not an archetype axis — "if the source data differs,
+it is a different case."
+
+### 15.4 Stage plan (each its own commit)
+
+- **3a — Ilford bare power-law (done).** New `BarePowerLawReciprocityContractTests`
+  over 12 films; dissolved `HP5PlusFormulaProfileTests`; coverage extended
+  to the 11 ILFORD/HARMAN films that previously had none.
+- **3b — converted guarded formula (in progress).** Four behavior
+  contracts (region-basis, fit, source-evidence, presentation) over the 6
+  members incl. Rollei RETRO 80S / SUPERPAN 200; dissolve the Velvia 50,
+  Velvia 100, Provia 100F formula suites; reduce CMS 20 II and the Rollei
+  formula portion to their genuinely film-specific remainder (film as a
+  constant, behavior-named functions).
+- **3c — Acros II constant-multiplier.** Rename to behavior-named
+  functions with the film as a constant.
+- **3d — table log-log source data.** Extend `TableLogLogReciprocityContractTests`
+  and add a source-data contract (anchors, source-evidence rows, markers)
+  as case data; dissolve the per-film table suites and the Rollei RPX
+  portion. Preserve the batch-2 exact-anchor guards.
+- **3e — limited guidance + model-basis table.** Case-drive the Kodak
+  limited-guidance suite and the bundled model-basis declarations.
+- **3f — Provia presentation / graph / scale.** Constant-ise the
+  film-named graph/scale/presentation tests (these exercise the
+  graph/scale engine, not the reciprocity model, so they stay
+  film-anchored via a constant rather than becoming cross-film cases).
+
+Each stage: `swift test --package-path ios/PTimerKit` + full app-hosted
+`xcodebuild` + SwiftLint + boundary grep, then a single commit. No
+production change in any C11 stage; no source-data guard weakened (exact
+anchors / parameters / corrected values move to explicit case columns).

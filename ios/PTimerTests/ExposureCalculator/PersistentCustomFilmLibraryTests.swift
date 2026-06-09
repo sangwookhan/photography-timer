@@ -1,4 +1,6 @@
 import XCTest
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 /// Save / reload coverage for the custom film library.
@@ -12,7 +14,7 @@ final class PersistentCustomFilmLibraryTests: XCTestCase {
     func test_savedProfile_survivesNewLibraryInstance() {
         let store = InMemoryCustomFilmLibraryStore()
         let library = CustomFilmLibrary(store: store)
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "film-1", stockName: "Saved")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "film-1", stockName: "Saved")
 
         library.add(film)
 
@@ -24,9 +26,9 @@ final class PersistentCustomFilmLibraryTests: XCTestCase {
     func test_savedMultipleProfiles_surviveReloadInOrder() {
         let store = InMemoryCustomFilmLibraryStore()
         let library = CustomFilmLibrary(store: store)
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "alpha", stockName: "Alpha"))
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "beta", stockName: "Beta"))
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "gamma", stockName: "Gamma"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "alpha", stockName: "Alpha"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "beta", stockName: "Beta"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "gamma", stockName: "Gamma"))
 
         let reloaded = CustomFilmLibrary(store: store)
         XCTAssertEqual(reloaded.customFilms.map(\.id), ["alpha", "beta", "gamma"])
@@ -96,8 +98,8 @@ final class PersistentCustomFilmLibraryTests: XCTestCase {
     func test_removeProfile_persistsDeletion() {
         let store = InMemoryCustomFilmLibraryStore()
         let library = CustomFilmLibrary(store: store)
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "keep", stockName: "Keep"))
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "drop", stockName: "Drop"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "keep", stockName: "Keep"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "drop", stockName: "Drop"))
 
         library.remove(id: "drop")
 
@@ -128,7 +130,7 @@ final class PersistentCustomFilmLibraryTests: XCTestCase {
 
         // After a successful save, subsequent loads should now
         // succeed — the malformed bytes have been replaced.
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "recovered", stockName: "Recovered"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "recovered", stockName: "Recovered"))
         let reloaded = CustomFilmLibrary(store: store)
         XCTAssertEqual(reloaded.customFilms.map(\.id), ["recovered"])
     }
@@ -146,7 +148,7 @@ final class PersistentCustomFilmLibraryTests: XCTestCase {
             snapshotKey: storeKey
         )
         let firstLibrary = CustomFilmLibrary(store: firstStore)
-        firstLibrary.add(CustomFilmLibraryTests.makeCustomFilm(id: "persisted", stockName: "P"))
+        firstLibrary.add(CustomFilmTestSupport.makeCustomFilm(id: "persisted", stockName: "P"))
 
         // A new store instance with the same UserDefaults must
         // observe the persisted payload — same backing storage.
@@ -175,7 +177,7 @@ final class PersistentCustomFilmLibraryTests: XCTestCase {
 
         let store = UserDefaultsCustomFilmLibraryStore(userDefaults: defaults)
         let library = CustomFilmLibrary(store: store)
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "custom", stockName: "Custom"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "custom", stockName: "Custom"))
 
         XCTAssertEqual(
             defaults.data(forKey: calculatorContextKey),

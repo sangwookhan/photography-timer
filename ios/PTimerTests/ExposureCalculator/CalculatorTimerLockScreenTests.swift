@@ -1,4 +1,6 @@
 import XCTest
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 final class CalculatorTimerLockScreenTests: XCTestCase {
@@ -26,7 +28,7 @@ final class CalculatorTimerLockScreenTests: XCTestCase {
                 representativeTimerName: timer.name,
                 representativeEndDate: try XCTUnwrap(timer.endDate),
                 scheduledTargets: [
-                    LockScreenTimerScheduledTarget(
+                    ScheduledTimerTarget(
                         timerID: timer.id,
                         timerName: timer.name,
                         endDate: try XCTUnwrap(timer.endDate)
@@ -224,12 +226,12 @@ final class CalculatorTimerLockScreenTests: XCTestCase {
             representativeTimerName: "30s timer",
             representativeEndDate: Date(timeIntervalSince1970: 130),
             scheduledTargets: [
-                LockScreenTimerScheduledTarget(
+                ScheduledTimerTarget(
                     timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000021")!,
                     timerName: "30s timer",
                     endDate: Date(timeIntervalSince1970: 130)
                 ),
-                LockScreenTimerScheduledTarget(
+                ScheduledTimerTarget(
                     timerID: UUID(uuidString: "00000000-0000-0000-0000-000000000022")!,
                     timerName: "2m timer",
                     endDate: Date(timeIntervalSince1970: 220)

@@ -1,16 +1,16 @@
-  ▿ PTimer.ReciprocityConfidencePresentation
-    - category: PTimer.ReciprocityConfidenceCategory.unsupported
-    - level: PTimer.ReciprocityConfidenceLevel.none
-    - badgeStyle: PTimer.ReciprocityConfidenceBadgeStyle.unsupported
-    - warningEmphasis: PTimer.ReciprocityConfidenceWarningEmphasis.strong
-    - resultKind: PTimer.ReciprocityConfidenceResultKind.unsupported
+  ▿ PTimerCore.ReciprocityConfidencePresentation
+    - category: PTimerCore.ReciprocityConfidenceCategory.unsupported
+    - level: PTimerCore.ReciprocityConfidenceLevel.none
+    - badgeStyle: PTimerCore.ReciprocityConfidenceBadgeStyle.unsupported
+    - warningEmphasis: PTimerCore.ReciprocityConfidenceWarningEmphasis.strong
+    - resultKind: PTimerCore.ReciprocityConfidenceResultKind.unsupported
     - shortLabel: "Outside guidance"
     ▿ explanationTokens: 5 elements
-      - PTimer.ReciprocityConfidenceExplanationToken.unsupportedByPolicy
-      - PTimer.ReciprocityConfidenceExplanationToken.currentOfficialSource
-      - PTimer.ReciprocityConfidenceExplanationToken.beyondPolicyLimit
-      - PTimer.ReciprocityConfidenceExplanationToken.officialRangeExceeded
-      - PTimer.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
+      - PTimerCore.ReciprocityConfidenceExplanationToken.unsupportedByPolicy
+      - PTimerCore.ReciprocityConfidenceExplanationToken.currentOfficialSource
+      - PTimerCore.ReciprocityConfidenceExplanationToken.beyondPolicyLimit
+      - PTimerCore.ReciprocityConfidenceExplanationToken.officialRangeExceeded
+      - PTimerCore.ReciprocityConfidenceExplanationToken.calculatedExposureReturned
     ▿ supportingNotes: 2 elements
       - "Manufacturer source range ends at 600 sec."
       - "Outside manufacturer source range — value is a formula prediction outside the published source range."

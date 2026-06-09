@@ -1,4 +1,6 @@
 import XCTest
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 /// Edit flow + selector top-of-list affordances. Covers the

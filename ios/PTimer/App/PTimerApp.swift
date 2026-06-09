@@ -1,4 +1,5 @@
 import ActivityKit
+import PTimerKit
 import SwiftUI
 import UIKit
 
@@ -24,26 +25,6 @@ final class PTimerAppDelegate: NSObject, UIApplicationDelegate {
         // screen-level UIKit boundary or a dedicated landscape design.
         .portrait
     }
-}
-
-struct LockScreenTimerTarget: Equatable {
-    let representativeTimerID: UUID
-    let representativeTimerName: String
-    let representativeEndDate: Date
-    let scheduledTargets: [LockScreenTimerScheduledTarget]
-}
-
-protocol LockScreenTimerTargetExposing {
-    @MainActor
-    func expose(_ target: LockScreenTimerTarget)
-
-    @MainActor
-    func clear()
-}
-
-struct NoOpLockScreenTimerTargetExposer: LockScreenTimerTargetExposing {
-    func expose(_ target: LockScreenTimerTarget) {}
-    func clear() {}
 }
 
 @MainActor

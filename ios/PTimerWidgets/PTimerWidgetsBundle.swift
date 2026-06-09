@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerCore
 import WidgetKit
 
 @main

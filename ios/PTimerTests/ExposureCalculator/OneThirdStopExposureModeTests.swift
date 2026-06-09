@@ -1,4 +1,6 @@
 import XCTest
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 /// Focused tests for the one-third-stop exposure calculation mode.

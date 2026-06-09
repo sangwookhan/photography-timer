@@ -1,4 +1,6 @@
 import Foundation
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 // Trace-recording implementations of the collaborator protocols

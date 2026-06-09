@@ -1,4 +1,6 @@
 import XCTest
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 /// PTIMER-164: the Ohzart community practical table is a separate

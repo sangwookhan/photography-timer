@@ -1,4 +1,5 @@
 import XCTest
+import PTimerCore
 @testable import PTimer
 
 /// Baseline snapshot tests covering display-state outputs. These lock

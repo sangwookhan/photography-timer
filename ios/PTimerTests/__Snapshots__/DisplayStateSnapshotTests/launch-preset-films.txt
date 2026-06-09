@@ -1,7 +1,7 @@
   ▿ 34 elements
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-pan-f-plus-50"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Pan F Plus"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -10,15 +10,15 @@
       ▿ aliases: 1 element
         - "Pan F+"
       - iso: 50
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-pan-f-plus-50-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -27,10 +27,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.33
@@ -46,9 +46,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-fp4-plus-125"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "FP4 Plus"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -57,15 +57,15 @@
       ▿ aliases: 1 element
         - "FP4+"
       - iso: 125
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-fp4-plus-125-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -74,10 +74,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.26
@@ -93,9 +93,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-delta-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Delta 100"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -104,15 +104,15 @@
       ▿ aliases: 1 element
         - "Delta 100 Pro"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-delta-100-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -121,10 +121,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.26
@@ -140,9 +140,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-delta-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Delta 400"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -151,15 +151,15 @@
       ▿ aliases: 1 element
         - "Delta 400 Pro"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-delta-400-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -168,10 +168,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.41
@@ -187,9 +187,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-delta-3200"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Delta 3200"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -198,15 +198,15 @@
       ▿ aliases: 1 element
         - "Delta 3200 Pro"
       - iso: 3200
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-delta-3200-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -215,10 +215,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.33
@@ -234,9 +234,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-hp5-plus-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "HP5 Plus"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -246,15 +246,15 @@
         - "HP5+"
         - "HP5 Plus 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-hp5-plus-400-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -263,10 +263,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.31
@@ -279,15 +279,15 @@
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerFormula, calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerFormula
-              - calculationModel: PTimer.ReciprocityCalculationModel.guardedFormula
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-xp2-super-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "XP2 Super"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -296,15 +296,15 @@
       ▿ aliases: 1 element
         - "XP2"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-xp2-super-400-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -313,10 +313,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.31
@@ -332,9 +332,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-sfx-200"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "SFX 200"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -342,15 +342,15 @@
         - some: "ILFORD SFX 200"
       - aliases: 0 elements
       - iso: 200
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-sfx-200-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -359,10 +359,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.43
@@ -378,9 +378,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-ortho-plus-80"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Ortho Plus"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -388,15 +388,15 @@
         - some: "ILFORD ORTHO PLUS"
       - aliases: 0 elements
       - iso: 80
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-ortho-plus-80-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -405,10 +405,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.25
@@ -424,9 +424,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-kentmere-pan-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Kentmere 100"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -435,15 +435,15 @@
       ▿ aliases: 1 element
         - "Kentmere Pan 100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-kentmere-pan-100-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -452,10 +452,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.26
@@ -471,9 +471,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-kentmere-pan-200"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Kentmere 200"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -482,15 +482,15 @@
       ▿ aliases: 1 element
         - "Kentmere Pan 200"
       - iso: 200
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-kentmere-pan-200-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -499,10 +499,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.26
@@ -518,9 +518,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "ilford-kentmere-pan-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Kentmere 400"
       ▿ manufacturer: Optional("ILFORD / HARMAN")
         - some: "ILFORD / HARMAN"
@@ -529,15 +529,15 @@
       ▿ aliases: 1 element
         - "Kentmere Pan 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "ilford-kentmere-pan-400-official-formula"
           - name: "Official formula"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Ilford Photo"
             ▿ title: Optional("Reciprocity characteristics")
               - some: "Reciprocity characteristics"
@@ -546,10 +546,10 @@
             ▿ sourceVersion: Optional("2026")
               - some: "2026"
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.3
@@ -565,9 +565,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-tri-x-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Tri-X 400"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -577,15 +577,15 @@
         - "TRI-X"
         - "TX 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-tri-x-official-graph-table"
           - name: "Official Kodak graph/table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data")
               - some: "KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"
@@ -593,40 +593,40 @@
               - some: "Publication F-4017"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 11 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 2.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 2.0
                     - correctedSeconds: 5.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 3.0
                     - correctedSeconds: 10.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 5.0
                     - correctedSeconds: 20.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 7.0
                     - correctedSeconds: 32.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 50.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 20.0
                     - correctedSeconds: 120.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 30.0
                     - correctedSeconds: 200.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 50.0
                     - correctedSeconds: 420.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 70.0
                     - correctedSeconds: 720.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 100.0
                     - correctedSeconds: 1200.0
                 - additionalAdjustments: 0 elements
@@ -637,81 +637,81 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 3 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 1.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 2.0
                       - isApproximate: false
-                ▿ PTimer.ReciprocityAdjustment.development
-                  ▿ development: PTimer.DevelopmentAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.development
+                  ▿ development: PTimerCore.DevelopmentAdjustment
                     - instruction: "-10% development"
                     - note: nil
               ▿ notes: 1 element
                 - "1 sec → +1 stop, corrected 2 sec, develop -10%."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 3 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 2.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 50.0
                       - isApproximate: false
-                ▿ PTimer.ReciprocityAdjustment.development
-                  ▿ development: PTimer.DevelopmentAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.development
+                  ▿ development: PTimerCore.DevelopmentAdjustment
                     - instruction: "-20% development"
                     - note: nil
               ▿ notes: 1 element
                 - "10 sec → +2 stops, corrected 50 sec, develop -20%."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 3 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 3.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(100.0)
                         - some: 100.0
                       - correctedSeconds: 1200.0
                       - isApproximate: false
-                ▿ PTimer.ReciprocityAdjustment.development
-                  ▿ development: PTimer.DevelopmentAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.development
+                  ▿ development: PTimerCore.DevelopmentAdjustment
                     - instruction: "-30% development"
                     - note: nil
               ▿ notes: 1 element
                 - "100 sec → +3 stops, corrected 1200 sec, develop -30%."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-tmax-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "T-MAX 100"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -721,15 +721,15 @@
         - "TMX"
         - "T-MAX 100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-tmax-100-official-table"
           - name: "Official Kodak table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL T-MAX 100 Film — Technical Data")
               - some: "KODAK PROFESSIONAL T-MAX 100 Film — Technical Data"
@@ -737,16 +737,16 @@
               - some: "Publication F-4016"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 3 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 1.2599210498948732
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 15.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 100.0
                     - correctedSeconds: 200.0
                 - additionalAdjustments: 0 elements
@@ -759,17 +759,17 @@
             - "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity table deliberately excludes that short-exposure anchor — it is preserved as a profile-level note only."
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.3333333333333333
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 1.2599210498948732
@@ -777,17 +777,17 @@
               ▿ notes: 1 element
                 - "1 sec → +1/3 stop. Kodak publishes this as an aperture/stop adjustment, not a corrected shutter time; the ≈1.26 sec shown is the derived time-equivalent (1 × 2^(1/3)) used as a calculation anchor, not a Kodak-published corrected time."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 15.0
@@ -795,17 +795,17 @@
               ▿ notes: 1 element
                 - "10 sec → +1/2 stop, corrected 15 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 1.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(100.0)
                         - some: 100.0
                       - correctedSeconds: 200.0
@@ -813,15 +813,15 @@
               ▿ notes: 1 element
                 - "100 sec → +1 stop, corrected 200 sec."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-tmax-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "T-MAX 400"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -831,15 +831,15 @@
         - "TMY-2"
         - "T-MAX 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-tmax-400-official-table"
           - name: "Official Kodak table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL T-MAX 400 Film — Technical Data")
               - some: "KODAK PROFESSIONAL T-MAX 400 Film — Technical Data"
@@ -847,16 +847,16 @@
               - some: "Publication F-4043"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 3 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 1.2599210498948732
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 15.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 100.0
                     - correctedSeconds: 300.0
                 - additionalAdjustments: 0 elements
@@ -867,17 +867,17 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.3333333333333333
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 1.2599210498948732
@@ -885,17 +885,17 @@
               ▿ notes: 1 element
                 - "1 sec → +1/3 stop. Kodak publishes this as an aperture/stop adjustment, not a corrected shutter time; the ≈1.26 sec shown is the derived time-equivalent (1 × 2^(1/3)) used as a calculation anchor, not a Kodak-published corrected time."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 15.0
@@ -903,17 +903,17 @@
               ▿ notes: 1 element
                 - "10 sec → +1/2 stop, corrected 15 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 1.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(100.0)
                         - some: 100.0
                       - correctedSeconds: 300.0
@@ -921,15 +921,15 @@
               ▿ notes: 1 element
                 - "100 sec → +1 1/2 stops, corrected 300 sec."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-ektar-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Ektar 100"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -938,15 +938,15 @@
       ▿ aliases: 1 element
         - "EKTAR 100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-ektar-100-official-threshold"
           - name: "Official threshold guidance"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL Ektar 100 Film — Technical Data")
               - some: "KODAK PROFESSIONAL Ektar 100 Film — Technical Data"
@@ -954,38 +954,38 @@
               - some: "Publication E-4046"
             - sourceVersion: nil
           ▿ rules: 2 elements
-            ▿ PTimer.ReciprocityRule.threshold
-              ▿ threshold: PTimer.ThresholdReciprocityRule
-                ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.threshold
+              ▿ threshold: PTimerCore.ThresholdReciprocityRule
+                ▿ noCorrectionRange: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
                   ▿ maximumSeconds: Optional(1.0)
                     - some: 1.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
-            ▿ PTimer.ReciprocityRule.limitedGuidance
-              ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
-                  ▿ some: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.limitedGuidance
+              ▿ limitedGuidance: PTimerCore.LimitedGuidanceReciprocityRule
+                ▿ appliesWhenMetered: Optional(PTimerCore.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
+                  ▿ some: PTimerCore.ReciprocityTimeRange
                     - minimumSeconds: 1.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
-                  ▿ PTimer.ReciprocityAdjustment.note
-                    ▿ note: PTimer.ReciprocityNote
+                  ▿ PTimerCore.ReciprocityAdjustment.note
+                    ▿ note: PTimerCore.ReciprocityNote
                       - text: "Longer exposures: test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimer.ReciprocityCalculationModel.limitedGuidance))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerLimitedGuidance
-              - calculationModel: PTimer.ReciprocityCalculationModel.limitedGuidance
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-portra-160"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Portra 160"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -994,15 +994,15 @@
       ▿ aliases: 1 element
         - "PORTRA 160"
       - iso: 160
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-portra-160-official-threshold"
           - name: "Official threshold guidance"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL Portra 160 Film — Technical Data")
               - some: "KODAK PROFESSIONAL Portra 160 Film — Technical Data"
@@ -1010,24 +1010,24 @@
               - some: "Publication E-4051"
             - sourceVersion: nil
           ▿ rules: 2 elements
-            ▿ PTimer.ReciprocityRule.threshold
-              ▿ threshold: PTimer.ThresholdReciprocityRule
-                ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.threshold
+              ▿ threshold: PTimerCore.ThresholdReciprocityRule
+                ▿ noCorrectionRange: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
                   ▿ maximumSeconds: Optional(10.0)
                     - some: 10.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
-            ▿ PTimer.ReciprocityRule.limitedGuidance
-              ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
-                  ▿ some: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.limitedGuidance
+              ▿ limitedGuidance: PTimerCore.LimitedGuidanceReciprocityRule
+                ▿ appliesWhenMetered: Optional(PTimerCore.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
+                  ▿ some: PTimerCore.ReciprocityTimeRange
                     - minimumSeconds: 10.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
-                  ▿ PTimer.ReciprocityAdjustment.note
-                    ▿ note: PTimer.ReciprocityNote
+                  ▿ PTimerCore.ReciprocityAdjustment.note
+                    ▿ note: PTimerCore.ReciprocityNote
                       - text: "Beyond 10 sec is not recommended; test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
@@ -1036,9 +1036,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-portra-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Portra 400"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -1047,15 +1047,15 @@
       ▿ aliases: 1 element
         - "PORTRA 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-portra-400-official-threshold"
           - name: "Official threshold guidance"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL Portra 400 Film — Technical Data")
               - some: "KODAK PROFESSIONAL Portra 400 Film — Technical Data"
@@ -1063,24 +1063,24 @@
               - some: "Publication E-4050"
             - sourceVersion: nil
           ▿ rules: 2 elements
-            ▿ PTimer.ReciprocityRule.threshold
-              ▿ threshold: PTimer.ThresholdReciprocityRule
-                ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.threshold
+              ▿ threshold: PTimerCore.ThresholdReciprocityRule
+                ▿ noCorrectionRange: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
                   ▿ maximumSeconds: Optional(10.0)
                     - some: 10.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
-            ▿ PTimer.ReciprocityRule.limitedGuidance
-              ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
-                  ▿ some: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.limitedGuidance
+              ▿ limitedGuidance: PTimerCore.LimitedGuidanceReciprocityRule
+                ▿ appliesWhenMetered: Optional(PTimerCore.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
+                  ▿ some: PTimerCore.ReciprocityTimeRange
                     - minimumSeconds: 10.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
-                  ▿ PTimer.ReciprocityAdjustment.note
-                    ▿ note: PTimer.ReciprocityNote
+                  ▿ PTimerCore.ReciprocityAdjustment.note
+                    ▿ note: PTimerCore.ReciprocityNote
                       - text: "Beyond 10 sec is not recommended; test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
@@ -1089,9 +1089,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-gold-200"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Gold 200"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -1100,15 +1100,15 @@
       ▿ aliases: 1 element
         - "GOLD 200"
       - iso: 200
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-gold-200-official-threshold"
           - name: "Official threshold guidance"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL Gold 200 Film — Technical Data")
               - some: "KODAK PROFESSIONAL Gold 200 Film — Technical Data"
@@ -1116,24 +1116,24 @@
               - some: "Publication E-7022"
             - sourceVersion: nil
           ▿ rules: 2 elements
-            ▿ PTimer.ReciprocityRule.threshold
-              ▿ threshold: PTimer.ThresholdReciprocityRule
-                ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.threshold
+              ▿ threshold: PTimerCore.ThresholdReciprocityRule
+                ▿ noCorrectionRange: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
                   ▿ maximumSeconds: Optional(1.0)
                     - some: 1.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
-            ▿ PTimer.ReciprocityRule.limitedGuidance
-              ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
-                  ▿ some: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.limitedGuidance
+              ▿ limitedGuidance: PTimerCore.LimitedGuidanceReciprocityRule
+                ▿ appliesWhenMetered: Optional(PTimerCore.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
+                  ▿ some: PTimerCore.ReciprocityTimeRange
                     - minimumSeconds: 1.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
-                  ▿ PTimer.ReciprocityAdjustment.note
-                    ▿ note: PTimer.ReciprocityNote
+                  ▿ PTimerCore.ReciprocityAdjustment.note
+                    ▿ note: PTimerCore.ReciprocityNote
                       - text: "Longer exposures: test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
@@ -1142,9 +1142,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-ultra-max-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Ultra Max 400"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -1153,15 +1153,15 @@
       ▿ aliases: 1 element
         - "ULTRA MAX 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-ultra-max-400-official-threshold"
           - name: "Official threshold guidance"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL Ultra Max 400 Film — Technical Data")
               - some: "KODAK PROFESSIONAL Ultra Max 400 Film — Technical Data"
@@ -1169,24 +1169,24 @@
               - some: "Publication E-7023"
             - sourceVersion: nil
           ▿ rules: 2 elements
-            ▿ PTimer.ReciprocityRule.threshold
-              ▿ threshold: PTimer.ThresholdReciprocityRule
-                ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.threshold
+              ▿ threshold: PTimerCore.ThresholdReciprocityRule
+                ▿ noCorrectionRange: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
                   ▿ maximumSeconds: Optional(1.0)
                     - some: 1.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
-            ▿ PTimer.ReciprocityRule.limitedGuidance
-              ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
-                  ▿ some: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.limitedGuidance
+              ▿ limitedGuidance: PTimerCore.LimitedGuidanceReciprocityRule
+                ▿ appliesWhenMetered: Optional(PTimerCore.ReciprocityTimeRange(minimumSeconds: 1.0, maximumSeconds: nil))
+                  ▿ some: PTimerCore.ReciprocityTimeRange
                     - minimumSeconds: 1.0
                     - maximumSeconds: nil
                 ▿ adjustments: 1 element
-                  ▿ PTimer.ReciprocityAdjustment.note
-                    ▿ note: PTimer.ReciprocityNote
+                  ▿ PTimerCore.ReciprocityAdjustment.note
+                    ▿ note: PTimerCore.ReciprocityNote
                       - text: "Longer exposures may require exposure compensation and color filtration; test under your conditions."
                 - notes: 0 elements
           - notes: 0 elements
@@ -1195,9 +1195,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "kodak-ektachrome-e100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Ektachrome E100"
       ▿ manufacturer: Optional("Kodak")
         - some: "Kodak"
@@ -1207,15 +1207,15 @@
         - "EKTACHROME E100"
         - "E100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "kodak-ektachrome-e100-official-threshold"
           - name: "Official threshold and 120 sec filtration guidance"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Kodak"
             ▿ title: Optional("KODAK PROFESSIONAL EKTACHROME E100 Film — Technical Data")
               - some: "KODAK PROFESSIONAL EKTACHROME E100 Film — Technical Data"
@@ -1223,29 +1223,29 @@
               - some: "Publication E-4000"
             - sourceVersion: nil
           ▿ rules: 2 elements
-            ▿ PTimer.ReciprocityRule.threshold
-              ▿ threshold: PTimer.ThresholdReciprocityRule
-                ▿ noCorrectionRange: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.threshold
+              ▿ threshold: PTimerCore.ThresholdReciprocityRule
+                ▿ noCorrectionRange: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 0.0001
                   ▿ maximumSeconds: Optional(10.0)
                     - some: 10.0
                 - adjustments: 0 elements
                 ▿ notes: 1 element
                   - "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
-            ▿ PTimer.ReciprocityRule.limitedGuidance
-              ▿ limitedGuidance: PTimer.LimitedGuidanceReciprocityRule
-                ▿ appliesWhenMetered: Optional(PTimer.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
-                  ▿ some: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocityRule.limitedGuidance
+              ▿ limitedGuidance: PTimerCore.LimitedGuidanceReciprocityRule
+                ▿ appliesWhenMetered: Optional(PTimerCore.ReciprocityTimeRange(minimumSeconds: 10.0, maximumSeconds: nil))
+                  ▿ some: PTimerCore.ReciprocityTimeRange
                     - minimumSeconds: 10.0
                     - maximumSeconds: nil
                 ▿ adjustments: 2 elements
-                  ▿ PTimer.ReciprocityAdjustment.colorFilter
-                    ▿ colorFilter: PTimer.ColorFilterRecommendation
+                  ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                    ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                       - filterName: "CC10R"
                       ▿ note: Optional("At 120 sec, add CC10R filtration per the published guidance.")
                         - some: "At 120 sec, add CC10R filtration per the published guidance."
-                  ▿ PTimer.ReciprocityAdjustment.note
-                    ▿ note: PTimer.ReciprocityNote
+                  ▿ PTimerCore.ReciprocityAdjustment.note
+                    ▿ note: PTimerCore.ReciprocityNote
                       - text: "Beyond 10 sec, follow the published 120 sec CC10R reference point; intermediate exposures are not quantified by the source."
                 - notes: 0 elements
           - notes: 0 elements
@@ -1254,9 +1254,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-acros-ii"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Acros II"
       ▿ manufacturer: Optional("Fujifilm")
         - some: "Fujifilm"
@@ -1266,15 +1266,15 @@
         - "NEOPAN 100 ACROS II"
         - "Acros II"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "fujifilm-acros-ii-official-formula"
           - name: "Official constant correction across published 120–1000 s range"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Fujifilm"
             ▿ title: Optional("NEOPAN 100 ACROS II — Reciprocity guidance")
               - some: "NEOPAN 100 ACROS II — Reciprocity guidance"
@@ -1282,10 +1282,10 @@
               - some: "Acros II support page"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.4142135623730951
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.0
@@ -1299,16 +1299,16 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 1 element
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.range
-                ▿ range: PTimer.ReciprocityTimeRange
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.range
+                ▿ range: PTimerCore.ReciprocityTimeRange
                   - minimumSeconds: 120.0
                   ▿ maximumSeconds: Optional(1000.0)
                     - some: 1000.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
               ▿ notes: 1 element
                 - "120 to 1000 sec → +1/2 stop."
@@ -1316,9 +1316,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-velvia-50"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Velvia 50"
       ▿ manufacturer: Optional("Fujifilm")
         - some: "Fujifilm"
@@ -1328,15 +1328,15 @@
         - "RVP 50"
         - "Velvia"
       - iso: 50
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "fujifilm-velvia-50-official-formula"
           - name: "Official formula anchored to 1 s threshold"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Fujifilm"
             ▿ title: Optional("FUJICHROME Velvia 50 — Long exposure guide")
               - some: "FUJICHROME Velvia 50 — Long exposure guide"
@@ -1344,10 +1344,10 @@
               - some: "Velvia 50 product page"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.0
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.1821
@@ -1361,82 +1361,82 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 5 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 4.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.3333333333333333
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "5M"
                     - note: nil
               ▿ notes: 1 element
                 - "4 sec → +1/3 stop, 5M."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "7.5M"
                     - note: nil
               ▿ notes: 1 element
                 - "8 sec → +1/2 stop, 7.5M."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 16.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.6666666666666666
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "10M"
                     - note: nil
               ▿ notes: 1 element
                 - "16 sec → +2/3 stop, 10M."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 32.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 1.0
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "12.5M"
                     - note: nil
               ▿ notes: 1 element
                 - "32 sec → +1 stop, 12.5M."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 64.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.warning
-                  ▿ warning: PTimer.ReciprocityWarning
-                    - severity: PTimer.ReciprocityWarningSeverity.notRecommended
+                ▿ PTimerCore.ReciprocityAdjustment.warning
+                  ▿ warning: PTimerCore.ReciprocityWarning
+                    - severity: PTimerCore.ReciprocityWarningSeverity.notRecommended
                     - message: "64 sec is not recommended."
               - notes: 0 elements
               - isSourceEvidenceOnly: false
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-velvia-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Velvia 100"
       ▿ manufacturer: Optional("Fujifilm")
         - some: "Fujifilm"
@@ -1445,15 +1445,15 @@
       ▿ aliases: 1 element
         - "RVP 100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "fujifilm-velvia-100-official-formula"
           - name: "Official formula anchored to 60 s threshold"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Fujifilm"
             ▿ title: Optional("FUJICHROME Velvia 100 — Long exposure guide")
               - some: "FUJICHROME Velvia 100 — Long exposure guide"
@@ -1461,10 +1461,10 @@
               - some: "Velvia 100 product page"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 60.0
                   - referenceMeteredTimeSeconds: 60.0
                   - exponent: 1.2667
@@ -1478,31 +1478,31 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 2 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 120.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.3333333333333333
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "2.5M"
                     - note: nil
               ▿ notes: 1 element
                 - "2 min → +1/3 stop, 2.5M."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 240.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "2.5M"
                     - note: nil
               ▿ notes: 1 element
@@ -1511,9 +1511,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-provia-100f"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Provia 100F"
       ▿ manufacturer: Optional("Fujifilm")
         - some: "Fujifilm"
@@ -1522,15 +1522,15 @@
       ▿ aliases: 1 element
         - "RDP III"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "fujifilm-provia-100f-official-formula"
           - name: "Official formula anchored to 240 s reference"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Fujifilm"
             ▿ title: Optional("FUJICHROME PROVIA 100F — Long exposure guide")
               - some: "FUJICHROME PROVIA 100F — Long exposure guide"
@@ -1538,10 +1538,10 @@
               - some: "Provia 100F support page"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 128.0
                   - referenceMeteredTimeSeconds: 128.0
                   - exponent: 1.3676
@@ -1555,37 +1555,37 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 2 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 240.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.3333333333333333
-                ▿ PTimer.ReciprocityAdjustment.colorFilter
-                  ▿ colorFilter: PTimer.ColorFilterRecommendation
+                ▿ PTimerCore.ReciprocityAdjustment.colorFilter
+                  ▿ colorFilter: PTimerCore.ColorFilterRecommendation
                     - filterName: "2.5G"
                     - note: nil
               ▿ notes: 1 element
                 - "4 min → +1/3 stop, 2.5G."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 480.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.warning
-                  ▿ warning: PTimer.ReciprocityWarning
-                    - severity: PTimer.ReciprocityWarningSeverity.notRecommended
+                ▿ PTimerCore.ReciprocityAdjustment.warning
+                  ▿ warning: PTimerCore.ReciprocityWarning
+                    - severity: PTimerCore.ReciprocityWarningSeverity.notRecommended
                     - message: "8 min is not recommended."
               - notes: 0 elements
               - isSourceEvidenceOnly: false
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "foma-fomapan-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Fomapan 100 Classic"
       ▿ manufacturer: Optional("FOMA BOHEMIA")
         - some: "FOMA BOHEMIA"
@@ -1594,15 +1594,15 @@
       ▿ aliases: 1 element
         - "Fomapan 100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "foma-fomapan-100-official-table"
           - name: "Official FOMA table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "FOMA BOHEMIA"
             ▿ title: Optional("FOMAPAN 100 CLASSIC — Technical sheet")
               - some: "FOMAPAN 100 CLASSIC — Technical sheet"
@@ -1610,16 +1610,16 @@
               - some: "Foma technical sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 3 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 2.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 80.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 100.0
                     - correctedSeconds: 1600.0
                 - additionalAdjustments: 0 elements
@@ -1630,17 +1630,17 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 2.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 2.0
@@ -1648,17 +1648,17 @@
               ▿ notes: 1 element
                 - "1 sec → ×2 (corrected 2 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 8.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 80.0
@@ -1666,17 +1666,17 @@
               ▿ notes: 1 element
                 - "10 sec → ×8 (corrected 80 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 16.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(100.0)
                         - some: 100.0
                       - correctedSeconds: 1600.0
@@ -1684,15 +1684,15 @@
               ▿ notes: 1 element
                 - "100 sec → ×16 (corrected 1600 sec)."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "foma-fomapan-200"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Fomapan 200 Creative"
       ▿ manufacturer: Optional("FOMA BOHEMIA")
         - some: "FOMA BOHEMIA"
@@ -1701,15 +1701,15 @@
       ▿ aliases: 1 element
         - "Fomapan 200"
       - iso: 200
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "foma-fomapan-200-official-table"
           - name: "Official FOMA table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "FOMA BOHEMIA"
             ▿ title: Optional("FOMAPAN 200 CREATIVE — Technical sheet")
               - some: "FOMAPAN 200 CREATIVE — Technical sheet"
@@ -1717,16 +1717,16 @@
               - some: "Foma technical sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 3 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 3.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 90.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 100.0
                     - correctedSeconds: 1800.0
                 - additionalAdjustments: 0 elements
@@ -1737,17 +1737,17 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 3.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 3.0
@@ -1755,17 +1755,17 @@
               ▿ notes: 1 element
                 - "1 sec → ×3 (corrected 3 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 9.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 90.0
@@ -1773,17 +1773,17 @@
               ▿ notes: 1 element
                 - "10 sec → ×9 (corrected 90 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 18.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(100.0)
                         - some: 100.0
                       - correctedSeconds: 1800.0
@@ -1791,15 +1791,15 @@
               ▿ notes: 1 element
                 - "100 sec → ×18 (corrected 1800 sec)."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "foma-fomapan-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "Fomapan 400 Action"
       ▿ manufacturer: Optional("FOMA BOHEMIA")
         - some: "FOMA BOHEMIA"
@@ -1808,15 +1808,15 @@
       ▿ aliases: 1 element
         - "Fomapan 400"
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "foma-fomapan-400-official-table"
           - name: "Official FOMA table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "FOMA BOHEMIA"
             ▿ title: Optional("FOMAPAN 400 ACTION — Technical sheet")
               - some: "FOMAPAN 400 ACTION — Technical sheet"
@@ -1824,16 +1824,16 @@
               - some: "Foma technical sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 3 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 1.5
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 60.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 100.0
                     - correctedSeconds: 800.0
                 - additionalAdjustments: 0 elements
@@ -1844,17 +1844,17 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 3 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 1.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 1.5
@@ -1862,17 +1862,17 @@
               ▿ notes: 1 element
                 - "1 sec → ×1.5 (corrected 1.5 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 6.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 60.0
@@ -1880,17 +1880,17 @@
               ▿ notes: 1 element
                 - "10 sec → ×6 (corrected 60 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 8.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(100.0)
                         - some: 100.0
                       - correctedSeconds: 800.0
@@ -1898,15 +1898,15 @@
               ▿ notes: 1 element
                 - "100 sec → ×8 (corrected 800 sec)."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "rollei-rpx-100"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "RPX 100"
       ▿ manufacturer: Optional("Rollei")
         - some: "Rollei"
@@ -1914,15 +1914,15 @@
         - some: "Rollei RPX 100"
       - aliases: 0 elements
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "rollei-rpx-100-official-table"
           - name: "Official Rollei table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Rollei"
             ▿ title: Optional("Rollei RPX 100 — Data sheet")
               - some: "Rollei RPX 100 — Data sheet"
@@ -1930,22 +1930,22 @@
               - some: "RPX 100 data sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 5 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 2.0
                     - correctedSeconds: 3.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 5.0
                     - correctedSeconds: 8.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 25.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 20.0
                     - correctedSeconds: 75.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 30.0
                     - correctedSeconds: 150.0
                 - additionalAdjustments: 0 elements
@@ -1956,13 +1956,13 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 5 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 2.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(2.0)
                         - some: 2.0
                       - correctedSeconds: 3.0
@@ -1970,13 +1970,13 @@
               ▿ notes: 1 element
                 - "2 sec → corrected 3 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 5.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(5.0)
                         - some: 5.0
                       - correctedSeconds: 8.0
@@ -1984,13 +1984,13 @@
               ▿ notes: 1 element
                 - "5 sec → corrected 8 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 25.0
@@ -1998,13 +1998,13 @@
               ▿ notes: 1 element
                 - "10 sec → corrected 25 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 20.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(20.0)
                         - some: 20.0
                       - correctedSeconds: 75.0
@@ -2012,13 +2012,13 @@
               ▿ notes: 1 element
                 - "20 sec → corrected 75 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 30.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(30.0)
                         - some: 30.0
                       - correctedSeconds: 150.0
@@ -2026,15 +2026,15 @@
               ▿ notes: 1 element
                 - "30 sec → corrected 150 sec."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "rollei-rpx-400"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "RPX 400"
       ▿ manufacturer: Optional("Rollei")
         - some: "Rollei"
@@ -2042,15 +2042,15 @@
         - some: "Rollei RPX 400"
       - aliases: 0 elements
       - iso: 400
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "rollei-rpx-400-official-table"
           - name: "Official Rollei table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Rollei"
             ▿ title: Optional("Rollei RPX 400 — Data sheet")
               - some: "Rollei RPX 400 — Data sheet"
@@ -2058,22 +2058,22 @@
               - some: "RPX 400 data sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 5 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 1.0
                     - correctedSeconds: 2.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 5.0
                     - correctedSeconds: 10.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 10.0
                     - correctedSeconds: 30.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 15.0
                     - correctedSeconds: 55.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 20.0
                     - correctedSeconds: 80.0
                 - additionalAdjustments: 0 elements
@@ -2084,13 +2084,13 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 5 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 2.0
@@ -2098,13 +2098,13 @@
               ▿ notes: 1 element
                 - "1 sec → corrected 2 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 5.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(5.0)
                         - some: 5.0
                       - correctedSeconds: 10.0
@@ -2112,13 +2112,13 @@
               ▿ notes: 1 element
                 - "5 sec → corrected 10 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 30.0
@@ -2126,13 +2126,13 @@
               ▿ notes: 1 element
                 - "10 sec → corrected 30 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(15.0)
                         - some: 15.0
                       - correctedSeconds: 55.0
@@ -2140,13 +2140,13 @@
               ▿ notes: 1 element
                 - "15 sec → corrected 55 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 20.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(20.0)
                         - some: 20.0
                       - correctedSeconds: 80.0
@@ -2154,15 +2154,15 @@
               ▿ notes: 1 element
                 - "20 sec → corrected 80 sec."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "rollei-retro-80s"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "RETRO 80S"
       ▿ manufacturer: Optional("Rollei")
         - some: "Rollei"
@@ -2170,15 +2170,15 @@
         - some: "Rollei RETRO 80S"
       - aliases: 0 elements
       - iso: 80
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "rollei-retro-80s-official-formula"
           - name: "Official log-log formula fit through published quantified rows"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Rollei"
             ▿ title: Optional("Rollei RETRO 80S — Data sheet")
               - some: "Rollei RETRO 80S — Data sheet"
@@ -2186,10 +2186,10 @@
               - some: "RETRO 80S data sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 0.9601
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.5361
@@ -2203,33 +2203,33 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 6 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.note
-                  ▿ note: PTimer.ReciprocityNote
+                ▿ PTimerCore.ReciprocityAdjustment.note
+                  ▿ note: PTimerCore.ReciprocityNote
                     - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "1 sec → effective exposure 1 to 2 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 2.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.note
-                  ▿ note: PTimer.ReciprocityNote
+                ▿ PTimerCore.ReciprocityAdjustment.note
+                  ▿ note: PTimerCore.ReciprocityNote
                     - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "2 sec → effective exposure 3 to 4 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 4.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(4.0)
                         - some: 4.0
                       - correctedSeconds: 8.0
@@ -2237,13 +2237,13 @@
               ▿ notes: 1 element
                 - "4 sec → corrected 8 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(8.0)
                         - some: 8.0
                       - correctedSeconds: 24.0
@@ -2251,13 +2251,13 @@
               ▿ notes: 1 element
                 - "8 sec → corrected 24 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(15.0)
                         - some: 15.0
                       - correctedSeconds: 60.0
@@ -2265,13 +2265,13 @@
               ▿ notes: 1 element
                 - "15 sec → corrected 60 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 30.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(30.0)
                         - some: 30.0
                       - correctedSeconds: 180.0
@@ -2282,9 +2282,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "rollei-superpan-200"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "SUPERPAN 200"
       ▿ manufacturer: Optional("Rollei")
         - some: "Rollei"
@@ -2292,15 +2292,15 @@
         - some: "Rollei SUPERPAN 200"
       - aliases: 0 elements
       - iso: 200
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "rollei-superpan-200-official-formula"
           - name: "Official log-log formula fit through published quantified rows"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "Rollei"
             ▿ title: Optional("Rollei SUPERPAN 200 — Data sheet")
               - some: "Rollei SUPERPAN 200 — Data sheet"
@@ -2308,10 +2308,10 @@
               - some: "SUPERPAN 200 data sheet"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 0.9601
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.5361
@@ -2325,33 +2325,33 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 6 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.note
-                  ▿ note: PTimer.ReciprocityNote
+                ▿ PTimerCore.ReciprocityAdjustment.note
+                  ▿ note: PTimerCore.ReciprocityNote
                     - text: "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "1 sec → effective exposure 1 to 2 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 2.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.note
-                  ▿ note: PTimer.ReciprocityNote
+                ▿ PTimerCore.ReciprocityAdjustment.note
+                  ▿ note: PTimerCore.ReciprocityNote
                     - text: "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
               ▿ notes: 1 element
                 - "2 sec → effective exposure 3 to 4 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 4.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(4.0)
                         - some: 4.0
                       - correctedSeconds: 8.0
@@ -2359,13 +2359,13 @@
               ▿ notes: 1 element
                 - "4 sec → corrected 8 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(8.0)
                         - some: 8.0
                       - correctedSeconds: 24.0
@@ -2373,13 +2373,13 @@
               ▿ notes: 1 element
                 - "8 sec → corrected 24 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(15.0)
                         - some: 15.0
                       - correctedSeconds: 60.0
@@ -2387,13 +2387,13 @@
               ▿ notes: 1 element
                 - "15 sec → corrected 60 sec."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 30.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(30.0)
                         - some: 30.0
                       - correctedSeconds: 180.0
@@ -2404,9 +2404,9 @@
           - modelBasis: nil
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "adox-chs-100-ii"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "CHS 100 II"
       ▿ manufacturer: Optional("ADOX")
         - some: "ADOX"
@@ -2415,15 +2415,15 @@
       ▿ aliases: 1 element
         - "CHS II 100"
       - iso: 100
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "adox-chs-100-ii-official-table"
           - name: "Official ADOX table"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "ADOX"
             ▿ title: Optional("ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024")
               - some: "ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024"
@@ -2431,19 +2431,19 @@
               - some: "ADOX CHS 100 II technical sheet (11 July 2024)"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.tableInterpolation
-              ▿ tableInterpolation: PTimer.TableInterpolationReciprocityRule
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
                 ▿ anchors: 4 elements
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 2.0
                     - correctedSeconds: 3.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 4.0
                     - correctedSeconds: 8.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 8.0
                     - correctedSeconds: 20.0
-                  ▿ PTimer.TableAnchor
+                  ▿ PTimerCore.TableAnchor
                     - meteredSeconds: 15.0
                     - correctedSeconds: 45.0
                 - additionalAdjustments: 0 elements
@@ -2454,17 +2454,17 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 4 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 2.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 1.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(2.0)
                         - some: 2.0
                       - correctedSeconds: 3.0
@@ -2472,17 +2472,17 @@
               ▿ notes: 1 element
                 - "2 sec → ×1.5 (corrected 3 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 4.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 2.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(4.0)
                         - some: 4.0
                       - correctedSeconds: 8.0
@@ -2490,17 +2490,17 @@
               ▿ notes: 1 element
                 - "4 sec → ×2 (corrected 8 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 8.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 2.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(8.0)
                         - some: 8.0
                       - correctedSeconds: 20.0
@@ -2508,17 +2508,17 @@
               ▿ notes: 1 element
                 - "8 sec → ×2.5 (corrected 20 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 15.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.multiplier
-                    ▿ multiplier: PTimer.MultiplierAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.multiplier
+                    ▿ multiplier: PTimerCore.MultiplierAdjustment
                       - factor: 3.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(15.0)
                         - some: 15.0
                       - correctedSeconds: 45.0
@@ -2526,15 +2526,15 @@
               ▿ notes: 1 element
                 - "15 sec → ×3 (corrected 45 sec)."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimer.ReciprocityProfileModelBasis(sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation))
-            ▿ some: PTimer.ReciprocityProfileModelBasis
-              - sourceModel: PTimer.ReciprocitySourceModel.manufacturerTable
-              - calculationModel: PTimer.ReciprocityCalculationModel.tableLogLogInterpolation
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
       - userMetadata: nil
-    ▿ PTimer.FilmIdentity
+    ▿ PTimerCore.FilmIdentity
       - id: "adox-cms-20-ii"
-      - kind: PTimer.FilmIdentityKind.preset
+      - kind: PTimerCore.FilmIdentityKind.preset
       - canonicalStockName: "CMS 20 II"
       ▿ manufacturer: Optional("ADOX")
         - some: "ADOX"
@@ -2543,15 +2543,15 @@
       ▿ aliases: 1 element
         - "CMS II 20"
       - iso: 20
-      - productionStatus: PTimer.FilmProductionStatus.current
+      - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
-        ▿ PTimer.ReciprocityProfile
+        ▿ PTimerCore.ReciprocityProfile
           - id: "adox-cms-20-ii-official-formula"
           - name: "Official log-log formula anchored to 1 s and 10 s reference points"
-          ▿ source: PTimer.ReciprocitySourceProvenance
-            - kind: PTimer.ReciprocitySourceKind.manufacturerPublished
-            - authority: PTimer.ReciprocityAuthority.official
-            - confidence: PTimer.ReciprocityConfidence.high
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
             - publisher: "ADOX"
             ▿ title: Optional("ADOX CMS 20 II — Technical information")
               - some: "ADOX CMS 20 II — Technical information"
@@ -2559,10 +2559,10 @@
               - some: "CMS 20 II ADOTECH instructions"
             - sourceVersion: nil
           ▿ rules: 1 element
-            ▿ PTimer.ReciprocityRule.formula
-              ▿ formula: PTimer.FormulaReciprocityRule
-                ▿ formula: PTimer.ReciprocityFormula
-                  - formulaFamily: PTimer.FormulaFamily.modifiedSchwarzschild
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
                   - coefficientSeconds: 1.4142136
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.150515
@@ -2576,28 +2576,28 @@
           - notes: 0 elements
           - userMetadata: nil
           ▿ sourceEvidence: 4 elements
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 0.001
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
               ▿ notes: 1 element
                 - "1/1000 sec → +1/2 stop. Preserved as published evidence only; the calculation path stays no-correction across the entire sub-1 sec band."
               - isSourceEvidenceOnly: true
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 0.5
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(1.0)
                         - some: 1.0
                       - correctedSeconds: 1.4142136
@@ -2605,17 +2605,17 @@
               ▿ notes: 1 element
                 - "1 sec → +1/2 stop (≈1.4 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 10.0
               ▿ adjustments: 2 elements
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.stopDelta
-                    ▿ stopDelta: PTimer.StopDeltaAdjustment
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
                       - stopDelta: 1.0
-                ▿ PTimer.ReciprocityAdjustment.exposure
-                  ▿ exposure: PTimer.ExposureAdjustment.correctedTime
-                    ▿ correctedTime: PTimer.CorrectedTimeMapping
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
                       ▿ meteredSeconds: Optional(10.0)
                         - some: 10.0
                       - correctedSeconds: 20.0
@@ -2623,13 +2623,13 @@
               ▿ notes: 1 element
                 - "10 sec → +1 stop (20 sec)."
               - isSourceEvidenceOnly: false
-            ▿ PTimer.ReciprocitySourceEvidenceRow
-              ▿ meteredExposure: PTimer.MeteredExposureSelector.exactSeconds
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 1 element
-                ▿ PTimer.ReciprocityAdjustment.warning
-                  ▿ warning: PTimer.ReciprocityWarning
-                    - severity: PTimer.ReciprocityWarningSeverity.notRecommended
+                ▿ PTimerCore.ReciprocityAdjustment.warning
+                  ▿ warning: PTimerCore.ReciprocityWarning
+                    - severity: PTimerCore.ReciprocityWarningSeverity.notRecommended
                     - message: "100 sec is not recommended."
               - notes: 0 elements
               - isSourceEvidenceOnly: false

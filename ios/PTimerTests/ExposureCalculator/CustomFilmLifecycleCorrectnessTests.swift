@@ -1,4 +1,6 @@
 import XCTest
+import PTimerKit
+import PTimerCore
 @testable import PTimer
 
 /// Lifecycle correctness coverage. Pins selection restore,
@@ -23,7 +25,7 @@ final class CustomFilmLifecycleCorrectnessTests: XCTestCase {
             calculatorContextStore: calculatorStore,
             sessionStore: sessionStore
         )
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "saved-custom", stockName: "Saved")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "saved-custom", stockName: "Saved")
         vm1.addCustomFilm(film)
         vm1.selectEntry(vm1.filmSelectorEntries.first { $0.id == "saved-custom" }!)
         // Force a persistence write by touching the base shutter
@@ -62,7 +64,7 @@ final class CustomFilmLifecycleCorrectnessTests: XCTestCase {
             )
         )
         let library = CustomFilmLibrary(store: libraryStore)
-        library.add(CustomFilmLibraryTests.makeCustomFilm(id: "legacy-custom", stockName: "Legacy"))
+        library.add(CustomFilmTestSupport.makeCustomFilm(id: "legacy-custom", stockName: "Legacy"))
 
         let vm = makeViewModel(
             library: library,
@@ -84,7 +86,7 @@ final class CustomFilmLifecycleCorrectnessTests: XCTestCase {
             calculatorContextStore: calculatorStore,
             sessionStore: sessionStore
         )
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "haunting", stockName: "Haunting")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "haunting", stockName: "Haunting")
         vm.addCustomFilm(film)
 
         // Select the custom film on Camera 2 (becomes an inactive
@@ -116,7 +118,7 @@ final class CustomFilmLifecycleCorrectnessTests: XCTestCase {
             calculatorContextStore: calculatorStore,
             sessionStore: sessionStore
         )
-        let film = CustomFilmLibraryTests.makeCustomFilm(id: "doomed", stockName: "Doomed")
+        let film = CustomFilmTestSupport.makeCustomFilm(id: "doomed", stockName: "Doomed")
         vm.addCustomFilm(film)
         vm.selectCameraSlot(.camera2)
         vm.selectEntry(vm.filmSelectorEntries.first { $0.id == "doomed" }!)
@@ -139,7 +141,7 @@ final class CustomFilmLifecycleCorrectnessTests: XCTestCase {
     // MARK: - Persistence sanitation
 
     func test_sanitation_dropsMalformedCustomFilm() {
-        let wellFormed = CustomFilmLibraryTests.makeCustomFilm(id: "ok", stockName: "Ok")
+        let wellFormed = CustomFilmTestSupport.makeCustomFilm(id: "ok", stockName: "Ok")
         let malformedKind = FilmIdentity(
             id: "preset-as-custom",
             kind: .preset,

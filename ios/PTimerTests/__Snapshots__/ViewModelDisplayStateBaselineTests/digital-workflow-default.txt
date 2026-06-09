@@ -1,5 +1,5 @@
   ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
-    ▿ activeCalculatorContext: PTimer.ActiveExposureCalculatorContext
+    ▿ activeCalculatorContext: PTimerKit.ActiveExposureCalculatorContext
       - selectedPresetFilm: nil
       - selectedProfileOverride: nil
     - isFilmWorkflowActive: false

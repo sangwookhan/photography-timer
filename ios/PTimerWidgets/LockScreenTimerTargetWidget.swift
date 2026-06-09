@@ -1,4 +1,5 @@
 import ActivityKit
+import PTimerCore
 import SwiftUI
 import WidgetKit
 
@@ -47,7 +48,7 @@ private struct LockScreenTimerSurface: View {
 }
 
 private struct LockScreenTimerTargetView: View {
-    let target: LockScreenTimerScheduledTarget?
+    let target: ScheduledTimerTarget?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -95,7 +96,7 @@ private struct LockScreenTimerIslandSurface: View {
 }
 
 private struct LockScreenTimerTargetIslandView: View {
-    let target: LockScreenTimerScheduledTarget?
+    let target: ScheduledTimerTarget?
 
     var body: some View {
         HStack(spacing: 8) {
@@ -126,6 +127,6 @@ private struct LockScreenTimerTargetIslandView: View {
 private func currentTarget(
     from state: TimerTargetLiveActivityAttributes.ContentState,
     now: Date
-) -> LockScreenTimerScheduledTarget? {
+) -> ScheduledTimerTarget? {
     state.displayTarget(at: now)
 }

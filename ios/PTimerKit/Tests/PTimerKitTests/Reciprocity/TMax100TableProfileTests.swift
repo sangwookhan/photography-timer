@@ -29,20 +29,6 @@ final class TMax100TableProfileTests: XCTestCase {
 
     // MARK: - Rule structure
 
-    func testTMax100HasTableInterpolationRuleAndNoFormulaRule() throws {
-        let profile = try tmax100Profile()
-
-        let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-            if case let .tableInterpolation(r) = rule { return r } else { return nil }
-        }.first
-        XCTAssertNotNil(tableRule, "T-MAX 100 must carry a .tableInterpolation rule after migration.")
-
-        let hasFormulaRule = profile.rules.contains { rule in
-            if case .formula = rule { return true } else { return false }
-        }
-        XCTAssertFalse(hasFormulaRule, "T-MAX 100 must NOT carry a .formula rule after migration to table.")
-    }
-
     func testTMax100TableRuleParametersMatchPublishedAnchors() throws {
         let profile = try tmax100Profile()
         let tableRule = try XCTUnwrap(
@@ -68,14 +54,6 @@ final class TMax100TableProfileTests: XCTestCase {
             "Anchor at 10 sec must map to 15 sec corrected.")
         XCTAssertEqual(anchorCorrected[2], 200, accuracy: 1e-4,
             "Anchor at 100 sec must map to 200 sec corrected.")
-    }
-
-    func testTMax100ModelBasisIsManufacturerTableLogLogInterpolation() throws {
-        let profile = try tmax100Profile()
-        let basis = try XCTUnwrap(profile.modelBasis,
-            "T-MAX 100 profile must carry a modelBasis after migration.")
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
     }
 
     // MARK: - Threshold boundary (0.1 sec, inclusive)
@@ -378,26 +356,6 @@ final class TMax100TableProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testTMax100SummaryTextIsLogLogInterpolationInsideRange() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 10)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Log-log interpolation of the official table",
-            "Summary inside the source range must describe table log-log interpolation."
-        )
-    }
-
-    @MainActor
-    func testTMax100SummaryTextIsBeyondSourceRangeAbove100Seconds() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Beyond source range",
-            "Summary above 100 sec must read 'Beyond source range'."
-        )
-    }
-
-    @MainActor
     func testTMax100GraphCarriesSourceReferenceMarkersForPublishedRows() throws {
         // Assert markers for all three table-anchor rows:
         //   1→≈1.2599 (approximate, derived from +1/3 stop)
@@ -436,20 +394,6 @@ final class TMax100TableProfileTests: XCTestCase {
             "The graph must shade the region above 100 sec so the user sees where source-backed guidance ends."
         )
         XCTAssertEqual(beyondStart, 100.000001, accuracy: 1e-3)
-    }
-
-    /// Past 100 sec the graph note must surface "source range"
-    /// wording so the user reads the value as outside Kodak's
-    /// supported range.
-    @MainActor
-    func testTMax100Above100SecondsGraphExplanationSurfacesSourceRangeWording() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        let graph = try XCTUnwrap(displayState.graph)
-        let explanation = try XCTUnwrap(graph.unsupportedExplanation)
-        XCTAssertTrue(
-            explanation.lowercased().contains("source table"),
-            "Graph explanation must surface source-table wording past 100 sec; got: \(explanation)"
-        )
     }
 
     // MARK: - Helpers

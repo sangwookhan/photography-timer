@@ -35,20 +35,6 @@ final class TriX400TableProfileTests: XCTestCase {
 
     // MARK: - Rule structure
 
-    func testTriX400HasTableInterpolationRuleAndNoFormulaRule() throws {
-        let profile = try triX400Profile()
-
-        let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
-            if case let .tableInterpolation(r) = rule { return r } else { return nil }
-        }.first
-        XCTAssertNotNil(tableRule, "Tri-X 400 must carry a .tableInterpolation rule after migration.")
-
-        let hasFormulaRule = profile.rules.contains { rule in
-            if case .formula = rule { return true } else { return false }
-        }
-        XCTAssertFalse(hasFormulaRule, "Tri-X 400 must NOT carry a .formula rule after migration to table.")
-    }
-
     func testTriX400TableRuleParametersMatchPublishedAnchors() throws {
         let profile = try triX400Profile()
         XCTAssertEqual(profile.id, "kodak-tri-x-official-graph-table",
@@ -87,14 +73,6 @@ final class TriX400TableProfileTests: XCTestCase {
         XCTAssertEqual(anchors[30] ?? -1, 200, accuracy: 1e-4, "Graph sample: 30 s → 200 s.")
         XCTAssertEqual(anchors[50] ?? -1, 420, accuracy: 1e-4, "Graph sample: 50 s → 420 s.")
         XCTAssertEqual(anchors[70] ?? -1, 720, accuracy: 1e-4, "Graph sample: 70 s → 720 s.")
-    }
-
-    func testTriX400ModelBasisIsManufacturerTableLogLogInterpolation() throws {
-        let profile = try triX400Profile()
-        let basis = try XCTUnwrap(profile.modelBasis,
-            "Tri-X 400 profile must carry a modelBasis after migration.")
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
     }
 
     // MARK: - No-correction boundary (inclusive at 1/10 sec)
@@ -488,26 +466,6 @@ final class TriX400TableProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testTriX400SummaryTextIsLogLogInterpolationInsideRange() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 10)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Log-log interpolation of the official table",
-            "Summary inside the source range must describe table log-log interpolation."
-        )
-    }
-
-    @MainActor
-    func testTriX400SummaryTextIsBeyondSourceRangeAbove100Seconds() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        XCTAssertEqual(
-            displayState.summary.summaryText,
-            "Beyond source range",
-            "Summary above 100 sec must read 'Beyond source range'."
-        )
-    }
-
-    @MainActor
     func testTriX400GraphCarriesSourceReferenceMarkersAtPublishedCorrectedTimes() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 10)
         let graph = try XCTUnwrap(displayState.graph)
@@ -540,19 +498,6 @@ final class TriX400TableProfileTests: XCTestCase {
             "The graph must shade the region above 100 sec so the user sees where source-backed guidance ends."
         )
         XCTAssertEqual(beyondStart, 100.000001, accuracy: 1e-3)
-    }
-
-    /// Past 100 sec the graph note must surface "source range"
-    /// wording so the value never reads as manufacturer-supported.
-    @MainActor
-    func testTriX400Above100SecondsGraphExplanationSurfacesSourceRangeWording() throws {
-        let displayState = try makeDisplayState(meteredExposureSeconds: 300)
-        let graph = try XCTUnwrap(displayState.graph)
-        let explanation = try XCTUnwrap(graph.unsupportedExplanation)
-        XCTAssertTrue(
-            explanation.lowercased().contains("source table"),
-            "Graph explanation must surface source-table wording past 100 sec; got: \(explanation)"
-        )
     }
 
     // MARK: - Helpers

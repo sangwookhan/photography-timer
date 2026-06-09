@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Range + guard coverage exercised through the calculator's
 /// reciprocity binding. Asserts the custom-profile policy result
@@ -134,7 +133,7 @@ final class CustomFilmRangeGuardTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: CustomFilmLibrary()
         )
     }

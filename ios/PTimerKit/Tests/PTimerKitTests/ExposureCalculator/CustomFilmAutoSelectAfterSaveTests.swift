@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// PTIMER-84 selector-flow behaviors:
 ///   * New custom film save flow auto-selects the saved film
@@ -73,7 +72,7 @@ final class CustomFilmAutoSelectAfterSaveTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: CustomFilmLibrary()
         )
     }

@@ -1,6 +1,5 @@
 import XCTest
 import PTimerKit
-@testable import PTimer
 
 final class BottomSheetCompactPresentationTests: XCTestCase {
     // MARK: - Compact card geometry (still drives screen-level strip)

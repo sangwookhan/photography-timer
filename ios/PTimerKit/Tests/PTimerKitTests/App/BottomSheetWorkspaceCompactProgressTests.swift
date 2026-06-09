@@ -1,6 +1,5 @@
 import XCTest
 import PTimerKit
-@testable import PTimer
 
 final class BottomSheetWorkspaceCompactProgressTests: XCTestCase {
     /// Table-driven compact-progress contract. One row per duration

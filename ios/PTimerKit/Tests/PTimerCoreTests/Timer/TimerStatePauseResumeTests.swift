@@ -1,8 +1,7 @@
 import XCTest
 import PTimerCore
-@testable import PTimer
 
-final class TimerManagerPauseResumeStateTests: XCTestCase {
+final class TimerStatePauseResumeTests: XCTestCase {
     @MainActor
     func testTimerStateResumeReturnsCompletedWhenNoRemainingTime() {
         let startDate = Date(timeIntervalSince1970: 100)

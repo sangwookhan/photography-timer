@@ -14,28 +14,16 @@ final class SecondaryGuidancePresentationTests: XCTestCase {
         XCTAssertEqual(rows[0].severity, .neutral)
     }
 
-    func testDecimal7Point5MNotationIsPreservedVerbatim() {
-        let rows = ReciprocitySecondaryGuidanceFormatter.format([
-            .colorFilter(ColorFilterRecommendation(filterName: "7.5M", note: nil))
-        ])
-
-        XCTAssertEqual(rows.map(\.valueText), ["7.5M"])
-    }
-
-    func testGreenChannel2Point5GNotationIsPreservedVerbatim() {
-        let rows = ReciprocitySecondaryGuidanceFormatter.format([
-            .colorFilter(ColorFilterRecommendation(filterName: "2.5G", note: nil))
-        ])
-
-        XCTAssertEqual(rows.map(\.valueText), ["2.5G"])
-    }
-
-    func testKodakCC10RNotationIsPreservedVerbatim() {
-        let rows = ReciprocitySecondaryGuidanceFormatter.format([
-            .colorFilter(ColorFilterRecommendation(filterName: "CC10R", note: nil))
-        ])
-
-        XCTAssertEqual(rows.map(\.valueText), ["CC10R"])
+    // Same contract — a color-filter notation is preserved verbatim in
+    // the value text — across the notation variants as case data.
+    func testColorFilterNotationIsPreservedVerbatim() {
+        for notation in ["7.5M", "2.5G", "CC10R"] {
+            let rows = ReciprocitySecondaryGuidanceFormatter.format([
+                .colorFilter(ColorFilterRecommendation(filterName: notation, note: nil))
+            ])
+            XCTAssertEqual(rows.map(\.valueText), [notation],
+                           "\(notation) notation must be preserved verbatim")
+        }
     }
 
     func testNegativeTenPercentDevelopmentFormatsAsDevelopmentAdjustment() {

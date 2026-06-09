@@ -11,11 +11,23 @@ final class ReciprocityModelComparisonPresenterTests: XCTestCase {
     private let presenter = ReciprocityModelComparisonPresenter()
     private let format: (Double) -> String = { String(format: "%.0fs", $0) }
 
-    func testFomapanTableDefaultHasNoComparison() throws {
-        // The catalog default is the official table (no formula), so it
-        // reproduces the anchors exactly — there is nothing to compare.
-        let film = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
-        XCTAssertNil(presenter.comparisonSection(for: film.profiles[0], formatDuration: format))
+    // Same contract — a profile with nothing to compare yields no
+    // comparison section — across films/profiles as case data; each
+    // case names the reason and the failure message carries the stock.
+    func testProfilesWithNothingToCompareHaveNoComparisonSection() throws {
+        struct Case { let stock: String; let why: String }
+        let cases: [Case] = [
+            Case(stock: "Fomapan 100 Classic", why: "official table default reproduces the anchors exactly"),
+            Case(stock: "HP5 Plus", why: "manufacturer formula with no published source anchors"),
+            Case(stock: "Ektar 100", why: "limited-guidance profile"),
+        ]
+        for c in cases {
+            let film = try XCTUnwrap(film(named: c.stock))
+            XCTAssertNil(
+                presenter.comparisonSection(for: film.profiles[0], formatDuration: format),
+                "\(c.stock) (\(c.why)) must have no comparison section"
+            )
+        }
     }
 
     func testFomapan100AppDerivedFormulaComparisonReportsPercentAndStopDeltas() throws {
@@ -47,18 +59,6 @@ final class ReciprocityModelComparisonPresenterTests: XCTestCase {
             joined.contains("Not manufacturer-published guidance."),
             "The comparison must explicitly disclaim manufacturer authorship of the app-derived deltas: \(joined)"
         )
-    }
-
-    func testFormulaProfileWithoutSourceAnchorsHasNoComparison() throws {
-        // HP5 Plus is a manufacturer-formula profile with no published
-        // source-evidence anchors, so there is nothing to compare.
-        let film = try XCTUnwrap(film(named: "HP5 Plus"))
-        XCTAssertNil(presenter.comparisonSection(for: film.profiles[0], formatDuration: format))
-    }
-
-    func testLimitedGuidanceProfileHasNoComparison() throws {
-        let film = try XCTUnwrap(film(named: "Ektar 100"))
-        XCTAssertNil(presenter.comparisonSection(for: film.profiles[0], formatDuration: format))
     }
 
     // MARK: - Helpers

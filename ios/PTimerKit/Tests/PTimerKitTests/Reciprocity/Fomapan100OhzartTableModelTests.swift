@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// PTIMER-164: the Ohzart community practical table is a separate
 /// unofficial, table-derived alternate model under the single Fomapan
@@ -11,6 +10,7 @@ import PTimerCore
 /// published range at 60 s, and never presents as official manufacturer
 /// data or as the app-derived formula. The default official FOMA table
 /// is unchanged.
+@MainActor
 final class Fomapan100OhzartTableModelTests: XCTestCase {
 
     private let filmID = "foma-fomapan-100"

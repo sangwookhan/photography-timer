@@ -1,6 +1,5 @@
 import XCTest
 import PTimerKit
-@testable import PTimer
 
 final class FilmModeGraphVisibilityTests: XCTestCase {
     // MARK: - PTIMER-143 — Sub-second No correction for formula-only profiles

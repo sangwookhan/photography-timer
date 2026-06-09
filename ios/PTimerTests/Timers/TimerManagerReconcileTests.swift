@@ -14,7 +14,7 @@ final class TimerManagerReconcileTests: XCTestCase {
         let id = try XCTUnwrap(manager.start(duration: 10))
 
         currentDate = startDate.addingTimeInterval(4)
-        manager.reconcileAfterAppBecomesActive()
+        manager.reconcile()
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
         XCTAssertEqual(timer.status(at: currentDate), .running)
@@ -35,7 +35,7 @@ final class TimerManagerReconcileTests: XCTestCase {
         let id = try XCTUnwrap(manager.start(duration: 3))
 
         currentDate = startDate.addingTimeInterval(5)
-        manager.reconcileAfterAppBecomesActive()
+        manager.reconcile()
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
         XCTAssertEqual(timer.status(at: currentDate), .completed)
@@ -58,7 +58,7 @@ final class TimerManagerReconcileTests: XCTestCase {
         manager.pause(id: id)
 
         currentDate = startDate.addingTimeInterval(20)
-        manager.reconcileAfterAppBecomesActive()
+        manager.reconcile()
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
         XCTAssertEqual(timer.status(at: currentDate), .paused)
@@ -84,7 +84,7 @@ final class TimerManagerReconcileTests: XCTestCase {
         manager.pause(id: pausedID)
 
         currentDate = startDate.addingTimeInterval(5)
-        manager.reconcileAfterAppBecomesActive()
+        manager.reconcile()
 
         let runningTimer = tryUnwrapTimer(withID: runningID, from: manager.timers)
         let completedTimer = tryUnwrapTimer(withID: completingID, from: manager.timers)

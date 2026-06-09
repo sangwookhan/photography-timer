@@ -1,4 +1,6 @@
 import SwiftUI
+import PTimerKit
+import PTimerCore
 
 struct RunningTimerPanelView: View {
     let timers: [RunningTimerItem]

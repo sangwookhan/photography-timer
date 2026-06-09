@@ -1,19 +1,14 @@
 import ActivityKit
+import PTimerCore
 import Foundation
-
-struct LockScreenTimerScheduledTarget: Codable, Equatable, Hashable {
-    let timerID: UUID
-    let timerName: String
-    let endDate: Date
-}
 
 struct TimerTargetLiveActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         let representativeTimerName: String
         let representativeEndDate: Date
-        let scheduledTargets: [LockScreenTimerScheduledTarget]
+        let scheduledTargets: [ScheduledTimerTarget]
 
-        func displayTarget(at now: Date) -> LockScreenTimerScheduledTarget? {
+        func displayTarget(at now: Date) -> ScheduledTimerTarget? {
             scheduledTargets.first(where: { $0.endDate > now })
         }
     }

@@ -1,4 +1,5 @@
 import XCTest
+import PTimerKit
 @testable import PTimer
 
 /// Direct unit tests for `TimerWorkspaceModel`. These cover the timer

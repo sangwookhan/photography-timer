@@ -1,4 +1,6 @@
 import SwiftUI
+import PTimerKit
+import PTimerCore
 import UIKit
 import XCTest
 @testable import PTimer

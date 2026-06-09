@@ -1,4 +1,5 @@
 import SwiftUI
+import PTimerKit
 
 /// Identifier for the field the photographer tapped in the compact
 /// editor. Drives the `.sheet(item:)` modal that
@@ -6,39 +7,6 @@ import SwiftUI
 /// edit sheet that owns its own input chrome (chips, steppers,
 /// numeric field) so the main editor stays a tall stack of compact
 /// summary rows.
-enum CustomFilmEditorEditField: String, Identifiable, Hashable {
-    case manufacturer
-    case label
-    case iso
-    case exponent
-    case referenceTm
-    case correctedAtReference
-    case offset
-    case noCorrectionThrough
-    case sourceRangeThrough
-
-    var id: String { rawValue }
-
-    /// Sheet navigation title. Formula fields show the bare
-    /// symbol (`Tc₀`, `Tm₀`, `p`, `b`) so the sheet header reads
-    /// as the same token the photographer tapped on the main
-    /// editor row. Threshold fields use their short label
-    /// (`No correction`, `Source data`). Identity fields keep
-    /// their short headings.
-    var sheetTitle: String {
-        switch self {
-        case .manufacturer: return "Manufacturer"
-        case .label: return "Label"
-        case .iso: return "ISO"
-        case .exponent: return "p"
-        case .referenceTm: return "Tm₀"
-        case .correctedAtReference: return "Tc₀"
-        case .offset: return "b"
-        case .noCorrectionThrough: return "No correction"
-        case .sourceRangeThrough: return "Source data"
-        }
-    }
-}
 
 /// Dispatching wrapper presented by `CustomFilmEditorView`'s
 /// `.sheet(item:)`. Routes the tapped field identifier to the

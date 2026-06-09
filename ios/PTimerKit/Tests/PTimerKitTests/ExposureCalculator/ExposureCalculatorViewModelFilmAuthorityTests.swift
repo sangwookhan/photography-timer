@@ -1,6 +1,5 @@
 import XCTest
 import PTimerKit
-@testable import PTimer
 
 final class FilmModeAuthorityLabelTests: XCTestCase {
     @MainActor

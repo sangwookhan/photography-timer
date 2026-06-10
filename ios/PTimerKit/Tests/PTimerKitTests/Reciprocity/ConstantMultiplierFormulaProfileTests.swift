@@ -22,9 +22,9 @@ import PTimerCore
 /// Acros II is its own constant-multiplier archetype (open 120 s
 /// boundary, `Tc = √2 × Tm`), distinct from the inclusive-threshold
 /// converted guarded formula contracts, so it stays a single-film suite.
-/// The film is the `acrosIIProfile()` constant; no film name appears in
+/// The film is the `profileUnderTest()` constant; no film name appears in
 /// a test-function name.
-final class AcrosIIFormulaProfileTests: XCTestCase {
+final class ConstantMultiplierFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -35,7 +35,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         // +1/2 stop applied across 120–1000 sec. The boundary itself
         // is the start of the corrected range, not the last
         // no-correction value.
-        let profile = try acrosIIProfile()
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 120)
 
         XCTAssertEqual(
@@ -50,7 +50,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     // MARK: - Formula range (120 s … 1000 s, constant +1/2 stop)
 
     func testInsideFormulaRangeAppliesConstantHalfStop() throws {
-        let profile = try acrosIIProfile()
+        let profile = try profileUnderTest()
         for metered in [120.0, 150.0, 240.0, 500.0, 750.0, 1000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -69,7 +69,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     }
 
     func testFormulaUsesConstantMultiplierForm() throws {
-        let profile = try acrosIIProfile()
+        let profile = try profileUnderTest()
         let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
             guard case let .formula(rule) = rule else { return nil }
             return rule
@@ -93,7 +93,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     // MARK: - Beyond the published source range (> 1000 s)
 
     func testAbove1000SecondsBecomesBeyondSourceNumericGuidance() throws {
-        let profile = try acrosIIProfile()
+        let profile = try profileUnderTest()
         for metered in [1100.0, 2000.0, 5000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -117,7 +117,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     // MARK: - Source evidence preservation
 
     func testSourceEvidenceIsPreservedAsRangeNotFabricatedExactPoints() throws {
-        let profile = try acrosIIProfile()
+        let profile = try profileUnderTest()
 
         XCTAssertEqual(
             profile.sourceEvidence.count,
@@ -264,7 +264,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         )
     }
 
-    private func acrosIIProfile() throws -> ReciprocityProfile {
+    private func profileUnderTest() throws -> ReciprocityProfile {
         try FormulaProfileTestSupport.profile(for: "Acros II")
     }
 }

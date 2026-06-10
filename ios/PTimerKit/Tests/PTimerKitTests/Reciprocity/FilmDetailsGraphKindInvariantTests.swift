@@ -137,7 +137,7 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
     /// green band as a continuous segment of the calculation curve
     /// rather than a gap. This is the Sub-1 s / formula handoff
     /// invariant that the dropped commits violated.
-    func testCms20IICalculationCurveExtendsThroughNoCorrectionBand() throws {
+    func testFormulaProfileCalculationCurveExtendsThroughNoCorrectionBand() throws {
         let displayState = try makeDisplayState(
             stock: "CMS 20 II",
             meteredExposureSeconds: 0.5

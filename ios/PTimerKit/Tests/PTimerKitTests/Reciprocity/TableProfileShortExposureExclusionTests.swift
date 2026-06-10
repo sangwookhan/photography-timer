@@ -13,9 +13,9 @@ import PTimerCore
 /// This suite holds only T-MAX 100's genuinely film-specific behavior:
 /// the 1/10,000 sec short-exposure guidance is excluded from the
 /// long-exposure table and archived on `profile.notes` rather than
-/// emitted as a table point. The film is the `tmax100Profile()` constant,
+/// emitted as a table point. The film is the `profileUnderTest()` constant,
 /// so no film name appears in a test-function name.
-final class TMax100TableProfileTests: XCTestCase {
+final class TableProfileShortExposureExclusionTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -33,7 +33,7 @@ final class TMax100TableProfileTests: XCTestCase {
         // 1/10000 sec sits well below noCorrectionThroughSeconds (0.1 sec).
         // The 1/10000 sec +1/3 stop guidance lives only as a profile-level
         // note; it must NOT produce a table correction.
-        let profile = try tmax100Profile()
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.0 / 10_000.0)
         XCTAssertEqual(
             result.metadata.basis,
@@ -63,7 +63,7 @@ final class TMax100TableProfileTests: XCTestCase {
         // The published 1/10,000 sec +1/3 stop short-exposure guidance
         // is preserved on `profile.notes` for source fidelity. It is not
         // rendered in the Details surface; a future ticket can wire it through.
-        let profile = try tmax100Profile()
+        let profile = try profileUnderTest()
         let notes = profile.notes.joined(separator: "\n").lowercased()
         XCTAssertTrue(
             notes.contains("1/10,000") || notes.contains("short-exposure"),
@@ -76,7 +76,7 @@ final class TMax100TableProfileTests: XCTestCase {
         // 1. No adjustment from 1/1,000 to 1/10 sec.
         // 2. The 1/10,000 sec short-exposure +1/3 stop is excluded from
         //    the long-exposure table (the note now says "table", not "formula").
-        let profile = try tmax100Profile()
+        let profile = try profileUnderTest()
         XCTAssertGreaterThanOrEqual(profile.notes.count, 2,
             "T-MAX 100 must carry at least two profile-level notes.")
 
@@ -109,7 +109,7 @@ final class TMax100TableProfileTests: XCTestCase {
         )
     }
 
-    private func tmax100Profile() throws -> ReciprocityProfile {
+    private func profileUnderTest() throws -> ReciprocityProfile {
         try FormulaProfileTestSupport.profile(for: "T-MAX 100")
     }
 }

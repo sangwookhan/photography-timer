@@ -16,9 +16,9 @@ import PTimerCore
 /// anchor, the "No correction range" source-reference row wording, the
 /// development-adjustment legend, and the two alternate models (the
 /// 3-anchor official table and the app-derived formula). The film is the
-/// `triX400Profile()` constant, so no film name appears in a
+/// `profileUnderTest()` constant, so no film name appears in a
 /// test-function name.
-final class TriX400TableProfileTests: XCTestCase {
+final class TableProfileMultiModelTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -32,7 +32,7 @@ final class TriX400TableProfileTests: XCTestCase {
     /// 0.1 sec knee toward the 1 sec → 2 sec anchor, and longer than the
     /// metered value (no vertical step at 1 sec).
     func testBetweenTenthAndOneSecondIsTableDerivedNotNoCorrection() throws {
-        let profile = try triX400Profile()
+        let profile = try profileUnderTest()
         for metered in [0.2, 0.5, 0.672, 0.9] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -79,7 +79,7 @@ final class TriX400TableProfileTests: XCTestCase {
             "Second alternate must be the app-derived formula.")
 
         // The default (catalog primary) is the graph/table model.
-        let defaultProfile = try triX400Profile()
+        let defaultProfile = try profileUnderTest()
         XCTAssertEqual(defaultProfile.id, "kodak-tri-x-official-graph-table",
             "Default profile must be the 11-anchor graph/table model.")
     }
@@ -240,7 +240,7 @@ final class TriX400TableProfileTests: XCTestCase {
         )
     }
 
-    private func triX400Profile() throws -> ReciprocityProfile {
+    private func profileUnderTest() throws -> ReciprocityProfile {
         try FormulaProfileTestSupport.profile(for: "Tri-X 400")
     }
 }

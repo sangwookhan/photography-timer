@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Edit flow + selector top-of-list affordances. Covers the
 /// prefilled editor, upsert-on-save behavior, the explicit
@@ -159,7 +158,7 @@ final class CustomFilmEditAndSelectorUXTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: CustomFilmLibrary()
         )
     }

@@ -289,7 +289,7 @@ extension ReciprocityProfile {
     /// prediction while preserving the published reference, which lets
     /// presentation surfaces use "Beyond source range" language for
     /// inputs past the published reference without affecting
-    /// source-less formula profiles (HP5 Plus etc.).
+    /// no-source-range formula profiles (HP5 Plus etc.).
     public var isConvertedFormulaProfile: Bool {
         let hasFormulaRule = rules.contains { rule in
             if case .formula = rule { return true }
@@ -310,7 +310,7 @@ extension ReciprocityProfile {
     /// `true` for profiles that carry a published source-range boundary
     /// they can exceed — converted formula profiles and table profiles.
     /// Presentation reads "Beyond source range" for inputs past the
-    /// boundary on these profiles (and never on source-less profiles).
+    /// boundary on these profiles (and never on no-source-range profiles).
     public var presentsBeyondSourceRange: Bool {
         isConvertedFormulaProfile || usesTableInterpolation
     }

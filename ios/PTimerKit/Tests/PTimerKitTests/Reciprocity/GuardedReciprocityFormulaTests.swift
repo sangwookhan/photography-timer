@@ -36,7 +36,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// Ilford-style power-law (`Tc = Tm^p`) — every neutral default
     /// applies; the formula matches the legacy `pow(metered,
     /// exponent)` arithmetic.
-    func testLegacyIlfordStylePowerLawMatchesLegacyOutput() {
+    func testLegacyBarePowerLawMatchesLegacyOutput() {
         let formula = ReciprocityFormula(
             exponent: 1.31,
             noCorrectionThroughSeconds: 1
@@ -411,7 +411,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// Acros II's `noCorrectionThroughSeconds = 119.999999` is the
     /// open-boundary case at 120 s: the note must read "< 120 sec",
     /// never the rounded inclusive "≤ 120 sec".
-    func testAcrosIINoCorrectionNoteUsesOpenBoundaryWording() throws {
+    func testOpenBoundaryNoCorrectionNoteUsesStrictlyBelowWording() throws {
         let film = try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Acros II" }
         )

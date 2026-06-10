@@ -156,7 +156,7 @@ final class OfficialTableMigrationInvariantTests: XCTestCase {
 
     // MARK: - 6. Limited-guidance Kodak color films stay limited guidance
 
-    func testLimitedGuidanceKodakColorFilmsRemainLimitedGuidance() throws {
+    func testLimitedGuidanceColorFilmsStayLimitedGuidanceAfterMigration() throws {
         let limitedGuidanceStocks = [
             "Ektar 100", "Portra 160", "Portra 400", "Gold 200", "Ultra Max 400", "Ektachrome E100",
         ]

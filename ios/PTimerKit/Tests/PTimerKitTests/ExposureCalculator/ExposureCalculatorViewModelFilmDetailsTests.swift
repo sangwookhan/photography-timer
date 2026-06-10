@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 final class FilmModeDetailsDisplayStateTests: XCTestCase {
     @MainActor
@@ -250,10 +249,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsIncludeThresholdInsideReferenceWhenOptionalValuesAreMissing() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeMinimalDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop
@@ -310,10 +306,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsSourceRowsExposeLinkWhenUsableURLExists() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeURLBackedDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop
@@ -365,10 +358,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsShowExponentFallbackWhenFormulaEquationIsUnavailable() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeFallbackFormulaDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop
@@ -487,10 +477,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsGraphOmitsGraphWhenNoGraphableReferenceDataExists() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeMinimalDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop

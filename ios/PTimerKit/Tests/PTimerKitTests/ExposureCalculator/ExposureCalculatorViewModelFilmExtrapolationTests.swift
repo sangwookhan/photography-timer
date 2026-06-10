@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 final class FilmModeFormulaExtrapolationTests: XCTestCase {
     @MainActor
@@ -78,10 +77,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     func testReciprocityDisplayFormattingUsesReadableUserFacingPrecision() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
         viewModel.scaleMode = .fullStop
 

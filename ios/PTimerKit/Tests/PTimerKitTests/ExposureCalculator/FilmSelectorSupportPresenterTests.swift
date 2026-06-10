@@ -136,7 +136,7 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
 
     // MARK: - Unofficial practical
 
-    func testPortra400UnofficialPracticalIsUnofficial() throws {
+    func testUnofficialPracticalProfileMapsToUnofficial() throws {
         let film = try film(named: "Portra 400")
         let unofficial = try XCTUnwrap(UnofficialPracticalProfiles.profile(forFilmID: film.id))
 

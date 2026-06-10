@@ -10,7 +10,7 @@ import PTimerCore
 final class ReciprocityModelSelectionTests: XCTestCase {
 
     @MainActor
-    func testPortra400ExposesBothProfilesAsModelSelection() throws {
+    func testDualProfileFilmExposesBothProfilesAsModelSelection() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
         viewModel.baseShutter = 10
@@ -95,7 +95,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanTableDefaultShowsSourceReferenceWithoutComparison() throws {
+    func testMultiModelTableDefaultShowsSourceReferenceWithoutComparison() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.baseShutter = 10
@@ -115,7 +115,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanAppDerivedFormulaSeparatesComparisonFromSourceReference() throws {
+    func testMultiModelAppDerivedFormulaSeparatesComparisonFromSourceReference() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.baseShutter = 10
@@ -139,7 +139,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanTableModelRendersGraphWithAnchorsAndCurrentPoint() throws {
+    func testMultiModelTableRendersGraphWithAnchorsAndCurrentPoint() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.baseShutter = 10
@@ -157,7 +157,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanTableBeyondSourceShowsBeyondSourceRangeWithValueAndNoFormulaWording() throws {
+    func testMultiModelTableBeyondSourceShowsBeyondSourceRangeWithValueAndNoFormulaWording() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.ndStop = 0
@@ -193,7 +193,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanSelectorLabelsAreShortButNamesStayFull() throws {
+    func testMultiModelSelectorLabelsAreShortButNamesStayFull() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.baseShutter = 10
@@ -209,7 +209,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanOfficialTableBadgeIsTableDerivedNotFormulaDerived() throws {
+    func testMultiModelOfficialTableBadgeIsTableDerivedNotFormulaDerived() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.baseShutter = 10   // within the published table range
@@ -230,7 +230,7 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testFomapanSubtitleNamesActiveModelNotPlainOfficialGuidance() throws {
+    func testMultiModelSubtitleNamesActiveModelNotPlainOfficialGuidance() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Fomapan 100 Classic" })
         viewModel.baseShutter = 10

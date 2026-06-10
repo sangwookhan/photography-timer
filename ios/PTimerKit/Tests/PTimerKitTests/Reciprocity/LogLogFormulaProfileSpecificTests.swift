@@ -34,7 +34,16 @@ import PTimerCore
 ///    preserved as a published warning marker through the Guidance
 ///    boundary section — it is NOT a corrected-time anchor and never
 ///    promotes its neighborhood back into source-backed status.
-final class AdoxFormulaProfileTests: XCTestCase {
+/// ADOX CMS 20 II is a converted guarded-formula film. Its
+/// archetype-shared contracts — inclusive-threshold no-correction, fit
+/// parameters, and source-evidence preservation — are verified across
+/// films in `GuardedFormula{RegionBasis,Fit,SourceEvidence}ContractTests`.
+/// This suite holds only CMS 20 II's genuinely film-specific behavior
+/// (the 1/1000 s … 1 s sub-second no-correction band, the 1 s / 10 s
+/// formula anchors, the 100 s not-recommended marker, and the graph /
+/// viewport detail). The film is the `profileUnderTest()` constant, so no
+/// film name appears in a test-function name.
+final class LogLogFormulaProfileSpecificTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -42,28 +51,17 @@ final class AdoxFormulaProfileTests: XCTestCase {
     //
     // The 1/1000 s point lives in source evidence as +1/2 stop but the
     // calculation path still returns the no-correction identity for
-    // it (see `testCms20IIAtOneOverThousandSecStaysNoCorrection...`
-    // below). The 1 s upper boundary is inclusive — 1.0 s itself
-    // still reads as no-correction.
-
-    func testCms20IIAtOneSecondBoundaryReturnsOfficialNoCorrection() throws {
-        let profile = try cms20Profile()
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1.0)
-        XCTAssertEqual(
-            result.metadata.basis,
-            .officialThresholdNoCorrection,
-            "CMS 20 II's 1 s upper boundary is inclusive — 1.0 s itself must read as no-correction."
-        )
-        let corrected = try XCTUnwrap(result.correctedExposureSeconds)
-        XCTAssertEqual(corrected, 1.0, accuracy: 1e-6)
-    }
+    // it (see `testAtOneOverThousandSecStaysNoCorrection...` below).
+    // The 1 s upper boundary is inclusive — 1.0 s itself still reads as
+    // no-correction (the inclusive-threshold contract is shared and
+    // verified in `GuardedFormulaRegionBasisContractTests`).
 
     /// Regression: 0.001 s lives in source evidence as +1/2 stop, but
     /// that row is preserved as published reference only. The active
     /// calculation path at 0.001 s must remain on the no-correction
     /// identity line, not collapse to the +1/2 stop derivation.
-    func testCms20IIAtOneOverThousandSecStaysNoCorrectionDespiteSourceEvidenceRow() throws {
-        let profile = try cms20Profile()
+    func testAtOneOverThousandSecStaysNoCorrectionDespiteSourceEvidenceRow() throws {
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.001)
         XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
         let corrected = try XCTUnwrap(result.correctedExposureSeconds)
@@ -77,8 +75,8 @@ final class AdoxFormulaProfileTests: XCTestCase {
     // a formula-derived value but are classified outside source
     // range (see the "Beyond the source-backed range" tests).
 
-    func testCms20IIFormulaAnchorAtOneSecondMatchesPublishedHalfStop() throws {
-        let profile = try cms20Profile()
+    func testFormulaAnchorAtOneSecondMatchesPublishedHalfStop() throws {
+        let profile = try profileUnderTest()
         // Evaluated at 1.0 the threshold rule wins (returns identity).
         // Evaluate just above 1 s to land in the formula domain and
         // verify the formula's value at the anchor matches the
@@ -89,19 +87,19 @@ final class AdoxFormulaProfileTests: XCTestCase {
         XCTAssertEqual(corrected, 1.4142136, accuracy: 0.002)
     }
 
-    func testCms20IIFormulaAnchorAtTenSecondsMatchesPublishedFullStop() throws {
-        let profile = try cms20Profile()
+    func testFormulaAnchorAtTenSecondsMatchesPublishedFullStop() throws {
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 10)
         XCTAssertEqual(result.metadata.basis, .formulaDerived)
         let corrected = try XCTUnwrap(result.correctedExposureSeconds)
         XCTAssertEqual(corrected, 20, accuracy: 0.05)
     }
 
-    func testCms20IIBetweenAnchorsReturnsFormulaDerivedValue() throws {
+    func testBetweenAnchorsReturnsFormulaDerivedValue() throws {
         // 1.7 s and 6.8 s sit between the 1 s and 10 s source-evidence
         // anchors. The closed-form formula should produce a corrected
         // exposure between 1.414 s (at 1 s) and 20 s (at 10 s).
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         for (metered, expected) in [
             (1.7, 2.604),
             (6.8, 12.83),
@@ -133,13 +131,13 @@ final class AdoxFormulaProfileTests: XCTestCase {
     // marker only; it is NOT a corrected-time anchor and never
     // promotes its neighborhood back into source-backed status.
 
-    func testCms20IIBeyondTenSecondsCarriesFormulaPredictionAsBeyondSource() throws {
+    func testBeyondTenSecondsCarriesFormulaPredictionAsBeyondSource() throws {
         // 14 s, 27 s, 54 s, and 100 s all sit above the source-
         // backed 10 s anchor. The formula continues to produce
         // numeric values, but presentation must surface them as
         // beyond source range (formula-derived continuation, not
         // manufacturer guidance).
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         for (metered, expected) in [
             (14.0, 29.4),
             (27.0, 62.7),
@@ -162,8 +160,8 @@ final class AdoxFormulaProfileTests: XCTestCase {
         }
     }
 
-    func testCms20IIAbove100SecondsRemainsBeyondSourceWithFormulaPrediction() throws {
-        let profile = try cms20Profile()
+    func testAbove100SecondsRemainsBeyondSourceWithFormulaPrediction() throws {
+        let profile = try profileUnderTest()
         for metered in [120.0, 200.0, 500.0, 1_000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -179,92 +177,12 @@ final class AdoxFormulaProfileTests: XCTestCase {
 
     // MARK: - Formula shape
 
-    func testCms20IIFormulaRuleUsesLogLogCoefficientAndExponent() throws {
-        let profile = try cms20Profile()
-        let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(rule) = rule else { return nil }
-            return rule
-        }.first)
-
-        XCTAssertEqual(formulaRule.formula.exponent, 1.150515, accuracy: 1e-3)
-        let coefficient = formulaRule.formula.coefficientSeconds
-        XCTAssertEqual(coefficient, 1.4142136, accuracy: 1e-3)
-
-        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-6)
-        // PTIMER-160: sourceRangeThroughSeconds is the last quantified
-        // source-backed metered time. For CMS 20 II that is the 10 s
-        // anchor; the 100 s row is preserved as a 'Not recommended'
-        // warning marker and is NOT a corrected-time anchor.
-        let sourceRange = try XCTUnwrap(formulaRule.formula.sourceRangeThroughSeconds)
-        XCTAssertEqual(sourceRange, 10, accuracy: 1e-6)
-    }
-
-    /// PTIMER-160 retired the companion threshold rule for formula
-    /// profiles. CMS 20 II's sub-1 s no-correction band is now owned
-    /// by the formula's `noCorrectionThroughSeconds` guard.
-    func testCms20IIFormulaCoversFullSubOneSecondNoCorrectionBand() throws {
-        let profile = try cms20Profile()
-        let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
-            guard case let .formula(rule) = rule else { return nil }
-            return rule
-        }.first)
-        XCTAssertEqual(formulaRule.formula.noCorrectionThroughSeconds, 1, accuracy: 1e-9)
-    }
-
     // MARK: - Source evidence preservation
-
-    func testCms20IISourceEvidencePreservesAllFourPublishedRows() throws {
-        let profile = try cms20Profile()
-        let metereds = profile.sourceEvidence.compactMap { row -> Double? in
-            if case let .exactSeconds(seconds) = row.meteredExposure { return seconds }
-            return nil
-        }
-        XCTAssertEqual(
-            metereds,
-            [0.001, 1, 10, 100],
-            "CMS 20 II must preserve all four published rows (1/1000 s, 1 s, 10 s, 100 s)."
-        )
-    }
-
-    func testCms20IIOneOverThousandSecEvidenceRowIsMarkedSourceEvidenceOnly() throws {
-        let profile = try cms20Profile()
-        let row = try XCTUnwrap(profile.sourceEvidence.first { row in
-            if case let .exactSeconds(seconds) = row.meteredExposure {
-                return abs(seconds - 0.001) < 1e-9
-            }
-            return false
-        })
-        XCTAssertTrue(
-            row.isSourceEvidenceOnly,
-            "1/1000 s row must be flagged source-evidence-only so the renderer can mark it and skip it as a formula fitting point."
-        )
-
-        let stopDelta = row.adjustments.compactMap { adjustment -> Double? in
-            guard case let .exposure(.stopDelta(value)) = adjustment else { return nil }
-            return value.stopDelta
-        }.first
-        XCTAssertEqual(stopDelta ?? 0, 0.5, accuracy: 1e-6)
-    }
-
-    func testCms20IIOneHundredSecondRowIsPreservedAsNotRecommendedBoundary() throws {
-        let profile = try cms20Profile()
-        let row = try XCTUnwrap(profile.sourceEvidence.first { row in
-            if case let .exactSeconds(seconds) = row.meteredExposure {
-                return abs(seconds - 100) < 1e-6
-            }
-            return false
-        })
-        let severity = row.adjustments.compactMap { adjustment -> ReciprocityWarningSeverity? in
-            guard case let .warning(warning) = adjustment else { return nil }
-            return warning.severity
-        }.first
-        XCTAssertEqual(severity, .notRecommended)
-    }
 
     // MARK: - Graph display state
 
     @MainActor
-    func testCms20IIGraphIsFormulaKindAndCarriesNoCorrectionBandUpToOneSecond() throws {
+    func testGraphIsFormulaKindAndCarriesNoCorrectionBandUpToOneSecond() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 0.5)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.kind, .formula)
@@ -277,7 +195,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IIGraphSourceReferenceMarkersIncludeOneSecondAndTenSecondsOnly() throws {
+    func testGraphSourceReferenceMarkersIncludeOneSecondAndTenSecondsOnly() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let graph = try XCTUnwrap(displayState.graph)
         let markerMetereds = graph.sourceReferenceMarkers.map { $0.point.meteredExposureSeconds }.sorted()
@@ -287,7 +205,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IIGraphExcludesOneOverThousandSecMarkerEvenThoughEvidenceIsPreserved() throws {
+    func testGraphExcludesOneOverThousandSecMarkerEvenThoughEvidenceIsPreserved() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let graph = try XCTUnwrap(displayState.graph)
         for marker in graph.sourceReferenceMarkers {
@@ -300,7 +218,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IIGraphExposesOneHundredSecondNotRecommendedBoundaryAcrossInputs() throws {
+    func testGraphExposesOneHundredSecondNotRecommendedBoundaryAcrossInputs() throws {
         for metered in [0.5, 5.0, 50.0, 200.0] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
@@ -320,7 +238,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     /// `notRecommendedBoundarySeconds`), not as the boundary of the
     /// source-backed range.
     @MainActor
-    func testCms20IIGraphBeyondSourceRangeStartsAtTenSecondsAtSourceBoundary() throws {
+    func testGraphBeyondSourceRangeStartsAtTenSecondsAtSourceBoundary() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(
@@ -332,7 +250,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IIGraphSupportedRangeUpperBoundIsTenSeconds() throws {
+    func testGraphSupportedRangeUpperBoundIsTenSeconds() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(
@@ -344,7 +262,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IIViewportAndAxisAreStableAcrossInputs() throws {
+    func testViewportAndAxisAreStableAcrossInputs() throws {
         let inputs: [Double] = [0.053, 0.423, 1.7, 6.8, 14, 27, 54, 200]
         var seenViewports = Set<String>()
         var seenAxisTicks = Set<String>()
@@ -367,7 +285,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IICurrentMarkerInsideNoCorrectionBandSitsOnIdentity() throws {
+    func testCurrentMarkerInsideNoCorrectionBandSitsOnIdentity() throws {
         for metered in [0.053, 0.423, 1.0] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
@@ -387,7 +305,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     /// plots with the `.formulaDerived` style — the formula matches
     /// ADOX's published anchors there.
     @MainActor
-    func testCms20IICurrentMarkerInSourceBackedRangePlotsAtFormulaValue() throws {
+    func testCurrentMarkerInSourceBackedRangePlotsAtFormulaValue() throws {
         for (metered, expected) in [(1.7, 2.604), (6.8, 12.83)] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
@@ -409,7 +327,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     /// (14 s, 27 s, 54 s, …) but presentation must classify them as
     /// formula-derived continuation, not as source-backed prediction.
     @MainActor
-    func testCms20IIAboveTenSecondsPlotsBeyondSourceMarker() throws {
+    func testAboveTenSecondsPlotsBeyondSourceMarker() throws {
         for metered in [14.0, 27.0, 54.0, 120.0, 200.0, 500.0] {
             let displayState = try makeDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
@@ -425,7 +343,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     // MARK: - Reference data rendering
 
     @MainActor
-    func testCms20IIDetailsSplitsSourceReferenceAndGuidanceBoundarySections() throws {
+    func testDetailsSplitsSourceReferenceAndGuidanceBoundarySections() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 5)
 
         let sourceReferenceSection = try XCTUnwrap(
@@ -462,7 +380,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testCms20IISourceReferenceRowsAreSortedByMeteredExposureAscending() throws {
+    func testSourceReferenceRowsAreSortedByMeteredExposureAscending() throws {
         // PTIMER-160 retired CMS 20 II's companion threshold rule; the
         // no-correction band is now contributed by the formula itself
         // and sorts at sortValue 0 (the band's effective start), so it
@@ -507,7 +425,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     /// range" wording with the numeric continuation copy other
     /// converted profiles use.
     @MainActor
-    func testCms20IIBeyondOneHundredSecondsUsesBeyondSourceRangeWordingWithValue() throws {
+    func testBeyondOneHundredSecondsUsesBeyondSourceRangeWordingWithValue() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 200)
         XCTAssertEqual(displayState.summary.summaryText, "Beyond source range")
 
@@ -521,12 +439,12 @@ final class AdoxFormulaProfileTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func cms20Profile() throws -> ReciprocityProfile {
-        let film = try cms20Film()
+    private func profileUnderTest() throws -> ReciprocityProfile {
+        let film = try filmUnderTest()
         return try XCTUnwrap(film.profiles.first)
     }
 
-    private func cms20Film() throws -> FilmIdentity {
+    private func filmUnderTest() throws -> FilmIdentity {
         try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CMS 20 II" },
             "CMS 20 II must remain in the launch catalog."
@@ -537,7 +455,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     private func makeDisplayState(
         meteredExposureSeconds: Double
     ) throws -> FilmModeDetailsDisplayState {
-        let film = try cms20Film()
+        let film = try filmUnderTest()
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
         let policyResult = model.evaluate(

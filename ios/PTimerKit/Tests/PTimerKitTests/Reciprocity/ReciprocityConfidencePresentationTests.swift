@@ -9,7 +9,7 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testThresholdNoCorrectionMapsToTrustedNoCorrectionPresentation() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            profile: ReciprocityPolicyScenarioFactory.limitedGuidanceProfile(),
             meteredExposureSeconds: 0.5
         )
 
@@ -27,7 +27,7 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testFormulaDerivedMapsToMeasuredFormulaDerivedPresentation() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 100
         )
 
@@ -45,7 +45,7 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testLimitedGuidanceMapsToLimitedGuidancePresentation() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            profile: ReciprocityPolicyScenarioFactory.limitedGuidanceProfile(),
             meteredExposureSeconds: 4
         )
 
@@ -84,7 +84,7 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testArchivalOfficialPropagatesShortLabelPrefixAndExplanationToken() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .archivalOfficial),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(authority: .archivalOfficial),
             meteredExposureSeconds: 100
         )
 
@@ -95,7 +95,7 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testUnofficialSecondaryPropagatesShortLabelPrefixAndExplanationToken() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .unofficialSecondary),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(authority: .unofficialSecondary),
             meteredExposureSeconds: 100
         )
 
@@ -107,7 +107,7 @@ final class ReciprocityConfidencePresentationTests: XCTestCase {
 
     func testUserDefinedPropagatesShortLabelPrefixAndExplanationToken() {
         let presentation = presentation(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .userDefined),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(authority: .userDefined),
             meteredExposureSeconds: 100
         )
 

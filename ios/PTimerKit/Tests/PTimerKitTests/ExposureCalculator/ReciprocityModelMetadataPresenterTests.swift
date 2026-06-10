@@ -24,7 +24,7 @@ final class ReciprocityModelMetadataPresenterTests: XCTestCase {
         XCTAssertEqual(value(section, "Calculation"), "Guarded formula")
     }
 
-    func testFomapanDefaultIsManufacturerTableLogLogInterpolation() throws {
+    func testMultiModelDefaultIsManufacturerTableLogLogInterpolation() throws {
         let film = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
         let section = presenter.metadataSection(film: film, profile: film.profiles[0])
         XCTAssertEqual(value(section, "Source"), "Manufacturer table")
@@ -35,7 +35,7 @@ final class ReciprocityModelMetadataPresenterTests: XCTestCase {
         )
     }
 
-    func testFomapanAppDerivedAlternateReadsAppDerivedGuardedFormula() throws {
+    func testMultiModelAppDerivedAlternateReadsAppDerivedGuardedFormula() throws {
         let film = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
         let alternate = AlternateReciprocityModels.fomapan100AppDerivedFormula
         let section = presenter.metadataSection(film: film, profile: alternate)

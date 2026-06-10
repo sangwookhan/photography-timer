@@ -187,100 +187,47 @@ final class CustomFilmEditorFormStateTests: XCTestCase {
         XCTAssertTrue(errors.contains(.missingFilmLabel))
     }
 
-    func test_validate_nonNumericISO_reportsInvalidISO() {
-        let state = makeValidState(isoText: "fast")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
+    func test_validate_invalidFieldValue_reportsSpecificError() {
+        // Same contract — one invalid field surfaces its specific
+        // `invalid*` error — exercised as a case table. Each case keeps
+        // its bad input and expected error explicit; the case name is
+        // included in every failure message.
+        struct Case {
+            let name: String
+            let state: CustomFilmEditorFormState
+            let expected: CustomFilmEditorValidationError
         }
-        XCTAssertTrue(errors.contains(.invalidISO))
-    }
-
-    func test_validate_zeroISO_reportsInvalidISO() {
-        let state = makeValidState(isoText: "0")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
+        let cases: [Case] = [
+            Case(name: "non-numeric ISO", state: makeValidState(isoText: "fast"), expected: .invalidISO),
+            Case(name: "zero ISO", state: makeValidState(isoText: "0"), expected: .invalidISO),
+            Case(name: "negative ISO", state: makeValidState(isoText: "-100"), expected: .invalidISO),
+            Case(name: "zero exponent", state: makeValidState(exponentText: "0"), expected: .invalidFormulaExponent),
+            Case(name: "negative exponent", state: makeValidState(exponentText: "-1.31"), expected: .invalidFormulaExponent),
+            Case(name: "non-numeric exponent", state: makeValidState(exponentText: "approx"), expected: .invalidFormulaExponent),
+            Case(name: "non-numeric baseTc", state: makeValidState(baseTcText: "approx"), expected: .invalidBaseTc),
+            Case(name: "zero baseTc", state: makeValidState(baseTcText: "0"), expected: .invalidBaseTc),
+            Case(name: "non-numeric baseTm", state: makeValidState(baseTmText: "approx"), expected: .invalidBaseTm),
+            Case(name: "zero baseTm", state: makeValidState(baseTmText: "0"), expected: .invalidBaseTm),
+            Case(name: "non-numeric offset", state: makeValidState(offsetSecondsText: "approx"), expected: .invalidFormulaOffset),
+        ]
+        for c in cases {
+            guard case .failure(let errors) = c.state.validate() else {
+                XCTFail("\(c.name): expected validation failure")
+                continue
+            }
+            XCTAssertTrue(errors.contains(c.expected), "\(c.name): expected \(c.expected) in \(errors)")
         }
-        XCTAssertTrue(errors.contains(.invalidISO))
-    }
-
-    func test_validate_negativeISO_reportsInvalidISO() {
-        let state = makeValidState(isoText: "-100")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidISO))
     }
 
     func test_validate_emptyExponent_reportsMissingFormulaExponent() {
+        // Distinct branch: empty (not invalid) exponent is the
+        // "missing required field" path, kept separate from the
+        // invalid-value table above.
         let state = makeValidState(exponentText: "  ")
         guard case .failure(let errors) = state.validate() else {
             return XCTFail("Expected validation failure")
         }
         XCTAssertTrue(errors.contains(.missingFormulaExponent))
-    }
-
-    func test_validate_zeroExponent_reportsInvalidFormulaExponent() {
-        let state = makeValidState(exponentText: "0")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidFormulaExponent))
-    }
-
-    func test_validate_negativeExponent_reportsInvalidFormulaExponent() {
-        let state = makeValidState(exponentText: "-1.31")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidFormulaExponent))
-    }
-
-    func test_validate_nonNumericExponent_reportsInvalidFormulaExponent() {
-        let state = makeValidState(exponentText: "approx")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidFormulaExponent))
-    }
-
-    func test_validate_nonNumericBaseTc_reportsInvalidBaseTc() {
-        let state = makeValidState(baseTcText: "approx")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidBaseTc))
-    }
-
-    func test_validate_nonNumericBaseTm_reportsInvalidBaseTm() {
-        let state = makeValidState(baseTmText: "approx")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidBaseTm))
-    }
-
-    func test_validate_zeroBaseTm_reportsInvalidBaseTm() {
-        let state = makeValidState(baseTmText: "0")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidBaseTm))
-    }
-
-    func test_validate_zeroBaseTc_reportsInvalidBaseTc() {
-        let state = makeValidState(baseTcText: "0")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidBaseTc))
-    }
-
-    func test_validate_nonNumericOffset_reportsInvalidFormulaOffset() {
-        let state = makeValidState(offsetSecondsText: "approx")
-        guard case .failure(let errors) = state.validate() else {
-            return XCTFail("Expected validation failure")
-        }
-        XCTAssertTrue(errors.contains(.invalidFormulaOffset))
     }
 
     func test_validate_collectsAllErrorsAtOnce() {

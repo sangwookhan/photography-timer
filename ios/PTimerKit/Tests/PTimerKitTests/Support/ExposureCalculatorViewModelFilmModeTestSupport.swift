@@ -1,17 +1,13 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 extension XCTestCase {
     @MainActor
     func makeFilmModeViewModel() -> ExposureCalculatorViewModel {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
         // Pin the legacy full-stop scale so the snap-style assertions
         // in this suite stay green; the shipping calculator now

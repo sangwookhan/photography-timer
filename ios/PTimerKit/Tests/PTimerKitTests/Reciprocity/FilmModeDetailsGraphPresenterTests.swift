@@ -60,7 +60,7 @@ final class FilmModeDetailsGraphPresenterTests: XCTestCase {
     }
 
     @MainActor
-    func testFormulaProfileSourceReferenceMarkersIncludeProvia240SecondAnchor() throws {
+    func testFormulaProfileSourceReferenceMarkersIncludePublished240SecondAnchor() throws {
         let graph = try presenterGraph(forFilm: "Provia 100F", meteredSeconds: 240)
         let marker = try XCTUnwrap(
             graph.sourceReferenceMarkers.first {
@@ -124,7 +124,7 @@ final class FilmModeDetailsGraphPresenterTests: XCTestCase {
     }
 
     @MainActor
-    func testFormulaEquationTextRendersExponentOnlyForSourcelessFormulaProfile() throws {
+    func testFormulaEquationTextRendersExponentOnlyForNoSourceRangeFormulaProfile() throws {
         let graph = try presenterGraph(forFilm: "HP5 Plus", meteredSeconds: 8)
         let formula = try XCTUnwrap(graph.formulaDisplayText)
         XCTAssertEqual(formula, "Tc = Tm^1.31")

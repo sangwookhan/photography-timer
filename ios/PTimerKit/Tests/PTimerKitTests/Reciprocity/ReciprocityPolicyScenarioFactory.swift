@@ -9,7 +9,7 @@ enum ReciprocityPolicyScenarioFactory {
     /// the manufacturer. Authority maps from the policy
     /// authority-impact enum so a single scenario can stand in for
     /// archival/secondary/user-defined variants.
-    static func hp5FormulaProfile(
+    static func barePowerLawFormulaProfile(
         authority: ReciprocitySourceAuthorityImpact = .currentOfficial
     ) -> ReciprocityProfile {
         ReciprocityProfile(
@@ -32,7 +32,7 @@ enum ReciprocityPolicyScenarioFactory {
 
     /// Threshold + limited-guidance profile shape used by Kodak
     /// color negatives (Portra / Ektar / Gold).
-    static func portraLimitedGuidanceProfile() -> ReciprocityProfile {
+    static func limitedGuidanceProfile() -> ReciprocityProfile {
         ReciprocityProfile(
             id: "kodak-portra-official-threshold",
             name: "Official threshold guidance",

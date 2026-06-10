@@ -1,7 +1,7 @@
 import XCTest
 import PTimerKit
 
-final class Provia100FScalePolicyTests: XCTestCase {
+final class FormulaGraphScalePolicyTests: XCTestCase {
     // MARK: - Scale policy (tier-based domain)
 
     func testScalePolicySelectsT1ForValuesUpToOneHour() {
@@ -46,8 +46,8 @@ final class Provia100FScalePolicyTests: XCTestCase {
     // MARK: - Provia 100F tier selection and marker consistency
 
     @MainActor
-    func testProvia100FUsesT1ForNormalInputs() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testUsesT1ForNormalInputs() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.scaleTier, .t1, "240 s plus a corrected exposure of ~302 s must stay inside the 1 h tier.")
         // Viewport lower bound is profile-stable (one decade below
@@ -62,11 +62,11 @@ final class Provia100FScalePolicyTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FUsesT2OrT3WhenFormulaPredictionExceedsOneHour() throws {
+    func testUsesT2OrT3WhenFormulaPredictionExceedsOneHour() throws {
         // formula(3000) ≈ 128 × (3000/128)^1.3676 ≈ 8200 s, > 1 h →
         // pushes the graph past T1 into T2 (or higher if the y also
         // exceeds T2).
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 3_000)
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 3_000)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertNotEqual(graph.scaleTier, .t1, "Predicted y above 1 h must escape T1.")
         XCTAssertTrue(
@@ -77,8 +77,8 @@ final class Provia100FScalePolicyTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FBeyondOneHundredHoursStaysAtT3WithOverflowIndicator() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 500_000)
+    func testBeyondOneHundredHoursStaysAtT3WithOverflowIndicator() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 500_000)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.scaleTier, .t3, "Inputs past T3.upperBound must stay pinned to T3.")
         // T3 caps the upper bound; the profile-stable lower bound
@@ -92,8 +92,8 @@ final class Provia100FScalePolicyTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FFormulaCurveDoesNotExceedSelectedTier() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 500_000)
+    func testFormulaCurveDoesNotExceedSelectedTier() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 500_000)
         let graph = try XCTUnwrap(displayState.graph)
         let maxSample = try XCTUnwrap(graph.sourcePoints.map(\.meteredExposureSeconds).max())
         XCTAssertLessThanOrEqual(
@@ -104,8 +104,8 @@ final class Provia100FScalePolicyTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FSourceMarkersAndBoundaryStayWithinSelectedTier() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testSourceMarkersAndBoundaryStayWithinSelectedTier() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         let tier = try XCTUnwrap(graph.scaleTier)
         for marker in graph.sourceReferenceMarkers {
@@ -118,14 +118,14 @@ final class Provia100FScalePolicyTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FAxisTicksExtendTierTicksWithSubSecondLabels() throws {
+    func testAxisTicksExtendTierTicksWithSubSecondLabels() throws {
         // Tier ticks anchor the axis from 1 s upward. With the
         // stable sub-second viewport the leading edge sits below
         // 1 s, so the axis prepends a sub-second tick (e.g.
         // "1/10s") to the tier's ticks. The user-visible labels
         // therefore extend the tier set; they no longer match it
         // exactly.
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         let tier = try XCTUnwrap(graph.scaleTier)
 

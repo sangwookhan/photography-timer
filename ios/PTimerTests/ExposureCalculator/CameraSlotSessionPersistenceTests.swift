@@ -613,7 +613,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
     /// switching back to Official must overwrite that, not leave a
     /// stale Unofficial id behind. Official is the catalog default, so
     /// the restored override clears to nil.
-    func testPortra400OfficialSurvivesRelaunchAfterPreviouslyChoosingUnofficial() throws {
+    func testOfficialProfileSurvivesRelaunchAfterPreviouslyChoosingUnofficial() throws {
         let page = try restoredActiveSlotPage(
             selecting: "Portra 400",
             firstSelectingProfileID: "kodak-portra-400-unofficial-practical",
@@ -632,7 +632,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
     /// (Tri-X App formula) covers every alternate — Tri-X Table,
     /// Fomapan Ohzart/App formula, Portra Unofficial — since they all
     /// flow through the same `selectProfileVariant` → session-save path.
-    func testTriX400AppFormulaAlternateSurvivesRelaunch() throws {
+    func testAppFormulaAlternateModelSurvivesRelaunch() throws {
         let page = try restoredActiveSlotPage(
             selecting: "Tri-X 400",
             thenSelectingProfileID: "kodak-tri-x-app-formula"
@@ -646,7 +646,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
     /// change to incidentally trigger a session write). One
     /// representative (Kentmere) covers the other single-profile films
     /// (T-MAX, RPX, ADOX) — same film-id-only path.
-    func testKentmere400SelectionSurvivesRelaunch() throws {
+    func testPresetFilmSelectionSurvivesRelaunch() throws {
         let page = try restoredActiveSlotPage(selecting: "Kentmere 400")
         XCTAssertEqual(page.selectedFilm?.canonicalStockName, "Kentmere 400")
         XCTAssertNil(page.selectedProfileOverride)

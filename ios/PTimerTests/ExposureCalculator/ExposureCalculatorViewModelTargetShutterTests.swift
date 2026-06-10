@@ -133,7 +133,7 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmWorkflowBeyondVelvia50SourceRangeComparesAgainstFormulaPrediction() throws {
+    func testFilmWorkflowBeyondConvertedFormulaSourceRangeComparesAgainstFormulaPrediction() throws {
         // Velvia 50's source-backed range ends at the 32 s anchor;
         // the 64 s row is a published "Not recommended" warning
         // marker only. At adjusted shutter 64 s the result is

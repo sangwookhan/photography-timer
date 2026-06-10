@@ -1,6 +1,5 @@
 import XCTest
 import PTimerKit
-@testable import PTimer
 
 final class FilmModeGraphVisibilityTests: XCTestCase {
     // MARK: - PTIMER-143 — Sub-second No correction for formula-only profiles
@@ -10,7 +9,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // With a short current input, the graph should still plot source points up to
         // the canonical 120s upper bound so the graph feels stable, not auto-scaled.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 2      // short input — well below canonical 120s
         viewModel.ndStop = 0
@@ -29,7 +28,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModePortra400UnofficialSubSecondReturnsNoCorrectionAndPreservesCaveat() throws {
+    func testFilmModeUnofficialProfileSubSecondReturnsNoCorrectionAndPreservesCaveat() throws {
         // Portra 400 unofficial practical has a single formula rule
         // (Tc = Tm^1.34) whose `noCorrectionThroughSeconds` open
         // boundary at ~1 s owns the long-exposure threshold — no
@@ -40,7 +39,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // correction" while keeping the unofficial-authority caveat
         // visible.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 1.0 / 30.0   // 0.033 sec, well below 1s
         viewModel.ndStop = 0
@@ -104,13 +103,13 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModePortra400UnofficialAboveOneSecondStillProducesFormulaPrediction() throws {
+    func testFilmModeUnofficialProfileAboveOneSecondStillProducesFormulaPrediction() throws {
         // Sanity guard: the default no-correction handoff applies
         // strictly below 1s. Inputs at or above 1s flow through the
         // formula rule unchanged, preserving the prior PTIMER-143
         // behavior for the unofficial profile.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -123,7 +122,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     // MARK: - PTIMER-143 — No-correction graph visibility
 
     @MainActor
-    func testFilmModePortra400UnofficialSubSecondGraphShowsNoCorrectionRegion() throws {
+    func testFilmModeUnofficialProfileSubSecondGraphShowsNoCorrectionRegion() throws {
         // After the policy default-handoff sends Portra 400
         // unofficial sub-1s inputs to No correction, the Details
         // graph must visibly show that no-correction state — the
@@ -131,7 +130,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // inside the plot and the no-correction overlay renders
         // up to the synthesized 1 s default upper bound.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.ndStop = 0
@@ -162,76 +161,6 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
             graph.currentPoint,
             "The current point must remain plotted so the user can read the No correction state on the graph."
         )
-        XCTAssertEqual(graph.currentPoint?.style, .noCorrection)
-    }
-
-    @MainActor
-    func testFilmModeTMax100SubSecondGraphShowsNoCorrectionRegion() throws {
-        // PTIMER-168: the official Kodak table applies no correction
-        // through 0.5 sec (Kodak's 1 sec +1/3 stop row marks 1 sec as
-        // already outside the no-correction band, and publishes no
-        // corrected time there, so the table neither anchors at 1 sec nor
-        // extends the band to it). A sub-second input must still produce a
-        // graph whose viewport extends below the band so it reads as a
-        // visible region instead of collapsing onto the left edge.
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "T-MAX 100" })
-
-        viewModel.baseShutter = 1.0 / 60.0      // 0.0167 s, inside T-MAX 100's no-correction range
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let graph = try XCTUnwrap(details.graph)
-
-        XCTAssertLessThan(graph.xRange.lowerBound, 0.1,
-                          "Viewport must expand well below T-MAX 100's 0.1 s no-correction upper bound so the band is visible.")
-        let upper = try XCTUnwrap(graph.noCorrectionRangeUpperBoundSeconds)
-        XCTAssertEqual(upper, 0.1, accuracy: 1e-6,
-                       "T-MAX 100's table no-correction range ends at 0.1 sec.")
-        XCTAssertGreaterThan(upper, graph.xRange.lowerBound,
-                             "No-correction upper bound must sit above the viewport's lower bound so the overlay has a visible width.")
-        XCTAssertFalse(graph.isBelowVisibleRange)
-        XCTAssertEqual(graph.currentPoint?.style, .noCorrection)
-    }
-
-    @MainActor
-    func testFilmModeHP5PlusSubSecondGraphShowsNoCorrectionRegion() throws {
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
-
-        viewModel.baseShutter = 0.25            // 1/4 s
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let graph = try XCTUnwrap(details.graph)
-
-        XCTAssertLessThan(graph.xRange.lowerBound, 1.0)
-        XCTAssertEqual(graph.noCorrectionRangeUpperBoundSeconds ?? 0, 1.0, accuracy: 1e-6)
-        XCTAssertFalse(graph.isBelowVisibleRange)
-        XCTAssertEqual(graph.currentPoint?.style, .noCorrection)
-    }
-
-    @MainActor
-    func testFilmModeProvia100FSubSecondGraphShowsNoCorrectionRegion() throws {
-        // Provia 100F's published threshold extends to 128 s. The
-        // stable viewport extends below 1 s so a sub-1 s input
-        // lands inside the plot and the no-correction overlay
-        // (128 s upper bound) renders end-to-end.
-        let viewModel = makeFilmModeViewModel()
-        let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Provia 100F" })
-
-        viewModel.baseShutter = 0.5
-        viewModel.ndStop = 0
-        viewModel.selectPresetFilm(film)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let graph = try XCTUnwrap(details.graph)
-
-        XCTAssertLessThan(graph.xRange.lowerBound, 1.0)
-        XCTAssertGreaterThanOrEqual(graph.noCorrectionRangeUpperBoundSeconds ?? 0, 128)
-        XCTAssertFalse(graph.isBelowVisibleRange)
         XCTAssertEqual(graph.currentPoint?.style, .noCorrection)
     }
 
@@ -270,11 +199,11 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModePortra400UnofficialFrameIsStableAcrossSubSecondNearOneSecondAndLongInputs() throws {
+    func testFilmModeUnofficialProfileFrameIsStableAcrossSubSecondNearOneSecondAndLongInputs() throws {
         // Spec: "0.033 s, 1.1 s, 17 s on the same profile must use
         // the same graph frame; current result marker only moves."
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
         viewModel.ndStop = 0
         viewModel.selectEntry(unofficialEntry)
 
@@ -306,7 +235,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModePortra400UnofficialCalculationCurveJoinsIdentityAndFormulaSegments() throws {
+    func testFilmModeUnofficialProfileCalculationCurveJoinsIdentityAndFormulaSegments() throws {
         // The calculation curve must include an identity segment
         // (Tc = Tm) through the no-correction zone and the formula
         // segment past the threshold, with no visual gap at the
@@ -314,7 +243,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // identity samples sit on the y = x line up to 1 s, and at
         // least one formula sample beyond 1 s lifts above it.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
         viewModel.selectEntry(unofficialEntry)
@@ -369,7 +298,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
         // across every model type that renders a formula-kind graph:
         // an official table-origin / table-derived profile (T-MAX 100,
         // PTIMER-168), an official converted-formula profile
-        // (Provia 100F), a source-less official formula (HP5 Plus), and
+        // (Provia 100F), a no-source-range official formula (HP5 Plus), and
         // an unofficial practical profile (Portra 400 unofficial).
         // Official limited-guidance profiles (Portra 400 official)
         // produce no formula graph and are excluded from this loop.
@@ -391,7 +320,7 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
             if caseInfo.selectsUnofficial {
                 // Portra 400 is the only unofficial-practical case today;
                 // activate it via the relocated profile/model path.
-                let entry = try unofficialPortra400SelectorEntry(in: viewModel)
+                let entry = try unofficialPracticalSelectorEntry(in: viewModel)
                 viewModel.baseShutter = caseInfo.baseShutter
                 viewModel.selectEntry(entry)
             } else {
@@ -412,6 +341,86 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
                 graph.legendChipLabels.contains("Formula curve"),
                 "[\(caseInfo.name)] legend must not surface 'Formula curve' as a user-visible label: \(graph.legendChipLabels)"
             )
+        }
+    }
+
+    // MARK: - Preset sub-second inputs surface a visible no-correction region
+
+    private struct PresetSubSecondNoCorrectionCase {
+        let film: String
+        let sample: Double
+        let viewportLowerBelow: Double
+        let expectedNoCorrectionUpperBound: Double
+        let upperBoundIsMinimum: Bool
+    }
+
+    /// Profiles whose no-correction band reaches into the sub-second
+    /// region must, for a sub-second input, expand the graph viewport
+    /// below the band so the no-correction overlay renders as a visible
+    /// region instead of collapsing onto the left edge. The per-film
+    /// no-correction upper bound and viewport expansion are case data;
+    /// the visibility contract is shared.
+    private let presetSubSecondNoCorrectionCases: [PresetSubSecondNoCorrectionCase] = [
+        // PTIMER-168: Kodak's table applies no correction through 0.5 sec
+        // but the 1 sec +1/3 stop row marks 1 sec as outside the band, so
+        // the no-correction range ends at 0.1 s.
+        PresetSubSecondNoCorrectionCase(film: "T-MAX 100", sample: 1.0 / 60.0,
+                                        viewportLowerBelow: 0.1,
+                                        expectedNoCorrectionUpperBound: 0.1,
+                                        upperBoundIsMinimum: false),
+        PresetSubSecondNoCorrectionCase(film: "HP5 Plus", sample: 0.25,
+                                        viewportLowerBelow: 1.0,
+                                        expectedNoCorrectionUpperBound: 1.0,
+                                        upperBoundIsMinimum: false),
+        // Provia 100F's published no-correction threshold extends to 128 s.
+        PresetSubSecondNoCorrectionCase(film: "Provia 100F", sample: 0.5,
+                                        viewportLowerBelow: 1.0,
+                                        expectedNoCorrectionUpperBound: 128,
+                                        upperBoundIsMinimum: true),
+    ]
+
+    @MainActor
+    func testPresetSubSecondInputShowsVisibleNoCorrectionRegion() throws {
+        for c in presetSubSecondNoCorrectionCases {
+            let viewModel = makeFilmModeViewModel()
+            let film = try XCTUnwrap(
+                viewModel.availablePresetFilms.first { $0.canonicalStockName == c.film },
+                "\(c.film): must remain in the launch catalog."
+            )
+
+            viewModel.baseShutter = c.sample
+            viewModel.ndStop = 0
+            viewModel.selectPresetFilm(film)
+
+            let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState, "\(c.film): must produce details.")
+            let graph = try XCTUnwrap(details.graph, "\(c.film): must surface a graph.")
+
+            XCTAssertLessThan(
+                graph.xRange.lowerBound,
+                c.viewportLowerBelow,
+                "\(c.film): viewport must expand below the no-correction band so the region is visible."
+            )
+            let upper = try XCTUnwrap(
+                graph.noCorrectionRangeUpperBoundSeconds,
+                "\(c.film): no-correction upper bound must be present."
+            )
+            if c.upperBoundIsMinimum {
+                XCTAssertGreaterThanOrEqual(
+                    upper, c.expectedNoCorrectionUpperBound,
+                    "\(c.film): no-correction overlay must reach at least its published upper bound."
+                )
+            } else {
+                XCTAssertEqual(
+                    upper, c.expectedNoCorrectionUpperBound, accuracy: 1e-6,
+                    "\(c.film): no-correction range upper bound."
+                )
+            }
+            XCTAssertGreaterThan(
+                upper, graph.xRange.lowerBound,
+                "\(c.film): no-correction upper bound must sit above the viewport lower bound so the overlay has visible width."
+            )
+            XCTAssertFalse(graph.isBelowVisibleRange, "\(c.film): sub-second input must sit inside the expanded visible range.")
+            XCTAssertEqual(graph.currentPoint?.style, .noCorrection, "\(c.film): current point must read as No correction.")
         }
     }
 }

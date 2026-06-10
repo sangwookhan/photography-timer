@@ -17,36 +17,23 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
 
     // MARK: - badgeText
 
-    func testFormulaDerivedBadgeReadsFormulaDerived() throws {
-        // Provia 100F (converted formula) at 240 s — inside the
-        // supported source range; presentation is `.formulaDerived`.
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 240)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "Formula-derived")
-    }
-
-    func testNoCorrectionBadgeReadsNoCorrection() throws {
-        // HP5 Plus at 0.5 s sits inside the formula-only profile's
-        // synthesized no-correction band — presentation is
-        // `.noCorrection`.
-        let bindingState = try makeBindingState(stock: "HP5 Plus", meteredSeconds: 0.5)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "No correction")
-    }
-
-    func testConvertedFormulaUnsupportedBadgeReadsBeyondSourceRange() throws {
-        // Provia 100F past the manufacturer-supported boundary (480 s).
-        // Converted formula profiles label this state as
-        // "Beyond source range" rather than "Outside guidance".
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 1_800)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "Beyond source range")
-    }
-
-    func testLimitedGuidanceBadgeReadsNoQuantifiedPrediction() throws {
-        // Portra 400 published preset has no formula and lands on
-        // `.limitedGuidance` past its threshold. PTIMER-168: the
-        // no-correction band now ends at 10 s, so use 30 s to ensure
-        // the input is beyond the band.
-        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 30)
-        XCTAssertEqual(presenter.badgeText(for: bindingState), "No quantified prediction")
+    // Same contract — badge wording reflects the presentation state.
+    // Film stock + metered seconds are case data (not test-name
+    // structure); each case names the state it exercises and the
+    // failure message carries the stock and metered input.
+    func testBadgeTextReflectsPresentationState() throws {
+        struct Case { let scenario: String; let stock: String; let metered: Double; let expected: String }
+        let cases: [Case] = [
+            Case(scenario: "formula-derived inside source range", stock: "Provia 100F", metered: 240, expected: "Formula-derived"),
+            Case(scenario: "synthesized no-correction band", stock: "HP5 Plus", metered: 0.5, expected: "No correction"),
+            Case(scenario: "converted formula beyond source range", stock: "Provia 100F", metered: 1_800, expected: "Beyond source range"),
+            Case(scenario: "limited guidance past threshold", stock: "Portra 400", metered: 30, expected: "No quantified prediction"),
+        ]
+        for c in cases {
+            let bindingState = try makeBindingState(stock: c.stock, meteredSeconds: c.metered)
+            XCTAssertEqual(presenter.badgeText(for: bindingState), c.expected,
+                           "\(c.scenario) [\(c.stock) @ \(c.metered)s]")
+        }
     }
 
     // MARK: - statusText
@@ -66,42 +53,28 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
 
     // MARK: - summaryText
 
-    func testFormulaSupportedSummaryReadsFormulaDerivedForConvertedProfile() throws {
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 240)
-        XCTAssertEqual(
-            presenter.summaryText(
-                for: bindingState,
-                calculationResult: successCalc(at: 240),
-                formatDurationCoarse: { "\($0)s" }
-            ),
-            "Formula-based correction on the active curve"
-        )
-    }
-
-    func testUnsupportedSummaryReadsBeyondSourceRangeForConvertedProfile() throws {
-        let bindingState = try makeBindingState(stock: "Provia 100F", meteredSeconds: 1_800)
-        XCTAssertEqual(
-            presenter.summaryText(
-                for: bindingState,
-                calculationResult: successCalc(at: 1_800),
-                formatDurationCoarse: { "\($0)s" }
-            ),
-            "Beyond source range"
-        )
-    }
-
-    func testLimitedGuidanceSummaryReadsBeyondPublishedNoCorrectionRange() throws {
-        // PTIMER-168: Portra 400 no-correction band now ends at 10 s;
-        // use 30 s so the input is beyond the band.
-        let bindingState = try makeBindingState(stock: "Portra 400", meteredSeconds: 30)
-        XCTAssertEqual(
-            presenter.summaryText(
-                for: bindingState,
-                calculationResult: successCalc(at: 30),
-                formatDurationCoarse: { "\($0)s" }
-            ),
-            "Beyond published no-correction range"
-        )
+    // Same contract — summary wording reflects the presentation state.
+    // Stock + metered seconds are case data; the scenario names the
+    // state and the failure message carries the stock/metered input.
+    func testSummaryTextReflectsPresentationState() throws {
+        struct Case { let scenario: String; let stock: String; let metered: Double; let expected: String }
+        let cases: [Case] = [
+            Case(scenario: "formula-derived (converted profile)", stock: "Provia 100F", metered: 240, expected: "Formula-based correction on the active curve"),
+            Case(scenario: "beyond source range (converted profile)", stock: "Provia 100F", metered: 1_800, expected: "Beyond source range"),
+            Case(scenario: "limited guidance beyond no-correction range", stock: "Portra 400", metered: 30, expected: "Beyond published no-correction range"),
+        ]
+        for c in cases {
+            let bindingState = try makeBindingState(stock: c.stock, meteredSeconds: c.metered)
+            XCTAssertEqual(
+                presenter.summaryText(
+                    for: bindingState,
+                    calculationResult: successCalc(at: c.metered),
+                    formatDurationCoarse: { "\($0)s" }
+                ),
+                c.expected,
+                "\(c.scenario) [\(c.stock) @ \(c.metered)s]"
+            )
+        }
     }
 
     // MARK: - summaryDetailText
@@ -221,7 +194,75 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         )
     }
 
+    // MARK: - Tone reflects calculation state, not source authority
+
+    /// PTIMER-164: the badge tone reflects the *calculation state*
+    /// (no-correction / in-range / beyond-source), never the source
+    /// authority. Across the three Fomapan 100 models (official FOMA
+    /// table, Ohzart community, app-derived formula) plus an unofficial
+    /// Portra profile — provenance is case data, not a per-film test — a
+    /// successful or derived result never reads as caution.
+    func testToneReflectsCalculationStateNotSourceAuthority() throws {
+        struct ToneCase {
+            let provenance: String
+            let filmStock: String
+            let makeProfile: () throws -> ReciprocityProfile
+            let metered: Double
+            let expectedCategory: ReciprocityConfidenceCategory?
+            let expectedBadge: String
+            let expectedTone: FilmModeReciprocityStateTone?
+        }
+        let officialFoma: () throws -> ReciprocityProfile = {
+            try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
+        }
+        let ohzart: () throws -> ReciprocityProfile = {
+            try XCTUnwrap(AlternateReciprocityModels.alternates(forFilmID: "foma-fomapan-100").first { $0.id == "foma-fomapan-100-ohzart-community-table" })
+        }
+        let appFormula: () throws -> ReciprocityProfile = { AlternateReciprocityModels.fomapan100AppDerivedFormula }
+        let portraUnofficial: () throws -> ReciprocityProfile = { UnofficialPracticalProfiles.kodakPortra400UnofficialPractical }
+
+        let cases: [ToneCase] = [
+            ToneCase(provenance: "official FOMA table — no correction", filmStock: "Fomapan 100 Classic", makeProfile: officialFoma, metered: 0.4, expectedCategory: .noCorrection, expectedBadge: "No correction", expectedTone: .trusted),
+            ToneCase(provenance: "official FOMA table — in range", filmStock: "Fomapan 100 Classic", makeProfile: officialFoma, metered: 10, expectedCategory: nil, expectedBadge: "Table-derived", expectedTone: .measured),
+            ToneCase(provenance: "Ohzart community — no correction", filmStock: "Fomapan 100 Classic", makeProfile: ohzart, metered: 0.4, expectedCategory: .noCorrection, expectedBadge: "No correction", expectedTone: .trusted),
+            ToneCase(provenance: "Ohzart community — in range", filmStock: "Fomapan 100 Classic", makeProfile: ohzart, metered: 8, expectedCategory: .formulaDerived, expectedBadge: "Table-derived", expectedTone: .measured),
+            ToneCase(provenance: "Ohzart community — beyond source", filmStock: "Fomapan 100 Classic", makeProfile: ohzart, metered: 120, expectedCategory: .unsupported, expectedBadge: "Beyond source range", expectedTone: .unsupported),
+            ToneCase(provenance: "app-derived formula — in range", filmStock: "Fomapan 100 Classic", makeProfile: appFormula, metered: 10, expectedCategory: nil, expectedBadge: "Formula-derived", expectedTone: nil),
+            ToneCase(provenance: "unofficial Portra — no correction", filmStock: "Portra 400", makeProfile: portraUnofficial, metered: 0.5, expectedCategory: .noCorrection, expectedBadge: "No correction", expectedTone: .trusted),
+        ]
+        for c in cases {
+            let binding = try makeBindingState(filmStock: c.filmStock, profile: c.makeProfile(), meteredSeconds: c.metered)
+            if let category = c.expectedCategory {
+                XCTAssertEqual(binding.presentation.category, category, "\(c.provenance): category")
+            }
+            XCTAssertEqual(presenter.badgeText(for: binding), c.expectedBadge, "\(c.provenance): badge")
+            if let tone = c.expectedTone {
+                XCTAssertEqual(presenter.tone(for: binding), tone, "\(c.provenance): tone must reflect the calculation state, not authority")
+            }
+            XCTAssertNotEqual(presenter.tone(for: binding), .caution, "\(c.provenance): a successful/derived state must never read as caution")
+        }
+    }
+
     // MARK: - Helpers
+
+    private func makeBindingState(
+        filmStock: String,
+        profile: ReciprocityProfile,
+        meteredSeconds: Double
+    ) throws -> FilmModeReciprocityBindingState {
+        let film = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == filmStock },
+            "\(filmStock) must remain in the launch catalog."
+        )
+        let model = ReciprocityModel()
+        let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: meteredSeconds)
+        return FilmModeReciprocityBindingState(
+            film: film,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
+    }
 
     private func makeBindingState(
         stock: String,

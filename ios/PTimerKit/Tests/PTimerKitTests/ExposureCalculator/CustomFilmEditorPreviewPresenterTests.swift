@@ -116,58 +116,22 @@ final class CustomFilmEditorPreviewPresenterTests: XCTestCase {
         XCTAssertEqual(parsed?.validThrough ?? 0, 300.0, accuracy: 1e-9)
     }
 
-    func test_parse_anchorRejectsUnlimited() {
-        let baseTmForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "Unlimited",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTmForm))
-
-        let baseTcForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTcText: "Unlimited",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTcForm))
-    }
-
-    func test_parse_offsetRejectsUnlimitedAndGarbage() {
-        let unlimited = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            offsetSecondsText: "Unlimited",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: unlimited))
-
-        let dashOnly = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            offsetSecondsText: "-",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: dashOnly))
-    }
-
-    func test_parse_anchorRejectsGarbage() {
-        let baseTmForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "abc",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTmForm))
-
-        let baseTcForm = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTcText: "abc",
-            noCorrectionThroughText: "1",
-            validThroughText: "60"
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: baseTcForm))
+    // Same contract — parse rejects an invalid numeric field value
+    // (returns nil) — across the rejected field/value combinations as
+    // case data; the failing field+value is named in the message.
+    func test_parse_rejectsInvalidNumericFieldValues() {
+        struct Case { let name: String; let form: CustomFilmEditorFormState }
+        let cases: [Case] = [
+            Case(name: "baseTm = Unlimited", form: CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "Unlimited", noCorrectionThroughText: "1", validThroughText: "60")),
+            Case(name: "baseTc = Unlimited", form: CustomFilmEditorFormState(exponentText: "1.30", baseTcText: "Unlimited", noCorrectionThroughText: "1", validThroughText: "60")),
+            Case(name: "baseTm = garbage", form: CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "abc", noCorrectionThroughText: "1", validThroughText: "60")),
+            Case(name: "baseTc = garbage", form: CustomFilmEditorFormState(exponentText: "1.30", baseTcText: "abc", noCorrectionThroughText: "1", validThroughText: "60")),
+            Case(name: "offset = Unlimited", form: CustomFilmEditorFormState(exponentText: "1.30", offsetSecondsText: "Unlimited", noCorrectionThroughText: "1", validThroughText: "60")),
+            Case(name: "offset = dash only", form: CustomFilmEditorFormState(exponentText: "1.30", offsetSecondsText: "-", noCorrectionThroughText: "1", validThroughText: "60")),
+        ]
+        for c in cases {
+            XCTAssertNil(CustomFilmEditorPreviewPresenter.parse(form: c.form), "\(c.name) must be rejected by parse")
+        }
     }
 
     func test_parse_validThroughEmptyMeansUnlimited() {

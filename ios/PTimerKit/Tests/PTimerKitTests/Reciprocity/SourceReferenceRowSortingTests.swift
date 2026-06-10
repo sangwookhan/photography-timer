@@ -108,7 +108,7 @@ final class SourceReferenceRowSortingTests: XCTestCase {
     /// end-to-end against the presenter so a future refactor of the
     /// sort plumbing cannot silently re-order the rendered block.
     @MainActor
-    func testCms20IIThroughPresenterPlacesPointAnchorAboveRangeAtSameSortValue() throws {
+    func testPointAnchorSortsAboveRangeRowAtSameSortValueThroughPresenter() throws {
         let film = try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CMS 20 II" }
         )

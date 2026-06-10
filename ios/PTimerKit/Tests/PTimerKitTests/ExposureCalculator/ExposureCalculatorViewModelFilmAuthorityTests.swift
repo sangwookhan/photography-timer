@@ -1,12 +1,11 @@
 import XCTest
 import PTimerKit
-@testable import PTimer
 
 final class FilmModeAuthorityLabelTests: XCTestCase {
     @MainActor
-    func testFilmModeDetailsUnofficialPortra400ShowsUnofficialAuthorityAndFormula() throws {
+    func testFilmModeDetailsUnofficialProfileShowsUnofficialAuthorityAndFormula() throws {
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -30,7 +29,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsOfficialPortra400ShowsOfficialAuthorityInSubtitle() throws {
+    func testFilmModeDetailsOfficialProfileShowsOfficialAuthorityInSubtitle() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
 
@@ -47,7 +46,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmSelectionDisplayStateOfficialPortra400ShowsOfficialGuidanceLabel() {
+    func testFilmSelectionDisplayStateOfficialProfileShowsOfficialGuidanceLabel() {
         let viewModel = makeFilmModeViewModel()
         let film = viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }!
         viewModel.selectPresetFilm(film)
@@ -61,9 +60,9 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmSelectionDisplayStateUnofficialPortra400ShowsUnofficialPracticalLabel() throws {
+    func testFilmSelectionDisplayStateUnofficialProfileShowsUnofficialPracticalLabel() throws {
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
         viewModel.selectEntry(unofficialEntry)
 
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Portra 400")
@@ -75,10 +74,10 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmSelectionDisplayStateOfficialAndUnofficialPortra400AreDistinguishable() throws {
+    func testFilmSelectionDisplayStateOfficialAndUnofficialProfileAreDistinguishable() throws {
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.selectPresetFilm(officialFilm)
         let officialDisplay = viewModel.filmSelectionDisplayState
@@ -98,9 +97,9 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsUnofficialPortra400ShowsFormulaNearGraphWithoutProfileSection() throws {
+    func testFilmModeDetailsUnofficialProfileShowsFormulaNearGraphWithoutProfileSection() throws {
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 15
         viewModel.ndStop = 0
@@ -146,12 +145,12 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsDisplayStateIsNonNilForOfficialAndUnofficialPortra400() throws {
+    func testFilmModeDetailsDisplayStateIsNonNilForOfficialAndUnofficialProfile() throws {
         // Both official and unofficial Portra 400 must produce a non-nil details display state
         // so the sheet can open for either profile.
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 15
         viewModel.ndStop = 0
@@ -172,14 +171,14 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     // MARK: - PTIMER-143 — Normalize Film Details for unofficial reciprocity profiles
 
     @MainActor
-    func testFilmModeDetailsUnofficialPortra400SubtitleMatchesMainRowAuthorityLabel() throws {
+    func testFilmModeDetailsUnofficialProfileSubtitleMatchesMainRowAuthorityLabel() throws {
         // The main film row already labels unofficial Portra 400 as
         // "Unofficial practical" (via `FilmSelectionModel.filmRowAuthorityLabel`).
         // The Details subtitle must reuse the same wording so the user
         // does not read one label on the main row and a different label
         // for the same selected profile inside the sheet.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -204,7 +203,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsUnofficialPortra400SurfacesAuthorityCaveatNote() throws {
+    func testFilmModeDetailsUnofficialProfileSurfacesAuthorityCaveatNote() throws {
         // The unofficial Portra 400 profile carries an explicit
         // authority caveat in its profile-level notes
         // ("Unofficial practical approximation. Not a Kodak-published profile.").
@@ -212,7 +211,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // can recognize the lower-authority status before trusting the
         // predicted corrected exposure.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
@@ -227,7 +226,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsUnofficialPortra400DoesNotUseOfficialSourceWording() throws {
+    func testFilmModeDetailsUnofficialProfileDoesNotUseOfficialSourceWording() throws {
         // Authority-leak guard: the unofficial profile path must not
         // borrow wording that exists only for manufacturer-published
         // (converted formula) profiles. "Beyond source range",
@@ -235,7 +234,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // "Guidance boundary" sections all imply a published Kodak
         // source-range, which the unofficial profile does not have.
         let viewModel = makeFilmModeViewModel()
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 30
         viewModel.ndStop = 0
@@ -274,7 +273,7 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsOfficialPortra400KeepsOfficialLimitedGuidanceBeyondThreshold() throws {
+    func testFilmModeDetailsOfficialProfileKeepsOfficialLimitedGuidanceBeyondThreshold() throws {
         // The official Portra 400 profile must remain the default
         // official limited-guidance profile and must not expose any
         // quantified prediction beyond the published 10 s threshold
@@ -342,13 +341,13 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsSectionOrderIsConsistentAcrossOfficialAndUnofficialPortra400() throws {
+    func testFilmModeDetailsSectionOrderIsConsistentAcrossOfficialAndUnofficialProfile() throws {
         // Profile / Formula metadata sections are removed in this
         // pass; the only stable invariant is that Sources, when
         // present, is the last section in the array.
         let viewModel = makeFilmModeViewModel()
         let officialFilm = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
-        let unofficialEntry = try unofficialPortra400SelectorEntry(in: viewModel)
+        let unofficialEntry = try unofficialPracticalSelectorEntry(in: viewModel)
 
         viewModel.baseShutter = 15
         viewModel.ndStop = 0

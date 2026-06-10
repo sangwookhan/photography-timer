@@ -44,7 +44,10 @@ final class GuardedFormulaRegionBasisContractTests: XCTestCase {
     ///   tolerance `max(floor, expected × fraction)`.
     private struct GuardedFormulaFilmCase {
         let film: String
-        let thresholdBoundarySeconds: Double
+        /// `nil` for fit-from-quantified-rows films (Rollei RETRO 80S /
+        /// SUPERPAN 200) whose just-above-threshold region goes through the
+        /// runtime safety handoff rather than a clean no-correction band.
+        let thresholdBoundarySeconds: Double?
         let insideFormulaSamples: [Double]
         let publishedUpperBoundarySeconds: Double?
         let aboveSourceSamples: [Double]
@@ -104,21 +107,46 @@ final class GuardedFormulaRegionBasisContractTests: XCTestCase {
             coefficientSeconds: 1.4142136, referenceMeteredTimeSeconds: 1, exponent: 1.150515,
             toleranceFloorSeconds: 0.5, toleranceFraction: 0.005
         ),
+        // Rollei RETRO 80S / SUPERPAN 200 — fit-from-quantified-rows
+        // formula (Tc = 0.9601 × Tm^1.5361). A runtime fit-gap just above
+        // the 0.5 s threshold means no clean no-correction boundary, so
+        // threshold is nil. Published quantified rows (4/8/15/30 s) are
+        // formula-derived; above the 30 s upper row the bare-power
+        // continuation carries through.
+        GuardedFormulaFilmCase(
+            film: "RETRO 80S",
+            thresholdBoundarySeconds: nil,
+            insideFormulaSamples: [4, 8, 15, 30],
+            publishedUpperBoundarySeconds: nil,
+            aboveSourceSamples: [90],
+            coefficientSeconds: 0.9601, referenceMeteredTimeSeconds: 1, exponent: 1.5361,
+            toleranceFloorSeconds: 0.5, toleranceFraction: 0.01
+        ),
+        GuardedFormulaFilmCase(
+            film: "SUPERPAN 200",
+            thresholdBoundarySeconds: nil,
+            insideFormulaSamples: [4, 8, 15, 30],
+            publishedUpperBoundarySeconds: nil,
+            aboveSourceSamples: [90],
+            coefficientSeconds: 0.9601, referenceMeteredTimeSeconds: 1, exponent: 1.5361,
+            toleranceFloorSeconds: 0.5, toleranceFraction: 0.01
+        ),
     ]
 
     // MARK: - Region 1: inclusive no-correction threshold
 
     func testAtThresholdBoundaryReturnsOfficialNoCorrection() throws {
         for c in cases {
+            guard let threshold = c.thresholdBoundarySeconds else { continue }
             let profile = try FormulaProfileTestSupport.profile(for: c.film)
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: c.thresholdBoundarySeconds)
+            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: threshold)
             XCTAssertEqual(
                 result.metadata.basis,
                 .officialThresholdNoCorrection,
-                "\(c.film) @ \(c.thresholdBoundarySeconds)s: inclusive threshold boundary must read as official no-correction."
+                "\(c.film) @ \(threshold)s: inclusive threshold boundary must read as official no-correction."
             )
-            let corrected = try XCTUnwrap(result.correctedExposureSeconds, "\(c.film) @ \(c.thresholdBoundarySeconds)s: no-correction must report corrected.")
-            XCTAssertEqual(corrected, c.thresholdBoundarySeconds, accuracy: 1e-6, "\(c.film) @ \(c.thresholdBoundarySeconds)s: corrected must equal metered at the boundary.")
+            let corrected = try XCTUnwrap(result.correctedExposureSeconds, "\(c.film) @ \(threshold)s: no-correction must report corrected.")
+            XCTAssertEqual(corrected, threshold, accuracy: 1e-6, "\(c.film) @ \(threshold)s: corrected must equal metered at the boundary.")
         }
     }
 

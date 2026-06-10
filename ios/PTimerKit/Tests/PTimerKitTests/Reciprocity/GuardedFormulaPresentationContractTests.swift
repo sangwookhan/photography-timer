@@ -36,6 +36,14 @@ final class GuardedFormulaPresentationContractTests: XCTestCase {
                     sourceReferenceContains: ["2.5M"],
                     sourceReferenceExcludes: [],
                     hasGuidanceBoundary: false, guidanceBoundaryContains: nil),
+        DetailsCase(film: "RETRO 80S", sample: 4,
+                    sourceReferenceContains: ["8.0s", "24.0s", "60.0s", "180.0s", "1 to 2", "3 to 4", "1.0s"],
+                    sourceReferenceExcludes: [],
+                    hasGuidanceBoundary: false, guidanceBoundaryContains: nil),
+        DetailsCase(film: "SUPERPAN 200", sample: 4,
+                    sourceReferenceContains: ["8.0s", "24.0s", "60.0s", "180.0s", "1 to 2", "3 to 4", "1.0s"],
+                    sourceReferenceExcludes: [],
+                    hasGuidanceBoundary: false, guidanceBoundaryContains: nil),
     ]
 
     func testDetailsSplitsSourceReferenceAndGuidanceBoundary() throws {
@@ -85,6 +93,8 @@ final class GuardedFormulaPresentationContractTests: XCTestCase {
     private let graphCases: [GraphCase] = [
         GraphCase(film: "Velvia 50", sample: 8, markerMetereds: [4, 8, 16, 32], notRecommendedBoundarySeconds: 64, beyondSourceStartSeconds: nil),
         GraphCase(film: "Velvia 100", sample: 120, markerMetereds: [120, 240], notRecommendedBoundarySeconds: nil, beyondSourceStartSeconds: nil),
+        GraphCase(film: "RETRO 80S", sample: 4, markerMetereds: [4, 8, 15, 30], notRecommendedBoundarySeconds: nil, beyondSourceStartSeconds: 30),
+        GraphCase(film: "SUPERPAN 200", sample: 4, markerMetereds: [4, 8, 15, 30], notRecommendedBoundarySeconds: nil, beyondSourceStartSeconds: 30),
     ]
 
     func testGraphCarriesSourceMarkersAndBoundaries() throws {

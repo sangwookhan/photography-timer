@@ -118,7 +118,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeBeyondVelvia50SourceRangeStartsCorrectedExposureTimerFromFormulaPrediction() throws {
+    func testFilmModeBeyondConvertedFormulaSourceRangeStartsCorrectedExposureTimerFromFormulaPrediction() throws {
         // Velvia 50's source-backed range ends at the 32 s anchor;
         // the 64 s row is a published "Not recommended" warning
         // marker only. At adjusted shutter 64 s the result is

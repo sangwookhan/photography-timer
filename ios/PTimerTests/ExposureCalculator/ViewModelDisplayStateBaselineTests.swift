@@ -39,7 +39,7 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     /// Tri-X 400 selected at metered=1s. Tri-X is formula-backed; the
     /// scenario locks the film-workflow cross-cutting surface for a
     /// formula-derived result at the threshold boundary.
-    func testFilmModeTriXFormulaBaseline() throws {
+    func testFilmModeTableProfileBaseline() throws {
         let viewModel = makeViewModel()
         viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
@@ -59,7 +59,7 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     /// Tri-X with ND applied — corrected exposure derived from the
     /// adjusted shutter, not the metered base. Locks the ND × film
     /// composition path through the formula calculation curve.
-    func testFilmModeTriXWithNDStopBaseline() throws {
+    func testFilmModeTableProfileWithNDStopBaseline() throws {
         let viewModel = makeViewModel()
         viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(
@@ -79,7 +79,7 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     /// Portra 400 limited-guidance profile — locks the non-quantified
     /// branch where `correctedExposure` carries a limited-guidance
     /// message rather than a numeric value.
-    func testFilmModePortraLimitedGuidanceBaseline() throws {
+    func testFilmModeLimitedGuidanceBaseline() throws {
         let viewModel = makeViewModel()
         viewModel.scaleMode = .fullStop
         let film = try XCTUnwrap(

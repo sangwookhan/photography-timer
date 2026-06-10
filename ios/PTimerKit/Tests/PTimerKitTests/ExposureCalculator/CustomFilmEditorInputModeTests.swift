@@ -97,7 +97,7 @@ final class CustomFilmEditorInputModeTests: XCTestCase {
 
     // MARK: - T-MAX style Scaled formula round-trip
 
-    func test_scaledMode_canRepresentTMaxFormula() throws {
+    func test_scaledMode_canRepresentAnchoredFormula() throws {
         // T-MAX 100 published formula: Tc = 0.1 × (Tm/0.1)^1.0966
         let state = CustomFilmEditorFormState(
             filmLabel: "T-MAX 100",

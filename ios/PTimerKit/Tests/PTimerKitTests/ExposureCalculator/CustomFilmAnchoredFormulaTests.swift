@@ -45,7 +45,7 @@ final class CustomFilmAnchoredFormulaTests: XCTestCase {
 
     // MARK: - T-MAX 100 example from the spec
 
-    func test_tmax100_anchorPair_persistsOnSharedFormula() throws {
+    func test_anchorPair_persistsOnSharedFormula() throws {
         // Spec example:
         //   Base Tm = 0.1s, Base Tc = 0.1s, Exponent = 1.0966
         //   Display: Tc = 0.1 × (Tm / 0.1)^1.0966

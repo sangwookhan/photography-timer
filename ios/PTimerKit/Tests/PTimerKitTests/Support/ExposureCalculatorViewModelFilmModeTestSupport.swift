@@ -26,7 +26,7 @@ extension XCTestCase {
     /// same `selectedProfileOverride` the Details model picker now sets,
     /// so the resulting calculator/Details state is identical.
     @MainActor
-    func unofficialPortra400SelectorEntry(
+    func unofficialPracticalSelectorEntry(
         in viewModel: ExposureCalculatorViewModel
     ) throws -> FilmSelectorEntry {
         let film = try XCTUnwrap(

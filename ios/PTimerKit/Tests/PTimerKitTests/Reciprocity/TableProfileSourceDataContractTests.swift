@@ -59,8 +59,23 @@ final class TableProfileSourceDataContractTests: XCTestCase {
         var publisher: String?
         var profileName: String?
         var profileIdSuffix: String?
+        var modelSourceModel: ReciprocitySourceModel?
+        var modelCalculationModel: ReciprocityCalculationModel?
+        /// Non-default profile lookup (e.g. a community/app-derived
+        /// alternate). `nil` uses the film's default catalog profile.
+        var profileProvider: (() throws -> ReciprocityProfile)?
+        /// Whether the Details / graph display-state surfaces are
+        /// exercised for this case. `false` for profiles whose only
+        /// published source-data is the evaluator path (e.g. alternates
+        /// selected through the view model elsewhere).
+        var exercisesDisplayState = true
 
         var lastAnchorCorrected: Double { anchors.last?.corrected ?? 0 }
+    }
+
+    private func profile(for c: TableFilmCase) throws -> ReciprocityProfile {
+        if let provider = c.profileProvider { return try provider() }
+        return try FormulaProfileTestSupport.profile(for: c.film)
     }
 
     private let cases: [TableFilmCase] = [
@@ -173,6 +188,65 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             sourceKind: .manufacturerPublished, authority: .official, publisher: "FOMA BOHEMIA",
             profileName: "Official FOMA table", profileIdSuffix: "-official-table"
         ),
+        // Fomapan 100 Classic — official FOMA table (default profile).
+        TableFilmCase(
+            film: "Fomapan 100 Classic",
+            noCorrectionThroughSeconds: 0.5,
+            sourceRangeThroughSeconds: 100,
+            anchors: [Anchor(metered: 1, corrected: 2), Anchor(metered: 10, corrected: 80), Anchor(metered: 100, corrected: 1600)],
+            belowThresholdSamples: [0.5],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [1, 10, 100],
+            aboveSourceSamples: [1000],
+            evidenceMetereds: [1, 10, 100],
+            evidenceRows: [
+                EvidenceRow(metered: 1, correctedSeconds: 2),
+                EvidenceRow(metered: 10, correctedSeconds: 80),
+                EvidenceRow(metered: 100, correctedSeconds: 1600),
+            ],
+            detailTokens: [],
+            markers: [],
+            beyondSourceStartSeconds: 100.000001,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "FOMA BOHEMIA",
+            modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation,
+            exercisesDisplayState: false
+        ),
+        // Fomapan 100 Classic — Ohzart community practical table
+        // (non-default alternate). Same table-log-log archetype; differs
+        // only by provenance (community) and its published anchors.
+        TableFilmCase(
+            film: "Fomapan 100 Classic",
+            noCorrectionThroughSeconds: 0.5,
+            sourceRangeThroughSeconds: 60,
+            anchors: [
+                Anchor(metered: 1, corrected: 1.9), Anchor(metered: 2, corrected: 5), Anchor(metered: 4, corrected: 13),
+                Anchor(metered: 8, corrected: 35), Anchor(metered: 15, corrected: 90), Anchor(metered: 30, corrected: 265),
+                Anchor(metered: 60, corrected: 795),
+            ],
+            belowThresholdSamples: [0.4, 0.5],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [2, 8, 30],
+            aboveSourceSamples: [120],
+            evidenceMetereds: [1, 2, 4, 8, 15, 30, 60],
+            evidenceRows: [
+                EvidenceRow(metered: 1, correctedSeconds: 1.9),
+                EvidenceRow(metered: 2, correctedSeconds: 5),
+                EvidenceRow(metered: 4, correctedSeconds: 13),
+                EvidenceRow(metered: 8, correctedSeconds: 35),
+                EvidenceRow(metered: 15, correctedSeconds: 90),
+                EvidenceRow(metered: 30, correctedSeconds: 265),
+                EvidenceRow(metered: 60, correctedSeconds: 795),
+            ],
+            detailTokens: [],
+            markers: [],
+            beyondSourceStartSeconds: 60.000001,
+            authority: .unofficial,
+            modelSourceModel: .practicalCommunityGuidance, modelCalculationModel: .tableLogLogInterpolation,
+            profileProvider: { try XCTUnwrap(AlternateReciprocityModels.alternates(forFilmID: "foma-fomapan-100").first { $0.id == "foma-fomapan-100-ohzart-community-table" }) },
+            exercisesDisplayState: false
+        ),
     ]
 
     private func tableRule(in profile: ReciprocityProfile) throws -> TableInterpolationReciprocityRule {
@@ -195,7 +269,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testTableRuleParametersAndStoredAnchorsMatchPublished() throws {
         for c in cases {
-            let rule = try tableRule(in: try FormulaProfileTestSupport.profile(for: c.film))
+            let rule = try tableRule(in: try profile(for: c))
             XCTAssertEqual(rule.noCorrectionThroughSeconds, c.noCorrectionThroughSeconds, accuracy: 1e-6, "\(c.film): noCorrectionThroughSeconds")
             XCTAssertEqual(rule.sourceRangeThroughSeconds, c.sourceRangeThroughSeconds, accuracy: 1e-6, "\(c.film): sourceRangeThroughSeconds")
             XCTAssertEqual(rule.anchors.map { $0.meteredSeconds }, c.anchors.map { $0.metered }, "\(c.film): anchor metered seconds")
@@ -210,7 +284,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testAtAndBelowThresholdReturnsOfficialNoCorrection() throws {
         for c in cases {
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             for metered in c.belowThresholdSamples {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
                 XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection, "\(c.film) @ \(metered)s: at/below threshold must be no-correction.")
@@ -222,7 +296,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
     func testNominalThresholdToleranceClassifiesNoCorrection() throws {
         for c in cases {
             guard let nominalSample = c.nominalToleranceSample else { continue }
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             let nominal = evaluator.evaluate(profile: profile, meteredExposureSeconds: nominalSample)
             XCTAssertEqual(nominal.metadata.basis, .officialThresholdNoCorrection, "\(c.film): nominal 1/10 s (~\(nominalSample)s) must read as no-correction.")
             XCTAssertEqual(try XCTUnwrap(nominal.correctedExposureSeconds), nominalSample, accuracy: 1e-6, "\(c.film): nominal corrected == metered.")
@@ -238,7 +312,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testInsideSourceRangeIsTableLogLogDerived() throws {
         for c in cases {
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             for metered in c.insideSamples {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
                 XCTAssertEqual(result.metadata.basis, .tableLogLogDerived, "\(c.film) @ \(metered)s: inside the source-backed table range.")
@@ -248,7 +322,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testAnchorsReproducePublishedCorrectedTimesExactly() throws {
         for c in cases {
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             for anchor in c.anchors {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: anchor.metered)
                 XCTAssertEqual(try XCTUnwrap(result.correctedExposureSeconds), anchor.corrected, accuracy: 1e-4, "\(c.film) @ \(anchor.metered)s: must reproduce \(anchor.corrected)s exactly.")
@@ -260,7 +334,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testAboveSourceRangeIsBeyondSourceWithExtrapolation() throws {
         for c in cases {
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             for metered in c.aboveSourceSamples {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
                 XCTAssertEqual(result.metadata.basis, .unsupportedOutOfPolicyRange, "\(c.film) @ \(metered)s: above the published upper anchor.")
@@ -274,7 +348,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testSourceEvidencePreservesPublishedRows() throws {
         for c in cases {
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             let exact = exactRows(in: profile)
             XCTAssertEqual(exact.map { $0.0 }, c.evidenceMetereds, "\(c.film): published source-evidence rows")
             for expected in c.evidenceRows {
@@ -323,7 +397,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
     func testSourceProvenanceMatchesPublished() throws {
         for c in cases {
             guard c.sourceKind != nil || c.authority != nil || c.publisher != nil else { continue }
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             if let kind = c.sourceKind { XCTAssertEqual(profile.source.kind, kind, "\(c.film): source kind") }
             if let authority = c.authority { XCTAssertEqual(profile.source.authority, authority, "\(c.film): source authority") }
             if let publisher = c.publisher { XCTAssertEqual(profile.source.publisher, publisher, "\(c.film): publisher") }
@@ -333,7 +407,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
     func testProfileIdentityMatchesPublished() throws {
         for c in cases {
             guard c.profileName != nil || c.profileIdSuffix != nil else { continue }
-            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            let profile = try profile(for: c)
             if let name = c.profileName { XCTAssertEqual(profile.name, name, "\(c.film): profile name") }
             if let suffix = c.profileIdSuffix {
                 XCTAssertTrue(profile.id.hasSuffix(suffix), "\(c.film): profile id must end with '\(suffix)'; got \(profile.id)")
@@ -341,11 +415,24 @@ final class TableProfileSourceDataContractTests: XCTestCase {
         }
     }
 
+    /// The declared model basis (source model + calculation model) is
+    /// case data — `.manufacturerTable` for official films, the
+    /// `.practicalCommunityGuidance` source for the community alternate —
+    /// so provenance is an axis, not a separate suite.
+    func testModelBasisMatchesPublished() throws {
+        for c in cases {
+            guard c.modelSourceModel != nil || c.modelCalculationModel != nil else { continue }
+            let basis = try XCTUnwrap(try profile(for: c).modelBasis, "\(c.film): must declare a modelBasis.")
+            if let sourceModel = c.modelSourceModel { XCTAssertEqual(basis.sourceModel, sourceModel, "\(c.film): modelBasis.sourceModel") }
+            if let calculationModel = c.modelCalculationModel { XCTAssertEqual(basis.calculationModel, calculationModel, "\(c.film): modelBasis.calculationModel") }
+        }
+    }
+
     // MARK: - Details and graph surfaces
 
     @MainActor
     func testDetailsSurfaceShowsSourceReferenceRows() throws {
-        for c in cases {
+        for c in cases where c.exercisesDisplayState {
             let displayState = try FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: 10)
             let section = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }), "\(c.film): must surface a Source reference section.")
             let block = try XCTUnwrap(section.rows.first?.value)
@@ -359,7 +446,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     @MainActor
     func testGraphCarriesSourceReferenceMarkers() throws {
-        for c in cases {
+        for c in cases where c.exercisesDisplayState {
             let displayState = try FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: 10)
             let graph = try XCTUnwrap(displayState.graph, "\(c.film): must surface a graph.")
             XCTAssertEqual(graph.kind, .formula, "\(c.film): table models render as the .formula graph kind.")

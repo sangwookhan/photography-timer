@@ -4,7 +4,7 @@ import PTimerCore
 
 final class FilmModeFormulaExtrapolationTests: XCTestCase {
     @MainActor
-    func testTriXBelowOneSecondDoesNotShowUnsupported() throws {
+    func testTableProfileBelowOneSecondStaysTableDerivedNotUnsupported() throws {
         // PTIMER-168: at 0.5 s Tri-X 400 is now table-derived (the
         // no-correction band ends at 0.1 s), not no-correction. The
         // result is still quantified and not unsupported.
@@ -26,7 +26,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXAtOneSecondReturnsCorrectedExposureFromTablePrediction() throws {
+    func testTableProfileAtOneSecondReturnsCorrectedExposureFromTablePrediction() throws {
         // PTIMER-168: Tri-X 400 evaluates through the official Kodak
         // table; the 1 sec published row (corrected 2 sec) is a table
         // anchor reproduced exactly, surfaced as a Table-derived badge.
@@ -197,7 +197,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXSmallerSupportedExposureDoesNotRegressToUnsupported() throws {
+    func testTableProfileSmallerSupportedExposureDoesNotRegressToUnsupported() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -218,7 +218,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXBeyondSourceRangeKeepsTablePredictionAsQuantifiedResult() throws {
+    func testTableProfileBeyondSourceRangeKeepsTablePredictionAsQuantifiedResult() throws {
         // PTIMER-168: past the published table the Tri-X profile keeps a
         // log-log extrapolated value, surfaced as Beyond source range.
         let viewModel = makeFilmModeViewModel()
@@ -247,7 +247,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testTriXVeryLongExposureStaysBeyondSourceRangeWithFormulaContinuation() throws {
+    func testTableProfileVeryLongExposureStaysBeyondSourceRangeWithFormulaContinuation() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" })
 
@@ -272,7 +272,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testHP5PlusLongAdjustedExposureRemainsFormulaDerivedInsteadOfUnsupported() throws {
+    func testBarePowerLawProfileLongAdjustedExposureRemainsFormulaDerivedInsteadOfUnsupported() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "HP5 Plus" })
 
@@ -329,7 +329,7 @@ final class FilmModeFormulaExtrapolationTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeBeyondVelvia50SourceRangeKeepsCorrectedExposureRowQuantifiedFromFormula() throws {
+    func testFilmModeBeyondConvertedFormulaSourceRangeKeepsCorrectedExposureRowQuantifiedFromFormula() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 

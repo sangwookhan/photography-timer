@@ -503,8 +503,8 @@ and the live plan. Where it differs from §§9–10, this section wins.
   as table-driven contracts and reorganize the reciprocity suite by
   **archetype**. Batch 1: same-file near-duplicates → case tables. Batch
   2: cross-file table-log-log invariants → `TableLogLogReciprocityContractTests`
-  (+ a follow-up cleanup commit). Batch 3 (in progress): the full
-  archetype re-architecture below.
+  (+ a follow-up cleanup commit). Batch 3 (done): the full
+  archetype re-architecture below — see §15.5.
 
 ### 15.2 Metrics (fixed denominator)
 
@@ -517,6 +517,9 @@ and the live plan. Where it differs from §§9–10, this section wins.
   the primary readout for C11 (consolidation removing duplicate
   executable functions). Coverage location (the app-hosted ratio) is
   unchanged by C11 because consolidation happens inside the package.
+- **Batch 3 result:** total 1332 (−170 vs baseline); app-hosted 435
+  (29.0%). The original C11 numeric target (app-hosted ≤ 75, total
+  ≤ 751) is **not** met by batch 3 and stays open — see §15.5.
 
 ### 15.3 Reciprocity archetype model
 
@@ -566,13 +569,13 @@ it is a different case."
   RPX→table / RETRO·SUPERPAN→guarded).** All table films + their source
   data are case rows in `TableLogLogReciprocityContractTests` +
   `TableProfileSourceDataContractTests`.
-- **3e — limited guidance + model-basis (next).** Case-drive the Kodak
+- **3e — limited guidance + model-basis (done).** Case-drive the Kodak
   limited-guidance suite, the bundled model-basis declarations, and the
   related migration invariants into behavior/case contracts.
-- **3f — Provia presentation / graph / scale.** Constant-ise the
+- **3f — Provia presentation / graph / scale (done).** Constant-ise the
   film-named graph/scale/presentation tests (these exercise the
   graph/scale engine, not the reciprocity model).
-- **3g — ViewModel / presenter / catalog naming cleanup (separate
+- **3g — ViewModel / presenter / catalog naming cleanup (done; separate
   theme).** The reciprocity-archetype stages (3a–3f) do not reach the
   ViewModel/presenter/catalog test layer (`ExposureCalculatorViewModelFilm*`,
   `FilmModeDetailsSecondaryGuidancePresenterTests`, `LaunchPresetFilmCatalogTests`,
@@ -586,3 +589,33 @@ Each stage: `swift test --package-path ios/PTimerKit` + full app-hosted
 `xcodebuild` + SwiftLint + boundary grep, then a single commit. No
 production change in any C11 stage; no source-data guard weakened (exact
 anchors / parameters / corrected values move to explicit case columns).
+
+### 15.5 Batch 3 completion and next stage (2026-06-11)
+
+**Done — C11 batch 3 (reciprocity test re-architecture).** Archetype
+stages 3a–3f and the 3g ViewModel / presenter / catalog naming cleanup
+have all landed. No film or brand identity remains in any structural
+test name across `Reciprocity/`, the `ExposureCalculator/` test layers
+(both Kit and app-hosted), and the shared scenario factory; identity
+lives only as case data, profile ids, lookup strings, expected text,
+snapshot baseline keys, assertion messages, comments, and source /
+manufacturer strings. The misleading `source-less` term is retired in
+favor of `no-source-range` repo-wide (Swift sources, tests, and this
+spec). The branch's commit history was standardized (≤ 50 / 72 messages,
+one logical change per commit, the spec refresh leading, every commit
+builds).
+
+**Batch 3 metrics:** Core 43 / Kit 854 / app-hosted 435 / total 1332 /
+−170 vs the 1502 baseline / app-hosted ratio 29.0%.
+
+**Not done — the original C11 numeric target stays open.** Batch 3
+delivered the archetype re-architecture and the duplicate-removal
+reduction (−170), **not** the full C11 goal. The original C11 target
+(app-hosted ≤ 75, total ≤ 751) is still open and is explicitly out of
+this batch's scope; later stages continue to push toward it.
+
+**Next stage.** Audit `ios/PTimerTests` for app-hosted suites that can
+safely move to the Kit / package tests — the app-hosted ratio is the
+lever toward the ≤ 75 target — and pick a safe migration slice to start
+with, prioritizing suites with no real timer / RunLoop / OS-integration
+/ snapshot / lifecycle dependency.

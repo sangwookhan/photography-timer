@@ -30,7 +30,7 @@ final class ReciprocityModelComparisonPresenterTests: XCTestCase {
         }
     }
 
-    func testFomapan100AppDerivedFormulaComparisonReportsPercentAndStopDeltas() throws {
+    func testMultiModelAppDerivedFormulaComparisonReportsPercentAndStopDeltas() throws {
         // The comparison belongs to the app-derived FORMULA model, which
         // deviates from the official anchors.
         let appFormula = AlternateReciprocityModels.fomapan100AppDerivedFormula

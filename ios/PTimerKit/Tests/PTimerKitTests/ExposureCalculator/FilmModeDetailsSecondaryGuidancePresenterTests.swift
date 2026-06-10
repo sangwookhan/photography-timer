@@ -7,7 +7,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
     // MARK: - Velvia 50
 
-    func testVelvia50FormulaSourceReferenceAndGuidanceBoundaryPreservePerEntryColorCorrectionAndStopRow() throws {
+    func testFormulaProfileSourceReferenceAndGuidanceBoundaryPreservePerEntryColorCorrectionAndStopRow() throws {
         let film = try XCTUnwrap(film(named: "Velvia 50"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -56,7 +56,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
         )
     }
 
-    func testVelvia50DetailsExposesFilmSubtitleAndLegend() throws {
+    func testFormulaProfileDetailsExposeSubtitleAndColorLegend() throws {
         let film = try XCTUnwrap(film(named: "Velvia 50"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -79,7 +79,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
     // MARK: - Provia 100F
 
-    func testProvia100FSourceReferenceAndGuidanceBoundaryPreserveGreenChannelAndStopRow() throws {
+    func testFormulaProfileSourceReferenceAndGuidanceBoundaryPreserveGreenChannelAndStopRow() throws {
         let film = try XCTUnwrap(film(named: "Provia 100F"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -117,7 +117,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
         )
     }
 
-    func testProvia100FDetailsExposesFilmSubtitleAndGreenLegend() throws {
+    func testFormulaProfileDetailsExposeSubtitleAndGreenLegend() throws {
         let film = try XCTUnwrap(film(named: "Provia 100F"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -130,7 +130,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
     // MARK: - Ektachrome E100
 
-    func testEktachromeE100ReferenceDataPreservesCC10RWithMeteredContext() throws {
+    func testLimitedGuidanceReferenceDataPreservesFiltrationWithMeteredContext() throws {
         let film = try XCTUnwrap(film(named: "Ektachrome E100"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -145,7 +145,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
         XCTAssertTrue(cc10RLine.contains("120"))
     }
 
-    func testEktachromeE100DetailsExposesFilmSubtitleAndCC10RLegend() throws {
+    func testLimitedGuidanceDetailsExposeSubtitleAndFiltrationLegend() throws {
         let film = try XCTUnwrap(film(named: "Ektachrome E100"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -162,7 +162,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
     // MARK: - Tri-X 400
 
-    func testTriX400SourceReferenceKeepsDevelopmentRowsWithMeteredContext() throws {
+    func testTableProfileSourceReferenceKeepsDevelopmentRowsWithMeteredContext() throws {
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -193,7 +193,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
         }
     }
 
-    func testTriX400DetailsExposesFilmSubtitleAndDevelopmentLegend() throws {
+    func testTableProfileDetailsExposeSubtitleAndDevelopmentLegend() throws {
         let film = try XCTUnwrap(film(named: "Tri-X 400"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 1))
 
@@ -213,7 +213,7 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
     // MARK: - Pan F Plus (no secondary guidance)
 
-    func testPanFPlusFormulaProfileDoesNotProduceLegendOrAdditionalGuidance() throws {
+    func testBarePowerLawProfileDoesNotProduceLegendOrAdditionalGuidance() throws {
         let film = try XCTUnwrap(film(named: "Pan F Plus"))
         let displayState = try XCTUnwrap(makeDisplayState(film: film, meteredExposureSeconds: 4))
 

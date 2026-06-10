@@ -25,7 +25,7 @@ import XCTest
 ///
 /// The review document quotes these numbers; if the catalog drift or
 /// the formula constants ever silently change, this file fails first.
-final class Fomapan100ModelReviewTests: XCTestCase {
+final class ReciprocityModelReviewFixtureTests: XCTestCase {
 
     // MARK: - Fixtures (mirror the review document, §2 and §3)
 
@@ -49,19 +49,19 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// `https://ohzart1.tistory.com/78` (mirrored on the Confluence
     /// "Communitity Sources Data" page). Treated as unofficial
     /// community guidance only — not FOMA-published data.
-    private struct OhzartRow {
+    private struct CommunityTableRow {
         let metered: Double
         let corrected: Double
     }
 
-    private let ohzartRows: [OhzartRow] = [
-        OhzartRow(metered: 1, corrected: 1.9),
-        OhzartRow(metered: 2, corrected: 5),
-        OhzartRow(metered: 4, corrected: 13),
-        OhzartRow(metered: 8, corrected: 35),
-        OhzartRow(metered: 15, corrected: 90),
-        OhzartRow(metered: 30, corrected: 265),
-        OhzartRow(metered: 60, corrected: 795),
+    private let communityRows: [CommunityTableRow] = [
+        CommunityTableRow(metered: 1, corrected: 1.9),
+        CommunityTableRow(metered: 2, corrected: 5),
+        CommunityTableRow(metered: 4, corrected: 13),
+        CommunityTableRow(metered: 8, corrected: 35),
+        CommunityTableRow(metered: 15, corrected: 90),
+        CommunityTableRow(metered: 30, corrected: 265),
+        CommunityTableRow(metered: 60, corrected: 795),
     ]
 
     /// Current app guarded-formula constants for the Fomapan 100
@@ -74,7 +74,7 @@ final class Fomapan100ModelReviewTests: XCTestCase {
 
     // MARK: - Official FOMA table — fixture integrity
 
-    func testOfficialFomapan100TableMatchesPublishedRows() {
+    func testOfficialReferenceTableMatchesPublishedRows() {
         XCTAssertEqual(officialAnchors.count, 3)
 
         XCTAssertEqual(officialAnchors[0].metered, 1, accuracy: 1e-9)
@@ -103,8 +103,8 @@ final class Fomapan100ModelReviewTests: XCTestCase {
 
     // MARK: - Ohzart / community table — fixture integrity
 
-    func testOhzartCommunityTableMatchesBlogRows() {
-        XCTAssertEqual(ohzartRows.count, 7)
+    func testCommunityTableMatchesPublishedBlogRows() {
+        XCTAssertEqual(communityRows.count, 7)
 
         let expected: [(Double, Double)] = [
             (1, 1.9),
@@ -115,7 +115,7 @@ final class Fomapan100ModelReviewTests: XCTestCase {
             (30, 265),
             (60, 795),
         ]
-        for (row, expected) in zip(ohzartRows, expected) {
+        for (row, expected) in zip(communityRows, expected) {
             XCTAssertEqual(row.metered, expected.0, accuracy: 1e-9)
             XCTAssertEqual(row.corrected, expected.1, accuracy: 1e-9)
         }
@@ -128,7 +128,7 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// constants, the review document and these residual tables go
     /// stale together — this test fails first so the drift is
     /// surfaced loudly.
-    func testAppDerivedFormulaStillCarriesReviewedFomapan100FormulaConstants() throws {
+    func testAppDerivedFormulaStillCarriesReviewedFormulaConstants() throws {
         // PTIMER-159: the reviewed p-formula is no longer Fomapan's
         // default (the official log-log table is). It survives as the
         // non-default app-derived formula model, which this fixture pins.
@@ -246,9 +246,9 @@ final class Fomapan100ModelReviewTests: XCTestCase {
 
     // MARK: - Community formula — passes official anchors
 
-    func testCommunityFormulaImagePassesOfficialFomapan100Anchors() {
+    func testCommunityFormulaImagePassesOfficialReferenceAnchors() {
         for anchor in officialAnchors {
-            let predicted = communityFormula(metered: anchor.metered)
+            let predicted = candidateFormula(metered: anchor.metered)
             XCTAssertEqual(
                 predicted,
                 anchor.corrected,
@@ -264,10 +264,10 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// and the Ohzart practical table do NOT describe the same
     /// correction curve. Forcing a meaningful tolerance per row makes
     /// it impossible for a future change to silently equate the two.
-    func testCommunityFormulaImageIsNotEquivalentToOhzartTable() throws {
+    func testCommunityFormulaImageIsNotEquivalentToCommunityPracticalTable() throws {
         struct ExpectedGap {
             let metered: Double
-            /// Lower bound (inclusive) on log2(formula / ohzart) the
+            /// Lower bound (inclusive) on log2(formula / communityCorrected) the
             /// review found at this input. Values are conservative
             /// rounded-down forms of the computed stop deltas
             /// (+0.524, +0.725, +0.745, +0.627, +0.389, +0.085).
@@ -283,16 +283,16 @@ final class Fomapan100ModelReviewTests: XCTestCase {
         ]
 
         for row in expected {
-            let ohzart = try XCTUnwrap(
-                ohzartRows.first(where: { $0.metered == row.metered })?.corrected
+            let communityCorrected = try XCTUnwrap(
+                communityRows.first(where: { $0.metered == row.metered })?.corrected
             )
-            let formulaPrediction = communityFormula(metered: row.metered)
-            let stopGap = log2(formulaPrediction / ohzart)
+            let formulaPrediction = candidateFormula(metered: row.metered)
+            let stopGap = log2(formulaPrediction / communityCorrected)
 
             XCTAssertGreaterThanOrEqual(
                 stopGap,
                 row.minimumStopGap,
-                "Community formula at \(row.metered) s predicts \(formulaPrediction) s; Ohzart row says \(ohzart) s. Review document records a gap of at least \(row.minimumStopGap) stop — getting \(stopGap) stop."
+                "Community formula at \(row.metered) s predicts \(formulaPrediction) s; Ohzart row says \(communityCorrected) s. Review document records a gap of at least \(row.minimumStopGap) stop — getting \(stopGap) stop."
             )
         }
     }
@@ -302,17 +302,17 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// (60 sec) the formula sits more than 5% above the Ohzart row.
     /// Locking the minimum percent gap keeps the document accurate
     /// even if future regenerations tighten the stop tolerances.
-    func testCommunityFormulaImagePercentGapAgainstOhzartTableStaysAboveFivePercent() throws {
+    func testCommunityFormulaImagePercentGapAgainstCommunityPracticalTableStaysAboveFivePercent() throws {
         for sample in [2.0, 4.0, 8.0, 15.0, 30.0, 60.0] {
-            let ohzart = try XCTUnwrap(
-                ohzartRows.first(where: { $0.metered == sample })?.corrected
+            let communityCorrected = try XCTUnwrap(
+                communityRows.first(where: { $0.metered == sample })?.corrected
             )
-            let formulaPrediction = communityFormula(metered: sample)
-            let percentGap = (formulaPrediction / ohzart - 1) * 100
+            let formulaPrediction = candidateFormula(metered: sample)
+            let percentGap = (formulaPrediction / communityCorrected - 1) * 100
             XCTAssertGreaterThan(
                 percentGap,
                 5,
-                "Community formula at \(sample) s must sit measurably longer than Ohzart's \(ohzart) s; got \(percentGap)%."
+                "Community formula at \(sample) s must sit measurably longer than Ohzart's \(communityCorrected) s; got \(percentGap)%."
             )
         }
     }
@@ -324,7 +324,7 @@ final class Fomapan100ModelReviewTests: XCTestCase {
     /// 5 log10 tm + 2)`. Defined locally so the test is
     /// independent of any production code path — the formula is a
     /// review candidate, not a shipped calculation model.
-    private func communityFormula(metered tm: Double) -> Double {
+    private func candidateFormula(metered tm: Double) -> Double {
         let logTm = log10(tm)
         return tm * (logTm * logTm + 5 * logTm + 2)
     }

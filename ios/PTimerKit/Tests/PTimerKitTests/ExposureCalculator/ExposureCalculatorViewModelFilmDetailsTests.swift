@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 final class FilmModeDetailsDisplayStateTests: XCTestCase {
     @MainActor
@@ -147,7 +146,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeSourceReferenceShowsBothStopAndCorrectedTimeForKodakTMax100() throws {
+    func testFilmModeSourceReferenceShowsBothStopAndCorrectedTimeForTableProfile() throws {
         // Source reference panel rule for source-backed profiles:
         // when a row carries both a stop correction and a published
         // corrected time, show both. Kodak's T-MAX 100 publishes a
@@ -192,7 +191,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeSourceReferenceShowsFomaMultiplierAndExactCorrectedTimeWithoutApproximateMarker() throws {
+    func testFilmModeSourceReferenceShowsMultiplierAndExactCorrectedTimeWithoutApproximateMarker() throws {
         // FOMA's data sheet publishes only the multiplier ("lengthen
         // exposure 2x"). The catalog stores `metered × multiplier` as
         // the published corrected time — an exact-arithmetic
@@ -250,10 +249,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsIncludeThresholdInsideReferenceWhenOptionalValuesAreMissing() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeMinimalDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop
@@ -310,10 +306,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsSourceRowsExposeLinkWhenUsableURLExists() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeURLBackedDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop
@@ -348,7 +341,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         // formula expression now lives next to the graph.
         XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
         XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
-        // HP5 Plus is a source-less manufacturer-formula profile: it
+        // HP5 Plus is a no-source-range manufacturer-formula profile: it
         // leads with the active-model metadata (PTIMER-159) and keeps
         // its Sources citation, with no source-evidence or comparison
         // sections.
@@ -365,10 +358,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsShowExponentFallbackWhenFormulaEquationIsUnavailable() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeFallbackFormulaDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop
@@ -420,7 +410,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     }
 
     @MainActor
-    func testFilmModeDetailsGraphSurfacesFormulaPredictionBeyondVelvia50SourceRange() throws {
+    func testFilmModeDetailsGraphSurfacesFormulaPredictionBeyondConvertedFormulaSourceRange() throws {
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Velvia 50" })
 
@@ -487,10 +477,7 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
     func testFilmModeDetailsGraphOmitsGraphWhenNoGraphableReferenceDataExists() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
+            timerManager: FakeTimerManaging(),
             presetFilms: [makeMinimalDetailsFilm()]
         )
         viewModel.scaleMode = .fullStop

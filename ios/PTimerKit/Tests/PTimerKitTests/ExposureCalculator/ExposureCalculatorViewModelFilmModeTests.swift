@@ -1,17 +1,13 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     @MainActor
     func testFilmRowDefaultsToNoFilmSelectorState() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
         viewModel.scaleMode = .fullStop
 
@@ -119,10 +115,7 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
     func testSelectingPresetFilmActivatesFilmWorkflowAndReciprocityBinding() throws {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
         viewModel.scaleMode = .fullStop
 

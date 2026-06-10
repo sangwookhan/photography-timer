@@ -139,6 +139,31 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
         )
     }
 
+    // MARK: - Converted-formula classification (positive and negative)
+
+    /// `isConvertedFormulaProfile` must be true only for a formula rule
+    /// backed by source evidence: a converted profile (Provia 100F) reads
+    /// true, while a no-source-range bare-power-law profile (HP5 Plus) and a
+    /// threshold-only limited-guidance profile (Portra 400) read false.
+    func testOnlyFormulaPlusSourceEvidenceProfilesAreConverted() throws {
+        let expectations: [(stock: String, converted: Bool)] = [
+            ("Provia 100F", true),
+            ("HP5 Plus", false),
+            ("Portra 400", false),
+        ]
+        for expectation in expectations {
+            let profile = try XCTUnwrap(
+                LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == expectation.stock }?.profiles.first,
+                "\(expectation.stock) must remain in the launch catalog."
+            )
+            XCTAssertEqual(
+                profile.isConvertedFormulaProfile,
+                expectation.converted,
+                "\(expectation.stock): isConvertedFormulaProfile must be \(expectation.converted) (formula + source evidence only)."
+            )
+        }
+    }
+
     // MARK: - Profile-shape templates
 
     /// Every converted formula profile carries a formula rule plus

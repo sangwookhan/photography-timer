@@ -44,18 +44,64 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     // MARK: - Manufacturer-batch completeness
 
-    func testLaunchCatalogContainsAllILFORDHarmanFormulaProfiles() throws {
-        let films = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "ILFORD / HARMAN" }
-        XCTAssertEqual(films.count, 12)
-        XCTAssertEqual(
-            Set(films.map(\.canonicalStockName)),
-            Set([
+    // MARK: - Catalog membership per manufacturer
+
+    private struct ManufacturerMembershipCase {
+        let manufacturer: String
+        let expectedCount: Int
+        let expectedStockNames: Set<String>
+    }
+
+    private let manufacturerMembershipCases: [ManufacturerMembershipCase] = [
+        ManufacturerMembershipCase(
+            manufacturer: "ILFORD / HARMAN", expectedCount: 12,
+            expectedStockNames: [
                 "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
                 "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
                 "Kentmere 100", "Kentmere 200", "Kentmere 400",
-            ])
-        )
+            ]),
+        ManufacturerMembershipCase(
+            manufacturer: "Kodak", expectedCount: 9,
+            expectedStockNames: [
+                "Tri-X 400", "T-MAX 100", "T-MAX 400",
+                "Ektar 100", "Portra 160", "Portra 400",
+                "Gold 200", "Ultra Max 400", "Ektachrome E100",
+            ]),
+        ManufacturerMembershipCase(
+            manufacturer: "Fujifilm", expectedCount: 4,
+            expectedStockNames: ["Acros II", "Velvia 50", "Velvia 100", "Provia 100F"]),
+        ManufacturerMembershipCase(
+            manufacturer: "FOMA BOHEMIA", expectedCount: 3,
+            expectedStockNames: ["Fomapan 100 Classic", "Fomapan 200 Creative", "Fomapan 400 Action"]),
+        ManufacturerMembershipCase(
+            manufacturer: "Rollei", expectedCount: 4,
+            expectedStockNames: ["RPX 100", "RPX 400", "RETRO 80S", "SUPERPAN 200"]),
+        ManufacturerMembershipCase(
+            manufacturer: "ADOX", expectedCount: 2,
+            expectedStockNames: ["CHS 100 II", "CMS 20 II"]),
+    ]
 
+    /// Each manufacturer family contributes exactly its expected member
+    /// set to the launch catalog. The manufacturer and its stock names
+    /// are case data so no film or brand identity sits in the test name.
+    func testLaunchCatalogContainsExpectedProfilesPerManufacturer() {
+        for c in manufacturerMembershipCases {
+            let films = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == c.manufacturer }
+            XCTAssertEqual(films.count, c.expectedCount, "\(c.manufacturer): launch catalog member count.")
+            XCTAssertEqual(
+                Set(films.map(\.canonicalStockName)),
+                c.expectedStockNames,
+                "\(c.manufacturer): launch catalog membership."
+            )
+        }
+    }
+
+    /// The no-source-range bare power-law family ships every entry as an
+    /// exponent-formula profile that preserves the 1-second
+    /// no-correction boundary in the formula.
+    func testBarePowerLawCatalogEntriesPreserveOneSecondNoCorrectionBoundary() throws {
+        let films = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "ILFORD / HARMAN" }
+        XCTAssertFalse(films.isEmpty, "Bare power-law family must have catalog members.")
         for film in films {
             let profile = try XCTUnwrap(film.profiles.first)
             let formulaRule = try XCTUnwrap(
@@ -63,18 +109,18 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
                     guard case let .formula(formulaRule) = rule else { return nil }
                     return formulaRule
                 }.first,
-                "ILFORD/HARMAN films must ship as exponent-formula profiles."
+                "\(film.canonicalStockName): bare power-law family must ship as exponent-formula profiles."
             )
             XCTAssertEqual(
                 formulaRule.formula.noCorrectionThroughSeconds,
                 1,
                 accuracy: 1e-9,
-                "ILFORD/HARMAN films must preserve the 1-second no-compensation boundary in the formula."
+                "\(film.canonicalStockName): must preserve the 1-second no-compensation boundary in the formula."
             )
         }
     }
 
-    func testLaunchCatalogPreservesILFORDFormulaCoefficients() throws {
+    func testLaunchCatalogPreservesBarePowerLawFormulaExponents() throws {
         let expected: [String: Double] = [
             "Pan F Plus": 1.33,
             "FP4 Plus": 1.26,
@@ -98,48 +144,6 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             let formulaRule = try XCTUnwrap(formulaRule(in: film), "Missing formula rule for \(canonicalName).")
             XCTAssertEqual(formulaRule.formula.exponent, exponent, accuracy: 0.001)
         }
-    }
-
-    func testLaunchCatalogContainsAllKodakStillFilmProfiles() throws {
-        let films = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "Kodak" }
-        XCTAssertEqual(films.count, 9)
-        XCTAssertEqual(
-            Set(films.map(\.canonicalStockName)),
-            Set([
-                "Tri-X 400", "T-MAX 100", "T-MAX 400",
-                "Ektar 100", "Portra 160", "Portra 400",
-                "Gold 200", "Ultra Max 400", "Ektachrome E100",
-            ])
-        )
-    }
-
-    func testLaunchCatalogContainsAllFujifilmAndFomaProfiles() throws {
-        let fujifilm = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "Fujifilm" }
-        XCTAssertEqual(fujifilm.count, 4)
-        XCTAssertEqual(
-            Set(fujifilm.map(\.canonicalStockName)),
-            Set(["Acros II", "Velvia 50", "Velvia 100", "Provia 100F"])
-        )
-
-        let foma = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "FOMA BOHEMIA" }
-        XCTAssertEqual(foma.count, 3)
-        XCTAssertEqual(
-            Set(foma.map(\.canonicalStockName)),
-            Set(["Fomapan 100 Classic", "Fomapan 200 Creative", "Fomapan 400 Action"])
-        )
-    }
-
-    func testLaunchCatalogContainsAllRolleiAndAdoxProfiles() throws {
-        let rollei = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "Rollei" }
-        XCTAssertEqual(rollei.count, 4)
-        XCTAssertEqual(
-            Set(rollei.map(\.canonicalStockName)),
-            Set(["RPX 100", "RPX 400", "RETRO 80S", "SUPERPAN 200"])
-        )
-
-        let adox = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "ADOX" }
-        XCTAssertEqual(adox.count, 2)
-        XCTAssertEqual(Set(adox.map(\.canonicalStockName)), Set(["CHS 100 II", "CMS 20 II"]))
     }
 
     // MARK: - Exclusions
@@ -174,7 +178,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
     }
 
-    func testLaunchCatalogDoesNotShipUnofficialPortraPracticalAsPrimary() throws {
+    func testLaunchCatalogDoesNotShipUnofficialPracticalProfileAsPrimary() throws {
         let portra400 = try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first(where: { $0.id == "kodak-portra-400" }),
             "Portra 400 must remain in the launch catalog."
@@ -222,7 +226,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     // MARK: - Representative behavior smoke tests
 
-    func testILFORDFormulaProfileEvaluatesPastThreshold() throws {
+    func testBarePowerLawProfileEvaluatesPastThreshold() throws {
         let hp5 = try XCTUnwrap(film(named: "HP5 Plus"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: hp5.profiles[0], meteredExposureSeconds: 4)
@@ -234,7 +238,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, pow(4.0, 1.31), accuracy: 0.0001)
     }
 
-    func testILFORDFormulaProfileReturnsNoCorrectionAtThreshold() throws {
+    func testBarePowerLawProfileReturnsNoCorrectionAtThreshold() throws {
         let hp5 = try XCTUnwrap(film(named: "HP5 Plus"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: hp5.profiles[0], meteredExposureSeconds: 0.5)
@@ -246,7 +250,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 0.5, accuracy: 0.000001)
     }
 
-    func testKodakTMax100TableProfileQuantifiesInsidePublishedRange() throws {
+    func testTableProfileQuantifiesInsidePublishedRange() throws {
         // PTIMER-168: T-MAX 100 is table-based; inputs inside the
         // source-backed long-exposure range stay quantified with
         // basis = .tableLogLogDerived, interpolated in log-log space
@@ -265,7 +269,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 5.60, accuracy: 0.1)
     }
 
-    func testKodakBlackAndWhiteFilmsPreserveNoCorrectionThresholdBand() throws {
+    func testTableProfilesPreserveNoCorrectionThresholdBand() throws {
         // Every Kodak B/W table profile must keep its published
         // no-correction threshold band intact: inside the band the
         // result stays quantified with
@@ -295,7 +299,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
     }
 
-    func testKodakTriX400TableContinuesBeyondPublishedSourceRangeAsUnsupportedNumeric() throws {
+    func testTableProfileContinuesBeyondPublishedSourceRangeAsUnsupportedNumeric() throws {
         // PTIMER-168: Tri-X 400 now uses official table interpolation.
         // Inputs above the published 100 sec upper anchor extrapolate the
         // last table segment as a numeric continuation outside the
@@ -312,7 +316,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
-    func testKodakTriXTableProfileReproducesPublished1SecondRow() throws {
+    func testTableProfileReproducesPublished1SecondRow() throws {
         // PTIMER-168: Tri-X 400 is table-based; the published 1 sec row
         // (+1 stop, corrected 2 sec) is a table anchor, reproduced
         // exactly by the log-log table model.
@@ -327,7 +331,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 1e-4)
     }
 
-    func testKodakColorNegativeLimitedGuidanceBeyondThreshold() throws {
+    func testLimitedGuidanceProfileReturnsNoQuantifiedPredictionBeyondThreshold() throws {
         let portra = try XCTUnwrap(film(named: "Portra 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: portra.profiles[0], meteredExposureSeconds: 30)
@@ -338,7 +342,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
     }
 
-    func testKodakColorNegativeNoCorrectionInOfficialRange() throws {
+    func testLimitedGuidanceProfileNoCorrectionInOfficialRange() throws {
         let portra = try XCTUnwrap(film(named: "Portra 400"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: portra.profiles[0], meteredExposureSeconds: 0.5)
@@ -356,7 +360,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     /// source-backed range. Inputs strictly above 32 s become
     /// beyond-source-range with a numeric formula-derived
     /// continuation; the 80 s sample exercises that path.
-    func testFujifilmAbove32SecondsIsBeyondSourceWithFormulaPrediction() throws {
+    func testConvertedFormulaProfileAboveSourceRangeIsBeyondSourceWithFormulaPrediction() throws {
         let velvia = try XCTUnwrap(film(named: "Velvia 50"))
         let result = ReciprocityCalculationPolicyEvaluator()
             .evaluate(profile: velvia.profiles[0], meteredExposureSeconds: 80)
@@ -368,7 +372,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertNotNil(payload.correctedExposureSeconds)
     }
 
-    func testFomapanTableReproducesPublishedMultiplierRowExactly() throws {
+    func testTableProfileReproducesPublishedMultiplierRowExactly() throws {
         // PTIMER-159: Fomapan 100 Classic is the official log-log table
         // model. Interpolation passes through the published anchors, so
         // the 1 sec row reproduces the published 2 sec corrected time
@@ -384,7 +388,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 1e-4)
     }
 
-    func testRolleiRangeRowsArePreservedAsSourceEvidenceNotesRatherThanInvented() throws {
+    func testGuardedFormulaRangeRowsArePreservedAsSourceEvidenceNotesRatherThanInvented() throws {
         let retro = try XCTUnwrap(film(named: "RETRO 80S"))
         let profile = retro.profiles[0]
 
@@ -422,7 +426,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertTrue(preservesNote, "Range source value '1 to 2 sec' must be preserved as a note adjustment in source evidence.")
     }
 
-    func testEktachromeE100PreservesFiltrationGuidance() throws {
+    func testLimitedGuidanceProfilePreservesFiltrationGuidance() throws {
         let e100 = try XCTUnwrap(film(named: "Ektachrome E100"))
         let limitedGuidanceRule = e100.profiles[0].rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
             if case let .limitedGuidance(rule) = rule { return rule }

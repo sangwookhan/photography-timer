@@ -18,18 +18,24 @@ import PTimerCore
 /// - Source evidence: a single 120–1000 s range row carrying
 ///   +1/2 stop. The range is preserved verbatim; no fabricated
 ///   per-second exact reference points are emitted.
-final class AcrosIIFormulaProfileTests: XCTestCase {
+///
+/// Acros II is its own constant-multiplier archetype (open 120 s
+/// boundary, `Tc = √2 × Tm`), distinct from the inclusive-threshold
+/// converted guarded formula contracts, so it stays a single-film suite.
+/// The film is the `profileUnderTest()` constant; no film name appears in
+/// a test-function name.
+final class ConstantMultiplierFormulaProfileTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
     // MARK: - Threshold boundary (exclusive at 120 s)
 
-    func testAcrosIIBoundaryAt120SecondsAppliesHalfStopFormulaNotNoCorrection() throws {
+    func testBoundaryAt120SecondsAppliesHalfStopFormulaNotNoCorrection() throws {
         // Fujifilm's published guidance: no correction below 120 sec,
         // +1/2 stop applied across 120–1000 sec. The boundary itself
         // is the start of the corrected range, not the last
         // no-correction value.
-        let profile = try acrosIIProfile()
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 120)
 
         XCTAssertEqual(
@@ -43,8 +49,8 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
 
     // MARK: - Formula range (120 s … 1000 s, constant +1/2 stop)
 
-    func testAcrosIIInsideFormulaRangeAppliesConstantHalfStop() throws {
-        let profile = try acrosIIProfile()
+    func testInsideFormulaRangeAppliesConstantHalfStop() throws {
+        let profile = try profileUnderTest()
         for metered in [120.0, 150.0, 240.0, 500.0, 750.0, 1000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -62,8 +68,8 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         }
     }
 
-    func testAcrosIIFormulaUsesConstantMultiplierForm() throws {
-        let profile = try acrosIIProfile()
+    func testFormulaUsesConstantMultiplierForm() throws {
+        let profile = try profileUnderTest()
         let formulaRule = try XCTUnwrap(profile.rules.compactMap { rule -> FormulaReciprocityRule? in
             guard case let .formula(rule) = rule else { return nil }
             return rule
@@ -86,8 +92,8 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
 
     // MARK: - Beyond the published source range (> 1000 s)
 
-    func testAcrosIIAbove1000SecondsBecomesBeyondSourceNumericGuidance() throws {
-        let profile = try acrosIIProfile()
+    func testAbove1000SecondsBecomesBeyondSourceNumericGuidance() throws {
+        let profile = try profileUnderTest()
         for metered in [1100.0, 2000.0, 5000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -110,8 +116,8 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
 
     // MARK: - Source evidence preservation
 
-    func testAcrosIISourceEvidenceIsPreservedAsRangeNotFabricatedExactPoints() throws {
-        let profile = try acrosIIProfile()
+    func testSourceEvidenceIsPreservedAsRangeNotFabricatedExactPoints() throws {
+        let profile = try profileUnderTest()
 
         XCTAssertEqual(
             profile.sourceEvidence.count,
@@ -137,7 +143,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     // MARK: - UI surfacing
 
     @MainActor
-    func testAcrosIIDetailsSurfaceShowsRangeSourceReference() throws {
+    func testDetailsSurfaceShowsRangeSourceReference() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 500)
 
         let sourceReferenceSection = try XCTUnwrap(
@@ -160,7 +166,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testAcrosIISourceReferenceThresholdRowReadsAsStrictlyBelow120Seconds() throws {
+    func testSourceReferenceThresholdRowReadsAsStrictlyBelow120Seconds() throws {
         // The threshold rule's upper bound sits at 119.999999 s so
         // the formula fires at exactly 120 s. The Source reference
         // row must render that as "< 120s" (strict) rather than the
@@ -190,7 +196,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     }
 
     @MainActor
-    func testAcrosIIFormulaGraphRendersWithoutPerSecondSourceMarkers() throws {
+    func testFormulaGraphRendersWithoutPerSecondSourceMarkers() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 500)
         let graph = try XCTUnwrap(
             displayState.graph,
@@ -219,7 +225,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     /// is omitted as a neutral value so the multiplier-only shape
     /// reads cleanly.
     @MainActor
-    func testAcrosIIFormulaGraphTextRendersConstantMultiplierWithoutSpuriousExponent() throws {
+    func testFormulaGraphTextRendersConstantMultiplierWithoutSpuriousExponent() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 500)
         let graph = try XCTUnwrap(displayState.graph)
         let formula = try XCTUnwrap(graph.formulaDisplayText)
@@ -230,7 +236,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
     /// "source range" wording on both the detail copy and the graph
     /// explanation, so the value never reads as manufacturer-supported.
     @MainActor
-    func testAcrosIIAbove1000SecondsDetailAndExplanationSurfaceSourceRangeWording() throws {
+    func testAbove1000SecondsDetailAndExplanationSurfaceSourceRangeWording() throws {
         let displayState = try makeDisplayState(meteredExposureSeconds: 2000)
         let detail = try XCTUnwrap(displayState.summary.detailText)
         XCTAssertTrue(
@@ -258,7 +264,7 @@ final class AcrosIIFormulaProfileTests: XCTestCase {
         )
     }
 
-    private func acrosIIProfile() throws -> ReciprocityProfile {
+    private func profileUnderTest() throws -> ReciprocityProfile {
         try FormulaProfileTestSupport.profile(for: "Acros II")
     }
 }

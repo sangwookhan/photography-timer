@@ -18,7 +18,7 @@ final class DisplayStateSnapshotTests: XCTestCase {
     func testThresholdNoCorrectionSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 0.5
         )
         DisplayStateSnapshot.assert(result, named: "hp5-threshold-0p5s")
@@ -27,7 +27,7 @@ final class DisplayStateSnapshotTests: XCTestCase {
     func testFormulaDerivedSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 100
         )
         DisplayStateSnapshot.assert(result, named: "hp5-formula-100s")
@@ -36,7 +36,7 @@ final class DisplayStateSnapshotTests: XCTestCase {
     func testLimitedGuidanceSnapshot() {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            profile: ReciprocityPolicyScenarioFactory.limitedGuidanceProfile(),
             meteredExposureSeconds: 4
         )
         DisplayStateSnapshot.assert(result, named: "portra-limited-guidance-4s")
@@ -68,7 +68,7 @@ final class DisplayStateSnapshotTests: XCTestCase {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
         let mapper = ReciprocityConfidencePresentationMapper()
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 0.5
         )
         DisplayStateSnapshot.assert(mapper.map(result: result), named: "confidence-trusted-no-correction")

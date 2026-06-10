@@ -21,13 +21,19 @@ import PTimerCore
 /// note. The catalog keeps it as limited-guidance color-filter
 /// advice so it never becomes a corrected-time anchor for a formula
 /// fit.
-final class KodakLimitedGuidanceProfilesTests: XCTestCase {
+final class LimitedGuidanceReciprocityContractTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
     private struct LimitedGuidanceProfile {
         let canonicalStockName: String
         let officialUpperBoundSeconds: Double
+        /// Optional published color-filter advice carried by the
+        /// limited-guidance rule (e.g. Ektachrome E100's CC10R at 120 s).
+        /// It is filter advice, never a corrected-time anchor.
+        var colorFilterName: String?
+        var colorFilterNoteSubstring: String?
+        var colorFilterAnchorSample: Double?
     }
 
     private let limitedGuidanceProfiles: [LimitedGuidanceProfile] = [
@@ -36,7 +42,13 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
         LimitedGuidanceProfile(canonicalStockName: "Portra 400", officialUpperBoundSeconds: 10),
         LimitedGuidanceProfile(canonicalStockName: "Gold 200", officialUpperBoundSeconds: 1),
         LimitedGuidanceProfile(canonicalStockName: "Ultra Max 400", officialUpperBoundSeconds: 1),
-        LimitedGuidanceProfile(canonicalStockName: "Ektachrome E100", officialUpperBoundSeconds: 10),
+        LimitedGuidanceProfile(
+            canonicalStockName: "Ektachrome E100",
+            officialUpperBoundSeconds: 10,
+            colorFilterName: "CC10R",
+            colorFilterNoteSubstring: "120",
+            colorFilterAnchorSample: 120
+        ),
     ]
 
     // MARK: - Catalog shape
@@ -141,61 +153,47 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
         }
     }
 
-    // MARK: - Ektachrome E100 — 120s CC10R guidance
+    // MARK: - Published color-filter advice stays advice, not an anchor
 
-    func testEktachromeE100LimitedGuidancePreservesCC10RColorFilterGuidance() throws {
-        let profile = try profile(for: "Ektachrome E100")
-        let limitedGuidanceRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
-                guard case let .limitedGuidance(rule) = rule else { return nil }
-                return rule
-            }.first,
-            "Ektachrome E100 must carry a limited-guidance rule for the beyond-10-sec guidance."
-        )
-
-        let cc10R = limitedGuidanceRule.adjustments.compactMap { adjustment -> ColorFilterRecommendation? in
-            guard case let .colorFilter(filter) = adjustment else { return nil }
-            return filter
-        }.first
-
-        let filter = try XCTUnwrap(cc10R, "Ektachrome E100 limited-guidance rule must carry the CC10R color-filter recommendation.")
-        XCTAssertEqual(filter.filterName, "CC10R")
-        let note = try XCTUnwrap(filter.note)
-        XCTAssertTrue(
-            note.contains("120"),
-            "CC10R note must reference the 120 sec anchor; got: \(note)"
-        )
-    }
-
-    func testEktachromeE100LimitedGuidanceAdjustmentsAreNotCorrectedTimeAnchors() throws {
-        let profile = try profile(for: "Ektachrome E100")
-        let limitedGuidanceRule = try XCTUnwrap(
-            profile.rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
-                guard case let .limitedGuidance(rule) = rule else { return nil }
-                return rule
-            }.first
-        )
-        // The 120 sec CC10R guidance is filter advice, not a corrected-
-        // time formula point. The catalog must not surface it as an
-        // exposure adjustment that could anchor a future fit.
-        let hasExposureAdjustment = limitedGuidanceRule.adjustments.contains { adjustment in
-            if case .exposure = adjustment { return true }
-            return false
+    /// A limited-guidance profile's published color-filter advice (e.g.
+    /// Ektachrome E100's CC10R at 120 s) is carried on the limited-guidance
+    /// rule as filter advice only: it names the filter and its note, never
+    /// surfaces an exposure adjustment that could anchor a future fit, and
+    /// the anchor metered value still evaluates as limited guidance with no
+    /// corrected exposure.
+    func testColorFilterGuidanceStaysAdviceNotCorrectedTimeAnchor() throws {
+        for entry in limitedGuidanceProfiles {
+            guard let filterName = entry.colorFilterName else { continue }
+            let profile = try profile(for: entry.canonicalStockName)
+            let rule = try XCTUnwrap(
+                profile.rules.compactMap { rule -> LimitedGuidanceReciprocityRule? in
+                    guard case let .limitedGuidance(rule) = rule else { return nil }
+                    return rule
+                }.first,
+                "\(entry.canonicalStockName) must carry a limited-guidance rule for its color-filter advice."
+            )
+            let filter = try XCTUnwrap(
+                rule.adjustments.compactMap { adjustment -> ColorFilterRecommendation? in
+                    guard case let .colorFilter(filter) = adjustment else { return nil }
+                    return filter
+                }.first,
+                "\(entry.canonicalStockName) limited-guidance rule must carry the published color-filter recommendation."
+            )
+            XCTAssertEqual(filter.filterName, filterName, "\(entry.canonicalStockName): color-filter name")
+            if let noteSubstring = entry.colorFilterNoteSubstring {
+                let note = try XCTUnwrap(filter.note, "\(entry.canonicalStockName): color-filter note")
+                XCTAssertTrue(note.contains(noteSubstring), "\(entry.canonicalStockName): note must reference '\(noteSubstring)'; got: \(note)")
+            }
+            XCTAssertFalse(
+                rule.adjustments.contains { if case .exposure = $0 { return true }; return false },
+                "\(entry.canonicalStockName): color-filter advice must not carry an exposure adjustment that promotes it to a corrected-time anchor."
+            )
+            if let sample = entry.colorFilterAnchorSample {
+                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: sample)
+                XCTAssertEqual(result.metadata.basis, .limitedGuidanceNoQuantifiedPrediction, "\(entry.canonicalStockName) @ \(sample)s: filter-advice anchor must stay limited-guidance.")
+                XCTAssertNil(result.correctedExposureSeconds, "\(entry.canonicalStockName) @ \(sample)s: filter advice is not a corrected-time anchor.")
+            }
         }
-        XCTAssertFalse(
-            hasExposureAdjustment,
-            "Ektachrome E100's 120 sec CC10R guidance must remain color/filter advice — no exposure adjustment can promote it to a corrected-time anchor."
-        )
-    }
-
-    func testEktachromeE100At120SecondsRemainsLimitedGuidanceWithoutCorrectedExposure() throws {
-        let profile = try profile(for: "Ektachrome E100")
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 120)
-        XCTAssertEqual(result.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
-        XCTAssertNil(
-            result.correctedExposureSeconds,
-            "Kodak's 120 sec CC10R note is filtration guidance, not a corrected-time anchor; the policy must not surface a numeric corrected exposure at 120 sec."
-        )
     }
 
     // MARK: - Presentation wording
@@ -253,49 +251,11 @@ final class KodakLimitedGuidanceProfilesTests: XCTestCase {
         }
     }
 
-    // MARK: - Formula-profile regression guards
-
-    func testKodakBlackAndWhiteTableProfilesUseTableLogLogPrediction() throws {
-        // PTIMER-168 migrated the Kodak B/W stocks from app-fitted
-        // formulas to the official Kodak table log-log model. They must
-        // still quantify a corrected exposure (unlike the limited-guidance
-        // Kodak color films), but now through the table, not a formula.
-        for stock in ["Tri-X 400", "T-MAX 100", "T-MAX 400"] {
-            let profile = try profile(for: stock)
-            XCTAssertTrue(
-                profile.usesTableInterpolation,
-                "Kodak B/W table profile '\(stock)' must use the official table log-log model."
-            )
-            XCTAssertFalse(
-                profile.rules.contains { if case .formula = $0 { return true }; return false },
-                "\(stock) must not keep a manufacturer formula default after PTIMER-168."
-            )
-
-            // Picked a metered exposure clearly inside the published
-            // table range so the policy hands back `.tableLogLogDerived`.
-            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 10)
-            XCTAssertEqual(
-                result.metadata.basis,
-                .tableLogLogDerived,
-                "\(stock) at 10 sec must be table-derived."
-            )
-            XCTAssertNotNil(result.correctedExposureSeconds)
-        }
-    }
-
-    func testFujifilmFormulaProfilesStillUseFormulaPrediction() throws {
-        for stock in ["Acros II", "Velvia 50", "Velvia 100", "Provia 100F"] {
-            let profile = try profile(for: stock)
-            let hasFormulaRule = profile.rules.contains { rule in
-                if case .formula = rule { return true }
-                return false
-            }
-            XCTAssertTrue(
-                hasFormulaRule,
-                "Fujifilm formula profile '\(stock)' must remain formula-based."
-            )
-        }
-    }
+    // Cross-archetype regression guards (the Kodak B/W stocks use the
+    // table-log-log model; the Fujifilm stocks stay formula-based) are not
+    // duplicated here — they are owned by `TableLogLogReciprocityContractTests`
+    // / `TableProfileSourceDataContractTests` and the `GuardedFormula*`
+    // contracts respectively.
 
     // MARK: - Helpers
 

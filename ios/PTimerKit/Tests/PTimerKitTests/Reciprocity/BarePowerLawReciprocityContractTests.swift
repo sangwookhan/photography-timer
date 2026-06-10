@@ -2,7 +2,7 @@ import XCTest
 import PTimerKit
 import PTimerCore
 
-/// Shared behavior contract for the **source-less bare power-law
+/// Shared behavior contract for the **no-source-range bare power-law
 /// reciprocity archetype** — the ILFORD / HARMAN family. Every film in
 /// this archetype ships a single power-law formula `Tc = Tm^p`
 /// (coefficient 1, reference 1) with an inclusive 1 s no-correction
@@ -14,7 +14,7 @@ import PTimerCore
 /// Film identity is case data, never part of a test-function name; the
 /// film and the exponent appear in every failure message. There is no
 /// per-film source data to keep elsewhere — these profiles are
-/// source-less by construction, which is itself one of the contracts
+/// no-source-range by construction, which is itself one of the contracts
 /// below.
 final class BarePowerLawReciprocityContractTests: XCTestCase {
 
@@ -23,7 +23,7 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
     /// One ILFORD / HARMAN bare power-law film. `exponent` is the only
     /// per-film parameter; everything else (coefficient 1, reference 1,
     /// 1 s threshold, no source range, no source evidence) is the
-    /// archetype constant verified by `testProfileIsSourceLessBarePowerLaw`.
+    /// archetype constant verified by `testProfileIsNoSourceRangeBarePowerLaw`.
     private struct BarePowerLawFilmCase {
         let film: String
         let exponent: Double
@@ -58,7 +58,7 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
     /// Each profile is a single bare power-law formula — coefficient 1,
     /// reference 1, 1 s inclusive threshold, no source range, no source
     /// evidence — carrying the published exponent.
-    func testProfileIsSourceLessBarePowerLaw() throws {
+    func testProfileIsNoSourceRangeBarePowerLaw() throws {
         for c in cases {
             let profile = try FormulaProfileTestSupport.profile(for: c.film)
             let formula = try formulaRule(in: profile).formula
@@ -68,7 +68,7 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
             XCTAssertEqual(formula.referenceMeteredTimeSeconds, 1, accuracy: 1e-9, "\(c.film): bare power-law reference must be 1")
             XCTAssertEqual(formula.noCorrectionThroughSeconds, 1, accuracy: 1e-9, "\(c.film): inclusive 1 s no-correction threshold")
             XCTAssertNil(formula.sourceRangeThroughSeconds, "\(c.film): bare power-law profiles have no bounded source range")
-            XCTAssertTrue(profile.sourceEvidence.isEmpty, "\(c.film): source-less profiles carry no source evidence")
+            XCTAssertTrue(profile.sourceEvidence.isEmpty, "\(c.film): no-source-range profiles carry no source evidence")
         }
     }
 
@@ -131,37 +131,37 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
             XCTAssertEqual(
                 result.metadata.basis,
                 .formulaDerived,
-                "\(c.film) @ \(metered)s: source-less profiles must stay formula-derived, never beyond-source."
+                "\(c.film) @ \(metered)s: no-source-range profiles must stay formula-derived, never beyond-source."
             )
             let corrected = try XCTUnwrap(result.correctedExposureSeconds, "\(c.film) @ \(metered)s: must keep a numeric value.")
             XCTAssertEqual(corrected, pow(metered, c.exponent), accuracy: max(0.5, pow(metered, c.exponent) * 1e-4), "\(c.film) @ \(metered)s: long-exposure value must stay on the bare power-law curve.")
         }
     }
 
-    // MARK: - Presentation: source-less surfaces
+    // MARK: - Presentation: no-source-range surfaces
 
-    /// Source-less profiles must not activate any source-reference
+    /// No-source-range profiles must not activate any source-reference
     /// presentation: no Source reference / Guidance boundary section, no
     /// graph source markers, no not-recommended boundary, no
     /// beyond-source region — while still surfacing the formula
     /// expression and the formula-derived summary wording.
     @MainActor
-    func testSourceLessProfileSuppressesSourceReferenceArtifacts() throws {
+    func testNoSourceRangeProfileSuppressesSourceReferenceArtifacts() throws {
         for c in cases {
             let displayState = try FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: 8)
 
             XCTAssertEqual(
                 displayState.summary.summaryText,
                 "Formula-based correction on the active curve",
-                "\(c.film): source-less formula profiles keep the formula-derived summary wording."
+                "\(c.film): no-source-range formula profiles keep the formula-derived summary wording."
             )
 
             let graph = try XCTUnwrap(displayState.graph, "\(c.film): must surface a graph.")
-            XCTAssertTrue(graph.sourceReferenceMarkers.isEmpty, "\(c.film): source-less graph must invent no source markers.")
+            XCTAssertTrue(graph.sourceReferenceMarkers.isEmpty, "\(c.film): no-source-range graph must invent no source markers.")
             XCTAssertNil(graph.notRecommendedBoundarySeconds, "\(c.film): no published not-recommended boundary.")
             XCTAssertNil(graph.beyondSourceRangeStartSeconds, "\(c.film): no source range, so no beyond-source region.")
             XCTAssertNotNil(graph.formulaDisplayText, "\(c.film): the formula expression must still surface near the graph.")
-            XCTAssertTrue(graph.descriptionLines.isEmpty, "\(c.film): source-less profiles stay on the state-aware caption without description lines.")
+            XCTAssertTrue(graph.descriptionLines.isEmpty, "\(c.film): no-source-range profiles stay on the state-aware caption without description lines.")
 
             XCTAssertFalse(
                 displayState.sections.contains(where: { $0.title == "Source reference" }),

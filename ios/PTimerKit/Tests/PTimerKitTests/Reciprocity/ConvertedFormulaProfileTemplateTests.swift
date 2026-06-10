@@ -143,7 +143,7 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
 
     /// `isConvertedFormulaProfile` must be true only for a formula rule
     /// backed by source evidence: a converted profile (Provia 100F) reads
-    /// true, while a source-less bare-power-law profile (HP5 Plus) and a
+    /// true, while a no-source-range bare-power-law profile (HP5 Plus) and a
     /// threshold-only limited-guidance profile (Portra 400) read false.
     func testOnlyFormulaPlusSourceEvidenceProfilesAreConverted() throws {
         let expectations: [(stock: String, converted: Bool)] = [

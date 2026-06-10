@@ -11,11 +11,14 @@ import PTimerCore
 /// instead of being copy-pasted per film.
 ///
 /// Per-film *source data* (published anchors, exact corrected times,
-/// source-evidence rows, graph markers, development adjustments, and
-/// alternate models) is genuinely film-specific and stays in each
-/// film's own suite (`TMax100TableProfileTests`, `TMax400TableProfileTests`,
-/// `TriX400TableProfileTests`). Only the archetype-shared invariants
-/// move here.
+/// source-evidence rows with multipliers, graph markers, provenance,
+/// and the Details/graph presentation) is preserved as explicit case
+/// data in `TableProfileSourceDataContractTests`; only the archetype-
+/// shared rule-kind / model-basis / summary / graph-wording invariants
+/// move here. Genuinely film-specific behavior that is not shared (e.g.
+/// Tri-X 400's sub-1 s interpolation and alternate models, T-MAX 100's
+/// short-exposure exclusion) stays in that film's own suite with the
+/// film as a constant.
 @MainActor
 final class TableLogLogReciprocityContractTests: XCTestCase {
 
@@ -36,6 +39,7 @@ final class TableLogLogReciprocityContractTests: XCTestCase {
         FilmCase(film: "Fomapan 200 Creative", beyondSourceSample: 300),
         FilmCase(film: "Fomapan 400 Action", beyondSourceSample: 300),
         FilmCase(film: "Fomapan 100 Classic", beyondSourceSample: 300),
+        FilmCase(film: "CHS 100 II", beyondSourceSample: 30),
     ]
 
     // MARK: - Rule structure

@@ -1,12 +1,12 @@
 import XCTest
 import PTimerKit
 
-final class Provia100FPresentationTests: XCTestCase {
+final class ConvertedFormulaDetailsPresentationTests: XCTestCase {
     // MARK: - UI surfacing
 
     @MainActor
-    func testProvia100FDetailsSplitsSourceReferenceAndGuidanceBoundarySections() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testDetailsSplitsSourceReferenceAndGuidanceBoundarySections() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
 
         let sourceReferenceSection = try XCTUnwrap(
             displayState.sections.first(where: { $0.title == "Source reference" }),
@@ -61,8 +61,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FGraphCarries240SecondSourceReferenceMarker() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testGraphCarries240SecondSourceReferenceMarker() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
 
         let marker = try XCTUnwrap(
@@ -83,9 +83,9 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FGraphCarriesNotRecommendedBoundaryAt480Seconds() throws {
+    func testGraphCarriesNotRecommendedBoundaryAt480Seconds() throws {
         for metered in [60.0, 240.0, 600.0] {
-            let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: metered)
+            let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             XCTAssertEqual(
                 graph.notRecommendedBoundarySeconds ?? 0,
@@ -97,8 +97,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FGraphSourceReferenceMarkersExclude480SecondBoundary() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testGraphSourceReferenceMarkersExclude480SecondBoundary() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
 
         for marker in graph.sourceReferenceMarkers {
@@ -112,8 +112,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FGraphCurrentResultMarkerPersistsAlongsideReferenceElements() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testGraphCurrentResultMarkerPersistsAlongsideReferenceElements() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
 
         let currentPoint = try XCTUnwrap(
@@ -125,8 +125,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FInSourceRangeGraphHasNoDuplicateDescriptionLines() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testInSourceRangeGraphHasNoDuplicateDescriptionLines() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertTrue(
             graph.descriptionLines.isEmpty,
@@ -135,8 +135,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FBeyondSourceRangeProducesSingleSourceRangeNote() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 600)
+    func testBeyondSourceRangeProducesSingleSourceRangeNote() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 600)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.descriptionLines.count, 1)
         let line = try XCTUnwrap(graph.descriptionLines.first)
@@ -144,8 +144,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FBeyondVisibleRangeProducesSingleVisibleRangeNote() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 500_000)
+    func testBeyondVisibleRangeProducesSingleVisibleRangeNote() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 500_000)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertEqual(graph.descriptionLines.count, 1)
         let line = try XCTUnwrap(graph.descriptionLines.first)
@@ -155,8 +155,8 @@ final class Provia100FPresentationTests: XCTestCase {
     // MARK: - Layout
 
     @MainActor
-    func testProvia100FDetailsSectionOrderIsSourceReferenceGuidanceBoundarySources() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testDetailsSectionOrderIsSourceReferenceGuidanceBoundarySources() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let titles = displayState.sections.map(\.title)
         XCTAssertEqual(
             titles,
@@ -166,28 +166,28 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FCurrentResultStatusTextIsShortAndStateAware() throws {
-        let supported = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testCurrentResultStatusTextIsShortAndStateAware() throws {
+        let supported = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         XCTAssertEqual(supported.currentResult.statusText, "Formula-derived")
 
-        let beyondSource = try makeProviaDetailsDisplayState(meteredExposureSeconds: 600)
+        let beyondSource = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 600)
         XCTAssertEqual(beyondSource.currentResult.statusText, "Beyond source range")
         XCTAssertEqual(beyondSource.currentResult.statusTone, .unsupported)
 
-        let noCorrection = try makeProviaDetailsDisplayState(meteredExposureSeconds: 60)
+        let noCorrection = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 60)
         XCTAssertEqual(noCorrection.currentResult.statusText, "No correction")
 
         // Visible-range membership is a graph affordance (orange
         // triangle + graph note); the status text stays anchored
         // to the calculation basis on converted formula profiles.
-        let beyondVisible = try makeProviaDetailsDisplayState(meteredExposureSeconds: 500_000)
+        let beyondVisible = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 500_000)
         XCTAssertEqual(
             beyondVisible.currentResult.statusText,
             "Beyond source range",
             "Provia 100F (converted) keeps the source-range status even when current is past T3."
         )
 
-        let belowVisible = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
+        let belowVisible = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         XCTAssertEqual(
             belowVisible.currentResult.statusText,
             "No correction",
@@ -198,8 +198,8 @@ final class Provia100FPresentationTests: XCTestCase {
     // MARK: - Unified Current Result layout
 
     @MainActor
-    func testProvia100FNoCorrectionUsesComparisonLayoutLikeEveryOtherCase() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 60)
+    func testNoCorrectionUsesComparisonLayoutLikeEveryOtherCase() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 60)
         XCTAssertEqual(
             displayState.currentResult.layout,
             .comparison,
@@ -214,14 +214,14 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FAllCasesShareSameLayoutAndProduceStatusText() throws {
+    func testAllCasesShareSameLayoutAndProduceStatusText() throws {
         let cases: [(meter: Double, expectedStatus: String)] = [
             (60, "No correction"),
             (240, "Formula-derived"),
             (600, "Beyond source range"),
         ]
         for (meter, expected) in cases {
-            let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: meter)
+            let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: meter)
             XCTAssertEqual(
                 displayState.currentResult.layout,
                 .comparison,
@@ -238,8 +238,8 @@ final class Provia100FPresentationTests: XCTestCase {
     // MARK: - ≈ duplication regression
 
     @MainActor
-    func testProvia100FBeyondVisibleNumericResultDoesNotDoubleApproximateMarker() throws {
-        let film = try proviaFilm()
+    func testBeyondVisibleNumericResultDoesNotDoubleApproximateMarker() throws {
+        let film = try subjectFilm()
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
         let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: 1_000_000)
@@ -260,8 +260,8 @@ final class Provia100FPresentationTests: XCTestCase {
     // MARK: - Status / graph state cross-checks for visible-range cases
 
     @MainActor
-    func testProvia100FBeyondVisibleStatusStaysOnBasisWhileGraphFlagsTrip() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1_000_000)
+    func testBeyondVisibleStatusStaysOnBasisWhileGraphFlagsTrip() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1_000_000)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertTrue(graph.isBeyondVisibleRange)
         XCTAssertEqual(displayState.currentResult.statusText, "Beyond source range")
@@ -269,8 +269,8 @@ final class Provia100FPresentationTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FSubSecondInputStatusReadsAsNoCorrection() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
+    func testSubSecondInputStatusReadsAsNoCorrection() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertFalse(
             graph.isBelowVisibleRange,
@@ -282,14 +282,14 @@ final class Provia100FPresentationTests: XCTestCase {
     // MARK: - Main badge / Detail status alignment
 
     @MainActor
-    func testProvia100FMainBadgeAndDetailStatusUseTheSameWording() throws {
+    func testMainBadgeAndDetailStatusUseTheSameWording() throws {
         let cases: [(meter: Double, expected: String)] = [
             (60, "No correction"),
             (240, "Formula-derived"),
             (600, "Beyond source range"),
         ]
         for (meter, expected) in cases {
-            let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: meter)
+            let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: meter)
             XCTAssertEqual(
                 displayState.summary.badgeText,
                 expected,
@@ -306,8 +306,8 @@ final class Provia100FPresentationTests: XCTestCase {
     // MARK: - Simplified Sources
 
     @MainActor
-    func testProvia100FSourcesAreAnUnlabeledListWithoutReferenceCitationLabels() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testSourcesAreAnUnlabeledListWithoutReferenceCitationLabels() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let sources = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Sources" }))
         XCTAssertEqual(sources.rows.map(\.title), ["", ""])
         XCTAssertFalse(sources.rows.contains { $0.title == "Reference" })

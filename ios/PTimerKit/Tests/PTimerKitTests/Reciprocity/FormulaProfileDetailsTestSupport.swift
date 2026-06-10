@@ -3,12 +3,12 @@ import PTimerKit
 import PTimerCore
 
 extension XCTestCase {
-    func proviaProfile() throws -> ReciprocityProfile {
-        let film = try proviaFilm()
+    func subjectProfile() throws -> ReciprocityProfile {
+        let film = try subjectFilm()
         return try XCTUnwrap(film.profiles.first)
     }
 
-    func proviaFilm() throws -> FilmIdentity {
+    func subjectFilm() throws -> FilmIdentity {
         try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Provia 100F" },
             "Provia 100F must remain in the launch catalog."
@@ -16,10 +16,10 @@ extension XCTestCase {
     }
 
     @MainActor
-    func makeProviaDetailsDisplayState(
+    func makeFormulaDetailsDisplayState(
         meteredExposureSeconds: Double
     ) throws -> FilmModeDetailsDisplayState {
-        let film = try proviaFilm()
+        let film = try subjectFilm()
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
         let policyResult = model.evaluate(

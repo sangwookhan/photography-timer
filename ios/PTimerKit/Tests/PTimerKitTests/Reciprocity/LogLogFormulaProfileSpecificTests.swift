@@ -41,9 +41,9 @@ import PTimerCore
 /// This suite holds only CMS 20 II's genuinely film-specific behavior
 /// (the 1/1000 s … 1 s sub-second no-correction band, the 1 s / 10 s
 /// formula anchors, the 100 s not-recommended marker, and the graph /
-/// viewport detail). The film is the `cms20Profile()` constant, so no
+/// viewport detail). The film is the `profileUnderTest()` constant, so no
 /// film name appears in a test-function name.
-final class AdoxFormulaProfileTests: XCTestCase {
+final class LogLogFormulaProfileSpecificTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
@@ -61,7 +61,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     /// calculation path at 0.001 s must remain on the no-correction
     /// identity line, not collapse to the +1/2 stop derivation.
     func testAtOneOverThousandSecStaysNoCorrectionDespiteSourceEvidenceRow() throws {
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.001)
         XCTAssertEqual(result.metadata.basis, .officialThresholdNoCorrection)
         let corrected = try XCTUnwrap(result.correctedExposureSeconds)
@@ -76,7 +76,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     // range (see the "Beyond the source-backed range" tests).
 
     func testFormulaAnchorAtOneSecondMatchesPublishedHalfStop() throws {
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         // Evaluated at 1.0 the threshold rule wins (returns identity).
         // Evaluate just above 1 s to land in the formula domain and
         // verify the formula's value at the anchor matches the
@@ -88,7 +88,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     func testFormulaAnchorAtTenSecondsMatchesPublishedFullStop() throws {
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 10)
         XCTAssertEqual(result.metadata.basis, .formulaDerived)
         let corrected = try XCTUnwrap(result.correctedExposureSeconds)
@@ -99,7 +99,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
         // 1.7 s and 6.8 s sit between the 1 s and 10 s source-evidence
         // anchors. The closed-form formula should produce a corrected
         // exposure between 1.414 s (at 1 s) and 20 s (at 10 s).
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         for (metered, expected) in [
             (1.7, 2.604),
             (6.8, 12.83),
@@ -137,7 +137,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
         // numeric values, but presentation must surface them as
         // beyond source range (formula-derived continuation, not
         // manufacturer guidance).
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         for (metered, expected) in [
             (14.0, 29.4),
             (27.0, 62.7),
@@ -161,7 +161,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     }
 
     func testAbove100SecondsRemainsBeyondSourceWithFormulaPrediction() throws {
-        let profile = try cms20Profile()
+        let profile = try profileUnderTest()
         for metered in [120.0, 200.0, 500.0, 1_000.0] {
             let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
             XCTAssertEqual(
@@ -439,12 +439,12 @@ final class AdoxFormulaProfileTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func cms20Profile() throws -> ReciprocityProfile {
-        let film = try cms20Film()
+    private func profileUnderTest() throws -> ReciprocityProfile {
+        let film = try filmUnderTest()
         return try XCTUnwrap(film.profiles.first)
     }
 
-    private func cms20Film() throws -> FilmIdentity {
+    private func filmUnderTest() throws -> FilmIdentity {
         try XCTUnwrap(
             LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CMS 20 II" },
             "CMS 20 II must remain in the launch catalog."
@@ -455,7 +455,7 @@ final class AdoxFormulaProfileTests: XCTestCase {
     private func makeDisplayState(
         meteredExposureSeconds: Double
     ) throws -> FilmModeDetailsDisplayState {
-        let film = try cms20Film()
+        let film = try filmUnderTest()
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
         let policyResult = model.evaluate(

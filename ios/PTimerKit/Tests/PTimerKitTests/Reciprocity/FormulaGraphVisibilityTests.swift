@@ -1,18 +1,18 @@
 import XCTest
 import PTimerKit
 
-final class Provia100FGraphVisibilityTests: XCTestCase {
+final class FormulaGraphVisibilityTests: XCTestCase {
     // MARK: - Sub-second no-correction visibility
 
     @MainActor
-    func testProvia100FSubSecondInputSitsInsideVisibleNoCorrectionBand() throws {
+    func testSubSecondInputSitsInsideVisibleNoCorrectionBand() throws {
         // 1/30 s metered is inside Provia 100F's published
         // no-correction band (0.00025 … 128 s). The stable
         // viewport extends below 1 s so the no-correction state
         // is visible end-to-end — the marker sits at its real
         // position on the identity line instead of being hidden as
         // off-graph.
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertFalse(
             graph.isBelowVisibleRange,
@@ -30,8 +30,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FOneSecondInputDoesNotTripBelowVisibleRange() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1)
+    func testOneSecondInputDoesNotTripBelowVisibleRange() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertFalse(
             graph.isBelowVisibleRange,
@@ -40,14 +40,14 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     }
 
     @MainActor
-    func testProvia100FCalculationCurveStartsAtViewportLowerBoundAsIdentitySegment() throws {
+    func testCalculationCurveStartsAtViewportLowerBoundAsIdentitySegment() throws {
         // The calculation curve now includes an identity segment
         // (Tc = Tm) through the no-correction range so the path is
         // continuous from the viewport's leading edge through the
         // formula segment. Samples must therefore extend down to
         // the profile-stable lower bound while every identity
         // sample sits on the y = x line.
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
         let minSample = try XCTUnwrap(graph.sourcePoints.map(\.meteredExposureSeconds).min())
         XCTAssertEqual(
@@ -75,8 +75,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     // MARK: - Formula display near the graph
 
     @MainActor
-    func testProvia100FGraphCarriesFormulaDisplayTextWithFourDecimalExponent() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 240)
+    func testGraphCarriesFormulaDisplayTextWithFourDecimalExponent() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let graph = try XCTUnwrap(displayState.graph)
         let formula = try XCTUnwrap(
             graph.formulaDisplayText,
@@ -101,9 +101,9 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// `notRecommendedBoundarySeconds`), not the source-range
     /// boundary.
     @MainActor
-    func testProvia100FGraphCarriesBeyondSourceRangeStartAt240Seconds() throws {
+    func testGraphCarriesBeyondSourceRangeStartAt240Seconds() throws {
         for metered in [60.0, 240.0, 600.0] {
-            let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: metered)
+            let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             XCTAssertEqual(
                 graph.beyondSourceRangeStartSeconds ?? 0,
@@ -117,16 +117,16 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     // MARK: - Outside-visible-range indicator semantics
 
     @MainActor
-    func testProvia100FBeyondVisibleSuppressesInRangeCurrentMarker() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 500_000)
+    func testBeyondVisibleSuppressesInRangeCurrentMarker() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 500_000)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertTrue(graph.isBeyondVisibleRange)
         XCTAssertNotNil(graph.currentPoint)
     }
 
     @MainActor
-    func testProvia100FSubSecondInputKeepsCurrentMarkerVisibleInsideViewport() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
+    func testSubSecondInputKeepsCurrentMarkerVisibleInsideViewport() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 1.0 / 30.0)
         let graph = try XCTUnwrap(displayState.graph)
         XCTAssertFalse(graph.isBelowVisibleRange)
         let currentPoint = try XCTUnwrap(graph.currentPoint)
@@ -140,8 +140,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// formula prediction. Keeps the profile structurally consistent
     /// across shutter ranges.
     @MainActor
-    func testProvia100FNoCorrectionInputStillRendersGraphWithIdentityCurrentPoint() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 60)
+    func testNoCorrectionInputStillRendersGraphWithIdentityCurrentPoint() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 60)
 
         let graph = try XCTUnwrap(
             displayState.graph,
@@ -170,9 +170,9 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// threshold) must be exposed on the graph state so the view can
     /// shade the no-correction band and draw the boundary guide.
     @MainActor
-    func testProvia100FGraphCarriesNoCorrectionRangeUpperBound() throws {
+    func testGraphCarriesNoCorrectionRangeUpperBound() throws {
         for metered in [60.0, 240.0, 600.0] {
-            let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: metered)
+            let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: metered)
             let graph = try XCTUnwrap(displayState.graph)
             XCTAssertEqual(
                 graph.noCorrectionRangeUpperBoundSeconds ?? 0,
@@ -188,8 +188,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// the threshold upper bound so the region left of 128 s reads as
     /// policy-controlled rather than as a formula prediction.
     @MainActor
-    func testProvia100FFormulaSegmentBeyondThresholdLeavesIdentityForPredictedCurve() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 60)
+    func testFormulaSegmentBeyondThresholdLeavesIdentityForPredictedCurve() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 60)
         let graph = try XCTUnwrap(displayState.graph)
 
         let pastThreshold = graph.sourcePoints.first(where: { $0.meteredExposureSeconds > 128 + 1e-6 })
@@ -210,8 +210,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// must call out the no-correction range explicitly so the
     /// user reads the state as policy-driven, not curve-driven.
     @MainActor
-    func testProvia100FNoCorrectionGraphCaptionReferencesNoCorrectionRangeNotCalculationCurve() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 60)
+    func testNoCorrectionGraphCaptionReferencesNoCorrectionRangeNotCalculationCurve() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 60)
         let graph = try XCTUnwrap(displayState.graph)
 
         XCTAssertFalse(
@@ -233,8 +233,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// the current point on the formula curve with the
     /// `.beyondSourceRange` style, not the "x-position only" red guide.
     @MainActor
-    func testProvia100FUnsupportedNumericInputRendersBeyondSourceRangeCurrentPoint() throws {
-        let displayState = try makeProviaDetailsDisplayState(meteredExposureSeconds: 600)
+    func testUnsupportedNumericInputRendersBeyondSourceRangeCurrentPoint() throws {
+        let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 600)
 
         let graph = try XCTUnwrap(
             displayState.graph,
@@ -255,8 +255,8 @@ final class Provia100FGraphVisibilityTests: XCTestCase {
     /// guidance so the play button can render with a warning-oriented
     /// treatment.
     @MainActor
-    func testProvia100FUnsupportedNumericEnablesCorrectedExposurePlayButton() throws {
-        let film = try proviaFilm()
+    func testUnsupportedNumericEnablesCorrectedExposurePlayButton() throws {
+        let film = try subjectFilm()
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
         let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: 600)

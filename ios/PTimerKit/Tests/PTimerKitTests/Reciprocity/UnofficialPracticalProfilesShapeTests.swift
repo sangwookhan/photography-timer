@@ -28,7 +28,7 @@ final class UnofficialPracticalProfilesShapeTests: XCTestCase {
     /// profile by film id. The registry is intentionally narrow today;
     /// this test pins the single shipped registration so future
     /// changes to the lookup table are deliberate.
-    func testRegistryResolvesKodakPortra400UnofficialPractical() {
+    func testRegistryResolvesTheUnofficialPracticalProfile() {
         let profile = UnofficialPracticalProfiles.profile(forFilmID: "kodak-portra-400")
         XCTAssertNotNil(profile)
         XCTAssertEqual(profile?.id, "kodak-portra-400-unofficial-practical")

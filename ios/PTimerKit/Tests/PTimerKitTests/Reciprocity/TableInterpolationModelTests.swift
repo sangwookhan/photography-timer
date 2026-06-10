@@ -7,7 +7,7 @@ import PTimerCore
 /// beyond source range (never a value-less result).
 final class TableInterpolationModelTests: XCTestCase {
 
-    private func fomapanRule() -> TableInterpolationReciprocityRule {
+    private func sampleTableRule() -> TableInterpolationReciprocityRule {
         TableInterpolationReciprocityRule(
             anchors: [
                 TableAnchor(meteredSeconds: 1, correctedSeconds: 2),
@@ -20,8 +20,8 @@ final class TableInterpolationModelTests: XCTestCase {
     }
 
     func testNoCorrectionWithinThreshold() {
-        XCTAssertEqual(fomapanRule().evaluate(meteredExposureSeconds: 0.5), .noCorrection)
-        XCTAssertEqual(fomapanRule().evaluate(meteredExposureSeconds: 0.25), .noCorrection)
+        XCTAssertEqual(sampleTableRule().evaluate(meteredExposureSeconds: 0.5), .noCorrection)
+        XCTAssertEqual(sampleTableRule().evaluate(meteredExposureSeconds: 0.25), .noCorrection)
     }
 
     /// A `0.1 s` (nominal 1/10 s) boundary rule, matching the migrated
@@ -67,7 +67,7 @@ final class TableInterpolationModelTests: XCTestCase {
     /// The tolerance is relative, so a `0.5 s` threshold band never
     /// stretches anywhere near `1 s`.
     func testToleranceDoesNotExpandBandTowardOneSecond() {
-        let rule = fomapanRule() // noCorrectionThroughSeconds: 0.5
+        let rule = sampleTableRule() // noCorrectionThroughSeconds: 0.5
         XCTAssertEqual(rule.evaluate(meteredExposureSeconds: 0.55), .noCorrection)
         guard case .withinSourceRange = rule.evaluate(meteredExposureSeconds: 0.7) else {
             return XCTFail("0.7s must be corrected for a 0.5s threshold.")
@@ -78,15 +78,15 @@ final class TableInterpolationModelTests: XCTestCase {
     }
 
     func testAnchorsReproduceExactly() {
-        assertWithin(fomapanRule().evaluate(meteredExposureSeconds: 1), expected: 2)
-        assertWithin(fomapanRule().evaluate(meteredExposureSeconds: 10), expected: 80)
-        assertWithin(fomapanRule().evaluate(meteredExposureSeconds: 100), expected: 1600)
+        assertWithin(sampleTableRule().evaluate(meteredExposureSeconds: 1), expected: 2)
+        assertWithin(sampleTableRule().evaluate(meteredExposureSeconds: 10), expected: 80)
+        assertWithin(sampleTableRule().evaluate(meteredExposureSeconds: 100), expected: 1600)
     }
 
     func testIntermediateUsesLogLogInterpolation() {
         // Tm = 10^1.5 ≈ 31.62 sits halfway (in log space) between the
         // 10s and 100s anchors; log-log interpolation gives ≈ 357.8 s.
-        guard case let .withinSourceRange(corrected) = fomapanRule().evaluate(meteredExposureSeconds: 31.6228) else {
+        guard case let .withinSourceRange(corrected) = sampleTableRule().evaluate(meteredExposureSeconds: 31.6228) else {
             return XCTFail("Expected a within-source-range value.")
         }
         XCTAssertEqual(corrected, 357.8, accuracy: 1.0)
@@ -98,7 +98,7 @@ final class TableInterpolationModelTests: XCTestCase {
         // 1000 s is past the 100 s source range; the model extrapolates
         // the last log-log segment (slope ≈ 1.301) → ≈ 32010 s, flagged
         // beyond source range. It must NOT dead-end.
-        guard case let .beyondSourceRange(corrected) = fomapanRule().evaluate(meteredExposureSeconds: 1000) else {
+        guard case let .beyondSourceRange(corrected) = sampleTableRule().evaluate(meteredExposureSeconds: 1000) else {
             return XCTFail("1000 s must compute a value classified beyond source range.")
         }
         XCTAssertGreaterThan(corrected, 1600)
@@ -106,8 +106,8 @@ final class TableInterpolationModelTests: XCTestCase {
     }
 
     func testInvalidInput() {
-        XCTAssertEqual(fomapanRule().evaluate(meteredExposureSeconds: 0), .invalidInput)
-        XCTAssertEqual(fomapanRule().evaluate(meteredExposureSeconds: -1), .invalidInput)
+        XCTAssertEqual(sampleTableRule().evaluate(meteredExposureSeconds: 0), .invalidInput)
+        XCTAssertEqual(sampleTableRule().evaluate(meteredExposureSeconds: -1), .invalidInput)
     }
 
     func testInvalidRuleParameters() {

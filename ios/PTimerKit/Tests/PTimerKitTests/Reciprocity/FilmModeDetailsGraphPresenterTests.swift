@@ -60,7 +60,7 @@ final class FilmModeDetailsGraphPresenterTests: XCTestCase {
     }
 
     @MainActor
-    func testFormulaProfileSourceReferenceMarkersIncludeProvia240SecondAnchor() throws {
+    func testFormulaProfileSourceReferenceMarkersIncludePublished240SecondAnchor() throws {
         let graph = try presenterGraph(forFilm: "Provia 100F", meteredSeconds: 240)
         let marker = try XCTUnwrap(
             graph.sourceReferenceMarkers.first {

@@ -24,24 +24,24 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
     /// per-film parameter; everything else (coefficient 1, reference 1,
     /// 1 s threshold, no source range, no source evidence) is the
     /// archetype constant verified by `testProfileIsSourceLessBarePowerLaw`.
-    private struct IlfordFilmCase {
+    private struct BarePowerLawFilmCase {
         let film: String
         let exponent: Double
     }
 
-    private let cases: [IlfordFilmCase] = [
-        IlfordFilmCase(film: "HP5 Plus", exponent: 1.31),
-        IlfordFilmCase(film: "Pan F Plus", exponent: 1.33),
-        IlfordFilmCase(film: "FP4 Plus", exponent: 1.26),
-        IlfordFilmCase(film: "Delta 100", exponent: 1.26),
-        IlfordFilmCase(film: "Delta 400", exponent: 1.41),
-        IlfordFilmCase(film: "Delta 3200", exponent: 1.33),
-        IlfordFilmCase(film: "Kentmere 100", exponent: 1.26),
-        IlfordFilmCase(film: "Kentmere 200", exponent: 1.26),
-        IlfordFilmCase(film: "Kentmere 400", exponent: 1.3),
-        IlfordFilmCase(film: "Ortho Plus", exponent: 1.25),
-        IlfordFilmCase(film: "SFX 200", exponent: 1.43),
-        IlfordFilmCase(film: "XP2 Super", exponent: 1.31),
+    private let cases: [BarePowerLawFilmCase] = [
+        BarePowerLawFilmCase(film: "HP5 Plus", exponent: 1.31),
+        BarePowerLawFilmCase(film: "Pan F Plus", exponent: 1.33),
+        BarePowerLawFilmCase(film: "FP4 Plus", exponent: 1.26),
+        BarePowerLawFilmCase(film: "Delta 100", exponent: 1.26),
+        BarePowerLawFilmCase(film: "Delta 400", exponent: 1.41),
+        BarePowerLawFilmCase(film: "Delta 3200", exponent: 1.33),
+        BarePowerLawFilmCase(film: "Kentmere 100", exponent: 1.26),
+        BarePowerLawFilmCase(film: "Kentmere 200", exponent: 1.26),
+        BarePowerLawFilmCase(film: "Kentmere 400", exponent: 1.3),
+        BarePowerLawFilmCase(film: "Ortho Plus", exponent: 1.25),
+        BarePowerLawFilmCase(film: "SFX 200", exponent: 1.43),
+        BarePowerLawFilmCase(film: "XP2 Super", exponent: 1.31),
     ]
 
     private func formulaRule(in profile: ReciprocityProfile) throws -> FormulaReciprocityRule {

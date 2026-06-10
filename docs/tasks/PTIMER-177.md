@@ -530,6 +530,13 @@ name.** Film identity lives only as case-table data or, for a genuinely
 single-film suite, a single `private let film` constant. Function names
 describe the behavior contract.
 
+**Reporting scope.** Each stage reports "no film name in a function name"
+**only for the archetype files that stage restructures** — never as a
+suite-wide claim. Film-named functions still living in the ViewModel /
+presenter / catalog test layer (outside the reciprocity-profile
+archetypes) are real but out of scope for 3a–3f; they are tracked and
+cleaned in **3g** (see §15.4).
+
 | Archetype | Members | Contract suite(s) |
 |---|---|---|
 | Source-less bare power-law (ILFORD / HARMAN, `Tc = Tm^p`, no source data) | HP5, Pan F, FP4, Delta 100/400/3200, Kentmere 100/200/400, Ortho, SFX 200, XP2 (12) | `BarePowerLawReciprocityContractTests` |
@@ -547,26 +554,33 @@ it is a different case."
 ### 15.4 Stage plan (each its own commit)
 
 - **3a — Ilford bare power-law (done).** New `BarePowerLawReciprocityContractTests`
-  over 12 films; dissolved `HP5PlusFormulaProfileTests`; coverage extended
-  to the 11 ILFORD/HARMAN films that previously had none.
-- **3b — converted guarded formula (in progress).** Four behavior
-  contracts (region-basis, fit, source-evidence, presentation) over the 6
-  members incl. Rollei RETRO 80S / SUPERPAN 200; dissolve the Velvia 50,
-  Velvia 100, Provia 100F formula suites; reduce CMS 20 II and the Rollei
-  formula portion to their genuinely film-specific remainder (film as a
-  constant, behavior-named functions).
-- **3c — Acros II constant-multiplier.** Rename to behavior-named
-  functions with the film as a constant.
-- **3d — table log-log source data.** Extend `TableLogLogReciprocityContractTests`
-  and add a source-data contract (anchors, source-evidence rows, markers)
-  as case data; dissolve the per-film table suites and the Rollei RPX
-  portion. Preserve the batch-2 exact-anchor guards.
-- **3e — limited guidance + model-basis table.** Case-drive the Kodak
-  limited-guidance suite and the bundled model-basis declarations.
+  over 12 films; dissolved `HP5PlusFormulaProfileTests`.
+- **3b — converted guarded formula (done).** Four behavior contracts
+  (region-basis, fit, source-evidence, presentation); dissolved Velvia 50,
+  Velvia 100, Provia 100F formula suites; CMS 20 II reduced to a
+  film-constant remainder.
+- **3c — Acros II constant-multiplier (done).** Behavior-named functions,
+  film as a constant.
+- **3d — table log-log (done; 3d-1 Kodak, 3d-2 Foma/Fomapan + Ohzart
+  community via provenance columns, 3d-3 ADOX CHS 100, 3d-4 Rollei split
+  RPX→table / RETRO·SUPERPAN→guarded).** All table films + their source
+  data are case rows in `TableLogLogReciprocityContractTests` +
+  `TableProfileSourceDataContractTests`.
+- **3e — limited guidance + model-basis (next).** Case-drive the Kodak
+  limited-guidance suite, the bundled model-basis declarations, and the
+  related migration invariants into behavior/case contracts.
 - **3f — Provia presentation / graph / scale.** Constant-ise the
   film-named graph/scale/presentation tests (these exercise the
-  graph/scale engine, not the reciprocity model, so they stay
-  film-anchored via a constant rather than becoming cross-film cases).
+  graph/scale engine, not the reciprocity model).
+- **3g — ViewModel / presenter / catalog naming cleanup (separate
+  theme).** The reciprocity-archetype stages (3a–3f) do not reach the
+  ViewModel/presenter/catalog test layer (`ExposureCalculatorViewModelFilm*`,
+  `FilmModeDetailsSecondaryGuidancePresenterTests`, `LaunchPresetFilmCatalogTests`,
+  `ReciprocityModel{Selection,Metadata,Comparison}PresenterTests`,
+  `CustomFilm*`, plus a few cross-cutting reciprocity files). ~70 film-named
+  functions there must move film identity into case data / constants and be
+  renamed by behavior. Tracked as its own stage so a coherent theme lands
+  per commit; it is **not** optional — it must be done.
 
 Each stage: `swift test --package-path ios/PTimerKit` + full app-hosted
 `xcodebuild` + SwiftLint + boundary grep, then a single commit. No

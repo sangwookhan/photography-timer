@@ -32,7 +32,13 @@ final class GuardedFormulaEvidenceContractTests: XCTestCase {
         let expectedMetereds: [Double]?
         let meteredsAreOrdered: Bool
         let rows: [EvidenceRow]
+        /// Fit-accuracy guard: the formula at each quantified row (a row
+        /// with `correctedSeconds`) must track the published corrected time
+        /// within this many stops. `nil` skips the check.
+        var formulaTracksWithinStops: Double?
     }
+
+    private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
     private let cases: [SourceEvidenceCase] = [
         SourceEvidenceCase(
@@ -73,6 +79,34 @@ final class GuardedFormulaEvidenceContractTests: XCTestCase {
                 EvidenceRow(metered: 0.001, exactStopDelta: 0.5, sourceEvidenceOnly: true),
                 EvidenceRow(metered: 100, notRecommended: true),
             ]
+        ),
+        SourceEvidenceCase(
+            film: "RETRO 80S",
+            expectedMetereds: [1, 2, 4, 8, 15, 30],
+            meteredsAreOrdered: false,
+            rows: [
+                EvidenceRow(metered: 1, rangeNoteContains: "1 to 2", forbidsQuantifiedExposure: true),
+                EvidenceRow(metered: 2, rangeNoteContains: "3 to 4", forbidsQuantifiedExposure: true),
+                EvidenceRow(metered: 4, correctedSeconds: 8),
+                EvidenceRow(metered: 8, correctedSeconds: 24),
+                EvidenceRow(metered: 15, correctedSeconds: 60),
+                EvidenceRow(metered: 30, correctedSeconds: 180),
+            ],
+            formulaTracksWithinStops: 0.05
+        ),
+        SourceEvidenceCase(
+            film: "SUPERPAN 200",
+            expectedMetereds: [1, 2, 4, 8, 15, 30],
+            meteredsAreOrdered: false,
+            rows: [
+                EvidenceRow(metered: 1, rangeNoteContains: "1 to 2", forbidsQuantifiedExposure: true),
+                EvidenceRow(metered: 2, rangeNoteContains: "3 to 4", forbidsQuantifiedExposure: true),
+                EvidenceRow(metered: 4, correctedSeconds: 8),
+                EvidenceRow(metered: 8, correctedSeconds: 24),
+                EvidenceRow(metered: 15, correctedSeconds: 60),
+                EvidenceRow(metered: 30, correctedSeconds: 180),
+            ],
+            formulaTracksWithinStops: 0.05
         ),
     ]
 
@@ -166,6 +200,22 @@ final class GuardedFormulaEvidenceContractTests: XCTestCase {
         }
         if expected.forbidsQuantifiedExposure {
             XCTAssertFalse(hasExposureAdjustment(in: row), "\(film) @ \(expected.metered)s: range-valued row must not carry a quantified exposure adjustment.")
+        }
+    }
+
+    /// Fit-accuracy guard: the formula tracks each published quantified row
+    /// within the documented stop tolerance.
+    func testFormulaTracksPublishedQuantifiedRowsWithinTolerance() throws {
+        for c in cases {
+            guard let tolerance = c.formulaTracksWithinStops else { continue }
+            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            for expectedRow in c.rows {
+                guard let published = expectedRow.correctedSeconds else { continue }
+                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: expectedRow.metered)
+                let corrected = try XCTUnwrap(result.correctedExposureSeconds, "\(c.film) @ \(expectedRow.metered)s: must produce a corrected value.")
+                let stopError = log2(corrected / published)
+                XCTAssertEqual(stopError, 0, accuracy: tolerance, "\(c.film) @ \(expectedRow.metered)s: formula must track the published \(published)s within \(tolerance) stop (error \(stopError)).")
+            }
         }
     }
 }

@@ -290,6 +290,58 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             noCorrectionStatusSample: 0.25,
             beyondSourceStatusSample: 30
         ),
+        // Rollei RPX 100 — official Rollei table (default profile).
+        TableFilmCase(
+            film: "RPX 100",
+            noCorrectionThroughSeconds: 1,
+            sourceRangeThroughSeconds: 30,
+            anchors: [Anchor(metered: 2, corrected: 3), Anchor(metered: 5, corrected: 8), Anchor(metered: 10, corrected: 25), Anchor(metered: 20, corrected: 75), Anchor(metered: 30, corrected: 150)],
+            belowThresholdSamples: [0.5, 1],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [2, 5, 10, 20, 30],
+            aboveSourceSamples: [90],
+            evidenceMetereds: [2, 5, 10, 20, 30],
+            evidenceRows: [
+                EvidenceRow(metered: 2, correctedSeconds: 3),
+                EvidenceRow(metered: 5, correctedSeconds: 8),
+                EvidenceRow(metered: 10, correctedSeconds: 25),
+                EvidenceRow(metered: 20, correctedSeconds: 75),
+                EvidenceRow(metered: 30, correctedSeconds: 150),
+            ],
+            detailTokens: ["3.0s", "8.0s", "25.0s", "75.0s", "150.0s"],
+            markers: [Anchor(metered: 2, corrected: 3), Anchor(metered: 5, corrected: 8), Anchor(metered: 10, corrected: 25), Anchor(metered: 20, corrected: 75), Anchor(metered: 30, corrected: 150)],
+            beyondSourceStartSeconds: 30,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "Rollei",
+            profileName: "Official Rollei table", profileIdSuffix: "-official-table",
+            modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation
+        ),
+        // Rollei RPX 400 — official Rollei table (default profile).
+        TableFilmCase(
+            film: "RPX 400",
+            noCorrectionThroughSeconds: 0.5,
+            sourceRangeThroughSeconds: 20,
+            anchors: [Anchor(metered: 1, corrected: 2), Anchor(metered: 5, corrected: 10), Anchor(metered: 10, corrected: 30), Anchor(metered: 15, corrected: 55), Anchor(metered: 20, corrected: 80)],
+            belowThresholdSamples: [0.25, 0.5],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [1, 5, 10, 15, 20],
+            aboveSourceSamples: [60],
+            evidenceMetereds: [1, 5, 10, 15, 20],
+            evidenceRows: [
+                EvidenceRow(metered: 1, correctedSeconds: 2),
+                EvidenceRow(metered: 5, correctedSeconds: 10),
+                EvidenceRow(metered: 10, correctedSeconds: 30),
+                EvidenceRow(metered: 15, correctedSeconds: 55),
+                EvidenceRow(metered: 20, correctedSeconds: 80),
+            ],
+            detailTokens: ["2.0s", "10.0s", "30.0s", "55.0s", "80.0s"],
+            markers: [Anchor(metered: 1, corrected: 2), Anchor(metered: 5, corrected: 10), Anchor(metered: 10, corrected: 30), Anchor(metered: 15, corrected: 55), Anchor(metered: 20, corrected: 80)],
+            beyondSourceStartSeconds: 20,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "Rollei",
+            profileName: "Official Rollei table", profileIdSuffix: "-official-table",
+            modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation
+        ),
     ]
 
     private func tableRule(in profile: ReciprocityProfile) throws -> TableInterpolationReciprocityRule {
@@ -471,6 +523,12 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             if let calculationModel = c.modelCalculationModel { XCTAssertEqual(basis.calculationModel, calculationModel, "\(c.film): modelBasis.calculationModel") }
         }
     }
+
+}
+
+// Display-state surfaces split into an extension to keep the main type
+// body within the size budget; the case table stays the single source.
+extension TableProfileSourceDataContractTests {
 
     // MARK: - Details and graph surfaces
 

@@ -28,6 +28,9 @@ final class GuardedFormulaFitContractTests: XCTestCase {
         let sourceRangeThroughSeconds: Double?
         /// Lowercased substrings the formula's first note must contain.
         let noteKeywords: [String]
+        /// Published provenance (asserted when set).
+        var publisher: String?
+        var authority: ReciprocityAuthority?
     }
 
     private let cases: [FitCase] = [
@@ -67,6 +70,26 @@ final class GuardedFormulaFitContractTests: XCTestCase {
             sourceRangeThroughSeconds: 10,
             noteKeywords: []
         ),
+        FitCase(
+            film: "RETRO 80S",
+            exponent: 1.5361, exponentAccuracy: 1e-3,
+            coefficientSeconds: 0.9601, coefficientAccuracy: 1e-3,
+            referenceMeteredTimeSeconds: nil,
+            noCorrectionThroughSeconds: nil,
+            sourceRangeThroughSeconds: nil,
+            noteKeywords: ["log-log", "numeric continuation"],
+            publisher: "Rollei", authority: .official
+        ),
+        FitCase(
+            film: "SUPERPAN 200",
+            exponent: 1.5361, exponentAccuracy: 1e-3,
+            coefficientSeconds: 0.9601, coefficientAccuracy: 1e-3,
+            referenceMeteredTimeSeconds: nil,
+            noCorrectionThroughSeconds: nil,
+            sourceRangeThroughSeconds: nil,
+            noteKeywords: ["log-log", "numeric continuation"],
+            publisher: "Rollei", authority: .official
+        ),
     ]
 
     func testFormulaParametersMatchPublishedFit() throws {
@@ -99,6 +122,8 @@ final class GuardedFormulaFitContractTests: XCTestCase {
                     XCTAssertTrue(note.contains(keyword), "\(c.film): formula note must contain '\(keyword)'; got: \(note)")
                 }
             }
+            if let publisher = c.publisher { XCTAssertEqual(profile.source.publisher, publisher, "\(c.film): publisher") }
+            if let authority = c.authority { XCTAssertEqual(profile.source.authority, authority, "\(c.film): authority") }
         }
     }
 }

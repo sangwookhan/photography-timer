@@ -31,6 +31,7 @@ final class TableProfileSourceDataContractTests: XCTestCase {
         let metered: Double
         var correctedSeconds: Double?
         var stopDelta: Double?
+        var multiplier: Double?
         var approximateCorrected = false
         var developmentInstruction: String?
     }
@@ -41,7 +42,9 @@ final class TableProfileSourceDataContractTests: XCTestCase {
         let sourceRangeThroughSeconds: Double
         let anchors: [Anchor]
         let belowThresholdSamples: [Double]
-        let nominalToleranceSample: Double
+        /// `nil` skips the nominal-tolerance check (only the 1/10 s
+        /// Kodak films drift to ~0.102 s; the FOMA films use a 1/2 s band).
+        let nominalToleranceSample: Double?
         let clearlyCorrectedSamples: [Double]
         let insideSamples: [Double]
         let aboveSourceSamples: [Double]
@@ -50,6 +53,12 @@ final class TableProfileSourceDataContractTests: XCTestCase {
         let detailTokens: [String]
         let markers: [Anchor]
         let beyondSourceStartSeconds: Double
+        // Provenance / identity — asserted only when set.
+        var sourceKind: ReciprocitySourceKind?
+        var authority: ReciprocityAuthority?
+        var publisher: String?
+        var profileName: String?
+        var profileIdSuffix: String?
 
         var lastAnchorCorrected: Double { anchors.last?.corrected ?? 0 }
     }
@@ -120,6 +129,50 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             markers: [Anchor(metered: 1, corrected: 2), Anchor(metered: 10, corrected: 50), Anchor(metered: 100, corrected: 1200)],
             beyondSourceStartSeconds: 100.000001
         ),
+        TableFilmCase(
+            film: "Fomapan 200 Creative",
+            noCorrectionThroughSeconds: 0.5,
+            sourceRangeThroughSeconds: 100,
+            anchors: [Anchor(metered: 1, corrected: 3), Anchor(metered: 10, corrected: 90), Anchor(metered: 100, corrected: 1800)],
+            belowThresholdSamples: [0.5],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [1, 10, 100],
+            aboveSourceSamples: [150, 300, 1000],
+            evidenceMetereds: [1, 10, 100],
+            evidenceRows: [
+                EvidenceRow(metered: 1, correctedSeconds: 3, multiplier: 3),
+                EvidenceRow(metered: 10, correctedSeconds: 90, multiplier: 9),
+                EvidenceRow(metered: 100, correctedSeconds: 1800, multiplier: 18),
+            ],
+            detailTokens: ["3x", "9x", "18x"],
+            markers: [Anchor(metered: 1, corrected: 3), Anchor(metered: 10, corrected: 90), Anchor(metered: 100, corrected: 1800)],
+            beyondSourceStartSeconds: 100.000001,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "FOMA BOHEMIA",
+            profileName: "Official FOMA table", profileIdSuffix: "-official-table"
+        ),
+        TableFilmCase(
+            film: "Fomapan 400 Action",
+            noCorrectionThroughSeconds: 0.5,
+            sourceRangeThroughSeconds: 100,
+            anchors: [Anchor(metered: 1, corrected: 1.5), Anchor(metered: 10, corrected: 60), Anchor(metered: 100, corrected: 800)],
+            belowThresholdSamples: [0.5],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [1, 10, 100],
+            aboveSourceSamples: [150, 300, 1000],
+            evidenceMetereds: [1, 10, 100],
+            evidenceRows: [
+                EvidenceRow(metered: 1, correctedSeconds: 1.5, multiplier: 1.5),
+                EvidenceRow(metered: 10, correctedSeconds: 60, multiplier: 6),
+                EvidenceRow(metered: 100, correctedSeconds: 800, multiplier: 8),
+            ],
+            detailTokens: ["1.5x", "6x", "8x"],
+            markers: [Anchor(metered: 1, corrected: 1.5), Anchor(metered: 10, corrected: 60), Anchor(metered: 100, corrected: 800)],
+            beyondSourceStartSeconds: 100.000001,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "FOMA BOHEMIA",
+            profileName: "Official FOMA table", profileIdSuffix: "-official-table"
+        ),
     ]
 
     private func tableRule(in profile: ReciprocityProfile) throws -> TableInterpolationReciprocityRule {
@@ -168,10 +221,11 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testNominalThresholdToleranceClassifiesNoCorrection() throws {
         for c in cases {
+            guard let nominalSample = c.nominalToleranceSample else { continue }
             let profile = try FormulaProfileTestSupport.profile(for: c.film)
-            let nominal = evaluator.evaluate(profile: profile, meteredExposureSeconds: c.nominalToleranceSample)
-            XCTAssertEqual(nominal.metadata.basis, .officialThresholdNoCorrection, "\(c.film): nominal 1/10 s (~\(c.nominalToleranceSample)s) must read as no-correction.")
-            XCTAssertEqual(try XCTUnwrap(nominal.correctedExposureSeconds), c.nominalToleranceSample, accuracy: 1e-6, "\(c.film): nominal corrected == metered.")
+            let nominal = evaluator.evaluate(profile: profile, meteredExposureSeconds: nominalSample)
+            XCTAssertEqual(nominal.metadata.basis, .officialThresholdNoCorrection, "\(c.film): nominal 1/10 s (~\(nominalSample)s) must read as no-correction.")
+            XCTAssertEqual(try XCTUnwrap(nominal.correctedExposureSeconds), nominalSample, accuracy: 1e-6, "\(c.film): nominal corrected == metered.")
             for metered in c.clearlyCorrectedSamples {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
                 XCTAssertEqual(result.metadata.basis, .tableLogLogDerived, "\(c.film) @ \(metered)s: clearly above the band must stay table-derived.")
@@ -254,6 +308,36 @@ final class TableProfileSourceDataContractTests: XCTestCase {
                 return value.instruction
             }.first
             XCTAssertEqual(actual, development, "\(film) @ \(expected.metered)s: published development adjustment")
+        }
+        if let multiplier = expected.multiplier {
+            let actual = row.adjustments.compactMap { adjustment -> Double? in
+                guard case let .exposure(.multiplier(value)) = adjustment else { return nil }
+                return value.factor
+            }.first
+            XCTAssertEqual(actual ?? .nan, multiplier, accuracy: 1e-6, "\(film) @ \(expected.metered)s: published multiplier factor")
+        }
+    }
+
+    // MARK: - Source provenance and profile identity
+
+    func testSourceProvenanceMatchesPublished() throws {
+        for c in cases {
+            guard c.sourceKind != nil || c.authority != nil || c.publisher != nil else { continue }
+            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            if let kind = c.sourceKind { XCTAssertEqual(profile.source.kind, kind, "\(c.film): source kind") }
+            if let authority = c.authority { XCTAssertEqual(profile.source.authority, authority, "\(c.film): source authority") }
+            if let publisher = c.publisher { XCTAssertEqual(profile.source.publisher, publisher, "\(c.film): publisher") }
+        }
+    }
+
+    func testProfileIdentityMatchesPublished() throws {
+        for c in cases {
+            guard c.profileName != nil || c.profileIdSuffix != nil else { continue }
+            let profile = try FormulaProfileTestSupport.profile(for: c.film)
+            if let name = c.profileName { XCTAssertEqual(profile.name, name, "\(c.film): profile name") }
+            if let suffix = c.profileIdSuffix {
+                XCTAssertTrue(profile.id.hasSuffix(suffix), "\(c.film): profile id must end with '\(suffix)'; got \(profile.id)")
+            }
         }
     }
 

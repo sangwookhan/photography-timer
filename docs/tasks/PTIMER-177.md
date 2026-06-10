@@ -539,7 +539,7 @@ cleaned in **3g** (see §15.4).
 
 | Archetype | Members | Contract suite(s) |
 |---|---|---|
-| Source-less bare power-law (ILFORD / HARMAN, `Tc = Tm^p`, no source data) | HP5, Pan F, FP4, Delta 100/400/3200, Kentmere 100/200/400, Ortho, SFX 200, XP2 (12) | `BarePowerLawReciprocityContractTests` |
+| No-source-range bare power-law (ILFORD / HARMAN, `Tc = Tm^p`, no source data) | HP5, Pan F, FP4, Delta 100/400/3200, Kentmere 100/200/400, Ortho, SFX 200, XP2 (12) | `BarePowerLawReciprocityContractTests` |
 | Converted guarded formula (inclusive threshold, bounded source range) | Velvia 50, Velvia 100, Provia 100F, ADOX CMS 20 II, Rollei RETRO 80S, SUPERPAN 200 | `GuardedFormula{RegionBasis,Fit,SourceEvidence,Presentation}ContractTests` |
 | Constant-multiplier converted formula (open boundary, `< 120 s`) | Acros II | single-film suite, film as a constant |
 | Table log-log | T-MAX 100/400, Tri-X 400, Foma 200/400, Fomapan 100 (+ Ohzart community), RPX 100/400, ADOX CHS 100 | `TableLogLogReciprocityContractTests` + a source-data contract |

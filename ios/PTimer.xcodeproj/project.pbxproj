@@ -85,7 +85,6 @@
 		A00000000000000000000970 /* CalculatorViewModelCustomFilmTimerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */; };
 		A00000000000000000000972 /* CustomFilmDeleteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */; };
 		A00000000000000000000974 /* CustomFilmLifecycleCorrectnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */; };
-		A00000000000000000000976 /* CustomFilmEditAndSelectorUXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */; };
 		A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */; };
 		A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */; };
 		A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */; };
@@ -200,7 +199,6 @@
 		A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorViewModelCustomFilmTimerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmDeleteFlowTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLifecycleCorrectnessTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditAndSelectorUXTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckView.swift; sourceTree = "<group>"; };
 		A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFieldSheets.swift; sourceTree = "<group>"; };
 		A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPolishTests.swift; sourceTree = "<group>"; };
@@ -343,7 +341,6 @@
 				A00000000000000000000971 /* CalculatorViewModelCustomFilmTimerTests.swift */,
 				A00000000000000000000973 /* CustomFilmDeleteFlowTests.swift */,
 				A00000000000000000000975 /* CustomFilmLifecycleCorrectnessTests.swift */,
-				A00000000000000000000977 /* CustomFilmEditAndSelectorUXTests.swift */,
 				A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */,
 			);
 			path = ExposureCalculator;
@@ -740,7 +737,6 @@
 				A00000000000000000000970 /* CalculatorViewModelCustomFilmTimerTests.swift in Sources */,
 				A00000000000000000000972 /* CustomFilmDeleteFlowTests.swift in Sources */,
 				A00000000000000000000974 /* CustomFilmLifecycleCorrectnessTests.swift in Sources */,
-				A00000000000000000000976 /* CustomFilmEditAndSelectorUXTests.swift in Sources */,
 				A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

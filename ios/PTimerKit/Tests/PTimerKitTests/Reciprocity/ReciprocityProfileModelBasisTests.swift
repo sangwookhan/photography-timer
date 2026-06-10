@@ -12,99 +12,67 @@ import XCTest
 /// `sourceEvidence` treatment.
 final class ReciprocityProfileModelBasisTests: XCTestCase {
 
-    // MARK: - Bundled representative profiles carry explicit metadata
+    // MARK: - Bundled representative profiles declare the expected basis
 
-    func testBundledHP5PlusProfileDeclaresManufacturerFormulaSource() throws {
-        let film = try XCTUnwrap(film(named: "HP5 Plus"))
-        let basis = try XCTUnwrap(film.profiles[0].modelBasis)
-        XCTAssertEqual(basis.sourceModel, .manufacturerFormula)
-        XCTAssertEqual(basis.calculationModel, .guardedFormula)
+    private struct ModelBasisDeclaration {
+        let film: String
+        let sourceModel: ReciprocitySourceModel
+        let calculationModel: ReciprocityCalculationModel
     }
 
-    func testBundledTriX400ProfileDeclaresTableSourceWithLogLogCalculation() throws {
-        // PTIMER-168: Tri-X 400 migrated from the app-derived guarded
-        // formula to the official Kodak table log-log model.
-        let film = try XCTUnwrap(film(named: "Tri-X 400"))
-        let basis = try XCTUnwrap(film.profiles[0].modelBasis)
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
-    }
-
-    func testBundledFomapan100ProfileDeclaresTableSourceWithLogLogCalculation() throws {
-        // PTIMER-159: Fomapan's default is the official log-log table,
-        // not the app-derived guarded formula.
-        let film = try XCTUnwrap(film(named: "Fomapan 100 Classic"))
-        let basis = try XCTUnwrap(film.profiles[0].modelBasis)
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation)
-    }
-
-    func testBundledEktar100ProfileDeclaresLimitedGuidanceSource() throws {
-        let film = try XCTUnwrap(film(named: "Ektar 100"))
-        let basis = try XCTUnwrap(film.profiles[0].modelBasis)
-        XCTAssertEqual(basis.sourceModel, .manufacturerLimitedGuidance)
-        XCTAssertEqual(basis.calculationModel, .limitedGuidance)
-    }
-
-    // MARK: - Calculation behavior is unchanged by adding metadata
-
-    func testAddingModelBasisDoesNotChangeHP5PlusFormulaCalculation() throws {
-        let film = try XCTUnwrap(film(named: "HP5 Plus"))
-        let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: film.profiles[0], meteredExposureSeconds: 4)
-
-        guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified result, got \(result).")
+    /// Each bundled representative profile declares the model basis its
+    /// archetype implies. Provenance / archetype is case data, not a
+    /// per-film test.
+    func testBundledProfilesDeclareExpectedModelBasis() throws {
+        let declarations: [ModelBasisDeclaration] = [
+            .init(film: "HP5 Plus", sourceModel: .manufacturerFormula, calculationModel: .guardedFormula),
+            .init(film: "Tri-X 400", sourceModel: .manufacturerTable, calculationModel: .tableLogLogInterpolation),
+            .init(film: "Fomapan 100 Classic", sourceModel: .manufacturerTable, calculationModel: .tableLogLogInterpolation),
+            .init(film: "Ektar 100", sourceModel: .manufacturerLimitedGuidance, calculationModel: .limitedGuidance),
+        ]
+        for d in declarations {
+            let film = try XCTUnwrap(film(named: d.film), "\(d.film) must remain in the launch catalog.")
+            let basis = try XCTUnwrap(film.profiles[0].modelBasis, "\(d.film): must declare a modelBasis.")
+            XCTAssertEqual(basis.sourceModel, d.sourceModel, "\(d.film): sourceModel")
+            XCTAssertEqual(basis.calculationModel, d.calculationModel, "\(d.film): calculationModel")
         }
-        XCTAssertEqual(payload.metadata.basis, .formulaDerived)
-        XCTAssertEqual(payload.correctedExposureSeconds, pow(4.0, 1.31), accuracy: 0.0001)
     }
 
-    func testTriX400TableModelReproducesPublishedAnchorAtOneSecond() throws {
-        // PTIMER-168: Tri-X 400 now evaluates through the official table
-        // log-log model. At the published 1 sec anchor it reproduces the
-        // Kodak corrected time (2 sec) exactly, with the table basis.
-        let film = try XCTUnwrap(film(named: "Tri-X 400"))
-        let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: film.profiles[0], meteredExposureSeconds: 1)
+    // MARK: - Adding model-basis metadata does not change calculation
 
-        guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified result, got \(result).")
-        }
-        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
-        XCTAssertEqual(payload.correctedExposureSeconds, 2, accuracy: 1e-4)
+    private struct CalcCheck {
+        let film: String
+        let sample: Double
+        let expectedBasis: ReciprocityCalculationBasis
+        let expectedCorrected: Double?
+        var correctedAccuracy: Double = 1e-4
+        var requiresSourceEvidence = false
     }
 
-    func testAddingModelBasisDoesNotChangeEktar100LimitedGuidanceCalculation() throws {
-        let film = try XCTUnwrap(film(named: "Ektar 100"))
-        let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: film.profiles[0], meteredExposureSeconds: 30)
-
-        guard case let .limitedGuidance(payload) = result else {
-            return XCTFail("Expected limited-guidance result, got \(result).")
+    /// The descriptive model-basis metadata is additive: each bundled
+    /// profile's calculation (basis + corrected exposure) is unchanged, and
+    /// table profiles keep their `sourceEvidence` display-only alongside the
+    /// table anchors (the calculation reads the table rule's own anchors).
+    func testModelBasisMetadataDoesNotChangeCalculation() throws {
+        let checks: [CalcCheck] = [
+            .init(film: "HP5 Plus", sample: 4, expectedBasis: .formulaDerived, expectedCorrected: pow(4.0, 1.31)),
+            .init(film: "Tri-X 400", sample: 1, expectedBasis: .tableLogLogDerived, expectedCorrected: 2),
+            .init(film: "Tri-X 400", sample: 10, expectedBasis: .tableLogLogDerived, expectedCorrected: 50, requiresSourceEvidence: true),
+            .init(film: "Ektar 100", sample: 30, expectedBasis: .limitedGuidanceNoQuantifiedPrediction, expectedCorrected: nil),
+        ]
+        for c in checks {
+            let film = try XCTUnwrap(film(named: c.film), "\(c.film) must remain in the launch catalog.")
+            if c.requiresSourceEvidence {
+                XCTAssertFalse(film.profiles[0].sourceEvidence.isEmpty, "\(c.film): table profile keeps display-only source evidence.")
+            }
+            let result = ReciprocityCalculationPolicyEvaluator().evaluate(profile: film.profiles[0], meteredExposureSeconds: c.sample)
+            XCTAssertEqual(result.metadata.basis, c.expectedBasis, "\(c.film) @ \(c.sample)s: basis")
+            if let expected = c.expectedCorrected {
+                XCTAssertEqual(try XCTUnwrap(result.correctedExposureSeconds, "\(c.film) @ \(c.sample)s: corrected"), expected, accuracy: c.correctedAccuracy, "\(c.film) @ \(c.sample)s: corrected")
+            } else {
+                XCTAssertNil(result.correctedExposureSeconds, "\(c.film) @ \(c.sample)s: must not surface a corrected exposure")
+            }
         }
-        XCTAssertEqual(payload.metadata.basis, .limitedGuidanceNoQuantifiedPrediction)
-    }
-
-    // MARK: - `sourceEvidence` remains display-only
-
-    func testTriX400SourceEvidenceRemainsDisplayOnlyAlongsideTableModel() throws {
-        // PTIMER-168: the calculation reads the table rule's own anchors,
-        // never the display-only `sourceEvidence` rows. For Tri-X the
-        // published rows and the table anchors coincide, so the 10 sec
-        // input reproduces Kodak's 50 sec corrected time exactly through
-        // the table log-log model while `sourceEvidence` stays populated
-        // purely for the Source reference surface.
-        let film = try XCTUnwrap(film(named: "Tri-X 400"))
-        XCTAssertFalse(film.profiles[0].sourceEvidence.isEmpty)
-
-        let result = ReciprocityCalculationPolicyEvaluator()
-            .evaluate(profile: film.profiles[0], meteredExposureSeconds: 10)
-        guard case let .quantified(payload) = result else {
-            return XCTFail("Expected quantified result, got \(result).")
-        }
-        XCTAssertEqual(payload.metadata.basis, .tableLogLogDerived)
-        XCTAssertEqual(payload.correctedExposureSeconds, 50, accuracy: 1e-4)
     }
 
     // MARK: - Optional / inferred basis behavior

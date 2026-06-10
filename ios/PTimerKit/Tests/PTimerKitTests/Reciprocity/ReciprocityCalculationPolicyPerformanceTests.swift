@@ -16,7 +16,7 @@ final class ReciprocityPolicyPerformanceTests: XCTestCase {
 
     /// Formula-based profile within the supported range.
     func testFormulaDerivedEvaluationPerformance() {
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
 
         measure {
             for _ in 0 ..< 1_000 {
@@ -41,7 +41,7 @@ final class ReciprocityPolicyPerformanceTests: XCTestCase {
 
     /// Threshold no-correction path — should be the cheapest.
     func testThresholdNoCorrectionPerformance() {
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
 
         measure {
             for _ in 0 ..< 1_000 {
@@ -52,7 +52,7 @@ final class ReciprocityPolicyPerformanceTests: XCTestCase {
 
     /// Limited-guidance evaluation — no quantified prediction at all.
     func testLimitedGuidanceEvaluationPerformance() {
-        let profile = ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile()
+        let profile = ReciprocityPolicyScenarioFactory.limitedGuidanceProfile()
 
         measure {
             for _ in 0 ..< 1_000 {
@@ -64,9 +64,9 @@ final class ReciprocityPolicyPerformanceTests: XCTestCase {
     /// Mixed workload approximating a picker scroll across the four
     /// supported profile shapes at varying metered exposures.
     func testMixedPickerScrollWorkloadPerformance() {
-        let hp5 = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let hp5 = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
         let bounded = ReciprocityPolicyScenarioFactory.formulaBoundedProfile()
-        let portra = ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile()
+        let portra = ReciprocityPolicyScenarioFactory.limitedGuidanceProfile()
 
         let inputs: [(ReciprocityProfile, Double)] = [
             (hp5, 0.5), (hp5, 1.0), (hp5, 100.0), (hp5, 1_500.0),

@@ -13,7 +13,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testThresholdRangeReturnsNoCorrectionBasis() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            profile: ReciprocityPolicyScenarioFactory.limitedGuidanceProfile(),
             meteredExposureSeconds: 0.5
         )
 
@@ -28,7 +28,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testThresholdHandoffWithFormulaUsesNoCorrectionBasis() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 0.5
         )
 
@@ -40,7 +40,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testFormulaProfileWithinSupportedRangeIsFormulaDerived() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 100
         )
 
@@ -53,7 +53,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testFormulaProfileWithoutExplicitMaxRemainsQuantifiedAtVeryLongInputs() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(),
             meteredExposureSeconds: 8_192
         )
 
@@ -103,7 +103,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testLimitedGuidanceBeyondThresholdReturnsNoQuantifiedPrediction() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.portraLimitedGuidanceProfile(),
+            profile: ReciprocityPolicyScenarioFactory.limitedGuidanceProfile(),
             meteredExposureSeconds: 4
         )
 
@@ -147,7 +147,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testArchivalOfficialProfilePropagatesAuthorityImpact() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .archivalOfficial),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(authority: .archivalOfficial),
             meteredExposureSeconds: 100
         )
 
@@ -157,7 +157,7 @@ final class ReciprocityCalculationPolicyTests: XCTestCase {
 
     func testUnofficialSecondaryProfilePropagatesAuthorityImpact() {
         let result = evaluator.evaluate(
-            profile: ReciprocityPolicyScenarioFactory.hp5FormulaProfile(authority: .unofficialSecondary),
+            profile: ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile(authority: .unofficialSecondary),
             meteredExposureSeconds: 100
         )
 

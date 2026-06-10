@@ -12,7 +12,7 @@ final class ReciprocityModelTests: XCTestCase {
     @MainActor
     func testEvaluateProducesNoCorrectionResultForThresholdInput() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
 
         let result = model.evaluate(
             profile: profile,
@@ -26,7 +26,7 @@ final class ReciprocityModelTests: XCTestCase {
     @MainActor
     func testEvaluateProducesFormulaDerivedResultForFormulaRangeInput() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
 
         let result = model.evaluate(
             profile: profile,
@@ -42,7 +42,7 @@ final class ReciprocityModelTests: XCTestCase {
     @MainActor
     func testMakeDetailsDisplayStateProducesNonNilForQuantifiedFormulaScenario() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
         let film = FilmIdentity(
             id: "hp5-test",
             kind: .preset,
@@ -94,7 +94,7 @@ final class ReciprocityModelTests: XCTestCase {
     @MainActor
     func testReciprocityStateDisplayStateForFormulaDerivedScenario() {
         let model = ReciprocityModel()
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
         let film = FilmIdentity(
             id: "hp5-test",
             kind: .preset,
@@ -130,7 +130,7 @@ final class ReciprocityModelTests: XCTestCase {
     func testEvaluateMatchesDirectEvaluatorForKnownScenario() {
         let model = ReciprocityModel()
         let directEvaluator = ReciprocityCalculationPolicyEvaluator()
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
 
         let viaModel = model.evaluate(profile: profile, meteredExposureSeconds: 5)
         let viaDirect = directEvaluator.evaluate(profile: profile, meteredExposureSeconds: 5)
@@ -334,7 +334,7 @@ final class ReciprocityModelTests: XCTestCase {
         model: ReciprocityModel,
         meteredExposureSeconds: Double
     ) -> FilmModeReciprocityBindingState {
-        let profile = ReciprocityPolicyScenarioFactory.hp5FormulaProfile()
+        let profile = ReciprocityPolicyScenarioFactory.barePowerLawFormulaProfile()
         let film = FilmIdentity(
             id: "hp5-test",
             kind: .preset,

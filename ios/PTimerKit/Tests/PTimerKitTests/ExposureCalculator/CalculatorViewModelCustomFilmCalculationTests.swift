@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Integration coverage for the calculation path when a custom
 /// power-law profile is selected. The existing
@@ -169,7 +168,7 @@ final class CustomFilmCalculationFlowTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: CustomFilmLibrary()
         )
     }

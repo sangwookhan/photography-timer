@@ -194,7 +194,75 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         )
     }
 
+    // MARK: - Tone reflects calculation state, not source authority
+
+    /// PTIMER-164: the badge tone reflects the *calculation state*
+    /// (no-correction / in-range / beyond-source), never the source
+    /// authority. Across the three Fomapan 100 models (official FOMA
+    /// table, Ohzart community, app-derived formula) plus an unofficial
+    /// Portra profile — provenance is case data, not a per-film test — a
+    /// successful or derived result never reads as caution.
+    func testToneReflectsCalculationStateNotSourceAuthority() throws {
+        struct ToneCase {
+            let provenance: String
+            let filmStock: String
+            let makeProfile: () throws -> ReciprocityProfile
+            let metered: Double
+            let expectedCategory: ReciprocityConfidenceCategory?
+            let expectedBadge: String
+            let expectedTone: FilmModeReciprocityStateTone?
+        }
+        let officialFoma: () throws -> ReciprocityProfile = {
+            try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
+        }
+        let ohzart: () throws -> ReciprocityProfile = {
+            try XCTUnwrap(AlternateReciprocityModels.alternates(forFilmID: "foma-fomapan-100").first { $0.id == "foma-fomapan-100-ohzart-community-table" })
+        }
+        let appFormula: () throws -> ReciprocityProfile = { AlternateReciprocityModels.fomapan100AppDerivedFormula }
+        let portraUnofficial: () throws -> ReciprocityProfile = { UnofficialPracticalProfiles.kodakPortra400UnofficialPractical }
+
+        let cases: [ToneCase] = [
+            ToneCase(provenance: "official FOMA table — no correction", filmStock: "Fomapan 100 Classic", makeProfile: officialFoma, metered: 0.4, expectedCategory: .noCorrection, expectedBadge: "No correction", expectedTone: .trusted),
+            ToneCase(provenance: "official FOMA table — in range", filmStock: "Fomapan 100 Classic", makeProfile: officialFoma, metered: 10, expectedCategory: nil, expectedBadge: "Table-derived", expectedTone: .measured),
+            ToneCase(provenance: "Ohzart community — no correction", filmStock: "Fomapan 100 Classic", makeProfile: ohzart, metered: 0.4, expectedCategory: .noCorrection, expectedBadge: "No correction", expectedTone: .trusted),
+            ToneCase(provenance: "Ohzart community — in range", filmStock: "Fomapan 100 Classic", makeProfile: ohzart, metered: 8, expectedCategory: .formulaDerived, expectedBadge: "Table-derived", expectedTone: .measured),
+            ToneCase(provenance: "Ohzart community — beyond source", filmStock: "Fomapan 100 Classic", makeProfile: ohzart, metered: 120, expectedCategory: .unsupported, expectedBadge: "Beyond source range", expectedTone: .unsupported),
+            ToneCase(provenance: "app-derived formula — in range", filmStock: "Fomapan 100 Classic", makeProfile: appFormula, metered: 10, expectedCategory: nil, expectedBadge: "Formula-derived", expectedTone: nil),
+            ToneCase(provenance: "unofficial Portra — no correction", filmStock: "Portra 400", makeProfile: portraUnofficial, metered: 0.5, expectedCategory: .noCorrection, expectedBadge: "No correction", expectedTone: .trusted),
+        ]
+        for c in cases {
+            let binding = try makeBindingState(filmStock: c.filmStock, profile: c.makeProfile(), meteredSeconds: c.metered)
+            if let category = c.expectedCategory {
+                XCTAssertEqual(binding.presentation.category, category, "\(c.provenance): category")
+            }
+            XCTAssertEqual(presenter.badgeText(for: binding), c.expectedBadge, "\(c.provenance): badge")
+            if let tone = c.expectedTone {
+                XCTAssertEqual(presenter.tone(for: binding), tone, "\(c.provenance): tone must reflect the calculation state, not authority")
+            }
+            XCTAssertNotEqual(presenter.tone(for: binding), .caution, "\(c.provenance): a successful/derived state must never read as caution")
+        }
+    }
+
     // MARK: - Helpers
+
+    private func makeBindingState(
+        filmStock: String,
+        profile: ReciprocityProfile,
+        meteredSeconds: Double
+    ) throws -> FilmModeReciprocityBindingState {
+        let film = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == filmStock },
+            "\(filmStock) must remain in the launch catalog."
+        )
+        let model = ReciprocityModel()
+        let policyResult = model.evaluate(profile: profile, meteredExposureSeconds: meteredSeconds)
+        return FilmModeReciprocityBindingState(
+            film: film,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
+    }
 
     private func makeBindingState(
         stock: String,

@@ -236,32 +236,6 @@ final class Fomapan100OhzartTableModelTests: XCTestCase {
 
     // MARK: - Authority label wording (film row / camera slot subtitle)
 
-    func testFilmRowAuthorityLabelsDistinguishTheThreeFomapanModels() throws {
-        let film = try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == filmID })
-
-        // Official FOMA table is the only Fomapan model that reads as
-        // official guidance.
-        XCTAssertEqual(
-            FilmSelectionModel.filmRowAuthorityLabel(for: film.profiles[0]),
-            "Official guidance"
-        )
-        // The app-derived formula must NOT read as official guidance —
-        // it names itself instead.
-        XCTAssertEqual(
-            FilmSelectionModel.filmRowAuthorityLabel(for: AlternateReciprocityModels.fomapan100AppDerivedFormula),
-            "App-derived formula"
-        )
-        XCTAssertNotEqual(
-            FilmSelectionModel.filmRowAuthorityLabel(for: AlternateReciprocityModels.fomapan100AppDerivedFormula),
-            "Official guidance"
-        )
-        // Ohzart stays unofficial / practical.
-        XCTAssertEqual(
-            FilmSelectionModel.filmRowAuthorityLabel(for: try ohzartProfile()),
-            "Unofficial practical"
-        )
-    }
-
     @MainActor
     func testActiveFilmRowSubtitleForAppFormulaIsNotOfficialGuidance() throws {
         let viewModel = makeFilmModeViewModel()
@@ -301,102 +275,6 @@ final class Fomapan100OhzartTableModelTests: XCTestCase {
     }
 
     // MARK: - Badge tone (status reflects calculation, not authority)
-
-    func testOhzartInRangeTableDerivedToneIsNotWarning() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let binding = try bindingState(profile: try ohzartProfile(), meteredSeconds: 8)
-
-        // 8 s is within the published table (an exact anchor).
-        XCTAssertEqual(binding.presentation.category, .formulaDerived)
-        XCTAssertEqual(presenter.badgeText(for: binding), "Table-derived")
-        XCTAssertEqual(
-            presenter.tone(for: binding),
-            .measured,
-            "A successful in-range Ohzart table result must use the normal derived tone, not caution/orange."
-        )
-        XCTAssertNotEqual(presenter.tone(for: binding), .caution)
-    }
-
-    func testOhzartNoCorrectionToneIsGreenSuccess() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let binding = try bindingState(profile: try ohzartProfile(), meteredSeconds: 0.4)
-
-        XCTAssertEqual(binding.presentation.category, .noCorrection)
-        XCTAssertEqual(presenter.badgeText(for: binding), "No correction")
-        XCTAssertEqual(
-            presenter.tone(for: binding),
-            .trusted,
-            "No correction is a normal/safe state — green/success — even for an unofficial source."
-        )
-    }
-
-    func testOfficialFomaNoCorrectionToneIsGreenSuccess() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let film = try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == filmID })
-        // 0.4 s is within FOMA's 0.5 s no-correction band.
-        let binding = try bindingState(profile: film.profiles[0], meteredSeconds: 0.4)
-
-        XCTAssertEqual(binding.presentation.category, .noCorrection)
-        XCTAssertEqual(presenter.badgeText(for: binding), "No correction")
-        XCTAssertEqual(presenter.tone(for: binding), .trusted)
-    }
-
-    func testPortraUnofficialNoCorrectionToneIsGreenSuccess() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Portra 400" }
-        )
-        let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
-        // 0.5 s is below the unofficial 1 s no-correction boundary.
-        let policyResult = ReciprocityModel().evaluate(profile: profile, meteredExposureSeconds: 0.5)
-        let binding = FilmModeReciprocityBindingState(
-            film: film,
-            profile: profile,
-            policyResult: policyResult,
-            presentation: policyResult.confidencePresentation
-        )
-
-        XCTAssertEqual(binding.presentation.category, .noCorrection)
-        XCTAssertEqual(presenter.badgeText(for: binding), "No correction")
-        XCTAssertEqual(
-            presenter.tone(for: binding),
-            .trusted,
-            "Unofficial Portra no-correction must also read as green/success."
-        )
-    }
-
-    func testOhzartBeyondSourceKeepsUnsupportedTone() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let binding = try bindingState(profile: try ohzartProfile(), meteredSeconds: 120)
-
-        XCTAssertEqual(binding.presentation.category, .unsupported)
-        XCTAssertEqual(presenter.badgeText(for: binding), "Beyond source range")
-        XCTAssertEqual(
-            presenter.tone(for: binding),
-            .unsupported,
-            "Beyond-source range must keep its stronger warning/unsupported tone."
-        )
-    }
-
-    func testOfficialFomaInRangeTableToneStaysMeasured() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let film = try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == filmID })
-        let binding = try bindingState(profile: film.profiles[0], meteredSeconds: 10)
-
-        XCTAssertEqual(presenter.badgeText(for: binding), "Table-derived")
-        XCTAssertEqual(presenter.tone(for: binding), .measured, "Official table-derived stays the normal derived tone.")
-    }
-
-    func testAppFormulaInRangeToneIsNotWarning() throws {
-        let presenter = ReciprocityDetailsVocabularyPresenter()
-        let binding = try bindingState(
-            profile: AlternateReciprocityModels.fomapan100AppDerivedFormula,
-            meteredSeconds: 10
-        )
-
-        XCTAssertEqual(presenter.badgeText(for: binding), "Formula-derived")
-        XCTAssertNotEqual(presenter.tone(for: binding), .caution)
-    }
 
     // MARK: - Helpers
 

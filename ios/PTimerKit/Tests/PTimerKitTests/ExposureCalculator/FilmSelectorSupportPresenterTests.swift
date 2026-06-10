@@ -255,6 +255,33 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
         XCTAssertNil(state.accessibilityLabel)
     }
 
+    // MARK: - Film-row authority label by provenance
+
+    /// PTIMER-164: the selector-row authority label reflects the profile's
+    /// provenance — official manufacturer guidance, app-derived formula,
+    /// or unofficial practical — which is what distinguishes the three
+    /// Fomapan 100 models. Provenance is case data.
+    func testFilmRowAuthorityLabelReflectsProvenance() throws {
+        struct Case { let provenance: String; let makeProfile: () throws -> ReciprocityProfile; let expectedLabel: String }
+        let cases: [Case] = [
+            Case(provenance: "official FOMA table", makeProfile: {
+                try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
+            }, expectedLabel: "Official guidance"),
+            Case(provenance: "app-derived formula", makeProfile: { AlternateReciprocityModels.fomapan100AppDerivedFormula }, expectedLabel: "App-derived formula"),
+            Case(provenance: "Ohzart community", makeProfile: {
+                try XCTUnwrap(AlternateReciprocityModels.alternates(forFilmID: "foma-fomapan-100").first { $0.id == "foma-fomapan-100-ohzart-community-table" })
+            }, expectedLabel: "Unofficial practical"),
+        ]
+        for c in cases {
+            XCTAssertEqual(FilmSelectionModel.filmRowAuthorityLabel(for: try c.makeProfile()), c.expectedLabel, "\(c.provenance): film-row authority label")
+        }
+        XCTAssertNotEqual(
+            FilmSelectionModel.filmRowAuthorityLabel(for: AlternateReciprocityModels.fomapan100AppDerivedFormula),
+            "Official guidance",
+            "App-derived formula must never read as official guidance."
+        )
+    }
+
     // MARK: - Helpers
 
     private func film(named name: String) throws -> FilmIdentity {

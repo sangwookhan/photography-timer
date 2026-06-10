@@ -61,6 +61,19 @@ final class TableProfileSourceDataContractTests: XCTestCase {
         var profileIdSuffix: String?
         var modelSourceModel: ReciprocitySourceModel?
         var modelCalculationModel: ReciprocityCalculationModel?
+        /// Published source citation title (asserted when set).
+        var sourceTitle: String?
+        /// Legend chips the table graph must / must not surface (asserted
+        /// when non-empty).
+        var requiredLegendChips: [String] = []
+        var forbiddenLegendChips: [String] = []
+        /// A sub-threshold sample whose graph current point reads
+        /// `.noCorrection` with the "No correction" status (when set).
+        var noCorrectionStatusSample: Double?
+        /// A beyond-source sample whose graph current point reads
+        /// `.beyondSourceRange` with the "Beyond source range" status
+        /// (when set).
+        var beyondSourceStatusSample: Double?
         /// Non-default profile lookup (e.g. a community/app-derived
         /// alternate). `nil` uses the film's default catalog profile.
         var profileProvider: (() throws -> ReciprocityProfile)?
@@ -247,6 +260,36 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             profileProvider: { try XCTUnwrap(AlternateReciprocityModels.alternates(forFilmID: "foma-fomapan-100").first { $0.id == "foma-fomapan-100-ohzart-community-table" }) },
             exercisesDisplayState: false
         ),
+        // ADOX CHS 100 II — official ADOX 2024 table (default profile).
+        TableFilmCase(
+            film: "CHS 100 II",
+            noCorrectionThroughSeconds: 1,
+            sourceRangeThroughSeconds: 15,
+            anchors: [Anchor(metered: 2, corrected: 3), Anchor(metered: 4, corrected: 8), Anchor(metered: 8, corrected: 20), Anchor(metered: 15, corrected: 45)],
+            belowThresholdSamples: [1],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [2, 4, 8, 15],
+            aboveSourceSamples: [16, 30, 60, 200],
+            evidenceMetereds: [2, 4, 8, 15],
+            evidenceRows: [
+                EvidenceRow(metered: 2, correctedSeconds: 3, multiplier: 1.5),
+                EvidenceRow(metered: 4, correctedSeconds: 8, multiplier: 2),
+                EvidenceRow(metered: 8, correctedSeconds: 20, multiplier: 2.5),
+                EvidenceRow(metered: 15, correctedSeconds: 45, multiplier: 3),
+            ],
+            detailTokens: ["1.5x", "2x", "2.5x", "3x"],
+            markers: [Anchor(metered: 2, corrected: 3), Anchor(metered: 4, corrected: 8), Anchor(metered: 8, corrected: 20), Anchor(metered: 15, corrected: 45)],
+            beyondSourceStartSeconds: 15.000001,
+            publisher: "ADOX",
+            profileName: "Official ADOX table", profileIdSuffix: "-official-table",
+            modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation,
+            sourceTitle: "ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024",
+            requiredLegendChips: ["Calculation curve", "Current result", "Source reference", "No-correction range"],
+            forbiddenLegendChips: ["Estimated", "Extrapolated", "Not-recommended boundary"],
+            noCorrectionStatusSample: 0.25,
+            beyondSourceStatusSample: 30
+        ),
     ]
 
     private func tableRule(in profile: ReciprocityProfile) throws -> TableInterpolationReciprocityRule {
@@ -396,11 +439,12 @@ final class TableProfileSourceDataContractTests: XCTestCase {
 
     func testSourceProvenanceMatchesPublished() throws {
         for c in cases {
-            guard c.sourceKind != nil || c.authority != nil || c.publisher != nil else { continue }
+            guard c.sourceKind != nil || c.authority != nil || c.publisher != nil || c.sourceTitle != nil else { continue }
             let profile = try profile(for: c)
             if let kind = c.sourceKind { XCTAssertEqual(profile.source.kind, kind, "\(c.film): source kind") }
             if let authority = c.authority { XCTAssertEqual(profile.source.authority, authority, "\(c.film): source authority") }
             if let publisher = c.publisher { XCTAssertEqual(profile.source.publisher, publisher, "\(c.film): publisher") }
+            if let title = c.sourceTitle { XCTAssertEqual(profile.source.title, title, "\(c.film): source citation title") }
         }
     }
 
@@ -458,6 +502,41 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             }
             XCTAssertNil(graph.notRecommendedBoundarySeconds, "\(c.film): no published not-recommended boundary.")
             XCTAssertEqual(graph.beyondSourceRangeStartSeconds ?? .nan, c.beyondSourceStartSeconds, accuracy: 1e-3, "\(c.film): beyond-source region start")
+        }
+    }
+
+    @MainActor
+    func testTableGraphLegendChipsMatchExpected() throws {
+        for c in cases where !c.requiredLegendChips.isEmpty || !c.forbiddenLegendChips.isEmpty {
+            let requiredSample = c.insideSamples.first ?? c.anchors.first?.metered ?? 1
+            let requiredLabels = try XCTUnwrap(FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: requiredSample).graph, "\(c.film): must surface a graph.").legendChipLabels
+            for chip in c.requiredLegendChips {
+                XCTAssertTrue(requiredLabels.contains(chip), "\(c.film): legend must contain '\(chip)'; got \(requiredLabels).")
+            }
+            // Forbidden chips must be absent across sub-threshold, in-range, and beyond-source inputs.
+            let forbiddenSamples = [c.noCorrectionStatusSample, requiredSample, c.beyondSourceStatusSample].compactMap { $0 }
+            for sample in forbiddenSamples {
+                let labels = try XCTUnwrap(FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: sample).graph).legendChipLabels
+                for chip in c.forbiddenLegendChips {
+                    XCTAssertFalse(labels.contains(chip), "\(c.film) @ \(sample)s: legend must not contain '\(chip)'; got \(labels).")
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testGraphCurrentPointStyleAndStatusReflectRegion() throws {
+        for c in cases {
+            if let sample = c.noCorrectionStatusSample {
+                let displayState = try FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: sample)
+                XCTAssertEqual(try XCTUnwrap(displayState.graph?.currentPoint).style, .noCorrection, "\(c.film) @ \(sample)s: current point style")
+                XCTAssertEqual(displayState.currentResult.statusText, "No correction", "\(c.film) @ \(sample)s: status text")
+            }
+            if let sample = c.beyondSourceStatusSample {
+                let displayState = try FormulaProfileTestSupport.makeDisplayState(film: c.film, meteredExposureSeconds: sample)
+                XCTAssertEqual(try XCTUnwrap(displayState.graph?.currentPoint).style, .beyondSourceRange, "\(c.film) @ \(sample)s: current point style")
+                XCTAssertEqual(displayState.currentResult.statusText, "Beyond source range", "\(c.film) @ \(sample)s: status text")
+            }
         }
     }
 }

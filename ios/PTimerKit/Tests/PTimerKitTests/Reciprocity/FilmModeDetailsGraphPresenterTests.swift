@@ -124,7 +124,7 @@ final class FilmModeDetailsGraphPresenterTests: XCTestCase {
     }
 
     @MainActor
-    func testFormulaEquationTextRendersExponentOnlyForSourcelessFormulaProfile() throws {
+    func testFormulaEquationTextRendersExponentOnlyForNoSourceRangeFormulaProfile() throws {
         let graph = try presenterGraph(forFilm: "HP5 Plus", meteredSeconds: 8)
         let formula = try XCTUnwrap(graph.formulaDisplayText)
         XCTAssertEqual(formula, "Tc = Tm^1.31")

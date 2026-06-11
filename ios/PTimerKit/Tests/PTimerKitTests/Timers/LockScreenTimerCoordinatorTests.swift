@@ -139,12 +139,53 @@ final class LockScreenTimerCoordinatorTests: XCTestCase {
         )
     }
 
+    // MARK: - Selected model identity (PTIMER-171)
+
+    func testExposedNamesCarrySelectedModelLabelOnlyForNonDefaultModels() throws {
+        // Two running timers from the same film: a non-default
+        // "App formula" model and the default model. The lock-screen
+        // names must distinguish them while keeping the default
+        // timer's name byte-for-byte unchanged.
+        let appFormulaTimer = makeRunningTimer(
+            order: 2,
+            name: "Tri-X 400 - 20m",
+            endIn: 1_200,
+            filmDisplayName: "Tri-X 400",
+            selectedModelLabel: "App formula"
+        )
+        let defaultTimer = makeRunningTimer(
+            order: 1,
+            name: "Tri-X 400 - 30m",
+            endIn: 1_800,
+            filmDisplayName: "Tri-X 400"
+        )
+
+        let target = try XCTUnwrap(
+            LockScreenTimerCoordinator.selectRepresentativeTarget(
+                from: [appFormulaTimer, defaultTimer]
+            )
+        )
+
+        XCTAssertEqual(
+            target.representativeTimerName,
+            "Tri-X 400 - 20m · App formula",
+            "The representative name must expose the non-default model label."
+        )
+        XCTAssertEqual(
+            target.scheduledTargets.map(\.timerName),
+            ["Tri-X 400 - 20m · App formula", "Tri-X 400 - 30m"],
+            "Scheduled targets must distinguish the models; default names stay unchanged."
+        )
+    }
+
     // MARK: - Helpers
 
     private func makeRunningTimer(
         order: Int,
         name: String,
-        endIn seconds: TimeInterval
+        endIn seconds: TimeInterval,
+        filmDisplayName: String? = nil,
+        selectedModelLabel: String? = nil
     ) -> RunningTimerItem {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         return RunningTimerItem(
@@ -158,7 +199,10 @@ final class LockScreenTimerCoordinatorTests: XCTestCase {
             pausedRemainingTime: nil,
             pausedAt: nil,
             status: .running,
-            referenceDate: now
+            referenceDate: now,
+            filmDisplayName: filmDisplayName,
+            exposureSource: filmDisplayName != nil ? .filmCorrectedExposure : nil,
+            selectedModelLabel: selectedModelLabel
         )
     }
 

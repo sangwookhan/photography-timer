@@ -52,6 +52,11 @@ public struct RunningTimerItem: Identifiable, Equatable {
     /// unofficial / non-film timers and older snapshots decode
     /// unchanged.
     public let customProfileSummary: String?
+    /// Captured-at-start display label of the selected reciprocity
+    /// model (PTIMER-171). Non-nil only for non-default model
+    /// selections; `nil` (default model / older snapshot) renders
+    /// exactly as before.
+    public let selectedModelLabel: String?
 
     public init(
         id: UUID,
@@ -70,7 +75,8 @@ public struct RunningTimerItem: Identifiable, Equatable {
         filmProfileQualifier: String? = nil,
         exposureSource: ExposureTimerSource? = nil,
         isOutsideManufacturerGuidance: Bool = false,
-        customProfileSummary: String? = nil
+        customProfileSummary: String? = nil,
+        selectedModelLabel: String? = nil
     ) {
         self.id = id
         self.order = order
@@ -89,6 +95,7 @@ public struct RunningTimerItem: Identifiable, Equatable {
         self.exposureSource = exposureSource
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
+        self.selectedModelLabel = selectedModelLabel
     }
 
     /// Convenience packaging of the slot + film + source identity
@@ -112,7 +119,8 @@ public struct RunningTimerItem: Identifiable, Equatable {
             filmProfileQualifier: filmProfileQualifier,
             exposureSource: exposureSource,
             isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
-            customProfileSummary: customProfileSummary
+            customProfileSummary: customProfileSummary,
+            selectedModelLabel: selectedModelLabel
         )
     }
 

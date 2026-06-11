@@ -67,6 +67,14 @@ public struct ExposureTimerIdentitySnapshot: Equatable, Hashable {
     /// non-film timers — the existing `filmProfileQualifier` carries
     /// the qualifier in those cases.
     public let customProfileSummary: String?
+    /// Display label of the selected reciprocity model captured at
+    /// start (PTIMER-171), e.g. `"App formula"`, `"Table"`, `"Ohzart"`.
+    /// Non-nil only when the user chose a non-default model whose
+    /// identity the authority qualifier cannot carry — official
+    /// alternates under a multi-model film, or a source-named
+    /// unofficial table. `nil` means the film's default model (or a
+    /// pre-PTIMER-171 snapshot), so older timers render unchanged.
+    public let selectedModelLabel: String?
 
     public init(
         cameraSlot: CameraSlotIdentity?,
@@ -74,7 +82,8 @@ public struct ExposureTimerIdentitySnapshot: Equatable, Hashable {
         filmProfileQualifier: String?,
         exposureSource: ExposureTimerSource,
         isOutsideManufacturerGuidance: Bool = false,
-        customProfileSummary: String? = nil
+        customProfileSummary: String? = nil,
+        selectedModelLabel: String? = nil
     ) {
         self.cameraSlot = cameraSlot
         self.filmDisplayName = filmDisplayName
@@ -82,5 +91,6 @@ public struct ExposureTimerIdentitySnapshot: Equatable, Hashable {
         self.exposureSource = exposureSource
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
+        self.selectedModelLabel = selectedModelLabel
     }
 }

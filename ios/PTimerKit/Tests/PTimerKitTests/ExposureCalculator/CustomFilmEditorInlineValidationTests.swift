@@ -9,8 +9,6 @@ import PTimerKit
 /// a separate red row that would push other rows down/up.
 final class CustomFilmEditorInlineValidationTests: XCTestCase {
 
-    // MARK: - Untouched empty new form
-
     func test_untouchedNewForm_returnsNil_forEveryField() {
         // Every field at its initial blank state: the inline
         // hints must stay suppressed across the whole form so the
@@ -42,108 +40,37 @@ final class CustomFilmEditorInlineValidationTests: XCTestCase {
         )
     }
 
-    // MARK: - Label
-
-    func test_missingLabel_returnsRequired() {
-        var form = makeFullyValidForm()
-        form.filmLabel = ""
-        XCTAssertEqual(
-            form.inlineValidationReason(for: .label, isEditing: false),
-            "Required"
-        )
-        // Other fields stay quiet for this isolated case.
-        XCTAssertNil(form.inlineValidationReason(for: .iso, isEditing: false))
-        XCTAssertNil(form.inlineValidationReason(for: .exponent, isEditing: false))
+    /// One invalid field at a time, against an otherwise valid form,
+    /// produces that field's compact inline hint (each invalid input ->
+    /// expected hint is a case row).
+    func test_invalidField_returnsExpectedCompactInlineHint() {
+        struct Case {
+            let name: String
+            let mutate: (inout CustomFilmEditorFormState) -> Void
+            let field: CustomFilmEditorField
+            let expected: String
+        }
+        let cases: [Case] = [
+            Case(name: "missing label", mutate: { $0.filmLabel = "" }, field: .label, expected: "Required"),
+            Case(name: "invalid ISO", mutate: { $0.isoText = "abc" }, field: .iso, expected: "Enter 1–100000"),
+            Case(name: "missing exponent", mutate: { $0.exponentText = "" }, field: .exponent, expected: "p is required"),
+            Case(name: "invalid exponent", mutate: { $0.exponentText = "abc" }, field: .exponent, expected: "p must be > 0"),
+            Case(name: "invalid reference Tm", mutate: { $0.baseTmText = "abc" }, field: .referenceTm, expected: "Tm₀ must be > 0"),
+            Case(name: "invalid corrected Tc", mutate: { $0.baseTcText = "abc" }, field: .correctedAtReference, expected: "Tc₀ must be > 0"),
+            Case(name: "invalid offset", mutate: { $0.offsetSecondsText = "-" }, field: .offset, expected: "b must be a finite duration"),
+            Case(name: "invalid no-correction", mutate: { $0.noCorrectionThroughText = "Unlimited" }, field: .noCorrectionThrough, expected: "Must be ≥ 0"),
+            Case(name: "source range below no-correction", mutate: { $0.noCorrectionThroughText = "1"; $0.validThroughText = "0.5" }, field: .sourceRangeThrough, expected: "Must be > No correction"),
+        ]
+        for c in cases {
+            var form = makeFullyValidForm()
+            c.mutate(&form)
+            XCTAssertEqual(
+                form.inlineValidationReason(for: c.field, isEditing: false),
+                c.expected,
+                "[\(c.name)] field \(c.field)"
+            )
+        }
     }
-
-    // MARK: - ISO
-
-    func test_invalidISO_returnsBoundedRangeHint() {
-        var form = makeFullyValidForm()
-        form.isoText = "abc"
-        let reason = form.inlineValidationReason(for: .iso, isEditing: false)
-        XCTAssertEqual(reason, "Enter 1–100000")
-    }
-
-    // MARK: - Exponent
-
-    func test_missingExponent_returnsRequired() {
-        var form = makeFullyValidForm()
-        form.exponentText = ""
-        XCTAssertEqual(
-            form.inlineValidationReason(for: .exponent, isEditing: false),
-            "p is required"
-        )
-    }
-
-    func test_invalidExponent_returnsCompactConstraintHint() {
-        var form = makeFullyValidForm()
-        form.exponentText = "abc"
-        XCTAssertEqual(
-            form.inlineValidationReason(for: .exponent, isEditing: false),
-            "p must be > 0"
-        )
-    }
-
-    // MARK: - Anchors
-
-    func test_invalidReferenceTm_returnsCompactConstraintHint() {
-        var form = makeFullyValidForm()
-        form.baseTmText = "abc"
-        XCTAssertEqual(
-            form.inlineValidationReason(for: .referenceTm, isEditing: false),
-            "Tm₀ must be > 0"
-        )
-    }
-
-    func test_invalidCorrectedAtReference_returnsCompactConstraintHint() {
-        var form = makeFullyValidForm()
-        form.baseTcText = "abc"
-        XCTAssertEqual(
-            form.inlineValidationReason(for: .correctedAtReference, isEditing: false),
-            "Tc₀ must be > 0"
-        )
-    }
-
-    // MARK: - Offset
-
-    func test_invalidOffset_returnsFiniteDurationHint() {
-        var form = makeFullyValidForm()
-        form.offsetSecondsText = "-"
-        XCTAssertEqual(
-            form.inlineValidationReason(for: .offset, isEditing: false),
-            "b must be a finite duration"
-        )
-    }
-
-    // MARK: - No-correction / source range
-
-    func test_invalidNoCorrectionThrough_returnsCompactConstraintHint() {
-        var form = makeFullyValidForm()
-        form.noCorrectionThroughText = "Unlimited"
-        XCTAssertEqual(
-            form.inlineValidationReason(
-                for: .noCorrectionThrough,
-                isEditing: false
-            ),
-            "Must be ≥ 0"
-        )
-    }
-
-    func test_invalidSourceRangeBelowNoCorrection_returnsCompactConstraintHint() {
-        var form = makeFullyValidForm()
-        form.noCorrectionThroughText = "1"
-        form.validThroughText = "0.5"
-        XCTAssertEqual(
-            form.inlineValidationReason(
-                for: .sourceRangeThrough,
-                isEditing: false
-            ),
-            "Must be > No correction"
-        )
-    }
-
-    // MARK: - Valid form returns nil per field
 
     func test_validForm_returnsNilForEveryField() {
         let form = makeFullyValidForm()
@@ -154,8 +81,6 @@ final class CustomFilmEditorInlineValidationTests: XCTestCase {
             )
         }
     }
-
-    // MARK: - Helpers
 
     private func makeFullyValidForm() -> CustomFilmEditorFormState {
         return CustomFilmEditorFormState(

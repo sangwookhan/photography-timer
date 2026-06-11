@@ -17,14 +17,18 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     }
 
     @MainActor
-    func testSetTargetShutterActivatesAndSurfacesValue() {
-        let viewModel = makeViewModel()
-
-        viewModel.setTargetShutter(120)
-
-        XCTAssertTrue(viewModel.isTargetShutterActive)
-        XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, 120, accuracy: 0.0001)
-        XCTAssertTrue(viewModel.canStartTargetShutterTimer)
+    func testSetTargetShutterAcceptsValidDurationsAndEnablesTimer() {
+        // Any positive duration (sub-second through multi-hour) is
+        // accepted: it activates, surfaces the value verbatim, and
+        // enables the target timer. Each value is a case row.
+        let cases: [TimeInterval] = [1, 120, 3600]
+        for seconds in cases {
+            let viewModel = makeViewModel()
+            viewModel.setTargetShutter(seconds)
+            XCTAssertTrue(viewModel.isTargetShutterActive, "\(seconds)s should activate")
+            XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, seconds, accuracy: 0.0001, "\(seconds)s value")
+            XCTAssertTrue(viewModel.canStartTargetShutterTimer, "\(seconds)s should enable timer")
+        }
     }
 
     @MainActor
@@ -184,27 +188,35 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - Timer integration
 
     @MainActor
-    func testStartTargetShutterTimerUsesTargetDuration() throws {
-        let viewModel = makeViewModel()
-        viewModel.baseShutter = 1
-        viewModel.ndStop = 6
-        viewModel.setTargetShutter(20 * 60)
-
-        viewModel.startTargetShutterTimer()
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 20 * 60, accuracy: 0.0001)
-        XCTAssertEqual(timer.exposureSource, .targetShutter)
+    func testStartTargetShutterTimerUsesTargetDurationForAnyLength() throws {
+        // The started timer's duration equals the target verbatim, with
+        // the target exposure source, across short and multi-hour values.
+        let cases: [TimeInterval] = [20 * 60, 8 * 3600]
+        for seconds in cases {
+            let viewModel = makeViewModel()
+            viewModel.setTargetShutter(seconds)
+            viewModel.startTargetShutterTimer()
+            let timer = try XCTUnwrap(viewModel.timers.first, "\(seconds)s timer")
+            XCTAssertEqual(timer.duration, seconds, accuracy: 0.0001, "\(seconds)s duration")
+            XCTAssertEqual(timer.exposureSource, .targetShutter, "\(seconds)s source")
+        }
     }
 
     @MainActor
-    func testStartTargetShutterTimerStampsCameraSlotIdentity() throws {
+    func testStartTargetShutterTimerStampsTargetMetadata() throws {
         let viewModel = makeViewModel()
-        viewModel.setTargetShutter(60)
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.ndStop = 6
+        viewModel.setTargetShutter(120)
 
         viewModel.startTargetShutterTimer()
 
+        // A digital target timer carries the target name prefix, a basis
+        // summary target segment, and the active camera slot identity.
         let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.name, "Target - 120s")
+        XCTAssertTrue(timer.basisSummary.contains("Target 120s"),
+                      "Basis summary should carry the target duration; got \(timer.basisSummary)")
         XCTAssertEqual(timer.cameraSlot?.id, viewModel.activeCameraSlotID)
     }
 
@@ -215,19 +227,6 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
         viewModel.startTargetShutterTimer()
 
         XCTAssertTrue(viewModel.timers.isEmpty)
-    }
-
-    @MainActor
-    func testStartTargetShutterTimerNamePrefixesTarget() throws {
-        let viewModel = makeViewModel()
-        viewModel.baseShutter = 1
-        viewModel.ndStop = 0
-        viewModel.setTargetShutter(60)
-
-        viewModel.startTargetShutterTimer()
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.name, "Target - 60s")
     }
 
     @MainActor
@@ -258,20 +257,6 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
         XCTAssertEqual(viewModel.timers.count, 2)
         let sources = viewModel.timers.compactMap(\.exposureSource).sorted { $0.rawValue < $1.rawValue }
         XCTAssertEqual(sources, [.digitalResult, .targetShutter].sorted { $0.rawValue < $1.rawValue })
-    }
-
-    @MainActor
-    func testTargetTimerBasisSummaryIncludesTargetSegment() throws {
-        let viewModel = makeViewModel()
-        viewModel.baseShutter = 1.0 / 30.0
-        viewModel.ndStop = 6
-        viewModel.setTargetShutter(120)
-
-        viewModel.startTargetShutterTimer()
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertTrue(timer.basisSummary.contains("Target 120s"),
-                      "Basis summary should carry the target duration; got \(timer.basisSummary)")
     }
 
     // MARK: - Per-camera-slot target state
@@ -352,23 +337,23 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     }
 
     @MainActor
-    func testInactiveSlotPageStateExposesStoredTarget() {
+    func testInactiveSlotPageExposesStoredTargetWhileActiveSlotStaysInactive() {
         let viewModel = makeViewModel()
-        viewModel.setTargetShutter(900) // Camera 1 → 15m
+        viewModel.setTargetShutter(7200) // Camera 1 → 2h
         viewModel.selectCameraSlot(.camera2)
-        viewModel.setTargetShutter(7200) // Camera 2 → 2h
 
-        // While Camera 2 is active, peeking at Camera 1's page state
-        // surfaces Camera 1's stored target (15m) — not the live
-        // active target (2h).
-        let inactivePageState = viewModel.cameraSlotPageState(for: .camera1)
-        XCTAssertEqual(inactivePageState.targetShutterSeconds ?? 0, 900, accuracy: 0.0001)
-
-        let inactiveDisplay = viewModel.targetShutterDisplayState(forPage: inactivePageState)
-        guard case .available(let availableState) = inactiveDisplay else {
+        // While Camera 2 is active (no target), peeking at Camera 1's
+        // page state surfaces its stored 2h target — both the seconds
+        // and the available display state — not Camera 2's live state.
+        let camera1Page = viewModel.cameraSlotPageState(for: .camera1)
+        XCTAssertEqual(camera1Page.targetShutterSeconds ?? 0, 7200, accuracy: 0.0001)
+        guard case .available(let camera1State) = viewModel.targetShutterDisplayState(forPage: camera1Page) else {
             return XCTFail("Inactive slot with stored target should produce an available display state")
         }
-        XCTAssertEqual(availableState.targetSeconds, 900, accuracy: 0.0001)
+        XCTAssertEqual(camera1State.targetSeconds, 7200, accuracy: 0.0001)
+
+        // Camera 2 is active with no target — its live display is inactive.
+        XCTAssertEqual(viewModel.targetShutterDisplayState, .unavailable(.inactive))
     }
 
     @MainActor
@@ -408,17 +393,6 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - Long target durations
 
     @MainActor
-    func testTargetShutterAcceptsOneHourDuration() {
-        let viewModel = makeViewModel()
-
-        viewModel.setTargetShutter(3600)
-
-        XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, 3600, accuracy: 0.0001)
-        XCTAssertTrue(viewModel.isTargetShutterActive)
-        XCTAssertTrue(viewModel.canStartTargetShutterTimer)
-    }
-
-    @MainActor
     func testTargetShutterAcceptsEightHourDuration() {
         let viewModel = makeViewModel()
         viewModel.baseShutter = 1
@@ -435,27 +409,12 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
         XCTAssertEqual(stopDifference.kind, .longerThanComparison)
     }
 
-    @MainActor
-    func testTargetShutterAcceptsOneSecondDuration() {
-        let viewModel = makeViewModel()
-
-        viewModel.setTargetShutter(1)
-
-        XCTAssertEqual(viewModel.targetShutterSeconds ?? 0, 1, accuracy: 0.0001)
-        XCTAssertTrue(viewModel.canStartTargetShutterTimer)
-    }
-
     // MARK: - Last-used target memory
 
     @MainActor
-    func testLastUsedTargetMemoryStartsNil() {
+    func testLastUsedTargetMemoryStartsNilThenTracksLatestSet() {
         let viewModel = makeViewModel()
         XCTAssertNil(viewModel.lastUsedTargetShutterSeconds)
-    }
-
-    @MainActor
-    func testLastUsedTargetMemoryUpdatesOnSet() {
-        let viewModel = makeViewModel()
 
         viewModel.setTargetShutter(120)
         XCTAssertEqual(viewModel.lastUsedTargetShutterSeconds ?? 0, 120, accuracy: 0.0001)
@@ -502,67 +461,27 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - Per-slot target reinforcement
 
     @MainActor
-    func testTargetSetOnCamera2DoesNotOverwriteCamera1Target() {
+    func testCamera2TargetWritesAndClearsDoNotAffectCamera1StoredTarget() {
         let viewModel = makeViewModel()
-
         viewModel.setTargetShutter(300) // Camera 1 → 5m
         viewModel.selectCameraSlot(.camera2)
-        viewModel.setTargetShutter(3600) // Camera 2 → 1h
 
-        // Camera 1's saved target must remain 5m on its inactive
-        // snapshot — the active write only touches the active slot.
-        let camera1Page = viewModel.cameraSlotPageState(for: .camera1)
-        XCTAssertEqual(camera1Page.targetShutterSeconds ?? 0, 300, accuracy: 0.0001,
-                       "Camera 1's stored target must not change when Camera 2 sets a different target")
-    }
-
-    @MainActor
-    func testTargetClearedOnCamera2DoesNotClearCamera1Target() {
-        let viewModel = makeViewModel()
-
-        viewModel.setTargetShutter(300)
-        viewModel.selectCameraSlot(.camera2)
+        // Setting Camera 2's target only touches the active slot — Camera
+        // 1's stored target stays 5m on its inactive snapshot.
         viewModel.setTargetShutter(600)
+        XCTAssertEqual(
+            viewModel.cameraSlotPageState(for: .camera1).targetShutterSeconds ?? 0,
+            300, accuracy: 0.0001,
+            "Camera 1's stored target must not change when Camera 2 sets a target"
+        )
 
-        viewModel.clearTargetShutter() // Clears Camera 2 only
-
-        let camera1Page = viewModel.cameraSlotPageState(for: .camera1)
-        XCTAssertEqual(camera1Page.targetShutterSeconds ?? 0, 300, accuracy: 0.0001,
-                       "Clearing Camera 2's target must not clear Camera 1's stored target")
-    }
-
-    @MainActor
-    func testInactivePageTargetDisplayStateMatchesStoredTarget() {
-        let viewModel = makeViewModel()
-        viewModel.setTargetShutter(7200) // Camera 1 → 2h
-        viewModel.selectCameraSlot(.camera2)
-
-        // While Camera 2 is active, peeking at Camera 1's page state
-        // surfaces Camera 1's stored 2h target, not Camera 2's
-        // (currently nil) live target.
-        let camera1Page = viewModel.cameraSlotPageState(for: .camera1)
-        let camera1Display = viewModel.targetShutterDisplayState(forPage: camera1Page)
-
-        guard case .available(let camera1State) = camera1Display else {
-            return XCTFail("Inactive Camera 1 with stored 2h target should produce an available state")
-        }
-        XCTAssertEqual(camera1State.targetSeconds, 7200, accuracy: 0.0001)
-
-        // Camera 2 is active and has no target — its display state
-        // should be inactive even while Camera 1 has one stored.
-        XCTAssertEqual(viewModel.targetShutterDisplayState, .unavailable(.inactive))
-    }
-
-    @MainActor
-    func testStartTargetShutterTimerFromEightHourTargetUsesFullDuration() throws {
-        let viewModel = makeViewModel()
-        viewModel.setTargetShutter(8 * 3600)
-
-        viewModel.startTargetShutterTimer()
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, 8 * 3600, accuracy: 0.0001)
-        XCTAssertEqual(timer.exposureSource, .targetShutter)
+        // Clearing Camera 2's target must not clear Camera 1's either.
+        viewModel.clearTargetShutter()
+        XCTAssertEqual(
+            viewModel.cameraSlotPageState(for: .camera1).targetShutterSeconds ?? 0,
+            300, accuracy: 0.0001,
+            "Clearing Camera 2's target must not clear Camera 1's stored target"
+        )
     }
 
     // MARK: - Helpers

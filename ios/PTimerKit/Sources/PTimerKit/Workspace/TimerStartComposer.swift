@@ -71,15 +71,21 @@ public struct TimerStartComposer {
         public let cameraSlot: CameraSlotIdentity?
         public let filmDisplayName: String?
         public let filmProfileQualifier: String?
+        /// Display label of the selected reciprocity model captured at
+        /// start (PTIMER-171). Non-nil only when the user chose a
+        /// non-default model whose identity the authority qualifier
+        /// alone cannot carry — see `compose` for the derivation rule.
+        public let selectedModelLabel: String?
         public let exposureSource: ExposureTimerSource?
         public let isOutsideManufacturerGuidance: Bool
         public let customProfileSummary: String?
-        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?) {
+        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?) {
             self.name = name
             self.basisSummary = basisSummary
             self.cameraSlot = cameraSlot
             self.filmDisplayName = filmDisplayName
             self.filmProfileQualifier = filmProfileQualifier
+            self.selectedModelLabel = selectedModelLabel
             self.exposureSource = exposureSource
             self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
             self.customProfileSummary = customProfileSummary
@@ -122,6 +128,34 @@ public struct TimerStartComposer {
             return Self.customProfileSummary(film: activeFilm, profile: activeProfile)
         }()
 
+        // PTIMER-171: snapshot the selected model's display label so a
+        // timer started from a non-default model under a multi-model
+        // film stays distinguishable after start / restore / clone.
+        // Only a deliberate override produces a label — nil means "the
+        // film's default model", which keeps default-path timers
+        // rendering exactly as before. Lower-authority overrides
+        // without a source-named `selectorLabel` stay nil too: their
+        // identity is already carried by the Unofficial / Custom
+        // qualifier, and an official-looking name must not displace
+        // that caution.
+        let selectedModelLabel: String? = {
+            guard captured, let override = input.selectedProfileOverride else {
+                return nil
+            }
+            if let selectorLabel = override.selectorLabel?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !selectorLabel.isEmpty {
+                return selectorLabel
+            }
+            switch override.source.authority {
+            case .official:
+                let trimmedName = override.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmedName.isEmpty ? nil : trimmedName
+            case .unofficial, .userDefined, .unknown:
+                return nil
+            }
+        }()
+
         // Outside-manufacturer-guidance applies only on the corrected
         // exposure start path. Adjusted-shutter / target-shutter
         // timers reflect calculator inputs, not the reciprocity
@@ -140,6 +174,7 @@ public struct TimerStartComposer {
             cameraSlot: captured ? input.activeCameraSlot : nil,
             filmDisplayName: activeFilm?.canonicalStockName,
             filmProfileQualifier: filmProfileQualifier,
+            selectedModelLabel: selectedModelLabel,
             exposureSource: input.source.timerExposureSource,
             isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
             customProfileSummary: customProfileSummary

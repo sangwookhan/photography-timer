@@ -56,16 +56,32 @@ public final class LockScreenTimerCoordinator {
 
         return LockScreenTimerTarget(
             representativeTimerID: timer.timer.id,
-            representativeTimerName: timer.timer.name,
+            representativeTimerName: lockScreenExposedName(for: timer.timer),
             representativeEndDate: timer.endDate,
             scheduledTargets: eligibleTargets.map {
                 ScheduledTimerTarget(
                     timerID: $0.timer.id,
-                    timerName: $0.timer.name,
+                    timerName: lockScreenExposedName(for: $0.timer),
                     endDate: $0.endDate
                 )
             }
         )
+    }
+
+    /// Lock-screen-exposed timer name (PTIMER-171). Default-model
+    /// timers keep `timer.name` byte-for-byte; a timer started from a
+    /// non-default reciprocity model appends its captured label so the
+    /// Live Activity / widget can distinguish e.g.
+    /// `"Tri-X 400 - 20m · App formula"` from the default
+    /// `"Tri-X 400 - 20m"`. Appended rather than inserted so the
+    /// composer-owned name shapes are never parsed here.
+    public static func lockScreenExposedName(for timer: RunningTimerItem) -> String {
+        guard let label = timer.selectedModelLabel?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !label.isEmpty else {
+            return timer.name
+        }
+        return "\(timer.name) · \(label)"
     }
 
     private static func eligibleRunningTimers(from timers: [RunningTimerItem]) -> [EligibleRunningTimer] {

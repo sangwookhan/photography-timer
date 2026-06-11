@@ -37,18 +37,27 @@ public enum TimerCardIdentityPresenter {
     }
 
     /// Inline film/digital descriptor. `"CHS 100 II"` when a film is
-    /// selected, `"CHS 100 II · Unofficial"` when an Unofficial
-    /// profile was chosen, `"No film"` otherwise. The separator
-    /// (`·`) and "No film" wording stay here so changing them never
-    /// requires editing the runtime snapshot type.
+    /// selected, `"CHS 100 II · App formula"` when a non-default model
+    /// was chosen (PTIMER-171), `"Portra 400 · Unofficial"` when only
+    /// the authority qualifier identifies the choice, `"No film"`
+    /// otherwise. A captured model label takes precedence over the
+    /// generic qualifier because it is strictly more specific (e.g.
+    /// `"Ohzart"` over `"Unofficial"`). The separator (`·`) and
+    /// "No film" wording stay here so changing them never requires
+    /// editing the runtime snapshot type.
     public static func filmDescriptor(for snapshot: ExposureTimerIdentitySnapshot) -> String {
         guard let filmName = snapshot.filmDisplayName, !filmName.isEmpty else {
             return "No film"
         }
+        let trimmedModelLabel = snapshot.selectedModelLabel?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedQualifier = snapshot.filmProfileQualifier?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if let qualifier = trimmedQualifier, !qualifier.isEmpty {
-            return "\(filmName) · \(qualifier)"
+        let modelSegment = [trimmedModelLabel, trimmedQualifier]
+            .compactMap { $0 }
+            .first { !$0.isEmpty }
+        if let modelSegment {
+            return "\(filmName) · \(modelSegment)"
         }
         return filmName
     }

@@ -1379,7 +1379,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             filmProfileQualifier: payload.filmProfileQualifier,
             exposureSource: payload.exposureSource,
             isOutsideManufacturerGuidance: payload.isOutsideManufacturerGuidance,
-            customProfileSummary: payload.customProfileSummary
+            customProfileSummary: payload.customProfileSummary,
+            selectedModelLabel: payload.selectedModelLabel
         )
     }
 

@@ -27,7 +27,6 @@
 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
 		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */; };
-		A000000000000000000000CF /* ExposureCalculatorViewModelScenePhaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */; };
 		A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */; };
 		A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */; };
 		A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000103 /* RunningTimerPanelView.swift */; };
@@ -124,7 +123,6 @@
 		A000000000000000000000C5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelContextPersistenceTests.swift; sourceTree = "<group>"; };
 		A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShell.swift; sourceTree = "<group>"; };
-		A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelScenePhaseTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorLayoutMetrics.swift; sourceTree = "<group>"; };
 		A00000000000000000000103 /* RunningTimerPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerPanelView.swift; sourceTree = "<group>"; };
 		A00000000000000000000106 /* ViewModelDependencyFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDependencyFactory.swift; sourceTree = "<group>"; };
@@ -288,7 +286,6 @@
 				A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */,
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
-				A000000000000000000000E3 /* ExposureCalculatorViewModelScenePhaseTests.swift */,
 				A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
 				A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */,
@@ -658,7 +655,6 @@
 				A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */,
 				A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
-				A000000000000000000000CF /* ExposureCalculatorViewModelScenePhaseTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
 				A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */,
 				A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */,

@@ -3,13 +3,19 @@ import Foundation
 import PTimerCore
 import PTimerKit
 
-/// Package-safe `TimerManaging` backed by the real, platform-neutral
-/// `TimerRuntime`. The app's concrete `TimerManager` is a thin OS wrapper
-/// whose `start/pause/resume/tick/reconcile/remove` are 1:1 delegations to
+/// Package-safe, **manual-tick** `TimerManaging` harness backed by the real,
+/// platform-neutral `TimerRuntime`. This is NOT an app `TimerManager`
+/// replacement: it has no RunLoop, so time advances only when a test calls
+/// `tick(now:)` (or supplies a moving `dateProvider`) — which is exactly what
+/// makes lifecycle tests deterministic off-simulator.
+///
+/// The app's concrete `TimerManager` is a thin OS wrapper whose
+/// `start/pause/resume/tick/reconcile/remove` are 1:1 delegations to
 /// `TimerRuntime`; this support type provides the same runtime semantics
 /// (including `tick(now:)`) without the RunLoop / UIKit / UserNotifications
-/// surface, so ViewModel suites that drive real timer lifecycle run via
-/// `swift test` off the simulator.
+/// surface, so ViewModel suites that drive real tick/pause/resume/complete
+/// behaviour run via `swift test`. Use this (not `FakeTimerManaging`) whenever
+/// a test asserts timer lifecycle.
 ///
 /// The initializer mirrors `TimerManager.init` exactly (the ignored
 /// `tickInterval` included) so relocating an app-hosted suite is a pure

@@ -13,21 +13,38 @@ import PTimerCore
 @MainActor
 final class CustomFilmEditorPreviewGraphTests: XCTestCase {
 
-    // MARK: - Axis labels match Details
-
-    func test_axisLabels_matchDetailsGraphPresenter() {
+    func test_axisLabelsAndTitle_matchDetailsGraphPresenter() {
         let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(
             for: makeValidForm()
         )
         XCTAssertEqual(state?.xAxisLabel, "Adjusted shutter")
         XCTAssertEqual(state?.yAxisLabel, "Corrected exposure")
+        XCTAssertEqual(state?.title, "Reciprocity Graph")
     }
 
-    func test_title_matchesDetailsGraphPresenter() {
-        let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(
-            for: makeValidForm()
-        )
-        XCTAssertEqual(state?.title, "Reciprocity Graph")
+    func test_graphHeader_suppressesFormulaText_forCustomAndAnchoredForms() {
+        // Custom power-law path
+        do {
+            let form = makeValidForm(exponent: "1.30")
+            let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(for: form)
+            XCTAssertNotNil(state, "Editor preview must still produce a graph state.")
+            XCTAssertNil(
+                state?.formulaDisplayText,
+                "Custom-path graph state must drop the in-header formula text so the shared Calculation Basis block is the single source."
+            )
+        }
+        // Anchored formula path
+        do {
+            let form = makeValidForm(
+                exponent: "1.0966",
+                baseTm: "0.1",
+                baseTc: "0.1",
+                offset: "0",
+                validThrough: "240"
+            )
+            let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(for: form)
+            XCTAssertNil(state?.formulaDisplayText)
+        }
     }
 
     // MARK: - Viewport range matches Details
@@ -105,36 +122,6 @@ final class CustomFilmEditorPreviewGraphTests: XCTestCase {
             identitySamples.isEmpty,
             "Curve must include identity (Tc=Tm) samples inside the no-correction zone."
         )
-    }
-
-    // MARK: - Graph header formula suppression
-
-    /// PTIMER-84 polish: the editor preview synthesizes a
-    /// user-defined-authority profile, and user-defined profiles
-    /// now render their formula text through the shared
-    /// `CalculationBasisPresenter` block between the graph and
-    /// the checkpoint table. The graph header itself must be
-    /// quiet on the custom path to avoid duplication.
-    func test_graphHeader_suppressesFormulaText_onCustomPath() {
-        let form = makeValidForm(exponent: "1.30")
-        let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(for: form)
-        XCTAssertNotNil(state, "Editor preview must still produce a graph state.")
-        XCTAssertNil(
-            state?.formulaDisplayText,
-            "Custom-path graph state must drop the in-header formula text so the shared Calculation Basis block is the single source."
-        )
-    }
-
-    func test_graphHeader_suppressesFormulaText_anchoredFormula() {
-        let form = makeValidForm(
-            exponent: "1.0966",
-            baseTm: "0.1",
-            baseTc: "0.1",
-            offset: "0",
-            validThrough: "240"
-        )
-        let state = CustomFilmEditorPreviewGraphPresenter.graphDisplayState(for: form)
-        XCTAssertNil(state?.formulaDisplayText)
     }
 
     /// The text the graph header used to render is still available

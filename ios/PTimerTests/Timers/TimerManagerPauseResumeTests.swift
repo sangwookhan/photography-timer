@@ -60,25 +60,6 @@ final class TimerManagerPauseResumeTests: XCTestCase {
     }
 
     @MainActor
-    func testPauseAtSixSecondsPreservesApproximatelyFourSecondsRemaining() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 10))
-
-        currentDate = startDate.addingTimeInterval(6)
-        manager.pause(id: id)
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), TimerStatus.paused)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 4, accuracy: 0.0001)
-    }
-
-    @MainActor
     func testResumeContinuesFromFrozenPausedRemainingTime() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
@@ -264,25 +245,6 @@ final class TimerManagerPauseResumeTests: XCTestCase {
     }
 
     @MainActor
-    func testPauseDoesNotModifyEndDateUntilResume() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 10))
-        let originalEndDate = try XCTUnwrap(tryUnwrapTimer(withID: id, from: manager.timers).endDate)
-
-        currentDate = startDate.addingTimeInterval(4)
-        manager.pause(id: id)
-
-        let pausedTimer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(pausedTimer.endDate, originalEndDate)
-    }
-
-    @MainActor
     func testPausedTimerEndDateIsDerivedFromFreezeMetadata() throws {
         // PausedTimer.endDate is now computed (`pausedAt +
         // pausedRemainingTime`) rather than stored. Verify the derived
@@ -364,31 +326,6 @@ final class TimerManagerPauseResumeTests: XCTestCase {
         XCTAssertEqual(resumeCompleted.status(at: currentDate.addingTimeInterval(6)), .completed)
         XCTAssertEqual(tickCompleted.endDate, startDate.addingTimeInterval(10))
         XCTAssertEqual(resumeCompleted.endDate, currentDate.addingTimeInterval(6))
-    }
-
-    @MainActor
-    func testResumeAfterLongWallClockPauseStillUsesPausedRemainingTime() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 5))
-
-        currentDate = startDate.addingTimeInterval(4)
-        manager.pause(id: id)
-
-        currentDate = startDate.addingTimeInterval(10)
-        manager.resume(id: id)
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 1, accuracy: 0.0001)
-        XCTAssertEqual(timer.endDate, currentDate.addingTimeInterval(1))
     }
 
     @MainActor

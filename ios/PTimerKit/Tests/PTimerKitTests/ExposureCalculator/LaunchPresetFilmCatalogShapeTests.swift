@@ -229,68 +229,27 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
 
     // MARK: - Explicit negative shape rejection
 
-    /// `ProfileShape.classify` shall reject every combination that is
-    /// not on the allow-list. These cases would slip past the bundled
-    /// catalog scan (because no shipped preset uses them today) but
-    /// would silently re-enable a calculation shape the policy does not
-    /// support. The explicit synthetic profiles below guard the
-    /// classifier itself.
-    func testClassifyRejectsOfficialFormulaPlusLimitedGuidance() {
-        let profile = MixedShapeFactory.officialFormulaPlusLimitedGuidance()
-        XCTAssertNil(ProfileShape.classify(profile))
+    /// ProfileShape.classify accepts only the official formula-only
+    /// shape and rejects every other rule/authority combination (the
+    /// synthetic mixed shapes guard the classifier itself). Each
+    /// shape -> expected classification is a case row.
+    func testClassifyAcceptsOfficialFormulaOnlyAndRejectsEveryOtherShape() {
+        struct Case { let name: String; let result: ProfileShape?; let expected: ProfileShape? }
+        let cases: [Case] = [
+            Case(name: "official formula + limited guidance", result: ProfileShape.classify(MixedShapeFactory.officialFormulaPlusLimitedGuidance()), expected: nil),
+            Case(name: "official limited guidance without threshold cap", result: ProfileShape.classify(MixedShapeFactory.officialLimitedGuidanceOnly()), expected: nil),
+            Case(name: "unofficial practical formula", result: ProfileShape.classify(MixedShapeFactory.unofficialFormulaOnly()), expected: nil),
+            Case(name: "unofficial + threshold rule", result: ProfileShape.classify(MixedShapeFactory.unofficialFormulaPlusThreshold()), expected: nil),
+            Case(name: "unofficial + limited guidance rule", result: ProfileShape.classify(MixedShapeFactory.unofficialFormulaPlusLimitedGuidance()), expected: nil),
+            Case(name: "user-defined authority", result: ProfileShape.classify(MixedShapeFactory.userDefinedFormulaOnly()), expected: nil),
+            Case(name: "unknown authority", result: ProfileShape.classify(MixedShapeFactory.unknownAuthorityFormulaOnly()), expected: nil),
+            Case(name: "official formula-only (allowed; PTIMER-160 canonical)", result: ProfileShape.classify(MixedShapeFactory.officialFormulaWithoutThreshold()), expected: .officialQuantifiedFormula),
+            Case(name: "official formula + threshold (PTIMER-160 retired)", result: ProfileShape.classify(MixedShapeFactory.officialFormulaPlusThreshold()), expected: nil),
+        ]
+        for c in cases {
+            XCTAssertEqual(c.result, c.expected, "[\(c.name)]")
+        }
     }
-
-    func testClassifyRejectsOfficialLimitedGuidanceWithoutThresholdCap() {
-        let profile = MixedShapeFactory.officialLimitedGuidanceOnly()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
-    func testClassifyRejectsUnofficialPracticalFormulaProfile() {
-        // Unofficial practical profiles are bundled outside the launch
-        // catalog (DomainSchema §13.3); the launch-shape classifier
-        // returns nil for every unofficial profile regardless of its
-        // rule combination.
-        let profile = MixedShapeFactory.unofficialFormulaOnly()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
-    func testClassifyRejectsUnofficialProfileCarryingThresholdRule() {
-        let profile = MixedShapeFactory.unofficialFormulaPlusThreshold()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
-    func testClassifyRejectsUnofficialProfileCarryingLimitedGuidanceRule() {
-        let profile = MixedShapeFactory.unofficialFormulaPlusLimitedGuidance()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
-    func testClassifyRejectsUserDefinedAuthority() {
-        let profile = MixedShapeFactory.userDefinedFormulaOnly()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
-    func testClassifyRejectsUnknownAuthority() {
-        let profile = MixedShapeFactory.unknownAuthorityFormulaOnly()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
-    /// PTIMER-160 made formula-only the canonical shape for formula
-    /// profiles; the companion threshold rule was retired. A
-    /// formula-only profile must now classify as
-    /// `officialQuantifiedFormula`.
-    func testClassifyAcceptsOfficialFormulaOnlyProfile() {
-        let profile = MixedShapeFactory.officialFormulaWithoutThreshold()
-        XCTAssertEqual(ProfileShape.classify(profile), .officialQuantifiedFormula)
-    }
-
-    /// PTIMER-160: a companion threshold rule on a formula profile is
-    /// no longer a valid shape — the formula owns its no-correction
-    /// guard.
-    func testClassifyRejectsOfficialFormulaPlusThresholdProfile() {
-        let profile = MixedShapeFactory.officialFormulaPlusThreshold()
-        XCTAssertNil(ProfileShape.classify(profile))
-    }
-
     // MARK: - Loader-level shape rejection
 
     /// Loader-level mirror of the classifier negative tests above. The

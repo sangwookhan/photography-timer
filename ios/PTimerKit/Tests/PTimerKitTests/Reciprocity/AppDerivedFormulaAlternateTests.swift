@@ -246,6 +246,54 @@ final class AppDerivedFormulaAlternateTests: XCTestCase {
         }
     }
 
+    /// The comparison's Source column must anchor on the row's
+    /// EXPLICIT published corrected time, even when the row lists a
+    /// stop delta or multiplier first. T-MAX 100's "10 s → +1/2 stop,
+    /// corrected 15 s" row regressed to the 2^0.5-derived 14.14 s
+    /// before the presenter applied its documented priority — which
+    /// inflated the displayed error to +0.139 stop and contradicted
+    /// the evaluated 0.054 stop residual.
+    @MainActor
+    func testComparisonSourceColumnPrefersExplicitCorrectedTime() throws {
+        let presenter = ReciprocityModelComparisonPresenter()
+
+        let tmax = try XCTUnwrap(accepted.first { $0.stock == "T-MAX 100" })
+        let tmaxTable = try XCTUnwrap(
+            presenter.comparisonSection(
+                for: try alternateProfile(tmax),
+                formatDuration: { String(format: "%.2fs", $0) }
+            )?.rows.first?.value
+        )
+        XCTAssertTrue(
+            tmaxTable.contains("15.00s"),
+            "T-MAX 100's 10 s row must anchor on the published corrected 15 s. Got:\n\(tmaxTable)"
+        )
+        XCTAssertTrue(
+            tmaxTable.contains("15.58s"),
+            "T-MAX 100's 10 s row must show the ≈15.58 s app value. Got:\n\(tmaxTable)"
+        )
+        XCTAssertTrue(
+            tmaxTable.contains("+0.054 stop"),
+            "T-MAX 100's 10 s row error must match the evaluated residual. Got:\n\(tmaxTable)"
+        )
+        XCTAssertFalse(
+            tmaxTable.contains("14.14s"),
+            "T-MAX 100's 10 s row must not fall back to the stop-delta-derived 14.14 s. Got:\n\(tmaxTable)"
+        )
+
+        let chs = try XCTUnwrap(accepted.first { $0.stock == "CHS 100 II" })
+        let chsTable = try XCTUnwrap(
+            presenter.comparisonSection(
+                for: try alternateProfile(chs),
+                formatDuration: { String(format: "%.2fs", $0) }
+            )?.rows.first?.value
+        )
+        XCTAssertTrue(
+            chsTable.contains("20.00s") && chsTable.contains("19.73s"),
+            "CHS 100 II's 8 s row must read published 20 s vs app ≈19.73 s. Got:\n\(chsTable)"
+        )
+    }
+
     // MARK: - Helpers
 
     private func alternateProfile(

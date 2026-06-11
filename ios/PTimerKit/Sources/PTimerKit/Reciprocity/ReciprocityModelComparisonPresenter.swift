@@ -129,22 +129,34 @@ public struct ReciprocityModelComparisonPresenter {
     /// corrected time, then a published multiplier, then a stop delta —
     /// the same source data the "Source reference" section renders, read
     /// here only to anchor the app-derived comparison.
+    ///
+    /// The priority is applied across ALL of the row's exposure
+    /// adjustments, not first-match: rows like T-MAX 100's
+    /// "10 s → +1/2 stop, corrected 15 s" list the stop delta before
+    /// the corrected time, and the comparison must anchor on the
+    /// published 15 s — not the 2^0.5-derived 14.1 s.
     private func publishedCorrectedSeconds(
         for evidence: ReciprocitySourceEvidenceRow,
         meteredSeconds: Double
     ) -> Double? {
+        var multiplierSeconds: Double?
+        var stopDeltaSeconds: Double?
         for adjustment in evidence.adjustments {
             guard case let .exposure(exposure) = adjustment else { continue }
             switch exposure {
             case let .correctedTime(mapping):
                 return mapping.correctedSeconds
             case let .multiplier(multiplier):
-                return meteredSeconds * multiplier.factor
+                if multiplierSeconds == nil {
+                    multiplierSeconds = meteredSeconds * multiplier.factor
+                }
             case let .stopDelta(stop):
-                return meteredSeconds * pow(2, stop.stopDelta)
+                if stopDeltaSeconds == nil {
+                    stopDeltaSeconds = meteredSeconds * pow(2, stop.stopDelta)
+                }
             }
         }
-        return nil
+        return multiplierSeconds ?? stopDeltaSeconds
     }
 
     private func signedPercent(_ value: Double) -> String {

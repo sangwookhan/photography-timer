@@ -24,4 +24,41 @@ public enum ReciprocitySourceEvidenceClassifier {
         }
         return hasNotRecommendedWarning && !hasExposureAdjustment
     }
+
+    /// Manufacturer stop-signal messages whose boundary the metered
+    /// exposure has reached or exceeded (PTIMER-169). Scans the
+    /// profile's guidance-boundary rows (see `isGuidanceBoundary`) and
+    /// returns their `notRecommended` warning messages so the
+    /// calculation-result presentation can surface the manufacturer's
+    /// own stop signal — e.g. Velvia 50's "64 sec is not recommended."
+    /// — at the point of use instead of only inside Film Details.
+    ///
+    /// Presentation-only, like the rest of this classifier: callers
+    /// enrich result text with the returned messages; the calculation
+    /// policy never reads them and no corrected exposure changes.
+    public static func reachedStopSignalMessages(
+        in profile: ReciprocityProfile,
+        meteredExposureSeconds: Double
+    ) -> [String] {
+        guard meteredExposureSeconds.isFinite else { return [] }
+        return profile.sourceEvidence
+            .filter(isGuidanceBoundary)
+            .filter { boundarySeconds(of: $0) <= meteredExposureSeconds }
+            .flatMap { row in
+                row.adjustments.compactMap { adjustment -> String? in
+                    guard case let .warning(warning) = adjustment,
+                          warning.severity == .notRecommended else { return nil }
+                    return warning.message
+                }
+            }
+    }
+
+    private static func boundarySeconds(of row: ReciprocitySourceEvidenceRow) -> Double {
+        switch row.meteredExposure {
+        case let .exactSeconds(seconds):
+            return seconds
+        case let .range(range):
+            return range.minimumSeconds
+        }
+    }
 }

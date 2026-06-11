@@ -93,29 +93,71 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
     }
 
     func testEffectiveModelBasisInfersManufacturerTableForFormulaWithSourceEvidence() throws {
-        // Provia 100F ships as a converted-formula profile with
-        // `sourceEvidence` but does not declare `modelBasis`. The
-        // inferred basis treats source-evidence + formula as a
-        // table-origin source converted to a derived guarded formula.
-        // (T-MAX 100 previously covered this case but migrated to an
-        // explicit table model in PTIMER-168.)
-        let film = try XCTUnwrap(film(named: "Provia 100F"))
-        XCTAssertNil(film.profiles[0].modelBasis)
-        XCTAssertFalse(film.profiles[0].sourceEvidence.isEmpty)
+        // A converted-formula profile with `sourceEvidence` and no
+        // declared `modelBasis` infers as a table-origin source
+        // converted to a derived guarded formula. (Provia 100F
+        // previously covered this case but declared an explicit basis
+        // in PTIMER-169, so the inference contract is pinned on a
+        // fixture.)
+        let profile = ReciprocityProfile(
+            id: "inference.formula-with-evidence",
+            name: "Inference probe",
+            source: officialSource(),
+            rules: [
+                .formula(
+                    FormulaReciprocityRule(
+                        formula: ReciprocityFormula(
+                            exponent: 1.3,
+                            noCorrectionThroughSeconds: 1
+                        )
+                    )
+                ),
+            ],
+            sourceEvidence: [
+                ReciprocitySourceEvidenceRow(
+                    meteredExposure: .exactSeconds(4),
+                    adjustments: [
+                        .exposure(.correctedTime(CorrectedTimeMapping(
+                            meteredSeconds: 4,
+                            correctedSeconds: 8
+                        ))),
+                    ]
+                ),
+            ]
+        )
+        XCTAssertNil(profile.modelBasis)
 
-        let basis = film.profiles[0].effectiveModelBasis
+        let basis = profile.effectiveModelBasis
         XCTAssertEqual(basis.sourceModel, .manufacturerTable)
         XCTAssertEqual(basis.calculationModel, .guardedFormula)
     }
 
     func testEffectiveModelBasisInfersLimitedGuidanceForThresholdPlusLimitedGuidanceProfile() throws {
-        // Portra 400 ships as threshold + limited-guidance and does
-        // not declare `modelBasis`. The inferred basis must classify
-        // it as manufacturer limited guidance.
-        let film = try XCTUnwrap(film(named: "Portra 400"))
-        XCTAssertNil(film.profiles[0].modelBasis)
+        // A threshold + limited-guidance profile with no declared
+        // `modelBasis` infers as manufacturer limited guidance.
+        // (Portra 400 previously covered this case but declared an
+        // explicit basis in PTIMER-169, so the inference contract is
+        // pinned on a fixture.)
+        let profile = ReciprocityProfile(
+            id: "inference.threshold-limited",
+            name: "Inference probe",
+            source: officialSource(),
+            rules: [
+                .threshold(
+                    ThresholdReciprocityRule(
+                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
+                    )
+                ),
+                .limitedGuidance(
+                    LimitedGuidanceReciprocityRule(
+                        appliesWhenMetered: ReciprocityTimeRange(minimumSeconds: 1)
+                    )
+                ),
+            ]
+        )
+        XCTAssertNil(profile.modelBasis)
 
-        let basis = film.profiles[0].effectiveModelBasis
+        let basis = profile.effectiveModelBasis
         XCTAssertEqual(basis.sourceModel, .manufacturerLimitedGuidance)
         XCTAssertEqual(basis.calculationModel, .limitedGuidance)
     }
@@ -504,9 +546,8 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
     // MARK: - Range-guidance source model compatibility
 
     /// PTIMER-163 lists `manufacturerRangeGuidance` as a representable
-    /// source shape (e.g. Rollei RETRO 80S's "1 to 2 sec" row). No
-    /// shipped profile declares this value yet; the fixture-level
-    /// round-trip pins the contract that the loader will accept it on
+    /// source shape; PTIMER-169 ships it on Acros II. The fixture-level
+    /// round-trip pins the contract that the loader accepts it on
     /// an otherwise valid official manufacturer profile.
     func testLoaderAcceptsManufacturerRangeGuidanceSourceModelOnFormulaProfile() throws {
         let probeFilm = try shapeProbeFilm(

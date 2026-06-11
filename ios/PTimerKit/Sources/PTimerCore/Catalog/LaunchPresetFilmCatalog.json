@@ -1062,6 +1062,10 @@
     "profiles": [
       {
         "id": "kodak-portra-160-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
         "name": "Official threshold guidance",
         "notes": [],
         "rules": [
@@ -1121,6 +1125,10 @@
     "profiles": [
       {
         "id": "kodak-portra-400-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
         "name": "Official threshold guidance",
         "notes": [],
         "rules": [
@@ -1180,6 +1188,10 @@
     "profiles": [
       {
         "id": "kodak-gold-200-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
         "name": "Official threshold guidance",
         "notes": [],
         "rules": [
@@ -1239,6 +1251,10 @@
     "profiles": [
       {
         "id": "kodak-ultra-max-400-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
         "name": "Official threshold guidance",
         "notes": [],
         "rules": [
@@ -1299,6 +1315,10 @@
     "profiles": [
       {
         "id": "kodak-ektachrome-e100-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
         "name": "Official threshold and 120 sec filtration guidance",
         "notes": [],
         "rules": [
@@ -1366,6 +1386,10 @@
     "profiles": [
       {
         "id": "fujifilm-acros-ii-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerRangeGuidance"
+        },
         "name": "Official constant correction across published 120–1000 s range",
         "notes": [],
         "rules": [
@@ -1437,6 +1461,10 @@
     "profiles": [
       {
         "id": "fujifilm-velvia-50-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official formula anchored to 1 s threshold",
         "notes": [],
         "rules": [
@@ -1603,6 +1631,10 @@
     "profiles": [
       {
         "id": "fujifilm-velvia-100-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official formula anchored to 60 s threshold",
         "notes": [],
         "rules": [
@@ -1703,6 +1735,10 @@
     "profiles": [
       {
         "id": "fujifilm-provia-100f-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official formula anchored to 240 s reference",
         "notes": [],
         "rules": [
@@ -2526,6 +2562,10 @@
     "profiles": [
       {
         "id": "rollei-retro-80s-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official log-log formula fit through published quantified rows",
         "notes": [],
         "rules": [
@@ -2689,6 +2729,10 @@
     "profiles": [
       {
         "id": "rollei-superpan-200-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official log-log formula fit through published quantified rows",
         "notes": [],
         "rules": [
@@ -3026,6 +3070,10 @@
     "profiles": [
       {
         "id": "adox-cms-20-ii-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
         "name": "Official log-log formula anchored to 1 s and 10 s reference points",
         "notes": [],
         "rules": [

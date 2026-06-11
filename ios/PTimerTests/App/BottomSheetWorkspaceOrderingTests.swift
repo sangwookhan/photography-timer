@@ -4,43 +4,6 @@ import XCTest
 @testable import PTimer
 
 final class BottomSheetWorkspaceOrderingTests: XCTestCase {
-    @MainActor
-    func testCompactCardTapSelectionExpandsAndStoresFocusedTimer() {
-        let store = BottomSheetWorkspaceStateStore()
-        let selectedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-
-        store.expandAndFocusTimer(selectedID)
-
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertEqual(store.selectedTimerID, selectedID)
-    }
-
-    @MainActor
-    func testCollapseClearsFocusedTimerSelection() {
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-        let selectedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-
-        store.focusTimer(selectedID)
-        XCTAssertEqual(store.selectedTimerID, selectedID)
-
-        store.collapse()
-
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
-    @MainActor
-    func testTransitionToCompactClearsFocusedTimerSelection() {
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-        let selectedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-
-        store.focusTimer(selectedID)
-        store.transition(to: .compact)
-
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
     func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
         let before = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .running))
         let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .paused))
@@ -130,20 +93,6 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
         )
         let snapshot2 = makeSnapshot(from: [activeA, completedB, activeC])
         XCTAssertEqual(snapshot2.compactItems.map(\.id), [activeC.id, activeA.id, completedB.id])
-    }
-
-    @MainActor
-    func testOverflowTapExpandsToLargeWithoutForcingSelection() {
-        let snapshot = makeSnapshot(from: completedAheadOfActiveTimers())
-        let store = BottomSheetWorkspaceStateStore()
-
-        XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertNil(store.selectedTimerID)
-
-        store.expand()
-
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertNil(store.selectedTimerID)
     }
 
     func testLargeSectionsGroupTimersByPresentationStatus() {

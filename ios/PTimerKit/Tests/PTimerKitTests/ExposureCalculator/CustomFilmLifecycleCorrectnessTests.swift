@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Lifecycle correctness coverage. Pins selection restore,
 /// inactive-slot scrub on delete, and persistence sanitation so
@@ -205,7 +204,7 @@ final class CustomFilmLifecycleCorrectnessTests: XCTestCase {
     ) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             contextPersistenceStore: calculatorContextStore,
             cameraSlotSessionPersistenceStore: sessionStore,
             customFilmLibrary: library

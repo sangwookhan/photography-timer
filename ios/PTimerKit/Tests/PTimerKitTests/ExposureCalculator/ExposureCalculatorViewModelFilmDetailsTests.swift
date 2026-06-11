@@ -432,9 +432,12 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
 
         XCTAssertEqual(details.summary.badgeText, "Beyond source range")
         XCTAssertEqual(details.summary.summaryText, "Beyond source range")
+        // PTIMER-169: 128 s sits past Velvia 50's published 64 s
+        // not-recommended boundary, so the manufacturer stop signal
+        // leads the generic beyond-source-range copy.
         XCTAssertEqual(
             details.summary.detailText,
-            "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
+            "Manufacturer guidance: 64 sec is not recommended. Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
         )
         XCTAssertEqual(details.currentResult.layout, .comparison)
         XCTAssertEqual(details.currentResult.adjustedShutter.valueText, "02:08")

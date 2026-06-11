@@ -8,90 +8,46 @@ import PTimerKit
 /// reason-aware message.
 final class CustomFilmEditorPreviewDiagnoseTests: XCTestCase {
 
-    func test_diagnose_validForm_returnsNil() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "1",
-            baseTcText: "1",
-            offsetSecondsText: "",
-            noCorrectionThroughText: "1",
-            validThroughText: ""
-        )
-        XCTAssertNil(CustomFilmEditorPreviewPresenter.diagnose(form: form))
+    /// diagnose(form:) maps each form state to its recovery reason
+    /// (nil for a valid form, the neutral .emptyExponent for a blank
+    /// new form, and a field-specific reason for each invalid field).
+    func test_diagnose_returnsExpectedReasonPerFormState() {
+        typealias Reason = CustomFilmEditorPreviewPresenter.InvalidReason
+        struct Case {
+            let name: String
+            let build: () -> CustomFilmEditorFormState
+            let expected: Reason?
+        }
+        let cases: [Case] = [
+            Case(name: "valid", build: {
+                CustomFilmEditorFormState(
+                    exponentText: "1.30", baseTmText: "1", baseTcText: "1",
+                    offsetSecondsText: "", noCorrectionThroughText: "1", validThroughText: ""
+                )
+            }, expected: nil),
+            Case(name: "empty exponent (neutral)", build: { CustomFilmEditorFormState() }, expected: .emptyExponent),
+            Case(name: "invalid exponent", build: { CustomFilmEditorFormState(exponentText: "abc") }, expected: .invalidExponent),
+            Case(name: "invalid baseTm", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "abc")
+            }, expected: .invalidBaseTm),
+            Case(name: "invalid baseTc", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", baseTcText: "abc")
+            }, expected: .invalidBaseTc),
+            Case(name: "invalid offset", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", offsetSecondsText: "-")
+            }, expected: .invalidOffset),
+            Case(name: "source range below no-correction", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", noCorrectionThroughText: "1", validThroughText: "0.5")
+            }, expected: .invalidSourceRange),
+        ]
+        for c in cases {
+            XCTAssertEqual(
+                CustomFilmEditorPreviewPresenter.diagnose(form: c.build()),
+                c.expected,
+                "[\(c.name)] diagnose reason"
+            )
+        }
     }
-
-    // MARK: - Empty / neutral state
-
-    func test_diagnose_emptyExponent_isNeutralReason() {
-        // Brand-new editor form: exponent blank, everything else
-        // at documented defaults. Diagnose must return a neutral
-        // `.emptyExponent` so the view can render a placeholder
-        // message instead of red error styling.
-        let form = CustomFilmEditorFormState()
-        XCTAssertEqual(
-            CustomFilmEditorPreviewPresenter.diagnose(form: form),
-            .emptyExponent
-        )
-    }
-
-    // MARK: - Per-field invalid reasons
-
-    func test_diagnose_invalidExponent_returnsExponentReason() {
-        let form = CustomFilmEditorFormState(exponentText: "abc")
-        XCTAssertEqual(
-            CustomFilmEditorPreviewPresenter.diagnose(form: form),
-            .invalidExponent
-        )
-    }
-
-    func test_diagnose_invalidBaseTm_returnsBaseTmReason() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "abc"
-        )
-        XCTAssertEqual(
-            CustomFilmEditorPreviewPresenter.diagnose(form: form),
-            .invalidBaseTm
-        )
-    }
-
-    func test_diagnose_invalidBaseTc_returnsBaseTcReason() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTcText: "abc"
-        )
-        XCTAssertEqual(
-            CustomFilmEditorPreviewPresenter.diagnose(form: form),
-            .invalidBaseTc
-        )
-    }
-
-    func test_diagnose_invalidOffset_returnsOffsetReason() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            offsetSecondsText: "-"
-        )
-        XCTAssertEqual(
-            CustomFilmEditorPreviewPresenter.diagnose(form: form),
-            .invalidOffset
-        )
-    }
-
-    func test_diagnose_invalidSourceRangeBelowNoCorrection_returnsSourceRangeReason() {
-        // Source range = 0.5s is below the no-correction threshold
-        // of 1s, which the validator rejects.
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            noCorrectionThroughText: "1",
-            validThroughText: "0.5"
-        )
-        XCTAssertEqual(
-            CustomFilmEditorPreviewPresenter.diagnose(form: form),
-            .invalidSourceRange
-        )
-    }
-
-    // MARK: - Display message wording
 
     func test_displayMessage_usesSymbolAnchoredVocabulary() {
         // Anchor reasons use the same symbol-anchored vocabulary

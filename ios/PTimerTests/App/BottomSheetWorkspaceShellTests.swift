@@ -20,299 +20,288 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         )
     }
 
-    // MARK: - State store (closed/full-screen Timers window)
-
-    @MainActor
-    func testStateStoreDefaultsToCompact() {
-        let store = BottomSheetWorkspaceStateStore()
-
-        XCTAssertEqual(store.detent, .compact)
-    }
-
-    @MainActor
-    func testStateStoreTransitionsBetweenCompactAndLargeDetents() {
-        let store = BottomSheetWorkspaceStateStore()
-
-        store.transition(to: .large)
-        XCTAssertEqual(store.detent, .large)
-
-        store.transition(to: .compact)
-        XCTAssertEqual(store.detent, .compact)
-    }
-
-    @MainActor
-    func testStateStoreExpandAndCollapseDriveTimersWindowPresentation() {
-        let store = BottomSheetWorkspaceStateStore()
-
-        XCTAssertFalse(store.isExpanded)
-
-        store.expand()
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertTrue(store.isExpanded)
-
-        store.collapse()
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertFalse(store.isExpanded)
-    }
-
-    @MainActor
-    func testStateStoreFocusedTimerSurvivesUntilCollapse() {
-        let store = BottomSheetWorkspaceStateStore()
-        let id = UUID()
-
-        store.expandAndFocusTimer(id)
-        XCTAssertEqual(store.selectedTimerID, id)
-        XCTAssertTrue(store.isExpanded)
-
-        store.collapse()
-        XCTAssertNil(store.selectedTimerID)
-    }
-
-    // MARK: - PTIMER-126: Open-focus routing
-
-    @MainActor
-    func testExpandAndFocusActiveTimerSetsActiveSectionFocusWithHighlight() {
-        let store = BottomSheetWorkspaceStateStore()
-        let id = UUID()
-
-        store.expandAndFocusActiveTimer(id)
-
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: id))
-        XCTAssertEqual(
-            store.selectedTimerID,
-            id,
-            "Highlight id is still surfaced through the back-compat selectedTimerID accessor."
-        )
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    @MainActor
-    func testExpandFocusingActiveSectionSetsActiveSectionWithoutHighlight() {
-        let store = BottomSheetWorkspaceStateStore()
-
-        store.expandFocusingActiveSection()
-
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: nil))
-        XCTAssertNil(store.selectedTimerID)
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    @MainActor
-    func testExpandFocusingCompletedSectionSetsCompletedSectionFocus() {
-        let store = BottomSheetWorkspaceStateStore()
-
-        store.expandFocusingCompletedSection()
-
-        XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
-        XCTAssertNil(
-            store.selectedTimerID,
-            "Section focus must not surface as an active-timer id."
-        )
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    @MainActor
-    func testCollapseClearsOpenFocus() {
-        let store = BottomSheetWorkspaceStateStore()
-        store.expandFocusingCompletedSection()
-        XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
-
-        store.collapse()
-
-        XCTAssertEqual(store.openFocus, .none)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
-    @MainActor
-    func testTimersOpenFocusActiveTimerIDProjection() {
-        let id = UUID()
-
-        XCTAssertEqual(
-            TimersOpenFocus.activeSection(highlightedTimerID: id).activeTimerID,
-            id
-        )
-        XCTAssertNil(TimersOpenFocus.activeSection(highlightedTimerID: nil).activeTimerID)
-        XCTAssertNil(TimersOpenFocus.recentlyCompletedSection.activeTimerID)
-        XCTAssertNil(TimersOpenFocus.none.activeTimerID)
-    }
-
-    // MARK: - PTIMER-126: Compact card tap routing
-
-    @MainActor
-    func testCompactCardTapOnActiveTimerFocusesActiveSectionWithHighlight() {
-        let store = BottomSheetWorkspaceStateStore()
-        let timer = bottomSheetSecondsScaleTimer()
-        let snapshot = makeBottomSheetSnapshot(from: [timer])
-
-        ExposureCalculatorScreen.handleCompactCardTap(
-            id: timer.id,
-            in: snapshot,
-            store: store
-        )
-
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: timer.id))
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    @MainActor
-    func testCompactCardTapOnPausedTimerFocusesActiveSectionWithHighlight() {
-        let store = BottomSheetWorkspaceStateStore()
-        let pausedTimer = bottomSheetPausedProgressTimer()
-        let snapshot = makeBottomSheetSnapshot(from: [pausedTimer])
-
-        ExposureCalculatorScreen.handleCompactCardTap(
-            id: pausedTimer.id,
-            in: snapshot,
-            store: store
-        )
-
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: pausedTimer.id))
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    /// PTIMER-126 fix: tapping a completed compact card must land
-    /// the full-screen window on the Recently Completed section
-    /// header, not on the completed row. Otherwise scrolling the
-    /// row to top hides the section title and the `Clear` button.
-    @MainActor
-    func testCompactCardTapOnCompletedTimerFocusesRecentlyCompletedSection() {
-        let store = BottomSheetWorkspaceStateStore()
-        let completedTimer = bottomSheetSampleTimers().first { $0.status == .completed }!
-        let snapshot = makeBottomSheetSnapshot(from: [completedTimer])
-
-        ExposureCalculatorScreen.handleCompactCardTap(
-            id: completedTimer.id,
-            in: snapshot,
-            store: store
-        )
-
-        XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
-        XCTAssertNil(
-            store.selectedTimerID,
-            "Completed-card tap must not select the completed row as an active focus."
-        )
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    /// Mixed snapshot: tapping the active card focuses the active
-    /// section (highlighting the row); tapping the completed card
-    /// focuses the completed section header. Both flows leave the
-    /// store expanded.
-    @MainActor
-    func testCompactCardTapInMixedSnapshotRoutesByStatus() {
-        let store = BottomSheetWorkspaceStateStore()
-        let active = bottomSheetSecondsScaleTimer()
-        let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
-        let snapshot = makeBottomSheetSnapshot(from: [active, completed])
-
-        ExposureCalculatorScreen.handleCompactCardTap(
-            id: active.id,
-            in: snapshot,
-            store: store
-        )
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: active.id))
-
-        store.collapse()
-        ExposureCalculatorScreen.handleCompactCardTap(
-            id: completed.id,
-            in: snapshot,
-            store: store
-        )
-        XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
-    }
-
-    @MainActor
-    func testOverflowTapRoutesToCompletedSectionWhenOnlyCompletedRemain() {
-        let store = BottomSheetWorkspaceStateStore()
-        let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
-        let snapshot = makeBottomSheetSnapshot(from: [completed])
-
-        ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
-
-        XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    @MainActor
-    func testOverflowTapRoutesToActiveSectionWhenAnyActiveTimerRemains() {
-        let store = BottomSheetWorkspaceStateStore()
-        let active = bottomSheetSecondsScaleTimer()
-        let snapshot = makeBottomSheetSnapshot(from: [active])
-
-        ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
-
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: nil))
-        XCTAssertTrue(store.isExpanded)
-    }
-
-    @MainActor
-    func testOverflowTapInMixedSnapshotPrefersActiveSection() {
-        let store = BottomSheetWorkspaceStateStore()
-        let active = bottomSheetSecondsScaleTimer()
-        let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
-        let snapshot = makeBottomSheetSnapshot(from: [active, completed])
-
-        ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
-
-        XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: nil))
-    }
-
     /// The workspace tags both section headers with stable scroll
     /// ids so `applyFocusIfNeeded` can scroll the section title
     /// (and, for the completed section, `Clear`) to the top
     /// instead of scrolling a row.
+
+    @MainActor
+    func testStateStoreLifecycleDrivesDetentFocusAndOpenFocusClearing() {
+        // Defaults to compact
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+
+            XCTAssertEqual(store.detent, .compact)
+        }
+
+        // Detent transitions both ways
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+
+            store.transition(to: .large)
+            XCTAssertEqual(store.detent, .large)
+
+            store.transition(to: .compact)
+            XCTAssertEqual(store.detent, .compact)
+        }
+
+        // expand()/collapse() drive the presentation flag
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+
+            XCTAssertFalse(store.isExpanded)
+
+            store.expand()
+            XCTAssertEqual(store.detent, .large)
+            XCTAssertTrue(store.isExpanded)
+
+            store.collapse()
+            XCTAssertEqual(store.detent, .compact)
+            XCTAssertFalse(store.isExpanded)
+        }
+
+        // A focused timer survives until collapse clears it
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let id = UUID()
+
+            store.expandAndFocusTimer(id)
+            XCTAssertEqual(store.selectedTimerID, id)
+            XCTAssertTrue(store.isExpanded)
+
+            store.collapse()
+            XCTAssertNil(store.selectedTimerID)
+        }
+
+        // Collapsing clears section open-focus
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            store.expandFocusingCompletedSection()
+            XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
+
+            store.collapse()
+
+            XCTAssertEqual(store.openFocus, .none)
+            XCTAssertNil(store.selectedTimerID)
+        }
+
+        // expand() alone does not force a timer selection
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            store.expand()
+            XCTAssertEqual(store.detent, .large)
+            XCTAssertNil(store.selectedTimerID)
+        }
+
+        // Transitioning to compact (not only collapse()) clears focus
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            store.transition(to: .large)
+            let id = UUID()
+            store.focusTimer(id)
+            XCTAssertEqual(store.selectedTimerID, id)
+            store.transition(to: .compact)
+            XCTAssertNil(store.selectedTimerID)
+        }
+    }
+
+    /// Open-focus routing: expanding to a section sets the matching
+    /// TimersOpenFocus (with/without highlight) and never surfaces a
+    /// section focus as an active-timer id.
+    @MainActor
+    func testExpandOpenFocusRoutesBySectionWithAndWithoutHighlight() {
+        // Active timer -> active section, highlighted
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let id = UUID()
+
+            store.expandAndFocusActiveTimer(id)
+
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: id))
+            XCTAssertEqual(
+                store.selectedTimerID,
+                id,
+                "Highlight id is still surfaced through the back-compat selectedTimerID accessor."
+            )
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // Active section -> active section, no highlight
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+
+            store.expandFocusingActiveSection()
+
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: nil))
+            XCTAssertNil(store.selectedTimerID)
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // Completed section -> recently completed
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+
+            store.expandFocusingCompletedSection()
+
+            XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
+            XCTAssertNil(
+                store.selectedTimerID,
+                "Section focus must not surface as an active-timer id."
+            )
+            XCTAssertTrue(store.isExpanded)
+        }
+    }
+
+    /// Compact-card tap routing by status. PTIMER-126 fix: a completed
+    /// card focuses the Recently Completed section header (not the row,
+    /// which would hide the section title and the Clear button).
+    @MainActor
+    func testCompactCardTapRoutesByStatusIncludingCompletedSectionFix() {
+        // Active -> active section, highlighted
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let timer = bottomSheetSecondsScaleTimer()
+            let snapshot = makeBottomSheetSnapshot(from: [timer])
+
+            ExposureCalculatorScreen.handleCompactCardTap(
+                id: timer.id,
+                in: snapshot,
+                store: store
+            )
+
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: timer.id))
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // Paused -> active section, highlighted
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let pausedTimer = bottomSheetPausedProgressTimer()
+            let snapshot = makeBottomSheetSnapshot(from: [pausedTimer])
+
+            ExposureCalculatorScreen.handleCompactCardTap(
+                id: pausedTimer.id,
+                in: snapshot,
+                store: store
+            )
+
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: pausedTimer.id))
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // PTIMER-126: completed -> recently completed section header
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let completedTimer = bottomSheetSampleTimers().first { $0.status == .completed }!
+            let snapshot = makeBottomSheetSnapshot(from: [completedTimer])
+
+            ExposureCalculatorScreen.handleCompactCardTap(
+                id: completedTimer.id,
+                in: snapshot,
+                store: store
+            )
+
+            XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
+            XCTAssertNil(
+                store.selectedTimerID,
+                "Completed-card tap must not select the completed row as an active focus."
+            )
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // Mixed snapshot routes each card by status
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let active = bottomSheetSecondsScaleTimer()
+            let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
+            let snapshot = makeBottomSheetSnapshot(from: [active, completed])
+
+            ExposureCalculatorScreen.handleCompactCardTap(
+                id: active.id,
+                in: snapshot,
+                store: store
+            )
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: active.id))
+
+            store.collapse()
+            ExposureCalculatorScreen.handleCompactCardTap(
+                id: completed.id,
+                in: snapshot,
+                store: store
+            )
+            XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
+        }
+    }
+
+    /// Overflow tap routing: lands on the active section when any
+    /// active timer remains, otherwise the recently completed section.
+    @MainActor
+    func testOverflowTapRoutesToActiveSectionOtherwiseCompleted() {
+        // Only completed -> recently completed
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
+            let snapshot = makeBottomSheetSnapshot(from: [completed])
+
+            ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
+
+            XCTAssertEqual(store.openFocus, .recentlyCompletedSection)
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // Any active -> active section
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let active = bottomSheetSecondsScaleTimer()
+            let snapshot = makeBottomSheetSnapshot(from: [active])
+
+            ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
+
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: nil))
+            XCTAssertTrue(store.isExpanded)
+        }
+
+        // Mixed -> prefers active section
+        do {
+            let store = BottomSheetWorkspaceStateStore()
+            let active = bottomSheetSecondsScaleTimer()
+            let completed = bottomSheetSampleTimers().first { $0.status == .completed }!
+            let snapshot = makeBottomSheetSnapshot(from: [active, completed])
+
+            ExposureCalculatorScreen.handleOverflowTap(in: snapshot, store: store)
+
+            XCTAssertEqual(store.openFocus, .activeSection(highlightedTimerID: nil))
+        }
+    }
+
+    /// hasTimerPresentation gates the timer chrome: false for an empty
+    /// snapshot, true when any (running or completed-only) timer exists.
+    func testHasTimerPresentationReflectsTimerExistence() {
+        // Empty -> hidden
+        do {
+            let emptySnapshot = makeBottomSheetSnapshot(from: [])
+
+            XCTAssertFalse(ExposureCalculatorScreen.hasTimerPresentation(in: emptySnapshot))
+        }
+
+        // Any timer -> shown
+        do {
+            let runningSnapshot = makeBottomSheetSnapshot(from: [bottomSheetSecondsScaleTimer()])
+            let completedOnlySnapshot = makeBottomSheetSnapshot(
+                from: [bottomSheetSampleTimers().first { $0.status == .completed }!]
+            )
+
+            XCTAssertTrue(ExposureCalculatorScreen.hasTimerPresentation(in: runningSnapshot))
+            XCTAssertTrue(ExposureCalculatorScreen.hasTimerPresentation(in: completedOnlySnapshot))
+        }
+    }
+
     func testSectionScrollIDsAreExposed() {
         XCTAssertFalse(BottomSheetLargeWorkspaceView.activeSectionScrollID.isEmpty)
         XCTAssertFalse(BottomSheetLargeWorkspaceView.recentlyCompletedSectionScrollID.isEmpty)
         XCTAssertNotEqual(
             BottomSheetLargeWorkspaceView.activeSectionScrollID,
             BottomSheetLargeWorkspaceView.recentlyCompletedSectionScrollID
-        )
-    }
-
-    // MARK: - Workspace copy
-
-    func testWorkspaceTitleCopyUsesTimersLabel() {
-        XCTAssertEqual(BottomSheetWorkspaceCopy.title, "Timers")
-    }
-
-    // MARK: - PTIMER-126: hasTimers gating
-
-    /// `hasTimerPresentation` is the screen-level gate that decides
-    /// whether the timer strip and Timers chrome render at all. When
-    /// no timers exist, every timer-related surface is hidden.
-    func testHasTimerPresentationFalseWhenSnapshotIsEmpty() {
-        let emptySnapshot = makeBottomSheetSnapshot(from: [])
-
-        XCTAssertFalse(ExposureCalculatorScreen.hasTimerPresentation(in: emptySnapshot))
-    }
-
-    func testHasTimerPresentationTrueWhenAnyTimerExists() {
-        let runningSnapshot = makeBottomSheetSnapshot(from: [bottomSheetSecondsScaleTimer()])
-        let completedOnlySnapshot = makeBottomSheetSnapshot(
-            from: [bottomSheetSampleTimers().first { $0.status == .completed }!]
-        )
-
-        XCTAssertTrue(ExposureCalculatorScreen.hasTimerPresentation(in: runningSnapshot))
-        XCTAssertTrue(ExposureCalculatorScreen.hasTimerPresentation(in: completedOnlySnapshot))
-    }
-
-    // MARK: - PTIMER-126: Section-scoped Clear placement
-
-    /// Section title constants used by the snapshot factory and the
-    /// view layer must agree, so the view's `isCompletedSection`
-    /// check against incoming sections actually matches what the
-    /// factory produced.
-    func testSectionTitleConstantsAreUsedByFactory() {
-        let snapshot = makeBottomSheetSnapshot(from: bottomSheetSampleTimers())
-
-        XCTAssertEqual(
-            snapshot.sections.first?.title,
-            TimerWorkspaceSection.activeTitle
-        )
-        XCTAssertEqual(
-            snapshot.sections.last?.title,
-            TimerWorkspaceSection.completedTitle
         )
     }
 
@@ -363,8 +352,6 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
         XCTAssertFalse(snapshot.sections.contains { $0.isCompletedSection })
         XCTAssertEqual(snapshot.completedCount, 0)
     }
-
-    // MARK: - PTIMER-126: hosted screen smoke tests
 
     @MainActor
     func testExposureScreenLoadsAtIPhone17Viewport() {

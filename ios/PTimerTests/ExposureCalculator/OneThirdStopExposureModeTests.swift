@@ -33,31 +33,29 @@ final class OneThirdStopExposureModeTests: XCTestCase {
 
     func testFractionalNDStepDoesNotSnapToFullStopLadder() throws {
         let calculator = ExposureCalculator()
+        // Reserved fractional-ND path: each fractional stop applies its
+        // exact factor (zero ND returns the base shutter unchanged).
+        let cases: [(Double, Double)] = [
+            (0, 1.0),
+            (1.0 / 3.0, pow(2.0, 1.0 / 3.0)),
+            (2.0 / 3.0, pow(2.0, 2.0 / 3.0)),
+        ]
+        for (ndStops, factor) in cases {
+            let result = try calculator.calculate(
+                baseShutterSeconds: 1.0 / 30.0,
+                ndStep: NDStep(stops: ndStops)
+            )
+            XCTAssertEqual(result, (1.0 / 30.0) * factor, accuracy: 1e-9)
+        }
+
+        // The 1/3-stop result must NOT collapse onto the nearest full-stop
+        // ladder entry; that would defeat the purpose of the new mode.
         let oneThird = try calculator.calculate(
             baseShutterSeconds: 1.0 / 30.0,
             ndStep: NDStep(stops: 1.0 / 3.0)
         )
-        let twoThirds = try calculator.calculate(
-            baseShutterSeconds: 1.0 / 30.0,
-            ndStep: NDStep(stops: 2.0 / 3.0)
-        )
-
-        XCTAssertEqual(oneThird, (1.0 / 30.0) * pow(2.0, 1.0 / 3.0), accuracy: 1e-9)
-        XCTAssertEqual(twoThirds, (1.0 / 30.0) * pow(2.0, 2.0 / 3.0), accuracy: 1e-9)
-        // The 1/3-stop result must NOT collapse onto the nearest full-stop
-        // ladder entry; that would defeat the purpose of the new mode.
         XCTAssertNotEqual(oneThird, 1.0 / 30.0, accuracy: 1e-12)
         XCTAssertNotEqual(oneThird, 1.0 / 15.0, accuracy: 1e-12)
-    }
-
-    func testFractionalNDStepShutterReturnsBaseWhenStopsAreZero() throws {
-        let calculator = ExposureCalculator()
-        let result = try calculator.calculate(
-            baseShutterSeconds: 1.0 / 30.0,
-            ndStep: NDStep(stops: 0)
-        )
-
-        XCTAssertEqual(result, 1.0 / 30.0, accuracy: 1e-9)
     }
 
     func testWholeStopNDStepPreservesLegacySnapToFullStopBehavior() throws {
@@ -271,190 +269,158 @@ final class OneThirdStopExposureModeTests: XCTestCase {
     }
 
     @MainActor
-    func testViewModelReservedFractionalNDTimerMetadataPreservesLabel() throws {
+    func testViewModelReservedFractionalNDTimerLabelPreservesFraction() throws {
         // Reserved-path coverage: the fractional-stop component of a
         // future-custom-driven `NDStep` must survive into the
-        // human-readable metadata fields that the timer card
-        // renders. Truncating to "0 stops" or "1 stops" would erase
-        // the only hint that the timer was driven by the reserved
-        // fractional path. The shipping ND picker emits whole stops
-        // only, so this assertion is meaningful only on the reserved
-        // path.
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+        // human-readable metadata the timer card renders (basis summary
+        // and name), including the mixed-fraction form ("1 2/3").
+        // Truncating to "0/1 stops" would erase the only hint that the
+        // timer was driven by the reserved fractional path. The shipping
+        // ND picker emits whole stops only, so these labels never appear
+        // for shipping-driven values.
+        struct Case {
+            let ndStep: NDStep
+            let label: String
+            let checkName: Bool
+        }
+        let cases = [
+            Case(ndStep: NDStep(stops: 1.0 / 3.0), label: "1/3", checkName: true),
+            Case(ndStep: NDStep(stops: 1.0 + 2.0 / 3.0), label: "1 2/3", checkName: false),
+        ]
+
+        for testCase in cases {
+            let viewModel = ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerManager: TimerManager(
+                    tickInterval: 60,
+                    dateProvider: { Date(timeIntervalSince1970: 100) }
+                )
             )
-        )
 
-        viewModel.baseShutter = 1.0
-        viewModel.ndStep = NDStep(stops: 1.0 / 3.0)
+            viewModel.baseShutter = 1.0
+            viewModel.ndStep = testCase.ndStep
 
-        viewModel.startTimer()
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertTrue(
-            timer.basisSummary.contains("1/3"),
-            "basisSummary should retain the reserved 1/3-stop ND label, got: \(timer.basisSummary)"
-        )
-        XCTAssertTrue(
-            timer.name.contains("1/3"),
-            "timer name should retain the reserved 1/3-stop ND label, got: \(timer.name)"
-        )
-    }
-
-    @MainActor
-    func testViewModelReservedFractionalNDMixedFractionLabel() throws {
-        // Reserved-path coverage: the mixed-fraction renderer
-        // ("1 2/3") is exercised only when a fractional `NDStep`
-        // reaches the ViewModel through the future-custom path. The
-        // shipping ND picker emits whole stops, so this label never
-        // appears for shipping-driven values.
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+            viewModel.startTimer()
+            let timer = try XCTUnwrap(viewModel.timers.first)
+            XCTAssertTrue(
+                timer.basisSummary.contains(testCase.label),
+                "basisSummary should retain reserved ND label \(testCase.label), got: \(timer.basisSummary)"
             )
-        )
-
-        viewModel.baseShutter = 1.0
-        viewModel.ndStep = NDStep(stops: 1.0 + 2.0 / 3.0)
-
-        viewModel.startTimer()
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertTrue(
-            timer.basisSummary.contains("1 2/3"),
-            "basisSummary should render reserved-path mixed-fraction ND label, got: \(timer.basisSummary)"
-        )
+            if testCase.checkName {
+                XCTAssertTrue(
+                    timer.name.contains(testCase.label),
+                    "timer name should retain reserved ND label \(testCase.label), got: \(timer.name)"
+                )
+            }
+        }
     }
 
     // MARK: - Persistence: reserved fractional-ND round-trip + legacy decode
 
     @MainActor
-    func testReservedFractionalNDPersistedSnapshotUsesThirdStopCount() {
-        // Reserved-path coverage: `NDStep` retains fractional
-        // support as reserved domain infrastructure (e.g. for a
-        // future custom / variable-ND workflow); the shipping ND
-        // picker does not surface fractional steps. This test pins
-        // the persistence round-trip — if a fractional ND value
-        // ever reaches the model through the reserved path, it
-        // survives via the integer `ndStopThirds` field rather than
-        // `Double` drift.
-        let store = InMemoryStore()
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+    func testPersistedSnapshotEncodesReservedFractionalAndWholeStopND() {
+        // Reserved fractional ND survives via the integer `ndStopThirds`
+        // field (no `Double` drift); whole-stop saves keep the legacy
+        // `ndStop` field (and leave `ndStopThirds` nil) so PTIMER-79-era
+        // persisted data round-trips byte-for-byte. The shipping default
+        // is one-third-stop, so a steady-state save omits the scale
+        // field; the decoder defaults a missing value to `.oneThirdStop`.
+        struct Case {
+            let apply: (ExposureCalculatorViewModel) -> Void
+            let expected: PersistentCalculatorContextSnapshot
+        }
+        let cases = [
+            Case(
+                apply: { $0.ndStep = NDStep(stops: 1.0 / 3.0) },
+                expected: PersistentCalculatorContextSnapshot(
+                    selectedPresetFilmID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: nil,
+                    ndStopThirds: 1,
+                    exposureScaleMode: nil
+                )
             ),
-            contextPersistenceStore: store
-        )
+            Case(
+                apply: { $0.ndStop = 6 },
+                expected: PersistentCalculatorContextSnapshot(
+                    selectedPresetFilmID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: 6,
+                    ndStopThirds: nil
+                )
+            ),
+        ]
 
-        viewModel.baseShutter = 1.0 / 30.0
-        viewModel.ndStep = NDStep(stops: 1.0 / 3.0)
-
-        XCTAssertEqual(
-            store.snapshot,
-            PersistentCalculatorContextSnapshot(
-                selectedPresetFilmID: nil,
-                baseShutterSeconds: 1.0 / 30.0,
-                ndStop: nil,
-                ndStopThirds: 1,
-                // The shipping default is one-third-stop, so a
-                // steady-state save omits the scale field to keep the
-                // snapshot compact. The decoder defaults missing
-                // values back to `.oneThirdStop`.
-                exposureScaleMode: nil
+        for testCase in cases {
+            let store = InMemoryStore()
+            let viewModel = ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerManager: TimerManager(
+                    tickInterval: 60,
+                    dateProvider: { Date(timeIntervalSince1970: 100) }
+                ),
+                contextPersistenceStore: store
             )
-        )
+
+            viewModel.baseShutter = 1.0 / 30.0
+            testCase.apply(viewModel)
+
+            XCTAssertEqual(store.snapshot, testCase.expected)
+        }
     }
 
     @MainActor
-    func testWholeStopPersistedSnapshotKeepsLegacyIntegerFieldByteForByte() {
-        let store = InMemoryStore()
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+    func testRelaunchRestoresNDFromThirdStopCountOrLegacyInteger() throws {
+        // A snapshot whose `ndStopThirds` encodes a fractional value
+        // (the shipping ND picker would never write this) restores
+        // through the reserved fractional `NDStep` path without `Double`
+        // drift. An old PTIMER-79 snapshot that predates `ndStopThirds`
+        // falls back to the legacy integer field and restores a
+        // whole-stop NDStep so existing user data continues to restore.
+        struct Case {
+            let snapshot: PersistentCalculatorContextSnapshot
+            let expectedNDStep: NDStep
+            let expectedNDStop: Int?
+        }
+        let cases = [
+            Case(
+                snapshot: PersistentCalculatorContextSnapshot(
+                    selectedPresetFilmID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: nil,
+                    ndStopThirds: 2
+                ),
+                expectedNDStep: NDStep.fromThirdStopCount(2),
+                expectedNDStop: nil
             ),
-            contextPersistenceStore: store
-        )
-
-        viewModel.baseShutter = 1.0 / 30.0
-        viewModel.ndStop = 6
-
-        // Whole-stop saves must continue to populate `ndStop` (and
-        // leave `ndStopThirds` nil) so PTIMER-79-era persisted data
-        // round-trips byte-for-byte.
-        XCTAssertEqual(
-            store.snapshot,
-            PersistentCalculatorContextSnapshot(
-                selectedPresetFilmID: nil,
-                baseShutterSeconds: 1.0 / 30.0,
-                ndStop: 6,
-                ndStopThirds: nil
-            )
-        )
-    }
-
-    @MainActor
-    func testRelaunchRestoresReservedFractionalNDFromThirdStopCount() throws {
-        // Reserved-path coverage: a snapshot whose `ndStopThirds`
-        // encodes a fractional value (the shipping ND picker would
-        // never write this — it emits whole stops only) must
-        // restore through the reserved fractional `NDStep` path
-        // without `Double` drift.
-        let store = InMemoryStore()
-        store.saveSnapshot(
-            PersistentCalculatorContextSnapshot(
-                selectedPresetFilmID: nil,
-                baseShutterSeconds: 1.0 / 30.0,
-                ndStop: nil,
-                ndStopThirds: 2
-            )
-        )
-
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+            Case(
+                snapshot: PersistentCalculatorContextSnapshot(
+                    selectedPresetFilmID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: 4
+                ),
+                expectedNDStep: NDStep(stops: 4),
+                expectedNDStop: 4
             ),
-            contextPersistenceStore: store
-        )
+        ]
 
-        XCTAssertEqual(viewModel.ndStep, NDStep.fromThirdStopCount(2))
-        XCTAssertEqual(viewModel.ndStep.stops, 2.0 / 3.0, accuracy: 1e-9)
-    }
-
-    @MainActor
-    func testRelaunchDecodesPTIMER79WholeStopSnapshotWithoutThirdStopField() {
-        let store = InMemoryStore()
-        // Old PTIMER-79 snapshot — `ndStopThirds` was not part of the
-        // schema yet. The decoder must fall back to the legacy integer
-        // field and produce a whole-stop NDStep so existing user data
-        // continues to restore.
-        store.saveSnapshot(
-            PersistentCalculatorContextSnapshot(
-                selectedPresetFilmID: nil,
-                baseShutterSeconds: 1.0 / 30.0,
-                ndStop: 4
+        for testCase in cases {
+            let store = InMemoryStore()
+            store.saveSnapshot(testCase.snapshot)
+            let viewModel = ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerManager: TimerManager(
+                    tickInterval: 60,
+                    dateProvider: { Date(timeIntervalSince1970: 100) }
+                ),
+                contextPersistenceStore: store
             )
-        )
 
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
-            contextPersistenceStore: store
-        )
-
-        XCTAssertEqual(viewModel.ndStop, 4)
-        XCTAssertEqual(viewModel.ndStep, NDStep(stops: 4))
+            XCTAssertEqual(viewModel.ndStep, testCase.expectedNDStep)
+            if let expectedNDStop = testCase.expectedNDStop {
+                XCTAssertEqual(viewModel.ndStop, expectedNDStop)
+            }
+        }
     }
 
     @MainActor

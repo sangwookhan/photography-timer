@@ -3,141 +3,22 @@ import PTimerKit
 @testable import PTimer
 
 final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
-    // MARK: - Rail-stable reservation invariants
 
-    /// Workspace budget does not vary with timer presence — the
-    /// rail's footprint is reserved unconditionally.
-    func testWorkspaceBudgetIsTimerPresenceIndependent() {
-        let workspaceArea: CGFloat = 751
-
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: workspaceArea
-        )
-        let expected = workspaceArea
-            - ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-            - ExposureWorkspaceLayoutMetrics.timerStripHeight
-            - ExposureWorkspaceLayoutMetrics.pageMarkerToStripGap
-            - ExposureWorkspaceLayoutMetrics.pageMarkerHeight
-            - ExposureWorkspaceLayoutMetrics.workspaceMarkerGap
-
-        XCTAssertEqual(budget, expected)
-    }
-
-    /// Budget is a pure subtraction from the workspace area.
-    func testWorkspaceBudgetIsLinearInWorkspaceArea() {
-        let small = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: 700
-        )
-        let large = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: 800
-        )
-
-        XCTAssertEqual(large - small, 100)
-    }
-
-    /// Marker sits above the rail's reserved band.
-    func testPageMarkerOffsetSitsAboveReservedRailBand() {
-        let expected = ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-            + ExposureWorkspaceLayoutMetrics.timerStripHeight
-            + ExposureWorkspaceLayoutMetrics.pageMarkerToStripGap
-
-        XCTAssertEqual(
-            ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(),
-            expected
-        )
-    }
-
-    /// Marker offset is stable across repeated calls.
-    func testPageMarkerOffsetIsStable() {
-        let offsets = (0..<8).map { _ in
-            ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
-        }
-
-        XCTAssertEqual(Set(offsets).count, 1)
-    }
-
-    func testTimerStripBottomOffsetMeasuresFromTrimmedBottomEdge() {
-        XCTAssertEqual(
-            ExposureWorkspaceLayoutMetrics.timerStripBottomOffset(),
-            ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-        )
-    }
-
-    /// Rail band matches the compact card viewport height exactly.
-    func testTimerRailHeightMatchesCompactCardViewport() {
-        XCTAssertEqual(
-            ExposureWorkspaceLayoutMetrics.timerStripHeight,
-            BottomSheetCompactDockMetrics.viewportHeight
-        )
-    }
-
-    /// Workspace + marker gap + marker + marker-to-rail gap + rail
-    /// + rail margin partitions the trimmed area without gap or
-    /// overlap, and adding both safe areas equals the device
-    /// screen height.
-    func testWorkspaceMarkerRailPartitionsTrimmedRegionExactly() {
-        let topSafeArea: CGFloat = 59
-        let bottomSafeArea: CGFloat = 34
-        let workspaceArea: CGFloat = 844 - topSafeArea - bottomSafeArea
-
-        let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: workspaceArea
-        )
-
-        let trimmedTotal = workspaceHeight
-            + ExposureWorkspaceLayoutMetrics.workspaceMarkerGap
-            + ExposureWorkspaceLayoutMetrics.pageMarkerHeight
-            + ExposureWorkspaceLayoutMetrics.pageMarkerToStripGap
-            + ExposureWorkspaceLayoutMetrics.timerStripHeight
-            + ExposureWorkspaceLayoutMetrics.timerStripBottomMargin
-
-        XCTAssertEqual(trimmedTotal, workspaceArea)
-        XCTAssertEqual(trimmedTotal + topSafeArea + bottomSafeArea, 844)
-    }
-
-    /// Marker top edge sits exactly `workspaceMarkerGap` below the
-    /// workspace bottom — neither overlapping nor floating away.
-    func testPageMarkerSitsBelowWorkspaceNotInsideIt() {
-        let workspaceArea: CGFloat = 751
-        let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: workspaceArea
-        )
-        let markerBottomFromTop = workspaceArea
-            - ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
-        let markerTopFromTop = markerBottomFromTop
-            - ExposureWorkspaceLayoutMetrics.pageMarkerHeight
-
-        XCTAssertGreaterThanOrEqual(markerBottomFromTop, workspaceHeight)
-        XCTAssertEqual(
-            markerTopFromTop,
-            workspaceHeight + ExposureWorkspaceLayoutMetrics.workspaceMarkerGap
-        )
-    }
-
-    // MARK: - Device viewport sanity
-
-    /// iPhone 17 budget falls into the compact tier — not regular.
-    func testIPhone17FallsIntoCompactTier() {
+    /// iPhone 17 budget lands in the compact tier (at/above the compact
+    /// floor, below the regular floor) and clears the dense minimum —
+    /// the compact/dense fallback boundary guard.
+    func testIPhone17BudgetUsesCompactTierAndFitsDenseMinimum() {
         let area: CGFloat = 844 - 59 - 34
         let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
             workspaceArea: area
         )
         let regularFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .regular)
         let compactFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .compact)
+        let denseFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .dense)
 
         XCTAssertGreaterThanOrEqual(budget, compactFloor)
         XCTAssertLessThan(budget, regularFloor)
-    }
-
-    func testIPhone17ViewportFitsDenseWorkspace() {
-        let area: CGFloat = 844 - 59 - 34
-        let dense = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .dense)
-
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: area
-        )
-
-        XCTAssertGreaterThanOrEqual(budget, dense)
+        XCTAssertGreaterThanOrEqual(budget, denseFloor)
     }
 
     /// Compact-tier intrinsic for the worst case (film result

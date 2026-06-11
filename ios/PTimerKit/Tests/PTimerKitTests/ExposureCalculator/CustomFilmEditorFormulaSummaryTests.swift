@@ -11,68 +11,39 @@ import PTimerCore
 /// represented, either as a value or as a symbol placeholder.
 final class CustomFilmEditorFormulaSummaryTests: XCTestCase {
 
-    // MARK: - Full anchored shape
-
-    func test_neutralDefaults_renderEverySlot() {
-        // Neutral values do NOT collapse out of the editor
-        // summary; the row labels below stay mapped 1:1 onto the
-        // visible tokens.
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "1",
-            baseTcText: "1",
-            offsetSecondsText: ""
-        )
-        XCTAssertEqual(
-            form.formulaExpressionSummary(),
-            "Tc = 1s × (Tm / 1s)^1.3 + 0s"
-        )
-    }
-
-    func test_scaledValues_renderWithUnits() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.29",
-            baseTmText: "2",
-            baseTcText: "3",
-            offsetSecondsText: ""
-        )
-        XCTAssertEqual(
-            form.formulaExpressionSummary(),
-            "Tc = 3s × (Tm / 2s)^1.29 + 0s"
-        )
-    }
-
-    func test_subSecondAnchors_renderFractionalSecondLabel() {
-        // T-MAX 100 style anchored profile. The Formula card's
-        // current line trims trailing zeros so its sub-second
-        // tokens match the `FormulaEquationFormatter` vocabulary
-        // used by the Calculation Basis surface — `0.1s`, not
-        // `0.10s` — so the two surfaces never disagree on the
-        // rendered token for the same value.
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.0966",
-            baseTmText: "0.1",
-            baseTcText: "0.1"
-        )
-        XCTAssertEqual(
-            form.formulaExpressionSummary(),
-            "Tc = 0.1s × (Tm / 0.1s)^1.0966 + 0s"
-        )
-    }
-
-    // MARK: - Offset segment
-
-    func test_positiveOffset_appendsPlusSegment() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "3",
-            baseTcText: "10",
-            offsetSecondsText: "0.3"
-        )
-        XCTAssertEqual(
-            form.formulaExpressionSummary(),
-            "Tc = 10s × (Tm / 3s)^1.3 + 0.3s"
-        )
+    /// formulaExpressionSummary() renders the full anchored shape for a
+    /// range of form states; each form -> exact rendered string is a
+    /// case row (neutral, scaled, sub-second, offset, and the symbol
+    /// fallbacks for unparseable anchors/offset).
+    func test_formulaSummary_rendersExpectedStringPerFormState() {
+        struct Case {
+            let name: String
+            let build: () -> CustomFilmEditorFormState
+            let expected: String
+        }
+        let cases: [Case] = [
+            Case(name: "neutral defaults", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "1", baseTcText: "1", offsetSecondsText: "")
+            }, expected: "Tc = 1s × (Tm / 1s)^1.3 + 0s"),
+            Case(name: "scaled values", build: {
+                CustomFilmEditorFormState(exponentText: "1.29", baseTmText: "2", baseTcText: "3", offsetSecondsText: "")
+            }, expected: "Tc = 3s × (Tm / 2s)^1.29 + 0s"),
+            Case(name: "sub-second anchors", build: {
+                CustomFilmEditorFormState(exponentText: "1.0966", baseTmText: "0.1", baseTcText: "0.1")
+            }, expected: "Tc = 0.1s × (Tm / 0.1s)^1.0966 + 0s"),
+            Case(name: "positive offset", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "3", baseTcText: "10", offsetSecondsText: "0.3")
+            }, expected: "Tc = 10s × (Tm / 3s)^1.3 + 0.3s"),
+            Case(name: "unparseable anchors fall back to symbols", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "abc", baseTcText: "xyz")
+            }, expected: "Tc = Tc₀ × (Tm / Tm₀)^1.3 + 0s"),
+            Case(name: "unparseable offset falls back to symbol b", build: {
+                CustomFilmEditorFormState(exponentText: "1.30", baseTmText: "1", baseTcText: "1", offsetSecondsText: "garbage")
+            }, expected: "Tc = 1s × (Tm / 1s)^1.3 + b"),
+        ]
+        for c in cases {
+            XCTAssertEqual(c.build().formulaExpressionSummary(), c.expected, "[\(c.name)]")
+        }
     }
 
     func test_negativeOffset_rendersWithMinusSign() {
@@ -97,8 +68,6 @@ final class CustomFilmEditorFormulaSummaryTests: XCTestCase {
         )
     }
 
-    // MARK: - Symbol placeholders for missing values
-
     func test_blankExponent_fallsBackToSymbolP() {
         // The photographer-visible row is labelled `p`, so the
         // mid-edit placeholder must also read `p` — never the
@@ -109,33 +78,6 @@ final class CustomFilmEditorFormulaSummaryTests: XCTestCase {
         XCTAssertTrue(summary.contains("^p "), "Expected `^p` slot in: \(summary)")
         XCTAssertFalse(summary.contains("exponent"))
     }
-
-    func test_unparseableAnchors_fallBackToTheirSymbols() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "abc",
-            baseTcText: "xyz"
-        )
-        XCTAssertEqual(
-            form.formulaExpressionSummary(),
-            "Tc = Tc₀ × (Tm / Tm₀)^1.3 + 0s"
-        )
-    }
-
-    func test_unparseableOffset_fallsBackToSymbolB() {
-        let form = CustomFilmEditorFormState(
-            exponentText: "1.30",
-            baseTmText: "1",
-            baseTcText: "1",
-            offsetSecondsText: "garbage"
-        )
-        XCTAssertEqual(
-            form.formulaExpressionSummary(),
-            "Tc = 1s × (Tm / 1s)^1.3 + b"
-        )
-    }
-
-    // MARK: - Live updates
 
     func test_summary_updatesWhenExponentChanges() {
         var form = CustomFilmEditorFormState(

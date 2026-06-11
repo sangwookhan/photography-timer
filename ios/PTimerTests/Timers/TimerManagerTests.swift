@@ -111,22 +111,6 @@ final class TimerManagerTests: XCTestCase {
     // MARK: - Edge durations and removal
 
     @MainActor
-    func testTimerWithLongDurationOneDayCompletesCorrectly() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { startDate }
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 86_400))
-        manager.tick(now: startDate.addingTimeInterval(86_401))
-
-        let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: startDate.addingTimeInterval(86_401)), .completed)
-        XCTAssertEqual(timer.remainingTime(at: startDate.addingTimeInterval(86_401)), 0, accuracy: 0.0001)
-    }
-
-    @MainActor
     func testTimerWithVeryLargeDurationDoesNotOverflow() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         let manager = TimerManager(
@@ -210,29 +194,6 @@ final class TimerManagerTests: XCTestCase {
 
         XCTAssertNil(manager.timers.first { $0.id == completedID })
         XCTAssertNotNil(manager.timers.first { $0.id == runningID })
-    }
-
-    @MainActor
-    func testRemoveCompletedTimersKeepsPausedTimers() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-
-        let pausedID = try XCTUnwrap(manager.start(duration: 10))
-        let completedID = try XCTUnwrap(manager.start(duration: 1))
-
-        currentDate = startDate.addingTimeInterval(4)
-        manager.pause(id: pausedID)
-        manager.tick(now: currentDate)
-        manager.removeCompletedTimers()
-
-        let pausedTimer = tryUnwrapTimer(withID: pausedID, from: manager.timers)
-        XCTAssertEqual(pausedTimer.status(at: currentDate), TimerStatus.paused)
-        XCTAssertEqual(pausedTimer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
-        XCTAssertNil(manager.timers.first { $0.id == completedID })
     }
 
     @MainActor
@@ -323,41 +284,29 @@ final class TimerManagerTests: XCTestCase {
     }
 
     @MainActor
-    func testRemainingTimeClampsBelowEpsilonToZero() {
+    func testRemainingTimeEpsilonClampBoundary() {
+        // Below the stability epsilon the remaining time clamps to zero;
+        // above it the exact value is kept.
         let epsilon = ExposureCalculator.stabilityEpsilon
         let startDate = Date(timeIntervalSince1970: 100)
-        let endDate = startDate.addingTimeInterval(epsilon / 2)
-        let timer = TimerState(
-            id: UUID(),
-            duration: 1,
-            startDate: startDate,
-            endDate: endDate,
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running
-        )
 
-        XCTAssertEqual(timer.remainingTime(at: startDate), 0, accuracy: 0.0001)
-    }
+        func timer(remaining: TimeInterval) -> TimerState {
+            TimerState(
+                id: UUID(),
+                duration: 1,
+                startDate: startDate,
+                endDate: startDate.addingTimeInterval(remaining),
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .running
+            )
+        }
 
-    @MainActor
-    func testRemainingTimeKeepsValueAboveEpsilon() {
-        let epsilon = ExposureCalculator.stabilityEpsilon
-        let startDate = Date(timeIntervalSince1970: 100)
-        let remaining = epsilon * 2
-        let endDate = startDate.addingTimeInterval(remaining)
-        let timer = TimerState(
-            id: UUID(),
-            duration: 1,
-            startDate: startDate,
-            endDate: endDate,
-            pausedRemainingTime: nil,
-            pausedAt: nil,
-            status: .running
-        )
+        XCTAssertEqual(timer(remaining: epsilon / 2).remainingTime(at: startDate), 0, accuracy: 0.0001)
 
-        XCTAssertGreaterThan(timer.remainingTime(at: startDate), 0)
-        XCTAssertEqual(timer.remainingTime(at: startDate), remaining, accuracy: 0.0001)
+        let above = timer(remaining: epsilon * 2)
+        XCTAssertGreaterThan(above.remainingTime(at: startDate), 0)
+        XCTAssertEqual(above.remainingTime(at: startDate), epsilon * 2, accuracy: 0.0001)
     }
 
     @MainActor

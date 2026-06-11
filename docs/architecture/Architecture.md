@@ -13,8 +13,41 @@ spec disagree, the spec wins.
 PTimer is a portrait-only iPhone app for film-photography exposure
 calculation and countdown timers. It has strict layer boundaries
 documented below and enforced by a combination of dependency direction,
-code review, and SwiftLint custom rules (see
-`docs/verification/Strategy.md` §2 L3).
+the package compiler boundary (§0), code review, and SwiftLint custom
+rules (see `docs/verification/Strategy.md` §2 L3).
+
+---
+
+## 0. Module layout
+
+The codebase is one SwiftPM package plus two Xcode targets
+(PTIMER-177 "Reusable Kit Architecture"; test relocation finished in
+PTIMER-174):
+
+- **`PTimerCore`** (`ios/PTimerKit/Sources/PTimerCore/`) — reusable,
+  Foundation-only calculation/state engine: exposure math
+  (`Exposure/`), the reciprocity domain and policy evaluator
+  (`Reciprocity/`), presentation-semantics mapping
+  (`PresentationSemantics/`), the timer state machine value types and
+  on-disk schema (`Timer/`), and the bundled film catalog
+  (`Catalog/`, JSON shipped as a package resource).
+- **`PTimerKit`** (`ios/PTimerKit/Sources/PTimerKit/`) — reusable app
+  logic built on Core: the view-model facade and feature models,
+  presenters and display states, persistence contracts and
+  `Persistent*` snapshot schemas (`Persistence/`), the timer runtime
+  (`Runtime/`), and a UIKit-free SwiftUI component kit
+  (`Components/`, `Theme/`, the details graph view, the target-shutter
+  input sheet).
+- **App target** (`ios/PTimer/`) — the thin OS shell: SwiftUI screens
+  and the workspace shell, concrete `UserDefaults*Store`
+  implementations, the RunLoop-based `TimerManager` coordinator,
+  notification and ActivityKit adapters, and the DI factory.
+
+The package declares macOS alongside iOS so its tests run
+off-simulator via `swift test` and so the compiler enforces the layer
+rule mechanically: `PTimerCore` imports Foundation only, and
+`PTimerKit` must build without UIKit. Dependency direction is
+app → `PTimerKit` → `PTimerCore`, never the reverse.
 
 ---
 
@@ -27,7 +60,10 @@ owned by exactly one collaborator.
 ### 1.1 SwiftUI Views
 
 Files: `*Screen.swift`, `BottomSheetWorkspaceShell.swift` and the
-broader workspace shell breakdown (`BottomSheetWorkspace*` siblings).
+broader workspace shell breakdown (`BottomSheetWorkspace*` siblings) —
+all in the app target (`ios/PTimer/`). Reusable leaf components live
+in `PTimerKit` (`Components/`, `FilmDetails/FilmModeDetailsGraphView`,
+`TargetShutter/TargetShutterInputSheet`, `Theme/`).
 
 Responsibility: render only. Views consume display-state structs
 emitted by the view model facade and model/presenter surfaces. Views
@@ -36,8 +72,10 @@ do not reach into persistence.
 
 ### 1.2 Composition / coordination
 
-Files: `WorkspaceCoordinator.swift`, `ViewModelDependencyFactory.swift`,
-`LockScreenTimerCoordinator.swift`, `ActivityKitLockScreenTimerTargetExposer`.
+Files: `WorkspaceCoordinator.swift` (Kit `Workspace/`),
+`LockScreenTimerCoordinator.swift` (Kit `LockScreen/`),
+`ViewModelDependencyFactory.swift` and
+`ActivityKitLockScreenTimerTargetExposer` (app target).
 
 - `WorkspaceCoordinator` is the composition root for the four feature
   models below. It holds strong references, wires the cross-model
@@ -54,7 +92,8 @@ Files: `WorkspaceCoordinator.swift`, `ViewModelDependencyFactory.swift`,
 
 ### 1.3 View model facade
 
-File: `ExposureCalculatorViewModel.swift`.
+File: `ExposureCalculatorViewModel.swift` (Kit `Calculator/`, plus the
+`+CustomFilm` extension).
 
 A lightweight `@MainActor ObservableObject` facade that preserves the
 established view/test binding surface while delegating responsibility
@@ -68,8 +107,12 @@ computed properties on the facade, not stored business state.
 
 ### 1.4 Child models / presenters
 
-Directory: `ExposureCalculator/Models/`. Plus
-`FilmModeDetailsPresenter.swift`.
+All in `PTimerKit`, one directory per feature area:
+`Calculator/CalculatorModel`, `Reciprocity/ReciprocityModel`,
+`Workspace/TimerWorkspaceModel`, `Film/FilmSelectionModel`,
+`CameraSlots/CameraSlotSessionModel`,
+`TargetShutter/TargetShutterModel`; presenters sit next to their
+feature (e.g. `FilmDetails/FilmModeDetailsPresenter`).
 
 `@Observable` feature models, each owning one slice of state:
 
@@ -112,52 +155,75 @@ into details display state — no lifecycle, no async dependency.
 
 ### 1.5 Domain / policy
 
-- `ExposureCalculator.swift` — pure ND exposure math, shutter
+Module: `PTimerCore`.
+
+- `Exposure/ExposureCalculator.swift` — pure ND exposure math, shutter
   formatting, snap-to-full-stop logic.
-- `ReciprocityCalculationPolicy.swift` —
+- `Reciprocity/ReciprocityCalculationPolicy.swift` —
   `ReciprocityCalculationPolicyEvaluator` evaluates a
   `ReciprocityProfile` against a metered exposure. Evaluation order is
   a contract; see `docs/specs/Calculator.md` §3.2.
-- `ReciprocityConfidencePresentation.swift` — maps a policy result to
-  a `ReciprocityConfidencePresentation` used for badge styling and
-  text display.
-- `ReciprocityDomain.swift` — all domain value types: `FilmIdentity`,
-  `ReciprocityProfile`, rule variants (`threshold`, `formula`,
-  `limitedGuidance`), `ReciprocitySourceEvidenceRow`, and adjustment
-  types. Fully `Codable`.
+- `PresentationSemantics/ReciprocityConfidencePresentation.swift` —
+  maps a policy result to a `ReciprocityConfidencePresentation` used
+  for badge styling and text display.
+- `Reciprocity/ReciprocityDomain.swift` — all domain value types:
+  `FilmIdentity`, `ReciprocityProfile`, rule variants (`threshold`,
+  `formula`, `limitedGuidance`), `ReciprocitySourceEvidenceRow`, and
+  adjustment types. Fully `Codable`.
 
-This layer is platform-neutral and pure-function-flavored. It does not
-import UIKit/SwiftUI and (per fitness rule) shall continue not to.
+This layer is platform-neutral and pure-function-flavored. It imports
+Foundation only — enforced by the package build itself (Core has no
+other dependency to import), not just by fitness rule.
 
 ### 1.6 Timer runtime
 
-Directory: `Timers/`.
+Split across all three modules along the OS boundary:
 
-- `TimerManager.swift` — manages `TimerState` (a sum type with
-  running/paused/completed cases) plus persistence via
-  `UserDefaultsTimerPersistenceStore` and notification scheduling. The
-  on-disk schema is independent of the in-memory representation; see
-  `docs/specs/Timer.md` §3.
-- `LockScreenTimerLiveActivity.swift` — ActivityKit Live Activity for
-  the lock-screen widget.
-- `TimerCompletionNotificationScheduler.swift`,
-  `CompletedRelativeTimeFormatter.swift` — supporting timer concerns.
+- `PTimerCore` `Timer/` — `TimerState` (a sum type with
+  running/paused/completed cases), the `Persistent*` on-disk schema,
+  and the timer-persistence `*Storing` protocol — the one persistence
+  contract that lives in Core beside its schema rather than in Kit
+  `Persistence/` (§1.7). The on-disk schema is independent of the
+  in-memory representation; see `docs/specs/Timer.md` §3.
+- `PTimerKit` `Runtime/` — `TimerRuntime`, the pure timer state
+  machine (start/pause/resume/tick/reconcile/remove, completion
+  events, persistence + notification scheduling through injected
+  protocols). `TimerManaging` is the minimal protocol boundary that
+  Kit models depend on instead of the app's concrete coordinator;
+  it deliberately omits `tick(now:)` (deterministic tick driving is
+  a test-support concern).
+- App `Timers/` — `TimerManager.swift`, a thin RunLoop/OS coordinator
+  that wraps `TimerRuntime` 1:1 and conforms to `TimerManaging`; it
+  also defines `UserDefaultsTimerPersistenceStore` and the
+  UIKit-dependent completion alert services.
+  `LockScreenTimerLiveActivity.swift` (ActivityKit Live Activity) and
+  `TimerCompletionNotificationScheduler.swift` (UNUserNotification)
+  are the other OS adapters. `CompletedRelativeTimeFormatter` lives in
+  Kit `Workspace/`.
 
 ### 1.7 Film context / persistence
 
-Directory: `ExposureCalculator/FilmContext/`.
+Contracts and snapshot schemas live in Kit; concrete UserDefaults
+stores live in the app target.
 
-- `ActiveExposureCalculatorContext` — transient film-selection state.
-- `PersistentCalculatorContextSnapshot` /
-  `UserDefaultsCalculatorContextStore` — persists
-  selected film plus calculator inputs across relaunches.
+- `ActiveExposureCalculatorContext` — transient film-selection state
+  (Kit `Calculator/ExposureCalculatorWorkingContext.swift`).
+- `PersistentCalculatorContextSnapshot` (Kit `Persistence/`) /
+  `UserDefaultsCalculatorContextStore` (app
+  `ExposureCalculator/FilmContext/`) — persists selected film plus
+  calculator inputs across relaunches.
+- Same pattern for the custom-film library, camera-slot session, and
+  timer metadata: `Persistent*` schema + `*Storing` protocol in Kit
+  `Persistence/`, `UserDefaults*Store` in the app.
 
 All persistence stores follow a `*Storing` protocol pair pattern with a
 real implementation plus a `NoOp*` implementation that unit tests use.
 
 ### 1.7a Camera slot domain
 
-Directory: `ExposureCalculator/CameraSlot/`.
+Directory: Kit `CameraSlots/` (the concrete
+`UserDefaultsCameraSlotSessionStore` and the pager/rename views stay in
+the app's `ExposureCalculator/CameraSlot/`).
 
 - `CameraSlotIdentity` — `CameraSlotID` enum (`camera1` … `camera4`)
   plus a stable id + default/custom display label pair. The id is
@@ -205,17 +271,17 @@ the ViewModel's restore path; once any state mutation happens, the
 new session snapshot becomes the source of truth and the legacy key
 is ignored.
 
-Exposure-calculated timer identity lives in
-`ExposureCalculator/Models/ExposureTimerIdentity.swift`:
+Exposure-calculated timer identity lives in Kit
+`Workspace/ExposureTimerIdentity.swift`:
 `ExposureTimerSource` enum + `ExposureTimerIdentitySnapshot` struct.
-The runtime `Timers/` layer carries no exposure-source concept on
+The timer runtime layer carries no exposure-source concept on
 its own — those types describe which exposure computation produced
 the timer, which is a calculator-domain concern.
 
 ### 1.8 Film catalog
 
-Files: `PresetFilmCatalog.swift`,
-`Resources/LaunchPresetFilmCatalog.json`.
+Files: `PTimerCore` `Catalog/PresetFilmCatalog.swift` +
+`Catalog/LaunchPresetFilmCatalog.json` (a package resource).
 
 Preset films load from the bundled JSON at launch via
 `LaunchPresetFilmCatalog`. Catalog validation (see
@@ -250,7 +316,7 @@ maintain a parallel copy.
 | Calculator inputs (base shutter, ND) | `CalculatorModel` |
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
-| Running timer collection + remaining time | `TimerManager` (via `TimerWorkspaceModel`) |
+| Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |
 | Active camera-slot id + inactive slot snapshots + custom slot display names | `CameraSlotSessionModel` |
 | Camera-slot identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
 | Active slot's Target Shutter duration | `TargetShutterModel` |
@@ -268,24 +334,28 @@ from these owners, never stored alongside them.
 ## 3. Dependency direction
 
 ```
-SwiftUI Views
+SwiftUI Views                                          [app]
     │
     ▼
-WorkspaceCoordinator  ─▶  ExposureCalculatorViewModel (facade)
+WorkspaceCoordinator  ─▶  ExposureCalculatorViewModel (facade)   [Kit]
     │                          │
     ▼                          ▼
-CalculatorModel  ReciprocityModel  TimerWorkspaceModel  FilmSelectionModel  CameraSlotSessionModel
+CalculatorModel  ReciprocityModel  TimerWorkspaceModel  FilmSelectionModel  CameraSlotSessionModel   [Kit]
     │                                   │
     ▼                                   ▼
-Domain / Policy  (pure)            TimerManager + persistence + notification
+Domain / Policy  (pure)  [Core]    TimerRuntime (any TimerManaging)   [Kit]
     │                                   │
     ▼                                   ▼
-              Persistence (*Storing pair) + ActivityKit / UNUserNotification
+              concrete UserDefaults*Store + TimerManager (RunLoop)
+              + ActivityKit / UNUserNotification adapters       [app]
 ```
 
 Reads point downward. Writes are confined to the model/runtime layer
 that owns the state. The composition root (`WorkspaceCoordinator`) is
-the only place allowed to assemble cross-model wiring.
+the only place allowed to assemble cross-model wiring. Kit reaches the
+OS only through protocols (`TimerManaging`, `*Storing`, `*Scheduling`,
+the lock-screen exposer); the app target supplies the concrete
+implementations through `ViewModelDependencyFactory`.
 
 ---
 
@@ -328,18 +398,27 @@ introduced for the same role shall reuse them.
 
 ## 5. Tests mirror this structure
 
-Test files under `ios/PTimerTests/` mirror the source layout:
+A test lives in the test target of the module that owns its subject
+(the PTIMER-174 placement rule; see `AGENTS.md` Build and Test
+Commands).
 
-- `ExposureCalculator/` — calculation accuracy, ViewModel state, film
-  catalog loading, feature-model unit tests
-  (`CalculatorModelTests`, `ReciprocityModelTests`,
-  `TimerWorkspaceModelTests`, `FilmSelectionModelTests`,
-  `CameraSlotSessionModelTests`), and the slot-routing facade tests
-  (`CalculatorViewModelCameraSlotsTests`).
-- `Reciprocity/` — policy evaluation, confidence mapping.
-- `Timers/` — TimerManager lifecycle, time formatting.
-- `App/` — workspace shell behavior.
-- `RecordReplay/` — display-state and event-sequence baselines that
+- `ios/PTimerKit/Tests/PTimerCoreTests/` — exposure math and timer
+  state-machine value types.
+- `ios/PTimerKit/Tests/PTimerKitTests/` — the large majority of the
+  suite, run off-simulator via `swift test`: ViewModel/facade state,
+  feature models, presenters, reciprocity policy and confidence
+  mapping, persistence contracts against in-memory stores, workspace
+  snapshots, and the display-state snapshot baselines
+  (`Snapshots/` + `__Snapshots__/`). Timer-dependent suites use the
+  test-support seams: `FakeTimerManaging` (records starts only — no
+  time-advance/transition behavior shall be added) or
+  `RuntimeBackedTimerManaging` (wraps the real `TimerRuntime`,
+  exposes deterministic `tick(now:)`).
+- `ios/PTimerTests/` (app-hosted, simulator) — OS-boundary behavior
+  only: the concrete `TimerManager` RunLoop coordinator suites,
+  workspace shell + layout metrics, ActivityKit content-state,
+  concrete `UserDefaults*Store` round-trips, app view helpers, and
+  `RecordReplay/` — display-state and event-sequence baselines that
   fence semantic equivalence across structural changes
   (see `docs/verification/Strategy.md` §2 L2).
 
@@ -352,6 +431,9 @@ custom rules and (where SwiftLint cannot reach) review-time
 discipline. The full taxonomy lives in
 `docs/verification/Strategy.md` §2 L3 (rules F1–F12).
 
+- `PTimerCore` imports Foundation only; `PTimerKit` shall not import
+  UIKit. Both are enforced by the package's macOS build — `swift test`
+  failing to compile is the fitness signal.
 - Production code shall not detect whether it is running under tests
   (`XCTestRuntime` / `isRunningTests` are forbidden in `ios/PTimer/`).
 - The `ExposureCalculatorViewModel` facade shall not import
@@ -381,8 +463,8 @@ without explicit task-level authorization (see `CLAUDE.md`):
   (`ReciprocityCalculationPolicyEvaluator`).
 - Confidence presentation mapping
   (`ReciprocityConfidencePresentation`).
-- Timer runtime semantics (pause / resume / complete state machine,
-  `TimerManager`).
+- Timer runtime semantics (pause / resume / complete state machine —
+  `TimerRuntime` in Kit and the app's `TimerManager` coordinator).
 - Persistence and restore contracts (snapshot schemas, UserDefaults
   keys).
 

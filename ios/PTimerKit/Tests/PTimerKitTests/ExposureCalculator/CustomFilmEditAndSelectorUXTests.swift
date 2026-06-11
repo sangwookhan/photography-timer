@@ -103,11 +103,15 @@ final class CustomFilmEditAndSelectorUXTests: XCTestCase {
 
     func test_filmSelectorEntries_includesCreateCustomFilmRow_belowNoFilm() {
         let viewModel = makeViewModel()
+        viewModel.addCustomFilm(makeFormulaFilm(id: "custom", stockName: "Custom"))
         let entries = viewModel.filmSelectorEntries
         guard let noFilmIndex = entries.firstIndex(where: { $0.id == "no-film" }),
               let createIndex = entries.firstIndex(where: { $0.isCreateCustomFilmAction }) else {
             return XCTFail("Both 'No film' and Create rows must exist")
         }
+        // No film anchors the top of the list, with the create-custom-film
+        // row immediately below it — stable even when custom films exist.
+        XCTAssertEqual(noFilmIndex, 0)
         XCTAssertEqual(createIndex, noFilmIndex + 1)
         XCTAssertEqual(
             entries[createIndex].id,
@@ -143,14 +147,6 @@ final class CustomFilmEditAndSelectorUXTests: XCTestCase {
         // and visual scanning stays stable.
         viewModel.selectPresetFilm(viewModel.customFilms.first { $0.id == "bravo" }!)
         XCTAssertEqual(viewModel.filmSelectorEntries.map(\.id), baselineOrder)
-    }
-
-    // MARK: - No film row anchor
-
-    func test_filmSelectorEntries_firstEntryIsNoFilm() {
-        let viewModel = makeViewModel()
-        viewModel.addCustomFilm(makeFormulaFilm(id: "custom", stockName: "Custom"))
-        XCTAssertEqual(viewModel.filmSelectorEntries.first?.id, "no-film")
     }
 
     // MARK: - Helpers

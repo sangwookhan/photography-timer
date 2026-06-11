@@ -16,28 +16,42 @@ final class SourceShapePreservationBaselineTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
+    /// One pinned evaluation: a stock at a metered exposure must keep
+    /// producing exactly this corrected exposure.
+    private struct CorrectedValuePin {
+        let stock: String
+        let metered: Double
+        let corrected: Double
+
+        init(_ stock: String, _ metered: Double, _ corrected: Double) {
+            self.stock = stock
+            self.metered = metered
+            self.corrected = corrected
+        }
+    }
+
     // MARK: - 1. Quantified corrected values stay exactly where they are
 
     /// Representative in-source-range inputs for every special-shape
     /// profile that currently produces a quantified formula result.
-    private let quantifiedPins: [(stock: String, metered: Double, corrected: Double)] = [
+    private let quantifiedPins: [CorrectedValuePin] = [
         // Acros II encodes the published 120–1000 s +1/2 stop range
         // rule as Tc = √2 × Tm.
-        ("Acros II", 120, 169.7056274847714),
-        ("Acros II", 240, 339.4112549695428),
-        ("Acros II", 1000, 1414.213562373095),
+        CorrectedValuePin("Acros II", 120, 169.7056274847714),
+        CorrectedValuePin("Acros II", 240, 339.4112549695428),
+        CorrectedValuePin("Acros II", 1000, 1414.213562373095),
         // Fujifilm slide films: fitted formulas through published rows.
-        ("Velvia 50", 4, 5.1486706970489395),
-        ("Velvia 50", 32, 60.15029884271631),
-        ("Velvia 100", 240, 347.3606680860101),
-        ("Provia 100F", 240, 302.3893624325641),
+        CorrectedValuePin("Velvia 50", 4, 5.1486706970489395),
+        CorrectedValuePin("Velvia 50", 32, 60.15029884271631),
+        CorrectedValuePin("Velvia 100", 240, 347.3606680860101),
+        CorrectedValuePin("Provia 100F", 240, 302.3893624325641),
         // Rollei range-valued-row films: free fit through the four
         // quantified rows.
-        ("RETRO 80S", 4, 8.074968230824046),
-        ("RETRO 80S", 30, 178.37025330742412),
-        ("SUPERPAN 200", 15, 61.504975909344836),
+        CorrectedValuePin("RETRO 80S", 4, 8.074968230824046),
+        CorrectedValuePin("RETRO 80S", 30, 178.37025330742412),
+        CorrectedValuePin("SUPERPAN 200", 15, 61.504975909344836),
         // ADOX sparse/special anchors.
-        ("CMS 20 II", 10, 20.000000631965317),
+        CorrectedValuePin("CMS 20 II", 10, 20.000000631965317),
     ]
 
     func testSpecialShapeProfilesReproduceCurrentQuantifiedValues() throws {
@@ -64,11 +78,11 @@ final class SourceShapePreservationBaselineTests: XCTestCase {
     /// Beyond the published source range the formula keeps producing a
     /// numeric continuation classified as unsupported. Those values
     /// must not move either.
-    private let beyondRangePins: [(stock: String, metered: Double, corrected: Double)] = [
-        ("Velvia 50", 64, 136.48513298595844),
-        ("Velvia 100", 480, 835.7864710601414),
-        ("Provia 100F", 480, 780.288365467848),
-        ("CMS 20 II", 100, 282.84272282391646),
+    private let beyondRangePins: [CorrectedValuePin] = [
+        CorrectedValuePin("Velvia 50", 64, 136.48513298595844),
+        CorrectedValuePin("Velvia 100", 480, 835.7864710601414),
+        CorrectedValuePin("Provia 100F", 480, 780.288365467848),
+        CorrectedValuePin("CMS 20 II", 100, 282.84272282391646),
     ]
 
     func testSpecialShapeProfilesReproduceCurrentBeyondRangeValues() throws {
@@ -169,12 +183,25 @@ final class SourceShapePreservationBaselineTests: XCTestCase {
 
     // MARK: - 3. Not-recommended stop signals stay present as source evidence
 
-    /// Manufacturer stop signals (a `notRecommended` warning row with
-    /// no exposure adjustment) for the slide films and CMS 20 II.
-    private let stopSignalPins: [(stock: String, boundarySeconds: Double, message: String)] = [
-        ("Velvia 50", 64, "64 sec is not recommended."),
-        ("Provia 100F", 480, "8 min is not recommended."),
-        ("CMS 20 II", 100, "100 sec is not recommended."),
+    /// One published manufacturer stop signal: a `notRecommended`
+    /// warning row (no exposure adjustment) at a boundary.
+    private struct StopSignalPin {
+        let stock: String
+        let boundarySeconds: Double
+        let message: String
+
+        init(_ stock: String, _ boundarySeconds: Double, _ message: String) {
+            self.stock = stock
+            self.boundarySeconds = boundarySeconds
+            self.message = message
+        }
+    }
+
+    /// Manufacturer stop signals for the slide films and CMS 20 II.
+    private let stopSignalPins: [StopSignalPin] = [
+        StopSignalPin("Velvia 50", 64, "64 sec is not recommended."),
+        StopSignalPin("Provia 100F", 480, "8 min is not recommended."),
+        StopSignalPin("CMS 20 II", 100, "100 sec is not recommended."),
     ]
 
     func testNotRecommendedBoundaryRowsRemainPresent() throws {
@@ -235,6 +262,12 @@ final class SourceShapePreservationBaselineTests: XCTestCase {
 
     // MARK: - 5. Phase 1 does not migrate the calculation model
 
+    /// Phase 1 guard only. PTIMER-169 deliberately keeps the fitted
+    /// formula as these profiles' default calculation; a later
+    /// Fujifilm / Rollei / CMS table/range-policy migration ticket is
+    /// expected to flip the calculation model and UPDATE this test
+    /// alongside it. App-derived formula evaluation stays in
+    /// PTIMER-170 either way.
     func testSpecialShapeProfilesKeepFormulaCalculationInPhase1() throws {
         let formulaStocks = [
             "Acros II", "Velvia 50", "Velvia 100", "Provia 100F",

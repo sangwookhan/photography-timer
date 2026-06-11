@@ -18,28 +18,45 @@ import PTimerCore
 /// ticket (deferred metadata consistency pass).
 final class SourceShapeModelBasisTests: XCTestCase {
 
+    /// One expected explicit declaration for a PTIMER-169 target.
+    private struct ExpectedDeclaration {
+        let stock: String
+        let source: ReciprocitySourceModel
+        let calculation: ReciprocityCalculationModel
+
+        init(
+            _ stock: String,
+            _ source: ReciprocitySourceModel,
+            _ calculation: ReciprocityCalculationModel
+        ) {
+            self.stock = stock
+            self.source = source
+            self.calculation = calculation
+        }
+    }
+
     /// Expected explicit declarations for every PTIMER-169 target.
-    private let expectedDeclarations: [(stock: String, source: ReciprocitySourceModel, calculation: ReciprocityCalculationModel)] = [
+    private let expectedDeclarations: [ExpectedDeclaration] = [
         // Published range rule encoded verbatim as a guarded formula —
         // NOT an app-derived table fit.
-        ("Acros II", .manufacturerRangeGuidance, .guardedFormula),
+        ExpectedDeclaration("Acros II", .manufacturerRangeGuidance, .guardedFormula),
         // Fujifilm slide films: table + color/warning guidance source,
         // fitted guarded formula calculation (Phase 1 keeps the fit).
-        ("Velvia 50", .manufacturerTable, .guardedFormula),
-        ("Velvia 100", .manufacturerTable, .guardedFormula),
-        ("Provia 100F", .manufacturerTable, .guardedFormula),
+        ExpectedDeclaration("Velvia 50", .manufacturerTable, .guardedFormula),
+        ExpectedDeclaration("Velvia 100", .manufacturerTable, .guardedFormula),
+        ExpectedDeclaration("Provia 100F", .manufacturerTable, .guardedFormula),
         // Rollei tables with range-valued rows.
-        ("RETRO 80S", .manufacturerTable, .guardedFormula),
-        ("SUPERPAN 200", .manufacturerTable, .guardedFormula),
+        ExpectedDeclaration("RETRO 80S", .manufacturerTable, .guardedFormula),
+        ExpectedDeclaration("SUPERPAN 200", .manufacturerTable, .guardedFormula),
         // ADOX sparse/special anchors.
-        ("CMS 20 II", .manufacturerTable, .guardedFormula),
+        ExpectedDeclaration("CMS 20 II", .manufacturerTable, .guardedFormula),
         // Kodak limited guidance: qualitative only, never quantified.
-        ("Ektar 100", .manufacturerLimitedGuidance, .limitedGuidance),
-        ("Portra 160", .manufacturerLimitedGuidance, .limitedGuidance),
-        ("Portra 400", .manufacturerLimitedGuidance, .limitedGuidance),
-        ("Gold 200", .manufacturerLimitedGuidance, .limitedGuidance),
-        ("Ultra Max 400", .manufacturerLimitedGuidance, .limitedGuidance),
-        ("Ektachrome E100", .manufacturerLimitedGuidance, .limitedGuidance),
+        ExpectedDeclaration("Ektar 100", .manufacturerLimitedGuidance, .limitedGuidance),
+        ExpectedDeclaration("Portra 160", .manufacturerLimitedGuidance, .limitedGuidance),
+        ExpectedDeclaration("Portra 400", .manufacturerLimitedGuidance, .limitedGuidance),
+        ExpectedDeclaration("Gold 200", .manufacturerLimitedGuidance, .limitedGuidance),
+        ExpectedDeclaration("Ultra Max 400", .manufacturerLimitedGuidance, .limitedGuidance),
+        ExpectedDeclaration("Ektachrome E100", .manufacturerLimitedGuidance, .limitedGuidance),
     ]
 
     func testTargetProfilesDeclareExplicitModelBasis() throws {

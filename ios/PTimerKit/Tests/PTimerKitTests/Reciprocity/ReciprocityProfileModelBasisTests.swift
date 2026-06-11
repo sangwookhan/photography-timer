@@ -99,37 +99,20 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         // previously covered this case but declared an explicit basis
         // in PTIMER-169, so the inference contract is pinned on a
         // fixture.)
-        let profile = ReciprocityProfile(
-            id: "inference.formula-with-evidence",
-            name: "Inference probe",
-            source: officialSource(),
-            rules: [
-                .formula(
-                    FormulaReciprocityRule(
-                        formula: ReciprocityFormula(
-                            exponent: 1.3,
-                            noCorrectionThroughSeconds: 1
-                        )
-                    )
-                ),
-            ],
+        let profile = inferenceProbeProfile(
+            rules: [probeFormulaRule()],
             sourceEvidence: [
                 ReciprocitySourceEvidenceRow(
                     meteredExposure: .exactSeconds(4),
                     adjustments: [
-                        .exposure(.correctedTime(CorrectedTimeMapping(
-                            meteredSeconds: 4,
-                            correctedSeconds: 8
-                        ))),
+                        .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 4, correctedSeconds: 8))),
                     ]
                 ),
             ]
         )
         XCTAssertNil(profile.modelBasis)
-
-        let basis = profile.effectiveModelBasis
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable)
-        XCTAssertEqual(basis.calculationModel, .guardedFormula)
+        XCTAssertEqual(profile.effectiveModelBasis.sourceModel, .manufacturerTable)
+        XCTAssertEqual(profile.effectiveModelBasis.calculationModel, .guardedFormula)
     }
 
     func testEffectiveModelBasisInfersLimitedGuidanceForThresholdPlusLimitedGuidanceProfile() throws {
@@ -138,28 +121,17 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
         // (Portra 400 previously covered this case but declared an
         // explicit basis in PTIMER-169, so the inference contract is
         // pinned on a fixture.)
-        let profile = ReciprocityProfile(
-            id: "inference.threshold-limited",
-            name: "Inference probe",
-            source: officialSource(),
-            rules: [
-                .threshold(
-                    ThresholdReciprocityRule(
-                        noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
-                    )
-                ),
-                .limitedGuidance(
-                    LimitedGuidanceReciprocityRule(
-                        appliesWhenMetered: ReciprocityTimeRange(minimumSeconds: 1)
-                    )
-                ),
-            ]
-        )
+        let profile = inferenceProbeProfile(rules: [
+            .threshold(ThresholdReciprocityRule(
+                noCorrectionRange: ReciprocityTimeRange(minimumSeconds: 0, maximumSeconds: 1)
+            )),
+            .limitedGuidance(LimitedGuidanceReciprocityRule(
+                appliesWhenMetered: ReciprocityTimeRange(minimumSeconds: 1)
+            )),
+        ])
         XCTAssertNil(profile.modelBasis)
-
-        let basis = profile.effectiveModelBasis
-        XCTAssertEqual(basis.sourceModel, .manufacturerLimitedGuidance)
-        XCTAssertEqual(basis.calculationModel, .limitedGuidance)
+        XCTAssertEqual(profile.effectiveModelBasis.sourceModel, .manufacturerLimitedGuidance)
+        XCTAssertEqual(profile.effectiveModelBasis.calculationModel, .limitedGuidance)
     }
 
     // MARK: - JSON round-trip
@@ -321,16 +293,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "bad.limited-on-formula",
                 name: "Mismatched basis",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .manufacturerLimitedGuidance,
                     calculationModel: .limitedGuidance
@@ -359,16 +322,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "bad.table-lookup",
                 name: "Reserved",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .manufacturerTable,
                     calculationModel: .tableLookup
@@ -397,16 +351,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "bad.unsupported-calc",
                 name: "Reserved",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .manufacturerFormula,
                     calculationModel: .unsupported
@@ -435,16 +380,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "bad.practical-source-on-official",
                 name: "Mismatched provenance",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .practicalCommunityGuidance,
                     calculationModel: .guardedFormula
@@ -473,16 +409,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "bad.user-defined-source-on-official",
                 name: "Mismatched provenance",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .userDefined,
                     calculationModel: .guardedFormula
@@ -511,16 +438,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "bad.unknown-source-on-official",
                 name: "Unknown source",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .unknown,
                     calculationModel: .guardedFormula
@@ -555,16 +473,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 id: "range-source.formula",
                 name: "Range-source compatibility probe",
                 source: officialSource(),
-                rules: [
-                    .formula(
-                        FormulaReciprocityRule(
-                            formula: ReciprocityFormula(
-                                exponent: 1.3,
-                                noCorrectionThroughSeconds: 1
-                            )
-                        )
-                    ),
-                ],
+                rules: [probeFormulaRule()],
                 modelBasis: ReciprocityProfileModelBasis(
                     sourceModel: .manufacturerRangeGuidance,
                     calculationModel: .guardedFormula
@@ -604,6 +513,25 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
             authority: .official,
             confidence: .high,
             publisher: "Test"
+        )
+    }
+
+    private func probeFormulaRule() -> ReciprocityRule {
+        .formula(FormulaReciprocityRule(
+            formula: ReciprocityFormula(exponent: 1.3, noCorrectionThroughSeconds: 1)
+        ))
+    }
+
+    private func inferenceProbeProfile(
+        rules: [ReciprocityRule],
+        sourceEvidence: [ReciprocitySourceEvidenceRow] = []
+    ) -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "inference.probe",
+            name: "Inference probe",
+            source: officialSource(),
+            rules: rules,
+            sourceEvidence: sourceEvidence
         )
     }
 

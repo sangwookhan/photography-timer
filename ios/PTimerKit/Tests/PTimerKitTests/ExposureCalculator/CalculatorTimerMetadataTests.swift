@@ -1,12 +1,11 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 final class CalculatorTimerMetadataTests: XCTestCase {
     @MainActor
     func testStartTimerPublishesCapturedMetadataOnFirstRuntimeEmission() {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -38,7 +37,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
     @MainActor
     func testStartTimerCreatesRunningDisplayItemWithMetadataAndContext() throws {
         let currentDate = Date(timeIntervalSince1970: 100)
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -75,7 +74,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
 
     @MainActor
     func testStartTimerFromDomainAPIUsesProvidedResult() {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -95,7 +94,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
     @MainActor
     func testClearCompletedTimersRemovesCompletedDisplayItems() {
         let startDate = Date(timeIntervalSince1970: 100)
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { startDate }
         )
@@ -122,7 +121,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
     func testClearCompletedTimersPreservesActiveMetadataAndRemovesCompletedMetadataBeforeNewTimer() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -181,7 +180,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
     @MainActor
     func testExistingTimerMetadataDoesNotChangeAfterInputUpdates() throws {
         let startDate = Date(timeIntervalSince1970: 100)
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { startDate }
         )

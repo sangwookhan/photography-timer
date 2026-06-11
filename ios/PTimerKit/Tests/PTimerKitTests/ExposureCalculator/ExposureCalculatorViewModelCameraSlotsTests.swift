@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Integration tests for camera-slot behavior through the
 /// `ExposureCalculatorViewModel` facade. Exercises slot independence
@@ -548,7 +547,7 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
     ) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             contextPersistenceStore: contextStore
         )
     }

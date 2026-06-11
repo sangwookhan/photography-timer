@@ -16,7 +16,9 @@
 DisplayStateSnapshot.assert(value, named: "my-scenario")
 ```
 
-baseline 위치: `PTimerTests/__Snapshots__/<TestClass>/<name>.txt`
+baseline 위치: `<TestRoot>/__Snapshots__/<TestClass>/<name>.txt` (`<TestRoot>`
+= 테스트 소스 위의 가장 가까운 지원 루트: `PTimerTests` 또는 `PTimerKitTests`).
+이 스위트는 PTIMER-174에서 `PTimerKitTests`로 이전되어 off-simulator로 실행된다.
 
 ## 라이프사이클
 
@@ -26,14 +28,11 @@ baseline 위치: `PTimerTests/__Snapshots__/<TestClass>/<name>.txt`
 
 ```bash
 # Re-record after deliberate change (run from repository root)
-cd ios && SNAPSHOT_RECORD=1 xcodebuild test \
-  -project PTimer.xcodeproj -scheme PTimer \
-  -testPlan PTimer \
-  -destination 'platform=iOS Simulator,name=iPhone 17' \
-  -only-testing:PTimerTests/DisplayStateSnapshotTests
+SNAPSHOT_RECORD=1 swift test --package-path ios/PTimerKit \
+  --filter DisplayStateSnapshotTests
 
 # Verify (no env)
-cd ios && xcodebuild test ... -only-testing:PTimerTests/DisplayStateSnapshotTests
+swift test --package-path ios/PTimerKit --filter DisplayStateSnapshotTests
 ```
 
 ## 베이스라인을 commit해야 하는가

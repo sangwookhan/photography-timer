@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 @MainActor
 final class CalculatorViewModelCameraSlotRenameTests: XCTestCase {
@@ -153,7 +152,7 @@ final class CalculatorViewModelCameraSlotRenameTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             contextPersistenceStore: NoOpCalculatorContextStore()
         )
     }

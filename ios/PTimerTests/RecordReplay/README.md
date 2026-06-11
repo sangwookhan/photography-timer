@@ -112,4 +112,4 @@ func testMyScenario() {
 ## 참조
 
 - 절차 spec: `docs/verification/Strategy.md` §6
-- 자매 헬퍼: `PTimerTests/Snapshots/README.md` (B8)
+- 자매 헬퍼: `ios/PTimerKit/Tests/PTimerKitTests/Snapshots/README.md` (B8)

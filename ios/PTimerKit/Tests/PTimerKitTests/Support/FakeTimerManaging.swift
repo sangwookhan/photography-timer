@@ -3,15 +3,20 @@ import Foundation
 import PTimerCore
 import PTimerKit
 
-/// Package-safe `TimerManaging` for off-simulator ViewModel tests. The app's
-/// concrete `TimerManager` (RunLoop/OS) stays in the app target; ViewModel
-/// suites only need *a* conforming dependency, not real OS ticking.
+/// Package-safe `TimerManaging` **metadata/composition stub** for
+/// off-simulator ViewModel tests. The app's concrete `TimerManager`
+/// (RunLoop/OS) stays in the app target; these suites only need *a*
+/// conforming dependency, not a runtime.
 ///
-/// It records started timers as `.running` against a fixed clock and republishes
-/// the collection, so suites that start a timer and assert its composed metadata
-/// (duration, name, basis, camera slot, source, identity snapshot) run
-/// off-simulator. It does NOT advance time — pause/resume/complete *runtime*
-/// behaviour is still covered by the app-hosted `TimerManager` suites.
+/// It records started timers as `.running` against a fixed clock and
+/// republishes the collection, so suites that start a timer and assert its
+/// composed metadata (duration, name, basis, camera slot, source, identity
+/// snapshot) run off-simulator. It deliberately does NOT advance time.
+///
+/// Use this ONLY for metadata/composition. For deterministic
+/// tick/pause/resume/complete *lifecycle* behaviour off-simulator, use
+/// `RuntimeBackedTimerManaging` (a real `TimerRuntime` driven by manual
+/// ticks) — not this stub.
 @MainActor
 final class FakeTimerManaging: TimerManaging {
     private(set) var timers: [TimerState] = []
@@ -40,6 +45,9 @@ final class FakeTimerManaging: TimerManaging {
         return id
     }
 
+    // No-ops: this stub does not model the timer lifecycle. A test that
+    // asserts pause/resume (or tick/completion) behaviour must use
+    // `RuntimeBackedTimerManaging`, not this type.
     func pause(id: UUID) {}
     func resume(id: UUID) {}
 
@@ -53,5 +61,6 @@ final class FakeTimerManaging: TimerManaging {
         subject.send(timers)
     }
 
+    // No-op: reconciliation is a runtime concern — see `RuntimeBackedTimerManaging`.
     func reconcile(now: Date?) {}
 }

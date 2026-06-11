@@ -114,7 +114,7 @@ enum DisplayStateSnapshot {
             return
         }
 
-        if serialized != baseline {
+        if serialized != canonicalize(baseline) {
             // Write the actual to a sidecar file for easier diffing.
             let actualURL = url.deletingPathExtension().appendingPathExtension("actual.txt")
             try? write(serialized, to: actualURL)
@@ -154,19 +154,30 @@ enum DisplayStateSnapshot {
     )
 
     private static func canonicalize(_ output: String) -> String {
+        // Strip the test-module qualifier `Swift.dump` prepends to
+        // file-private (anonymous-context) helper types, so a baseline is
+        // portable between the app (PTimerTests) and package
+        // (PTimerKitTests) test targets: the dumped DATA is identical and
+        // only the owning test module's name differs. Applied to both the
+        // serialized value and the stored baseline at compare time, so the
+        // committed `.txt` files stay byte-identical.
+        var result = output
+            .replacingOccurrences(of: "PTimerTests.(unknown context", with: "(unknown context")
+            .replacingOccurrences(of: "PTimerKitTests.(unknown context", with: "(unknown context")
         guard let regex = hexAddressPattern else {
-            return output
+            return result
         }
-        let range = NSRange(output.startIndex..., in: output)
+        let range = NSRange(result.startIndex..., in: result)
         // NSRegularExpression treats `$` in templates as a back-
         // reference prefix, so literal `$` must be escaped with a
         // single backslash — `\$` in the template, `"\\$"` in the
         // Swift string literal.
-        return regex.stringByReplacingMatches(
-            in: output,
+        result = regex.stringByReplacingMatches(
+            in: result,
             range: range,
             withTemplate: "\\$XX"
         )
+        return result
     }
 
     /// `__Snapshots__/<TestClassDir>/<name>.txt` next to the test
@@ -186,9 +197,14 @@ enum DisplayStateSnapshot {
     }
 
     private static func locateSnapshotsRoot(startingAt directory: URL) -> URL {
+        // The suites live in either the app test target (PTimerTests) or
+        // the package test target (PTimerKitTests). Walk up to whichever
+        // test root owns the caller so snapshots live in a single
+        // `__Snapshots__` tree per target, mirroring the test layout.
+        let testRoots: Set<String> = ["PTimerTests", "PTimerKitTests"]
         var current = directory
         while current.pathComponents.count > 1 {
-            if current.lastPathComponent == "PTimerTests" {
+            if testRoots.contains(current.lastPathComponent) {
                 return current.appendingPathComponent("__Snapshots__", isDirectory: true)
             }
             current = current.deletingLastPathComponent()

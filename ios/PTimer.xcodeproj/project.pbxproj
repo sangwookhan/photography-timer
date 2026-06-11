@@ -31,8 +31,6 @@
 		A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */; };
 		A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000103 /* RunningTimerPanelView.swift */; };
 		A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000106 /* ViewModelDependencyFactory.swift */; };
-		A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000110 /* DisplayStateSnapshot.swift */; };
-		A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000112 /* DisplayStateSnapshotTests.swift */; };
 		A00000000000000000000116 /* RecordReplayTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000115 /* RecordReplayTrace.swift */; };
 		A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* RecordReplayBaseline.swift */; };
 		A0000000000000000000011A /* RecordReplaySpies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RecordReplaySpies.swift */; };
@@ -42,7 +40,6 @@
 		A00000000000000000000147 /* UserDefaultsTimerMetadataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000145 /* UserDefaultsTimerMetadataStore.swift */; };
 		A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000148 /* FilmModeDetailsView.swift */; };
 		A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014A /* WheelPickerContinuousObserver.swift */; };
-		A0000000000000000000014D /* ViewModelDisplayStateBaselineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */; };
 		A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000203 /* CameraSlotPagerIndicator.swift */; };
 		A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* CameraSlotRenameSheet.swift */; };
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
@@ -126,8 +123,6 @@
 		A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorLayoutMetrics.swift; sourceTree = "<group>"; };
 		A00000000000000000000103 /* RunningTimerPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningTimerPanelView.swift; sourceTree = "<group>"; };
 		A00000000000000000000106 /* ViewModelDependencyFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDependencyFactory.swift; sourceTree = "<group>"; };
-		A00000000000000000000110 /* DisplayStateSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStateSnapshot.swift; sourceTree = "<group>"; };
-		A00000000000000000000112 /* DisplayStateSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStateSnapshotTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000115 /* RecordReplayTrace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayTrace.swift; sourceTree = "<group>"; };
 		A00000000000000000000117 /* RecordReplayBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplayBaseline.swift; sourceTree = "<group>"; };
 		A00000000000000000000119 /* RecordReplaySpies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordReplaySpies.swift; sourceTree = "<group>"; };
@@ -137,7 +132,6 @@
 		A00000000000000000000145 /* UserDefaultsTimerMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsTimerMetadataStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000148 /* FilmModeDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsView.swift; sourceTree = "<group>"; };
 		A0000000000000000000014A /* WheelPickerContinuousObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelPickerContinuousObserver.swift; sourceTree = "<group>"; };
-		A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDisplayStateBaselineTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../docs; sourceTree = "<group>"; };
 		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
@@ -286,7 +280,6 @@
 				A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */,
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
-				A0000000000000000000014C /* ViewModelDisplayStateBaselineTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
 				A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */,
 			);
@@ -388,8 +381,6 @@
 		A00000000000000000000113 /* Snapshots */ = {
 			isa = PBXGroup;
 			children = (
-				A00000000000000000000110 /* DisplayStateSnapshot.swift */,
-				A00000000000000000000112 /* DisplayStateSnapshotTests.swift */,
 			);
 			path = Snapshots;
 			sourceTree = "<group>";
@@ -645,8 +636,6 @@
 				A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */,
 				A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */,
 				A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */,
-				A0000000000000000000010F /* DisplayStateSnapshot.swift in Sources */,
-				A00000000000000000000111 /* DisplayStateSnapshotTests.swift in Sources */,
 				A00000000000000000000116 /* RecordReplayTrace.swift in Sources */,
 				A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */,
 				A0000000000000000000011A /* RecordReplaySpies.swift in Sources */,
@@ -659,7 +648,6 @@
 				A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */,
 				A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */,
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
-				A0000000000000000000014D /* ViewModelDisplayStateBaselineTests.swift in Sources */,
 				A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */,
 				A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */,
 			);

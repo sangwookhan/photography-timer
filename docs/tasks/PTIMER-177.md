@@ -11,13 +11,15 @@
   - `feature/PTIMER-177-timer-state-machine`
   - `feature/PTIMER-177-timer-runtime` (latest combined exploration; abandoned at WIP `798403d`)
 
-**Status (2026-06-10).** The three-layer architecture (§§1–8) has
-landed. Phases C8 (SwiftUI component kit) and C9 (off-simulator test
-relocation) merged to `main` via PR #2. Active branch
-`feature/PTIMER-177-c10-viewmodel-testability` carries C10 (ViewModel
-testability seam) and the in-progress C11 (reciprocity test
-re-architecture by archetype). Current state, metrics, and the remaining
-plan are in **§15**; that section supersedes §§9–10 where they differ.
+**Status (2026-06-11).** The three-layer architecture (§§1–8) has
+landed. C8/C9/C10/C11 merged to `main` (PRs #2, #3, #5). The current
+work — PR #6 — has driven the app-hosted test suite to its practical
+floor by relocating the remaining non-OS suites off-simulator into
+`PTimerKitTests` (app-hosted 435 → 93 since the §15.2 checkpoint, ratio
+29.0% → 6.2%; or 342 → 93 against the PR #6 base, 22.8% → 6.2%; total
+fixed at 1198, zero production change). Latest state, metrics, and the
+residual classification are in **§15.6**; §15 supersedes §§9–10 where
+they differ.
 
 ---
 
@@ -619,3 +621,44 @@ safely move to the Kit / package tests — the app-hosted ratio is the
 lever toward the ≤ 75 target — and pick a safe migration slice to start
 with, prioritizing suites with no real timer / RunLoop / OS-integration
 / snapshot / lifecycle dependency.
+
+### 15.6 Off-simulator migration to the practical floor (2026-06-11, PR #6)
+
+**Done — the app-hosted suite has been driven to its practical floor.**
+On PR #6 (`feature/PTIMER-174-target-shutter-test-audit`) the remaining
+non-OS app-hosted suites were relocated to `PTimerKitTests`:
+
+- whole-file moves of the calculator / timer / camera-slot / scale-mode
+  ViewModel suites — using `FakeTimerManaging` (a metadata/composition
+  stub) for non-lifecycle suites and a new `RuntimeBackedTimerManaging`
+  (a manual-tick `TimerRuntime` harness, init-compatible with
+  `TimerManager`) for lifecycle / tick suites;
+- splits of the mixed suites (ContextPersistence, LockScreen, custom-film
+  library / editor-polish) — Kit-compatible tests move, the concrete
+  app-store / ActivityKit / app-view-helper minority stays app-hosted;
+- the display-state snapshot suites — the helper was made
+  baseline-root-neutral across `PTimerTests` and `PTimerKitTests` and its
+  dump canonicalizer strips the test-module qualifier, so baselines moved
+  `git mv` byte-identical with no re-record;
+- two orphaned app test-support files audited: `ReciprocityPolicyScenarioFactory`
+  removed (orphaned by this PR; Kit has a verified-identical copy);
+  `SharedFixtureLocator` left as a pre-existing orphan (out of scope).
+
+No production source changed across the PR.
+
+**Metrics (fixed 1502 denominator).** Core 29 / Kit 1076 / app-hosted 93
+/ total 1198 / −304 vs baseline / app-hosted ratio 6.2%. Reduction by
+reference point: app-hosted 435 → 93 since the §15.2 batch-3 checkpoint
+(ratio 29.0% → 6.2%), or 342 → 93 against the PR #6 base (22.8% → 6.2%).
+
+**Status of the original numeric target.** The C11 "app-hosted ≤ 75"
+figure is not reached and is assessed as not worth forcing by test-only
+moves: the remaining 93 app-hosted tests are genuine app/OS boundaries —
+concrete-`TimerManager` runtime suites, BottomSheet shell / layout,
+RecordReplay / B4 baselines, and intentional split residuals (concrete
+UserDefaults stores, ActivityKit content-state, app view helpers).
+Reaching ≤ 75 would require production extraction (decoupling the
+`TimerManager` state machine = PTIMER-177 proper), not relocation.
+Recommend tracking the app-hosted ratio (6.2%) and the off-simulator
+wall-clock (`swift test` ≈ 2 s for 1105 package tests vs the
+multi-minute simulator plan) instead of the absolute count.

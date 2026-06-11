@@ -107,31 +107,6 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     }
 
     @MainActor
-    func testCompletedTimerShowsZeroRemainingTimeInViewModel() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-
-        viewModel.startTimer(from: 2)
-
-        currentDate = startDate.addingTimeInterval(4)
-        timerManager.tick(now: currentDate)
-
-        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.completed)
-        let remainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
-        XCTAssertEqual(remainingTime, 0, accuracy: 0.0001)
-        XCTAssertEqual(viewModel.formatTimeDisplay(remainingTime), TimeDisplay(primary: "0s", secondary: "0s"))
-    }
-
-    @MainActor
     func testCompletedTimerDisplaySemanticsPreserveOriginalDurationAndCompletionMetadata() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
@@ -159,6 +134,10 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
             "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt))) · just now"
+        )
+        XCTAssertEqual(
+            viewModel.formatTimeDisplay(timer.remainingTime),
+            TimeDisplay(primary: "0s", secondary: "0s")
         )
     }
 
@@ -210,77 +189,6 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
         XCTAssertEqual(timer.status, .completed)
         XCTAssertEqual(display.primary, "01:30")
         XCTAssertNotEqual(display.primary, "0s")
-    }
-
-    @MainActor
-    func testRunningTimerIncludesEndDateWithFullDateFormat() throws {
-        let currentDate = Date(timeIntervalSince1970: 100)
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-
-        viewModel.startTimer(from: 120)
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        let context = try XCTUnwrap(viewModel.timerTimeContext(for: timer))
-        XCTAssertEqual(context, "Ends \(viewModel.formatDateTime(try XCTUnwrap(timer.endDate)))")
-    }
-
-    @MainActor
-    func testPausedTimerIncludesPausedDateWithFullDateFormat() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-
-        viewModel.startTimer(from: 120)
-        let id = try XCTUnwrap(viewModel.timers.first?.id)
-        currentDate = startDate.addingTimeInterval(10)
-        viewModel.pauseTimer(id: id)
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(
-            viewModel.timerTimeContext(for: timer),
-            "Paused \(viewModel.formatDateTime(try XCTUnwrap(timer.pausedAt)))"
-        )
-    }
-
-    @MainActor
-    func testCompletedTimerIncludesCompletedDateWithFullDateFormat() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-
-        viewModel.startTimer(from: 2)
-        currentDate = startDate.addingTimeInterval(5)
-        timerManager.tick(now: currentDate)
-
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(
-            viewModel.timerTimeContext(for: timer),
-            "Completed \(viewModel.formatDateTime(try XCTUnwrap(timer.completedAt))) · just now"
-        )
     }
 
     @MainActor

@@ -11,27 +11,18 @@ import PTimerCore
 @MainActor
 final class PersistentCustomFilmLibraryTests: XCTestCase {
 
-    func test_savedProfile_survivesNewLibraryInstance() {
-        let store = InMemoryCustomFilmLibraryStore()
-        let library = CustomFilmLibrary(store: store)
-        let film = CustomFilmTestSupport.makeCustomFilm(id: "film-1", stockName: "Saved")
-
-        library.add(film)
-
-        let reloaded = CustomFilmLibrary(store: store)
-        XCTAssertEqual(reloaded.customFilms.map(\.id), ["film-1"])
-        XCTAssertEqual(reloaded.customFilms.first?.canonicalStockName, "Saved")
-    }
-
-    func test_savedMultipleProfiles_surviveReloadInOrder() {
+    func test_savedProfiles_surviveReloadInOrderIntoNewInstance() {
         let store = InMemoryCustomFilmLibraryStore()
         let library = CustomFilmLibrary(store: store)
         library.add(CustomFilmTestSupport.makeCustomFilm(id: "alpha", stockName: "Alpha"))
         library.add(CustomFilmTestSupport.makeCustomFilm(id: "beta", stockName: "Beta"))
         library.add(CustomFilmTestSupport.makeCustomFilm(id: "gamma", stockName: "Gamma"))
 
+        // A fresh library instance reloads every saved profile in order,
+        // and a saved profile's stock name survives the round-trip.
         let reloaded = CustomFilmLibrary(store: store)
         XCTAssertEqual(reloaded.customFilms.map(\.id), ["alpha", "beta", "gamma"])
+        XCTAssertEqual(reloaded.customFilms.first?.canonicalStockName, "Alpha")
     }
 
     func test_savedProfile_roundTripsAllFieldsAndFormula() {

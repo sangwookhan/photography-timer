@@ -18,60 +18,36 @@ import PTimerCore
 ///    speeds) at a stable order.
 final class CustomFilmEditorPolishTests: XCTestCase {
 
-    // MARK: - Compact row duration display
-
-    func test_rowDurationDisplayValue_secondsValueRendersWithSecondsUnit() {
-        let value = rowDurationDisplayValue("2", placeholder: "1s")
-        XCTAssertEqual(value.text, "2s")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_minutesValueRendersWithMinutesUnit() {
-        let value = rowDurationDisplayValue("200", placeholder: "1s")
-        XCTAssertEqual(value.text, "3.3m")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_subSecondValueRendersWithLeadingZero() {
-        let value = rowDurationDisplayValue("0.5", placeholder: "0s")
-        XCTAssertEqual(value.text, "0.50s")
-    }
-
-    func test_rowDurationDisplayValue_empty_returnsPlaceholder() {
-        let value = rowDurationDisplayValue("", placeholder: "1s")
-        XCTAssertEqual(value.text, "1s")
-        XCTAssertTrue(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_unparseable_echoesRawText() {
-        // Echoing the raw text lets the photographer read what
-        // they typed alongside the inline validation hint, instead
-        // of vanishing the input behind a placeholder.
-        let value = rowDurationDisplayValue("abc", placeholder: "1s")
-        XCTAssertEqual(value.text, "abc")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_sourceRangeUnlimited_rendersExplicitToken() {
-        let value = rowDurationDisplayValue(
-            "Unlimited",
-            placeholder: "Unlimited",
-            allowsUnlimited: true
-        )
-        XCTAssertEqual(value.text, "Unlimited")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_anchorRowRejectsUnlimited() {
-        // Reference Tm / Corrected at ref. / No correction do not
-        // accept Unlimited. The helper echoes the raw text so the
-        // inline-validation hint can flag it.
-        let value = rowDurationDisplayValue(
-            "Unlimited",
-            placeholder: "1s",
-            allowsUnlimited: false
-        )
-        XCTAssertEqual(value.text, "Unlimited")
+    /// rowDurationDisplayValue maps each raw input to its rendered
+    /// row text and placeholder flag (seconds/minutes/sub-second units,
+    /// empty -> placeholder, unparseable -> echo, and the Unlimited
+    /// token honoured or echoed per allowsUnlimited). Each input ->
+    /// expected is a case row.
+    func test_rowDurationDisplayValue_rendersExpectedTextPerInput() {
+        struct Case {
+            let name: String
+            let input: String
+            let placeholder: String
+            let allowsUnlimited: Bool
+            let expectedText: String
+            let expectedPlaceholder: Bool?
+        }
+        let cases: [Case] = [
+            Case(name: "seconds", input: "2", placeholder: "1s", allowsUnlimited: false, expectedText: "2s", expectedPlaceholder: false),
+            Case(name: "minutes", input: "200", placeholder: "1s", allowsUnlimited: false, expectedText: "3.3m", expectedPlaceholder: false),
+            Case(name: "sub-second leading zero", input: "0.5", placeholder: "0s", allowsUnlimited: false, expectedText: "0.50s", expectedPlaceholder: nil),
+            Case(name: "empty -> placeholder", input: "", placeholder: "1s", allowsUnlimited: false, expectedText: "1s", expectedPlaceholder: true),
+            Case(name: "unparseable echoes raw text", input: "abc", placeholder: "1s", allowsUnlimited: false, expectedText: "abc", expectedPlaceholder: false),
+            Case(name: "unlimited token when allowed", input: "Unlimited", placeholder: "Unlimited", allowsUnlimited: true, expectedText: "Unlimited", expectedPlaceholder: false),
+            Case(name: "anchor row echoes unlimited (not allowed)", input: "Unlimited", placeholder: "1s", allowsUnlimited: false, expectedText: "Unlimited", expectedPlaceholder: nil),
+        ]
+        for c in cases {
+            let value = rowDurationDisplayValue(c.input, placeholder: c.placeholder, allowsUnlimited: c.allowsUnlimited)
+            XCTAssertEqual(value.text, c.expectedText, "[\(c.name)] text")
+            if let expectedPlaceholder = c.expectedPlaceholder {
+                XCTAssertEqual(value.isPlaceholder, expectedPlaceholder, "[\(c.name)] placeholder")
+            }
+        }
     }
 
     // MARK: - Formula card top summary ↔ Calculation Basis agreement

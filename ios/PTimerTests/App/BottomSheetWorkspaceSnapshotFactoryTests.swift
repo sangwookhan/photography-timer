@@ -254,22 +254,16 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 2)
     }
 
-    func testSnapshotSummarizesTimerCounts() {
+    /// One snapshot from the sample timers must report its counts,
+    /// honour the compact visible-item limit, order visible timers
+    /// (newer active before recently completed), and surface the
+    /// hidden-count overflow text — the full compact-summary contract.
+    func testCompactSummaryOrdersVisibleTimersCountsAndReportsOverflow() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
         XCTAssertEqual(snapshot.completedCount, 2)
-    }
-
-    func testCompactSummaryRespectsVisibleItemLimit() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
         XCTAssertEqual(snapshot.compactItems.count, BottomSheetWorkspaceSnapshot.compactVisibleLimit)
         XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
-    }
-
-    func testCompactSummaryPrioritizesNewerActiveTimersThenRecentlyCompleted() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
         XCTAssertEqual(snapshot.compactItems.map(\.status), [.paused, .running, .completed])
         XCTAssertEqual(snapshot.compactItems.map(\.identityCue.markerText), ["T2", "T1", "T3"])
         XCTAssertEqual(
@@ -280,12 +274,6 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
                 UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             ]
         )
-    }
-
-    func testCompactSummaryCalculatesHiddenCountAndOverflowText() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-
-        XCTAssertEqual(snapshot.hiddenCompactItemCount, 1)
         XCTAssertEqual(snapshot.compactOverflowText, "+1")
     }
 

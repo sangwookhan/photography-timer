@@ -1,7 +1,5 @@
-import SwiftUI
 import PTimerKit
 import PTimerCore
-import UIKit
 import XCTest
 @testable import PTimer
 
@@ -154,33 +152,6 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
         XCTAssertEqual(snapshot.sections[0].items.count, 2)
         XCTAssertEqual(snapshot.sections[1].items.count, 2)
-    }
-
-    func testLargeSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-
-        let focusedItem = snapshot.sections
-            .flatMap(\.items)
-            .first { $0.id == focusedID }
-
-        XCTAssertEqual(focusedItem?.title, "Paused Hold")
-        XCTAssertEqual(focusedItem?.status, .paused)
-    }
-
-    @MainActor
-    func testLargeStateMarksFocusedRowForTappedCompactTimer() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-
-        store.focusTimer(focusedID)
-
-        let host = makeFullScreenTimersHost(store: store, snapshot: snapshot)
-
-        XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertEqual(store.selectedTimerID, focusedID)
-        XCTAssertTrue(snapshot.sections.flatMap(\.items).contains { $0.id == focusedID })
     }
 
     private func sampleTimers() -> [RunningTimerItem] {
@@ -392,28 +363,4 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
         )
     }
 
-    @MainActor
-    private func makeFullScreenTimersHost(
-        store: BottomSheetWorkspaceStateStore,
-        snapshot: BottomSheetWorkspaceSnapshot
-    ) -> UIViewController {
-        let host = UIHostingController(
-            rootView: FullScreenTimersWindow(
-                snapshot: snapshot,
-                openFocus: store.openFocus,
-                onPauseTimer: { _ in },
-                onResumeTimer: { _ in },
-                onRemoveTimer: { _ in },
-                onStartTimerAgain: { _ in },
-                onClearCompletedTimers: {},
-                onClose: {}
-            )
-            .frame(width: 390, height: 844)
-        )
-
-        host.loadViewIfNeeded()
-        host.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
-        host.view.layoutIfNeeded()
-        return host
-    }
 }

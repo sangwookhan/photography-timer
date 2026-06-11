@@ -1,9 +1,6 @@
-import SwiftUI
-import PTimerKit
 import PTimerCore
-import UIKit
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
     @MainActor
@@ -134,7 +131,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         )
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
+            timerManager: RuntimeBackedTimerManaging(
                 tickInterval: 60,
                 dateProvider: { now }
             )
@@ -455,7 +452,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
     @MainActor
     private func makeRuntimeHarness(now: TimeInterval) -> RuntimeHarness {
         var currentDate = Date(timeIntervalSince1970: now)
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -488,7 +485,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
 
     @MainActor
     private struct RuntimeHarness {
-        let timerManager: TimerManager
+        let timerManager: RuntimeBackedTimerManaging
         let viewModel: ExposureCalculatorViewModel
         let snapshotStore: BottomSheetWorkspaceSnapshotStore
         let stateStore: BottomSheetWorkspaceStateStore
@@ -501,7 +498,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         }
 
         init(
-            timerManager: TimerManager,
+            timerManager: RuntimeBackedTimerManaging,
             viewModel: ExposureCalculatorViewModel,
             snapshotStore: BottomSheetWorkspaceSnapshotStore,
             stateStore: BottomSheetWorkspaceStateStore,

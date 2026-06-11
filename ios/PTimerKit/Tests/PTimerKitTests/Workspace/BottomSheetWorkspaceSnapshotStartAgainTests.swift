@@ -1,7 +1,6 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 /// PTIMER-36: tests for the Start Again surface (completed-row clone)
 /// extracted from BottomSheetWorkspaceSnapshotFactoryTests so the
@@ -221,7 +220,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
     @MainActor
     private func makeRuntimeHarness(now: TimeInterval) -> RuntimeHarness {
         var currentDate = Date(timeIntervalSince1970: now)
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -254,7 +253,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
 
     @MainActor
     private struct RuntimeHarness {
-        let timerManager: TimerManager
+        let timerManager: RuntimeBackedTimerManaging
         let viewModel: ExposureCalculatorViewModel
         let snapshotStore: BottomSheetWorkspaceSnapshotStore
         let stateStore: BottomSheetWorkspaceStateStore
@@ -267,7 +266,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
         }
 
         init(
-            timerManager: TimerManager,
+            timerManager: RuntimeBackedTimerManaging,
             viewModel: ExposureCalculatorViewModel,
             snapshotStore: BottomSheetWorkspaceSnapshotStore,
             stateStore: BottomSheetWorkspaceStateStore,

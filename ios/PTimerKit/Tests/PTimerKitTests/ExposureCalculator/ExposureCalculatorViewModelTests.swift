@@ -1,7 +1,6 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 final class ExposureCalculatorViewModelTests: XCTestCase {
 
@@ -11,7 +10,7 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
+            timerManager: RuntimeBackedTimerManaging(
                 tickInterval: 60,
                 dateProvider: { startDate }
             )

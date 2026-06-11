@@ -1,7 +1,6 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 /// Display-state baseline tests for the cross-cutting orchestration
 /// surface that the `ExposureCalculatorViewModel` facade exposes. Each
@@ -101,10 +100,7 @@ final class ViewModelDisplayStateBaselineTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 3600,
-                dateProvider: { Date(timeIntervalSince1970: 1_700_000_000) }
-            )
+            timerManager: FakeTimerManaging(currentDate: Date(timeIntervalSince1970: 1_700_000_000))
         )
     }
 }

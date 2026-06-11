@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Delete flow coverage. Asserts the `deleteCustomFilm` surface
 /// drops the entry, falls back safely when the deleted profile
@@ -109,7 +108,7 @@ final class CustomFilmDeleteFlowTests: XCTestCase {
     private func makeViewModel(library: CustomFilmLibrary) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: library
         )
     }

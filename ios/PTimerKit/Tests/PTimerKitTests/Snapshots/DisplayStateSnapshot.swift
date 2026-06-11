@@ -21,8 +21,10 @@ import XCTest
 ///
 /// ## Baseline files
 ///
-/// Stored at `PTimerTests/__Snapshots__/<TestClass>/<testMethod>.txt`.
-/// Resolved relative to the test source file at runtime.
+/// Stored at `<TestRoot>/__Snapshots__/<TestClass>/<testMethod>.txt`,
+/// where `<TestRoot>` is the nearest supported test root above the test
+/// source file — `PTimerTests` (app) or `PTimerKitTests` (package).
+/// Resolved relative to the test source file's `#filePath` at runtime.
 ///
 /// ## Recording / replaying
 ///
@@ -180,16 +182,16 @@ enum DisplayStateSnapshot {
         return result
     }
 
-    /// `__Snapshots__/<TestClassDir>/<name>.txt` next to the test
-    /// file. The test class dir name is derived from the test
-    /// file's basename minus ".swift".
+    /// `<TestRoot>/__Snapshots__/<TestClassDir>/<name>.txt`. The test
+    /// class dir name is derived from the test file's basename minus
+    /// ".swift".
     private static func baselineURL(testFile: StaticString, name: String) -> URL {
         let testFileURL = URL(fileURLWithPath: "\(testFile)")
         let testDir = testFileURL.deletingLastPathComponent()
         let testClass = testFileURL.deletingPathExtension().lastPathComponent
 
-        // Walk up to the PTimerTests root so all snapshots live in
-        // a single __Snapshots__ tree, mirroring the test layout.
+        // Walk up to the owning test root so all snapshots live in a
+        // single __Snapshots__ tree per target, mirroring the test layout.
         let snapshotsRoot = locateSnapshotsRoot(startingAt: testDir)
         return snapshotsRoot
             .appendingPathComponent(testClass, isDirectory: true)

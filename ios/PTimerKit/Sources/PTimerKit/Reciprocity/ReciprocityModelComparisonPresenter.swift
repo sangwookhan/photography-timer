@@ -15,8 +15,10 @@ import PTimerCore
 /// never presented as manufacturer-published guidance.
 ///
 /// Returns `nil` when the profile has no formula rule or no
-/// corrected-time anchors — today only Fomapan 100 qualifies, so no
-/// other film gains the section.
+/// corrected-time anchors. The section is rendered only for models
+/// enrolled in `AlternateReciprocityModels.isAppDerivedModel` (the
+/// gate lives in `FilmModeDetailsPresenter`), so it appears solely on
+/// approved app-derived models with source anchors.
 public struct ReciprocityModelComparisonPresenter {
     public init() {}
 

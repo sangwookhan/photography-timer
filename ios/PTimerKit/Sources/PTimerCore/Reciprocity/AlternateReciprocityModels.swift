@@ -16,6 +16,13 @@ import Foundation
 ///   community anchors exactly) and an APP-DERIVED formula fitted to the
 ///   official FOMA table. Both are clearly labelled and never presented
 ///   as the official source/model.
+/// - Kodak Tri-X 400 — the published-rows-only official table and an
+///   app-derived formula (PTIMER-168).
+/// - Kodak T-MAX 100 / ADOX CHS 100 II — one app-derived formula each,
+///   fitted to the official table rows (PTIMER-170); the films whose
+///   fits exceeded the PTIMER-170 residual policy (T-MAX 400, Fomapan
+///   200/400, RPX 100/400) deliberately ship NO formula alternate —
+///   see `AppDerivedFormulaEvaluationTests`.
 public enum AlternateReciprocityModels {
 
     /// Alternate models for a film stock, in display order. Empty when
@@ -33,6 +40,10 @@ public enum AlternateReciprocityModels {
             // the published-rows-only official table, then the
             // app-derived formula fitted to those three rows.
             return [triX400OfficialTable, triX400AppDerivedFormula]
+        case "kodak-tmax-100":
+            return [tmax100AppDerivedFormula]
+        case "adox-chs-100-ii":
+            return [chs100AppDerivedFormula]
         default:
             return []
         }
@@ -49,6 +60,8 @@ public enum AlternateReciprocityModels {
     public static func isAppDerivedModel(id: String) -> Bool {
         id == fomapan100AppDerivedFormula.id
             || id == triX400AppDerivedFormula.id
+            || id == tmax100AppDerivedFormula.id
+            || id == chs100AppDerivedFormula.id
     }
 
     /// Resolves an alternate profile by its id (used by session restore
@@ -60,6 +73,8 @@ public enum AlternateReciprocityModels {
             fomapan100AppDerivedFormula,
             triX400OfficialTable,
             triX400AppDerivedFormula,
+            tmax100AppDerivedFormula,
+            chs100AppDerivedFormula,
         ]
         return all.first { $0.id == profileID }
     }
@@ -305,6 +320,151 @@ public enum AlternateReciprocityModels {
                 .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: stopDelta))),
                 .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: metered, correctedSeconds: corrected))),
                 .development(DevelopmentAdjustment(instruction: development, note: nil)),
+            ],
+            notes: [note]
+        )
+    }
+
+    // MARK: - Kodak T-MAX 100 alternate model (PTIMER-170)
+
+    /// App-derived formula for T-MAX 100 — `Tc = 1.2364 × Tm^1.1003`, a
+    /// free log-log fit through Kodak's three published F-4016 rows
+    /// (worst anchor residual ≈ 0.054 stop; see
+    /// `AppDerivedFormulaEvaluationTests`). Source is the
+    /// Kodak table (so it cites Kodak), but the calculation is the
+    /// app's own fit, NOT a Kodak-published formula. Kept non-default
+    /// and enrolled in `isAppDerivedModel` so it surfaces the
+    /// app-derived comparison rather than reading as manufacturer
+    /// guidance.
+    public static let tmax100AppDerivedFormula = ReciprocityProfile(
+        id: "kodak-tmax-100-app-formula",
+        name: "App formula",
+        source: ReciprocitySourceProvenance(
+            kind: .manufacturerPublished,
+            authority: .official,
+            confidence: .high,
+            publisher: "Kodak",
+            title: "KODAK PROFESSIONAL T-MAX 100 Film — Technical Data",
+            citation: "Publication F-4016"
+        ),
+        rules: [
+            .formula(FormulaReciprocityRule(
+                formula: ReciprocityFormula(
+                    formulaFamily: .modifiedSchwarzschild,
+                    coefficientSeconds: 1.2364,
+                    exponent: 1.1003,
+                    noCorrectionThroughSeconds: 0.1,
+                    sourceRangeThroughSeconds: 100.0
+                ),
+                notes: [
+                    "App-derived: Tc = 1.2364 × Tm^1.1003, fitted to Kodak's published 1/10/100 sec table rows (no correction through 1/10 sec). Not a Kodak-published formula; the official table model is the default.",
+                ]
+            )),
+        ],
+        sourceEvidence: tmax100OfficialAnchorEvidence,
+        modelBasis: ReciprocityProfileModelBasis(
+            sourceModel: .manufacturerTable,
+            calculationModel: .guardedFormula
+        )
+    )
+
+    /// The three official Kodak T-MAX 100 published rows preserved as
+    /// source evidence for the app-derived comparison. The 1 sec row is
+    /// published as +1/3 stop; the ≈1.26 sec corrected time is the
+    /// derived time-equivalent (1 × 2^(1/3)), mirroring the catalog
+    /// profile's anchor treatment.
+    private static let tmax100OfficialAnchorEvidence: [ReciprocitySourceEvidenceRow] = [
+        ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(1),
+            adjustments: [
+                .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1.0 / 3.0))),
+                .exposure(.correctedTime(CorrectedTimeMapping(
+                    meteredSeconds: 1,
+                    correctedSeconds: 1.2599210498948732,
+                    isApproximate: true
+                ))),
+            ],
+            notes: ["1 sec → +1/3 stop (≈1.26 sec derived time-equivalent)."]
+        ),
+        ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(10),
+            adjustments: [
+                .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 0.5))),
+                .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 10, correctedSeconds: 15))),
+            ],
+            notes: ["10 sec → +1/2 stop, corrected 15 sec."]
+        ),
+        ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(100),
+            adjustments: [
+                .exposure(.stopDelta(StopDeltaAdjustment(stopDelta: 1))),
+                .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: 100, correctedSeconds: 200))),
+            ],
+            notes: ["100 sec → +1 stop, corrected 200 sec."]
+        ),
+    ]
+
+    // MARK: - ADOX CHS 100 II alternate model (PTIMER-170)
+
+    /// App-derived formula for CHS 100 II — `Tc = 1.2102 × Tm^1.3423`, a
+    /// free log-log fit through ADOX's four published quantified rows
+    /// (worst anchor residual ≈ 0.040 stop; see
+    /// `AppDerivedFormulaEvaluationTests`). The same constants
+    /// served as the pre-PTIMER-168 catalog formula, now offered as a
+    /// clearly labelled non-default alternate to the official table.
+    public static let chs100AppDerivedFormula = ReciprocityProfile(
+        id: "adox-chs-100-ii-app-formula",
+        name: "App formula",
+        source: ReciprocitySourceProvenance(
+            kind: .manufacturerPublished,
+            authority: .official,
+            confidence: .high,
+            publisher: "ADOX",
+            title: "ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024",
+            citation: "ADOX CHS 100 II technical sheet (11 July 2024)"
+        ),
+        rules: [
+            .formula(FormulaReciprocityRule(
+                formula: ReciprocityFormula(
+                    formulaFamily: .modifiedSchwarzschild,
+                    coefficientSeconds: 1.2102,
+                    exponent: 1.3423,
+                    noCorrectionThroughSeconds: 1,
+                    sourceRangeThroughSeconds: 15.0
+                ),
+                notes: [
+                    "App-derived: Tc = 1.2102 × Tm^1.3423, fitted to ADOX's published 2/4/8/15 sec table rows (no correction through 1 sec). Not an ADOX-published formula; the official table model is the default.",
+                ]
+            )),
+        ],
+        sourceEvidence: chs100OfficialAnchorEvidence,
+        modelBasis: ReciprocityProfileModelBasis(
+            sourceModel: .manufacturerTable,
+            calculationModel: .guardedFormula
+        )
+    )
+
+    /// The four official ADOX CHS 100 II published rows preserved as
+    /// source evidence (multiplier + corrected time), mirroring the
+    /// catalog profile's source-evidence rows.
+    private static let chs100OfficialAnchorEvidence: [ReciprocitySourceEvidenceRow] = [
+        chs100AnchorEvidence(metered: 2, multiplier: 1.5, corrected: 3, note: "2 sec → ×1.5 (corrected 3 sec)."),
+        chs100AnchorEvidence(metered: 4, multiplier: 2, corrected: 8, note: "4 sec → ×2 (corrected 8 sec)."),
+        chs100AnchorEvidence(metered: 8, multiplier: 2.5, corrected: 20, note: "8 sec → ×2.5 (corrected 20 sec)."),
+        chs100AnchorEvidence(metered: 15, multiplier: 3, corrected: 45, note: "15 sec → ×3 (corrected 45 sec)."),
+    ]
+
+    private static func chs100AnchorEvidence(
+        metered: Double,
+        multiplier: Double,
+        corrected: Double,
+        note: String
+    ) -> ReciprocitySourceEvidenceRow {
+        ReciprocitySourceEvidenceRow(
+            meteredExposure: .exactSeconds(metered),
+            adjustments: [
+                .exposure(.multiplier(MultiplierAdjustment(factor: multiplier))),
+                .exposure(.correctedTime(CorrectedTimeMapping(meteredSeconds: metered, correctedSeconds: corrected))),
             ],
             notes: [note]
         )

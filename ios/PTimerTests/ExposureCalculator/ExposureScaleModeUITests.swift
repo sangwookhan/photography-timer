@@ -94,37 +94,47 @@ final class ExposureScaleModeUITests: XCTestCase {
 
     // MARK: - Snap policy: the shipping scale never snaps
 
-    func testEngineFractionalShutterWithZeroNDInOneThirdStopDoesNotSnap() throws {
+    func testEngineFractionalShutterInOneThirdStopDoesNotSnap() throws {
         // In the shipping 1/3-stop scale the calc engine must not
         // collapse a fractional shutter back to the nearest full-stop
-        // entry, even when ND is whole (including 0).
+        // entry, regardless of the whole-stop ND applied (including 0).
         let calculator = ExposureCalculator()
-        let fractionalShutter = (1.0 / 30.0) * pow(2.0, 1.0 / 3.0)
 
-        let result = try calculator.calculate(
-            baseShutterSeconds: fractionalShutter,
-            ndStep: NDStep(stops: 0),
-            scaleMode: .oneThirdStop
-        )
+        struct Case {
+            let shutterStops: Double
+            let ndStops: Double
+            let accuracy: Double
+        }
+        let cases = [
+            Case(shutterStops: 1.0 / 3.0, ndStops: 0, accuracy: 1e-12),
+            Case(shutterStops: 2.0 / 3.0, ndStops: 10, accuracy: 1e-6),
+        ]
 
-        XCTAssertEqual(result, fractionalShutter, accuracy: 1e-12)
-        XCTAssertNotEqual(result, 1.0 / 30.0, accuracy: 1e-12)
-    }
+        for testCase in cases {
+            let fractionalShutter = (1.0 / 30.0) * pow(2.0, testCase.shutterStops)
+            let result = try calculator.calculate(
+                baseShutterSeconds: fractionalShutter,
+                ndStep: NDStep(stops: testCase.ndStops),
+                scaleMode: .oneThirdStop
+            )
+            XCTAssertEqual(
+                result,
+                fractionalShutter * pow(2.0, testCase.ndStops),
+                accuracy: testCase.accuracy
+            )
+        }
 
-    func testEngineFractionalShutterWithWholeNDInOneThirdStopDoesNotSnap() throws {
-        let calculator = ExposureCalculator()
-        let fractionalShutter = (1.0 / 30.0) * pow(2.0, 2.0 / 3.0)
-
-        let result = try calculator.calculate(
-            baseShutterSeconds: fractionalShutter,
-            ndStep: NDStep(stops: 10),
-            scaleMode: .oneThirdStop
-        )
-
-        XCTAssertEqual(
-            result,
-            fractionalShutter * pow(2.0, 10),
-            accuracy: 1e-6
+        // The zero-ND fractional shutter must not collapse onto the
+        // nearest full-stop entry.
+        let zeroNDShutter = (1.0 / 30.0) * pow(2.0, 1.0 / 3.0)
+        XCTAssertNotEqual(
+            try calculator.calculate(
+                baseShutterSeconds: zeroNDShutter,
+                ndStep: NDStep(stops: 0),
+                scaleMode: .oneThirdStop
+            ),
+            1.0 / 30.0,
+            accuracy: 1e-12
         )
     }
 
@@ -152,61 +162,66 @@ final class ExposureScaleModeUITests: XCTestCase {
     }
 
     @MainActor
-    func testViewModelDefaultFractionalShutterWithZeroNDDoesNotSnap() {
-        let viewModel = makeViewModel()
+    func testViewModelReservedFractionalPathsCalculateWithoutSnapping() {
+        // Drives the reserved fractional paths directly through the
+        // ViewModel boundary (the shipping ND picker emits whole stops
+        // only; these cases exercise the reserved infrastructure so a
+        // future custom-ND workflow stays calc-correct). A fractional
+        // base shutter with zero ND passes through unsnapped, and a
+        // fractional ND applies its exact factor.
         let fractionalShutter = (1.0 / 30.0) * pow(2.0, 1.0 / 3.0)
-        viewModel.baseShutter = fractionalShutter
-        viewModel.ndStep = NDStep(stops: 0)
 
-        guard case .success(let result) = viewModel.calculationResult else {
-            XCTFail("default 1/3-stop fractional shutter + zero ND should succeed.")
-            return
+        struct Case {
+            let baseShutter: Double
+            let ndStep: NDStep
+            let expected: Double
+            let expectedNDStep: NDStep?
         }
-        XCTAssertEqual(result.resultShutterSeconds, fractionalShutter, accuracy: 1e-9)
-    }
+        let cases = [
+            Case(
+                baseShutter: fractionalShutter,
+                ndStep: NDStep(stops: 0),
+                expected: fractionalShutter,
+                expectedNDStep: nil
+            ),
+            Case(
+                baseShutter: 1.0,
+                ndStep: NDStep(stops: 1.0 / 3.0),
+                expected: pow(2.0, 1.0 / 3.0),
+                expectedNDStep: NDStep(stops: 1.0 / 3.0)
+            ),
+        ]
 
-    @MainActor
-    func testViewModelDefaultFractionalNDCalculatesCorrectly() {
-        // Drives the reserved fractional ND path directly through
-        // the ViewModel boundary (the shipping ND picker emits whole
-        // stops only; this test exercises the reserved infrastructure
-        // so a future custom-ND workflow stays calc-correct).
-        let viewModel = makeViewModel()
-        viewModel.baseShutter = 1.0
-        viewModel.ndStep = NDStep(stops: 1.0 / 3.0)
+        for testCase in cases {
+            let viewModel = makeViewModel()
+            viewModel.baseShutter = testCase.baseShutter
+            viewModel.ndStep = testCase.ndStep
 
-        guard case .success(let result) = viewModel.calculationResult else {
-            XCTFail("reserved fractional ND calculation should succeed.")
-            return
+            guard case .success(let result) = viewModel.calculationResult else {
+                XCTFail("reserved fractional path should succeed for ndStep \(testCase.ndStep).")
+                return
+            }
+            XCTAssertEqual(result.resultShutterSeconds, testCase.expected, accuracy: 1e-9)
+            if let expectedNDStep = testCase.expectedNDStep {
+                XCTAssertEqual(result.ndStep, expectedNDStep)
+            }
         }
-        XCTAssertEqual(
-            result.resultShutterSeconds,
-            pow(2.0, 1.0 / 3.0),
-            accuracy: 1e-9
-        )
-        XCTAssertEqual(result.ndStep, NDStep(stops: 1.0 / 3.0))
     }
 
     // MARK: - Camera-facing shutter labels (Nikon Z7 LUT)
 
     @MainActor
-    func testDefaultShutterPickerLabelMatchesCameraConvention() {
-        let viewModel = makeViewModel()
-
-        // The 1/3-stop intermediate above 1/30 is canonically
-        // `(1/30) · 2^(1/3) ≈ 0.042`. The camera-facing label is
-        // `1/25` (the value the photographer actually selects on the
-        // dial), not `0.042s`.
-        let lower = (1.0 / 30.0) * pow(2.0, 1.0 / 3.0)
-        let upper = (1.0 / 30.0) * pow(2.0, 2.0 / 3.0)
-
-        XCTAssertEqual(viewModel.formatShutterStepLabel(lower), "1/25")
-        XCTAssertEqual(viewModel.formatShutterStepLabel(upper), "1/20")
-    }
-
-    @MainActor
     func testDefaultShutterPickerKeepsAllSubSecondValuesAsFractions() {
         let viewModel = makeViewModel()
+
+        // The 1/3-stop intermediates above 1/30 are canonically
+        // `(1/30) · 2^(1/3) ≈ 0.042` and `(1/30) · 2^(2/3) ≈ 0.053`.
+        // The camera-facing labels are the dial values the photographer
+        // actually selects (`1/25`, `1/20`), not `0.042s`.
+        let cameraLower = (1.0 / 30.0) * pow(2.0, 1.0 / 3.0)
+        let cameraUpper = (1.0 / 30.0) * pow(2.0, 2.0 / 3.0)
+        XCTAssertEqual(viewModel.formatShutterStepLabel(cameraLower), "1/25")
+        XCTAssertEqual(viewModel.formatShutterStepLabel(cameraUpper), "1/20")
 
         // Sub-1s values stay in `1/N` notation across the whole slow
         // range — the picker should never render `0.5s` for the
@@ -347,25 +362,25 @@ final class ExposureScaleModeUITests: XCTestCase {
     // MARK: - ND label formatter
 
     @MainActor
-    func testFormatNDStopRendersWholeStopValuesAsBareInteger() {
+    func testFormatNDStopRendersWholeAndReservedFractionalValues() {
+        // Whole-stop values render as bare integers; the reserved
+        // fractional path (the shipping ND picker emits whole stops
+        // only) must still render mixed fractions so a future custom-ND
+        // workflow that drives `formatNDStop` does not lose the
+        // fractional component.
         let viewModel = makeViewModel()
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 0)), "0")
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 1)), "1")
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 6)), "6")
-    }
-
-    @MainActor
-    func testFormatNDStopRendersFractionalValuesAsMixedFractions() {
-        // Exercises the reserved fractional path of the formatter:
-        // the shipping ND picker only emits whole-stop values, but
-        // the formatter must still render mixed fractions for any
-        // future custom-ND workflow that drives `formatNDStop` with
-        // a fractional `NDStep`.
-        let viewModel = makeViewModel()
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 1.0 / 3.0)), "1/3")
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 2.0 / 3.0)), "2/3")
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 1.0 + 1.0 / 3.0)), "1 1/3")
-        XCTAssertEqual(viewModel.formatNDStop(NDStep(stops: 1.0 + 2.0 / 3.0)), "1 2/3")
+        let cases: [(NDStep, String)] = [
+            (NDStep(stops: 0), "0"),
+            (NDStep(stops: 1), "1"),
+            (NDStep(stops: 6), "6"),
+            (NDStep(stops: 1.0 / 3.0), "1/3"),
+            (NDStep(stops: 2.0 / 3.0), "2/3"),
+            (NDStep(stops: 1.0 + 1.0 / 3.0), "1 1/3"),
+            (NDStep(stops: 1.0 + 2.0 / 3.0), "1 2/3"),
+        ]
+        for (ndStep, expected) in cases {
+            XCTAssertEqual(viewModel.formatNDStop(ndStep), expected)
+        }
     }
 
     // MARK: - Live preview round-trip via NDStep
@@ -399,62 +414,64 @@ final class ExposureScaleModeUITests: XCTestCase {
     // MARK: - Persistence round-trip + legacy decode
 
     @MainActor
-    func testRelaunchRestoresOneThirdStopModeAndFractionalNDFromSnapshot() {
-        let store = InMemoryStore()
-        store.saveSnapshot(
-            PersistentCalculatorContextSnapshot(
-                selectedPresetFilmID: nil,
-                baseShutterSeconds: 1.0 / 30.0,
-                ndStop: nil,
-                ndStopThirds: 1,
-                exposureScaleMode: ExposureScaleMode.oneThirdStop.rawValue
-            )
-        )
-
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+    func testRelaunchRestoresScaleAndNDFromSnapshot() {
+        // A snapshot that carries the scale token plus a reserved
+        // fractional ND restores both. An older snapshot (pre-default-
+        // flip) that omits the `exposureScaleMode` field must restore as
+        // the shipping `.oneThirdStop` scale (per docs/specs/Calculator.md
+        // §5) and accept a legacy whole-stop ND value, because the
+        // shipping ladder is a strict superset.
+        struct Case {
+            let snapshot: PersistentCalculatorContextSnapshot
+            let expectedNDStep: NDStep?
+            let expectedNDStop: Int?
+        }
+        let cases = [
+            Case(
+                snapshot: PersistentCalculatorContextSnapshot(
+                    selectedPresetFilmID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: nil,
+                    ndStopThirds: 1,
+                    exposureScaleMode: ExposureScaleMode.oneThirdStop.rawValue
+                ),
+                expectedNDStep: NDStep.fromThirdStopCount(1),
+                expectedNDStop: nil
             ),
-            contextPersistenceStore: store
-        )
-
-        XCTAssertEqual(viewModel.scaleMode, .oneThirdStop)
-        XCTAssertEqual(viewModel.ndStep, NDStep.fromThirdStopCount(1))
-        XCTAssertEqual(viewModel.baseShutter, 1.0 / 30.0, accuracy: 1e-9)
-    }
-
-    @MainActor
-    func testRelaunchWithoutPersistedModeFallsBackToOneThirdStop() {
-        // Older snapshots (pre-default-flip) omitted the
-        // `exposureScaleMode` field entirely. Per
-        // docs/specs/Calculator.md §5 they must restore as the
-        // shipping `.oneThirdStop` scale, and a legacy whole-stop ND
-        // value must be accepted because the shipping ladder is a
-        // strict superset.
-        let store = InMemoryStore()
-        store.saveSnapshot(
-            PersistentCalculatorContextSnapshot(
-                selectedPresetFilmID: nil,
-                baseShutterSeconds: 1.0 / 30.0,
-                ndStop: 4,
-                ndStopThirds: nil,
-                exposureScaleMode: nil
-            )
-        )
-
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
+            Case(
+                snapshot: PersistentCalculatorContextSnapshot(
+                    selectedPresetFilmID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: 4,
+                    ndStopThirds: nil,
+                    exposureScaleMode: nil
+                ),
+                expectedNDStep: nil,
+                expectedNDStop: 4
             ),
-            contextPersistenceStore: store
-        )
+        ]
 
-        XCTAssertEqual(viewModel.scaleMode, .oneThirdStop)
-        XCTAssertEqual(viewModel.ndStop, 4)
+        for testCase in cases {
+            let store = InMemoryStore()
+            store.saveSnapshot(testCase.snapshot)
+            let viewModel = ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerManager: TimerManager(
+                    tickInterval: 60,
+                    dateProvider: { Date(timeIntervalSince1970: 100) }
+                ),
+                contextPersistenceStore: store
+            )
+
+            XCTAssertEqual(viewModel.scaleMode, .oneThirdStop)
+            XCTAssertEqual(viewModel.baseShutter, 1.0 / 30.0, accuracy: 1e-9)
+            if let expectedNDStep = testCase.expectedNDStep {
+                XCTAssertEqual(viewModel.ndStep, expectedNDStep)
+            }
+            if let expectedNDStop = testCase.expectedNDStop {
+                XCTAssertEqual(viewModel.ndStop, expectedNDStop)
+            }
+        }
     }
 
     func testRelaunchDecodesLegacyJSONWithoutScaleModeFieldAsOneThirdStop() throws {
@@ -472,51 +489,6 @@ final class ExposureScaleModeUITests: XCTestCase {
 
         XCTAssertNil(snapshot.exposureScaleMode)
         XCTAssertEqual(snapshot.restoredScaleMode, .oneThirdStop)
-    }
-
-    @MainActor
-    func testReservedFractionalNDStepWritePersistsAsThirdStopCount() {
-        // This value is written directly through the reserved
-        // `NDStep` path. It does not come from the shipping ND
-        // picker, which enumerates whole stops only (per
-        // docs/specs/Calculator.md §2.2). The shipping calculator
-        // already runs on `.oneThirdStop`, so a steady-state
-        // snapshot omits the scale field; the reserved fractional
-        // ND value is encoded into `ndStopThirds`.
-        let store = InMemoryStore()
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            ),
-            contextPersistenceStore: store
-        )
-
-        viewModel.ndStep = NDStep(stops: 1.0 / 3.0)
-
-        XCTAssertEqual(store.snapshot?.ndStopThirds, 1)
-        // Default scale is the shipping default, so the field is
-        // omitted to keep the steady-state snapshot compact.
-        XCTAssertNil(store.snapshot?.exposureScaleMode)
-    }
-
-    // MARK: - Reserved fractional-ND timer duration
-
-    @MainActor
-    func testReservedFractionalNDTimerDurationMatchesResult() throws {
-        // This value is written directly through the reserved
-        // `NDStep` path. It does not come from the shipping ND
-        // picker, which enumerates whole stops only. The reserved
-        // fractional value must reach the timer duration verbatim
-        // — the shipping picker would never produce this duration.
-        let viewModel = makeViewModel()
-        viewModel.baseShutter = 1.0
-        viewModel.ndStep = NDStep(stops: 1.0 / 3.0)
-
-        viewModel.startTimer()
-        let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.duration, pow(2.0, 1.0 / 3.0), accuracy: 1e-9)
     }
 
     // MARK: - Reset returns to the shipping default

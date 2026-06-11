@@ -1,14 +1,13 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 final class CalculatorViewModelScenePhaseTests: XCTestCase {
     @MainActor
     func testReconcileTimersAfterAppBecomesActivePublishesUpdatedTimerStateWithoutUserInteraction() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -43,7 +42,7 @@ final class CalculatorViewModelScenePhaseTests: XCTestCase {
     func testReconcileTimersAfterAppBecomesActiveUpdatesCompletedDisplayState() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )

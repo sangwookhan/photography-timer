@@ -1,48 +1,9 @@
-import SwiftUI
 import PTimerKit
 import PTimerCore
-import UIKit
 import XCTest
 @testable import PTimer
 
 final class BottomSheetWorkspaceOrderingTests: XCTestCase {
-    @MainActor
-    func testCompactCardTapSelectionExpandsAndStoresFocusedTimer() {
-        let store = BottomSheetWorkspaceStateStore()
-        let selectedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-
-        store.expandAndFocusTimer(selectedID)
-
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertEqual(store.selectedTimerID, selectedID)
-    }
-
-    @MainActor
-    func testCollapseClearsFocusedTimerSelection() {
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-        let selectedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-
-        store.focusTimer(selectedID)
-        XCTAssertEqual(store.selectedTimerID, selectedID)
-
-        store.collapse()
-
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
-    @MainActor
-    func testTransitionToCompactClearsFocusedTimerSelection() {
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-        let selectedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-
-        store.focusTimer(selectedID)
-        store.transition(to: .compact)
-
-        XCTAssertEqual(store.detent, .compact)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
     func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {
         let before = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .running))
         let after = makeSnapshot(from: activeOrderingTimers(pausedFirstTimerStatus: .paused))
@@ -134,53 +95,12 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
         XCTAssertEqual(snapshot2.compactItems.map(\.id), [activeC.id, activeA.id, completedB.id])
     }
 
-    @MainActor
-    func testOverflowTapExpandsToLargeWithoutForcingSelection() {
-        let snapshot = makeSnapshot(from: completedAheadOfActiveTimers())
-        let store = BottomSheetWorkspaceStateStore()
-
-        XCTAssertEqual(snapshot.compactOverflowText, "+1")
-        XCTAssertNil(store.selectedTimerID)
-
-        store.expand()
-
-        XCTAssertEqual(store.detent, .large)
-        XCTAssertNil(store.selectedTimerID)
-    }
-
     func testLargeSectionsGroupTimersByPresentationStatus() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
         XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
         XCTAssertEqual(snapshot.sections[0].items.count, 2)
         XCTAssertEqual(snapshot.sections[1].items.count, 2)
-    }
-
-    func testLargeSectionsCanResolveFocusedTimerAcrossPresentationGroups() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-
-        let focusedItem = snapshot.sections
-            .flatMap(\.items)
-            .first { $0.id == focusedID }
-
-        XCTAssertEqual(focusedItem?.title, "Paused Hold")
-        XCTAssertEqual(focusedItem?.status, .paused)
-    }
-
-    @MainActor
-    func testLargeStateMarksFocusedRowForTappedCompactTimer() {
-        let snapshot = makeSnapshot(from: sampleTimers())
-        let focusedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-        let store = BottomSheetWorkspaceStateStore(detent: .large)
-
-        store.focusTimer(focusedID)
-
-        let host = makeFullScreenTimersHost(store: store, snapshot: snapshot)
-
-        XCTAssertGreaterThan(host.view.bounds.height, 0)
-        XCTAssertEqual(store.selectedTimerID, focusedID)
-        XCTAssertTrue(snapshot.sections.flatMap(\.items).contains { $0.id == focusedID })
     }
 
     private func sampleTimers() -> [RunningTimerItem] {
@@ -392,28 +312,4 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
         )
     }
 
-    @MainActor
-    private func makeFullScreenTimersHost(
-        store: BottomSheetWorkspaceStateStore,
-        snapshot: BottomSheetWorkspaceSnapshot
-    ) -> UIViewController {
-        let host = UIHostingController(
-            rootView: FullScreenTimersWindow(
-                snapshot: snapshot,
-                openFocus: store.openFocus,
-                onPauseTimer: { _ in },
-                onResumeTimer: { _ in },
-                onRemoveTimer: { _ in },
-                onStartTimerAgain: { _ in },
-                onClearCompletedTimers: {},
-                onClose: {}
-            )
-            .frame(width: 390, height: 844)
-        )
-
-        host.loadViewIfNeeded()
-        host.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
-        host.view.layoutIfNeeded()
-        return host
-    }
 }

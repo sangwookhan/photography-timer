@@ -18,60 +18,36 @@ import PTimerCore
 ///    speeds) at a stable order.
 final class CustomFilmEditorPolishTests: XCTestCase {
 
-    // MARK: - Compact row duration display
-
-    func test_rowDurationDisplayValue_secondsValueRendersWithSecondsUnit() {
-        let value = rowDurationDisplayValue("2", placeholder: "1s")
-        XCTAssertEqual(value.text, "2s")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_minutesValueRendersWithMinutesUnit() {
-        let value = rowDurationDisplayValue("200", placeholder: "1s")
-        XCTAssertEqual(value.text, "3.3m")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_subSecondValueRendersWithLeadingZero() {
-        let value = rowDurationDisplayValue("0.5", placeholder: "0s")
-        XCTAssertEqual(value.text, "0.50s")
-    }
-
-    func test_rowDurationDisplayValue_empty_returnsPlaceholder() {
-        let value = rowDurationDisplayValue("", placeholder: "1s")
-        XCTAssertEqual(value.text, "1s")
-        XCTAssertTrue(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_unparseable_echoesRawText() {
-        // Echoing the raw text lets the photographer read what
-        // they typed alongside the inline validation hint, instead
-        // of vanishing the input behind a placeholder.
-        let value = rowDurationDisplayValue("abc", placeholder: "1s")
-        XCTAssertEqual(value.text, "abc")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_sourceRangeUnlimited_rendersExplicitToken() {
-        let value = rowDurationDisplayValue(
-            "Unlimited",
-            placeholder: "Unlimited",
-            allowsUnlimited: true
-        )
-        XCTAssertEqual(value.text, "Unlimited")
-        XCTAssertFalse(value.isPlaceholder)
-    }
-
-    func test_rowDurationDisplayValue_anchorRowRejectsUnlimited() {
-        // Reference Tm / Corrected at ref. / No correction do not
-        // accept Unlimited. The helper echoes the raw text so the
-        // inline-validation hint can flag it.
-        let value = rowDurationDisplayValue(
-            "Unlimited",
-            placeholder: "1s",
-            allowsUnlimited: false
-        )
-        XCTAssertEqual(value.text, "Unlimited")
+    /// rowDurationDisplayValue maps each raw input to its rendered
+    /// row text and placeholder flag (seconds/minutes/sub-second units,
+    /// empty -> placeholder, unparseable -> echo, and the Unlimited
+    /// token honoured or echoed per allowsUnlimited). Each input ->
+    /// expected is a case row.
+    func test_rowDurationDisplayValue_rendersExpectedTextPerInput() {
+        struct Case {
+            let name: String
+            let input: String
+            let placeholder: String
+            let allowsUnlimited: Bool
+            let expectedText: String
+            let expectedPlaceholder: Bool?
+        }
+        let cases: [Case] = [
+            Case(name: "seconds", input: "2", placeholder: "1s", allowsUnlimited: false, expectedText: "2s", expectedPlaceholder: false),
+            Case(name: "minutes", input: "200", placeholder: "1s", allowsUnlimited: false, expectedText: "3.3m", expectedPlaceholder: false),
+            Case(name: "sub-second leading zero", input: "0.5", placeholder: "0s", allowsUnlimited: false, expectedText: "0.50s", expectedPlaceholder: nil),
+            Case(name: "empty -> placeholder", input: "", placeholder: "1s", allowsUnlimited: false, expectedText: "1s", expectedPlaceholder: true),
+            Case(name: "unparseable echoes raw text", input: "abc", placeholder: "1s", allowsUnlimited: false, expectedText: "abc", expectedPlaceholder: false),
+            Case(name: "unlimited token when allowed", input: "Unlimited", placeholder: "Unlimited", allowsUnlimited: true, expectedText: "Unlimited", expectedPlaceholder: false),
+            Case(name: "anchor row echoes unlimited (not allowed)", input: "Unlimited", placeholder: "1s", allowsUnlimited: false, expectedText: "Unlimited", expectedPlaceholder: nil),
+        ]
+        for c in cases {
+            let value = rowDurationDisplayValue(c.input, placeholder: c.placeholder, allowsUnlimited: c.allowsUnlimited)
+            XCTAssertEqual(value.text, c.expectedText, "[\(c.name)] text")
+            if let expectedPlaceholder = c.expectedPlaceholder {
+                XCTAssertEqual(value.isPlaceholder, expectedPlaceholder, "[\(c.name)] placeholder")
+            }
+        }
     }
 
     // MARK: - Formula card top summary ↔ Calculation Basis agreement
@@ -123,70 +99,81 @@ final class CustomFilmEditorPolishTests: XCTestCase {
 
     // MARK: - Advanced offset rendering
 
-    func test_advancedFormula_positiveOffset_rendersWithPlusSegment() {
-        let formula = ReciprocityFormula(
-            coefficientSeconds: 10,
-            referenceMeteredTimeSeconds: 3,
-            exponent: 1.30,
-            offsetSeconds: 0.3,
-            noCorrectionThroughSeconds: 1
-        )
-        XCTAssertEqual(
-            FormulaEquationFormatter.userFacingText(for: formula),
-            "Tc = 10s × (Tm / 3s)^1.3 + 0.3s"
-        )
-    }
-
-    func test_advancedFormula_negativeOffset_rendersWithMinusSegment() {
-        let formula = ReciprocityFormula(
-            coefficientSeconds: 10,
-            referenceMeteredTimeSeconds: 3,
-            exponent: 1.30,
-            offsetSeconds: -0.3,
-            noCorrectionThroughSeconds: 1
-        )
-        // The formatter prints `-` (ASCII) for negative offsets.
-        // The leading space before the operator stays so the
-        // expression reads as `... - 0.3s`.
-        XCTAssertEqual(
-            FormulaEquationFormatter.userFacingText(for: formula),
-            "Tc = 10s × (Tm / 3s)^1.3 - 0.3s"
-        )
+    func test_advancedFormula_signedOffset_rendersWithSignedSegment() {
+        // The formatter appends a signed seconds segment for a non-zero
+        // offset, printing ASCII `+` / `-` with a leading space so the
+        // expression reads as `... + 0.3s` / `... - 0.3s`.
+        struct Case {
+            let name: String
+            let offsetSeconds: Double
+            let expected: String
+        }
+        let cases: [Case] = [
+            Case(name: "positive offset", offsetSeconds: 0.3, expected: "Tc = 10s × (Tm / 3s)^1.3 + 0.3s"),
+            Case(name: "negative offset", offsetSeconds: -0.3, expected: "Tc = 10s × (Tm / 3s)^1.3 - 0.3s"),
+        ]
+        for c in cases {
+            let formula = ReciprocityFormula(
+                coefficientSeconds: 10,
+                referenceMeteredTimeSeconds: 3,
+                exponent: 1.30,
+                offsetSeconds: c.offsetSeconds,
+                noCorrectionThroughSeconds: 1
+            )
+            XCTAssertEqual(
+                FormulaEquationFormatter.userFacingText(for: formula),
+                c.expected,
+                "[\(c.name)]"
+            )
+        }
     }
 
     // MARK: - Exponent superscript scope
 
-    func test_formulaExpressionSplitter_offsetSuffixStaysAtBaseline() {
-        // Splitter must stop the exponent token at the first
-        // whitespace, so the trailing ` + 0.3s` renders at the
-        // normal text baseline instead of bleeding into the
-        // superscript.
-        guard let parts = FilmModeDetailsFormulaExpressionText.split(
-            "Tc = 10s × (Tm / 3s)^1.3 + 0.3s"
-        ) else {
-            return XCTFail("Splitter must accept anchored formula with offset.")
+    func test_formulaExpressionSplitter_scopesExponentTokenPerInput() {
+        // The splitter stops the exponent token at the first whitespace
+        // (so a trailing ` + 0.3s` renders at the baseline, not in the
+        // superscript), yields an empty remainder when the expression
+        // ends on the exponent, and returns nil for a plain no-caret
+        // string so the caller renders it raw. Each input -> expected
+        // is a case row.
+        struct ExpectedParts {
+            let base: String
+            let exponent: String
+            let remainder: String
         }
-        XCTAssertEqual(parts.base, "Tc = 10s × (Tm / 3s)")
-        XCTAssertEqual(parts.exponent, "1.3")
-        XCTAssertEqual(parts.remainder, " + 0.3s")
-    }
-
-    func test_formulaExpressionSplitter_endingWithExponent_hasEmptyRemainder() {
-        guard let parts = FilmModeDetailsFormulaExpressionText.split(
-            "Tc = Tm^1.31"
-        ) else {
-            return XCTFail("Splitter must accept the simplified shape.")
+        struct Case {
+            let name: String
+            let input: String
+            let expected: ExpectedParts?
         }
-        XCTAssertEqual(parts.base, "Tc = Tm")
-        XCTAssertEqual(parts.exponent, "1.31")
-        XCTAssertEqual(parts.remainder, "")
-    }
-
-    func test_formulaExpressionSplitter_noCaret_returnsNil() {
-        XCTAssertNil(
-            FilmModeDetailsFormulaExpressionText.split("Tc = Tm"),
-            "Splitter must return nil for plain (no-caret) expressions so the caller can render the raw string."
-        )
+        let cases: [Case] = [
+            Case(
+                name: "offset suffix stays at baseline",
+                input: "Tc = 10s × (Tm / 3s)^1.3 + 0.3s",
+                expected: ExpectedParts(base: "Tc = 10s × (Tm / 3s)", exponent: "1.3", remainder: " + 0.3s")
+            ),
+            Case(
+                name: "ending with exponent has empty remainder",
+                input: "Tc = Tm^1.31",
+                expected: ExpectedParts(base: "Tc = Tm", exponent: "1.31", remainder: "")
+            ),
+            Case(name: "no caret returns nil", input: "Tc = Tm", expected: nil),
+        ]
+        for c in cases {
+            let parts = FilmModeDetailsFormulaExpressionText.split(c.input)
+            guard let expected = c.expected else {
+                XCTAssertNil(parts, "[\(c.name)] splitter must return nil")
+                continue
+            }
+            guard let parts else {
+                XCTFail("[\(c.name)] splitter must accept the input")
+                continue
+            }
+            XCTAssertEqual(parts.base, expected.base, "[\(c.name)] base")
+            XCTAssertEqual(parts.exponent, expected.exponent, "[\(c.name)] exponent")
+            XCTAssertEqual(parts.remainder, expected.remainder, "[\(c.name)] remainder")
+        }
     }
 
     // MARK: - Preview gating

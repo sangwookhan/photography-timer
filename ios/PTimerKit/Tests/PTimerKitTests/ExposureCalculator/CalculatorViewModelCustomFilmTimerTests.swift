@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Timer-start + identity-snapshot coverage for the custom film
 /// path. Exercises the full chain: ViewModel →
@@ -198,7 +197,7 @@ final class CalculatorViewModelCustomFilmTimerTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             customFilmLibrary: CustomFilmLibrary()
         )
     }

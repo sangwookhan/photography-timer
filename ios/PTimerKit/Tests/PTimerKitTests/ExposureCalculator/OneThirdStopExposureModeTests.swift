@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// Focused tests for the one-third-stop exposure calculation mode.
 /// The shipping calculator runs on `.oneThirdStop` (Base Shutter
@@ -190,10 +189,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
     func testViewModelDefaultScaleModeIsOneThirdStop() {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
 
         XCTAssertEqual(viewModel.scaleMode, .oneThirdStop)
@@ -224,10 +220,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         // verbatim through this future-custom / variable-ND path.
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
 
         viewModel.baseShutter = 1.0 / 30.0
@@ -254,10 +247,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         // truncated to a whole-stop equivalent.
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
 
         viewModel.baseShutter = 1.0
@@ -291,10 +281,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
         for testCase in cases {
             let viewModel = ExposureCalculatorViewModel(
                 calculator: ExposureCalculator(),
-                timerManager: TimerManager(
-                    tickInterval: 60,
-                    dateProvider: { Date(timeIntervalSince1970: 100) }
-                )
+                timerManager: FakeTimerManaging()
             )
 
             viewModel.baseShutter = 1.0
@@ -355,10 +342,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
             let store = InMemoryStore()
             let viewModel = ExposureCalculatorViewModel(
                 calculator: ExposureCalculator(),
-                timerManager: TimerManager(
-                    tickInterval: 60,
-                    dateProvider: { Date(timeIntervalSince1970: 100) }
-                ),
+                timerManager: FakeTimerManaging(),
                 contextPersistenceStore: store
             )
 
@@ -409,10 +393,7 @@ final class OneThirdStopExposureModeTests: XCTestCase {
             store.saveSnapshot(testCase.snapshot)
             let viewModel = ExposureCalculatorViewModel(
                 calculator: ExposureCalculator(),
-                timerManager: TimerManager(
-                    tickInterval: 60,
-                    dateProvider: { Date(timeIntervalSince1970: 100) }
-                ),
+                timerManager: FakeTimerManaging(),
                 contextPersistenceStore: store
             )
 

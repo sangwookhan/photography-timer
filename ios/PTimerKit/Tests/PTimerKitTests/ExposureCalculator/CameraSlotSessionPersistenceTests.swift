@@ -1,7 +1,6 @@
 import XCTest
 import PTimerKit
 import PTimerCore
-@testable import PTimer
 
 /// End-to-end tests for the multi-slot persistence layer:
 /// `CameraSlotSessionPersistenceController`, the
@@ -633,7 +632,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
     ) -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(),
+            timerManager: FakeTimerManaging(),
             contextPersistenceStore: legacyStore,
             cameraSlotSessionPersistenceStore: sessionStore
         )

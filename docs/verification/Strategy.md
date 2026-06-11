@@ -28,12 +28,15 @@ PTIMER 구조 개선 작업이 다음을 만족하도록 보장:
 **목적**: PR 단위로 build/test/lint 회귀 차단
 
 **무엇을**:
+- 패키지 테스트 통과 (`swift test --package-path ios/PTimerKit` —
+  `PTimerCoreTests`/`PTimerKitTests`, 시뮬레이터 불필요, 테스트 대다수)
 - Xcode build (`cd ios && xcodebuild test`) 통과
-- 모든 단위 테스트 통과 (`ios/PTimer.xctestplan`)
+- app-hosted 단위 테스트 통과 (`ios/PTimer.xctestplan` — OS 경계
+  스위트)
 - SwiftLint warning/error 0
 - Coverage 비-회귀 (after coverage gating is introduced: 이전 대비 −1% 이내)
 
-**도구**: local `xcodebuild` / `swiftlint`, and CI when configured
+**도구**: local `swift test` / `xcodebuild` / `swiftlint`, and CI when configured
 
 **언제**: 모든 PR
 
@@ -110,9 +113,13 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 
 #### (a) Snapshot 자동
 
-현재 자동 snapshot은 in-house display-state snapshot이다. 위치:
-`ios/PTimerTests/Snapshots/`, baseline:
-`ios/PTimerTests/__Snapshots__/<TestClass>/<name>.txt`.
+현재 자동 snapshot은 in-house display-state snapshot이다. helper는
+baseline을 호출 테스트 파일 위의 가장 가까운 지원 루트(`PTimerTests`
+또는 `PTimerKitTests`) 아래에서 해석한다. display-state snapshot
+스위트는 PTIMER-174에서 `PTimerKitTests`로 이전되어 off-simulator로
+실행된다. 위치: `ios/PTimerKit/Tests/PTimerKitTests/Snapshots/`,
+baseline:
+`ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/<TestClass>/<name>.txt`.
 
 이 helper는 SwiftUI 픽셀 비교가 아니라 ViewModel/Presenter/Mapper가
 emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
@@ -178,11 +185,12 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 
 | 도구 | 무엇 |
 |---|---|
-| Xcode test, `ios/PTimer.xctestplan` | L1 |
+| `swift test`, `ios/PTimerKit/Tests` (`PTimerCoreTests`/`PTimerKitTests`) | L1 — off-simulator, 테스트 대다수 |
+| Xcode test, `ios/PTimer.xctestplan` | L1 — app-hosted OS 경계 스위트 |
 | `ios/PTimerTests/` XCTest suite | L1 (테스트 데이터) |
 | `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md` | L4 매뉴얼 스모크 발판 |
 | `Storing` 페어 | DI 발판, L3 fitness 일부 |
-| `ios/PTimerTests/Snapshots/` | L2/L4 display-state snapshot |
+| `ios/PTimerKit/Tests/PTimerKitTests/Snapshots/` | L2/L4 display-state snapshot |
 | `ios/PTimerTests/RecordReplay/` | L2 event-sequence record-replay |
 
 ### 추가 필요

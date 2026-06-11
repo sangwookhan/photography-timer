@@ -1,14 +1,13 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     @MainActor
     func testPausedTimerRemainingTimeStaysStableInViewModel() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -40,7 +39,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testPausedTimerDisplaySemanticsPreservePauseMetadataAndRemainResumable() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -78,7 +77,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testResumeTimerUpdatesViewModelState() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -110,7 +109,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testCompletedTimerDisplaySemanticsPreserveOriginalDurationAndCompletionMetadata() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -145,7 +144,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testRunningTimerPrimaryIsRemainingSecondaryIsExactSeconds() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -169,7 +168,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testCompletedTimerDisplaysOriginalDurationNotZero() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -195,7 +194,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testTimerDisplayDoesNotDuplicateInformation() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -229,7 +228,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testBasisSummaryRemainsStableAcrossStateChanges() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )
@@ -258,7 +257,7 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     func testTimerStateTransitionDoesNotCorruptDisplayModel() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )

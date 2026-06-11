@@ -1,7 +1,6 @@
-import PTimerKit
 import PTimerCore
 import XCTest
-@testable import PTimer
+@testable import PTimerKit
 
 final class BottomSheetWorkspaceOrderingTests: XCTestCase {
     func testActiveTimersPreserveStableRelativeOrderAcrossStatusChanges() {

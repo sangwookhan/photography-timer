@@ -67,7 +67,17 @@ in addition to its own.
 - iOS stack: Swift, SwiftUI, Xcode project
 - iOS workspace entry point: `ios/PTimer.xcodeproj`
 - iOS main app scheme: `PTimer`
-- iOS test target: `ios/PTimerTests`
+- Reusable logic package: `ios/PTimerKit` (SwiftPM). Libraries:
+  `PTimerCore` (Foundation-only calculation/state engine) and
+  `PTimerKit` (app logic, presenters, view models, SwiftUI
+  components), consumed by the app target. The package declares
+  macOS so its tests run off-simulator and the compiler polices the
+  no-UIKit layer boundary.
+- iOS test targets:
+  - `ios/PTimerKit/Tests` (`PTimerCoreTests`, `PTimerKitTests`) —
+    the large majority of tests; run via `swift test`, no simulator
+  - `ios/PTimerTests` — app-hosted; reserved for OS-boundary
+    behavior (see test placement rule under Build and Test Commands)
 - iOS automated tests use `XCTest`
 - Secondary platform: native Android skeleton (`android/`,
   Kotlin + Jetpack Compose, Gradle). Android build entry point:
@@ -253,12 +263,18 @@ stay at the repo root under `shared/test-fixtures/`.
 ### iOS
 
 ```bash
-# Run all tests
+# Run the package tests (the large majority; no simulator needed)
+swift test --package-path ios/PTimerKit
+
+# Run a single package test class
+swift test --package-path ios/PTimerKit --filter <ClassName>
+
+# Run all app-hosted tests (OS-boundary suites)
 cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 
-# Run tests without a test plan (same scheme, ad-hoc)
+# Run app-hosted tests without a test plan (same scheme, ad-hoc)
 cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 
@@ -269,8 +285,27 @@ cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer
 If `iPhone 17` is unavailable, choose any available iPhone simulator
 from the destinations list.
 
-To run a single test class, add `-only-testing PTimerTests/<ClassName>`
-to the command.
+To run a single app-hosted test class, add
+`-only-testing PTimerTests/<ClassName>` to the `xcodebuild` command.
+
+A full verification run is BOTH commands: `swift test` for the
+package targets and `xcodebuild … -testPlan PTimer test` for the
+app-hosted remainder. Running only the app test plan covers a small
+minority of the suite.
+
+Test placement rule (PTIMER-174):
+
+- A test lives in the test target of the module that owns its
+  subject (`PTimerCoreTests` / `PTimerKitTests`).
+- App-hosted `ios/PTimerTests` is reserved for OS-boundary behavior:
+  the RunLoop-based `TimerManager` coordinator, ActivityKit /
+  Live Activity, `UIApplication`, concrete UserDefaults stores, the
+  SwiftUI shell, and RecordReplay.
+- Timer test-double boundary: `FakeTimerManaging`
+  (PTimerKitTests support) records starts only — never add
+  time-advance or state-transition behavior to it. Tests that need
+  transitions use `RuntimeBackedTimerManaging`, which wraps the real
+  `TimerRuntime`.
 
 iOS verification guidance:
 

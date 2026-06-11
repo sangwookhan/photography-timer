@@ -2,7 +2,6 @@ import Combine
 import PTimerKit
 import PTimerCore
 import XCTest
-@testable import PTimer
 
 /// ViewModel-level coverage for the shipping one-third-stop
 /// calculator scale (per `docs/specs/Calculator.md` §1.4). The
@@ -456,10 +455,7 @@ final class ExposureScaleModeUITests: XCTestCase {
             store.saveSnapshot(testCase.snapshot)
             let viewModel = ExposureCalculatorViewModel(
                 calculator: ExposureCalculator(),
-                timerManager: TimerManager(
-                    tickInterval: 60,
-                    dateProvider: { Date(timeIntervalSince1970: 100) }
-                ),
+                timerManager: FakeTimerManaging(),
                 contextPersistenceStore: store
             )
 
@@ -519,10 +515,7 @@ final class ExposureScaleModeUITests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
-                tickInterval: 60,
-                dateProvider: { Date(timeIntervalSince1970: 100) }
-            )
+            timerManager: FakeTimerManaging()
         )
     }
 }

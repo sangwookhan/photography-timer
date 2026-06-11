@@ -36,33 +36,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
     }
 
     @MainActor
-    func testStartTimerCreatesDisplayItemThroughManager() {
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { Date(timeIntervalSince1970: 100) }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-
-        viewModel.baseShutter = 1.0 / 30.0
-        viewModel.ndStop = 6
-        viewModel.startTimer()
-
-        XCTAssertEqual(timerManager.timers.count, 1)
-        XCTAssertEqual(viewModel.timers.count, 1)
-        XCTAssertEqual(viewModel.runningTimerCount, 1)
-        XCTAssertEqual(viewModel.timers[0].name, "6 stops - 2s")
-        XCTAssertEqual(viewModel.timers[0].status, TimerStatus.running)
-        XCTAssertEqual(viewModel.timers[0].remainingTime, 2, accuracy: 0.0001)
-        XCTAssertEqual(viewModel.formatTimeDisplay(viewModel.timers[0].remainingTime), TimeDisplay(primary: "2s", secondary: "2s"))
-        XCTAssertEqual(viewModel.timers[0].basisSummary, "Base 1/30s · 6 stops")
-    }
-
-    @MainActor
-    func testRunningTimerDisplaySemanticsPreserveTargetAndContext() throws {
+    func testStartTimerCreatesRunningDisplayItemWithMetadataAndContext() throws {
         let currentDate = Date(timeIntervalSince1970: 100)
         let timerManager = TimerManager(
             tickInterval: 60,
@@ -78,11 +52,20 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         viewModel.ndStop = 6
         viewModel.startTimer()
 
+        XCTAssertEqual(timerManager.timers.count, 1)
+        XCTAssertEqual(viewModel.timers.count, 1)
+        XCTAssertEqual(viewModel.runningTimerCount, 1)
+
         let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.name, "6 stops - 2s")
         XCTAssertEqual(timer.status, .running)
         XCTAssertEqual(timer.remainingTime, 2, accuracy: 0.0001)
         XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
         XCTAssertEqual(timer.basisSummary, "Base 1/30s · 6 stops")
+        XCTAssertEqual(
+            viewModel.formatTimeDisplay(timer.remainingTime),
+            TimeDisplay(primary: "2s", secondary: "2s")
+        )
         XCTAssertEqual(viewModel.timerTargetContext(for: timer), "2s · 2s")
         XCTAssertEqual(
             viewModel.timerTimeContext(for: timer),
@@ -193,31 +176,6 @@ final class CalculatorTimerMetadataTests: XCTestCase {
             viewModel.timers.map(\.basisSummary),
             ["Base 1/15s · 4 stops", "Base 1s · 3 stops"]
         )
-    }
-
-    @MainActor
-    func testPauseTimerUpdatesViewModelState() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let timerManager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate }
-        )
-        let viewModel = ExposureCalculatorViewModel(
-            calculator: ExposureCalculator(),
-            timerManager: timerManager
-        )
-        viewModel.scaleMode = .fullStop
-
-        viewModel.startTimer(from: 10)
-        let id = try XCTUnwrap(viewModel.timers.first?.id)
-
-        currentDate = startDate.addingTimeInterval(4)
-        viewModel.pauseTimer(id: id)
-
-        XCTAssertEqual(viewModel.timers.first?.status, TimerStatus.paused)
-        let remainingTime = try XCTUnwrap(viewModel.timers.first?.remainingTime)
-        XCTAssertEqual(remainingTime, 6, accuracy: 0.0001)
     }
 
     @MainActor

@@ -73,17 +73,6 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(camera4Page.ndStep.stops, 0, accuracy: 1e-9)
     }
 
-    func testActiveSlotIDIsRestored() throws {
-        let sessionStore = InMemorySessionStore()
-        let viewModel = makeViewModel(sessionStore: sessionStore)
-
-        viewModel.selectCameraSlot(.camera3)
-        viewModel.baseShutter = 1.0 / 15.0
-
-        let restored = makeViewModel(sessionStore: sessionStore)
-        XCTAssertEqual(restored.activeCameraSlotID, .camera3)
-    }
-
     /// Two-relaunch regression. The bug being fenced: on first
     /// relaunch, the restore path used to apply the active
     /// snapshot before loading the inactive map, and the trailing
@@ -126,6 +115,12 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
             "Camera 1's film must survive the first relaunch."
         )
         XCTAssertEqual(
+            firstRelaunch.cameraSlotPageState(for: .camera1).baseShutter,
+            1.0 / 60.0,
+            accuracy: 1e-9,
+            "Camera 1's base shutter must restore independently on the first relaunch."
+        )
+        XCTAssertEqual(
             firstRelaunch.cameraSlotPageState(for: .camera2).baseShutter,
             1.0 / 15.0,
             accuracy: 1e-9
@@ -158,28 +153,6 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
             accuracy: 1e-9,
             "Camera 3's ND must survive a second relaunch."
         )
-    }
-
-    func testInactiveSlotStateRestoresIndependently() throws {
-        let sessionStore = InMemorySessionStore()
-        let viewModel = makeViewModel(sessionStore: sessionStore)
-        let film = try XCTUnwrap(
-            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
-        )
-
-        viewModel.selectPresetFilm(film)
-        viewModel.baseShutter = 1.0 / 60.0
-        viewModel.selectCameraSlot(.camera4)
-
-        // Camera 1 is now inactive and should be persisted with its
-        // film selection. Relaunch and verify the inactive slot's
-        // state is reachable from the page-state derivation.
-        let restored = makeViewModel(sessionStore: sessionStore)
-        XCTAssertEqual(restored.activeCameraSlotID, .camera4)
-
-        let camera1Page = restored.cameraSlotPageState(for: .camera1)
-        XCTAssertEqual(camera1Page.selectedFilm?.id, film.id)
-        XCTAssertEqual(camera1Page.baseShutter, 1.0 / 60.0, accuracy: 1e-9)
     }
 
     // MARK: - Target Shutter persistence

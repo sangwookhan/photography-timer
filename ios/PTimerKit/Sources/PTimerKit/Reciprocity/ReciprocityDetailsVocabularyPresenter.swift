@@ -19,12 +19,40 @@ public struct ReciprocityDetailsVocabularyPresenter {
     public func reciprocityStateDisplayState(
         for bindingState: FilmModeReciprocityBindingState
     ) -> FilmModeReciprocityStateDisplayState {
-        FilmModeReciprocityStateDisplayState(
+        // PTIMER-169: a manufacturer stop signal ("64 sec is not
+        // recommended.") leads the info text once the metered exposure
+        // reaches its boundary, so the published warning is visible at
+        // the point of use rather than only inside Film Details.
+        let explanation = guidanceExplanation(for: bindingState.presentation)
+        let infoText = manufacturerStopSignalText(for: bindingState)
+            .map { "\($0) \(explanation)" } ?? explanation
+        return FilmModeReciprocityStateDisplayState(
             badgeText: badgeText(for: bindingState),
             tone: tone(for: bindingState),
-            infoText: guidanceExplanation(for: bindingState.presentation),
+            infoText: infoText,
             showsInfoAffordance: true
         )
+    }
+
+    /// Manufacturer stop-signal sentence for the current metered
+    /// exposure, or `nil` when no `notRecommended` boundary has been
+    /// reached. Deliberately scoped to the beyond-source-range
+    /// (`unsupported`) presentation state: every shipped boundary sits
+    /// past its profile's published source range, so that is the only
+    /// state where the boundary context applies — no-correction and
+    /// in-range derived results must not grow the warning
+    /// speculatively. When several boundaries have been passed, only
+    /// the FIRST reached message surfaces; a multi-warning UI is out
+    /// of scope for PTIMER-169. Presentation-only — reads the
+    /// profile's source evidence, never the calculation path.
+    public func manufacturerStopSignalText(
+        for bindingState: FilmModeReciprocityBindingState
+    ) -> String? {
+        guard bindingState.presentation.category == .unsupported else { return nil }
+        return ReciprocitySourceEvidenceClassifier.reachedStopSignalMessages(
+            in: bindingState.profile,
+            meteredExposureSeconds: bindingState.policyResult.meteredExposureSeconds
+        ).first.map { "Manufacturer guidance: \($0)" }
     }
 
     /// Both Main (reciprocity badge chip) and Detail (Current Result
@@ -170,16 +198,26 @@ public struct ReciprocityDetailsVocabularyPresenter {
 
         switch bindingState.presentation.category {
         case .unsupported:
+            let genericDetail: String
             if bindingState.policyResult.correctedExposureSeconds != nil {
                 if bindingState.profile.usesTableInterpolation {
-                    return "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+                    genericDetail = "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+                } else if bindingState.profile.isConvertedFormulaProfile {
+                    genericDetail = "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
+                } else {
+                    genericDetail = "Current input is outside manufacturer guidance. The corrected value is a formula prediction outside the supported range."
                 }
-                if bindingState.profile.isConvertedFormulaProfile {
-                    return "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
-                }
-                return "Current input is outside manufacturer guidance. The corrected value is a formula prediction outside the supported range."
+            } else {
+                genericDetail = "Current input is outside the supported range and no quantified corrected point is available."
             }
-            return "Current input is outside the supported range and no quantified corrected point is available."
+            // PTIMER-169: lead with the manufacturer's own stop signal
+            // when the metered exposure has reached a not-recommended
+            // boundary, so the published warning is not hidden behind
+            // the generic beyond-source-range copy.
+            if let stopSignal = manufacturerStopSignalText(for: bindingState) {
+                return "\(stopSignal) \(genericDetail)"
+            }
+            return genericDetail
         case .limitedGuidance:
             return "No official quantified prediction is available beyond this range."
         case .noCorrection, .formulaDerived:

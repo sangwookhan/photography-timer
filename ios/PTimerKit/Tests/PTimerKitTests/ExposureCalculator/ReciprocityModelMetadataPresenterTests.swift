@@ -50,6 +50,46 @@ final class ReciprocityModelMetadataPresenterTests: XCTestCase {
         XCTAssertEqual(value(section, "Calculation"), "Limited guidance — no quantified prediction")
     }
 
+    // MARK: - PTIMER-169 special source shapes
+
+    func testRangeGuidanceProfileReadsManufacturerRangeGuidance() throws {
+        // Acros II's source is Fujifilm's published 120–1000 s range
+        // rule; the formula encodes it verbatim. The Details section
+        // must read "Manufacturer range guidance" (never "Manufacturer
+        // table") and the calculation must not imply an app-derived fit.
+        let film = try XCTUnwrap(film(named: "Acros II"))
+        let section = presenter.metadataSection(film: film, profile: film.profiles[0])
+        XCTAssertEqual(value(section, "Source"), "Manufacturer range guidance")
+        XCTAssertEqual(value(section, "Calculation"), "Guarded formula")
+    }
+
+    func testTableSourceProfilesWithFittedFormulaReadAppDerived() throws {
+        // Fujifilm slide films, Rollei range-valued-row films, and CMS
+        // 20 II keep their fitted formula in Phase 1; Details must say
+        // so honestly: table-shaped source, app-derived calculation.
+        for stock in ["Velvia 50", "Velvia 100", "Provia 100F", "RETRO 80S", "SUPERPAN 200", "CMS 20 II"] {
+            let film = try XCTUnwrap(film(named: stock))
+            let section = presenter.metadataSection(film: film, profile: film.profiles[0])
+            XCTAssertEqual(value(section, "Source"), "Manufacturer table", stock)
+            XCTAssertEqual(value(section, "Calculation"), "App-derived guarded formula", stock)
+        }
+    }
+
+    func testAllLimitedGuidanceProfilesReadLimitedGuidance() throws {
+        // The five Kodak profiles that gained an explicit declaration
+        // in PTIMER-169 read identically to Ektar 100 above.
+        for stock in ["Portra 160", "Portra 400", "Gold 200", "Ultra Max 400", "Ektachrome E100"] {
+            let film = try XCTUnwrap(film(named: stock))
+            let section = presenter.metadataSection(film: film, profile: film.profiles[0])
+            XCTAssertEqual(value(section, "Source"), "Manufacturer limited guidance", stock)
+            XCTAssertEqual(
+                value(section, "Calculation"),
+                "Limited guidance — no quantified prediction",
+                stock
+            )
+        }
+    }
+
     func testUnofficialPracticalProfileMapsToPracticalGuidance() throws {
         let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
         let film = try XCTUnwrap(film(named: "Portra 400"))

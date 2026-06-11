@@ -1033,7 +1033,10 @@
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1086,7 +1089,10 @@
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1139,7 +1145,10 @@
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1192,7 +1201,10 @@
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1251,7 +1263,10 @@
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1313,7 +1328,10 @@
               ▿ notes: 1 element
                 - "120 to 1000 sec → +1/2 stop."
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerRangeGuidance, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerRangeGuidance
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1431,7 +1449,10 @@
                     - message: "64 sec is not recommended."
               - notes: 0 elements
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1508,7 +1529,10 @@
               ▿ notes: 1 element
                 - "4 min → +1/2 stop, 2.5M."
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -1580,7 +1604,10 @@
                     - message: "8 min is not recommended."
               - notes: 0 elements
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -2279,7 +2306,10 @@
               ▿ notes: 1 element
                 - "30 sec → corrected 180 sec."
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -2401,7 +2431,10 @@
               ▿ notes: 1 element
                 - "30 sec → corrected 180 sec."
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -2633,6 +2666,9 @@
                     - message: "100 sec is not recommended."
               - notes: 0 elements
               - isSourceEvidenceOnly: false
-          - modelBasis: nil
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
       - userMetadata: nil

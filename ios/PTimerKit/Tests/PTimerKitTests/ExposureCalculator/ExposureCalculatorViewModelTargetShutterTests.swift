@@ -1,7 +1,6 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 final class CalculatorViewModelTargetShutterTests: XCTestCase {
     // MARK: - State and display
@@ -376,7 +375,7 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
         // helper pins `.fullStop`, which itself flips the reset flag.
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
+            timerManager: RuntimeBackedTimerManaging(
                 tickInterval: 60,
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )
@@ -490,7 +489,7 @@ final class CalculatorViewModelTargetShutterTests: XCTestCase {
     private func makeViewModel() -> ExposureCalculatorViewModel {
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
-            timerManager: TimerManager(
+            timerManager: RuntimeBackedTimerManaging(
                 tickInterval: 60,
                 dateProvider: { Date(timeIntervalSince1970: 100) }
             )

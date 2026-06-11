@@ -1,12 +1,11 @@
 import XCTest
-import PTimerKit
 import PTimerCore
-@testable import PTimer
+@testable import PTimerKit
 
 final class CalculatorTimerIntegrationTests: XCTestCase {
     @MainActor
     func testFilmModeCorrectedExposureTimerUsesQuantifiedCorrectedResult() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -36,7 +35,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testFilmModeAdjustedShutterTimerStartsFromAdjustedValueWhenCorrectedIsQuantified() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -66,7 +65,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testFilmModeLimitedGuidanceDoesNotProvideCorrectedExposureTimerSource() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -92,7 +91,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testFilmModeAdjustedShutterTimerStartsForLimitedGuidanceResult() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -126,7 +125,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         // a corrected exposure, so the corrected-exposure timer
         // affordance enables and stamps the timer with the
         // formula-predicted duration.
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -155,7 +154,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testFilmModeAdjustedShutterTimerStartsForUnsupportedResult() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -182,7 +181,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testDigitalModeStartTimerBehaviorRemainsUnchanged() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -206,7 +205,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testStartTimerUsesLivePreviewCalculationWhenPresent() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -229,7 +228,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
     @MainActor
     func testStartTimerUsesLiveBaseShutterPreviewCalculationWhenPresent() throws {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -255,7 +254,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
 
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { currentDate }
         )

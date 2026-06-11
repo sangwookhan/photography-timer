@@ -1,6 +1,6 @@
 import XCTest
-import PTimerKit
-@testable import PTimer
+@testable import PTimerKit
+import PTimerCore
 
 /// Direct unit tests for `TimerWorkspaceModel`. These cover the timer
 /// slice in isolation; `CalculatorTimerIntegrationTests`
@@ -11,7 +11,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
     @MainActor
     func testStartTimerAddsRunningEntryToTimers() {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -35,7 +35,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testStartTimerWithNonPositiveDurationDoesNotPersistMetadata() {
         let store = SpyTimerMetadataPersistenceStore()
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -60,7 +60,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testPauseResumeLifecycleTransitions() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -87,7 +87,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testRemoveTimerDropsTimerAndClearsPersistedMetadata() {
         let store = SpyTimerMetadataPersistenceStore()
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -122,7 +122,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testClearCompletedTimersOnlyRemovesCompletedEntries() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -162,7 +162,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testCloningCompletedTimerStartsNewRunningTimerWithSameDuration() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -216,7 +216,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testCloningCompletedTimerCopiesShootingContextIdentity() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -260,7 +260,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testCloningCompletedTimerPreservesFunctionalityWithoutShootingContext() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -300,7 +300,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testCloneAssignsFreshOrderIndependentOfSource() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -335,7 +335,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
     @MainActor
     func testCloningRejectsNonCompletedTimer() {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -360,7 +360,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     @MainActor
     func testCloneIsIndependentLifecycleFromSource() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { dateBox.date }
         )
@@ -420,7 +420,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
             ]
         )
         let store = SpyTimerMetadataPersistenceStore(initialSnapshot: snapshot)
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -453,7 +453,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
     @MainActor
     func testMultipleStartsAssignIncrementingOrder() {
-        let timerManager = TimerManager(
+        let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
         )
@@ -508,7 +508,7 @@ private final class DateBox {
 
 @MainActor
 private func makeModel(
-    timerManager: TimerManager,
+    timerManager: any TimerManaging,
     metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore()
 ) -> TimerWorkspaceModel {
     TimerWorkspaceModel(

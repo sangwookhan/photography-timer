@@ -61,4 +61,37 @@ public enum ReciprocitySourceEvidenceClassifier {
             return range.minimumSeconds
         }
     }
+
+    /// Recognizes a graph-sampled support row (PTIMER-168 follow-up):
+    /// a row whose only exposure fact is an APPROXIMATE corrected
+    /// time. Rows that carry a published stop delta, multiplier,
+    /// development, or color guidance are published table rows and
+    /// never match — T-MAX 100's ≈1.26 s stop-conversion row carries
+    /// a stop delta, so it is excluded by shape, not by film.
+    /// Callers pair this with the profile's `manufacturerGraphTable`
+    /// source declaration (e.g. the Details legend) so a plain-table
+    /// profile never picks up graph-sampled wording.
+    public static func isGraphSampledSupportRow(_ row: ReciprocitySourceEvidenceRow) -> Bool {
+        var hasApproximateCorrectedTime = false
+        for adjustment in row.adjustments {
+            switch adjustment {
+            case let .exposure(exposure):
+                switch exposure {
+                case let .correctedTime(mapping):
+                    if mapping.isApproximate {
+                        hasApproximateCorrectedTime = true
+                    } else {
+                        return false
+                    }
+                case .stopDelta, .multiplier:
+                    return false
+                }
+            case .development, .colorFilter:
+                return false
+            case .warning, .note:
+                continue
+            }
+        }
+        return hasApproximateCorrectedTime
+    }
 }

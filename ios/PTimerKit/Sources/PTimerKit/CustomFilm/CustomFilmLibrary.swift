@@ -98,14 +98,34 @@ public final class CustomFilmLibrary: ObservableObject {
     private static func isWellFormedCustomFilm(_ film: FilmIdentity) -> Bool {
         guard hasWellFormedFilmIdentity(film),
               let profile = film.profiles.first,
-              hasWellFormedProfileIdentity(profile),
-              let formula = formulaRule(in: profile),
-              hasWellFormedFormulaCoefficients(formula),
-              hasWellFormedFormulaRange(formula),
-              hasNonShorteningBoundary(formula: formula) else {
+              hasWellFormedProfileIdentity(profile) else {
             return false
         }
-        return true
+        // A custom profile carries exactly one calculation path:
+        // formula XOR tableInterpolation (PTIMER-178). The formula
+        // branch keeps the pre-existing guards unchanged; the table
+        // branch reuses the domain's safe-table contract plus the
+        // stricter custom-editor rule that the no-correction knee
+        // must be strictly positive (the evaluator feeds it into
+        // log-log interpolation, so a persisted 0 would dead-end
+        // the first segment).
+        let formulaRules = formulaRules(in: profile)
+        let tableRules = tableInterpolationRules(in: profile)
+        guard profile.rules.count == 1,
+              formulaRules.count + tableRules.count == 1 else {
+            return false
+        }
+
+        if let formula = formulaRules.first {
+            return hasWellFormedFormulaCoefficients(formula)
+                && hasWellFormedFormulaRange(formula)
+                && hasNonShorteningBoundary(formula: formula)
+        }
+        if let table = tableRules.first {
+            return table.hasValidParameters
+                && table.noCorrectionThroughSeconds > 0
+        }
+        return false
     }
 
     private static func hasWellFormedFilmIdentity(_ film: FilmIdentity) -> Bool {
@@ -122,11 +142,20 @@ public final class CustomFilmLibrary: ObservableObject {
         return !trimmedID.isEmpty && !trimmedName.isEmpty
     }
 
-    private static func formulaRule(in profile: ReciprocityProfile) -> FormulaReciprocityRule? {
+    private static func formulaRules(in profile: ReciprocityProfile) -> [FormulaReciprocityRule] {
         profile.rules.compactMap { rule -> FormulaReciprocityRule? in
             if case .formula(let r) = rule { return r }
             return nil
-        }.first
+        }
+    }
+
+    private static func tableInterpolationRules(
+        in profile: ReciprocityProfile
+    ) -> [TableInterpolationReciprocityRule] {
+        profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+            if case .tableInterpolation(let r) = rule { return r }
+            return nil
+        }
     }
 
     /// Basic-shape check that rejects non-finite values or

@@ -83,6 +83,14 @@ public struct CustomFilmEditorFormState: Equatable {
     /// the bottom of the editor and round-trips through
     /// `UserEditableMetadata.referenceURL`.
     public var referenceURLText: String
+    /// Which calculation rule the form authors (PTIMER-178). A
+    /// profile carries exactly one rule — formula XOR table — and
+    /// a saved profile never converts between the two, so the Edit
+    /// flow opens with the saved profile's kind fixed.
+    public var calculationInputKind: CustomFilmCalculationInputKind
+    /// Pending Tm/Tc anchor rows for the `.table` input kind.
+    /// Empty (and ignored) while the form is in `.formula` mode.
+    public var tableRows: [CustomFilmTableAnchorRowInput]
 
     public init(
         profileName: String = "",
@@ -98,7 +106,9 @@ public struct CustomFilmEditorFormState: Equatable {
         noCorrectionThroughText: String = "1",
         validThroughText: String = "",
         manufacturerText: String = "",
-        referenceURLText: String = ""
+        referenceURLText: String = "",
+        calculationInputKind: CustomFilmCalculationInputKind = .formula,
+        tableRows: [CustomFilmTableAnchorRowInput] = []
     ) {
         self.profileName = profileName
         self.filmLabel = filmLabel
@@ -114,6 +124,8 @@ public struct CustomFilmEditorFormState: Equatable {
         self.validThroughText = validThroughText
         self.manufacturerText = manufacturerText
         self.referenceURLText = referenceURLText
+        self.calculationInputKind = calculationInputKind
+        self.tableRows = tableRows
     }
 }
 
@@ -262,6 +274,15 @@ public enum CustomFilmEditorValidationError: Error, Equatable, Hashable {
     /// misleading "long-exposure correction makes the shot
     /// shorter" guidance.
     case formulaShortensExposure
+    /// Table input kind: fewer than two complete, valid Tm/Tc
+    /// anchor rows (PTIMER-178). Blank rows are ignored; partially
+    /// filled or unparseable rows raise `.invalidTableAnchors`.
+    case insufficientTableAnchors
+    /// Table input kind: at least one anchor row is unparseable,
+    /// non-positive, shortens the exposure (Tc < Tm), or breaks
+    /// the strictly-ascending metered-time order. Row-level
+    /// wording comes from `tableRowValidationReason(at:isEditing:)`.
+    case invalidTableAnchors
 }
 
 /// `Result` requires the failure type to conform to `Error`. `Set`
@@ -293,20 +314,22 @@ extension CustomFilmEditorFormState {
     public static func from(film: FilmIdentity) -> CustomFilmEditorFormState? {
         guard film.kind == .custom,
               let profile = film.profiles.first,
-              profile.source.authority == .userDefined,
-              let formulaRule = profile.rules.compactMap({ rule -> FormulaReciprocityRule? in
-                  if case .formula(let r) = rule { return r }
-                  return nil
-              }).first else {
+              profile.source.authority == .userDefined else {
             return nil
         }
+        guard let formulaRule = profile.rules.compactMap({ rule -> FormulaReciprocityRule? in
+            if case .formula(let r) = rule { return r }
+            return nil
+        }).first else {
+            // PTIMER-178: a custom profile carries exactly one
+            // calculation rule — formula XOR tableInterpolation —
+            // so a profile without a formula rule is either a
+            // table profile (prefill the table editor) or
+            // unsupported (defensive nil).
+            return fromTableFilm(film, profile: profile)
+        }
         let formula = formulaRule.formula
-        let sourceType = profile.userMetadata?.customSourceType
-            ?? film.userMetadata?.customSourceType
-            ?? .userDefined
-        let notesValue = profile.userMetadata?.notes.first
-            ?? film.userMetadata?.notes.first
-            ?? ""
+        let seed = recoveredIdentitySeed(film: film, profile: profile)
 
         // The shared formula carries the range boundaries on the
         // formula itself; the editor reads them directly so an
@@ -315,6 +338,59 @@ extension CustomFilmEditorFormState {
         let noCorrectionThrough = formula.noCorrectionThroughSeconds
         let validThrough = formula.sourceRangeThroughSeconds
 
+        // The shared formula stores the anchor pair on the
+        // formula directly: `referenceMeteredTimeSeconds` is the
+        // editor's `Tm₀` (Metered point) and `coefficientSeconds`
+        // is its `Tc₀` (Corrected point).
+        let baseTm = formula.referenceMeteredTimeSeconds
+        let baseTc = formula.coefficientSeconds
+        let offsetText = abs(formula.offsetSeconds) < 1e-9
+            ? ""
+            : Self.formatNumeric(formula.offsetSeconds)
+        return CustomFilmEditorFormState(
+            profileName: profile.name,
+            filmLabel: seed.labelText,
+            isoText: "\(film.iso)",
+            sourceType: seed.sourceType,
+            notes: seed.notesValue,
+            formulaInputMode: Self.inferInputMode(
+                baseTm: baseTm,
+                baseTc: baseTc,
+                offsetSeconds: formula.offsetSeconds
+            ),
+            exponentText: Self.formatNumeric(formula.exponent),
+            baseTmText: Self.formatNumeric(baseTm),
+            baseTcText: Self.formatNumeric(baseTc),
+            offsetSecondsText: offsetText,
+            noCorrectionThroughText: Self.formatNumeric(noCorrectionThrough),
+            validThroughText: validThrough.map(Self.formatNumeric) ?? "",
+            manufacturerText: seed.manufacturerText,
+            referenceURLText: seed.referenceURLText
+        )
+    }
+
+    /// Identity / provenance fields recovered from a saved custom
+    /// film for editor prefill. Shared by the formula and table
+    /// Edit-flow branches so both recover manufacturer, label,
+    /// source type, notes, and reference URL with one rule set.
+    struct RecoveredIdentitySeed {
+        let sourceType: CustomProfileSourceType
+        let notesValue: String
+        let manufacturerText: String
+        let labelText: String
+        let referenceURLText: String
+    }
+
+    static func recoveredIdentitySeed(
+        film: FilmIdentity,
+        profile: ReciprocityProfile
+    ) -> RecoveredIdentitySeed {
+        let sourceType = profile.userMetadata?.customSourceType
+            ?? film.userMetadata?.customSourceType
+            ?? .userDefined
+        let notesValue = profile.userMetadata?.notes.first
+            ?? film.userMetadata?.notes.first
+            ?? ""
         // Recover the manufacturer and label from
         // `userMetadata.customManufacturer` and the canonical
         // stock name. Older payloads stored the full name in
@@ -335,34 +411,11 @@ extension CustomFilmEditorFormState {
         let referenceURLText = profile.userMetadata?.referenceURL
             ?? film.userMetadata?.referenceURL
             ?? ""
-
-        // The shared formula stores the anchor pair on the
-        // formula directly: `referenceMeteredTimeSeconds` is the
-        // editor's `Tm₀` (Metered point) and `coefficientSeconds`
-        // is its `Tc₀` (Corrected point).
-        let baseTm = formula.referenceMeteredTimeSeconds
-        let baseTc = formula.coefficientSeconds
-        let offsetText = abs(formula.offsetSeconds) < 1e-9
-            ? ""
-            : Self.formatNumeric(formula.offsetSeconds)
-        return CustomFilmEditorFormState(
-            profileName: profile.name,
-            filmLabel: labelText,
-            isoText: "\(film.iso)",
+        return RecoveredIdentitySeed(
             sourceType: sourceType,
-            notes: notesValue,
-            formulaInputMode: Self.inferInputMode(
-                baseTm: baseTm,
-                baseTc: baseTc,
-                offsetSeconds: formula.offsetSeconds
-            ),
-            exponentText: Self.formatNumeric(formula.exponent),
-            baseTmText: Self.formatNumeric(baseTm),
-            baseTcText: Self.formatNumeric(baseTc),
-            offsetSecondsText: offsetText,
-            noCorrectionThroughText: Self.formatNumeric(noCorrectionThrough),
-            validThroughText: validThrough.map(Self.formatNumeric) ?? "",
+            notesValue: notesValue,
             manufacturerText: manufacturerText,
+            labelText: labelText,
             referenceURLText: referenceURLText
         )
     }
@@ -387,10 +440,10 @@ extension CustomFilmEditorFormState {
         return .basic
     }
 
-    /// Compact numeric rendering shared by `from(film:)` so an edit
-    /// round-trip reads back the same exponent/coefficient/offset
-    /// strings the formula summary uses.
-    private static func formatNumeric(_ value: Double) -> String {
+    /// Compact numeric rendering shared by `from(film:)` (formula
+    /// and table branches) so an edit round-trip reads back the
+    /// same numeric strings the summaries use.
+    static func formatNumeric(_ value: Double) -> String {
         let formatted = String(format: "%.4f", value)
         var trimmed = formatted
         while trimmed.contains(".") && (trimmed.hasSuffix("0") || trimmed.hasSuffix(".")) {
@@ -886,9 +939,14 @@ extension CustomFilmEditorFormState {
                 ? "b must be a finite duration"
                 : nil
         case .noCorrectionThrough:
-            return errors.contains(.invalidNoCorrectionThrough)
-                ? "Must be ≥ 0"
-                : nil
+            guard errors.contains(.invalidNoCorrectionThrough) else { return nil }
+            // The table evaluator feeds the no-correction knee into
+            // log-log interpolation, so the table editor is stricter
+            // than the formula path: positive only, and strictly
+            // below the first anchor.
+            return calculationInputKind == .table
+                ? "Must be > 0 and below the first anchor"
+                : "Must be ≥ 0"
         case .sourceRangeThrough:
             return errors.contains(.invalidValidThrough)
                 ? "Must be > No correction"
@@ -915,6 +973,12 @@ extension CustomFilmEditorFormState {
         }
         if envelope.errors.contains(.formulaShortensExposure) {
             return formulaShortensExposureMessage()
+        }
+        // Table-mode cross-row reason: the per-row hints cover
+        // unparseable / shortening / out-of-order rows, so the only
+        // structural message left is "not enough anchors yet".
+        if envelope.errors.contains(.insufficientTableAnchors) {
+            return "Enter at least 2 anchor rows (Tm → Tc)"
         }
         return nil
     }
@@ -971,6 +1035,7 @@ extension CustomFilmEditorFormState {
             && manufacturerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && referenceURLText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && tableRows.allSatisfy(\.isBlank)
     }
 
     /// Lower bound for accepted ISO box-speed values. 1 covers
@@ -992,6 +1057,9 @@ extension CustomFilmEditorFormState {
     public func validate(
         idGenerator: () -> String = { UUID().uuidString }
     ) -> Result<FilmIdentity, CustomFilmEditorValidationErrors> {
+        if calculationInputKind == .table {
+            return validateTable(idGenerator: idGenerator)
+        }
         var errors: Set<CustomFilmEditorValidationError> = []
 
         let trimmedFilmLabel = filmLabel.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1187,7 +1255,7 @@ extension CustomFilmEditorFormState {
         let validThrough: Double?
     }
 
-    private func parseISO(errors: inout Set<CustomFilmEditorValidationError>) -> Int? {
+    func parseISO(errors: inout Set<CustomFilmEditorValidationError>) -> Int? {
         let trimmed = isoText.trimmingCharacters(in: .whitespacesAndNewlines)
         if let parsed = Int(trimmed), (Self.minISO...Self.maxISO).contains(parsed) {
             return parsed
@@ -1243,37 +1311,72 @@ extension CustomFilmEditorFormState {
             sourceRangeThroughSeconds: input.validThrough
         )
         let formulaRule = FormulaReciprocityRule(formula: formula)
-
-        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        let noteList = trimmedNotes.isEmpty ? [] : [trimmedNotes]
-        let trimmedManufacturer = manufacturerText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let manufacturerForMetadata = trimmedManufacturer.isEmpty ? nil : trimmedManufacturer
-        let trimmedURL = referenceURLText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let urlForMetadata = trimmedURL.isEmpty ? nil : trimmedURL
-        let profileMetadata = UserEditableMetadata(
-            notes: noteList,
-            customSourceType: sourceType,
-            customManufacturer: manufacturerForMetadata,
-            referenceURL: urlForMetadata
-        )
         let profile = ReciprocityProfile(
             id: idGenerator(),
             name: input.profileName,
-            source: ReciprocitySourceProvenance(
-                kind: .userDefined,
-                authority: .userDefined,
-                confidence: .unknown,
-                publisher: ""
-            ),
+            source: Self.customSourceProvenance(),
             rules: [.formula(formulaRule)],
-            userMetadata: profileMetadata
+            userMetadata: customProfileMetadata()
         )
+        return assembleCustomFilm(
+            profile: profile,
+            filmLabel: input.filmLabel,
+            iso: input.iso,
+            idGenerator: idGenerator
+        )
+    }
+
+    /// Shared `.userDefined` provenance every custom-authored
+    /// profile (formula or table) carries.
+    static func customSourceProvenance() -> ReciprocitySourceProvenance {
+        ReciprocitySourceProvenance(
+            kind: .userDefined,
+            authority: .userDefined,
+            confidence: .unknown,
+            publisher: ""
+        )
+    }
+
+    /// Profile-level user metadata assembled from the form's
+    /// provenance fields. Shared by the formula and table build
+    /// paths.
+    func customProfileMetadata() -> UserEditableMetadata {
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let noteList = trimmedNotes.isEmpty ? [] : [trimmedNotes]
+        return UserEditableMetadata(
+            notes: noteList,
+            customSourceType: sourceType,
+            customManufacturer: trimmedManufacturerOrNil(),
+            referenceURL: trimmedReferenceURLOrNil()
+        )
+    }
+
+    private func trimmedManufacturerOrNil() -> String? {
+        let trimmed = manufacturerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func trimmedReferenceURLOrNil() -> String? {
+        let trimmed = referenceURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Wraps a validated custom profile into the `FilmIdentity`
+    /// shape every downstream surface consumes. Shared by the
+    /// formula and table build paths; the second `idGenerator()`
+    /// call yields the film id (callers that reuse ids on Edit
+    /// pass profile id first, film id second).
+    func assembleCustomFilm(
+        profile: ReciprocityProfile,
+        filmLabel: String,
+        iso: Int,
+        idGenerator: () -> String
+    ) -> FilmIdentity {
+        let manufacturerForMetadata = trimmedManufacturerOrNil()
         let filmMetadata = UserEditableMetadata(
             customSourceType: sourceType,
             customManufacturer: manufacturerForMetadata,
-            referenceURL: urlForMetadata
+            referenceURL: trimmedReferenceURLOrNil()
         )
         // Compose `canonicalStockName` from manufacturer + label so
         // every downstream surface (selector primary text, timer
@@ -1282,8 +1385,8 @@ extension CustomFilmEditorFormState {
         // picker keeps custom rows in the "Custom films" section
         // instead of merging them with preset manufacturer groups.
         let canonical = manufacturerForMetadata
-            .map { "\($0) \(input.filmLabel)" }
-            ?? input.filmLabel
+            .map { "\($0) \(filmLabel)" }
+            ?? filmLabel
         return FilmIdentity(
             id: idGenerator(),
             kind: .custom,
@@ -1291,7 +1394,7 @@ extension CustomFilmEditorFormState {
             manufacturer: nil,
             brandLabel: nil,
             aliases: [],
-            iso: input.iso,
+            iso: iso,
             productionStatus: .unknown,
             profiles: [profile],
             userMetadata: filmMetadata

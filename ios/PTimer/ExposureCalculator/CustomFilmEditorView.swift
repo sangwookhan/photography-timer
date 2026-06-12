@@ -88,7 +88,14 @@ struct CustomFilmEditorView: View {
                 .listRowBackground(Color.clear)
 
                 identityCard
-                formulaCard
+                if editing == nil {
+                    calculationKindSection
+                }
+                if formState.calculationInputKind == .table {
+                    tableCard
+                } else {
+                    formulaCard
+                }
                 previewCard
                 secondaryDetailsSection
             }
@@ -163,6 +170,48 @@ struct CustomFilmEditorView: View {
                 activeEditField = .iso
             }
         }
+    }
+
+    // MARK: - Calculation kind (PTIMER-178)
+
+    /// Create-flow choice between authoring a formula profile and a
+    /// table profile. Hidden in the Edit flow — a saved profile's
+    /// calculation type is fixed in this slice (formula XOR table).
+    @ViewBuilder
+    private var calculationKindSection: some View {
+        Section {
+            Picker("Calculation", selection: calculationKindBinding) {
+                ForEach(
+                    [CustomFilmCalculationInputKind.formula, .table],
+                    id: \.self
+                ) { kind in
+                    Text(kind.displayLabel).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("custom-film-editor-calculation-kind")
+        }
+    }
+
+    /// Routes kind changes through the form state's pure-value
+    /// switch so row seeding / no-correction defaults apply in one
+    /// state write.
+    private var calculationKindBinding: Binding<CustomFilmCalculationInputKind> {
+        Binding(
+            get: { formState.calculationInputKind },
+            set: { formState = formState.switching(toCalculationKind: $0) }
+        )
+    }
+
+    // MARK: - Table card (PTIMER-178)
+
+    @ViewBuilder
+    private var tableCard: some View {
+        CustomFilmEditorTableCard(
+            formState: $formState,
+            isEditing: editing != nil,
+            onEditNoCorrection: { activeEditField = .noCorrectionThrough }
+        )
     }
 
     // MARK: - Formula card
@@ -350,6 +399,56 @@ struct CustomFilmEditorView: View {
     @ViewBuilder
     private var previewCard: some View {
         Section("Preview") {
+            if formState.calculationInputKind == .table {
+                tablePreviewContent
+            } else {
+                formulaPreviewContent
+            }
+        }
+    }
+
+    /// Table-kind preview (PTIMER-178): the same Details graph the
+    /// runtime renders for table profiles (curve + anchor markers
+    /// from the synthesized display evidence) plus the per-anchor
+    /// checkpoint table. No formula recovery affordances — the
+    /// anchor rows themselves are the recovery surface.
+    @ViewBuilder
+    private var tablePreviewContent: some View {
+        if formState.tableCanRenderPreview,
+           let graphState = CustomFilmEditorPreviewGraphPresenter
+            .graphDisplayState(for: formState) {
+            FilmModeDetailsGraph(graph: graphState)
+                .accessibilityIdentifier("custom-film-editor-preview-chart")
+            CustomFilmEditorPreviewTable(form: formState)
+                .accessibilityIdentifier("custom-film-editor-preview-table")
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        Color.secondary.opacity(0.3),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                    )
+                VStack(spacing: 6) {
+                    Text("Preview waiting")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(CustomFilmEditorPreviewPresenter
+                        .tableDiagnosisMessage(form: formState)
+                        ?? "Enter at least two valid Tm/Tc anchor rows.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 12)
+                }
+            }
+            .frame(height: 196)
+            .accessibilityIdentifier("custom-film-editor-preview-placeholder")
+        }
+    }
+
+    @ViewBuilder
+    private var formulaPreviewContent: some View {
             // Render the editor preview through the same
             // `FilmModeDetailsGraph` view the runtime Reciprocity
             // Details sheet uses, so the same formula parameters
@@ -376,7 +475,6 @@ struct CustomFilmEditorView: View {
             } else {
                 previewUnavailable
             }
-        }
     }
 
     /// Replaces both the graph and the row-table when the formula
@@ -953,7 +1051,9 @@ private struct CustomFilmEditorPreviewTable: View {
     let form: CustomFilmEditorFormState
 
     private var rows: [CustomFilmEditorPreviewPresenter.Row] {
-        CustomFilmEditorPreviewPresenter.rows(form: form)
+        form.calculationInputKind == .table
+            ? CustomFilmEditorPreviewPresenter.tableRows(form: form)
+            : CustomFilmEditorPreviewPresenter.rows(form: form)
     }
 
     var body: some View {
@@ -997,7 +1097,7 @@ private struct CustomFilmEditorPreviewTable: View {
         switch row.status {
         case .noCorrection:
             return row.status.displayLabel
-        case .formulaApplied, .beyondSourceRange:
+        case .formulaApplied, .tableApplied, .beyondSourceRange:
             // Beyond-source-range still carries a numeric result
             // with a real Δstop, so the table reads "+N stops"
             // alongside the reduced confidence label rather than
@@ -1014,9 +1114,156 @@ private struct CustomFilmEditorPreviewTable: View {
     private func statusColor(for status: CustomFilmEditorPreviewPresenter.RowStatus) -> Color {
         switch status {
         case .noCorrection: return Color.secondary
-        case .formulaApplied: return Color.accentColor
+        case .formulaApplied, .tableApplied: return Color.accentColor
         case .beyondSourceRange: return Color.orange
         case .invalidFormulaResult: return Color.red.opacity(0.8)
+        }
+    }
+}
+
+/// Table card section (PTIMER-178): the editable Tm/Tc anchor
+/// rows with add/delete affordances, the editable no-correction
+/// boundary (same field sheet as the formula card; an empty field
+/// falls back to the derived `firstAnchor / 10` suggestion shown
+/// as the placeholder), and the read-only derived source range —
+/// PTIMER-178 does not expose source range as an editable field.
+private struct CustomFilmEditorTableCard: View {
+    @Binding var formState: CustomFilmEditorFormState
+    let isEditing: Bool
+    let onEditNoCorrection: () -> Void
+
+    var body: some View {
+        Section {
+            ForEach(Array(formState.tableRows.enumerated()), id: \.element.id) { index, _ in
+                CustomFilmEditorTableAnchorRowView(
+                    row: $formState.tableRows[index],
+                    index: index,
+                    inlineError: formState.tableRowValidationReason(
+                        at: index,
+                        isEditing: isEditing
+                    ),
+                    canDelete: formState.tableRows.count > 1,
+                    onDelete: { deleteRow(at: index) }
+                )
+            }
+            if formState.tableRows.count < CustomFilmEditorFormState.tableRowSoftCap {
+                Button {
+                    formState.tableRows.append(CustomFilmTableAnchorRowInput())
+                } label: {
+                    Label("Add row", systemImage: "plus.circle")
+                        .font(.footnote.weight(.medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .accessibilityIdentifier("custom-film-editor-table-add-row")
+            }
+            rangeBlock
+            if let reason = formState.saveDisabledReason(isEditing: isEditing) {
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(Color.red.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("custom-film-editor-save-disabled-reason")
+            }
+        } header: {
+            Text("Table (Tm → Tc)")
+        }
+    }
+
+    private func deleteRow(at index: Int) {
+        guard formState.tableRows.indices.contains(index) else { return }
+        formState.tableRows.remove(at: index)
+    }
+
+    @ViewBuilder
+    private var rangeBlock: some View {
+        VStack(spacing: 4) {
+            CustomFilmEditorRangeRow(
+                label: "No correction",
+                value: rowDurationDisplayValue(
+                    formState.noCorrectionThroughText,
+                    placeholder: noCorrectionPlaceholder
+                ),
+                inlineError: formState.inlineValidationReason(
+                    for: .noCorrectionThrough,
+                    isEditing: isEditing
+                ),
+                accessibilityID: "custom-film-editor-no-correction-through",
+                action: onEditNoCorrection
+            )
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Source data")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Text(sourceRangeText)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("custom-film-editor-table-source-range")
+        }
+    }
+
+    /// Placeholder for the no-correction row while the field is
+    /// empty: the derived suggestion when the first anchor parses,
+    /// otherwise a neutral em dash.
+    private var noCorrectionPlaceholder: String {
+        guard let suggested = formState.defaultTableNoCorrectionSeconds else {
+            return "—"
+        }
+        return CustomFilmEditorFormState.formatDurationExpression(suggested)
+    }
+
+    private var sourceRangeText: String {
+        guard let derived = formState.derivedTableSourceRangeSeconds else {
+            return "Last anchor"
+        }
+        let formatted = CustomFilmEditorFormState.formatDurationExpression(derived)
+        return "Through \(formatted) · last anchor"
+    }
+}
+
+/// One editable Tm/Tc anchor row in the table card (PTIMER-178).
+/// Two duration text fields joined by an arrow, with a trailing
+/// delete affordance and an optional inline validation caption —
+/// mirroring the compact-row error treatment the formula card uses.
+private struct CustomFilmEditorTableAnchorRowView: View {
+    @Binding var row: CustomFilmTableAnchorRowInput
+    let index: Int
+    let inlineError: String?
+    let canDelete: Bool
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                TextField("Tm", text: $row.meteredText)
+                    .multilineTextAlignment(.trailing)
+                    .font(.footnote.monospacedDigit())
+                    .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tm")
+                Image(systemName: "arrow.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                TextField("Tc", text: $row.correctedText)
+                    .font(.footnote.monospacedDigit())
+                    .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tc")
+                if canDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Image(systemName: "minus.circle")
+                            .font(.footnote)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Delete row \(index + 1)")
+                    .accessibilityIdentifier("custom-film-editor-table-row-\(index)-delete")
+                }
+            }
+            if let inlineError {
+                Text(inlineError)
+                    .font(.caption2)
+                    .foregroundStyle(Color.red.opacity(0.85))
+                    .accessibilityIdentifier("custom-film-editor-table-row-\(index)-inline-error")
+            }
         }
     }
 }

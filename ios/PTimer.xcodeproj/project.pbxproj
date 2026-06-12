@@ -63,6 +63,7 @@
 		A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */; };
 		A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */; };
 		A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */; };
+		A0000000000000000000FF01 /* CustomFilmEditorFittedFormulaSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */; };
 		A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */; };
 		A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */; };
 /* End PBXBuildFile section */
@@ -154,6 +155,7 @@
 		A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCustomFilmLibraryStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibraryTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckView.swift; sourceTree = "<group>"; };
+		A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFittedFormulaSection.swift; sourceTree = "<group>"; };
 		A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFieldSheets.swift; sourceTree = "<group>"; };
 		A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPolishTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
@@ -259,6 +261,7 @@
 				A00000000000000000000812 /* FilmSelectorOverlayView.swift */,
 				A00000000000000000000961 /* CustomFilmEditorView.swift */,
 				A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */,
+				A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */,
 				A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */,
 				A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
@@ -606,6 +609,7 @@
 				A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */,
 				A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */,
 				A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */,
+				A0000000000000000000FF01 /* CustomFilmEditorFittedFormulaSection.swift in Sources */,
 				A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */,
 				A00000000000000000000147 /* UserDefaultsTimerMetadataStore.swift in Sources */,
 				A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */,

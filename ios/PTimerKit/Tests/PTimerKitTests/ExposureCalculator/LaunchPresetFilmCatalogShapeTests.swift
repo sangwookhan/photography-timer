@@ -178,6 +178,9 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
         /// PTIMER-159: official manufacturer table evaluated by log-log
         /// interpolation (Fomapan 100).
         case officialTableLogLog
+        /// PTIMER-122: explicitly promoted unofficial practical primary
+        /// profile for Rollei RETRO 400S.
+        case promotedUnofficialPractical
 
         /// Classifies a launch-catalog profile against the two-shape
         /// allow-list (DomainSchema §13). Returns `nil` for any other
@@ -195,8 +198,6 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
         /// The compiler-enforced absence of `.table` is a separate
         /// guarantee from this classifier.
         static func classify(_ profile: ReciprocityProfile) -> ProfileShape? {
-            guard profile.source.authority == .official else { return nil }
-
             let hasFormula = profile.rules.contains { rule in
                 if case .formula = rule { return true }
                 return false
@@ -213,6 +214,15 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
                 if case .tableInterpolation = rule { return true }
                 return false
             }
+
+            if profile.source.authority == .unofficial,
+               profile.source.kind == .thirdPartyPublication,
+               profile.modelBasis?.sourceModel == .practicalCommunityGuidance,
+               hasFormula && !hasThreshold && !hasLimitedGuidance && !hasTableInterpolation {
+                return .promotedUnofficialPractical
+            }
+
+            guard profile.source.authority == .official else { return nil }
 
             if hasTableInterpolation && !hasFormula && !hasThreshold && !hasLimitedGuidance {
                 return .officialTableLogLog

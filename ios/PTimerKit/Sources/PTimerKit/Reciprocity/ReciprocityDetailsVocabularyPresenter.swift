@@ -65,10 +65,14 @@ public struct ReciprocityDetailsVocabularyPresenter {
             return "No correction"
         case .formulaDerived:
             // Photographer-authored profiles read as "Custom formula"
-            // (method/authority wording) so the badge does not look
-            // like the warning copy used for official profiles.
+            // / "Custom table" (method/authority wording) so the badge
+            // does not look like the warning copy used for official
+            // profiles. The basis distinguishes the two custom
+            // calculation kinds (PTIMER-178).
             if bindingState.profile.source.authority == .userDefined {
-                return "Custom formula"
+                return bindingState.policyResult.metadata.basis == .tableLogLogDerived
+                    ? "Custom table"
+                    : "Custom formula"
             }
             // The official log-log table model is table-derived, not a
             // closed-form formula (PTIMER-159).
@@ -193,6 +197,11 @@ public struct ReciprocityDetailsVocabularyPresenter {
         // focused on adjusted shutter / corrected exposure /
         // status, matching the preset Details hierarchy.
         if bindingState.profile.source.authority == .userDefined {
+            if bindingState.presentation.category == .unsupported,
+               bindingState.policyResult.correctedExposureSeconds != nil,
+               bindingState.profile.usesTableInterpolation {
+                return tableBeyondSourceRangeDetailText(for: bindingState.profile)
+            }
             return nil
         }
 
@@ -201,7 +210,7 @@ public struct ReciprocityDetailsVocabularyPresenter {
             let genericDetail: String
             if bindingState.policyResult.correctedExposureSeconds != nil {
                 if bindingState.profile.usesTableInterpolation {
-                    genericDetail = "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+                    genericDetail = tableBeyondSourceRangeDetailText(for: bindingState.profile)
                 } else if bindingState.profile.isConvertedFormulaProfile {
                     genericDetail = "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
                 } else {
@@ -222,6 +231,17 @@ public struct ReciprocityDetailsVocabularyPresenter {
             return "No official quantified prediction is available beyond this range."
         case .noCorrection, .formulaDerived:
             return nil
+        }
+    }
+
+    private func tableBeyondSourceRangeDetailText(for profile: ReciprocityProfile) -> String {
+        switch profile.source.authority {
+        case .official:
+            return "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+        case .unofficial:
+            return "Current input is beyond this table's source range. The corrected value is extrapolated past the last community table anchor."
+        case .userDefined, .unknown:
+            return "Current input is beyond this table's source range. The corrected value is extrapolated past the last table anchor."
         }
     }
 
@@ -409,6 +429,10 @@ public struct ReciprocityDetailsVocabularyPresenter {
         }
         if let formulaText = TimerStartComposer.customProfileFormulaText(profile: profile) {
             lines.append("Formula: \(formulaText)")
+        } else if let calculationText = TimerStartComposer.customProfileCalculationText(profile: profile) {
+            // Table profiles have no equation; the calculation line
+            // is self-describing ("Custom table · 3 anchors").
+            lines.append(calculationText)
         }
         // The new wording reads as standalone facts ("No correction
         // through 1s", "Source range through 4m"), so they are
@@ -439,19 +463,26 @@ public struct ReciprocityDetailsVocabularyPresenter {
     ///   without bound)
     public func customRangeLines(profile: ReciprocityProfile) -> [String] {
         // The shared formula carries the no-correction and
-        // source-range boundaries on itself. Prefer the formula's
-        // fields; fall back to a threshold rule only when one is
-        // present (some preset shapes may surface through this
-        // branch).
+        // source-range boundaries on itself; a custom table rule
+        // carries its own pair (PTIMER-178). Prefer the formula's
+        // fields, then the table rule's; fall back to a threshold
+        // rule only when one is present (some preset shapes may
+        // surface through this branch).
         let formulaRule = profile.rules.compactMap { rule -> FormulaReciprocityRule? in
             if case .formula(let f) = rule { return f }
+            return nil
+        }.first
+        let tableRule = profile.rules.compactMap { rule -> TableInterpolationReciprocityRule? in
+            if case .tableInterpolation(let t) = rule { return t }
             return nil
         }.first
         let thresholdMax = profile.rules.compactMap { rule -> Double? in
             if case .threshold(let t) = rule { return t.noCorrectionRange.maximumSeconds }
             return nil
         }.first
-        let noCorrection = formulaRule?.formula.noCorrectionThroughSeconds ?? thresholdMax
+        let noCorrection = formulaRule?.formula.noCorrectionThroughSeconds
+            ?? tableRule?.noCorrectionThroughSeconds
+            ?? thresholdMax
         guard let noCorrection else { return [] }
 
         var lines: [String] = []
@@ -464,6 +495,10 @@ public struct ReciprocityDetailsVocabularyPresenter {
             // should still surface this fact so the user reads the
             // confidence boundary rather than its absence.
             lines.append("Source range unlimited")
+        } else if let tableRule {
+            // A table's source range is always finite (the last
+            // anchor's metered time).
+            lines.append("Source range through \(Self.formatSeconds(tableRule.sourceRangeThroughSeconds))")
         }
         return lines
     }

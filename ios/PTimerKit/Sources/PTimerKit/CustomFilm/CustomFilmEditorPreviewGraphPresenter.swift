@@ -39,10 +39,26 @@ public enum CustomFilmEditorPreviewGraphPresenter {
     public static func graphDisplayState(
         for form: CustomFilmEditorFormState
     ) -> FilmModeDetailsGraphDisplayState? {
-        guard let parsed = CustomFilmEditorPreviewPresenter.parse(form: form) else {
-            return nil
+        let profile: ReciprocityProfile
+        switch form.calculationInputKind {
+        case .formula:
+            guard let parsed = CustomFilmEditorPreviewPresenter.parse(form: form) else {
+                return nil
+            }
+            profile = makeProfile(parsed: parsed)
+        case .table:
+            // PTIMER-178: synthesize the same table profile Save
+            // would persist (rule anchors + display-only evidence
+            // copies) and route it through the shared Details graph
+            // presenter, which already renders table profiles for
+            // the shipped catalog — identical pipeline, no
+            // editor-specific graph code.
+            guard let rule = form.parsedTableInterpolationRule() else {
+                return nil
+            }
+            profile = makeTableProfile(rule: rule)
         }
-        let bindingState = makeBindingState(parsed: parsed)
+        let bindingState = makeBindingState(profile: profile)
         let calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> = .success(
             ExposureCalculationResult(
                 baseShutterSeconds: previewMeteredSeconds,
@@ -68,9 +84,8 @@ public enum CustomFilmEditorPreviewGraphPresenter {
     /// exact display state the saved profile would render at the
     /// preview metered sample.
     private static func makeBindingState(
-        parsed: CustomFilmEditorPreviewPresenter.ParsedFormula
+        profile: ReciprocityProfile
     ) -> FilmModeReciprocityBindingState {
-        let profile = makeProfile(parsed: parsed)
         let film = makeFilm(profile: profile)
         let policyResult = ReciprocityCalculationPolicyEvaluator().evaluate(
             profile: profile,
@@ -113,6 +128,29 @@ public enum CustomFilmEditorPreviewGraphPresenter {
                 publisher: ""
             ),
             rules: [.formula(formulaRule)]
+        )
+    }
+
+    /// Table-kind counterpart of `makeProfile(parsed:)`: mirrors
+    /// what `validateTable` writes on Save — the rule carries the
+    /// calculation anchors and `sourceEvidence` carries the
+    /// display-only copies that drive the graph's anchor markers.
+    private static func makeTableProfile(
+        rule: TableInterpolationReciprocityRule
+    ) -> ReciprocityProfile {
+        ReciprocityProfile(
+            id: "custom-preview-profile",
+            name: "Custom preview",
+            source: ReciprocitySourceProvenance(
+                kind: .userDefined,
+                authority: .userDefined,
+                confidence: .unknown,
+                publisher: ""
+            ),
+            rules: [.tableInterpolation(rule)],
+            sourceEvidence: CustomFilmEditorFormState.displayEvidenceRows(
+                for: rule.sortedAnchors
+            )
         )
     }
 

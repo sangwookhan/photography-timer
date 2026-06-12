@@ -30,6 +30,11 @@ public enum CustomFilmEditorPreviewPresenter {
     public enum RowStatus: Equatable, Hashable {
         case noCorrection
         case formulaApplied
+        /// Table input kind (PTIMER-178): the corrected value came
+        /// from log-log interpolation of the photographer's anchor
+        /// rows. Reuses the Details surface's "Table-derived"
+        /// vocabulary so the preview and runtime never disagree.
+        case tableApplied
         /// Source/fitting confidence boundary: a sample whose
         /// metered exposure sits above `sourceRangeThroughSeconds`
         /// still has a corrected value (the formula keeps
@@ -43,6 +48,7 @@ public enum CustomFilmEditorPreviewPresenter {
             switch self {
             case .noCorrection: return "No correction"
             case .formulaApplied: return "Formula applied"
+            case .tableApplied: return "Table-derived"
             case .beyondSourceRange: return "Beyond source range"
             case .invalidFormulaResult: return "Invalid formula result"
             }
@@ -282,6 +288,73 @@ public enum CustomFilmEditorPreviewPresenter {
     ) -> [Row] {
         let parsed = parse(form: form)
         return samples.map { row(for: $0, parsed: parsed) }
+    }
+
+    // MARK: - Table input kind (PTIMER-178)
+
+    /// Multiplier applied past the last anchor for the single
+    /// beyond-source sample row, so the preview demonstrates the
+    /// reduced-confidence extrapolation state without the
+    /// photographer hunting for an input.
+    static let tableBeyondSourceSampleMultiplier: Double = 4
+
+    /// Preview rows for the table input kind: one row per anchor
+    /// (each must reproduce the entered Tc exactly — interpolation
+    /// passes through every anchor) plus one beyond-source sample
+    /// past the last anchor. Empty when the rows do not yet form a
+    /// valid table; the editor shows `tableDiagnosisMessage` in
+    /// that state instead.
+    public static func tableRows(form: CustomFilmEditorFormState) -> [Row] {
+        guard let rule = form.parsedTableInterpolationRule() else { return [] }
+        let anchors = rule.sortedAnchors
+        var samples = anchors.map(\.meteredSeconds)
+        samples.append(rule.sourceRangeThroughSeconds * tableBeyondSourceSampleMultiplier)
+        return samples.map { metered in
+            switch rule.evaluate(meteredExposureSeconds: metered) {
+            case .noCorrection:
+                return Row(
+                    meteredSeconds: metered,
+                    correctedSeconds: metered,
+                    status: .noCorrection,
+                    stopDelta: 0
+                )
+            case .withinSourceRange(let corrected):
+                return Row(
+                    meteredSeconds: metered,
+                    correctedSeconds: corrected,
+                    status: .tableApplied,
+                    stopDelta: log2(corrected / metered)
+                )
+            case .beyondSourceRange(let corrected):
+                return Row(
+                    meteredSeconds: metered,
+                    correctedSeconds: corrected,
+                    status: .beyondSourceRange,
+                    stopDelta: log2(corrected / metered)
+                )
+            case .invalidInput, .invalidRule:
+                return Row(
+                    meteredSeconds: metered,
+                    correctedSeconds: nil,
+                    status: .invalidFormulaResult,
+                    stopDelta: nil
+                )
+            }
+        }
+    }
+
+    /// Photographer-readable reason the table preview cannot render
+    /// yet, or `nil` when `tableRows(form:)` will produce rows.
+    /// Coarse on purpose — row-level wording lives on the rows
+    /// themselves via `tableRowValidationReason(at:isEditing:)`.
+    public static func tableDiagnosisMessage(
+        form: CustomFilmEditorFormState
+    ) -> String? {
+        guard form.parsedTableInterpolationRule() == nil else { return nil }
+        if form.parsedTableAnchors() == nil {
+            return "Enter at least two valid Tm/Tc anchor rows."
+        }
+        return "No correction must be > 0 and below the first anchor."
     }
 
     private static func row(

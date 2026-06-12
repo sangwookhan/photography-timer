@@ -300,6 +300,7 @@ public struct LaunchPresetFilmCatalogLoader {
         switch basis.sourceModel {
         case .manufacturerFormula,
              .manufacturerTable,
+             .manufacturerGraphTable,
              .manufacturerRangeGuidance,
              .manufacturerLimitedGuidance:
             break

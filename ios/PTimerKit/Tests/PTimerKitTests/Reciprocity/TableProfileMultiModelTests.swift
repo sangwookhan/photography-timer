@@ -84,6 +84,87 @@ final class TableProfileMultiModelTests: XCTestCase {
             "Default profile must be the 11-anchor graph/table model.")
     }
 
+    /// Segmented-picker labels and order must distinguish the two
+    /// table-based models (PTIMER-168 follow-up to the ambiguous
+    /// "Table" label): the published-rows-only "Official table" leads,
+    /// the graph-extended default reads "Graph table" second — and
+    /// stays the default because selection is by id, independent of
+    /// display order.
+    @MainActor
+    func testModelPickerOrderAndLabelsDistinguishTableModels() throws {
+        let defaultProfile = try profileUnderTest()
+        let ordered = AlternateReciprocityModels.modelPickerOrder(
+            primary: defaultProfile,
+            forFilmID: "kodak-tri-x-400"
+        )
+        XCTAssertEqual(
+            ordered.map(\.id),
+            ["kodak-tri-x-official-table", "kodak-tri-x-official-graph-table", "kodak-tri-x-app-formula"]
+        )
+        XCTAssertEqual(
+            ordered.map { ExposureCalculatorViewModel.modelSelectorLabel(for: $0) },
+            ["Official table", "Graph table", "App formula"]
+        )
+    }
+
+    /// The two table-based models stay HUMANLY distinguishable on the
+    /// Details graph by marker COUNT: the graph-extended default
+    /// carries all eleven anchors as source-reference rows (published
+    /// rows plus graph-sampled rows, the latter marked
+    /// "(graph-sampled)" in their notes), the published-rows-only
+    /// alternate carries three.
+    func testGraphTableShowsElevenSourceMarkersOfficialTableThree() throws {
+        let evidencePresenter = FilmModeDetailsGraphEvidencePresenter()
+        let format: (Double) -> String = { "\($0)s" }
+
+        let graphTable = try profileUnderTest()
+        XCTAssertEqual(
+            evidencePresenter.markers(for: graphTable, formatDuration: format).count,
+            11,
+            "Graph table must mark every anchor, including the 8 graph-sampled rows."
+        )
+        XCTAssertEqual(
+            graphTable.sourceEvidence.filter { row in
+                row.notes.contains { $0.contains("(graph-sampled)") }
+            }.count,
+            8,
+            "Graph-sampled rows must say so in their notes — they are not published table rows."
+        )
+
+        let officialTable = try XCTUnwrap(
+            AlternateReciprocityModels.alternates(forFilmID: "kodak-tri-x-400")
+                .first { $0.id == "kodak-tri-x-official-table" }
+        )
+        XCTAssertEqual(
+            evidencePresenter.markers(for: officialTable, formatDuration: format).count,
+            3,
+            "Official table must keep only the published 1/10/100 sec rows."
+        )
+
+        // The graph-sampled provenance legend appears on the graph
+        // table only: the published-rows alternate has no ≈ rows, and
+        // a plain-table profile whose ≈ is a stop-conversion
+        // derivation (T-MAX 100's 1 s row) must not pick up the graph
+        // wording.
+        let graphLegendLine = "Graph-sampled rows are points read from the published Kodak graph."
+        let legendPresenter = FilmModeDetailsLegendPresenter()
+        XCTAssertTrue(
+            legendPresenter.legendDisplayState(for: graphTable)?.lines.contains(graphLegendLine) == true,
+            "Graph table must carry the graph-sampled legend line."
+        )
+        XCTAssertFalse(
+            legendPresenter.legendDisplayState(for: officialTable)?.lines.contains(graphLegendLine) == true,
+            "Official table has no graph-sampled rows."
+        )
+        let tmax = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.id == "kodak-tmax-100" }?.profiles.first
+        )
+        XCTAssertFalse(
+            legendPresenter.legendDisplayState(for: tmax)?.lines.contains(graphLegendLine) == true,
+            "T-MAX 100's ≈ is a stop-conversion derivation, not a graph sample."
+        )
+    }
+
     func testOfficialTableAlternate() throws {
         let alternates = AlternateReciprocityModels.alternates(forFilmID: "kodak-tri-x-400")
         let officialTable = try XCTUnwrap(
@@ -178,11 +259,12 @@ final class TableProfileMultiModelTests: XCTestCase {
             "App formula name must contain 'App'; got '\(appFormula.name)'."
         )
 
-        // modelBasis: source is .manufacturerTable (the table it was
-        // derived from), calculation is .guardedFormula (app-fitted).
+        // modelBasis: source is .manufacturerGraphTable (the
+        // graph-extended Kodak data set it was derived from),
+        // calculation is .guardedFormula (app-fitted).
         let basis = try XCTUnwrap(appFormula.modelBasis)
-        XCTAssertEqual(basis.sourceModel, .manufacturerTable,
-            "App-derived formula's source is still the manufacturer table it was fitted against.")
+        XCTAssertEqual(basis.sourceModel, .manufacturerGraphTable,
+            "App-derived formula's source is the Kodak graph/table data set it was fitted against.")
         XCTAssertEqual(basis.calculationModel, .guardedFormula,
             "App-derived formula must use .guardedFormula, not .tableLogLogInterpolation or .manufacturerFormula.")
 

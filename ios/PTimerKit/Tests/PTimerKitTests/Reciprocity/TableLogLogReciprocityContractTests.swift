@@ -64,12 +64,16 @@ final class TableLogLogReciprocityContractTests: XCTestCase {
 
     // MARK: - Model basis
 
-    /// Model basis is manufacturer table + log-log interpolation.
+    /// Model basis is a manufacturer table shape + log-log
+    /// interpolation. Tri-X 400's default set is graph-extended, so
+    /// its source reads manufacturerGraphTable (PTIMER-168 follow-up).
     func testDefaultProfileModelBasisIsManufacturerTableLogLog() throws {
         for c in cases {
             let profile = try FormulaProfileTestSupport.profile(for: c.film)
             let basis = try XCTUnwrap(profile.modelBasis, "\(c.film): profile must carry a modelBasis.")
-            XCTAssertEqual(basis.sourceModel, .manufacturerTable, "\(c.film): sourceModel")
+            let expectedSource: ReciprocitySourceModel =
+                c.film == "Tri-X 400" ? .manufacturerGraphTable : .manufacturerTable
+            XCTAssertEqual(basis.sourceModel, expectedSource, "\(c.film): sourceModel")
             XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation, "\(c.film): calculationModel")
         }
     }

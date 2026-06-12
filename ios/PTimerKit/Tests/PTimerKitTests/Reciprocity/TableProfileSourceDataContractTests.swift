@@ -147,14 +147,26 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             clearlyCorrectedSamples: [0.12, 0.15],
             insideSamples: [1, 5, 10, 25, 50, 100],
             aboveSourceSamples: [150, 300, 1000],
-            evidenceMetereds: [1, 10, 100],
+            // The graph-extended default carries every anchor as a
+            // source-evidence row: the three published Kodak rows
+            // (stop delta + development) plus eight graph-sampled rows
+            // (corrected time only, "(graph-sampled)" note) so the
+            // Details graph and Source reference distinguish it from
+            // the published-rows-only "Official table" alternate by
+            // row COUNT (PTIMER-168 follow-up).
+            evidenceMetereds: [1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100],
             evidenceRows: [
                 EvidenceRow(metered: 1, correctedSeconds: 2, stopDelta: 1, developmentInstruction: "-10% development"),
                 EvidenceRow(metered: 10, correctedSeconds: 50, stopDelta: 2, developmentInstruction: "-20% development"),
                 EvidenceRow(metered: 100, correctedSeconds: 1200, stopDelta: 3, developmentInstruction: "-30% development"),
             ],
             detailTokens: ["-10%", "-20%", "-30%"],
-            markers: [Anchor(metered: 1, corrected: 2), Anchor(metered: 10, corrected: 50), Anchor(metered: 100, corrected: 1200)],
+            markers: [
+                Anchor(metered: 1, corrected: 2), Anchor(metered: 2, corrected: 5), Anchor(metered: 3, corrected: 10),
+                Anchor(metered: 5, corrected: 20), Anchor(metered: 7, corrected: 32), Anchor(metered: 10, corrected: 50),
+                Anchor(metered: 20, corrected: 120), Anchor(metered: 30, corrected: 200), Anchor(metered: 50, corrected: 420),
+                Anchor(metered: 70, corrected: 720), Anchor(metered: 100, corrected: 1200),
+            ],
             beyondSourceStartSeconds: 100.000001
         ),
         TableFilmCase(

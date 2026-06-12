@@ -77,7 +77,8 @@ public final class TimerWorkspaceModel: ObservableObject {
         filmProfileQualifier: String? = nil,
         exposureSource: ExposureTimerSource? = nil,
         isOutsideManufacturerGuidance: Bool = false,
-        customProfileSummary: String? = nil
+        customProfileSummary: String? = nil,
+        selectedModelLabel: String? = nil
     ) -> UUID? {
         let order = nextTimerOrder
         timerMetadata[id] = TimerMetadataEntry(
@@ -89,7 +90,8 @@ public final class TimerWorkspaceModel: ObservableObject {
             filmProfileQualifier: filmProfileQualifier,
             exposureSource: exposureSource,
             isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
-            customProfileSummary: customProfileSummary
+            customProfileSummary: customProfileSummary,
+            selectedModelLabel: selectedModelLabel
         )
 
         guard timerManager.start(id: id, duration: duration) != nil else {
@@ -134,7 +136,8 @@ public final class TimerWorkspaceModel: ObservableObject {
             filmProfileQualifier: source.filmProfileQualifier,
             exposureSource: source.exposureSource,
             isOutsideManufacturerGuidance: source.isOutsideManufacturerGuidance,
-            customProfileSummary: source.customProfileSummary
+            customProfileSummary: source.customProfileSummary,
+            selectedModelLabel: source.selectedModelLabel
         )
     }
 
@@ -232,7 +235,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                         filmProfileQualifier: entry.filmProfileQualifier,
                         exposureSource: exposureSource,
                         isOutsideManufacturerGuidance: entry.isOutsideManufacturerGuidance ?? false,
-                        customProfileSummary: entry.customProfileSummary
+                        customProfileSummary: entry.customProfileSummary,
+                        selectedModelLabel: entry.selectedModelLabel
                     )
                 )
             }
@@ -262,7 +266,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                         isOutsideManufacturerGuidance: metadata.isOutsideManufacturerGuidance
                             ? true
                             : nil,
-                        customProfileSummary: metadata.customProfileSummary
+                        customProfileSummary: metadata.customProfileSummary,
+                        selectedModelLabel: metadata.selectedModelLabel
                     )
                 }
                 .sorted { lhs, rhs in
@@ -306,7 +311,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                     filmProfileQualifier: metadata?.filmProfileQualifier,
                     exposureSource: metadata?.exposureSource,
                     isOutsideManufacturerGuidance: metadata?.isOutsideManufacturerGuidance ?? false,
-                    customProfileSummary: metadata?.customProfileSummary
+                    customProfileSummary: metadata?.customProfileSummary,
+                    selectedModelLabel: metadata?.selectedModelLabel
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
@@ -369,6 +375,7 @@ private struct TimerMetadataEntry {
     let exposureSource: ExposureTimerSource?
     let isOutsideManufacturerGuidance: Bool
     let customProfileSummary: String?
+    let selectedModelLabel: String?
 
     init(
         order: Int,
@@ -379,7 +386,8 @@ private struct TimerMetadataEntry {
         filmProfileQualifier: String? = nil,
         exposureSource: ExposureTimerSource? = nil,
         isOutsideManufacturerGuidance: Bool = false,
-        customProfileSummary: String? = nil
+        customProfileSummary: String? = nil,
+        selectedModelLabel: String? = nil
     ) {
         self.order = order
         self.name = name
@@ -390,5 +398,6 @@ private struct TimerMetadataEntry {
         self.exposureSource = exposureSource
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
+        self.selectedModelLabel = selectedModelLabel
     }
 }

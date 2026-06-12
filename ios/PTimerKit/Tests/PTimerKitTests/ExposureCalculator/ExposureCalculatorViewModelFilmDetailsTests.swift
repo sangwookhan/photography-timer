@@ -119,20 +119,39 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
 
         XCTAssertEqual(referenceSection.rows.map(\.title), [""])
         XCTAssertEqual(referenceSection.rows.map(\.style), [.referenceBlock])
-        // Each Tri-X 400 source-evidence row keeps the published
-        // stop correction, the published corrected time, and the
-        // published development hint so the user reads exactly what
-        // Kodak prints in F-4017. The threshold row reconciles
-        // Kodak's "1/10s" boundary reading "<= 1/10s" — the table now
-        // has 11 anchors with the no-correction band ending at 0.1 s.
+        // Each published Tri-X 400 row keeps the published stop
+        // correction, corrected time, and development hint exactly as
+        // Kodak prints in F-4017; the eight graph-sampled support rows
+        // interleave COMPACTLY with just an ≈-marked corrected time —
+        // no per-row provenance tag (it overflowed the phone's
+        // monospaced line width); the legend line below the block
+        // carries the provenance instead (PTIMER-168 follow-up). The
+        // threshold row reconciles Kodak's "1/10s" boundary reading
+        // "<= 1/10s".
         XCTAssertEqual(referenceSection.rows.map(\.value), [
             """
             <= 1/10s    No correction range
             1s          +1 stop · 2s           Dev -10%
+            2s          ≈5s
+            3s          ≈10s
+            5s          ≈20s
+            7s          ≈32s
             10s         +2 stops · 50s         Dev -20%
+            20s         ≈120s
+            30s         ≈200s
+            50s         ≈420s
+            70s         ≈720s
             100s        +3 stops · 1200s       Dev -30%
             """,
         ])
+        // The ≈ rows' provenance is spelled out in the legend.
+        let legend = try XCTUnwrap(details.legend)
+        XCTAssertTrue(
+            legend.lines.contains(
+                "Graph-sampled rows are points read from the published Kodak graph."
+            ),
+            "Graph table must explain the graph-sampled rows' provenance. Got: \(legend.lines)"
+        )
         XCTAssertEqual(details.summary.summaryText, "Log-log interpolation of the official table")
         // Sources are now an unlabeled list (one row per item); the
         // legacy Reference / Citation sub-labels are gone.

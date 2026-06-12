@@ -43,6 +43,7 @@ public struct ReciprocityModelMetadataPresenter {
         switch sourceModel {
         case .manufacturerFormula: return "Manufacturer formula"
         case .manufacturerTable: return "Manufacturer table"
+        case .manufacturerGraphTable: return "Manufacturer graph/table"
         case .manufacturerRangeGuidance: return "Manufacturer range guidance"
         case .manufacturerLimitedGuidance: return "Manufacturer limited guidance"
         case .practicalCommunityGuidance: return "Practical / community guidance"
@@ -59,9 +60,14 @@ public struct ReciprocityModelMetadataPresenter {
     private func calculationMethodLabel(for basis: ReciprocityProfileModelBasis) -> String {
         switch basis.calculationModel {
         case .guardedFormula:
-            return basis.sourceModel == .manufacturerTable
-                ? "App-derived guarded formula"
-                : "Guarded formula"
+            switch basis.sourceModel {
+            case .manufacturerTable, .manufacturerGraphTable:
+                return "App-derived guarded formula"
+            case .manufacturerFormula, .manufacturerRangeGuidance,
+                 .manufacturerLimitedGuidance, .practicalCommunityGuidance,
+                 .userDefined, .unknown:
+                return "Guarded formula"
+            }
         case .tableLogLogInterpolation:
             return "Log-log table interpolation"
         case .limitedGuidance:

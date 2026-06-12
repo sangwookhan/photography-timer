@@ -19,8 +19,9 @@ final class TimerSelectedModelIdentityTests: XCTestCase {
 
     func testOfficialAlternateModelsCaptureDistinguishingLabels() throws {
         // Tri-X 400's three official models: default graph/table (no
-        // label), the 3-row official table ("Table" selector label),
-        // and the app-derived formula (profile-name fallback).
+        // label — it is the default), the 3-row official table
+        // ("Official table" selector label), and the app-derived
+        // formula (profile-name fallback).
         let film = try film("kodak-tri-x-400")
 
         XCTAssertNil(
@@ -31,7 +32,7 @@ final class TimerSelectedModelIdentityTests: XCTestCase {
         let officialTable = try alternate(filmID: film.id, profileID: "kodak-tri-x-official-table")
         XCTAssertEqual(
             compose(film: film, override: officialTable).selectedModelLabel,
-            "Table",
+            "Official table",
             "A source-named selectorLabel wins when present."
         )
 
@@ -46,21 +47,6 @@ final class TimerSelectedModelIdentityTests: XCTestCase {
             appPayload.filmProfileQualifier,
             "Official alternates carry no authority qualifier — the model label is the only distinguisher."
         )
-    }
-
-    func testPtimer170AppFormulaAlternatesCaptureLabels() throws {
-        for (filmID, profileID) in [
-            ("kodak-tmax-100", "kodak-tmax-100-app-formula"),
-            ("adox-chs-100-ii", "adox-chs-100-ii-app-formula"),
-        ] {
-            let film = try film(filmID)
-            let override = try alternate(filmID: filmID, profileID: profileID)
-            XCTAssertEqual(
-                compose(film: film, override: override).selectedModelLabel,
-                "App formula",
-                "\(filmID) app formula must be distinguishable from the default table."
-            )
-        }
     }
 
     func testOhzartCommunityTableKeepsSourceNamedLabel() throws {

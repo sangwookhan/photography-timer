@@ -26,7 +26,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
     func testBundledProfilesDeclareExpectedModelBasis() throws {
         let declarations: [ModelBasisDeclaration] = [
             .init(film: "HP5 Plus", sourceModel: .manufacturerFormula, calculationModel: .guardedFormula),
-            .init(film: "Tri-X 400", sourceModel: .manufacturerTable, calculationModel: .tableLogLogInterpolation),
+            .init(film: "Tri-X 400", sourceModel: .manufacturerGraphTable, calculationModel: .tableLogLogInterpolation),
             .init(film: "Fomapan 100 Classic", sourceModel: .manufacturerTable, calculationModel: .tableLogLogInterpolation),
             .init(film: "Ektar 100", sourceModel: .manufacturerLimitedGuidance, calculationModel: .limitedGuidance),
         ]

@@ -1,6 +1,6 @@
-  ▿ PTimerTests.(unknown context at $XX).ViewModelCrossCuttingDump
+  ▿ (unknown context at $XX).ViewModelCrossCuttingDump
     ▿ activeCalculatorContext: PTimerKit.ActiveExposureCalculatorContext
-      ▿ selectedPresetFilm: Optional(PTimerCore.FilmIdentity(id: "kodak-tri-x-400", kind: PTimerCore.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimerCore.FilmProductionStatus.current, profiles: [PTimerCore.ReciprocityProfile(id: "kodak-tri-x-official-graph-table", name: "Official Kodak graph/table", source: PTimerCore.ReciprocitySourceProvenance(kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished, authority: PTimerCore.ReciprocityAuthority.official, confidence: PTimerCore.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimerCore.ReciprocityRule.tableInterpolation(PTimerCore.TableInterpolationReciprocityRule(anchors: [PTimerCore.TableAnchor(meteredSeconds: 1.0, correctedSeconds: 2.0), PTimerCore.TableAnchor(meteredSeconds: 2.0, correctedSeconds: 5.0), PTimerCore.TableAnchor(meteredSeconds: 3.0, correctedSeconds: 10.0), PTimerCore.TableAnchor(meteredSeconds: 5.0, correctedSeconds: 20.0), PTimerCore.TableAnchor(meteredSeconds: 7.0, correctedSeconds: 32.0), PTimerCore.TableAnchor(meteredSeconds: 10.0, correctedSeconds: 50.0), PTimerCore.TableAnchor(meteredSeconds: 20.0, correctedSeconds: 120.0), PTimerCore.TableAnchor(meteredSeconds: 30.0, correctedSeconds: 200.0), PTimerCore.TableAnchor(meteredSeconds: 50.0, correctedSeconds: 420.0), PTimerCore.TableAnchor(meteredSeconds: 70.0, correctedSeconds: 720.0), PTimerCore.TableAnchor(meteredSeconds: 100.0, correctedSeconds: 1200.0)], additionalAdjustments: [], notes: ["Default Kodak model for Tri-X 400. Combines the published E-31 table rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec; Dev -10/-20/-30%) with points sampled from Kodak\'s adjusted-exposure graph between them (2/3/5/7/20/30/50/70 sec). Kodak lists no adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec and corrected exposure interpolates in log-log space from the 0.1 sec knee through the anchors (the three published rows reproduce exactly; the intermediate points are graph estimates, not published table values). Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."], noCorrectionThroughSeconds: 0.1, sourceRangeThroughSeconds: 100.0))], notes: [], userMetadata: nil, sourceEvidence: [PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.stopDelta(PTimerCore.StopDeltaAdjustment(stopDelta: 1.0))), PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimerCore.ReciprocityAdjustment.development(PTimerCore.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: ["1 sec → +1 stop, corrected 2 sec, develop -10%."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.stopDelta(PTimerCore.StopDeltaAdjustment(stopDelta: 2.0))), PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimerCore.ReciprocityAdjustment.development(PTimerCore.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: ["10 sec → +2 stops, corrected 50 sec, develop -20%."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.stopDelta(PTimerCore.StopDeltaAdjustment(stopDelta: 3.0))), PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimerCore.ReciprocityAdjustment.development(PTimerCore.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: ["100 sec → +3 stops, corrected 1200 sec, develop -30%."], isSourceEvidenceOnly: false)], modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation)), selectorLabel: nil)], userMetadata: nil))
+      ▿ selectedPresetFilm: Optional(PTimerCore.FilmIdentity(id: "kodak-tri-x-400", kind: PTimerCore.FilmIdentityKind.preset, canonicalStockName: "Tri-X 400", manufacturer: Optional("Kodak"), brandLabel: Optional("KODAK PROFESSIONAL TRI-X 400"), aliases: ["TRI-X", "TX 400"], iso: 400, productionStatus: PTimerCore.FilmProductionStatus.current, profiles: [PTimerCore.ReciprocityProfile(id: "kodak-tri-x-official-graph-table", name: "Official Kodak graph/table", source: PTimerCore.ReciprocitySourceProvenance(kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished, authority: PTimerCore.ReciprocityAuthority.official, confidence: PTimerCore.ReciprocityConfidence.high, publisher: "Kodak", title: Optional("KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"), citation: Optional("Publication F-4017"), sourceVersion: nil), rules: [PTimerCore.ReciprocityRule.tableInterpolation(PTimerCore.TableInterpolationReciprocityRule(anchors: [PTimerCore.TableAnchor(meteredSeconds: 1.0, correctedSeconds: 2.0), PTimerCore.TableAnchor(meteredSeconds: 2.0, correctedSeconds: 5.0), PTimerCore.TableAnchor(meteredSeconds: 3.0, correctedSeconds: 10.0), PTimerCore.TableAnchor(meteredSeconds: 5.0, correctedSeconds: 20.0), PTimerCore.TableAnchor(meteredSeconds: 7.0, correctedSeconds: 32.0), PTimerCore.TableAnchor(meteredSeconds: 10.0, correctedSeconds: 50.0), PTimerCore.TableAnchor(meteredSeconds: 20.0, correctedSeconds: 120.0), PTimerCore.TableAnchor(meteredSeconds: 30.0, correctedSeconds: 200.0), PTimerCore.TableAnchor(meteredSeconds: 50.0, correctedSeconds: 420.0), PTimerCore.TableAnchor(meteredSeconds: 70.0, correctedSeconds: 720.0), PTimerCore.TableAnchor(meteredSeconds: 100.0, correctedSeconds: 1200.0)], additionalAdjustments: [], notes: ["Default Kodak model for Tri-X 400. Combines the published E-31 table rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec; Dev -10/-20/-30%) with points sampled from Kodak\'s adjusted-exposure graph between them (2/3/5/7/20/30/50/70 sec). Kodak lists no adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec and corrected exposure interpolates in log-log space from the 0.1 sec knee through the anchors (the three published rows reproduce exactly; the intermediate points are graph estimates, not published table values). Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."], noCorrectionThroughSeconds: 0.1, sourceRangeThroughSeconds: 100.0))], notes: [], userMetadata: nil, sourceEvidence: [PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(1.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.stopDelta(PTimerCore.StopDeltaAdjustment(stopDelta: 1.0))), PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(1.0), correctedSeconds: 2.0, isApproximate: false))), PTimerCore.ReciprocityAdjustment.development(PTimerCore.DevelopmentAdjustment(instruction: "-10% development", note: nil))], notes: ["1 sec → +1 stop, corrected 2 sec, develop -10%."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(2.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(2.0), correctedSeconds: 5.0, isApproximate: true)))], notes: ["2 sec → corrected 5 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(3.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(3.0), correctedSeconds: 10.0, isApproximate: true)))], notes: ["3 sec → corrected 10 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(5.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(5.0), correctedSeconds: 20.0, isApproximate: true)))], notes: ["5 sec → corrected 20 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(7.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(7.0), correctedSeconds: 32.0, isApproximate: true)))], notes: ["7 sec → corrected 32 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(10.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.stopDelta(PTimerCore.StopDeltaAdjustment(stopDelta: 2.0))), PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(10.0), correctedSeconds: 50.0, isApproximate: false))), PTimerCore.ReciprocityAdjustment.development(PTimerCore.DevelopmentAdjustment(instruction: "-20% development", note: nil))], notes: ["10 sec → +2 stops, corrected 50 sec, develop -20%."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(20.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(20.0), correctedSeconds: 120.0, isApproximate: true)))], notes: ["20 sec → corrected 120 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(30.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(30.0), correctedSeconds: 200.0, isApproximate: true)))], notes: ["30 sec → corrected 200 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(50.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(50.0), correctedSeconds: 420.0, isApproximate: true)))], notes: ["50 sec → corrected 420 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(70.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(70.0), correctedSeconds: 720.0, isApproximate: true)))], notes: ["70 sec → corrected 720 sec (graph-sampled)."], isSourceEvidenceOnly: false), PTimerCore.ReciprocitySourceEvidenceRow(meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds(100.0), adjustments: [PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.stopDelta(PTimerCore.StopDeltaAdjustment(stopDelta: 3.0))), PTimerCore.ReciprocityAdjustment.exposure(PTimerCore.ExposureAdjustment.correctedTime(PTimerCore.CorrectedTimeMapping(meteredSeconds: Optional(100.0), correctedSeconds: 1200.0, isApproximate: false))), PTimerCore.ReciprocityAdjustment.development(PTimerCore.DevelopmentAdjustment(instruction: "-30% development", note: nil))], notes: ["100 sec → +3 stops, corrected 1200 sec, develop -30%."], isSourceEvidenceOnly: false)], modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerGraphTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation)), selectorLabel: Optional("Graph table"))], userMetadata: nil))
         ▿ some: PTimerCore.FilmIdentity
           - id: "kodak-tri-x-400"
           - kind: PTimerCore.FilmIdentityKind.preset
@@ -72,7 +72,7 @@
                     - sourceRangeThroughSeconds: 100.0
               - notes: 0 elements
               - userMetadata: nil
-              ▿ sourceEvidence: 3 elements
+              ▿ sourceEvidence: 11 elements
                 ▿ PTimerCore.ReciprocitySourceEvidenceRow
                   ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                     - exactSeconds: 1.0
@@ -94,6 +94,62 @@
                         - note: nil
                   ▿ notes: 1 element
                     - "1 sec → +1 stop, corrected 2 sec, develop -10%."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 2.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(2.0)
+                            - some: 2.0
+                          - correctedSeconds: 5.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "2 sec → corrected 5 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 3.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(3.0)
+                            - some: 3.0
+                          - correctedSeconds: 10.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "3 sec → corrected 10 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 5.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(5.0)
+                            - some: 5.0
+                          - correctedSeconds: 20.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "5 sec → corrected 20 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 7.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(7.0)
+                            - some: 7.0
+                          - correctedSeconds: 32.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "7 sec → corrected 32 sec (graph-sampled)."
                   - isSourceEvidenceOnly: false
                 ▿ PTimerCore.ReciprocitySourceEvidenceRow
                   ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
@@ -119,6 +175,62 @@
                   - isSourceEvidenceOnly: false
                 ▿ PTimerCore.ReciprocitySourceEvidenceRow
                   ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 20.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(20.0)
+                            - some: 20.0
+                          - correctedSeconds: 120.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "20 sec → corrected 120 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 30.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(30.0)
+                            - some: 30.0
+                          - correctedSeconds: 200.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "30 sec → corrected 200 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 50.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(50.0)
+                            - some: 50.0
+                          - correctedSeconds: 420.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "50 sec → corrected 420 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                    - exactSeconds: 70.0
+                  ▿ adjustments: 1 element
+                    ▿ PTimerCore.ReciprocityAdjustment.exposure
+                      ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                        ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                          ▿ meteredSeconds: Optional(70.0)
+                            - some: 70.0
+                          - correctedSeconds: 720.0
+                          - isApproximate: true
+                  ▿ notes: 1 element
+                    - "70 sec → corrected 720 sec (graph-sampled)."
+                  - isSourceEvidenceOnly: false
+                ▿ PTimerCore.ReciprocitySourceEvidenceRow
+                  ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                     - exactSeconds: 100.0
                   ▿ adjustments: 3 elements
                     ▿ PTimerCore.ReciprocityAdjustment.exposure
@@ -139,17 +251,18 @@
                   ▿ notes: 1 element
                     - "100 sec → +3 stops, corrected 1200 sec, develop -30%."
                   - isSourceEvidenceOnly: false
-              ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+              ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerGraphTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
                 ▿ some: PTimerCore.ReciprocityProfileModelBasis
-                  - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+                  - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerGraphTable
                   - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
-              - selectorLabel: nil
+              ▿ selectorLabel: Optional("Graph table")
+                - some: "Graph table"
           - userMetadata: nil
       - selectedProfileOverride: nil
     - isFilmWorkflowActive: true
     - canResetFilmModeWorkingContext: true
-    ▿ filmReciprocityBindingState: Optional(PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "tableLogLogDerived", correctedExposureSeconds: Optional(4.999999999999999), presentationCategory: "formulaDerived", presentationBadgeStyle: "measured"))
-      ▿ some: PTimerTests.(unknown context at $XX).FilmModeReciprocityBindingDump
+    ▿ filmReciprocityBindingState: Optional((unknown context at $XX).FilmModeReciprocityBindingDump(filmStockName: "Tri-X 400", profileAuthority: "official", policyResultBasis: "tableLogLogDerived", correctedExposureSeconds: Optional(4.999999999999999), presentationCategory: "formulaDerived", presentationBadgeStyle: "measured"))
+      ▿ some: (unknown context at $XX).FilmModeReciprocityBindingDump
         - filmStockName: "Tri-X 400"
         - profileAuthority: "official"
         - policyResultBasis: "tableLogLogDerived"
@@ -157,8 +270,8 @@
           - some: 4.999999999999999
         - presentationCategory: "formulaDerived"
         - presentationBadgeStyle: "measured"
-    ▿ filmModeExposureResultState: Optional(PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 2.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(4.999999999999999), correctedPrimary: "5s", correctedSecondary: "", correctedExposureCanStart: true))
-      ▿ some: PTimerTests.(unknown context at $XX).FilmModeExposureResultStateDump
+    ▿ filmModeExposureResultState: Optional((unknown context at $XX).FilmModeExposureResultStateDump(adjustedShutterSeconds: 2.0, reciprocityStateTone: "measured", adjustedShutterCanStart: true, correctedKind: "quantified", correctedSeconds: Optional(4.999999999999999), correctedPrimary: "5s", correctedSecondary: "", correctedExposureCanStart: true))
+      ▿ some: (unknown context at $XX).FilmModeExposureResultStateDump
         - adjustedShutterSeconds: 2.0
         - reciprocityStateTone: "measured"
         - adjustedShutterCanStart: true

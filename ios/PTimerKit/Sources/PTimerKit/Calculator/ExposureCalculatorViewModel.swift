@@ -636,11 +636,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     public var filmDetailsModelSelection: FilmModeDetailsModelSelectionState? {
         guard let film = selectedPresetFilm else { return nil }
 
+        // Display order comes from the registry (Tri-X 400 leads with
+        // the published-rows-only Official table); the ACTIVE model is
+        // resolved by id below, so the catalog primary stays the
+        // default selection regardless of its display position.
         var profiles: [ReciprocityProfile] = []
         if let primary = film.profiles.first {
-            profiles.append(primary)
+            profiles = AlternateReciprocityModels.modelPickerOrder(
+                primary: primary,
+                forFilmID: film.id
+            )
         }
-        profiles.append(contentsOf: AlternateReciprocityModels.alternates(forFilmID: film.id))
 
         guard profiles.count > 1 else { return nil }
 

@@ -195,6 +195,12 @@ public struct FilmModeDetailsReferencePresenter {
                 columns.append(sourceEvidenceOnlyMarker)
                 collected.hasEvidenceOnlyRows = true
             }
+            // Graph-sampled support rows (PTIMER-168 follow-up)
+            // render compactly with just their ≈-marked corrected
+            // time — a per-row provenance tag overflowed the phone's
+            // monospaced line width. The legend below the block
+            // spells out where the ≈ rows come from
+            // (`FilmModeDetailsLegendPresenter`).
             let (sortValue, kind) = sortKey(for: evidenceRow.meteredExposure)
             collected.orderedLines.append(
                 ReferenceRow(

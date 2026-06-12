@@ -49,6 +49,26 @@ public enum AlternateReciprocityModels {
         }
     }
 
+    /// Picker display order for a film's models. Most films lead with
+    /// the default (catalog primary) profile followed by `alternates`.
+    /// Tri-X 400 lists the published-rows-only "Official table" first
+    /// so the two table-based models read in source-fidelity order —
+    /// the graph/table default stays the SELECTED model because
+    /// selection is by profile id, independent of display order
+    /// (PTIMER-168 follow-up).
+    public static func modelPickerOrder(
+        primary: ReciprocityProfile,
+        forFilmID filmID: String
+    ) -> [ReciprocityProfile] {
+        let alternates = alternates(forFilmID: filmID)
+        guard filmID == "kodak-tri-x-400",
+              let officialTable = alternates.first(where: { $0.id == triX400OfficialTable.id })
+        else {
+            return [primary] + alternates
+        }
+        return [officialTable, primary] + alternates.filter { $0.id != officialTable.id }
+    }
+
     /// `true` for explicitly app-derived alternate models (a formula the
     /// app fitted to a manufacturer table). The "App-derived comparison"
     /// section is intentionally limited to these enrolled models, so it
@@ -256,7 +276,10 @@ public enum AlternateReciprocityModels {
             sourceModel: .manufacturerTable,
             calculationModel: .tableLogLogInterpolation
         ),
-        selectorLabel: "Table"
+        // "Official table" = the published anchor set only; the
+        // default graph-extended model reads "Graph table" so the two
+        // table-based models stay unambiguous (PTIMER-168 follow-up).
+        selectorLabel: "Official table"
     )
 
     /// App-derived formula for Tri-X 400 — `Tc = 2 × Tm^1.3891`, fitted to
@@ -292,7 +315,9 @@ public enum AlternateReciprocityModels {
         ],
         sourceEvidence: triX400OfficialAnchorEvidence,
         modelBasis: ReciprocityProfileModelBasis(
-            sourceModel: .manufacturerTable,
+            // The fit's source is Kodak's graph/table data set, same
+            // as the default model (PTIMER-168 follow-up).
+            sourceModel: .manufacturerGraphTable,
             calculationModel: .guardedFormula
         )
     )

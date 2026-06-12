@@ -44,7 +44,11 @@ final class OfficialTableMigrationInvariantTests: XCTestCase {
                 profile.modelBasis,
                 "\(film.stock) must declare an explicit table modelBasis."
             )
-            XCTAssertEqual(basis.sourceModel, .manufacturerTable, "\(film.stock) source model")
+            // Tri-X 400's default anchor set is graph-extended, so its
+            // source reads manufacturerGraphTable (PTIMER-168 follow-up).
+            let expectedSource: ReciprocitySourceModel =
+                film.stock == "Tri-X 400" ? .manufacturerGraphTable : .manufacturerTable
+            XCTAssertEqual(basis.sourceModel, expectedSource, "\(film.stock) source model")
             XCTAssertEqual(basis.calculationModel, .tableLogLogInterpolation, "\(film.stock) calculation model")
             XCTAssertTrue(profile.usesTableInterpolation, "\(film.stock) must evaluate through the table model.")
         }

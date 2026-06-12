@@ -33,10 +33,17 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             XCTAssertFalse(film.canonicalStockName.isEmpty)
 
             let profile = film.profiles[0]
-            XCTAssertEqual(profile.source.kind, .manufacturerPublished)
-            XCTAssertEqual(profile.source.authority, .official)
-            XCTAssertEqual(profile.source.confidence, .high)
-            XCTAssertFalse(profile.source.publisher.isEmpty)
+            if film.id == "rollei-retro-400s" {
+                XCTAssertEqual(profile.source.kind, .thirdPartyPublication)
+                XCTAssertEqual(profile.source.authority, .unofficial)
+                XCTAssertEqual(profile.source.confidence, .medium)
+                XCTAssertTrue(profile.source.publisher.contains("Lafitte"))
+            } else {
+                XCTAssertEqual(profile.source.kind, .manufacturerPublished)
+                XCTAssertEqual(profile.source.authority, .official)
+                XCTAssertEqual(profile.source.confidence, .high)
+                XCTAssertFalse(profile.source.publisher.isEmpty)
+            }
             XCTAssertNil(film.userMetadata)
             XCTAssertNil(profile.userMetadata)
         }
@@ -74,8 +81,8 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             manufacturer: "FOMA BOHEMIA", expectedCount: 3,
             expectedStockNames: ["Fomapan 100 Classic", "Fomapan 200 Creative", "Fomapan 400 Action"]),
         ManufacturerMembershipCase(
-            manufacturer: "Rollei", expectedCount: 4,
-            expectedStockNames: ["RPX 100", "RPX 400", "RETRO 80S", "SUPERPAN 200"]),
+            manufacturer: "Rollei", expectedCount: 7,
+            expectedStockNames: ["RPX 25", "RPX 100", "RPX 400", "ORTHO 25 plus", "RETRO 80S", "RETRO 400S", "SUPERPAN 200"]),
         ManufacturerMembershipCase(
             manufacturer: "ADOX", expectedCount: 2,
             expectedStockNames: ["CHS 100 II", "CMS 20 II"]),
@@ -169,13 +176,20 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
         // Non-launch-ready Rollei / FOMA / ADOX members
         for stock in [
-            "RPX 25", "RETRO 400S", "INFRARED", "ORTHO 25 plus",
-            "PAUL & REINHOLD", "BLACKBIRD", "CROSSBIRD", "REDBIRD",
+            "INFRARED", "PAUL & REINHOLD", "BLACKBIRD", "CROSSBIRD", "REDBIRD",
             "Fomapan R100", "Fomapan Cine 100", "Fomapan Cine 400", "FOMA Cine Ortho 400",
             "HR-50", "Scala 50",
         ] {
             XCTAssertFalse(canonical.contains(stock), "Non-launch-ready stock '\(stock)' must not ship in the launch catalog.")
         }
+    }
+
+    func testLaunchCatalogDoesNotDuplicateFilmOrProfileIdentifiers() {
+        let filmIDs = LaunchPresetFilmCatalog.films.map(\.id)
+        let profileIDs = LaunchPresetFilmCatalog.films.flatMap { film in film.profiles.map(\.id) }
+
+        XCTAssertEqual(filmIDs.count, Set(filmIDs).count)
+        XCTAssertEqual(profileIDs.count, Set(profileIDs).count)
     }
 
     func testLaunchCatalogDoesNotShipUnofficialPracticalProfileAsPrimary() throws {
@@ -199,6 +213,86 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testRetro400SShipsPromotedUnofficialPracticalPrimary() throws {
+        let retro = try XCTUnwrap(film(named: "RETRO 400S"))
+        XCTAssertEqual(retro.id, "rollei-retro-400s")
+        XCTAssertEqual(retro.iso, 400)
+
+        let profile = try XCTUnwrap(retro.profiles.first)
+        XCTAssertEqual(profile.id, "rollei-retro-400s-unofficial-practical")
+        XCTAssertEqual(profile.source.kind, .thirdPartyPublication)
+        XCTAssertEqual(profile.source.authority, .unofficial)
+        XCTAssertTrue(profile.source.publisher.contains("Lafitte"))
+        XCTAssertEqual(profile.modelBasis?.sourceModel, .practicalCommunityGuidance)
+        XCTAssertEqual(profile.modelBasis?.calculationModel, .guardedFormula)
+
+        let rule = try XCTUnwrap(formulaRule(in: retro))
+        XCTAssertEqual(rule.formula.exponent, 1.62, accuracy: 0.000001)
+        XCTAssertEqual(rule.formula.noCorrectionThroughSeconds, 1, accuracy: 0.000001)
+        XCTAssertEqual(rule.formula.sourceRangeThroughSeconds ?? .nan, 15, accuracy: 0.000001)
+    }
+
+    func testRetro400SFormulaMatchesPublishedPracticalAnchorsApproximately() throws {
+        let retro = try XCTUnwrap(film(named: "RETRO 400S"))
+        let profile = retro.profiles[0]
+        let evaluator = ReciprocityCalculationPolicyEvaluator()
+
+        let threshold = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1)
+        guard case let .quantified(thresholdPayload) = threshold else {
+            return XCTFail("RETRO 400S at 1 sec must remain no-correction, got \(threshold).")
+        }
+        XCTAssertEqual(thresholdPayload.correctedExposureSeconds, 1, accuracy: 0.000001)
+
+        for sample in [(5.0, 13.5), (10.0, 41.0), (15.0, 80.0)] {
+            let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: sample.0)
+            guard case let .quantified(payload) = result else {
+                return XCTFail("RETRO 400S at \(sample.0) sec must produce a quantified practical result, got \(result).")
+            }
+            XCTAssertEqual(payload.correctedExposureSeconds, sample.1, accuracy: 0.7)
+        }
+    }
+
+    func testLoaderRejectsArbitraryUnofficialPrimaryProfile() throws {
+        let originalFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
+        let unofficialProfile = ReciprocityProfile(
+            id: "arbitrary-unofficial-primary",
+            name: "Unofficial primary",
+            source: ReciprocitySourceProvenance(
+                kind: .thirdPartyPublication,
+                authority: .unofficial,
+                confidence: .medium,
+                publisher: "Test source",
+                title: "Test title",
+                citation: "Test citation"
+            ),
+            rules: [
+                .formula(
+                    FormulaReciprocityRule(
+                        formula: ReciprocityFormula(
+                            exponent: 1.62,
+                            noCorrectionThroughSeconds: 1,
+                            sourceRangeThroughSeconds: 15
+                        )
+                    )
+                ),
+            ],
+            modelBasis: ReciprocityProfileModelBasis(
+                sourceModel: .practicalCommunityGuidance,
+                calculationModel: .guardedFormula
+            )
+        )
+        let invalidFilm = copyFilm(originalFilm, profiles: [unofficialProfile])
+        let invalidData = try encodeCatalog([invalidFilm])
+
+        let error = try XCTUnwrap(
+            XCTAssertThrowsErrorAndReturn(
+                try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData)
+            ) as? LaunchPresetFilmCatalogLoaderError
+        )
+
+        XCTAssertEqual(error, .invalidPrimaryProfileSource(originalFilm.id))
     }
 
     // MARK: - Source provenance preservation
@@ -634,7 +728,7 @@ private func XCTAssertThrowsErrorAndReturn<T>(
 /// scope so the test class body stays under the SwiftLint
 /// `type_body_length` threshold.
 private enum LaunchCatalogExpectations {
-    static let scopeCount = 34
+    static let scopeCount = 37
 
     static let canonicalStockOrder: [String] = [
         // Batch 1 — ILFORD / HARMAN
@@ -649,7 +743,8 @@ private enum LaunchCatalogExpectations {
         "Acros II", "Velvia 50", "Velvia 100", "Provia 100F",
         "Fomapan 100 Classic", "Fomapan 200 Creative", "Fomapan 400 Action",
         // Batch 4 — Rollei + ADOX
-        "RPX 100", "RPX 400", "RETRO 80S", "SUPERPAN 200",
+        "RPX 25", "RPX 100", "RPX 400", "ORTHO 25 plus",
+        "RETRO 80S", "RETRO 400S", "SUPERPAN 200",
         "CHS 100 II", "CMS 20 II",
     ]
 }
@@ -670,7 +765,10 @@ private struct SourceExemplarExpectation {
         .init(canonical: "Velvia 50", publisherFragment: "Fujifilm", citationContains: nil),
         .init(canonical: "Acros II", publisherFragment: "Fujifilm", citationContains: nil),
         .init(canonical: "Fomapan 100 Classic", publisherFragment: "FOMA", citationContains: nil),
+        .init(canonical: "RPX 25", publisherFragment: "Rollei", citationContains: "RPX 25 data sheet"),
         .init(canonical: "RPX 100", publisherFragment: "Rollei", citationContains: "RPX 100 data sheet"),
+        .init(canonical: "ORTHO 25 plus", publisherFragment: "Rollei", citationContains: "ORTHO 25 plus data sheet"),
+        .init(canonical: "RETRO 400S", publisherFragment: "Lafitte", citationContains: "Rollei Retro 400S"),
         .init(canonical: "CHS 100 II", publisherFragment: "ADOX", citationContains: nil),
         .init(canonical: "Ektachrome E100", publisherFragment: "Kodak", citationContains: "E-4000"),
     ]

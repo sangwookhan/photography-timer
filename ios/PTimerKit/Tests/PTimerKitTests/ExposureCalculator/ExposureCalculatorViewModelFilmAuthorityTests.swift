@@ -126,6 +126,9 @@ final class FilmModeAuthorityLabelTests: XCTestCase {
         // This ensures the label is consistent across all catalog films, not only Portra 400.
         let viewModel = makeFilmModeViewModel()
         for film in viewModel.availablePresetFilms {
+            guard film.profiles.first?.source.authority == .official else {
+                continue
+            }
             viewModel.selectPresetFilm(film)
             XCTAssertEqual(
                 viewModel.filmSelectionDisplayState.secondaryText,

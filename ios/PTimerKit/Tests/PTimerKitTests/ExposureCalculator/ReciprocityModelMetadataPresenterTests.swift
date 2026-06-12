@@ -127,6 +127,14 @@ final class ReciprocityModelMetadataPresenterTests: XCTestCase {
         XCTAssertEqual(value(section, "Calculation"), "Guarded formula")
     }
 
+    func testPromotedUnofficialPracticalPrimaryDoesNotReadAsManufacturerTable() throws {
+        let film = try XCTUnwrap(film(named: "RETRO 400S"))
+        let section = presenter.metadataSection(film: film, profile: film.profiles[0])
+        XCTAssertEqual(value(section, "Source"), "Practical / community guidance")
+        XCTAssertEqual(value(section, "Calculation"), "Guarded formula")
+        XCTAssertNotEqual(value(section, "Source"), "Manufacturer table")
+    }
+
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {

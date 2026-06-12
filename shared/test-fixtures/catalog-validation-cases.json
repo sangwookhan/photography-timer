@@ -6,11 +6,11 @@
       "ios/PTimer/Resources/LaunchPresetFilmCatalog.json"
     ],
     "version": "4.0.0",
-    "description": "Validation cases for the bundled launch preset film catalog. The launch catalog ships only official manufacturer profiles in one of two shapes: formula (with optional sourceEvidence) or threshold + limited-guidance. PTIMER-160 retired the companion threshold rule from formula profiles — the formula owns its no-correction and source-range guards through the shared guarded `ReciprocityFormula` (Modified Schwarzschild: Tc = a × (Tm / Tref)^p + b). `sourceRangeThroughSeconds` is the source/fitting confidence boundary, not a calculation stop — inputs strictly above it still compute a numeric continuation, classified outside the source-backed range. PTIMER-162 will add a new formula family case alongside `modifiedSchwarzschild`. Unofficial practical profiles are bundled outside this catalog. No calculation table rules. User-facing reciprocity wording is constrained to No correction / Formula-derived / Beyond source range / No quantified prediction / Outside guidance; the legacy table-era vocabulary is forbidden."
+    "description": "Validation cases for the bundled launch preset film catalog. The launch catalog ships official manufacturer profiles plus explicitly promoted unofficial practical primary profiles. PTIMER-160 retired the companion threshold rule from formula profiles — the formula owns its no-correction and source-range guards through the shared guarded `ReciprocityFormula` (Modified Schwarzschild: Tc = a × (Tm / Tref)^p + b). `sourceRangeThroughSeconds` is the source/fitting confidence boundary, not a calculation stop — inputs strictly above it still compute a numeric continuation, classified outside the source-backed range. PTIMER-162 will add a new formula family case alongside `modifiedSchwarzschild`. User-facing reciprocity wording is constrained to No correction / Formula-derived / Beyond source range / No quantified prediction / Outside guidance; the legacy table-era vocabulary is forbidden."
   },
   "catalogExpectations": {
     "description": "Expected properties of the bundled launch catalog (PTIMER-103 launch-ready scope).",
-    "expectedFilmCount": 34,
+    "expectedFilmCount": 37,
     "expectedFilmOrder": [
       "Pan F Plus",
       "FP4 Plus",
@@ -40,9 +40,12 @@
       "Fomapan 100 Classic",
       "Fomapan 200 Creative",
       "Fomapan 400 Action",
+      "RPX 25",
       "RPX 100",
       "RPX 400",
+      "ORTHO 25 plus",
       "RETRO 80S",
+      "RETRO 400S",
       "SUPERPAN 200",
       "CHS 100 II",
       "CMS 20 II"
@@ -76,9 +79,12 @@
       "foma-fomapan-100",
       "foma-fomapan-200",
       "foma-fomapan-400",
+      "rollei-rpx-25",
       "rollei-rpx-100",
       "rollei-rpx-400",
+      "rollei-ortho-25-plus",
       "rollei-retro-80s",
+      "rollei-retro-400s",
       "rollei-superpan-200",
       "adox-chs-100-ii",
       "adox-cms-20-ii"
@@ -88,7 +94,7 @@
       "Kodak": 9,
       "Fujifilm": 4,
       "FOMA BOHEMIA": 3,
-      "Rollei": 4,
+      "Rollei": 7,
       "ADOX": 2
     }
   },

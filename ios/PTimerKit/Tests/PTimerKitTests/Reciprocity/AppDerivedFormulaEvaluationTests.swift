@@ -185,11 +185,21 @@ final class AppDerivedFormulaEvaluationTests: XCTestCase {
     // MARK: - 1. Candidate list matches the migrated table-profile group
 
     func testCandidateListCoversAllUnshippedMigratedTableProfiles() throws {
-        // Migrated table-default profiles in the launch catalog, minus
-        // the two films that already ship app-derived alternates.
+        // PTIMER-170 evaluated the PTIMER-168 migrated table-default
+        // profiles, minus the two films that already ship app-derived
+        // alternates. Later table additions stay out of this fitted-
+        // formula fixture until a dedicated follow-up evaluates them.
+        let ptimer168MigratedStocks = [
+            "Fomapan 200 Creative", "Fomapan 400 Action",
+            "Tri-X 400", "T-MAX 100", "T-MAX 400",
+            "RPX 100", "RPX 400", "CHS 100 II",
+        ]
         let alreadyShipped = ["Tri-X 400", "Fomapan 100 Classic"]
         let migratedStocks = LaunchPresetFilmCatalog.films
-            .filter { $0.profiles.first?.usesTableInterpolation == true }
+            .filter {
+                ptimer168MigratedStocks.contains($0.canonicalStockName)
+                    && $0.profiles.first?.usesTableInterpolation == true
+            }
             .map(\.canonicalStockName)
         XCTAssertEqual(
             Set(migratedStocks).subtracting(alreadyShipped),

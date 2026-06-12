@@ -84,9 +84,12 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
         .init(stock: "Kentmere 400", kind: .formula, sampleMeteredSeconds: 10),
 
         // Rollei
+        .init(stock: "RPX 25", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "RPX 100", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "RPX 400", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "ORTHO 25 plus", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "RETRO 80S", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "RETRO 400S", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "SUPERPAN 200", kind: .formula, sampleMeteredSeconds: 10),
     ]
 

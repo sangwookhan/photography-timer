@@ -2417,6 +2417,140 @@
   },
   {
     "aliases": [],
+    "brandLabel": "Rollei RPX 25",
+    "canonicalStockName": "RPX 25",
+    "id": "rollei-rpx-25",
+    "iso": 25,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-rpx-25-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 2 },
+                { "correctedSeconds": 20, "meteredSeconds": 10 },
+                { "correctedSeconds": 50, "meteredSeconds": 20 },
+                { "correctedSeconds": 180, "meteredSeconds": 50 }
+              ],
+              "noCorrectionThroughSeconds": 1.0,
+              "notes": [
+                "Official Rollei corrected-time rows (2 sec → 3 sec, 10 sec → 20 sec, 20 sec → 50 sec, 50 sec → 180 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 50 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 50.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "RPX 25 data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei RPX 25 — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → corrected 3 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 20 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 50 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 180,
+                    "meteredSeconds": 50
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 50,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "50 sec → corrected 180 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
     "brandLabel": "Rollei RPX 100",
     "canonicalStockName": "RPX 100",
     "id": "rollei-rpx-100",
@@ -2729,6 +2863,184 @@
   },
   {
     "aliases": [],
+    "brandLabel": "Rollei ORTHO 25 plus",
+    "canonicalStockName": "ORTHO 25 plus",
+    "id": "rollei-ortho-25-plus",
+    "iso": 25,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-ortho-25-plus-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 7.5, "meteredSeconds": 5 },
+                { "correctedSeconds": 20, "meteredSeconds": 10 },
+                { "correctedSeconds": 50, "meteredSeconds": 20 },
+                { "correctedSeconds": 75, "meteredSeconds": 30 },
+                { "correctedSeconds": 100, "meteredSeconds": 40 },
+                { "correctedSeconds": 150, "meteredSeconds": 50 }
+              ],
+              "noCorrectionThroughSeconds": 1.0,
+              "notes": [
+                "Official Rollei corrected-time rows (5 sec → 7.5 sec, 10 sec → 20 sec, 20 sec → 50 sec, 30 sec → 75 sec, 40 sec → 100 sec, 50 sec → 150 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 50 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 50.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "ORTHO 25 plus data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei ORTHO 25 plus — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 7.5,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 7.5 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 20 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 50 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 75,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 75 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 100,
+                    "meteredSeconds": 40
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 40,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "40 sec → corrected 100 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 150,
+                    "meteredSeconds": 50
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 50,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "50 sec → corrected 150 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
     "brandLabel": "Rollei RETRO 80S",
     "canonicalStockName": "RETRO 80S",
     "id": "rollei-retro-80s",
@@ -2888,6 +3200,121 @@
             },
             "notes": [
               "30 sec → corrected 180 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei RETRO 400S",
+    "canonicalStockName": "RETRO 400S",
+    "id": "rollei-retro-400s",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-retro-400s-unofficial-practical",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "practicalCommunityGuidance"
+        },
+        "name": "Unofficial practical approximation",
+        "notes": [
+          "Unofficial practical approximation from Stéphane Lafitte. Not Rollei-published reciprocity guidance.",
+          "Formula: Tc = Tm^1.62 for Tm > 1 sec. Lafitte context: long exposure with a B+W 10-stop ND filter.",
+          "Official Rollei product pages and PDFs identify the film stock but do not publish a Schwarzschild / reciprocity table for RETRO 400S."
+        ],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.62,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1.0,
+                "sourceRangeThroughSeconds": 15.0
+              },
+              "notes": [
+                "Tc = Tm^1.62. Lafitte's published anchor examples (5 sec → 13.5 sec, 10 sec → 41 sec, 15 sec → 80 sec) define the practical source range through 15 sec; inputs above 15 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "unofficial",
+          "citation": "Rollei Retro 400S — Réciprocité",
+          "confidence": "medium",
+          "kind": "thirdPartyPublication",
+          "publisher": "Stéphane Lafitte",
+          "title": "Rollei Retro 400S"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 13.5,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 13.5 sec. Lafitte context: long exposure with a B+W 10-stop ND filter."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 41,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 41 sec. Lafitte context: long exposure with a B+W 10-stop ND filter."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec → corrected 80 sec. Lafitte context: long exposure with a B+W 10-stop ND filter."
             ]
           }
         ]

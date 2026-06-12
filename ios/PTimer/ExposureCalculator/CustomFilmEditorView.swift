@@ -97,6 +97,10 @@ struct CustomFilmEditorView: View {
                     formulaCard
                 }
                 previewCard
+                if formState.calculationInputKind == .table,
+                   formState.tableCanRenderPreview {
+                    fittedFormulaSection
+                }
                 secondaryDetailsSection
             }
             .navigationTitle(editing == nil ? "New custom film" : "Edit custom film")
@@ -562,6 +566,22 @@ struct CustomFilmEditorView: View {
         // the panel honest if a future guard reports failure
         // without a matching diagnostic.
         return "Fix the highlighted formula fields or reset the formula."
+    }
+
+    // MARK: - App-derived fitted formula (PTIMER-179)
+
+    /// Inspection-only section: an app-derived power-law formula
+    /// fitted from the table anchors, shown so the photographer can
+    /// judge how closely a formula would match their table before any
+    /// future Table/App-formula choice (PTIMER-180). It never changes
+    /// the active shooting calculation — the table keeps driving
+    /// corrected exposure. Only rendered for the table kind with a
+    /// valid table (the gate lives at the call site).
+    @ViewBuilder
+    private var fittedFormulaSection: some View {
+        Section("App-derived formula preview") {
+            CustomTableFittedFormulaPreviewContent(form: formState)
+        }
     }
 
     // MARK: - Secondary details section
@@ -1076,14 +1096,7 @@ private struct CustomFilmEditorPreviewTable: View {
     }
 
     private func metricLabel(_ seconds: Double) -> String {
-        if seconds >= 60 {
-            let minutes = seconds / 60
-            return minutes == minutes.rounded() ? "\(Int(minutes))m" : String(format: "%.1fm", minutes)
-        }
-        if seconds < 1 {
-            return String(format: "%.2fs", seconds)
-        }
-        return seconds == seconds.rounded() ? "\(Int(seconds))s" : String(format: "%.1fs", seconds)
+        customFilmEditorCompactSeconds(seconds)
     }
 
     private func correctedLabel(for row: CustomFilmEditorPreviewPresenter.Row) -> String {

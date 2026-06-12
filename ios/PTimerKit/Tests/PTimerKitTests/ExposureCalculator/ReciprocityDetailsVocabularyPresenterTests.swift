@@ -121,6 +121,60 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         XCTAssertNil(presenter.summaryDetailText(for: bindingState))
     }
 
+    func testOfficialTableBeyondSourceSummaryDetailKeepsPublishedOfficialCopy() throws {
+        let bindingState = try makeBindingState(
+            stock: "Fomapan 100 Classic",
+            meteredSeconds: 120
+        )
+        let detailText = try XCTUnwrap(presenter.summaryDetailText(for: bindingState))
+
+        XCTAssertEqual(
+            detailText,
+            "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+        )
+    }
+
+    func testUnofficialTableBeyondSourceSummaryDetailDoesNotSayOfficial() throws {
+        let film = try XCTUnwrap(
+            LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }
+        )
+        let tableRule = TableInterpolationReciprocityRule(
+            anchors: [
+                TableAnchor(meteredSeconds: 1, correctedSeconds: 2),
+                TableAnchor(meteredSeconds: 10, correctedSeconds: 80),
+                TableAnchor(meteredSeconds: 100, correctedSeconds: 1600),
+            ],
+            noCorrectionThroughSeconds: 0.1,
+            sourceRangeThroughSeconds: 100
+        )
+        let profile = ReciprocityProfile(
+            id: "community-table",
+            name: "Community table",
+            source: ReciprocitySourceProvenance(
+                kind: .thirdPartyPublication,
+                authority: .unofficial,
+                confidence: .medium,
+                publisher: "Community"
+            ),
+            rules: [.tableInterpolation(tableRule)]
+        )
+        let policyResult = ReciprocityModel().evaluate(
+            profile: profile,
+            meteredExposureSeconds: 120
+        )
+        let bindingState = FilmModeReciprocityBindingState(
+            film: film,
+            profile: profile,
+            policyResult: policyResult,
+            presentation: policyResult.confidencePresentation
+        )
+        let detailText = try XCTUnwrap(presenter.summaryDetailText(for: bindingState))
+
+        XCTAssertTrue(detailText.contains("community table anchor"), detailText)
+        XCTAssertFalse(detailText.localizedCaseInsensitiveContains("official"), detailText)
+        XCTAssertFalse(detailText.localizedCaseInsensitiveContains("published"), detailText)
+    }
+
     // MARK: - reciprocityStateDisplayState
 
     func testReciprocityStateDisplayStateAgreesWithBadgeAndTone() throws {

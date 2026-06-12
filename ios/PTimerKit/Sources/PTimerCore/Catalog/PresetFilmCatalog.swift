@@ -115,8 +115,8 @@ public struct LaunchPresetFilmCatalogLoader {
                 )
             }
 
-            guard profile.source.kind == .manufacturerPublished,
-                  profile.source.authority == .official else {
+            guard isOfficialManufacturerPrimary(profile)
+                || isPromotedUnofficialPracticalPrimary(profile, filmID: filmID) else {
                 throw LaunchPresetFilmCatalogLoaderError.invalidPrimaryProfileSource(filmID)
             }
 
@@ -124,17 +124,75 @@ public struct LaunchPresetFilmCatalogLoader {
         }
     }
 
+    private func isOfficialManufacturerPrimary(_ profile: ReciprocityProfile) -> Bool {
+        profile.source.kind == .manufacturerPublished
+            && profile.source.authority == .official
+    }
+
+    private func isPromotedUnofficialPracticalPrimary(
+        _ profile: ReciprocityProfile,
+        filmID: String
+    ) -> Bool {
+        guard filmID == "rollei-retro-400s",
+              profile.id == "rollei-retro-400s-unofficial-practical",
+              profile.source.kind == .thirdPartyPublication,
+              profile.source.authority == .unofficial,
+              profile.source.confidence == .medium,
+              profile.source.publisher.contains("Lafitte"),
+              profile.source.title?.isEmpty == false,
+              profile.source.citation?.isEmpty == false,
+              profile.modelBasis == ReciprocityProfileModelBasis(
+                sourceModel: .practicalCommunityGuidance,
+                calculationModel: .guardedFormula
+              ),
+              profile.rules.count == 1,
+              case let .formula(formulaRule) = profile.rules[0],
+              formulaRule.additionalAdjustments.isEmpty,
+              formulaRule.formula.formulaFamily == .modifiedSchwarzschild,
+              isEffectivelyEqual(formulaRule.formula.coefficientSeconds, 1),
+              isEffectivelyEqual(formulaRule.formula.referenceMeteredTimeSeconds, 1),
+              isEffectivelyEqual(formulaRule.formula.exponent, 1.62),
+              isEffectivelyEqual(formulaRule.formula.offsetSeconds, 0),
+              isEffectivelyEqual(formulaRule.formula.noCorrectionThroughSeconds, 1),
+              isEffectivelyEqual(formulaRule.formula.sourceRangeThroughSeconds ?? .nan, 15)
+        else {
+            return false
+        }
+
+        let evidence = profile.sourceEvidence.compactMap { row -> (metered: Double, corrected: Double)? in
+            guard case let .exactSeconds(metered) = row.meteredExposure else { return nil }
+            let corrected = row.adjustments.compactMap { adjustment -> Double? in
+                guard case let .exposure(.correctedTime(mapping)) = adjustment else { return nil }
+                return mapping.correctedSeconds
+            }.first
+            guard let corrected else { return nil }
+            return (metered, corrected)
+        }
+
+        let expectedEvidence = [(5.0, 13.5), (10.0, 41.0), (15.0, 80.0)]
+        guard evidence.count == expectedEvidence.count else { return false }
+        return zip(evidence, expectedEvidence).allSatisfy { actual, expected in
+            isEffectivelyEqual(actual.metered, expected.0)
+                && isEffectivelyEqual(actual.corrected, expected.1)
+        }
+    }
+
+    private func isEffectivelyEqual(_ lhs: Double, _ rhs: Double) -> Bool {
+        abs(lhs - rhs) < 1e-9
+    }
+
     /// Enforces the post-PTIMER-160 allow-list at load time so a
     /// malformed catalog cannot ship a rule combination the
     /// calculation policy no longer supports. The bundled catalog is
-    /// "official" everywhere (the loader already rejects unofficial /
-    /// user-defined sources above), so this validator only
-    /// enumerates the two official shapes:
+    /// official everywhere except the single PTIMER-122 promoted
+    /// unofficial practical primary that is allow-listed above, so
+    /// this validator enumerates the shipped shapes:
     ///
     /// - formula only (the formula owns its no-correction and source
     ///   range guards via the shared `ReciprocityFormula` contract;
     ///   no companion threshold rule is needed)
     /// - threshold + limited-guidance (no formula rule)
+    /// - table interpolation only
     ///
     /// Any other combination — bare limited-guidance, formula +
     /// limited-guidance, formula + threshold, an empty rule list —
@@ -303,6 +361,8 @@ public struct LaunchPresetFilmCatalogLoader {
              .manufacturerGraphTable,
              .manufacturerRangeGuidance,
              .manufacturerLimitedGuidance:
+            break
+        case .practicalCommunityGuidance where isPromotedUnofficialPracticalPrimary(profile, filmID: filmID):
             break
         case .practicalCommunityGuidance:
             throw LaunchPresetFilmCatalogLoaderError.invalidRuleShape(

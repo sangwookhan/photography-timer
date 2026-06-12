@@ -295,7 +295,10 @@ extension ReciprocityProfile {
             if case .formula = rule { return true }
             return false
         }
-        return hasFormulaRule && !sourceEvidence.isEmpty
+        return hasFormulaRule
+            && !sourceEvidence.isEmpty
+            && source.authority == .official
+            && (source.kind == .manufacturerPublished || source.kind == .manufacturerArchive)
     }
 
     /// `true` when the profile evaluates via the log-log table model

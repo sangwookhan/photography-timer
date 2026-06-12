@@ -302,6 +302,31 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             noCorrectionStatusSample: 0.25,
             beyondSourceStatusSample: 30
         ),
+        // Rollei RPX 25 — official Rollei table (default profile).
+        TableFilmCase(
+            film: "RPX 25",
+            noCorrectionThroughSeconds: 1,
+            sourceRangeThroughSeconds: 50,
+            anchors: [Anchor(metered: 2, corrected: 3), Anchor(metered: 10, corrected: 20), Anchor(metered: 20, corrected: 50), Anchor(metered: 50, corrected: 180)],
+            belowThresholdSamples: [0.5, 1],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [2, 10, 20, 50],
+            aboveSourceSamples: [90],
+            evidenceMetereds: [2, 10, 20, 50],
+            evidenceRows: [
+                EvidenceRow(metered: 2, correctedSeconds: 3),
+                EvidenceRow(metered: 10, correctedSeconds: 20),
+                EvidenceRow(metered: 20, correctedSeconds: 50),
+                EvidenceRow(metered: 50, correctedSeconds: 180),
+            ],
+            detailTokens: ["3.0s", "20.0s", "50.0s", "180.0s"],
+            markers: [Anchor(metered: 2, corrected: 3), Anchor(metered: 10, corrected: 20), Anchor(metered: 20, corrected: 50), Anchor(metered: 50, corrected: 180)],
+            beyondSourceStartSeconds: 50,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "Rollei",
+            profileName: "Official Rollei table", profileIdSuffix: "-official-table",
+            modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation
+        ),
         // Rollei RPX 100 — official Rollei table (default profile).
         TableFilmCase(
             film: "RPX 100",
@@ -350,6 +375,33 @@ final class TableProfileSourceDataContractTests: XCTestCase {
             detailTokens: ["2.0s", "10.0s", "30.0s", "55.0s", "80.0s"],
             markers: [Anchor(metered: 1, corrected: 2), Anchor(metered: 5, corrected: 10), Anchor(metered: 10, corrected: 30), Anchor(metered: 15, corrected: 55), Anchor(metered: 20, corrected: 80)],
             beyondSourceStartSeconds: 20,
+            sourceKind: .manufacturerPublished, authority: .official, publisher: "Rollei",
+            profileName: "Official Rollei table", profileIdSuffix: "-official-table",
+            modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation
+        ),
+        // Rollei ORTHO 25 plus — official Rollei table (default profile).
+        TableFilmCase(
+            film: "ORTHO 25 plus",
+            noCorrectionThroughSeconds: 1,
+            sourceRangeThroughSeconds: 50,
+            anchors: [Anchor(metered: 5, corrected: 7.5), Anchor(metered: 10, corrected: 20), Anchor(metered: 20, corrected: 50), Anchor(metered: 30, corrected: 75), Anchor(metered: 40, corrected: 100), Anchor(metered: 50, corrected: 150)],
+            belowThresholdSamples: [0.5, 1],
+            nominalToleranceSample: nil,
+            clearlyCorrectedSamples: [],
+            insideSamples: [5, 10, 20, 30, 40, 50],
+            aboveSourceSamples: [90],
+            evidenceMetereds: [5, 10, 20, 30, 40, 50],
+            evidenceRows: [
+                EvidenceRow(metered: 5, correctedSeconds: 7.5),
+                EvidenceRow(metered: 10, correctedSeconds: 20),
+                EvidenceRow(metered: 20, correctedSeconds: 50),
+                EvidenceRow(metered: 30, correctedSeconds: 75),
+                EvidenceRow(metered: 40, correctedSeconds: 100),
+                EvidenceRow(metered: 50, correctedSeconds: 150),
+            ],
+            detailTokens: ["7.5s", "20.0s", "50.0s", "75.0s", "100.0s", "150.0s"],
+            markers: [Anchor(metered: 5, corrected: 7.5), Anchor(metered: 10, corrected: 20), Anchor(metered: 20, corrected: 50), Anchor(metered: 30, corrected: 75), Anchor(metered: 40, corrected: 100), Anchor(metered: 50, corrected: 150)],
+            beyondSourceStartSeconds: 50,
             sourceKind: .manufacturerPublished, authority: .official, publisher: "Rollei",
             profileName: "Official Rollei table", profileIdSuffix: "-official-table",
             modelSourceModel: .manufacturerTable, modelCalculationModel: .tableLogLogInterpolation

@@ -206,10 +206,32 @@ public struct TimerStartComposer {
             ?? film?.userMetadata?.customSourceType {
             segments.append(sourceType.displayLabel)
         }
-        if let formulaText = customProfileFormulaText(profile: profile) {
-            segments.append(formulaText)
+        if let calculationText = customProfileCalculationText(profile: profile) {
+            segments.append(calculationText)
         }
         return segments.isEmpty ? nil : segments.joined(separator: " · ")
+    }
+
+    /// Calculation-identity segment of the custom-profile summary:
+    /// the rendered formula for a formula profile, or the table
+    /// kind plus anchor count for a table profile (PTIMER-178) —
+    /// e.g. `Custom table · 3 anchors` — so a timer card always
+    /// distinguishes which calculation kind produced the result
+    /// even after the source profile is deleted.
+    public static func customProfileCalculationText(
+        profile: ReciprocityProfile
+    ) -> String? {
+        if let formulaText = customProfileFormulaText(profile: profile) {
+            return formulaText
+        }
+        for rule in profile.rules {
+            if case .tableInterpolation(let tableRule) = rule {
+                let count = tableRule.anchors.count
+                let noun = count == 1 ? "anchor" : "anchors"
+                return "Custom table · \(count) \(noun)"
+            }
+        }
+        return nil
     }
 
     /// Compact, human-readable rendering of a `.userDefined`

@@ -89,7 +89,7 @@ struct CustomFilmEditorLiveCheckView: View {
         switch status {
         case .noCorrection:
             return Color.secondary
-        case .formulaApplied, .beyondSourceRange:
+        case .formulaApplied, .tableApplied, .beyondSourceRange:
             return Color.primary
         case .invalidFormulaResult:
             return Color.secondary

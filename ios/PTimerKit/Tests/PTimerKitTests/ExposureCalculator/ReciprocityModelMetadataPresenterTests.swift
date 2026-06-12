@@ -50,6 +50,35 @@ final class ReciprocityModelMetadataPresenterTests: XCTestCase {
         XCTAssertEqual(value(section, "Calculation"), "Limited guidance — no quantified prediction")
     }
 
+    // MARK: - Tri-X 400 graph/table vs table distinction (PTIMER-168 follow-up)
+
+    func testTriXModelsDistinguishGraphTableFromPublishedTable() throws {
+        let film = try XCTUnwrap(film(named: "Tri-X 400"))
+
+        // Default: the graph-extended anchor set.
+        let graphTable = presenter.metadataSection(film: film, profile: film.profiles[0])
+        XCTAssertEqual(value(graphTable, "Source"), "Manufacturer graph/table")
+        XCTAssertEqual(value(graphTable, "Calculation"), "Log-log table interpolation")
+
+        // Alternate: the published rows only.
+        let officialTable = try XCTUnwrap(
+            AlternateReciprocityModels.alternates(forFilmID: "kodak-tri-x-400")
+                .first { $0.id == "kodak-tri-x-official-table" }
+        )
+        let officialSection = presenter.metadataSection(film: film, profile: officialTable)
+        XCTAssertEqual(value(officialSection, "Source"), "Manufacturer table")
+        XCTAssertEqual(value(officialSection, "Calculation"), "Log-log table interpolation")
+
+        // Alternate: the app-derived fit keeps the graph/table source.
+        let appFormula = try XCTUnwrap(
+            AlternateReciprocityModels.alternates(forFilmID: "kodak-tri-x-400")
+                .first { $0.id == "kodak-tri-x-app-formula" }
+        )
+        let appSection = presenter.metadataSection(film: film, profile: appFormula)
+        XCTAssertEqual(value(appSection, "Source"), "Manufacturer graph/table")
+        XCTAssertEqual(value(appSection, "Calculation"), "App-derived guarded formula")
+    }
+
     // MARK: - PTIMER-169 special source shapes
 
     func testRangeGuidanceProfileReadsManufacturerRangeGuidance() throws {

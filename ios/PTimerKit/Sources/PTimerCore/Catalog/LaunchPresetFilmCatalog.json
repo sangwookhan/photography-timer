@@ -545,7 +545,7 @@
         "id": "kodak-tri-x-official-graph-table",
         "modelBasis": {
           "calculationModel": "tableLogLogInterpolation",
-          "sourceModel": "manufacturerTable"
+          "sourceModel": "manufacturerGraphTable"
         },
         "name": "Official Kodak graph/table",
         "notes": [],
@@ -575,6 +575,7 @@
             }
           }
         ],
+        "selectorLabel": "Graph table",
         "source": {
           "authority": "official",
           "citation": "Publication F-4017",
@@ -624,6 +625,94 @@
             "adjustments": [
               {
                 "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 5,
+                    "isApproximate": true,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → corrected 5 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 10,
+                    "isApproximate": true,
+                    "meteredSeconds": 3
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 3,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "3 sec → corrected 10 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "isApproximate": true,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 20 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 32,
+                    "isApproximate": true,
+                    "meteredSeconds": 7
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 7,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "7 sec → corrected 32 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
                   "kind": "stopDelta",
                   "stopDelta": {
                     "stopDelta": 2
@@ -654,6 +743,94 @@
             },
             "notes": [
               "10 sec → +2 stops, corrected 50 sec, develop -20%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 120,
+                    "isApproximate": true,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 120 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 200,
+                    "isApproximate": true,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 200 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 420,
+                    "isApproximate": true,
+                    "meteredSeconds": 50
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 50,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "50 sec → corrected 420 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 720,
+                    "isApproximate": true,
+                    "meteredSeconds": 70
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 70,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "70 sec → corrected 720 sec (graph-sampled)."
             ]
           },
           {

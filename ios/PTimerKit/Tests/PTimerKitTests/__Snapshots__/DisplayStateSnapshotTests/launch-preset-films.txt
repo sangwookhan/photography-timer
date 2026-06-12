@@ -636,7 +636,7 @@
                 - sourceRangeThroughSeconds: 100.0
           - notes: 0 elements
           - userMetadata: nil
-          ▿ sourceEvidence: 3 elements
+          ▿ sourceEvidence: 11 elements
             ▿ PTimerCore.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 1.0
@@ -658,6 +658,62 @@
                     - note: nil
               ▿ notes: 1 element
                 - "1 sec → +1 stop, corrected 2 sec, develop -10%."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 2.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(2.0)
+                        - some: 2.0
+                      - correctedSeconds: 5.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "2 sec → corrected 5 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 3.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(3.0)
+                        - some: 3.0
+                      - correctedSeconds: 10.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "3 sec → corrected 10 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 5.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(5.0)
+                        - some: 5.0
+                      - correctedSeconds: 20.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "5 sec → corrected 20 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 7.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(7.0)
+                        - some: 7.0
+                      - correctedSeconds: 32.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "7 sec → corrected 32 sec (graph-sampled)."
               - isSourceEvidenceOnly: false
             ▿ PTimerCore.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
@@ -683,6 +739,62 @@
               - isSourceEvidenceOnly: false
             ▿ PTimerCore.ReciprocitySourceEvidenceRow
               ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 20.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(20.0)
+                        - some: 20.0
+                      - correctedSeconds: 120.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "20 sec → corrected 120 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 30.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(30.0)
+                        - some: 30.0
+                      - correctedSeconds: 200.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "30 sec → corrected 200 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 50.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(50.0)
+                        - some: 50.0
+                      - correctedSeconds: 420.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "50 sec → corrected 420 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 70.0
+              ▿ adjustments: 1 element
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(70.0)
+                        - some: 70.0
+                      - correctedSeconds: 720.0
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "70 sec → corrected 720 sec (graph-sampled)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
                 - exactSeconds: 100.0
               ▿ adjustments: 3 elements
                 ▿ PTimerCore.ReciprocityAdjustment.exposure
@@ -703,11 +815,12 @@
               ▿ notes: 1 element
                 - "100 sec → +3 stops, corrected 1200 sec, develop -30%."
               - isSourceEvidenceOnly: false
-          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerGraphTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
             ▿ some: PTimerCore.ReciprocityProfileModelBasis
-              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerGraphTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
-          - selectorLabel: nil
+          ▿ selectorLabel: Optional("Graph table")
+            - some: "Graph table"
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-tmax-100"

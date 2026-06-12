@@ -42,6 +42,26 @@ public struct FilmModeDetailsLegendPresenter {
             lines.append("Development adjustment: Dev -10% means adjust development time by -10%.")
         }
 
+        // A graph/table-sourced profile whose evidence carries
+        // graph-sampled support rows (e.g. Tri-X 400's Graph table
+        // model) needs the ≈ rows' provenance spelled out so the
+        // extra rows never read as published table rows. The row
+        // shape comes from the shared classifier, and the declared
+        // source shape gates the wording so a plain-table profile
+        // with a derivation ≈ (T-MAX 100's 1 s stop-conversion) does
+        // not pick it up.
+        if profile.effectiveModelBasis.sourceModel == .manufacturerGraphTable,
+           profile.sourceEvidence.contains(
+               where: ReciprocitySourceEvidenceClassifier.isGraphSampledSupportRow
+           ) {
+            let publisher = profile.source.publisher
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let publisherText = publisher.isEmpty ? "manufacturer's" : publisher
+            lines.append(
+                "Graph-sampled rows are points read from the published \(publisherText) graph."
+            )
+        }
+
         if presentations.contains(where: { $0.kind == .warning && $0.severity == .stop }) {
             lines.append("Warning: Not recommended marks a manufacturer stop-signal.")
         }

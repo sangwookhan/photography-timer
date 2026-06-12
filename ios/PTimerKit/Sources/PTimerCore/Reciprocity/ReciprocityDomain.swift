@@ -405,6 +405,15 @@ public enum ReciprocitySourceModel: String, Codable, Equatable, CaseIterable {
     /// derived formula for calculation (e.g. Kodak Tri-X 400,
     /// Fomapan 100 Classic).
     case manufacturerTable
+    /// Source combines a published table with a published correction
+    /// GRAPH the anchors were sampled from (e.g. Kodak Tri-X 400's
+    /// E-31/F-4017 graph + table). Distinct from `manufacturerTable`
+    /// so Details can say "Manufacturer graph/table" for the
+    /// graph-extended anchor set and the app-derived formula fitted
+    /// to it, while the published-rows-only model keeps reading
+    /// "Manufacturer table" (PTIMER-168 follow-up). Display / catalog
+    /// vocabulary only, like every case in this enum.
+    case manufacturerGraphTable
     /// Source publishes a corrected value as a range (e.g. Rollei
     /// RETRO 80S's "1 to 2 sec" row).
     case manufacturerRangeGuidance

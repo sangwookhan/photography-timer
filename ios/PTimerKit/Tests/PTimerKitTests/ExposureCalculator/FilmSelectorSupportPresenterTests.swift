@@ -149,6 +149,15 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
         )
     }
 
+    func testPromotedUnofficialPracticalPrimaryMapsToUnofficial() throws {
+        let film = try film(named: "RETRO 400S")
+
+        XCTAssertEqual(
+            FilmSelectorSupportPresenter.makeSupportState(for: film),
+            .unofficialPractical
+        )
+    }
+
     func testUnofficialOverrideIsNotConflatedWithOfficialPrediction() throws {
         let film = try film(named: "Portra 400")
         let unofficial = try XCTUnwrap(UnofficialPracticalProfiles.profile(forFilmID: film.id))

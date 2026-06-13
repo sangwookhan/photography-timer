@@ -140,9 +140,11 @@ extension CustomFilmEditorFormState {
     }
 
     /// Anchors parsed from the non-blank rows, or `nil` when any
-    /// non-blank row is invalid, the metered times are not strictly
-    /// ascending, any corrected time is shorter than its metered
-    /// time, or fewer than two anchors remain.
+    /// non-blank row is invalid, any corrected time is shorter than
+    /// its metered time, Tm values are duplicated, or fewer than two
+    /// anchors remain. Complete rows are auto-sorted by Tm ascending
+    /// so out-of-order entry does not block the preview or save paths
+    /// (PTIMER-179 UX follow-up).
     public func parsedTableAnchors() -> [TableAnchor]? {
         var anchors: [TableAnchor] = []
         for row in tableRows where !row.isBlank {
@@ -150,13 +152,16 @@ extension CustomFilmEditorFormState {
                   anchor.correctedSeconds >= anchor.meteredSeconds else {
                 return nil
             }
-            if let previous = anchors.last,
-               anchor.meteredSeconds <= previous.meteredSeconds {
-                return nil
-            }
             anchors.append(anchor)
         }
-        return anchors.count >= 2 ? anchors : nil
+        guard anchors.count >= 2 else { return nil }
+        anchors.sort { $0.meteredSeconds < $1.meteredSeconds }
+        for i in 1..<anchors.count {
+            if anchors[i].meteredSeconds <= anchors[i - 1].meteredSeconds {
+                return nil
+            }
+        }
+        return anchors
     }
 
     /// Strict full-table parse mirroring `validate()`'s table
@@ -237,6 +242,29 @@ extension CustomFilmEditorFormState {
         }
     }
 
+    // MARK: - Sort
+
+    /// Sorts complete rows (both Tm and Tc parse as positive seconds)
+    /// by ascending Tm in-place, leaving incomplete rows at their
+    /// current positions. Called at safe commit points (Return key,
+    /// Add row) so rows never jump while the photographer is still
+    /// typing.
+    public mutating func sortCompleteTableRows() {
+        let completePositions = tableRows.indices.filter { idx in
+            Self.parsedAnchor(from: tableRows[idx]) != nil
+        }
+        guard completePositions.count >= 2 else { return }
+        let sorted = completePositions
+            .map { tableRows[$0] }
+            .sorted { lhs, rhs in
+                Self.parsedAnchor(from: lhs)!.meteredSeconds
+                    < Self.parsedAnchor(from: rhs)!.meteredSeconds
+            }
+        for (orderedIndex, position) in completePositions.enumerated() {
+            tableRows[position] = sorted[orderedIndex]
+        }
+    }
+
     // MARK: - Row-level validation wording
 
     /// Concise inline reason rendered under one anchor row, or
@@ -265,22 +293,22 @@ extension CustomFilmEditorFormState {
             return "Tc must be > 0"
         }
         if corrected < metered { return "Tc must be ≥ Tm" }
-        if let previous = lastValidAnchorMetered(before: index),
-           metered <= previous {
-            return "Tm must increase down the table"
+        // Out-of-order complete rows are auto-sorted on save/preview,
+        // so only a DUPLICATE Tm among complete rows is a real error.
+        if hasDuplicateMeteredTime(metered, excludingRowAt: index) {
+            return "Rows must be sorted by Tm."
         }
         return nil
     }
 
-    private func lastValidAnchorMetered(before index: Int) -> Double? {
-        var lastMetered: Double?
-        for row in tableRows.prefix(index) where !row.isBlank {
+    private func hasDuplicateMeteredTime(_ metered: Double, excludingRowAt excludedIndex: Int) -> Bool {
+        for (idx, row) in tableRows.enumerated() {
+            guard idx != excludedIndex, !row.isBlank else { continue }
             guard let anchor = Self.parsedAnchor(from: row),
                   anchor.correctedSeconds >= anchor.meteredSeconds else { continue }
-            if let current = lastMetered, anchor.meteredSeconds <= current { continue }
-            lastMetered = anchor.meteredSeconds
+            if anchor.meteredSeconds == metered { return true }
         }
-        return lastMetered
+        return false
     }
 
     // MARK: - Validate + build (table branch)
@@ -370,8 +398,10 @@ extension CustomFilmEditorFormState {
 
     /// Anchor scan for `validateTable`. Inserts the coarse error
     /// cases (`.invalidTableAnchors` / `.insufficientTableAnchors`)
-    /// and returns the ascending anchor list only when every
-    /// non-blank row participates cleanly.
+    /// and returns the ascending anchor list only when every non-blank
+    /// row participates cleanly. Complete rows are auto-sorted by Tm
+    /// before the duplicate check so the save path accepts any row
+    /// entry order.
     private func validatedTableAnchors(
         errors: inout Set<CustomFilmEditorValidationError>
     ) -> [TableAnchor]? {
@@ -383,20 +413,22 @@ extension CustomFilmEditorFormState {
                 rowsValid = false
                 continue
             }
-            if let previous = anchors.last,
-               anchor.meteredSeconds <= previous.meteredSeconds {
-                rowsValid = false
-                continue
-            }
             anchors.append(anchor)
         }
-        if !rowsValid {
+        guard rowsValid else {
             errors.insert(.invalidTableAnchors)
             return nil
         }
-        if anchors.count < 2 {
+        guard anchors.count >= 2 else {
             errors.insert(.insufficientTableAnchors)
             return nil
+        }
+        anchors.sort { $0.meteredSeconds < $1.meteredSeconds }
+        for i in 1..<anchors.count {
+            if anchors[i].meteredSeconds <= anchors[i - 1].meteredSeconds {
+                errors.insert(.invalidTableAnchors)
+                return nil
+            }
         }
         return anchors
     }

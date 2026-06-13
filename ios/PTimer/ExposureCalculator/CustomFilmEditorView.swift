@@ -1158,11 +1158,13 @@ private struct CustomFilmEditorTableCard: View {
                         isEditing: isEditing
                     ),
                     canDelete: formState.tableRows.count > 1,
-                    onDelete: { deleteRow(at: index) }
+                    onDelete: { deleteRow(at: index) },
+                    onFieldCommit: { formState.sortCompleteTableRows() }
                 )
             }
             if formState.tableRows.count < CustomFilmEditorFormState.tableRowSoftCap {
                 Button {
+                    formState.sortCompleteTableRows()
                     formState.tableRows.append(CustomFilmTableAnchorRowInput())
                 } label: {
                     Label("Add row", systemImage: "plus.circle")
@@ -1249,6 +1251,7 @@ private struct CustomFilmEditorTableAnchorRowView: View {
     let inlineError: String?
     let canDelete: Bool
     let onDelete: () -> Void
+    let onFieldCommit: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -1256,12 +1259,14 @@ private struct CustomFilmEditorTableAnchorRowView: View {
                 TextField("Tm", text: $row.meteredText)
                     .multilineTextAlignment(.trailing)
                     .font(.footnote.monospacedDigit())
+                    .onSubmit { onFieldCommit() }
                     .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tm")
                 Image(systemName: "arrow.right")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                 TextField("Tc", text: $row.correctedText)
                     .font(.footnote.monospacedDigit())
+                    .onSubmit { onFieldCommit() }
                     .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tc")
                 if canDelete {
                     Button(role: .destructive, action: onDelete) {

@@ -111,9 +111,13 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         assertFailure(form, contains: .invalidTableAnchors)
     }
 
-    func test_validate_descendingMetered_failsInvalidAnchors() {
+    func test_validate_descendingMetered_autoSortedToValid() throws {
+        // Rows entered in descending order are auto-sorted before
+        // validation, so [10→80, 1→2] is identical to [1→2, 10→80].
         let form = makeTableForm(rows: [("10", "80"), ("1", "2")])
-        assertFailure(form, contains: .invalidTableAnchors)
+        let rule = try tableRule(from: form)
+        XCTAssertEqual(rule.anchors[0].meteredSeconds, 1, accuracy: 1e-9)
+        XCTAssertEqual(rule.anchors[1].meteredSeconds, 10, accuracy: 1e-9)
     }
 
     func test_validate_duplicateMetered_failsInvalidAnchors() {
@@ -164,6 +168,62 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(envelope.contains(.invalidISO))
     }
 
+    // MARK: - Auto-sort
+
+    func test_parsedTableAnchors_autoSortsDescendingInput() {
+        // Rows entered in any order are returned sorted ascending by Tm.
+        let form = makeTableForm(rows: [("100", "1600"), ("1", "2"), ("10", "80")])
+        let anchors = form.parsedTableAnchors()
+        XCTAssertEqual(anchors?.map(\.meteredSeconds), [1, 10, 100])
+    }
+
+    func test_parsedTableAnchors_incompleteRowDoesNotPreventSort() {
+        // A partially blank row (isBlank == true) is skipped; the
+        // remaining complete rows are still sorted and returned.
+        var form = makeTableForm(rows: [("10", "80"), ("1", "2")])
+        form.tableRows.append(CustomFilmTableAnchorRowInput())
+        let anchors = form.parsedTableAnchors()
+        XCTAssertEqual(anchors?.map(\.meteredSeconds), [1, 10])
+    }
+
+    func test_sortCompleteTableRows_reordersOutOfOrderRows() {
+        var form = makeTableForm(rows: [("100", "1600"), ("1", "2"), ("10", "80")])
+        form.sortCompleteTableRows()
+        XCTAssertEqual(form.tableRows.map(\.meteredText), ["1", "10", "100"])
+    }
+
+    func test_sortCompleteTableRows_leavesIncompleteRowInPlace() {
+        // Partial row at position 1 must not jump; complete rows around it sort.
+        var form = makeTableForm(rows: [("100", "1600"), ("10", "80")])
+        form.tableRows.insert(
+            CustomFilmTableAnchorRowInput(meteredText: "50", correctedText: ""),
+            at: 1
+        )
+        // Rows: [100→1600, 50→(incomplete), 10→80]
+        form.sortCompleteTableRows()
+        // Complete positions 0 and 2 sort ascending: 10 < 100
+        XCTAssertEqual(form.tableRows[0].meteredText, "10")
+        XCTAssertEqual(form.tableRows[1].meteredText, "50") // incomplete — unmoved
+        XCTAssertEqual(form.tableRows[2].meteredText, "100")
+    }
+
+    func test_sortCompleteTableRows_noOpWhenFewerThanTwoCompleteRows() {
+        var form = makeTableForm(rows: [("10", "80")])
+        form.tableRows.append(CustomFilmTableAnchorRowInput())
+        let original = form.tableRows.map(\.meteredText)
+        form.sortCompleteTableRows()
+        XCTAssertEqual(form.tableRows.map(\.meteredText), original)
+    }
+
+    func test_sortCompleteTableRows_preservesDuplicateMeteredInvalid() {
+        // Duplicate Tm values are still invalid after sort; just confirms
+        // sort doesn't crash or silently drop rows.
+        var form = makeTableForm(rows: [("10", "90"), ("10", "80")])
+        form.sortCompleteTableRows()
+        XCTAssertEqual(form.tableRows.count, 2)
+        XCTAssertNil(form.parsedTableAnchors(), "Duplicates must remain invalid")
+    }
+
     // MARK: - Row-level wording
 
     func test_tableRowValidationReason_flagsShorteningRow() {
@@ -175,11 +235,19 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertNil(form.tableRowValidationReason(at: 1, isEditing: false))
     }
 
-    func test_tableRowValidationReason_flagsOutOfOrderRow() {
+    func test_tableRowValidationReason_outOfOrderCompleteRow_returnsNil() {
+        // Out-of-order complete rows are auto-sorted on save/preview;
+        // no per-row error is shown for positional order.
         let form = makeTableForm(rows: [("10", "80"), ("5", "40")])
+        XCTAssertNil(form.tableRowValidationReason(at: 0, isEditing: false))
+        XCTAssertNil(form.tableRowValidationReason(at: 1, isEditing: false))
+    }
+
+    func test_tableRowValidationReason_duplicateMetered_returnsError() {
+        let form = makeTableForm(rows: [("10", "80"), ("10", "90")])
         XCTAssertEqual(
             form.tableRowValidationReason(at: 1, isEditing: false),
-            "Tm must increase down the table"
+            "Rows must be sorted by Tm."
         )
     }
 

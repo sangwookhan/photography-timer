@@ -27,7 +27,7 @@ final class CustomFilmEditorPolishTests: XCTestCase {
         }
         let cases: [Case] = [
             Case(name: "seconds", input: "2", placeholder: "1s", allowsUnlimited: false, expectedText: "2s", expectedPlaceholder: false),
-            Case(name: "minutes", input: "200", placeholder: "1s", allowsUnlimited: false, expectedText: "3.3m", expectedPlaceholder: false),
+            Case(name: "minutes", input: "200", placeholder: "1s", allowsUnlimited: false, expectedText: "3m 20s", expectedPlaceholder: false),
             Case(name: "sub-second leading zero", input: "0.5", placeholder: "0s", allowsUnlimited: false, expectedText: "0.50s", expectedPlaceholder: nil),
             Case(name: "empty -> placeholder", input: "", placeholder: "1s", allowsUnlimited: false, expectedText: "1s", expectedPlaceholder: true),
             Case(name: "unparseable echoes raw text", input: "abc", placeholder: "1s", allowsUnlimited: false, expectedText: "abc", expectedPlaceholder: false),

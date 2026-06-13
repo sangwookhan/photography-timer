@@ -245,6 +245,38 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(reopened.tableRows.isEmpty)
     }
 
+    // MARK: - Duration formatting (no decimal minutes)
+
+    func test_formatDurationExpression_100sDoesNotRenderAsDecimalMinutes() {
+        // 100 s used to render as "1.7m" — this pins the fix so it cannot regress.
+        let result = CustomFilmEditorFormState.formatDurationExpression(100)
+        XCTAssertFalse(
+            result.contains(".") && result.hasSuffix("m"),
+            "100s formatted as \(result); expected no decimal-minute notation"
+        )
+        XCTAssertEqual(result, "1m 40s")
+    }
+
+    func test_formatDurationExpression_wholeMinutesRenderCompact() {
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(60), "1m")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(120), "2m")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(3600), "60m")
+    }
+
+    func test_formatDurationExpression_subMinuteValuesUnchanged() {
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(1), "1s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(30), "30s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(0.5), "0.50s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(1.5), "1.5s")
+    }
+
+    func test_formatDurationExpression_fractionalMinutesUseMsSeparation() {
+        // Values like 100 s, 400 s, 1262 s are common reciprocity anchors.
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(400), "6m 40s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(1262), "21m 2s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(90), "1m 30s")
+    }
+
     // MARK: - Preview parity
 
     func test_parsedTableRule_matchesSavedRule() throws {
@@ -324,5 +356,42 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
             file: file,
             line: line
         )
+    }
+}
+
+// MARK: - Anchor seconds format
+
+final class CustomFilmEditorAnchorSecondsFormatTests: XCTestCase {
+
+    func test_formatAnchorSeconds_subSixty_returnsPlain() {
+        XCTAssertEqual(CustomFilmEditorFormState.formatAnchorSeconds(10), "10s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatAnchorSeconds(59), "59s")
+    }
+
+    func test_formatAnchorSeconds_exactSixty_includesRawSeconds() {
+        let result = CustomFilmEditorFormState.formatAnchorSeconds(60)
+        XCTAssertTrue(result.hasPrefix("60s"), "Expected '60s' prefix, got '\(result)'")
+    }
+
+    func test_formatAnchorSeconds_100s_displaysSecondsFirst() {
+        let result = CustomFilmEditorFormState.formatAnchorSeconds(100)
+        XCTAssertTrue(result.hasPrefix("100s"), "Expected '100s' prefix, got '\(result)'")
+        XCTAssertTrue(result.contains("1m"), "Expected minutes component, got '\(result)'")
+    }
+
+    func test_formatAnchorSeconds_1000s_displaysSecondsFirst() {
+        let result = CustomFilmEditorFormState.formatAnchorSeconds(1000)
+        XCTAssertTrue(result.hasPrefix("1000s"), "Expected '1000s' prefix, got '\(result)'")
+        XCTAssertTrue(result.contains("16m"), "Expected 16m component, got '\(result)'")
+    }
+
+    func test_formatAnchorSeconds_neverDecimalMinutes() {
+        for seconds in [100.0, 200.0, 300.0, 1000.0] {
+            let result = CustomFilmEditorFormState.formatAnchorSeconds(seconds)
+            XCTAssertFalse(
+                result.contains(".") && result.contains("m"),
+                "formatAnchorSeconds(\(seconds)) emitted decimal minutes: '\(result)'"
+            )
+        }
     }
 }

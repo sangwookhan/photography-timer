@@ -1081,7 +1081,7 @@ private struct CustomFilmEditorPreviewTable: View {
             ForEach(rows, id: \.meteredSeconds) { row in
                 HStack(alignment: .center) {
                     Text(metricLabel(row.meteredSeconds))
-                        .frame(width: 60, alignment: .leading)
+                        .frame(width: 110, alignment: .leading)
                         .font(.footnote.monospacedDigit())
                     Text(correctedLabel(for: row))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1096,7 +1096,9 @@ private struct CustomFilmEditorPreviewTable: View {
     }
 
     private func metricLabel(_ seconds: Double) -> String {
-        customFilmEditorCompactSeconds(seconds)
+        form.calculationInputKind == .table
+            ? CustomFilmEditorFormState.formatAnchorSeconds(seconds)
+            : CustomFilmEditorFormState.formatDurationExpression(seconds)
     }
 
     private func correctedLabel(for row: CustomFilmEditorPreviewPresenter.Row) -> String {
@@ -1232,7 +1234,7 @@ private struct CustomFilmEditorTableCard: View {
         guard let derived = formState.derivedTableSourceRangeSeconds else {
             return "Last anchor"
         }
-        let formatted = CustomFilmEditorFormState.formatDurationExpression(derived)
+        let formatted = CustomFilmEditorFormState.formatAnchorSeconds(derived)
         return "Through \(formatted) · last anchor"
     }
 }

@@ -2,18 +2,13 @@ import SwiftUI
 import PTimerKit
 import PTimerCore
 
-/// Compact seconds/minutes label shared by the editor's checkpoint
-/// preview table and the app-derived fitted-formula comparison so the
-/// two adjacent tables read with one duration vocabulary.
+/// Seconds-first label for anchor/source/comparison values in the
+/// fitted-formula tables. Values ≥ 60 s render as `Xs (NmYs)` so
+/// the raw seconds value the photographer entered is always visible
+/// alongside the compact clock context. Delegates to
+/// `CustomFilmEditorFormState.formatAnchorSeconds`.
 func customFilmEditorCompactSeconds(_ seconds: Double) -> String {
-    if seconds >= 60 {
-        let minutes = seconds / 60
-        return minutes == minutes.rounded() ? "\(Int(minutes))m" : String(format: "%.1fm", minutes)
-    }
-    if seconds < 1 {
-        return String(format: "%.2fs", seconds)
-    }
-    return seconds == seconds.rounded() ? "\(Int(seconds))s" : String(format: "%.1fs", seconds)
+    CustomFilmEditorFormState.formatAnchorSeconds(seconds)
 }
 
 /// Inspection-only body of the "App-derived formula preview" section
@@ -128,7 +123,7 @@ struct CustomTableFittedFormulaPreviewContent: View {
 
     private var comparisonHeaderRow: some View {
         HStack {
-            Text("Metered").frame(width: 56, alignment: .leading)
+            Text("Metered").frame(width: 110, alignment: .leading)
             Text("Source").frame(maxWidth: .infinity, alignment: .leading)
             Text("App").frame(maxWidth: .infinity, alignment: .leading)
             Text("Error").frame(maxWidth: .infinity, alignment: .trailing)
@@ -142,7 +137,7 @@ struct CustomTableFittedFormulaPreviewContent: View {
     ) -> some View {
         HStack {
             Text(customFilmEditorCompactSeconds(row.meteredSeconds))
-                .frame(width: 56, alignment: .leading)
+                .frame(width: 110, alignment: .leading)
             Text(customFilmEditorCompactSeconds(row.sourceCorrectedSeconds))
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(customFilmEditorCompactSeconds(row.fittedCorrectedSeconds))

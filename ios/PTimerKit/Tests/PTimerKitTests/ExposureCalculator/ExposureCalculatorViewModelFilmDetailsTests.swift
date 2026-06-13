@@ -131,17 +131,20 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertEqual(referenceSection.rows.map(\.value), [
             """
             <= 1/10s    No correction range
-            1s          +1 stop · 2s           Dev -10%
+            1s          +1 stop · 2s
+                        Dev -10%
             2s          ≈5s
             3s          ≈10s
             5s          ≈20s
             7s          ≈32s
-            10s         +2 stops · 50s         Dev -20%
-            20s         ≈120s
-            30s         ≈200s
-            50s         ≈420s
-            70s         ≈720s
-            100s        +3 stops · 1200s       Dev -30%
+            10s         +2 stops · 50s
+                        Dev -20%
+            20s         ≈120s (2m)
+            30s         ≈200s (3m 20s)
+            50s         ≈420s (7m)
+            70s         ≈720s (12m)
+            100s        +3 stops · 1200s (20m)
+                        Dev -30%
             """,
         ])
         // The ≈ rows' provenance is spelled out in the legend.

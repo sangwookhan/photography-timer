@@ -504,17 +504,11 @@ public struct ReciprocityDetailsVocabularyPresenter {
     }
 
     private static func formatSeconds(_ seconds: Double) -> String {
-        if seconds >= 60 {
-            let minutes = seconds / 60
-            if minutes == minutes.rounded() {
-                return "\(Int(minutes))m"
-            }
-            return String(format: "%.1fm", minutes)
-        }
-        if seconds == seconds.rounded() {
-            return "\(Int(seconds))s"
-        }
-        return String(format: "%.1fs", seconds)
+        // Seconds-first with an hms supplement for long values
+        // (`100s (1m 40s)`), reusing the custom-table editor's
+        // formatter so Details body text never shows the old
+        // decimal-minute label (`1.7m`). PTIMER-179.
+        CustomFilmEditorFormState.formatAnchorSeconds(seconds)
     }
 
     private func profileUsesFormula(_ profile: ReciprocityProfile) -> Bool {

@@ -216,18 +216,8 @@ struct CustomTableFittedFormulaPreviewContent: View {
 
     // MARK: - Formatting
 
-    /// Fixed-decimal rendering at roughly four significant digits.
-    /// `%g` would switch to scientific notation (`1.23e+03`) for
-    /// large or tiny fit parameters, which reads wrong in a
-    /// photographer-facing formula line; `%f` always stays a plain
-    /// number.
     private func numeric(_ value: Double) -> String {
-        let magnitude = abs(value)
-        if magnitude >= 1000 { return String(format: "%.0f", value) }
-        if magnitude >= 100 { return String(format: "%.1f", value) }
-        if magnitude >= 10 { return String(format: "%.2f", value) }
-        if magnitude >= 0.01 { return String(format: "%.3f", value) }
-        return String(format: "%.5f", value)
+        CustomTableFittedFormulaPresenter.parameterText(value)
     }
 
     private func signedPercent(_ value: Double) -> String {

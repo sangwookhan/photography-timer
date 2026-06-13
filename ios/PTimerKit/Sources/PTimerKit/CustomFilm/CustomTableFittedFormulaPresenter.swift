@@ -253,6 +253,30 @@ public enum CustomTableFittedFormulaPresenter {
         return .poor
     }
 
+    // MARK: - Parameter formatting
+
+    /// Photographer-facing rendering of a fit parameter (`a`, `p`):
+    /// fixed decimals at roughly four significant digits, trailing
+    /// zeros trimmed — never scientific notation, so the
+    /// `Tc = a × Tm^p` line always reads as a plain number.
+    public static func parameterText(_ value: Double) -> String {
+        let decimals = parameterDecimals(forMagnitude: abs(value))
+        var text = String(format: "%.\(decimals)f", value)
+        if text.contains(".") {
+            while text.hasSuffix("0") { text.removeLast() }
+            if text.hasSuffix(".") { text.removeLast() }
+        }
+        return text
+    }
+
+    private static func parameterDecimals(forMagnitude magnitude: Double) -> Int {
+        if magnitude >= 1000 { return 0 }
+        if magnitude >= 100 { return 1 }
+        if magnitude >= 10 { return 2 }
+        if magnitude >= 0.01 { return 3 }
+        return 5
+    }
+
     /// Corrected exposure the shared evaluator produces, so the
     /// comparison uses identical math to the runtime — `nil` only when
     /// the evaluator rejects the input (which the upstream guard makes

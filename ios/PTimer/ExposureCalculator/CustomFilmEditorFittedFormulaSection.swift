@@ -198,13 +198,46 @@ struct CustomTableFittedFormulaPreviewContent: View {
     private func unavailableContent(
         _ reason: CustomTableFittedFormulaPresenter.Unavailable
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(CustomTableFittedFormulaPresenter.appDerivedLabel)
-                .font(.footnote.weight(.semibold))
-            Text(reason.displayMessage)
-                .font(.caption)
+        let guidance = reason.guidance
+        VStack(alignment: .leading, spacing: 10) {
+            // Keep the formula-card identity so the section reads as the
+            // same preview, just without a usable result.
+            header
+            Text("Tc = unavailable")
+                .font(.footnote.monospaced())
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("custom-film-editor-fitted-formula-unavailable-expression")
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(CustomTableFittedFormulaPresenter.unavailableTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text(guidance.cause)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !guidance.recoveryActions.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Try")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(guidance.recoveryActions, id: \.self) { action in
+                            Text("•  \(action)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("custom-film-editor-fitted-formula-recovery")
+                }
+
+                if guidance.tableRemainsReliable {
+                    Text(CustomTableFittedFormulaPresenter.tableRemainsReliableNote)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
         .accessibilityIdentifier("custom-film-editor-fitted-formula-unavailable")
     }

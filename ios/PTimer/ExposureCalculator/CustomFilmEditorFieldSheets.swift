@@ -466,22 +466,35 @@ private struct CustomFilmEditorDurationSheet: View {
             accessibilityIdentifier: sheetAccessibilityID
         ) {
             Form {
-                Section {
-                    CustomFilmEditorFormulaDisplayBlock(
-                        form: formState,
-                        topAccessibilityID: "custom-film-editor-sheet-formula-structure",
-                        bottomAccessibilityID: "custom-film-editor-sheet-formula-current"
-                    )
-                } header: {
-                    Text("Formula")
-                }
+                contextSection
 
                 Section {
-                    TextField(placeholder, text: textBinding)
-                        .keyboardType(.numbersAndPunctuation)
-                        .autocorrectionDisabled(true)
-                        .textInputAutocapitalization(.never)
-                        .accessibilityIdentifier("\(sheetAccessibilityID)-input")
+                    if field == .noCorrectionThrough {
+                        HStack(spacing: 12) {
+                            noCorrectionStepButton(label: "−0.1s", delta: -0.1)
+                                .accessibilityIdentifier(
+                                    "\(sheetAccessibilityID)-decrement"
+                                )
+                            TextField(placeholder, text: textBinding)
+                                .keyboardType(.numbersAndPunctuation)
+                                .autocorrectionDisabled(true)
+                                .textInputAutocapitalization(.never)
+                                .multilineTextAlignment(.center)
+                                .font(.body.monospacedDigit())
+                                .frame(maxWidth: .infinity)
+                                .accessibilityIdentifier("\(sheetAccessibilityID)-input")
+                            noCorrectionStepButton(label: "+0.1s", delta: 0.1)
+                                .accessibilityIdentifier(
+                                    "\(sheetAccessibilityID)-increment"
+                                )
+                        }
+                    } else {
+                        TextField(placeholder, text: textBinding)
+                            .keyboardType(.numbersAndPunctuation)
+                            .autocorrectionDisabled(true)
+                            .textInputAutocapitalization(.never)
+                            .accessibilityIdentifier("\(sheetAccessibilityID)-input")
+                    }
                 } footer: {
                     if let validationField,
                        let reason = formState.inlineValidationReason(
@@ -511,5 +524,75 @@ private struct CustomFilmEditorDurationSheet: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var contextSection: some View {
+        if field == .noCorrectionThrough, formState.calculationInputKind == .table {
+            Section {
+                Text("No correction is the metered time below which the table keeps Tc = Tm. It must be below the first table anchor.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("custom-film-editor-sheet-no-correction-explanation")
+                if tableNoCorrectionIsShortening {
+                    Text("Raise this value to inspect the fitted formula.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("custom-film-editor-sheet-no-correction-shortening-hint")
+                }
+            }
+        } else {
+            Section {
+                CustomFilmEditorFormulaDisplayBlock(
+                    form: formState,
+                    topAccessibilityID: "custom-film-editor-sheet-formula-structure",
+                    bottomAccessibilityID: "custom-film-editor-sheet-formula-current"
+                )
+            } header: {
+                Text("Formula")
+            }
+        }
+    }
+
+    private var tableNoCorrectionIsShortening: Bool {
+        guard let rule = formState.parsedTableInterpolationRule() else { return false }
+        if case .unavailable(.unusableShorteningFit) = CustomTableFittedFormulaPresenter.outcome(for: rule) {
+            return true
+        }
+        return false
+    }
+
+    private func noCorrectionStepButton(label: String, delta: Double) -> some View {
+        Button {
+            adjustNoCorrection(by: delta)
+        } label: {
+            Text(label)
+                .font(.footnote.monospacedDigit())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.primary.opacity(0.08))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func adjustNoCorrection(by delta: Double) {
+        let currentSeconds: Double
+        switch CustomFilmDurationParser.parse(textBinding.wrappedValue) {
+        case .seconds(let v) where v.isFinite && v > 0:
+            currentSeconds = v
+        default:
+            currentSeconds = 0.1
+        }
+        let next = max(0.1, ((currentSeconds + delta) * 10).rounded() / 10)
+        textBinding.wrappedValue = next < 1
+            ? String(format: "%.1fs", next)
+            : next == next.rounded()
+                ? "\(Int(next.rounded()))s"
+                : String(format: "%.1fs", next)
     }
 }

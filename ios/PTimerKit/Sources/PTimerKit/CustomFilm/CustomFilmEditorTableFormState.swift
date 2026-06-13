@@ -58,10 +58,14 @@ extension CustomFilmEditorFormState {
     /// required shape immediately).
     public static let newTableRowSeedCount = 2
 
-    /// Divisor for the suggested no-correction default: the first
-    /// anchor's metered time divided by 10 (first anchor 1 s →
-    /// 0.1 s, 10 s → 1 s).
-    private static let defaultNoCorrectionDivisor: Double = 10
+    /// Derives the suggested no-correction default.
+    /// Returns `min(0.5, firstAnchor / 2)` so typical first anchors
+    /// of 1 s or above suggest 0.5 s — enough headroom to keep the
+    /// fitted-formula preview usable — while sub-second anchors fall
+    /// back to half their own value.
+    private static func defaultTableNoCorrection(firstAnchorSeconds: Double) -> Double {
+        min(0.5, firstAnchorSeconds / 2)
+    }
 
     /// Pure-value kind switch for the Create flow. Switching to
     /// `.table` seeds the minimum rows and clears the formula-mode
@@ -121,13 +125,13 @@ extension CustomFilmEditorFormState {
         return nil
     }
 
-    /// Suggested no-correction default (`firstAnchorMetered / 10`).
-    /// The editor shows it as the field placeholder; an empty field
-    /// resolves to this value at validate/save so the suggestion
-    /// re-derives whenever the first anchor changes without ever
-    /// overwriting a value the photographer typed.
+    /// Suggested no-correction default derived from the first anchor
+    /// (`min(0.5, firstAnchor / 2)`). The editor shows it as the
+    /// field placeholder; an empty field resolves to this value at
+    /// validate/save so the suggestion re-derives whenever the first
+    /// anchor changes without overwriting a value the photographer typed.
     public var defaultTableNoCorrectionSeconds: Double? {
-        firstTableAnchorMeteredSeconds.map { $0 / Self.defaultNoCorrectionDivisor }
+        firstTableAnchorMeteredSeconds.map { Self.defaultTableNoCorrection(firstAnchorSeconds: $0) }
     }
 
     /// Derived source-range boundary (`max(anchor.meteredSeconds)`,
@@ -214,7 +218,7 @@ extension CustomFilmEditorFormState {
     ) -> Double? {
         switch CustomFilmDurationParser.parse(noCorrectionThroughText) {
         case .empty:
-            return firstAnchorMeteredSeconds / Self.defaultNoCorrectionDivisor
+            return Self.defaultTableNoCorrection(firstAnchorSeconds: firstAnchorMeteredSeconds)
         case .seconds(let value)
             where value.isFinite && value > 0 && value < firstAnchorMeteredSeconds:
             return value

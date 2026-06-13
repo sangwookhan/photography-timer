@@ -1208,6 +1208,13 @@ private struct CustomFilmEditorTableCard: View {
                 accessibilityID: "custom-film-editor-no-correction-through",
                 action: onEditNoCorrection
             )
+            if fittedFormulaUnusableDueToShortening {
+                Text("Raise no correction to inspect the fitted formula.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("custom-film-editor-no-correction-formula-hint")
+            }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("Source data")
                     .font(.caption)
@@ -1220,6 +1227,14 @@ private struct CustomFilmEditorTableCard: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("custom-film-editor-table-source-range")
         }
+    }
+
+    private var fittedFormulaUnusableDueToShortening: Bool {
+        guard let rule = formState.parsedTableInterpolationRule() else { return false }
+        if case .unavailable(.unusableShorteningFit) = CustomTableFittedFormulaPresenter.outcome(for: rule) {
+            return true
+        }
+        return false
     }
 
     /// Placeholder for the no-correction row while the field is

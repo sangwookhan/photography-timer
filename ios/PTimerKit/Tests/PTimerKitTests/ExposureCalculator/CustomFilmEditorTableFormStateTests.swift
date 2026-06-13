@@ -33,10 +33,18 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(rule.hasValidParameters)
     }
 
-    func test_validate_emptyNoCorrection_defaultsToFirstAnchorOverTen() throws {
+    func test_validate_emptyNoCorrection_defaultsToHalfSecond_forTypicalAnchor() throws {
+        // Default is min(0.5, firstAnchor / 2); first anchor 1 s → 0.5 s.
         let form = makeTableForm(rows: [("1", "2"), ("10", "80")])
         let rule = try tableRule(from: form)
-        XCTAssertEqual(rule.noCorrectionThroughSeconds, 0.1, accuracy: 1e-9)
+        XCTAssertEqual(rule.noCorrectionThroughSeconds, 0.5, accuracy: 1e-9)
+    }
+
+    func test_validate_emptyNoCorrection_subHalfSecondAnchor_defaultsToHalfAnchor() throws {
+        // First anchor 0.4 s → min(0.5, 0.2) = 0.2 s.
+        let form = makeTableForm(rows: [("0.4", "1"), ("10", "80")])
+        let rule = try tableRule(from: form)
+        XCTAssertEqual(rule.noCorrectionThroughSeconds, 0.2, accuracy: 1e-9)
     }
 
     func test_validate_sourceRange_derivedFromLastAnchor() throws {

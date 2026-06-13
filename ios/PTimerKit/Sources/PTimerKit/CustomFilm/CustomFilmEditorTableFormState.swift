@@ -160,10 +160,9 @@ extension CustomFilmEditorFormState {
         }
         guard anchors.count >= 2 else { return nil }
         anchors.sort { $0.meteredSeconds < $1.meteredSeconds }
-        for i in 1..<anchors.count {
-            if anchors[i].meteredSeconds <= anchors[i - 1].meteredSeconds {
-                return nil
-            }
+        for i in 1..<anchors.count
+        where anchors[i].meteredSeconds <= anchors[i - 1].meteredSeconds {
+            return nil
         }
         return anchors
     }
@@ -428,11 +427,10 @@ extension CustomFilmEditorFormState {
             return nil
         }
         anchors.sort { $0.meteredSeconds < $1.meteredSeconds }
-        for i in 1..<anchors.count {
-            if anchors[i].meteredSeconds <= anchors[i - 1].meteredSeconds {
-                errors.insert(.invalidTableAnchors)
-                return nil
-            }
+        for i in 1..<anchors.count
+        where anchors[i].meteredSeconds <= anchors[i - 1].meteredSeconds {
+            errors.insert(.invalidTableAnchors)
+            return nil
         }
         return anchors
     }

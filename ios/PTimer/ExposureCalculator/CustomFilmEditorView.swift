@@ -1175,6 +1175,14 @@ private struct CustomFilmEditorPreviewTable: View {
 private enum CustomFilmEditorTableFocus: Hashable {
     case metered(UUID)
     case corrected(UUID)
+
+    /// The anchor row this focus target belongs to, so a delete can
+    /// clear focus only when it lands on the row being removed.
+    var rowID: UUID {
+        switch self {
+        case let .metered(id), let .corrected(id): return id
+        }
+    }
 }
 
 private struct CustomFilmEditorTableCard: View {
@@ -1188,16 +1196,21 @@ private struct CustomFilmEditorTableCard: View {
 
     var body: some View {
         Section {
-            ForEach(Array(formState.tableRows.enumerated()), id: \.element.id) { index, _ in
+            // Identity-based iteration: SwiftUI manages each row's
+            // binding by id, so a delete mid-edit never subscripts a
+            // stale index out of range. The display index is looked up
+            // from the live array for accessibility / validation only.
+            ForEach($formState.tableRows) { $row in
+                let index = formState.tableRows.firstIndex { $0.id == row.id } ?? 0
                 CustomFilmEditorTableAnchorRowView(
-                    row: $formState.tableRows[index],
+                    row: $row,
                     index: index,
                     inlineError: formState.tableRowValidationReason(
                         at: index,
                         isEditing: isEditing
                     ),
                     canDelete: formState.tableRows.count > 1,
-                    onDelete: { deleteRow(at: index) },
+                    onDelete: { deleteRow(id: row.id) },
                     onFieldCommit: { formState.sortCompleteTableRows() },
                     focusedField: $focusedField
                 )
@@ -1235,9 +1248,14 @@ private struct CustomFilmEditorTableCard: View {
         }
     }
 
-    private func deleteRow(at index: Int) {
-        guard formState.tableRows.indices.contains(index) else { return }
-        formState.tableRows.remove(at: index)
+    private func deleteRow(id: UUID) {
+        // Drop focus first if it sits on the row being removed, so the
+        // keyboard dismisses cleanly and no FocusState points at a gone
+        // row.
+        if focusedField?.rowID == id {
+            focusedField = nil
+        }
+        formState.removeTableRow(id: id)
     }
 
     @ViewBuilder

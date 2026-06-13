@@ -218,6 +218,48 @@ final class CustomTableFittedFormulaPresenterTests: XCTestCase {
         )
     }
 
+    func testUnavailableTitleIsStable() {
+        XCTAssertEqual(CustomTableFittedFormulaPresenter.unavailableTitle, "Unavailable fit")
+    }
+
+    func testShorteningGuidanceIsStructuredWithBothActions() {
+        let guidance = CustomTableFittedFormulaPresenter.Unavailable
+            .unusableShorteningFit.guidance
+        XCTAssertTrue(
+            guidance.cause.contains("shorten exposure"),
+            "Cause must name the shortening reason: \(guidance.cause)"
+        )
+        XCTAssertEqual(
+            guidance.recoveryActions,
+            ["Raise no correction", "Add an anchor near the lower range"]
+        )
+        XCTAssertTrue(guidance.tableRemainsReliable)
+    }
+
+    func testGuidanceWithoutRecoveryActionsStillKeepsTableReliable() {
+        // A fit-failure that the table contract makes unreachable in the
+        // UI still yields calm guidance: a cause, no false fixes, and the
+        // table-reliable reassurance.
+        let guidance = CustomTableFittedFormulaPresenter.Unavailable
+            .fit(.insufficientAnchors).guidance
+        XCTAssertTrue(guidance.recoveryActions.isEmpty)
+        XCTAssertTrue(guidance.tableRemainsReliable)
+        XCTAssertFalse(guidance.cause.isEmpty)
+    }
+
+    func testDisplayMessageComposesFromGuidance() {
+        // displayMessage is the flattened guidance, so the structured
+        // and prose surfaces cannot drift.
+        let reason = CustomTableFittedFormulaPresenter.Unavailable.unusableShorteningFit
+        let message = reason.displayMessage
+        XCTAssertTrue(message.contains(reason.guidance.cause))
+        XCTAssertTrue(message.contains("Raise no correction"))
+        XCTAssertTrue(message.contains("Add an anchor near the lower range"))
+        XCTAssertTrue(
+            message.contains(CustomTableFittedFormulaPresenter.tableRemainsReliableNote)
+        )
+    }
+
     func testUsableFitDoesNotReportShortening() {
         // A clean, non-shortening table fits cleanly: the outcome is
         // available, so neither warning surface can show.

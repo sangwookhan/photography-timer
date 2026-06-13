@@ -45,6 +45,16 @@ public enum CustomTableFittedFormulaPresenter {
     public static let unusableShorteningRowMessage =
         "Fitted formula unavailable. Raise no correction or add a lower-range anchor."
 
+    /// Heading the preview card shows in place of a fit-quality label
+    /// when no formula can be produced.
+    public static let unavailableTitle = "Unavailable fit"
+
+    /// Reassurance that the unavailable formula does not affect the
+    /// active calculation. Shared by the structured guidance and the
+    /// flattened `displayMessage`.
+    public static let tableRemainsReliableNote =
+        "The table remains your reliable calculation."
+
     // MARK: - Fit quality (PTIMER-170 thresholds)
 
     /// Worst absolute anchor residual, in stops, at or below which the
@@ -161,23 +171,80 @@ public enum CustomTableFittedFormulaPresenter {
         /// contract (e.g. a non-positive exponent).
         case invalidParameters
 
-        public var displayMessage: String {
-            switch self {
-            case .fit(.insufficientAnchors):
-                return "Add at least two anchors to fit a formula."
-            case .fit(.nonPositiveAnchors):
-                return "Anchor times must be positive to fit a formula."
-            case .fit(.degenerateAnchors):
-                return "Anchors must span more than one metered time."
-            case .fit(.nonFiniteResult), .invalidParameters:
-                return "These anchors do not produce a usable formula."
-            case .unusableShorteningFit:
-                return "The fitted formula would shorten exposure with the "
-                    + "current table boundaries.\n"
-                    + "Raise no correction, or add another anchor near the "
-                    + "lower range.\n"
-                    + "The table remains your reliable calculation."
+        /// Structured recovery guidance the preview card renders: a
+        /// one-line cause, zero or more concrete fixes the photographer
+        /// can act on, and whether to reassure that the table still
+        /// calculates. Keeping it structured (rather than one prose
+        /// blob) lets the card lay the parts out and lets tests assert
+        /// each part is present.
+        public struct Guidance: Equatable {
+            public let cause: String
+            public let recoveryActions: [String]
+            public let tableRemainsReliable: Bool
+
+            public init(
+                cause: String,
+                recoveryActions: [String],
+                tableRemainsReliable: Bool
+            ) {
+                self.cause = cause
+                self.recoveryActions = recoveryActions
+                self.tableRemainsReliable = tableRemainsReliable
             }
+        }
+
+        public var guidance: Guidance {
+            switch self {
+            case .unusableShorteningFit:
+                return Guidance(
+                    cause: "The fitted formula would shorten exposure with the "
+                        + "current table boundaries.",
+                    recoveryActions: [
+                        "Raise no correction",
+                        "Add an anchor near the lower range",
+                    ],
+                    tableRemainsReliable: true
+                )
+            case .fit(.insufficientAnchors):
+                return Guidance(
+                    cause: "Add at least two anchors to fit a formula.",
+                    recoveryActions: [],
+                    tableRemainsReliable: true
+                )
+            case .fit(.nonPositiveAnchors):
+                return Guidance(
+                    cause: "Anchor times must be positive to fit a formula.",
+                    recoveryActions: [],
+                    tableRemainsReliable: true
+                )
+            case .fit(.degenerateAnchors):
+                return Guidance(
+                    cause: "Anchors must span more than one metered time.",
+                    recoveryActions: [],
+                    tableRemainsReliable: true
+                )
+            case .fit(.nonFiniteResult), .invalidParameters:
+                return Guidance(
+                    cause: "These anchors do not produce a usable formula.",
+                    recoveryActions: [],
+                    tableRemainsReliable: true
+                )
+            }
+        }
+
+        /// Flattened single-string form, composed from `guidance` so the
+        /// two never drift. Used where a structured layout is not
+        /// available.
+        public var displayMessage: String {
+            let guidance = self.guidance
+            var lines = [guidance.cause]
+            if !guidance.recoveryActions.isEmpty {
+                lines.append(guidance.recoveryActions.joined(separator: ", ") + ".")
+            }
+            if guidance.tableRemainsReliable {
+                lines.append(CustomTableFittedFormulaPresenter.tableRemainsReliableNote)
+            }
+            return lines.joined(separator: "\n")
         }
     }
 

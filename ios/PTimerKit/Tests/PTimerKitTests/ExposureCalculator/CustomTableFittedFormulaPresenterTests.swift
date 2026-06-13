@@ -192,4 +192,48 @@ final class CustomTableFittedFormulaPresenterTests: XCTestCase {
             .unavailable(.fit(.insufficientAnchors))
         )
     }
+
+    // MARK: - Non-shortening tolerance boundary
+
+    func testFlatTableFitStaysAvailableAtNonShorteningBoundary() throws {
+        // Tc = Tm anchors sit exactly on the non-shortening boundary;
+        // the fit reproduces them (a = 1, p = 1). Because the guard and
+        // the per-anchor comparison share one tolerance, a fit the
+        // guard approves must surface as available — never as
+        // `.unusableShorteningFit` from the comparison pass.
+        let flat = rule(
+            [anchor(1, 1), anchor(10, 10), anchor(100, 100)],
+            noCorrection: 0.5,
+            sourceRange: 100
+        )
+        let formula = try available(CustomTableFittedFormulaPresenter.outcome(for: flat))
+        XCTAssertEqual(formula.coefficientSeconds, 1.0, accuracy: 1e-9)
+        XCTAssertEqual(formula.exponent, 1.0, accuracy: 1e-9)
+        for row in formula.comparisonRows {
+            XCTAssertEqual(row.fittedCorrectedSeconds, row.sourceCorrectedSeconds, accuracy: 1e-9)
+        }
+    }
+
+    // MARK: - Parameter text formatting
+
+    func testParameterTextNeverUsesScientificNotation() {
+        for value in [1_234_567.0, 12_345.0, 4_821.9, 0.0004821, 0.00012] {
+            let text = CustomTableFittedFormulaPresenter.parameterText(value)
+            XCTAssertFalse(
+                text.lowercased().contains("e"),
+                "\(value) rendered as \(text)"
+            )
+        }
+    }
+
+    func testParameterTextUsesCompactFixedDecimals() {
+        let presenter = CustomTableFittedFormulaPresenter.self
+        XCTAssertEqual(presenter.parameterText(12_345.0), "12345")
+        XCTAssertEqual(presenter.parameterText(123.46), "123.5")
+        XCTAssertEqual(presenter.parameterText(12.25), "12.25")
+        XCTAssertEqual(presenter.parameterText(1.2345678), "1.235")
+        XCTAssertEqual(presenter.parameterText(1.4), "1.4")
+        XCTAssertEqual(presenter.parameterText(2.0), "2")
+        XCTAssertEqual(presenter.parameterText(0.0004821), "0.00048")
+    }
 }

@@ -654,6 +654,11 @@ struct CustomFilmEditorView: View {
     // MARK: - Mutations
 
     private func save() {
+        // Save is a commit point too: settle the visible row order
+        // before validating so the stored anchors and the last on-screen
+        // order agree. (The validator also sorts internally; this keeps
+        // the editor's own rows consistent if Save is somehow re-entered.)
+        formState.sortCompleteTableRows()
         // Edit-mode reuse rule: the form must keep the original
         // film/profile ids so the library upserts in place. The
         // generator yields the profile id first, then the film id
@@ -1142,10 +1147,22 @@ private struct CustomFilmEditorPreviewTable: View {
 /// falls back to the derived `firstAnchor / 10` suggestion shown
 /// as the placeholder), and the read-only derived source range —
 /// PTIMER-178 does not expose source range as an editable field.
+/// Identifies which anchor-row text field currently holds keyboard
+/// focus. The table card watches this so it can sort completed rows
+/// whenever focus moves — a commit point that actually fires on iOS
+/// (switching fields, tapping outside, dismissing the keyboard) —
+/// rather than relying only on `.onSubmit`, which the numeric-style
+/// keyboards used here may never deliver.
+private enum CustomFilmEditorTableFocus: Hashable {
+    case metered(UUID)
+    case corrected(UUID)
+}
+
 private struct CustomFilmEditorTableCard: View {
     @Binding var formState: CustomFilmEditorFormState
     let isEditing: Bool
     let onEditNoCorrection: () -> Void
+    @FocusState private var focusedField: CustomFilmEditorTableFocus?
 
     var body: some View {
         Section {
@@ -1159,7 +1176,8 @@ private struct CustomFilmEditorTableCard: View {
                     ),
                     canDelete: formState.tableRows.count > 1,
                     onDelete: { deleteRow(at: index) },
-                    onFieldCommit: { formState.sortCompleteTableRows() }
+                    onFieldCommit: { formState.sortCompleteTableRows() },
+                    focusedField: $focusedField
                 )
             }
             if formState.tableRows.count < CustomFilmEditorFormState.tableRowSoftCap {
@@ -1184,6 +1202,14 @@ private struct CustomFilmEditorTableCard: View {
             }
         } header: {
             Text("Table (Tm → Tc)")
+        }
+        // Sort whenever focus moves between fields, to another row, or
+        // away from the table entirely (keyboard dismissed). Only
+        // complete rows reorder, so a half-typed row never jumps; and
+        // because this fires on focus transitions — not keystrokes —
+        // rows stay put while the photographer is mid-entry.
+        .onChange(of: focusedField) { _, _ in
+            formState.sortCompleteTableRows()
         }
     }
 
@@ -1268,6 +1294,7 @@ private struct CustomFilmEditorTableAnchorRowView: View {
     let canDelete: Bool
     let onDelete: () -> Void
     let onFieldCommit: () -> Void
+    @FocusState.Binding var focusedField: CustomFilmEditorTableFocus?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -1275,6 +1302,7 @@ private struct CustomFilmEditorTableAnchorRowView: View {
                 TextField("Tm", text: $row.meteredText)
                     .multilineTextAlignment(.trailing)
                     .font(.footnote.monospacedDigit())
+                    .focused($focusedField, equals: .metered(row.id))
                     .onSubmit { onFieldCommit() }
                     .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tm")
                 Image(systemName: "arrow.right")
@@ -1282,6 +1310,7 @@ private struct CustomFilmEditorTableAnchorRowView: View {
                     .foregroundStyle(.tertiary)
                 TextField("Tc", text: $row.correctedText)
                     .font(.footnote.monospacedDigit())
+                    .focused($focusedField, equals: .corrected(row.id))
                     .onSubmit { onFieldCommit() }
                     .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tc")
                 if canDelete {

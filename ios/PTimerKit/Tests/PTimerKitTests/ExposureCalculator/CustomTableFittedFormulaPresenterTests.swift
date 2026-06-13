@@ -183,6 +183,50 @@ final class CustomTableFittedFormulaPresenterTests: XCTestCase {
         )
     }
 
+    // MARK: - Unusable guidance copy (PTIMER-179 UX blocker)
+
+    func testUnusableShorteningRowMessageNamesBothFixes() {
+        let message = CustomTableFittedFormulaPresenter.unusableShorteningRowMessage
+        XCTAssertTrue(
+            message.contains("Raise no correction"),
+            "Row hint must name the no-correction fix: \(message)"
+        )
+        XCTAssertTrue(
+            message.contains("lower-range anchor"),
+            "Row hint must name the lower-range anchor fix: \(message)"
+        )
+        XCTAssertFalse(
+            message.lowercased().contains("invalid"),
+            "Row hint must not imply the table itself is invalid: \(message)"
+        )
+    }
+
+    func testUnusableShorteningPreviewMessageNamesBothFixes() {
+        let message = CustomTableFittedFormulaPresenter.Unavailable
+            .unusableShorteningFit.displayMessage
+        XCTAssertTrue(
+            message.contains("Raise no correction"),
+            "Preview card must name the no-correction fix: \(message)"
+        )
+        XCTAssertTrue(
+            message.contains("anchor near the lower range"),
+            "Preview card must name the lower-range anchor fix: \(message)"
+        )
+        XCTAssertTrue(
+            message.contains("table remains your reliable calculation"),
+            "Preview card must keep the table reassurance: \(message)"
+        )
+    }
+
+    func testUsableFitDoesNotReportShortening() {
+        // A clean, non-shortening table fits cleanly: the outcome is
+        // available, so neither warning surface can show.
+        let outcome = CustomTableFittedFormulaPresenter.outcome(for: cleanPowerLawRule())
+        guard case .available = outcome else {
+            return XCTFail("Expected available, got \(outcome)")
+        }
+    }
+
     func testInsufficientAnchorsSurfaceFitReason() {
         // A single-anchor rule never passes the table contract, but the
         // presenter must degrade gracefully rather than crash.

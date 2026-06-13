@@ -37,6 +37,14 @@ public enum CustomTableFittedFormulaPresenter {
     public static let notManufacturerNote =
         "App-derived from your table anchors. Not manufacturer-published guidance."
 
+    /// Short, actionable hint shown in the table row area when the
+    /// fitted preview is unavailable solely because the fit would
+    /// shorten exposure (`.unavailable(.unusableShorteningFit)`). Names
+    /// the two fixes the photographer can actually make; it never
+    /// implies the table itself is invalid.
+    public static let unusableShorteningRowMessage =
+        "Fitted formula unavailable. Raise no correction or add a lower-range anchor."
+
     // MARK: - Fit quality (PTIMER-170 thresholds)
 
     /// Worst absolute anchor residual, in stops, at or below which the
@@ -164,8 +172,11 @@ public enum CustomTableFittedFormulaPresenter {
             case .fit(.nonFiniteResult), .invalidParameters:
                 return "These anchors do not produce a usable formula."
             case .unusableShorteningFit:
-                return "The fitted formula would shorten exposure, so it "
-                    + "is not usable. The table remains your reliable calculation."
+                return "The fitted formula would shorten exposure with the "
+                    + "current table boundaries.\n"
+                    + "Raise no correction, or add another anchor near the "
+                    + "lower range.\n"
+                    + "The table remains your reliable calculation."
             }
         }
     }

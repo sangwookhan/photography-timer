@@ -382,6 +382,16 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertFalse(form.tableCanRenderPreview)
     }
 
+    /// The fitted-formula unavailable warning is gated on
+    /// `parsedTableInterpolationRule()` being non-nil, so an incomplete
+    /// table (which cannot even attempt a fit) must yield no rule and
+    /// therefore no warning — never a false "shortening" claim.
+    func test_incompleteTable_yieldsNoRuleSoFittedWarningIsSuppressed() {
+        var form = makeTableForm(rows: [("2", "2")])
+        form.tableRows.append(CustomFilmTableAnchorRowInput(meteredText: "10", correctedText: ""))
+        XCTAssertNil(form.parsedTableInterpolationRule())
+    }
+
     // MARK: - Helpers
 
     private func makeTableForm(

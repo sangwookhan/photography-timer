@@ -1209,9 +1209,10 @@ private struct CustomFilmEditorTableCard: View {
                 action: onEditNoCorrection
             )
             if fittedFormulaUnusableDueToShortening {
-                Text("Raise no correction to inspect the fitted formula.")
+                Text(CustomTableFittedFormulaPresenter.unusableShorteningRowMessage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("custom-film-editor-no-correction-formula-hint")
             }

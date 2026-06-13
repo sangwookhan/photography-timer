@@ -245,6 +245,16 @@ extension CustomFilmEditorFormState {
         }
     }
 
+    // MARK: - Row removal
+
+    /// Removes the anchor row with `id`. Id-based (never index-based)
+    /// so a SwiftUI delete mid-edit can never subscript a stale row
+    /// index out of range (PTIMER-179 crash: deleting an unfilled row
+    /// while another row held focus).
+    public mutating func removeTableRow(id: UUID) {
+        tableRows.removeAll { $0.id == id }
+    }
+
     // MARK: - Sort
 
     /// Sorts complete rows (both Tm and Tc parse as positive seconds)

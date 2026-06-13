@@ -232,6 +232,23 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertNil(form.parsedTableAnchors(), "Duplicates must remain invalid")
     }
 
+    func test_removeTableRow_removesByIdLeavingOthersIntact() {
+        // Mirrors the crash repro: two filled rows plus a trailing
+        // unfilled row, delete the unfilled one. Id-based removal keeps
+        // the others and never depends on a positional index.
+        var form = makeTableForm(rows: [("10", "20"), ("100", "1000")])
+        let blank = CustomFilmTableAnchorRowInput(meteredText: "", correctedText: "")
+        form.tableRows.append(blank)
+        form.removeTableRow(id: blank.id)
+        XCTAssertEqual(form.tableRows.map(\.meteredText), ["10", "100"])
+    }
+
+    func test_removeTableRow_unknownIdIsNoOp() {
+        var form = makeTableForm(rows: [("10", "20"), ("100", "1000")])
+        form.removeTableRow(id: UUID())
+        XCTAssertEqual(form.tableRows.count, 2)
+    }
+
     func test_savePath_storesAnchorsSortedByMeteredTime() throws {
         // Rows entered out of order (2, 100, 10) must save ascending.
         let form = makeTableForm(rows: [("2", "2"), ("100", "1000"), ("10", "20")])

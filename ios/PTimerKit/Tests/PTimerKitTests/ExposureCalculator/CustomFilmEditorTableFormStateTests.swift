@@ -232,6 +232,13 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertNil(form.parsedTableAnchors(), "Duplicates must remain invalid")
     }
 
+    func test_savePath_storesAnchorsSortedByMeteredTime() throws {
+        // Rows entered out of order (2, 100, 10) must save ascending.
+        let form = makeTableForm(rows: [("2", "2"), ("100", "1000"), ("10", "20")])
+        let rule = try tableRule(from: form)
+        XCTAssertEqual(rule.anchors.map(\.meteredSeconds), [2, 10, 100])
+    }
+
     // MARK: - Row-level wording
 
     func test_tableRowValidationReason_flagsShorteningRow() {

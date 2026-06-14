@@ -316,11 +316,12 @@ final class CustomFilmTableProfileFlowTests: XCTestCase {
             sourceEvidence: []
         )
         let lines = ReciprocityDetailsVocabularyPresenter().customRangeLines(profile: profile)
-        // 100 s renders as fractional minutes per the shared
-        // formatter policy.
+        // Seconds-first with an hms supplement for long values
+        // (PTIMER-179), so 100 s reads as "100s (1m 40s)" rather than
+        // the old decimal-minute "1.7m".
         XCTAssertEqual(
             lines,
-            ["No correction through 0.1s", "Source range through 1.7m"]
+            ["No correction through 0.10s", "Source range through 100s (1m 40s)"]
         )
     }
 

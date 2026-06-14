@@ -21,9 +21,14 @@ import PTimerCore
 /// log-spaced scan could silently miss between samples; the
 /// analytic check cannot.
 public enum CustomFilmFormulaGuard {
-    /// 1 ms slack so a flat `Tc = Tm` boundary stays valid under
-    /// floating-point rounding.
-    private static let slackSeconds: Double = 0.001
+    /// Non-shortening slack matching the runtime evaluator's safety
+    /// net (`ReciprocityFormula.evaluate` rejects
+    /// `Tc < Tm - 1e-6`), so a formula this guard approves can never
+    /// trip the runtime clamp — and the per-anchor preview comparison
+    /// can never contradict the guard. Still generous enough that a
+    /// flat `Tc = Tm` boundary stays valid under floating-point
+    /// rounding (~1e-12 absolute at hour-scale magnitudes).
+    private static let slackSeconds: Double = 1e-6
 
     /// Parameter bundle for `passesUsableRangeCheck` — kept as a
     /// struct so the helper stays under the swiftlint parameter
@@ -147,7 +152,7 @@ public enum CustomFilmFormulaGuard {
                 && formula.fIsNonNegative(at: upper)
         }
         // c == 1 → f(t) = offset, constant. Need offset >= 0.
-        return formula.offset + slackSeconds >= 0
+        return formula.offset >= -slackSeconds
     }
 
     /// Internal compact view of the shortening function used by
@@ -158,13 +163,14 @@ public enum CustomFilmFormulaGuard {
         let exponent: Double
         let offset: Double
 
-        /// Returns `Tc(t) + slack >= t`. The slack mirrors the
-        /// 1 ms tolerance the editor's validator uses so a flat
-        /// boundary doesn't get rejected by rounding.
+        /// Returns `Tc(t) >= t - slack`, written in the same form as
+        /// the runtime evaluator's safety net
+        /// (`corrected >= metered - 1e-6`) so the two checks agree
+        /// bit-for-bit when the arithmetic matches.
         func fIsNonNegative(at t: Double) -> Bool {
-            guard t > 0 else { return offset + slackSeconds >= 0 }
+            guard t > 0 else { return offset >= -slackSeconds }
             let tc = coefficient * pow(t, exponent) + offset
-            return tc + slackSeconds >= t
+            return tc >= t - slackSeconds
         }
     }
 }

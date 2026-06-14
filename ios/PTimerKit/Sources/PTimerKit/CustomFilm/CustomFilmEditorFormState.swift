@@ -638,9 +638,9 @@ extension CustomFilmEditorFormState {
     /// `0.1` as `0.1s` — matching the `FormulaEquationFormatter`
     /// vocabulary used by the Calculation Basis surface so the
     /// two surfaces never disagree on the rendered numeric token
-    /// for the same value. Minute-scale and whole-second values
-    /// reuse the same `formatDurationExpression` policy the Live
-    /// Check view uses so the cross-surface look stays coherent.
+    /// for the same value. Minute-scale values delegate to
+    /// `formatDurationExpression` so both surfaces share one
+    /// no-decimal-minute policy.
     public static func formatDurationCompact(_ seconds: Double) -> String {
         if seconds >= 60 {
             return formatDurationExpression(seconds)
@@ -868,16 +868,17 @@ extension CustomFilmEditorFormState {
     }
 
     /// Compact numeric duration rendering for the formula
-    /// summary. Mirrors the Live Check / preview-table policy:
-    /// whole-minute values render as `Nm`, fractional minutes as
-    /// `N.Nm`, sub-second values as `0.NNs`, whole seconds as
-    /// `Ns`, and fractional seconds as `N.Ns`.
+    /// summary. Whole-minute values render as `Nm`, sub-minute
+    /// values as `Nm Xs` (e.g. `1m 40s` for 100 s), sub-second
+    /// values as `0.NNs`, whole seconds as `Ns`, and fractional
+    /// seconds as `N.Ns`. No decimal-minute notation (`1.7m`) —
+    /// that form is ambiguous for source-anchor verification.
     public static func formatDurationExpression(_ seconds: Double) -> String {
         if seconds >= 60 {
-            let minutes = seconds / 60
-            return minutes == minutes.rounded()
-                ? "\(Int(minutes))m"
-                : String(format: "%.1fm", minutes)
+            let total = Int(seconds.rounded())
+            let mins = total / 60
+            let secs = total % 60
+            return secs == 0 ? "\(mins)m" : "\(mins)m \(secs)s"
         }
         if seconds < 1 {
             return String(format: "%.2fs", seconds)
@@ -885,6 +886,18 @@ extension CustomFilmEditorFormState {
         return seconds == seconds.rounded()
             ? "\(Int(seconds))s"
             : String(format: "%.1fs", seconds)
+    }
+
+    /// Seconds-first format for values that the photographer entered
+    /// as anchor seconds. Values ≥ 60 s render as `Xs (NmYs)` so
+    /// the raw seconds value is always visible alongside the clock
+    /// context — e.g. `100s (1m 40s)`, `1000s (16m 40s)`. Values
+    /// < 60 s fall through to `formatDurationExpression` unchanged.
+    public static func formatAnchorSeconds(_ seconds: Double) -> String {
+        guard seconds >= 60 else { return formatDurationExpression(seconds) }
+        let total = Int(seconds.rounded())
+        let compact = formatDurationExpression(seconds)
+        return "\(total)s (\(compact))"
     }
 
     /// Concise, per-row inline validation reason rendered under

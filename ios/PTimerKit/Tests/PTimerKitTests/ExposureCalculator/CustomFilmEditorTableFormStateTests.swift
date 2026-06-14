@@ -33,10 +33,18 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(rule.hasValidParameters)
     }
 
-    func test_validate_emptyNoCorrection_defaultsToFirstAnchorOverTen() throws {
+    func test_validate_emptyNoCorrection_defaultsToHalfSecond_forTypicalAnchor() throws {
+        // Default is min(0.5, firstAnchor / 2); first anchor 1 s → 0.5 s.
         let form = makeTableForm(rows: [("1", "2"), ("10", "80")])
         let rule = try tableRule(from: form)
-        XCTAssertEqual(rule.noCorrectionThroughSeconds, 0.1, accuracy: 1e-9)
+        XCTAssertEqual(rule.noCorrectionThroughSeconds, 0.5, accuracy: 1e-9)
+    }
+
+    func test_validate_emptyNoCorrection_subHalfSecondAnchor_defaultsToHalfAnchor() throws {
+        // First anchor 0.4 s → min(0.5, 0.2) = 0.2 s.
+        let form = makeTableForm(rows: [("0.4", "1"), ("10", "80")])
+        let rule = try tableRule(from: form)
+        XCTAssertEqual(rule.noCorrectionThroughSeconds, 0.2, accuracy: 1e-9)
     }
 
     func test_validate_sourceRange_derivedFromLastAnchor() throws {
@@ -111,9 +119,13 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         assertFailure(form, contains: .invalidTableAnchors)
     }
 
-    func test_validate_descendingMetered_failsInvalidAnchors() {
+    func test_validate_descendingMetered_autoSortedToValid() throws {
+        // Rows entered in descending order are auto-sorted before
+        // validation, so [10→80, 1→2] is identical to [1→2, 10→80].
         let form = makeTableForm(rows: [("10", "80"), ("1", "2")])
-        assertFailure(form, contains: .invalidTableAnchors)
+        let rule = try tableRule(from: form)
+        XCTAssertEqual(rule.anchors[0].meteredSeconds, 1, accuracy: 1e-9)
+        XCTAssertEqual(rule.anchors[1].meteredSeconds, 10, accuracy: 1e-9)
     }
 
     func test_validate_duplicateMetered_failsInvalidAnchors() {
@@ -164,6 +176,86 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(envelope.contains(.invalidISO))
     }
 
+    // MARK: - Auto-sort
+
+    func test_parsedTableAnchors_autoSortsDescendingInput() {
+        // Rows entered in any order are returned sorted ascending by Tm.
+        let form = makeTableForm(rows: [("100", "1600"), ("1", "2"), ("10", "80")])
+        let anchors = form.parsedTableAnchors()
+        XCTAssertEqual(anchors?.map(\.meteredSeconds), [1, 10, 100])
+    }
+
+    func test_parsedTableAnchors_incompleteRowDoesNotPreventSort() {
+        // A partially blank row (isBlank == true) is skipped; the
+        // remaining complete rows are still sorted and returned.
+        var form = makeTableForm(rows: [("10", "80"), ("1", "2")])
+        form.tableRows.append(CustomFilmTableAnchorRowInput())
+        let anchors = form.parsedTableAnchors()
+        XCTAssertEqual(anchors?.map(\.meteredSeconds), [1, 10])
+    }
+
+    func test_sortCompleteTableRows_reordersOutOfOrderRows() {
+        var form = makeTableForm(rows: [("100", "1600"), ("1", "2"), ("10", "80")])
+        form.sortCompleteTableRows()
+        XCTAssertEqual(form.tableRows.map(\.meteredText), ["1", "10", "100"])
+    }
+
+    func test_sortCompleteTableRows_leavesIncompleteRowInPlace() {
+        // Partial row at position 1 must not jump; complete rows around it sort.
+        var form = makeTableForm(rows: [("100", "1600"), ("10", "80")])
+        form.tableRows.insert(
+            CustomFilmTableAnchorRowInput(meteredText: "50", correctedText: ""),
+            at: 1
+        )
+        // Rows: [100→1600, 50→(incomplete), 10→80]
+        form.sortCompleteTableRows()
+        // Complete positions 0 and 2 sort ascending: 10 < 100
+        XCTAssertEqual(form.tableRows[0].meteredText, "10")
+        XCTAssertEqual(form.tableRows[1].meteredText, "50") // incomplete — unmoved
+        XCTAssertEqual(form.tableRows[2].meteredText, "100")
+    }
+
+    func test_sortCompleteTableRows_noOpWhenFewerThanTwoCompleteRows() {
+        var form = makeTableForm(rows: [("10", "80")])
+        form.tableRows.append(CustomFilmTableAnchorRowInput())
+        let original = form.tableRows.map(\.meteredText)
+        form.sortCompleteTableRows()
+        XCTAssertEqual(form.tableRows.map(\.meteredText), original)
+    }
+
+    func test_sortCompleteTableRows_preservesDuplicateMeteredInvalid() {
+        // Duplicate Tm values are still invalid after sort; just confirms
+        // sort doesn't crash or silently drop rows.
+        var form = makeTableForm(rows: [("10", "90"), ("10", "80")])
+        form.sortCompleteTableRows()
+        XCTAssertEqual(form.tableRows.count, 2)
+        XCTAssertNil(form.parsedTableAnchors(), "Duplicates must remain invalid")
+    }
+
+    func test_removeTableRow_removesByIdLeavingOthersIntact() {
+        // Mirrors the crash repro: two filled rows plus a trailing
+        // unfilled row, delete the unfilled one. Id-based removal keeps
+        // the others and never depends on a positional index.
+        var form = makeTableForm(rows: [("10", "20"), ("100", "1000")])
+        let blank = CustomFilmTableAnchorRowInput(meteredText: "", correctedText: "")
+        form.tableRows.append(blank)
+        form.removeTableRow(id: blank.id)
+        XCTAssertEqual(form.tableRows.map(\.meteredText), ["10", "100"])
+    }
+
+    func test_removeTableRow_unknownIdIsNoOp() {
+        var form = makeTableForm(rows: [("10", "20"), ("100", "1000")])
+        form.removeTableRow(id: UUID())
+        XCTAssertEqual(form.tableRows.count, 2)
+    }
+
+    func test_savePath_storesAnchorsSortedByMeteredTime() throws {
+        // Rows entered out of order (2, 100, 10) must save ascending.
+        let form = makeTableForm(rows: [("2", "2"), ("100", "1000"), ("10", "20")])
+        let rule = try tableRule(from: form)
+        XCTAssertEqual(rule.anchors.map(\.meteredSeconds), [2, 10, 100])
+    }
+
     // MARK: - Row-level wording
 
     func test_tableRowValidationReason_flagsShorteningRow() {
@@ -175,11 +267,19 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertNil(form.tableRowValidationReason(at: 1, isEditing: false))
     }
 
-    func test_tableRowValidationReason_flagsOutOfOrderRow() {
+    func test_tableRowValidationReason_outOfOrderCompleteRow_returnsNil() {
+        // Out-of-order complete rows are auto-sorted on save/preview;
+        // no per-row error is shown for positional order.
         let form = makeTableForm(rows: [("10", "80"), ("5", "40")])
+        XCTAssertNil(form.tableRowValidationReason(at: 0, isEditing: false))
+        XCTAssertNil(form.tableRowValidationReason(at: 1, isEditing: false))
+    }
+
+    func test_tableRowValidationReason_duplicateMetered_returnsError() {
+        let form = makeTableForm(rows: [("10", "80"), ("10", "90")])
         XCTAssertEqual(
             form.tableRowValidationReason(at: 1, isEditing: false),
-            "Tm must increase down the table"
+            "Rows must be sorted by Tm."
         )
     }
 
@@ -245,6 +345,38 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(reopened.tableRows.isEmpty)
     }
 
+    // MARK: - Duration formatting (no decimal minutes)
+
+    func test_formatDurationExpression_100sDoesNotRenderAsDecimalMinutes() {
+        // 100 s used to render as "1.7m" — this pins the fix so it cannot regress.
+        let result = CustomFilmEditorFormState.formatDurationExpression(100)
+        XCTAssertFalse(
+            result.contains(".") && result.hasSuffix("m"),
+            "100s formatted as \(result); expected no decimal-minute notation"
+        )
+        XCTAssertEqual(result, "1m 40s")
+    }
+
+    func test_formatDurationExpression_wholeMinutesRenderCompact() {
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(60), "1m")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(120), "2m")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(3600), "60m")
+    }
+
+    func test_formatDurationExpression_subMinuteValuesUnchanged() {
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(1), "1s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(30), "30s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(0.5), "0.50s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(1.5), "1.5s")
+    }
+
+    func test_formatDurationExpression_fractionalMinutesUseMsSeparation() {
+        // Values like 100 s, 400 s, 1262 s are common reciprocity anchors.
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(400), "6m 40s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(1262), "21m 2s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatDurationExpression(90), "1m 30s")
+    }
+
     // MARK: - Preview parity
 
     func test_parsedTableRule_matchesSavedRule() throws {
@@ -272,6 +404,16 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
         XCTAssertTrue(CustomFilmEditorPreviewPresenter.tableRows(form: form).isEmpty)
         XCTAssertNotNil(CustomFilmEditorPreviewPresenter.tableDiagnosisMessage(form: form))
         XCTAssertFalse(form.tableCanRenderPreview)
+    }
+
+    /// The fitted-formula unavailable warning is gated on
+    /// `parsedTableInterpolationRule()` being non-nil, so an incomplete
+    /// table (which cannot even attempt a fit) must yield no rule and
+    /// therefore no warning — never a false "shortening" claim.
+    func test_incompleteTable_yieldsNoRuleSoFittedWarningIsSuppressed() {
+        var form = makeTableForm(rows: [("2", "2")])
+        form.tableRows.append(CustomFilmTableAnchorRowInput(meteredText: "10", correctedText: ""))
+        XCTAssertNil(form.parsedTableInterpolationRule())
     }
 
     // MARK: - Helpers
@@ -324,5 +466,42 @@ final class CustomFilmEditorTableFormStateTests: XCTestCase {
             file: file,
             line: line
         )
+    }
+}
+
+// MARK: - Anchor seconds format
+
+final class CustomFilmEditorAnchorSecondsFormatTests: XCTestCase {
+
+    func test_formatAnchorSeconds_subSixty_returnsPlain() {
+        XCTAssertEqual(CustomFilmEditorFormState.formatAnchorSeconds(10), "10s")
+        XCTAssertEqual(CustomFilmEditorFormState.formatAnchorSeconds(59), "59s")
+    }
+
+    func test_formatAnchorSeconds_exactSixty_includesRawSeconds() {
+        let result = CustomFilmEditorFormState.formatAnchorSeconds(60)
+        XCTAssertTrue(result.hasPrefix("60s"), "Expected '60s' prefix, got '\(result)'")
+    }
+
+    func test_formatAnchorSeconds_100s_displaysSecondsFirst() {
+        let result = CustomFilmEditorFormState.formatAnchorSeconds(100)
+        XCTAssertTrue(result.hasPrefix("100s"), "Expected '100s' prefix, got '\(result)'")
+        XCTAssertTrue(result.contains("1m"), "Expected minutes component, got '\(result)'")
+    }
+
+    func test_formatAnchorSeconds_1000s_displaysSecondsFirst() {
+        let result = CustomFilmEditorFormState.formatAnchorSeconds(1000)
+        XCTAssertTrue(result.hasPrefix("1000s"), "Expected '1000s' prefix, got '\(result)'")
+        XCTAssertTrue(result.contains("16m"), "Expected 16m component, got '\(result)'")
+    }
+
+    func test_formatAnchorSeconds_neverDecimalMinutes() {
+        for seconds in [100.0, 200.0, 300.0, 1000.0] {
+            let result = CustomFilmEditorFormState.formatAnchorSeconds(seconds)
+            XCTAssertFalse(
+                result.contains(".") && result.contains("m"),
+                "formatAnchorSeconds(\(seconds)) emitted decimal minutes: '\(result)'"
+            )
+        }
     }
 }

@@ -26,7 +26,7 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         XCTAssertTrue(provenance.contains("Tc"))
         XCTAssertTrue(provenance.contains("1.3"))
         XCTAssertTrue(provenance.contains("No correction through 1s"))
-        XCTAssertTrue(provenance.contains("Source range through 4m"))
+        XCTAssertTrue(provenance.contains("Source range through 240s (4m)"))
         XCTAssertTrue(provenance.contains("Bracketed at 1s, 4s, 30s"))
     }
 
@@ -84,7 +84,7 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         let rangeLines = section.rows[1].value.components(separatedBy: "\n")
         XCTAssertEqual(rangeLines.count, 2)
         XCTAssertEqual(rangeLines[0], "No correction through 1s")
-        XCTAssertEqual(rangeLines[1], "Source range through 4m")
+        XCTAssertEqual(rangeLines[1], "Source range through 240s (4m)")
         XCTAssertEqual(section.rows[2].value, "Bracketed at 1s, 4s, 30s")
     }
 

@@ -104,6 +104,55 @@ final class CustomFilmStabilizationFixesTests: XCTestCase {
         XCTAssertFalse(CustomFilmFormulaGuard.passesUsableRangeCheck(smallerCoefficient))
     }
 
+    func test_analyticGuard_nonShorteningSlackMatchesRuntimeEvaluator() {
+        // PTIMER-179 review follow-up: the guard's slack must equal
+        // the runtime evaluator's 1e-6 safety net so an approved fit
+        // can never be rejected per anchor by
+        // `ReciprocityFormula.evaluate` (the fitted-formula preview
+        // derives its comparison rows through it). The constant case
+        // `Tc = Tm + offset` makes the shortening depth exactly
+        // `-offset`.
+        let boundaryCases: [(offset: Double, passes: Bool)] = [
+            (-0.5e-6, true),   // inside the shared 1e-6 tolerance
+            (-2e-6, false),    // beyond it
+            (-5e-4, false),    // inside the old 1 ms slack — must not pass
+        ]
+        for (offset, passes) in boundaryCases {
+            let input = CustomFilmFormulaGuard.UsableRangeInput(
+                exponent: 1.0,
+                referenceMeteredTimeSeconds: 1.0,
+                coefficientSeconds: 1.0,
+                offsetSeconds: offset,
+                noCorrectionThroughSeconds: 1,
+                sourceRangeThroughSeconds: nil
+            )
+            XCTAssertEqual(
+                CustomFilmFormulaGuard.passesUsableRangeCheck(input),
+                passes,
+                "guard verdict for offset \(offset)"
+            )
+            let formula = ReciprocityFormula(
+                coefficientSeconds: 1.0,
+                referenceMeteredTimeSeconds: 1.0,
+                exponent: 1.0,
+                offsetSeconds: offset,
+                noCorrectionThroughSeconds: 1,
+                sourceRangeThroughSeconds: nil
+            )
+            let evaluatorRejects: Bool
+            if case .unsafeShorteningFormula = formula.evaluate(meteredExposureSeconds: 4) {
+                evaluatorRejects = true
+            } else {
+                evaluatorRejects = false
+            }
+            XCTAssertEqual(
+                evaluatorRejects,
+                !passes,
+                "evaluator must agree with the guard for offset \(offset)"
+            )
+        }
+    }
+
     // MARK: - Fix 4: Duration parser policy
 
     func test_baseAnchor_rejectsUnlimitedKeyword() {

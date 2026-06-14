@@ -34,10 +34,25 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
             XCTAssertNotNil(match, "Expected \(meteredPrefix) row to end with \(valueSuffix). Block was:\n\(block)", file: file, line: line)
         }
 
-        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "4.0s", valueSuffix: "5M")
-        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "8.0s", valueSuffix: "7.5M")
-        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "16.0s", valueSuffix: "10M")
-        assertPaired(in: sourceLines, block: sourceBlock, meteredPrefix: "32.0s", valueSuffix: "12.5M")
+        // PTIMER-179 layout: the per-entry color note now renders on its
+        // own indented line directly below the metered row, instead of as
+        // a crowded third column. Verify the metered row is immediately
+        // followed by its color note.
+        func assertNoteBelow(in lines: [String], block: String, meteredPrefix: String, note: String, file: StaticString = #filePath, line: UInt = #line) {
+            guard let index = lines.firstIndex(where: { $0.hasPrefix(meteredPrefix) }) else {
+                XCTFail("Expected a row with prefix \(meteredPrefix). Block was:\n\(block)", file: file, line: line)
+                return
+            }
+            let below = index + 1 < lines.count
+                ? lines[index + 1].trimmingCharacters(in: .whitespaces)
+                : ""
+            XCTAssertEqual(below, note, "Expected \(meteredPrefix) row to be followed by note \(note). Block was:\n\(block)", file: file, line: line)
+        }
+
+        assertNoteBelow(in: sourceLines, block: sourceBlock, meteredPrefix: "4.0s", note: "5M")
+        assertNoteBelow(in: sourceLines, block: sourceBlock, meteredPrefix: "8.0s", note: "7.5M")
+        assertNoteBelow(in: sourceLines, block: sourceBlock, meteredPrefix: "16.0s", note: "10M")
+        assertNoteBelow(in: sourceLines, block: sourceBlock, meteredPrefix: "32.0s", note: "12.5M")
         XCTAssertFalse(
             sourceBlock.contains("Not recommended"),
             "Source reference section must not pull the 64 s not-recommended boundary row into it."
@@ -87,12 +102,16 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
             displayState.sections.first(where: { $0.title == "Source reference" })
         )
         let sourceBlock = try XCTUnwrap(sourceReferenceSection.rows.first?.value)
-        let greenLine = try XCTUnwrap(
-            sourceBlock.split(separator: "\n").map(String.init).first(where: { $0.contains("2.5G") })
-        )
+        let sourceLines = sourceBlock.split(separator: "\n").map(String.init)
+        let greenIndex = try XCTUnwrap(sourceLines.firstIndex(where: { $0.contains("2.5G") }))
+        // PTIMER-179 layout: the green-correction note renders on its own
+        // indented line directly below its metered row, so the metered
+        // context is the preceding line rather than this line's prefix.
+        XCTAssertEqual(sourceLines[greenIndex].trimmingCharacters(in: .whitespaces), "2.5G")
+        XCTAssertGreaterThan(greenIndex, 0)
         XCTAssertTrue(
-            greenLine.first?.isNumber ?? false,
-            "Green-correction row should start with a metered exposure: \(greenLine)"
+            sourceLines[greenIndex - 1].first?.isNumber ?? false,
+            "Green-correction note should sit directly below a metered row: \(greenIndex > 0 ? sourceLines[greenIndex - 1] : "")"
         )
 
         let guidanceBoundarySection = try XCTUnwrap(
@@ -181,9 +200,16 @@ final class FilmModeSecondaryGuidanceTests: XCTestCase {
 
         let devLines = lines.filter { $0.contains("Dev ") }
         XCTAssertEqual(devLines.count, 3)
-        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("1.0s") && $0.contains("Dev -10%") }))
-        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("10.0s") && $0.contains("Dev -20%") }))
-        XCTAssertTrue(devLines.contains(where: { $0.hasPrefix("100.0s") && $0.contains("Dev -30%") }))
+        // PTIMER-179: a development note now renders on its own indented
+        // line directly below its metered row (2-column layout), so the
+        // metered context is positional rather than inline.
+        func devNoteFollows(meteredPrefix: String, note: String) -> Bool {
+            guard let index = lines.firstIndex(where: { $0.hasPrefix(meteredPrefix) }) else { return false }
+            return index + 1 < lines.count && lines[index + 1].contains(note)
+        }
+        XCTAssertTrue(devNoteFollows(meteredPrefix: "1.0s", note: "Dev -10%"))
+        XCTAssertTrue(devNoteFollows(meteredPrefix: "10.0s", note: "Dev -20%"))
+        XCTAssertTrue(devNoteFollows(meteredPrefix: "100.0s", note: "Dev -30%"))
 
         for line in lines {
             XCTAssertNil(

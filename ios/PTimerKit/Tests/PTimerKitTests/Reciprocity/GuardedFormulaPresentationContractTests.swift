@@ -37,11 +37,11 @@ final class GuardedFormulaPresentationContractTests: XCTestCase {
                     sourceReferenceExcludes: [],
                     hasGuidanceBoundary: false, guidanceBoundaryContains: nil),
         DetailsCase(film: "RETRO 80S", sample: 4,
-                    sourceReferenceContains: ["8.0s", "24.0s", "60.0s", "180.0s", "1 to 2", "3 to 4", "1.0s"],
+                    sourceReferenceContains: ["8.0s", "24s", "60s (1m)", "180s (3m)", "1 to 2", "3 to 4", "1.0s"],
                     sourceReferenceExcludes: [],
                     hasGuidanceBoundary: false, guidanceBoundaryContains: nil),
         DetailsCase(film: "SUPERPAN 200", sample: 4,
-                    sourceReferenceContains: ["8.0s", "24.0s", "60.0s", "180.0s", "1 to 2", "3 to 4", "1.0s"],
+                    sourceReferenceContains: ["8.0s", "24s", "60s (1m)", "180s (3m)", "1 to 2", "3 to 4", "1.0s"],
                     sourceReferenceExcludes: [],
                     hasGuidanceBoundary: false, guidanceBoundaryContains: nil),
     ]

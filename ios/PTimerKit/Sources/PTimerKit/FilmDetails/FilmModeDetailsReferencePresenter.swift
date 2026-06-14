@@ -96,9 +96,15 @@ public struct FilmModeDetailsReferencePresenter {
         // a CMS-only branch.
         let collected = collectSourceEvidenceRows(for: input)
 
+        // Expand each sorted row into its two-column main line plus an
+        // optional indented note line (`["", note]`) so a `Dev -10%`
+        // note sits under the row instead of crowding a third column.
         let referenceLines = collected.orderedLines
             .sorted { $0.key < $1.key }
-            .map(\.columns)
+            .flatMap { row -> [[String]] in
+                guard let note = row.belowNote else { return [row.columns] }
+                return [row.columns, ["", note]]
+            }
 
         return buildSourceEvidenceSections(
             referenceLines: referenceLines,
@@ -180,7 +186,7 @@ public struct FilmModeDetailsReferencePresenter {
         }
 
         for evidenceRow in input.bindingState.profile.sourceEvidence {
-            guard var columns = compactReferenceColumns(
+            guard let item = compactReferenceColumns(
                 meteredExposure: evidenceRow.meteredExposure,
                 adjustments: evidenceRow.adjustments,
                 formatDuration: input.formatDuration
@@ -188,11 +194,19 @@ public struct FilmModeDetailsReferencePresenter {
                 continue
             }
             if ReciprocitySourceEvidenceClassifier.isGuidanceBoundary(evidenceRow) {
-                collected.boundaryLines.append(columns)
+                collected.boundaryLines.append(item.columns)
+                if let note = item.belowNote {
+                    collected.boundaryLines.append(["", note])
+                }
                 continue
             }
+            var columns = item.columns
             if evidenceRow.isSourceEvidenceOnly {
-                columns.append(sourceEvidenceOnlyMarker)
+                // Keep the row two-column: append the `*` marker to the
+                // detail cell rather than as a third column.
+                if !columns.isEmpty {
+                    columns[columns.count - 1] += " \(sourceEvidenceOnlyMarker)"
+                }
                 collected.hasEvidenceOnlyRows = true
             }
             // Graph-sampled support rows (PTIMER-168 follow-up)
@@ -209,7 +223,8 @@ public struct FilmModeDetailsReferencePresenter {
                         kind: kind,
                         catalogOffset: collected.orderedLines.count
                     ),
-                    columns: columns
+                    columns: columns,
+                    belowNote: item.belowNote
                 )
             )
         }
@@ -275,6 +290,25 @@ public struct FilmModeDetailsReferencePresenter {
     private struct ReferenceRow {
         let key: SourceReferenceRowSortKey
         let columns: [String]
+        /// Optional secondary note (e.g. `Dev -10%`) rendered on its
+        /// own indented line below the row, so the main row stays a
+        /// clean two columns (metered · correction/Tc) even once the
+        /// corrected time carries an hms supplement. PTIMER-179.
+        let belowNote: String?
+
+        init(key: SourceReferenceRowSortKey, columns: [String], belowNote: String? = nil) {
+            self.key = key
+            self.columns = columns
+            self.belowNote = belowNote
+        }
+    }
+
+    /// A single source-reference item: the two-column main row plus an
+    /// optional note rendered below it. Replaces the earlier
+    /// third-column note so the layout never crowds.
+    private struct ReferenceItem {
+        let columns: [String]
+        let belowNote: String?
     }
 
     /// Marker appended as a final column to a Source reference row
@@ -479,7 +513,7 @@ public struct FilmModeDetailsReferencePresenter {
         meteredExposure: MeteredExposureSelector,
         adjustments: [ReciprocityAdjustment],
         formatDuration: (Double) -> String
-    ) -> [String]? {
+    ) -> ReferenceItem? {
         let meteredText = meteredExposureSelectorText(meteredExposure, formatDuration: formatDuration)
 
         // Combined stop/multiplier · correctedTime cell. When a row
@@ -522,17 +556,18 @@ public struct FilmModeDetailsReferencePresenter {
         if let exposureText {
             // Existing rule: development beats color correction when both exist on
             // the same entry (the launch catalog never mixes them today; preference
-            // is documented to keep behavior deterministic).
+            // is documented to keep behavior deterministic). The secondary note
+            // (e.g. `Dev -10%`) renders on its own line below the row rather than
+            // as a cramped third column.
             let secondaryText = developmentText ?? colorCorrectionText
-            let detailColumns = [exposureText, secondaryText].compactMap { $0 }
-            return [meteredText] + detailColumns
+            return ReferenceItem(columns: [meteredText, exposureText], belowNote: secondaryText)
         }
 
         // Warning-only entries (Velvia 50's "64 sec is not recommended.") have no
         // exposure adjustment; surface them with the metered row so the user can
         // see WHICH metered exposure the source flags.
         if let stopSignalText {
-            return [meteredText, stopSignalText]
+            return ReferenceItem(columns: [meteredText, stopSignalText], belowNote: nil)
         }
 
         // Note-only entries (RETRO 80S / SUPERPAN 200 range-valued rows where the
@@ -546,7 +581,7 @@ public struct FilmModeDetailsReferencePresenter {
             return note.text
         }.first
         if let noteText {
-            return [meteredText, noteText]
+            return ReferenceItem(columns: [meteredText, noteText], belowNote: nil)
         }
 
         return nil
@@ -623,7 +658,12 @@ public struct FilmModeDetailsReferencePresenter {
             guard case let .exposure(exposureAdjustment) = adjustment else { continue }
             switch exposureAdjustment {
             case .correctedTime(let mapping):
-                let formatted = formatDuration(mapping.correctedSeconds)
+                // Corrected times are the long results the photographer
+                // verifies, so they read seconds-first with an hms
+                // supplement for ≥60s (`1600s (26m 40s)`), reusing the
+                // editor's formatter. Metered ladder values keep the
+                // compact `formatDuration` form. PTIMER-179.
+                let formatted = CustomFilmEditorFormState.formatAnchorSeconds(mapping.correctedSeconds)
                 correctedTimeText = mapping.isApproximate ? "≈\(formatted)" : formatted
             case .stopDelta(let adjustment):
                 if stopOrMultiplierText == nil {
@@ -676,7 +716,7 @@ public struct FilmModeDetailsReferencePresenter {
         }
 
         return lines.map { columns in
-            columns.enumerated().map { index, column in
+            let joined = columns.enumerated().map { index, column in
                 guard index < widths.count else {
                     return column
                 }
@@ -685,9 +725,20 @@ public struct FilmModeDetailsReferencePresenter {
                 return column + String(repeating: " ", count: paddingWidth) + spacing
             }
             .joined()
-            .trimmingCharacters(in: .whitespaces)
+            // Trim trailing padding only — leading spaces are kept so a
+            // below-row note (empty first column) stays indented under
+            // the correction/Tc column rather than collapsing to the margin.
+            return Self.trimmingTrailingSpaces(joined)
         }
         .joined(separator: "\n")
+    }
+
+    private static func trimmingTrailingSpaces(_ text: String) -> String {
+        var result = text
+        while result.last == " " {
+            result.removeLast()
+        }
+        return result
     }
 
     private func meteredExposureSelectorText(

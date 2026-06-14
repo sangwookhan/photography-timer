@@ -50,6 +50,13 @@ struct CustomFilmEditorView: View {
     /// case when the photographer taps one of the formula tokens
     /// or a range row.
     @State private var activeEditField: CustomFilmEditorEditField?
+    /// Focus for the inline custom-table Tm/Tc fields, owned here at
+    /// the Form level. It drives the row-sort boundary (sort fires when
+    /// focus leaves a row, never mid-typing) and lets Save end editing.
+    /// There is intentionally no keyboard `Done` toolbar — values are
+    /// committed live through the row binding, and a swipe dismisses
+    /// the keyboard.
+    @FocusState private var tableFocusedField: CustomFilmEditorTableFocus?
 
     /// Opening formula-related snapshot for the Edit flow. Captured
     /// once at `init` so a later Revert Formula tap restores the
@@ -97,8 +104,19 @@ struct CustomFilmEditorView: View {
                     formulaCard
                 }
                 previewCard
+                if formState.calculationInputKind == .table,
+                   formState.tableCanRenderPreview {
+                    fittedFormulaSection
+                }
                 secondaryDetailsSection
             }
+            // The decimal pad has no Return key and a custom keyboard
+            // Done toolbar proved unreliable in a multi-field Form, so
+            // editing relies on the live row binding instead: every
+            // keystroke commits to form state immediately, and a swipe
+            // dismisses the keyboard. Sorting happens only at focus /
+            // Add / delete / Save boundaries, never mid-typing.
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(editing == nil ? "New custom film" : "Edit custom film")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -210,7 +228,8 @@ struct CustomFilmEditorView: View {
         CustomFilmEditorTableCard(
             formState: $formState,
             isEditing: editing != nil,
-            onEditNoCorrection: { activeEditField = .noCorrectionThrough }
+            onEditNoCorrection: { activeEditField = .noCorrectionThrough },
+            focusedField: $tableFocusedField
         )
     }
 
@@ -564,6 +583,22 @@ struct CustomFilmEditorView: View {
         return "Fix the highlighted formula fields or reset the formula."
     }
 
+    // MARK: - App-derived fitted formula (PTIMER-179)
+
+    /// Inspection-only section: an app-derived power-law formula
+    /// fitted from the table anchors, shown so the photographer can
+    /// judge how closely a formula would match their table before any
+    /// future Table/App-formula choice (PTIMER-180). It never changes
+    /// the active shooting calculation — the table keeps driving
+    /// corrected exposure. Only rendered for the table kind with a
+    /// valid table (the gate lives at the call site).
+    @ViewBuilder
+    private var fittedFormulaSection: some View {
+        Section("App-derived formula preview") {
+            CustomTableFittedFormulaPreviewContent(form: formState)
+        }
+    }
+
     // MARK: - Secondary details section
 
     /// Lower-priority provenance fields (source type, notes,
@@ -634,6 +669,15 @@ struct CustomFilmEditorView: View {
     // MARK: - Mutations
 
     private func save() {
+        // End table editing so the keyboard dismisses and the focused
+        // value is settled (it is already live-bound, so nothing is
+        // lost). Save is a commit point too: settle the visible row
+        // order before validating so the stored anchors and the last
+        // on-screen order agree. (The validator also sorts internally;
+        // this keeps the editor's own rows consistent if Save is
+        // somehow re-entered.)
+        tableFocusedField = nil
+        formState.sortCompleteTableRows()
         // Edit-mode reuse rule: the form must keep the original
         // film/profile ids so the library upserts in place. The
         // generator yields the profile id first, then the film id
@@ -1061,7 +1105,7 @@ private struct CustomFilmEditorPreviewTable: View {
             ForEach(rows, id: \.meteredSeconds) { row in
                 HStack(alignment: .center) {
                     Text(metricLabel(row.meteredSeconds))
-                        .frame(width: 60, alignment: .leading)
+                        .frame(width: 110, alignment: .leading)
                         .font(.footnote.monospacedDigit())
                     Text(correctedLabel(for: row))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1076,14 +1120,9 @@ private struct CustomFilmEditorPreviewTable: View {
     }
 
     private func metricLabel(_ seconds: Double) -> String {
-        if seconds >= 60 {
-            let minutes = seconds / 60
-            return minutes == minutes.rounded() ? "\(Int(minutes))m" : String(format: "%.1fm", minutes)
-        }
-        if seconds < 1 {
-            return String(format: "%.2fs", seconds)
-        }
-        return seconds == seconds.rounded() ? "\(Int(seconds))s" : String(format: "%.1fs", seconds)
+        form.calculationInputKind == .table
+            ? CustomFilmEditorFormState.formatAnchorSeconds(seconds)
+            : CustomFilmEditorFormState.formatDurationExpression(seconds)
     }
 
     private func correctedLabel(for row: CustomFilmEditorPreviewPresenter.Row) -> String {
@@ -1127,27 +1166,58 @@ private struct CustomFilmEditorPreviewTable: View {
 /// falls back to the derived `firstAnchor / 10` suggestion shown
 /// as the placeholder), and the read-only derived source range —
 /// PTIMER-178 does not expose source range as an editable field.
+/// Identifies which anchor-row text field currently holds keyboard
+/// focus. The table card watches this so it can sort completed rows
+/// whenever focus moves — a commit point that actually fires on iOS
+/// (switching fields, tapping outside, dismissing the keyboard) —
+/// rather than relying only on `.onSubmit`, which the numeric-style
+/// keyboards used here may never deliver.
+private enum CustomFilmEditorTableFocus: Hashable {
+    case metered(UUID)
+    case corrected(UUID)
+
+    /// The anchor row this focus target belongs to, so a delete can
+    /// clear focus only when it lands on the row being removed.
+    var rowID: UUID {
+        switch self {
+        case let .metered(id), let .corrected(id): return id
+        }
+    }
+}
+
 private struct CustomFilmEditorTableCard: View {
     @Binding var formState: CustomFilmEditorFormState
     let isEditing: Bool
     let onEditNoCorrection: () -> Void
+    /// Table focus is owned by the parent `CustomFilmEditorView` so a
+    /// single keyboard `Done` toolbar can own it; the rows and this
+    /// card share it through the binding.
+    @FocusState.Binding var focusedField: CustomFilmEditorTableFocus?
 
     var body: some View {
         Section {
-            ForEach(Array(formState.tableRows.enumerated()), id: \.element.id) { index, _ in
+            // Identity-based iteration: SwiftUI manages each row's
+            // binding by id, so a delete mid-edit never subscripts a
+            // stale index out of range. The display index is looked up
+            // from the live array for accessibility / validation only.
+            ForEach($formState.tableRows) { $row in
+                let index = formState.tableRows.firstIndex { $0.id == row.id } ?? 0
                 CustomFilmEditorTableAnchorRowView(
-                    row: $formState.tableRows[index],
+                    row: $row,
                     index: index,
                     inlineError: formState.tableRowValidationReason(
                         at: index,
                         isEditing: isEditing
                     ),
                     canDelete: formState.tableRows.count > 1,
-                    onDelete: { deleteRow(at: index) }
+                    onDelete: { deleteRow(id: row.id) },
+                    onFieldCommit: { formState.sortCompleteTableRows() },
+                    focusedField: $focusedField
                 )
             }
             if formState.tableRows.count < CustomFilmEditorFormState.tableRowSoftCap {
                 Button {
+                    formState.sortCompleteTableRows()
                     formState.tableRows.append(CustomFilmTableAnchorRowInput())
                 } label: {
                     Label("Add row", systemImage: "plus.circle")
@@ -1168,11 +1238,24 @@ private struct CustomFilmEditorTableCard: View {
         } header: {
             Text("Table (Tm → Tc)")
         }
+        // Sort whenever focus moves between fields, to another row, or
+        // away from the table entirely (keyboard dismissed). Only
+        // complete rows reorder, so a half-typed row never jumps; and
+        // because this fires on focus transitions — not keystrokes —
+        // rows stay put while the photographer is mid-entry.
+        .onChange(of: focusedField) { _, _ in
+            formState.sortCompleteTableRows()
+        }
     }
 
-    private func deleteRow(at index: Int) {
-        guard formState.tableRows.indices.contains(index) else { return }
-        formState.tableRows.remove(at: index)
+    private func deleteRow(id: UUID) {
+        // Drop focus first if it sits on the row being removed, so the
+        // keyboard dismisses cleanly and no FocusState points at a gone
+        // row.
+        if focusedField?.rowID == id {
+            focusedField = nil
+        }
+        formState.removeTableRow(id: id)
     }
 
     @ViewBuilder
@@ -1191,6 +1274,14 @@ private struct CustomFilmEditorTableCard: View {
                 accessibilityID: "custom-film-editor-no-correction-through",
                 action: onEditNoCorrection
             )
+            if fittedFormulaUnusableDueToShortening {
+                Text(CustomTableFittedFormulaPresenter.unusableShorteningRowMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("custom-film-editor-no-correction-formula-hint")
+            }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("Source data")
                     .font(.caption)
@@ -1203,6 +1294,14 @@ private struct CustomFilmEditorTableCard: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("custom-film-editor-table-source-range")
         }
+    }
+
+    private var fittedFormulaUnusableDueToShortening: Bool {
+        guard let rule = formState.parsedTableInterpolationRule() else { return false }
+        if case .unavailable(.unusableShorteningFit) = CustomTableFittedFormulaPresenter.outcome(for: rule) {
+            return true
+        }
+        return false
     }
 
     /// Placeholder for the no-correction row while the field is
@@ -1219,7 +1318,7 @@ private struct CustomFilmEditorTableCard: View {
         guard let derived = formState.derivedTableSourceRangeSeconds else {
             return "Last anchor"
         }
-        let formatted = CustomFilmEditorFormState.formatDurationExpression(derived)
+        let formatted = CustomFilmEditorFormState.formatAnchorSeconds(derived)
         return "Through \(formatted) · last anchor"
     }
 }
@@ -1234,20 +1333,29 @@ private struct CustomFilmEditorTableAnchorRowView: View {
     let inlineError: String?
     let canDelete: Bool
     let onDelete: () -> Void
+    let onFieldCommit: () -> Void
+    @FocusState.Binding var focusedField: CustomFilmEditorTableFocus?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                TextField("Tm", text: $row.meteredText)
-                    .multilineTextAlignment(.trailing)
-                    .font(.footnote.monospacedDigit())
-                    .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tm")
+                anchorField(
+                    placeholder: "Tm",
+                    text: $row.meteredText,
+                    textAlignment: .trailing,
+                    focus: .metered(row.id),
+                    accessibilityID: "custom-film-editor-table-row-\(index)-tm"
+                )
                 Image(systemName: "arrow.right")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
-                TextField("Tc", text: $row.correctedText)
-                    .font(.footnote.monospacedDigit())
-                    .accessibilityIdentifier("custom-film-editor-table-row-\(index)-tc")
+                anchorField(
+                    placeholder: "Tc",
+                    text: $row.correctedText,
+                    textAlignment: .leading,
+                    focus: .corrected(row.id),
+                    accessibilityID: "custom-film-editor-table-row-\(index)-tc"
+                )
                 if canDelete {
                     Button(role: .destructive, action: onDelete) {
                         Image(systemName: "minus.circle")
@@ -1265,5 +1373,34 @@ private struct CustomFilmEditorTableAnchorRowView: View {
                     .accessibilityIdentifier("custom-film-editor-table-row-\(index)-inline-error")
             }
         }
+    }
+
+    /// One Tm/Tc cell. Two behaviors fix real-device entry:
+    /// `.decimalPad` keeps a numeric keyboard across the Tm→Tc move
+    /// (the fields previously defaulted to the text keyboard), and the
+    /// `maxWidth`/`contentShape`/tap-to-focus trio makes the whole cell
+    /// a hit target so the photographer no longer has to land exactly
+    /// on the digits. Focus changes are the table's sort commit point.
+    @ViewBuilder
+    private func anchorField(
+        placeholder: String,
+        text: Binding<String>,
+        textAlignment: TextAlignment,
+        focus: CustomFilmEditorTableFocus,
+        accessibilityID: String
+    ) -> some View {
+        TextField(placeholder, text: text)
+            .multilineTextAlignment(textAlignment)
+            .font(.footnote.monospacedDigit())
+            .keyboardType(.decimalPad)
+            .focused($focusedField, equals: focus)
+            .onSubmit { onFieldCommit() }
+            .frame(
+                maxWidth: .infinity,
+                alignment: textAlignment == .trailing ? .trailing : .leading
+            )
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = focus }
+            .accessibilityIdentifier(accessibilityID)
     }
 }

@@ -29,3 +29,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PTimer"
 include(":app")
+include(":core")

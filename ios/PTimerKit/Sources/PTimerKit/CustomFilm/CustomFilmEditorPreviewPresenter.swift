@@ -419,4 +419,103 @@ public enum CustomFilmEditorPreviewPresenter {
         )
     }
 
+    // MARK: - Reference points + linked-table error (PTIMER-180)
+
+    /// One reference-points row in the formula editor. Carries the
+    /// formula's corrected value at `meteredSeconds`, and — only when
+    /// the row coincides with a linked reference-table anchor — the
+    /// table's reference corrected time plus the formula-vs-table
+    /// stop error.
+    public struct ReferencePointRow: Equatable, Hashable {
+        public let meteredSeconds: Double
+        /// `nil` only when the formula cannot produce a value
+        /// (`.invalidFormulaResult`).
+        public let formulaCorrectedSeconds: Double?
+        /// Linked-table reference corrected time at this metered
+        /// point, or `nil` for a standard preview row that has no
+        /// table anchor.
+        public let referenceCorrectedSeconds: Double?
+        /// `log2(formula / reference)` in stops, or `nil` when there
+        /// is no reference value (or the formula value is unusable).
+        public let stopError: Double?
+        public let status: RowStatus
+
+        public init(
+            meteredSeconds: Double,
+            formulaCorrectedSeconds: Double?,
+            referenceCorrectedSeconds: Double?,
+            stopError: Double?,
+            status: RowStatus
+        ) {
+            self.meteredSeconds = meteredSeconds
+            self.formulaCorrectedSeconds = formulaCorrectedSeconds
+            self.referenceCorrectedSeconds = referenceCorrectedSeconds
+            self.stopError = stopError
+            self.status = status
+        }
+    }
+
+    /// Reference-points list for the formula editor (PTIMER-180 §6).
+    ///
+    /// When `linkedTableAnchors` is non-empty, the table's metered
+    /// anchors are merged into the standard sample ladder and each
+    /// anchor row carries the table's reference corrected time and the
+    /// formula-vs-table stop error. Standard rows without a matching
+    /// anchor carry no reference / error. A standard sample that
+    /// overlaps an anchor metered time collapses to a single
+    /// table-reference row (no duplicate). With no anchors this is the
+    /// standard preview (every row has `nil` reference / error), so the
+    /// view renders exactly as the unlinked editor does today.
+    public static func referencePointRows(
+        form: CustomFilmEditorFormState,
+        linkedTableAnchors: [TableAnchor],
+        samples: [Double] = defaultSampleSeconds
+    ) -> [ReferencePointRow] {
+        let parsed = parse(form: form)
+        let mergedMetered = mergedSortedMetered(
+            samples: samples,
+            anchorMetered: linkedTableAnchors.map(\.meteredSeconds)
+        )
+        return mergedMetered.map { metered in
+            let formulaRow = row(for: metered, parsed: parsed)
+            let reference = linkedTableAnchors
+                .first { approximatelyEqualMetered($0.meteredSeconds, metered) }?
+                .correctedSeconds
+            let stopError: Double? = {
+                guard let reference, reference > 0,
+                      let formula = formulaRow.correctedSeconds, formula > 0 else {
+                    return nil
+                }
+                return log2(formula / reference)
+            }()
+            return ReferencePointRow(
+                meteredSeconds: metered,
+                formulaCorrectedSeconds: formulaRow.correctedSeconds,
+                referenceCorrectedSeconds: reference,
+                stopError: stopError,
+                status: formulaRow.status
+            )
+        }
+    }
+
+    /// Merges the standard sample ladder with linked-table anchor
+    /// metered times into one ascending, de-duplicated list. Overlaps
+    /// (within `approximatelyEqualMetered`) collapse to one point so a
+    /// shared metered time renders a single row.
+    private static func mergedSortedMetered(
+        samples: [Double],
+        anchorMetered: [Double]
+    ) -> [Double] {
+        let sorted = (samples + anchorMetered).sorted()
+        var result: [Double] = []
+        for value in sorted where result.last.map({ !approximatelyEqualMetered($0, value) }) ?? true {
+            result.append(value)
+        }
+        return result
+    }
+
+    private static func approximatelyEqualMetered(_ a: Double, _ b: Double) -> Bool {
+        abs(a - b) <= max(abs(a), abs(b)) * 1e-9 + 1e-9
+    }
+
 }

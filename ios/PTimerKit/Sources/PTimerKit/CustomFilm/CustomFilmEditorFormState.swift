@@ -91,6 +91,13 @@ public struct CustomFilmEditorFormState: Equatable {
     /// Pending Tm/Tc anchor rows for the `.table` input kind.
     /// Empty (and ignored) while the form is in `.formula` mode.
     public var tableRows: [CustomFilmTableAnchorRowInput]
+    /// PTIMER-180: optional id of the custom **table** film this
+    /// **formula** was created from / linked to, for reference /
+    /// error display only. `nil` for an unlinked formula or any
+    /// table profile. Carried verbatim into film-level
+    /// `UserEditableMetadata.referenceTableFilmID` on save; never a
+    /// calculation input.
+    public var referenceTableFilmID: String?
 
     public init(
         profileName: String = "",
@@ -108,7 +115,8 @@ public struct CustomFilmEditorFormState: Equatable {
         manufacturerText: String = "",
         referenceURLText: String = "",
         calculationInputKind: CustomFilmCalculationInputKind = .formula,
-        tableRows: [CustomFilmTableAnchorRowInput] = []
+        tableRows: [CustomFilmTableAnchorRowInput] = [],
+        referenceTableFilmID: String? = nil
     ) {
         self.profileName = profileName
         self.filmLabel = filmLabel
@@ -126,6 +134,7 @@ public struct CustomFilmEditorFormState: Equatable {
         self.referenceURLText = referenceURLText
         self.calculationInputKind = calculationInputKind
         self.tableRows = tableRows
+        self.referenceTableFilmID = referenceTableFilmID
     }
 }
 
@@ -365,7 +374,55 @@ extension CustomFilmEditorFormState {
             noCorrectionThroughText: Self.formatNumeric(noCorrectionThrough),
             validThroughText: validThrough.map(Self.formatNumeric) ?? "",
             manufacturerText: seed.manufacturerText,
-            referenceURLText: seed.referenceURLText
+            referenceURLText: seed.referenceURLText,
+            referenceTableFilmID: seed.referenceTableFilmID
+        )
+    }
+
+    /// PTIMER-180: builds a **create-mode** formula form seeded from a
+    /// saved custom **table** film's table-derived fitted formula, and
+    /// pre-linked to that table (`referenceTableFilmID`) for
+    /// reference / error display. The fitted parameters come from the
+    /// shared `CustomTableFittedFormulaPresenter` so the seed equals
+    /// the PTIMER-179 inspection preview. Returns `nil` when `film` is
+    /// not a custom table or its anchors cannot be fitted into a usable
+    /// formula — the caller then keeps `Create Formula` unavailable.
+    public static func creatingFormula(fromTable film: FilmIdentity) -> CustomFilmEditorFormState? {
+        guard film.kind == .custom, let profile = film.profiles.first else { return nil }
+        var tableRule: TableInterpolationReciprocityRule?
+        for rule in profile.rules {
+            if case let .tableInterpolation(rule) = rule {
+                tableRule = rule
+                break
+            }
+        }
+        guard let tableRule,
+              case let .available(fitted) =
+                CustomTableFittedFormulaPresenter.outcome(for: tableRule) else {
+            return nil
+        }
+        let seed = recoveredIdentitySeed(film: film, profile: profile)
+        let suggestedLabel = seed.labelText.isEmpty ? "Formula" : "\(seed.labelText) Formula"
+        let offsetText = abs(fitted.offsetSeconds) < 1e-9 ? "" : formatNumeric(fitted.offsetSeconds)
+        return CustomFilmEditorFormState(
+            filmLabel: suggestedLabel,
+            isoText: "\(film.iso)",
+            sourceType: seed.sourceType,
+            notes: seed.notesValue,
+            formulaInputMode: inferInputMode(
+                baseTm: fitted.referenceMeteredTimeSeconds,
+                baseTc: fitted.coefficientSeconds,
+                offsetSeconds: fitted.offsetSeconds
+            ),
+            exponentText: formatNumeric(fitted.exponent),
+            baseTmText: formatNumeric(fitted.referenceMeteredTimeSeconds),
+            baseTcText: formatNumeric(fitted.coefficientSeconds),
+            offsetSecondsText: offsetText,
+            noCorrectionThroughText: formatNumeric(fitted.noCorrectionThroughSeconds),
+            validThroughText: formatNumeric(fitted.sourceRangeThroughSeconds),
+            manufacturerText: seed.manufacturerText,
+            referenceURLText: seed.referenceURLText,
+            referenceTableFilmID: film.id
         )
     }
 
@@ -379,6 +436,9 @@ extension CustomFilmEditorFormState {
         let manufacturerText: String
         let labelText: String
         let referenceURLText: String
+        /// PTIMER-180: film-level reference-table link recovered so an
+        /// Edit round-trip preserves it. `nil` for unlinked profiles.
+        let referenceTableFilmID: String?
     }
 
     static func recoveredIdentitySeed(
@@ -411,12 +471,17 @@ extension CustomFilmEditorFormState {
         let referenceURLText = profile.userMetadata?.referenceURL
             ?? film.userMetadata?.referenceURL
             ?? ""
+        // The reference-table link is stored film-level (PTIMER-180,
+        // decision §11.2); fall back to the profile for resilience.
+        let referenceTableFilmID = film.userMetadata?.referenceTableFilmID
+            ?? profile.userMetadata?.referenceTableFilmID
         return RecoveredIdentitySeed(
             sourceType: sourceType,
             notesValue: notesValue,
             manufacturerText: manufacturerText,
             labelText: labelText,
-            referenceURLText: referenceURLText
+            referenceURLText: referenceURLText,
+            referenceTableFilmID: referenceTableFilmID
         )
     }
 
@@ -1389,7 +1454,10 @@ extension CustomFilmEditorFormState {
         let filmMetadata = UserEditableMetadata(
             customSourceType: sourceType,
             customManufacturer: manufacturerForMetadata,
-            referenceURL: trimmedReferenceURLOrNil()
+            referenceURL: trimmedReferenceURLOrNil(),
+            // PTIMER-180: film-level reference-table link (display /
+            // comparison only). `nil` for unlinked formulas and tables.
+            referenceTableFilmID: referenceTableFilmID
         )
         // Compose `canonicalStockName` from manufacturer + label so
         // every downstream surface (selector primary text, timer

@@ -135,12 +135,16 @@ struct CustomTableFittedFormulaPreviewContent: View {
     private func comparisonRow(
         _ row: CustomTableFittedFormulaPresenter.ComparisonRow
     ) -> some View {
-        HStack {
-            Text(customFilmEditorCompactSeconds(row.meteredSeconds))
+        HStack(alignment: .top) {
+            // PTIMER-180: controlled two-line duration cells so values
+            // like `100s (1m 40s)` no longer wrap mid-clock in the
+            // narrow 4-column table (shared with the formula editor's
+            // Calculation Basis table).
+            CustomFilmEditorDurationCell(seconds: row.meteredSeconds)
                 .frame(width: 110, alignment: .leading)
-            Text(customFilmEditorCompactSeconds(row.sourceCorrectedSeconds))
+            CustomFilmEditorDurationCell(seconds: row.sourceCorrectedSeconds)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(customFilmEditorCompactSeconds(row.fittedCorrectedSeconds))
+            CustomFilmEditorDurationCell(seconds: row.fittedCorrectedSeconds)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("\(signedPercent(row.percentError)) / \(signedStop(row.stopError))")
                 .frame(maxWidth: .infinity, alignment: .trailing)

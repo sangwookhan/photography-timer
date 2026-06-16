@@ -23,6 +23,10 @@ struct FilmSelectorOverlay: View {
     /// `onDeleteCustomFilm` — only `kind == .custom` rows surface
     /// the action.
     let onEditCustomFilm: ((String) -> Void)?
+    /// PTIMER-180: creates a new editable Custom Formula seeded from a
+    /// saved custom **table** film. Surfaced only on custom table rows
+    /// whose anchors can be fitted into a usable formula.
+    let onCreateFormulaFromTable: ((String) -> Void)?
     let style: ExposureWorkspaceMainLayoutStyle
 
     /// Captured entry awaiting the "Delete custom film?"
@@ -39,6 +43,7 @@ struct FilmSelectorOverlay: View {
         onCreateCustomFilm: (() -> Void)? = nil,
         onDeleteCustomFilm: ((String) -> Void)? = nil,
         onEditCustomFilm: ((String) -> Void)? = nil,
+        onCreateFormulaFromTable: ((String) -> Void)? = nil,
         style: ExposureWorkspaceMainLayoutStyle
     ) {
         self.sections = sections
@@ -47,6 +52,7 @@ struct FilmSelectorOverlay: View {
         self.onCreateCustomFilm = onCreateCustomFilm
         self.onDeleteCustomFilm = onDeleteCustomFilm
         self.onEditCustomFilm = onEditCustomFilm
+        self.onCreateFormulaFromTable = onCreateFormulaFromTable
         self.style = style
     }
 
@@ -81,6 +87,7 @@ struct FilmSelectorOverlay: View {
                                     ? nil
                                     : { entry in pendingDelete = entry },
                                 onEditCustomFilm: onEditCustomFilm,
+                                onCreateFormulaFromTable: onCreateFormulaFromTable,
                                 rowHeight: rowHeight
                             )
                         }
@@ -213,6 +220,7 @@ private struct FilmSelectorSectionCard: View {
     /// button in the dialog.
     let onRequestDeleteCustomFilm: ((FilmSelectorEntry) -> Void)?
     let onEditCustomFilm: ((String) -> Void)?
+    let onCreateFormulaFromTable: ((String) -> Void)?
     let rowHeight: CGFloat
 
     private let cardCornerRadius: CGFloat = 14
@@ -278,6 +286,9 @@ private struct FilmSelectorSectionCard: View {
                     }
 
                     // Keep the Unofficial badge next to the film name so it reads as profile identity.
+                    // PTIMER-180: suppress the redundant CUSTOM badge on custom rows — they
+                    // already sit in the dedicated Custom films section, and the badge crowded
+                    // out useful names (e.g. "Pt180-2 Formula"). Preset Unofficial badges stay.
                     HStack(spacing: 6) {
                         Text(entry.primaryText)
                             .font(.body.weight(isSelected(entry) || entry.isCreateCustomFilmAction ? .semibold : .regular))
@@ -285,7 +296,9 @@ private struct FilmSelectorSectionCard: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
 
-                        unofficialBadge(for: entry.supportState)
+                        if entry.film?.kind != .custom {
+                            unofficialBadge(for: entry.supportState)
+                        }
                     }
                     .layoutPriority(0)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -340,6 +353,13 @@ private struct FilmSelectorSectionCard: View {
                         Label("Edit custom film", systemImage: "pencil")
                     }
                 }
+                if let onCreateFormulaFromTable, let formulaSourceID = creatableFormulaFilmID(for: entry) {
+                    Button {
+                        onCreateFormulaFromTable(formulaSourceID)
+                    } label: {
+                        Label("Create Formula", systemImage: "function")
+                    }
+                }
                 if let onRequestDeleteCustomFilm {
                     Button(role: .destructive) {
                         onRequestDeleteCustomFilm(entry)
@@ -351,10 +371,25 @@ private struct FilmSelectorSectionCard: View {
         }
     }
 
+    /// Canonical id of a custom **table** film whose anchors can be
+    /// fitted into a usable formula — `nil` for preset films, custom
+    /// formula films, and tables that cannot be fitted (so the
+    /// Create Formula action is never offered as a dead end).
+    private func creatableFormulaFilmID(for entry: FilmSelectorEntry) -> String? {
+        guard onCreateFormulaFromTable != nil,
+              let film = entry.film, film.kind == .custom,
+              let canonical = entry.canonicalCustomFilmID,
+              CustomFilmEditorFormState.creatingFormula(fromTable: film) != nil else {
+            return nil
+        }
+        return canonical
+    }
+
     @ViewBuilder
     private func customRowOverflowMenu(for entry: FilmSelectorEntry) -> some View {
         let isCustom = entry.film?.kind == .custom
         let hasAction = onEditCustomFilm != nil || onRequestDeleteCustomFilm != nil
+            || onCreateFormulaFromTable != nil
         if isCustom, hasAction {
             Menu {
                 if let onEditCustomFilm, let canonical = entry.canonicalCustomFilmID {
@@ -362,6 +397,13 @@ private struct FilmSelectorSectionCard: View {
                         onEditCustomFilm(canonical)
                     } label: {
                         Label("Edit", systemImage: "pencil")
+                    }
+                }
+                if let onCreateFormulaFromTable, let formulaSourceID = creatableFormulaFilmID(for: entry) {
+                    Button {
+                        onCreateFormulaFromTable(formulaSourceID)
+                    } label: {
+                        Label("Create Formula", systemImage: "function")
                     }
                 }
                 if let onRequestDeleteCustomFilm {

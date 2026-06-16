@@ -7,33 +7,115 @@ import PTimerCore
 /// factory test class stays within strict file/type-length budgets.
 final class BottomSheetStartAgainTests: XCTestCase {
     @MainActor
-    func testCompletedRowSurfacesStartAgainActionAndOtherStatusesDoNot() throws {
+    func testEachStatusSurfacesItsActionSetAndCanceledIsNotLabeledDone() throws {
         let snapshot = makeSnapshot(from: sampleTimers())
         let activeSection = try XCTUnwrap(
             snapshot.sections.first(where: { $0.title == "Active" })
         )
         let completedSection = try XCTUnwrap(
-            snapshot.sections.first(where: { $0.title == "Recently Completed" })
+            snapshot.sections.first(where: { $0.title == "History" })
         )
 
         for activeItem in activeSection.items {
-            XCTAssertFalse(
-                activeItem.actions.contains(.startAgain),
-                "\(activeItem.status) timers must not surface the Start Again action"
-            )
+            switch activeItem.status {
+            case .running:
+                XCTAssertEqual(
+                    activeItem.actions,
+                    [.pause, .startNew],
+                    "Running rows offer Pause then Start New"
+                )
+            case .paused:
+                XCTAssertEqual(
+                    activeItem.actions,
+                    [.resume, .startNew, .cancel, .remove],
+                    "Paused rows offer Resume, Start New, Cancel, Remove"
+                )
+            case .completed, .canceled:
+                XCTFail("Terminal records do not belong in the Active section")
+            }
         }
 
-        for completedItem in completedSection.items {
-            XCTAssertTrue(
-                completedItem.actions.contains(.startAgain),
-                "Completed timers must surface the Start Again action"
-            )
+        // Both completed and canceled records land in the history
+        // section and share the Start Again + Remove action set.
+        XCTAssertTrue(
+            completedSection.items.contains { $0.status == .canceled },
+            "Canceled records belong in the history section, not Active"
+        )
+        for terminalItem in completedSection.items {
             XCTAssertEqual(
-                completedItem.actions,
+                terminalItem.actions,
                 [.startAgain, .remove],
-                "Start Again is presented before Remove on completed rows"
+                "Terminal rows present Start Again before Remove"
             )
+            switch terminalItem.status {
+            case .completed:
+                XCTAssertEqual(terminalItem.statusLabel, "Done")
+            case .canceled:
+                XCTAssertEqual(
+                    terminalItem.statusLabel,
+                    "Canceled",
+                    "Canceled records must read Canceled, never Done"
+                )
+            case .running, .paused:
+                XCTFail("Active timers do not belong in the history section")
+            }
         }
+    }
+
+    @MainActor
+    func testHistorySectionShowsCanceledRemainingAndStableSequenceNumber() throws {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let canceled = RunningTimerItem(
+            id: UUID(uuidString: "66666666-6666-6666-6666-666666666666")!,
+            order: 7,
+            name: "Tri-X 400 - 90s",
+            basisSummary: "Base 1s · 6 stops",
+            duration: 90,
+            startDate: now.addingTimeInterval(-40),
+            endDate: now.addingTimeInterval(-10),
+            pausedRemainingTime: nil,
+            pausedAt: nil,
+            status: .canceled,
+            referenceDate: now,
+            canceledRemainingTime: 51
+        )
+
+        let snapshot = makeSnapshot(from: [canceled])
+        let history = try XCTUnwrap(snapshot.sections.first { $0.title == "History" })
+        let item = try XCTUnwrap(history.items.first { $0.id == canceled.id })
+
+        // Remaining-at-cancel is combined into the large status text,
+        // no new line.
+        XCTAssertEqual(item.remainingText, "Canceled · 51s left")
+        XCTAssertEqual(item.statusLabel, "Canceled")
+        // Stable numeric id = the timer's creation order, bare number.
+        XCTAssertEqual(item.sequenceNumberText, "7")
+    }
+
+    @MainActor
+    func testSequenceNumberTracksTimerOrderNotVisibleListIndex() throws {
+        // Two timers whose visible order (LIFO / completion-desc) differs
+        // from their creation order; the sequence number must follow the
+        // stable creation order, not the rendered position.
+        let now = Date(timeIntervalSince1970: 1_000)
+        let older = RunningTimerItem(
+            id: UUID(uuidString: "AAAAAAAA-0000-0000-0000-000000000001")!,
+            order: 2, name: "A", basisSummary: "m", duration: 60,
+            startDate: now, endDate: now.addingTimeInterval(60),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
+        )
+        let newer = RunningTimerItem(
+            id: UUID(uuidString: "AAAAAAAA-0000-0000-0000-000000000002")!,
+            order: 5, name: "B", basisSummary: "m", duration: 60,
+            startDate: now, endDate: now.addingTimeInterval(60),
+            pausedRemainingTime: nil, pausedAt: nil, status: .running, referenceDate: now
+        )
+
+        let snapshot = makeSnapshot(from: [older, newer])
+        let active = try XCTUnwrap(snapshot.sections.first { $0.title == "Active" })
+
+        XCTAssertEqual(active.items.first { $0.id == older.id }?.sequenceNumberText, "2")
+        XCTAssertEqual(active.items.first { $0.id == newer.id }?.sequenceNumberText, "5")
     }
 
     @MainActor
@@ -55,7 +137,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
         // distinct from the source's start date (the clone's running
         // payload must not share start/completion timestamps).
         harness.currentDate = Date(timeIntervalSince1970: 250)
-        harness.viewModel.startNewTimer(fromCompleted: completedSource)
+        harness.viewModel.startTimerAgain(from: completedSource)
 
         XCTAssertEqual(harness.viewModel.timers.count, 2)
 
@@ -77,16 +159,100 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testStartingNewTimerFromNonCompletedRowIsRejected() throws {
+    func testStartingNewFromRunningRowCancelsSourceAndStartsOneFreshTimer() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 60)
         let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
         XCTAssertEqual(runningSource.status, .running)
 
-        harness.viewModel.startNewTimer(fromCompleted: runningSource)
+        // Advance the clock so the fresh timer's start date is distinct
+        // from the abandoned source's.
+        harness.currentDate = Date(timeIntervalSince1970: 130)
+        harness.viewModel.startNewTimer(from: runningSource)
 
+        // Source is kept as a canceled record; exactly one running timer
+        // exists (no ghost/duplicate), started from full duration.
+        XCTAssertEqual(harness.viewModel.timers.count, 2)
+        XCTAssertEqual(
+            harness.viewModel.timers.filter { $0.status == .running }.count,
+            1
+        )
+        let canceledSource = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id == runningSource.id }
+        )
+        XCTAssertEqual(canceledSource.status, .canceled)
+
+        let fresh = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id != runningSource.id }
+        )
+        XCTAssertEqual(fresh.status, .running)
+        XCTAssertEqual(fresh.duration, runningSource.duration, accuracy: 0.0001)
+        XCTAssertEqual(fresh.startDate, harness.currentDate)
+    }
+
+    @MainActor
+    func testStartingNewFromPausedRowCancelsSourceAndStartsFromBeginning() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 60)
+        let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
+
+        // Pause partway through, then Start New.
+        harness.currentDate = Date(timeIntervalSince1970: 130)
+        harness.viewModel.pauseTimer(id: runningSource.id)
+        let pausedSource = try XCTUnwrap(harness.viewModel.timers.first)
+        XCTAssertEqual(pausedSource.status, .paused)
+
+        harness.currentDate = Date(timeIntervalSince1970: 150)
+        harness.viewModel.startNewTimer(from: pausedSource)
+
+        XCTAssertEqual(harness.viewModel.timers.count, 2)
+        XCTAssertEqual(
+            harness.viewModel.timers.first { $0.id == pausedSource.id }?.status,
+            .canceled
+        )
+
+        let fresh = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id != pausedSource.id }
+        )
+        XCTAssertEqual(fresh.status, .running)
+        XCTAssertNil(fresh.pausedAt)
+        XCTAssertEqual(fresh.duration, pausedSource.duration, accuracy: 0.0001)
+        XCTAssertEqual(fresh.remainingTime, pausedSource.duration, accuracy: 0.0001)
+        XCTAssertEqual(fresh.startDate, harness.currentDate)
+    }
+
+    @MainActor
+    func testCancelOnPausedProducesCanceledRecordThatCanStartAgain() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 60)
+        let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
+
+        harness.currentDate = Date(timeIntervalSince1970: 130)
+        harness.viewModel.pauseTimer(id: runningSource.id)
+        harness.viewModel.cancelTimer(id: runningSource.id)
+
+        let canceled = try XCTUnwrap(harness.viewModel.timers.first)
+        XCTAssertEqual(canceled.status, .canceled)
         XCTAssertEqual(harness.viewModel.timers.count, 1)
+
+        // Start Again on the canceled record clones a fresh running
+        // timer and leaves the canceled record intact.
+        harness.currentDate = Date(timeIntervalSince1970: 160)
+        harness.viewModel.startTimerAgain(from: canceled)
+
+        XCTAssertEqual(harness.viewModel.timers.count, 2)
+        XCTAssertEqual(
+            harness.viewModel.timers.first { $0.id == canceled.id }?.status,
+            .canceled
+        )
+        let fresh = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id != canceled.id }
+        )
+        XCTAssertEqual(fresh.status, .running)
+        XCTAssertEqual(fresh.startDate, harness.currentDate)
     }
 
     @MainActor
@@ -169,6 +335,19 @@ final class BottomSheetStartAgainTests: XCTestCase {
                 status: .completed,
                 referenceDate: now
             ),
+            RunningTimerItem(
+                id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,
+                order: 5,
+                name: "Canceled Shot",
+                basisSummary: "Base 1/8s · 5 stops",
+                duration: 200,
+                startDate: now.addingTimeInterval(-40),
+                endDate: now.addingTimeInterval(-10),
+                pausedRemainingTime: nil,
+                pausedAt: nil,
+                status: .canceled,
+                referenceDate: now
+            ),
         ]
     }
 
@@ -197,6 +376,8 @@ final class BottomSheetStartAgainTests: XCTestCase {
                     return "Paused recently"
                 case .completed:
                     return "Completed recently"
+                case .canceled:
+                    return "Canceled recently"
                 }
             },
             compactCompletedSupplementaryText: { timer in
@@ -210,7 +391,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
                         from: completionDate,
                         relativeTo: timer.referenceDate
                     )
-                case .running, .paused:
+                case .running, .paused, .canceled:
                     return nil
                 }
             }

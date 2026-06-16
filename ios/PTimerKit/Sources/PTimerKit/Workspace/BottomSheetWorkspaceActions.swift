@@ -24,11 +24,19 @@ public enum BottomSheetQuickAction: String, Equatable {
 public enum BottomSheetLargeAction: String, Equatable {
     case pause
     case resume
+    /// Cancels a running or paused timer, keeping it as a terminal
+    /// canceled record in the history area (distinct from `remove`,
+    /// which deletes the record outright). Surfaced on paused rows.
+    case cancel
     case remove
-    /// Starts a new timer cloned from this completed timer's
-    /// duration and identity snapshot. Surfaced only on completed
-    /// rows so the photographer can repeat a long exposure without
-    /// recomputing it from the calculator.
+    /// Cancels the current running or paused timer and starts a fresh
+    /// timer from the same setup and full duration. Surfaced on active
+    /// rows so the photographer can abandon an in-progress exposure and
+    /// begin a new one without recomputing it from the calculator.
+    case startNew
+    /// Starts a fresh timer cloned from a terminal record's duration
+    /// and identity snapshot, leaving the source record intact.
+    /// Surfaced on completed and canceled rows.
     case startAgain
 
     public var title: String {
@@ -37,8 +45,12 @@ public enum BottomSheetLargeAction: String, Equatable {
             return "Pause"
         case .resume:
             return "Resume"
+        case .cancel:
+            return "Cancel"
         case .remove:
             return "Remove"
+        case .startNew:
+            return "Start New"
         case .startAgain:
             return "Start Again"
         }

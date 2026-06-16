@@ -310,17 +310,24 @@ struct ExposureCalculatorScreen: View {
                     openFocus: bottomSheetStateStore.openFocus,
                     onPauseTimer: viewModel.pauseTimer,
                     onResumeTimer: viewModel.resumeTimer,
+                    onCancelTimer: viewModel.cancelTimer,
                     onRemoveTimer: viewModel.removeTimer,
-                    onStartTimerAgain: { id in
+                    onStartNewTimer: { id in
                         // Look the source timer up on the facade rather
                         // than threading the row's full RunningTimerItem
                         // through the snapshot — the snapshot carries
                         // presentation values, not the metadata-bearing
-                        // runtime item that the clone path needs.
+                        // runtime item the replace path needs.
                         guard let source = viewModel.timers.first(where: { $0.id == id }) else {
                             return
                         }
-                        viewModel.startNewTimer(fromCompleted: source)
+                        viewModel.startNewTimer(from: source)
+                    },
+                    onStartTimerAgain: { id in
+                        guard let source = viewModel.timers.first(where: { $0.id == id }) else {
+                            return
+                        }
+                        viewModel.startTimerAgain(from: source)
                     },
                     onClearCompletedTimers: viewModel.clearCompletedTimers,
                     onClose: bottomSheetStateStore.collapse
@@ -460,7 +467,7 @@ struct ExposureCalculatorScreen: View {
         let item = snapshot.compactItems.first(where: { $0.id == id })
 
         switch item?.status {
-        case .completed:
+        case .completed, .canceled:
             store.expandFocusingCompletedSection()
         case .running, .paused:
             store.expandAndFocusActiveTimer(id)

@@ -174,7 +174,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running, .paused:
             return timer.remainingTime
-        case .completed:
+        case .completed, .canceled:
             return timer.duration
         }
     }
@@ -183,7 +183,7 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
-        case .completed:
+        case .completed, .canceled:
             return nil
         case .paused:
             return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
@@ -198,6 +198,9 @@ private struct TimerSummaryCard: View {
         case .completed:
             let completionText = timer.completedAt.map(formatDateTime) ?? "--"
             return "Completed \(completionText)"
+        case .canceled:
+            let canceledText = timer.endDate.map(formatDateTime) ?? "--"
+            return "Canceled \(canceledText)"
         case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
             return "Paused \(pausedText)"
@@ -248,6 +251,8 @@ private struct TimerSummaryCard: View {
             return "Paused"
         case .completed:
             return "Completed"
+        case .canceled:
+            return "Canceled"
         }
     }
 
@@ -259,6 +264,8 @@ private struct TimerSummaryCard: View {
             return "square.fill"
         case .completed:
             return "checkmark"
+        case .canceled:
+            return "xmark"
         }
     }
 
@@ -268,7 +275,7 @@ private struct TimerSummaryCard: View {
             return .green
         case .paused:
             return .orange
-        case .completed:
+        case .completed, .canceled:
             return .gray
         }
     }
@@ -279,7 +286,7 @@ private struct TimerSummaryCard: View {
             return .primary
         case .paused:
             return .orange
-        case .completed:
+        case .completed, .canceled:
             return .secondary
         }
     }
@@ -290,7 +297,7 @@ private struct TimerSummaryCard: View {
             return Color(.secondarySystemBackground)
         case .paused:
             return Color(.systemGray6)
-        case .completed:
+        case .completed, .canceled:
             return Color(.tertiarySystemBackground)
         }
     }
@@ -301,7 +308,7 @@ private struct TimerSummaryCard: View {
             return .green.opacity(0.18)
         case .paused:
             return .orange.opacity(0.18)
-        case .completed:
+        case .completed, .canceled:
             return .gray.opacity(0.18)
         }
     }

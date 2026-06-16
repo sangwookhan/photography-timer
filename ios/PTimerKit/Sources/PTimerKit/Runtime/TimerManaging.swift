@@ -16,6 +16,7 @@ public protocol TimerManaging: AnyObject {
     func start(id: UUID, duration: TimeInterval) -> UUID?
     func pause(id: UUID)
     func resume(id: UUID)
+    func cancel(id: UUID)
     func remove(id: UUID)
     func removeCompletedTimers()
     func reconcile(now: Date?)

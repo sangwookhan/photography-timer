@@ -369,6 +369,8 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
                     return "Paused recently"
                 case .completed:
                     return "Completed recently"
+                    case .canceled:
+                    return "Canceled recently"
                 }
             },
             compactCompletedSupplementaryText: { timer in
@@ -382,7 +384,7 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
                         from: completionDate,
                         relativeTo: timer.referenceDate
                     )
-                case .running, .paused:
+                case .running, .paused, .canceled:
                     return nil
                 }
             }

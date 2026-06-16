@@ -33,8 +33,84 @@ struct ExposureCalculatorScreen: View {
     /// this existing custom film. `.sheet(item:)` keys off this so
     /// dismissal clears it back to nil.
     @State private var customFilmBeingEdited: EditingCustomFilmIdentity?
+    /// PTIMER-180: drives the Create-Formula-from-table sheet — a
+    /// create-mode formula editor seeded from a saved custom table.
+    @State private var customFormulaSeed: CustomFormulaSeedContext?
+    /// PTIMER-180: id of a table the photographer asked to turn into a
+    /// formula from inside the table editor. The seeded formula editor
+    /// is presented only after the table editor sheet dismisses (a new
+    /// sheet cannot be presented while another is dismissing), via the
+    /// sheet's `onDismiss`.
+    @State private var pendingFormulaSeedFilmID: String?
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
+
+    /// Persists the (possibly just-edited) table, then queues the
+    /// seeded Custom Formula editor to open once the table editor
+    /// sheet finishes dismissing. `dismiss` closes the current table
+    /// editor sheet.
+    private func saveTableThenSeedFormula(_ tableFilm: FilmIdentity, dismiss: () -> Void) {
+        viewModel.addCustomFilm(tableFilm)
+        pendingFormulaSeedFilmID = tableFilm.id
+        dismiss()
+    }
+
+    /// Edit-flow editor for a saved custom film. PTIMER-180: re-hydrate
+    /// the linked reference table from the formula's persisted
+    /// `referenceTableFilmID` so the graph markers and the Calculation
+    /// Basis Reference / Error columns reappear (the creation flow holds
+    /// the anchors in memory; the edit flow opens from persistence).
+    /// Tables and unlinked formulas resolve to no anchors and edit as
+    /// before. Anchors come from the table's *current* state, so a
+    /// table edited after the formula was saved is reflected here
+    /// without changing the saved formula parameters.
+    @ViewBuilder
+    private func customFilmEditorSheet(
+        for editing: EditingCustomFilmIdentity
+    ) -> some View {
+        let resolution = CustomFilmReferenceTableResolver.resolve(for: editing.film) {
+            viewModel.customFilmLibrary.film(withID: $0)
+        }
+        CustomFilmEditorView(
+            editing: editing.film,
+            linkedReferenceTableAnchors: resolution.anchors,
+            linkedReferenceTableMissing: resolution.isLinkedButMissing,
+            onSave: { updated in
+                // Upsert by id replaces the existing entry in place, so
+                // any running timer's identity snapshot stays frozen at
+                // its start-time values while live calculations switch
+                // to the edited formula on the next read.
+                viewModel.addCustomFilm(updated)
+                customFilmBeingEdited = nil
+            },
+            onCreateFormula: { tableFilm in
+                saveTableThenSeedFormula(tableFilm) {
+                    customFilmBeingEdited = nil
+                }
+            },
+            onCancel: {
+                customFilmBeingEdited = nil
+            }
+        )
+    }
+
+    /// `onDismiss` hook for the table editor sheets: if a Create
+    /// Custom Formula action is pending, resolve the saved table and
+    /// present the seeded formula editor. Re-resolves the seed from the
+    /// persisted table so an unfittable edit safely opens nothing.
+    private func presentPendingFormulaSeed() {
+        guard let filmID = pendingFormulaSeedFilmID else { return }
+        pendingFormulaSeedFilmID = nil
+        guard let film = viewModel.customFilmLibrary.film(withID: filmID),
+              let seed = CustomFilmEditorFormState.creatingFormula(fromTable: film) else {
+            return
+        }
+        customFormulaSeed = CustomFormulaSeedContext(
+            sourceFilmID: film.id,
+            seedFormState: seed,
+            linkedTableAnchors: customTableAnchors(of: film)
+        )
+    }
 
     @MainActor
     init() {
@@ -204,6 +280,22 @@ struct ExposureCalculatorScreen: View {
                             isFilmSelectorPresented = false
                             customFilmBeingEdited = EditingCustomFilmIdentity(film: film)
                         },
+                        onCreateFormulaFromTable: { filmID in
+                            // PTIMER-180: seed a NEW formula from the
+                            // saved table's fitted formula and open the
+                            // existing formula editor, pre-linked to the
+                            // table for reference / error display.
+                            guard let film = viewModel.customFilmLibrary.film(withID: filmID),
+                                  let seed = CustomFilmEditorFormState.creatingFormula(fromTable: film) else {
+                                return
+                            }
+                            isFilmSelectorPresented = false
+                            customFormulaSeed = CustomFormulaSeedContext(
+                                sourceFilmID: film.id,
+                                seedFormState: seed,
+                                linkedTableAnchors: customTableAnchors(of: film)
+                            )
+                        },
                         style: style
                     )
                     .padding(.top, screenLevelSelectorOverlayTopPadding(style: style))
@@ -274,7 +366,7 @@ struct ExposureCalculatorScreen: View {
                     }
                 )
             }
-            .sheet(isPresented: $isCustomFilmEditorPresented) {
+            .sheet(isPresented: $isCustomFilmEditorPresented, onDismiss: presentPendingFormulaSeed) {
                 CustomFilmEditorView(
                     onSave: { film in
                         viewModel.addCustomFilm(film)
@@ -285,25 +377,35 @@ struct ExposureCalculatorScreen: View {
                         viewModel.selectPresetFilm(film)
                         isCustomFilmEditorPresented = false
                     },
+                    onCreateFormula: { tableFilm in
+                        saveTableThenSeedFormula(tableFilm) {
+                            isCustomFilmEditorPresented = false
+                        }
+                    },
                     onCancel: {
                         isCustomFilmEditorPresented = false
                     }
                 )
             }
-            .sheet(item: $customFilmBeingEdited) { editing in
+            .sheet(item: $customFilmBeingEdited, onDismiss: presentPendingFormulaSeed) { editing in
+                customFilmEditorSheet(for: editing)
+            }
+            .sheet(item: $customFormulaSeed) { seed in
                 CustomFilmEditorView(
-                    editing: editing.film,
-                    onSave: { updated in
-                        // Upsert by id replaces the existing entry
-                        // in place, so any running timer's identity
-                        // snapshot stays frozen at its start-time
-                        // values while live calculations switch to
-                        // the edited formula on the next read.
-                        viewModel.addCustomFilm(updated)
-                        customFilmBeingEdited = nil
+                    seededFormState: seed.seedFormState,
+                    linkedReferenceTableAnchors: seed.linkedTableAnchors,
+                    isSeededFormulaCreate: true,
+                    onSave: { film in
+                        // A new, independent custom formula profile.
+                        // Auto-select it like the New-custom flow.
+                        viewModel.addCustomFilm(film)
+                        viewModel.selectPresetFilm(film)
+                        customFormulaSeed = nil
                     },
                     onCancel: {
-                        customFilmBeingEdited = nil
+                        // Cancel discards the formula; the saved table
+                        // is untouched.
+                        customFormulaSeed = nil
                     }
                 )
             }
@@ -942,6 +1044,28 @@ extension View {
 private struct EditingCustomFilmIdentity: Identifiable {
     let film: FilmIdentity
     var id: String { film.id }
+}
+
+/// PTIMER-180: identifiable context for the Create-Formula-from-table
+/// sheet — the seeded create-mode form plus the source table's anchors
+/// for the editor's reference / error display.
+private struct CustomFormulaSeedContext: Identifiable {
+    let sourceFilmID: String
+    let seedFormState: CustomFilmEditorFormState
+    let linkedTableAnchors: [TableAnchor]
+    var id: String { sourceFilmID }
+}
+
+/// The table-interpolation anchors of a custom table film's profile,
+/// or `[]` when it carries no table rule. Used to feed the linked
+/// reference / error display in the Create-Formula editor.
+private func customTableAnchors(of film: FilmIdentity) -> [TableAnchor] {
+    for rule in film.profiles.first?.rules ?? [] {
+        if case let .tableInterpolation(table) = rule {
+            return table.anchors
+        }
+    }
+    return []
 }
 
 private extension String {

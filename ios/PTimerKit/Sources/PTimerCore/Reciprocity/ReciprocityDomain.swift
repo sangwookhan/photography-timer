@@ -108,6 +108,15 @@ public struct UserEditableMetadata: Codable, Equatable {
     /// field — older `UserEditableMetadata` payloads decode
     /// unchanged.
     public let referenceURL: String?
+    /// PTIMER-180: optional id of a custom **table** film this
+    /// (custom **formula**) profile was created from / linked to.
+    /// Display-only — comparison / error / provenance hint. The
+    /// calculation policy never reads it; a Custom Formula computes
+    /// only from its formula parameters. Additive Optional field so
+    /// older payloads decode unchanged. The link is set at
+    /// Create-Formula time and is never used to recalculate the
+    /// formula when the linked table changes.
+    public let referenceTableFilmID: String?
 
     public init(
         displayNameOverride: String? = nil,
@@ -115,7 +124,8 @@ public struct UserEditableMetadata: Codable, Equatable {
         notes: [String] = [],
         customSourceType: CustomProfileSourceType? = nil,
         customManufacturer: String? = nil,
-        referenceURL: String? = nil
+        referenceURL: String? = nil,
+        referenceTableFilmID: String? = nil
     ) {
         self.displayNameOverride = displayNameOverride
         self.tags = tags
@@ -123,6 +133,7 @@ public struct UserEditableMetadata: Codable, Equatable {
         self.customSourceType = customSourceType
         self.customManufacturer = customManufacturer
         self.referenceURL = referenceURL
+        self.referenceTableFilmID = referenceTableFilmID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -132,6 +143,7 @@ public struct UserEditableMetadata: Codable, Equatable {
         case customSourceType
         case customManufacturer
         case referenceURL
+        case referenceTableFilmID
     }
 
     public init(from decoder: Decoder) throws {
@@ -145,6 +157,7 @@ public struct UserEditableMetadata: Codable, Equatable {
         )
         self.customManufacturer = try container.decodeIfPresent(String.self, forKey: .customManufacturer)
         self.referenceURL = try container.decodeIfPresent(String.self, forKey: .referenceURL)
+        self.referenceTableFilmID = try container.decodeIfPresent(String.self, forKey: .referenceTableFilmID)
     }
 }
 

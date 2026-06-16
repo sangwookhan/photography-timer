@@ -37,7 +37,8 @@ public enum CustomFilmEditorPreviewGraphPresenter {
     public static let previewMeteredSeconds: Double = 4
 
     public static func graphDisplayState(
-        for form: CustomFilmEditorFormState
+        for form: CustomFilmEditorFormState,
+        linkedReferenceTableAnchors: [TableAnchor] = []
     ) -> FilmModeDetailsGraphDisplayState? {
         let profile: ReciprocityProfile
         switch form.calculationInputKind {
@@ -45,7 +46,18 @@ public enum CustomFilmEditorPreviewGraphPresenter {
             guard let parsed = CustomFilmEditorPreviewPresenter.parse(form: form) else {
                 return nil
             }
-            profile = makeProfile(parsed: parsed)
+            // PTIMER-180: when the formula is linked to a reference
+            // table, attach that table's anchors as display-only
+            // source-reference markers so the formula curve is shown
+            // against the table it was seeded from. The curve stays the
+            // formula — `sourceEvidence` never feeds calculation — and
+            // an unlinked formula graph is unchanged (empty evidence).
+            let evidence = linkedReferenceTableAnchors.isEmpty
+                ? []
+                : CustomFilmEditorFormState.displayEvidenceRows(
+                    for: linkedReferenceTableAnchors.sorted { $0.meteredSeconds < $1.meteredSeconds }
+                )
+            profile = makeProfile(parsed: parsed, sourceEvidence: evidence)
         case .table:
             // PTIMER-178: synthesize the same table profile Save
             // would persist (rule anchors + display-only evidence
@@ -100,7 +112,8 @@ public enum CustomFilmEditorPreviewGraphPresenter {
     }
 
     private static func makeProfile(
-        parsed: CustomFilmEditorPreviewPresenter.ParsedFormula
+        parsed: CustomFilmEditorPreviewPresenter.ParsedFormula,
+        sourceEvidence: [ReciprocitySourceEvidenceRow] = []
     ) -> ReciprocityProfile {
         // The synthesized preview profile mirrors what
         // `CustomFilmEditorFormState.buildFilmIdentity` writes on
@@ -127,7 +140,8 @@ public enum CustomFilmEditorPreviewGraphPresenter {
                 confidence: .unknown,
                 publisher: ""
             ),
-            rules: [.formula(formulaRule)]
+            rules: [.formula(formulaRule)],
+            sourceEvidence: sourceEvidence
         )
     }
 

@@ -153,7 +153,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     }
 
     /// Compact-card tap routing by status. PTIMER-126 fix: a completed
-    /// card focuses the Recently Completed section header (not the row,
+    /// card focuses the History section header (not the row,
     /// which would hide the section title and the Clear button).
     @MainActor
     func testCompactCardTapRoutesByStatusIncludingCompletedSectionFix() {
@@ -311,7 +311,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
     func testIsCompletedSectionFlagsCompletedSectionOnly() {
         let snapshot = makeBottomSheetSnapshot(from: bottomSheetSampleTimers())
         let active = snapshot.sections.first { $0.title == TimerWorkspaceSection.activeTitle }
-        let completed = snapshot.sections.first { $0.title == TimerWorkspaceSection.completedTitle }
+        let completed = snapshot.sections.first { $0.title == TimerWorkspaceSection.historyTitle }
 
         XCTAssertEqual(active?.isCompletedSection, false)
         XCTAssertEqual(completed?.isCompletedSection, true)
@@ -376,7 +376,9 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 openFocus: .none,
                 onPauseTimer: { _ in },
                 onResumeTimer: { _ in },
+                onCancelTimer: { _ in },
                 onRemoveTimer: { _ in },
+                onStartNewTimer: { _ in },
                 onStartTimerAgain: { _ in },
                 onClearCompletedTimers: {},
                 onClose: {}

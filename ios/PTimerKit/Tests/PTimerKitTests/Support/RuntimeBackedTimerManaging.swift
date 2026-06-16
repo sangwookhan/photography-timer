@@ -53,6 +53,7 @@ final class RuntimeBackedTimerManaging: TimerManaging {
 
     func pause(id: UUID) { runtime.pause(id: id) }
     func resume(id: UUID) { runtime.resume(id: id) }
+    func cancel(id: UUID) { runtime.cancel(id: id) }
     func remove(id: UUID) { runtime.remove(id: id) }
     func removeCompletedTimers() { runtime.removeCompletedTimers() }
     func reconcile(now: Date? = nil) { runtime.reconcile(now: now) }

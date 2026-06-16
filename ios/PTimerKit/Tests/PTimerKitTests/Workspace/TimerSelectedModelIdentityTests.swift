@@ -280,7 +280,7 @@ final class TimerSelectedModelIdentityTests: XCTestCase {
         let store = SpyMetadataStore()
         let model = makeModel(store: store)
 
-        let cloneID = try XCTUnwrap(model.startTimer(cloningCompleted: source))
+        let cloneID = try XCTUnwrap(model.startTimer(cloning: source))
         let clone = try XCTUnwrap(model.timers.first { $0.id == cloneID })
         XCTAssertEqual(
             clone.selectedModelLabel,

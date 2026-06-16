@@ -10,13 +10,14 @@ This document is a behavior contract for the timer runtime. It is platform-neutr
 
 ### 1.1 States
 
-A timer is in exactly one of three states at any time:
+A timer is in exactly one of four states at any time:
 
 - **running** — actively counting down; remaining time decreases with wall clock.
 - **paused** — frozen; remaining time does not change.
-- **completed** — terminal; remaining time is zero. Cannot transition out.
+- **completed** — terminal; the timer reached its end naturally. Remaining time is zero. Cannot transition out.
+- **canceled** — terminal; the user stopped the timer before it finished. Remaining time is zero. Cannot transition out. Distinct from completed so the abandoned shot is surfaced as *Canceled* rather than *Done*.
 
-A timer's representation shall carry exactly the fields meaningful for its current state: running carries the expected end time, paused carries the frozen remaining duration and the paused-at instant, completed carries the recorded completion timestamp. There are no nullable siblings sharing a record across states; an *invalid* combination (e.g. a running timer with a paused-at instant) is therefore not representable.
+A timer's representation shall carry exactly the fields meaningful for its current state: running carries the expected end time, paused carries the frozen remaining duration and the paused-at instant, completed carries the recorded completion timestamp, canceled carries the recorded cancellation timestamp. There are no nullable siblings sharing a record across states; an *invalid* combination (e.g. a running timer with a paused-at instant) is therefore not representable.
 
 ### 1.2 Transitions
 
@@ -25,15 +26,19 @@ A timer's representation shall carry exactly the fields meaningful for its curre
    │ running  │ ───────▶ │ paused │
    │          │ ◀─────── │        │
    └──────────┘  resume  └────────┘
-        │
-        │ wall clock reaches end
-        ▼
+      │   │                │
+      │   └──────┐  cancel  │
+      │   wall   │ ◀────────┘
+      │   clock  ▼
+      │   reaches┌──────────┐
+      │   end    │ canceled │  (terminal)
+      ▼          └──────────┘
    ┌──────────┐
    │completed │   (terminal)
    └──────────┘
 ```
 
-The only legal transitions are: `running ⇄ paused` and `running → completed`. **paused → completed** is not a direct transition; a paused timer must be resumed before it can complete. Completed is terminal: no transition leaves it.
+The legal transitions are: `running ⇄ paused`, `running → completed`, and `running → canceled` / `paused → canceled`. **paused → completed** is not a direct transition; a paused timer must be resumed before it can complete. Cancellation, by contrast, is reachable directly from both running and paused. Completed and canceled are both terminal: no transition leaves them.
 
 A timer's `duration` is set at creation and is positive and finite. The system shall reject creation with non-positive, non-finite, or `NaN` duration values.
 

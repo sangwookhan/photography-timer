@@ -39,6 +39,12 @@ struct CustomFilmEditorView: View {
     let editing: FilmIdentity?
     let onSave: (FilmIdentity) -> Void
     let onCancel: () -> Void
+    /// PTIMER-180: primary "Create Custom Formula" action near the
+    /// fitted-formula preview (table mode). Receives the validated
+    /// table film so the screen can persist it and then open the
+    /// seeded Custom Formula editor. `nil` (default) hides the action —
+    /// e.g. in the formula editor itself.
+    let onCreateFormula: ((FilmIdentity) -> Void)?
 
     @State private var formState: CustomFilmEditorFormState
     /// Toggles the compact help panel inside the Formula card so
@@ -67,15 +73,38 @@ struct CustomFilmEditorView: View {
     /// instead.
     private let editingOpeningFormulaSnapshot: CustomFilmEditorFormulaSnapshot?
 
+    /// PTIMER-180: anchors of the linked reference table, resolved by
+    /// the caller from `referenceTableFilmID`. Drives the formula
+    /// preview's Reference / Error columns. Empty when unlinked.
+    let linkedReferenceTableAnchors: [TableAnchor]
+    /// `true` when the form is linked to a reference table that can no
+    /// longer be resolved (deleted) — the editor shows a short
+    /// "reference table unavailable" note instead of error columns.
+    let linkedReferenceTableMissing: Bool
+    /// `true` for the Create-Formula-from-table flow: a create-mode
+    /// (`editing == nil`) formula seeded from a saved table. Suppresses
+    /// the Formula/Table kind picker (the kind is fixed to formula).
+    let isSeededFormulaCreate: Bool
+
     init(
         editing: FilmIdentity? = nil,
+        seededFormState: CustomFilmEditorFormState? = nil,
+        linkedReferenceTableAnchors: [TableAnchor] = [],
+        linkedReferenceTableMissing: Bool = false,
+        isSeededFormulaCreate: Bool = false,
         onSave: @escaping (FilmIdentity) -> Void,
+        onCreateFormula: ((FilmIdentity) -> Void)? = nil,
         onCancel: @escaping () -> Void
     ) {
         self.editing = editing
         self.onSave = onSave
+        self.onCreateFormula = onCreateFormula
         self.onCancel = onCancel
-        let initialState = editing.flatMap(CustomFilmEditorFormState.from(film:))
+        self.linkedReferenceTableAnchors = linkedReferenceTableAnchors
+        self.linkedReferenceTableMissing = linkedReferenceTableMissing
+        self.isSeededFormulaCreate = isSeededFormulaCreate
+        let initialState = seededFormState
+            ?? editing.flatMap(CustomFilmEditorFormState.from(film:))
             ?? CustomFilmEditorFormState()
         self._formState = State(initialValue: initialState)
         self.editingOpeningFormulaSnapshot = editing == nil
@@ -95,7 +124,7 @@ struct CustomFilmEditorView: View {
                 .listRowBackground(Color.clear)
 
                 identityCard
-                if editing == nil {
+                if editing == nil, !isSeededFormulaCreate {
                     calculationKindSection
                 }
                 if formState.calculationInputKind == .table {
@@ -117,7 +146,11 @@ struct CustomFilmEditorView: View {
             // dismisses the keyboard. Sorting happens only at focus /
             // Add / delete / Save boundaries, never mid-typing.
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(editing == nil ? "New custom film" : "Edit custom film")
+            .navigationTitle(
+                editing == nil
+                    ? (isSeededFormulaCreate ? "New formula" : "New custom film")
+                    : "Edit custom film"
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -475,7 +508,10 @@ struct CustomFilmEditorView: View {
             // semantics on both surfaces.
             if formState.formulaCanRenderPreview,
                let graphState = CustomFilmEditorPreviewGraphPresenter
-                .graphDisplayState(for: formState) {
+                .graphDisplayState(
+                    for: formState,
+                    linkedReferenceTableAnchors: linkedReferenceTableAnchors
+                ) {
                 FilmModeDetailsGraph(graph: graphState)
                     .accessibilityIdentifier("custom-film-editor-preview-chart")
                 // Shared Calculation Basis block sits between the
@@ -489,8 +525,17 @@ struct CustomFilmEditorView: View {
                     .calculationBasisText(for: formState) {
                     CustomFilmEditorCalculationBasisBlock(text: basisText)
                 }
-                CustomFilmEditorPreviewTable(form: formState)
-                    .accessibilityIdentifier("custom-film-editor-preview-table")
+                if linkedReferenceTableMissing {
+                    Text("Reference table unavailable.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("custom-film-editor-reference-table-unavailable")
+                }
+                CustomFilmEditorPreviewTable(
+                    form: formState,
+                    linkedReferenceTableAnchors: linkedReferenceTableAnchors
+                )
+                .accessibilityIdentifier("custom-film-editor-preview-table")
             } else {
                 previewUnavailable
             }
@@ -596,7 +641,45 @@ struct CustomFilmEditorView: View {
     private var fittedFormulaSection: some View {
         Section("App-derived formula preview") {
             CustomTableFittedFormulaPreviewContent(form: formState)
+            // PTIMER-180 primary action: the place the photographer
+            // evaluates the fit is the natural place to start a custom
+            // formula from it. Shown only when a usable fit exists, so
+            // the action is never a dead end; the row-menu shortcut
+            // (Create Formula) stays as a secondary entry point.
+            if onCreateFormula != nil, fittedFormulaAvailable {
+                VStack(alignment: .leading, spacing: 8) {
+                    Button {
+                        createFormulaFromCurrentTable()
+                    } label: {
+                        Text("Create Custom Formula")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canSave)
+                    .accessibilityIdentifier("custom-film-editor-create-custom-formula")
+                    Text("Your table will be saved, then used as the starting point for a custom formula.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                // Render as a CTA block, not a tappable list row.
+                .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                .listRowBackground(Color.clear)
+            }
         }
+    }
+
+    /// `true` when the current table form parses into a rule whose
+    /// anchors yield an available fitted formula — the same gate the
+    /// preview uses for its `.available` state. Drives the primary
+    /// Create-Custom-Formula action's visibility so an unusable /
+    /// unfittable table never exposes an enabled action.
+    private var fittedFormulaAvailable: Bool {
+        guard let rule = formState.parsedTableInterpolationRule() else { return false }
+        if case .available = CustomTableFittedFormulaPresenter.outcome(for: rule) {
+            return true
+        }
+        return false
     }
 
     // MARK: - Secondary details section
@@ -669,26 +752,37 @@ struct CustomFilmEditorView: View {
     // MARK: - Mutations
 
     private func save() {
+        if let film = validatedFilm() {
+            onSave(film)
+        }
+    }
+
+    /// PTIMER-180 primary "Create Custom Formula" action: save the
+    /// current table (validate → hand the film to the screen, which
+    /// persists it), then the screen opens the seeded Custom Formula
+    /// editor. Shares the exact validation / id-reuse path as `save()`.
+    private func createFormulaFromCurrentTable() {
+        if let film = validatedFilm() {
+            onCreateFormula?(film)
+        }
+    }
+
+    /// Settles table editing, then validates the form into a
+    /// `FilmIdentity`. Edit-mode reuse rule: the form keeps the
+    /// original film/profile ids so the library upserts in place (the
+    /// generator yields the profile id first, then the film id —
+    /// matching `buildFilmIdentity`'s call order). Returns `nil` when
+    /// validation fails; both the Save and Create-Formula buttons are
+    /// disabled in that state, so the failure paths exist only
+    /// defensively and leave the form untouched.
+    private func validatedFilm() -> FilmIdentity? {
         // End table editing so the keyboard dismisses and the focused
         // value is settled (it is already live-bound, so nothing is
-        // lost). Save is a commit point too: settle the visible row
+        // lost). This is a commit point too: settle the visible row
         // order before validating so the stored anchors and the last
-        // on-screen order agree. (The validator also sorts internally;
-        // this keeps the editor's own rows consistent if Save is
-        // somehow re-entered.)
+        // on-screen order agree.
         tableFocusedField = nil
         formState.sortCompleteTableRows()
-        // Edit-mode reuse rule: the form must keep the original
-        // film/profile ids so the library upserts in place. The
-        // generator yields the profile id first, then the film id
-        // — matching `buildFilmIdentity`'s call order.
-        //
-        // The Save button is disabled whenever validation would
-        // fail, so by the time this method runs the validator is
-        // expected to succeed. Failure paths exist defensively;
-        // they leave the form alone (the inline-row hints and the
-        // cross-field summary already paint the issues for the
-        // user).
         let result: Result<FilmIdentity, CustomFilmEditorValidationErrors>
         if let editing {
             let profileID = editing.profiles.first?.id ?? UUID().uuidString
@@ -700,8 +794,9 @@ struct CustomFilmEditorView: View {
             result = formState.validate()
         }
         if case .success(let film) = result {
-            onSave(film)
+            return film
         }
+        return nil
     }
 }
 
@@ -757,7 +852,11 @@ func rowDurationDisplayValue(
     }
     switch CustomFilmDurationParser.parse(trimmed) {
     case .seconds(let value) where value.isFinite:
-        let rendered = CustomFilmEditorFormState.formatDurationExpression(value)
+        // PTIMER-180 Q4: seconds-first display (`100s (1m 40s)`) so the
+        // Formula card's No correction / Source data rows match the
+        // shared Details/source-reference policy. Below 60 s this is the
+        // compact seconds form, unchanged.
+        let rendered = CustomFilmEditorFormState.formatAnchorSeconds(value)
         let isNeutral = dimWhenMatches.map { $0 == rendered } ?? false
         return CustomFilmEditorRowDisplayValue(
             text: rendered,
@@ -1087,12 +1186,64 @@ private struct CustomFilmEditorFormulaHelpPanel: View {
     ]
 }
 
+/// Splits a duration into a seconds-first primary line and an optional
+/// clock secondary line for the two-line Calculation Basis cells
+/// (PTIMER-180 Q3): `>= 60 s` → (`100s`, `(1m 40s)`); below 60 s →
+/// (`2.8s`, nil). Avoids mid-string wrapping in the narrow 4-column
+/// reference table.
+func customFilmEditorDurationLines(
+    _ seconds: Double
+) -> (primary: String, secondary: String?) {
+    guard seconds >= 60 else {
+        return (CustomFilmEditorFormState.formatDurationExpression(seconds), nil)
+    }
+    let total = Int(seconds.rounded())
+    return ("\(total)s", "(\(CustomFilmEditorFormState.formatDurationExpression(seconds)))")
+}
+
+/// Two-line duration cell shared by the Calculation Basis / reference
+/// table and the table editor's App-derived formula preview
+/// (PTIMER-180 Q3): `>= 60 s` renders seconds over a dimmed clock line
+/// (`100s` / `(1m 40s)`), below 60 s one compact line; `nil` renders an
+/// em dash. Font is inherited from the enclosing row so each table
+/// keeps its own scale; callers tint the whole cell (e.g. the
+/// Reference / Source columns) as needed.
+struct CustomFilmEditorDurationCell: View {
+    let seconds: Double?
+
+    var body: some View {
+        Group {
+            if let seconds {
+                let lines = customFilmEditorDurationLines(seconds)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(lines.primary)
+                    if let secondary = lines.secondary {
+                        Text(secondary)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Text("—")
+            }
+        }
+    }
+}
+
 /// Editor preview table. Renders the presenter's sample rows with
 /// `Tm | Tc | Δstop or status` so the photographer can
 /// sanity-check the formula across common metered exposures
 /// before saving.
 private struct CustomFilmEditorPreviewTable: View {
     let form: CustomFilmEditorFormState
+    /// PTIMER-180: when a linked reference table exists (formula
+    /// mode), its anchors are merged into the preview list and the
+    /// rows gain Reference Tc + Error columns. Empty for the unlinked
+    /// editor, which renders exactly as before.
+    var linkedReferenceTableAnchors: [TableAnchor] = []
+
+    private var showsReferenceColumns: Bool {
+        form.calculationInputKind == .formula && !linkedReferenceTableAnchors.isEmpty
+    }
 
     private var rows: [CustomFilmEditorPreviewPresenter.Row] {
         form.calculationInputKind == .table
@@ -1100,7 +1251,22 @@ private struct CustomFilmEditorPreviewTable: View {
             : CustomFilmEditorPreviewPresenter.rows(form: form)
     }
 
+    private var referenceRows: [CustomFilmEditorPreviewPresenter.ReferencePointRow] {
+        CustomFilmEditorPreviewPresenter.referencePointRows(
+            form: form,
+            linkedTableAnchors: linkedReferenceTableAnchors
+        )
+    }
+
     var body: some View {
+        if showsReferenceColumns {
+            referenceTableBody
+        } else {
+            standardTableBody
+        }
+    }
+
+    private var standardTableBody: some View {
         VStack(spacing: 4) {
             ForEach(rows, id: \.meteredSeconds) { row in
                 HStack(alignment: .center) {
@@ -1119,10 +1285,58 @@ private struct CustomFilmEditorPreviewTable: View {
         }
     }
 
+    /// Reference-points layout (PTIMER-180 §6): Metered · Formula Tc ·
+    /// Reference Tc · Error. Anchor rows carry the linked table's
+    /// reference time and the formula-vs-table stop error; standard
+    /// preview rows leave the reference / error cells blank.
+    private var referenceTableBody: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text("Metered").frame(width: 88, alignment: .leading)
+                Text("Formula").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Reference").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Error").frame(width: 72, alignment: .trailing)
+            }
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            ForEach(referenceRows, id: \.meteredSeconds) { row in
+                HStack(alignment: .top) {
+                    CustomFilmEditorDurationCell(seconds: row.meteredSeconds)
+                        .frame(width: 88, alignment: .leading)
+                    CustomFilmEditorDurationCell(seconds: row.formulaCorrectedSeconds)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    CustomFilmEditorDurationCell(seconds: row.referenceCorrectedSeconds)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .foregroundStyle(.secondary)
+                    Text(errorLabel(for: row))
+                        .frame(width: 72, alignment: .trailing)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(errorColor(for: row))
+                }
+                .font(.footnote.monospacedDigit())
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .accessibilityIdentifier("custom-film-editor-reference-points")
+    }
+
+    private func errorLabel(for row: CustomFilmEditorPreviewPresenter.ReferencePointRow) -> String {
+        guard let stops = row.stopError else { return "" }
+        return String(format: "%+.2f st", stops)
+    }
+
+    private func errorColor(for row: CustomFilmEditorPreviewPresenter.ReferencePointRow) -> Color {
+        guard let stops = row.stopError else { return .secondary }
+        return abs(stops) <= 0.1 ? .secondary : (abs(stops) <= 0.25 ? .orange : .red.opacity(0.8))
+    }
+
     private func metricLabel(_ seconds: Double) -> String {
-        form.calculationInputKind == .table
-            ? CustomFilmEditorFormState.formatAnchorSeconds(seconds)
-            : CustomFilmEditorFormState.formatDurationExpression(seconds)
+        // Seconds-first with clock in parentheses for >= 60 s
+        // (`100s (1m 40s)`), compact seconds below — the shared
+        // Details/source-reference policy (PTIMER-172). Applies to both
+        // table and formula modes so every preview / reference column
+        // reads the same way (PTIMER-180).
+        CustomFilmEditorFormState.formatAnchorSeconds(seconds)
     }
 
     private func correctedLabel(for row: CustomFilmEditorPreviewPresenter.Row) -> String {

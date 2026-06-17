@@ -116,4 +116,46 @@ class TimerSnapshotCodecTest {
         val r = TimerSnapshotCodec.decode(json) // must not throw
         assertEquals(listOf("ok"), r.snapshots.map { it.id })
     }
+
+    // --- per-item TYPE-mismatch isolation (Pass 2, issue 1) ----------------
+    // A type mismatch in one item must not drop the whole collection.
+
+    @Test
+    fun badDurationTypeInOneItemDoesNotDropValidSibling() {
+        val bad = """{"id":"bad","title":"t","status":"running","durationSeconds":"oops","startEpochMs":$baseMs}"""
+        assertEquals(listOf("ok"), TimerSnapshotCodec.decode(wrap(bad, running("ok"))).snapshots.map { it.id })
+    }
+
+    @Test
+    fun badStartEpochTypeInOneItemDoesNotDropValidSibling() {
+        val bad = """{"id":"bad","title":"t","status":"running","durationSeconds":100.0,"startEpochMs":"nope"}"""
+        assertEquals(listOf("ok"), TimerSnapshotCodec.decode(wrap(bad, running("ok"))).snapshots.map { it.id })
+    }
+
+    @Test
+    fun badPausedRemainingTypeInOneItemDoesNotDropValidSibling() {
+        val bad = """{"id":"bad","title":"t","status":"paused","durationSeconds":100.0,"startEpochMs":$baseMs,"pausedRemainingSeconds":"x","pausedAtEpochMs":$baseMs}"""
+        assertEquals(listOf("ok"), TimerSnapshotCodec.decode(wrap(bad, running("ok"))).snapshots.map { it.id })
+    }
+
+    @Test
+    fun badStatusTypeOrUnknownStatusInOneItemDoesNotDropValidSibling() {
+        val badType = """{"id":"a","title":"t","status":123,"durationSeconds":100.0,"startEpochMs":$baseMs}"""
+        assertEquals(listOf("ok"), TimerSnapshotCodec.decode(wrap(badType, running("ok"))).snapshots.map { it.id })
+        val unknown = """{"id":"b","title":"t","status":"frozen","durationSeconds":100.0,"startEpochMs":$baseMs}"""
+        assertEquals(listOf("ok"), TimerSnapshotCodec.decode(wrap(unknown, running("ok"))).snapshots.map { it.id })
+    }
+
+    @Test
+    fun badSourceMetadataTypeInOneItemDoesNotDropValidSibling() {
+        val bad = """{"id":"bad","title":"t","source":123,"status":"running","durationSeconds":100.0,"startEpochMs":$baseMs,"expectedCompletionEpochMs":${baseMs + 100_000}}"""
+        assertEquals(listOf("ok"), TimerSnapshotCodec.decode(wrap(bad, running("ok"))).snapshots.map { it.id })
+    }
+
+    @Test
+    fun fullyMalformedOrNonObjectJsonReturnsEmptyWithoutThrowing() {
+        assertTrue(TimerSnapshotCodec.decode("not json {").snapshots.isEmpty())
+        assertTrue(TimerSnapshotCodec.decode("[1,2,3]").snapshots.isEmpty()) // non-object top level
+        assertTrue(TimerSnapshotCodec.decode("42").snapshots.isEmpty())
+    }
 }

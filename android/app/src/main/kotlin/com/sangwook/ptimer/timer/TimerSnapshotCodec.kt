@@ -4,9 +4,13 @@ import com.sangwook.ptimer.core.timer.ExposureTimerSource
 import com.sangwook.ptimer.core.timer.PersistentTimerSnapshot
 import com.sangwook.ptimer.core.timer.TimerState
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
 import java.time.Instant
 
 /**
@@ -78,34 +82,36 @@ object TimerSnapshotCodec {
 
     fun decode(text: String): Restored {
         val empty = Restored(emptyList(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
-        val collection = try {
-            json.decodeFromString<CollectionDto>(text)
-        } catch (_: Exception) {
-            return empty
+        // Parse the envelope only; each timer item is decoded individually below
+        // so a type mismatch in one item cannot drop its valid siblings.
+        val root = runCatching { json.parseToJsonElement(text) }.getOrNull() as? JsonObject ?: return empty
+        when (val v = root["schemaVersion"]) {
+            null -> Unit // absent → treat as current schema (lenient, as before)
+            else -> if ((v as? JsonPrimitive)?.intOrNull != SCHEMA_VERSION) return empty
         }
-        if (collection.schemaVersion != SCHEMA_VERSION) return empty
+        val array = root["timers"] as? JsonArray ?: JsonArray(emptyList())
 
-        val snapshots = ArrayList<PersistentTimerSnapshot>(collection.timers.size)
+        val snapshots = ArrayList<PersistentTimerSnapshot>(array.size)
         val titles = LinkedHashMap<String, String>()
         val subtitles = LinkedHashMap<String, String>()
         val metadatas = LinkedHashMap<String, String>()
         val sources = LinkedHashMap<String, ExposureTimerSource>()
         val seen = HashSet<String>()
-        for (dto in collection.timers) {
+        for (element in array) {
+            // A type mismatch on any field fails this item only (skipped).
+            val dto = runCatching { json.decodeFromJsonElement<Dto>(element) }.getOrNull() ?: continue
             // Skip structurally-impossible items rather than the whole snapshot.
-            // Items that are merely missing reconcilable detail (running with no
-            // expected-completion, paused with no freeze metadata) are kept and
-            // safely completed by PersistentTimerSnapshot.restore().
+            // Items merely missing reconcilable detail (running with no expected
+            // completion, paused with no freeze metadata) are kept and safely
+            // completed by PersistentTimerSnapshot.restore().
             if (dto.id.isBlank() || !seen.add(dto.id)) continue
             if (!dto.durationSeconds.isFinite() || dto.durationSeconds <= 0.0) continue
             val startEpochMs = dto.startEpochMs ?: continue
             val pausedRemaining = dto.pausedRemainingSeconds
             if (pausedRemaining != null && (!pausedRemaining.isFinite() || pausedRemaining < 0.0)) continue
-            val status = try {
+            val status = runCatching {
                 PersistentTimerSnapshot.SnapshotStatus.fromToken(dto.status)
-            } catch (_: IllegalArgumentException) {
-                continue
-            }
+            }.getOrNull() ?: continue
             snapshots += PersistentTimerSnapshot(
                 id = dto.id,
                 status = status,

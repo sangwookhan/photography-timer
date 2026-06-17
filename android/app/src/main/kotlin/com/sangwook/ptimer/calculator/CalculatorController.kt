@@ -26,6 +26,9 @@ data class CalculatorUiState(
     val canStartTimer: Boolean,
     val startDisabledHint: String?,
     val availableModels: List<ModelOptionUi>,
+    val isCustomTable: Boolean = false,
+    val fittedPreviewSummary: String? = null,
+    val selectedCustomFilmId: String? = null,
 )
 
 /** What a Start-Timer tap should create, or null when disabled. */
@@ -46,6 +49,10 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
     private var ndStops: Int = CalculatorDefaults.ND_STOP
     private var selectedFilmId: String? = null
     private var selectedProfileId: String? = null // null = primary profile
+    private var customFilms: List<FilmIdentity> = emptyList()
+
+    /** Make custom-library films selectable alongside the preset catalog. */
+    fun setCustomFilms(films: List<FilmIdentity>) { customFilms = films }
 
     fun setBaseShutterSeconds(seconds: Double) { baseShutterSeconds = seconds }
     fun setBaseShutterLadderIndex(index: Int) {
@@ -58,6 +65,7 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
     fun selectModel(profileId: String?) { selectedProfileId = profileId }
 
     fun currentBaseSeconds(): Double = baseShutterSeconds
+    fun currentFilmId(): String? = selectedFilmId
 
     /** Capture the active calculator inputs for per-slot persistence. */
     fun capture(): SlotCalculatorSnapshot =
@@ -78,7 +86,9 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
         selectedProfileId = snapshot.selectedProfileId
     }
 
-    private fun film(): FilmIdentity? = selectedFilmId?.let { id -> catalog.firstOrNull { it.id == id } }
+    private fun film(): FilmIdentity? = selectedFilmId?.let { id ->
+        catalog.firstOrNull { it.id == id } ?: customFilms.firstOrNull { it.id == id }
+    }
 
     private fun activeProfile(film: FilmIdentity): ReciprocityProfile {
         val pid = selectedProfileId ?: return film.profiles.first()
@@ -126,11 +136,25 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             alternates.forEach { add(ModelOptionUi(it.id, it.selectorLabel ?: it.name, selectedProfileId == it.id)) }
         }
 
+        val tableRule = (profile.typedRules.firstOrNull() as? com.sangwook.ptimer.core.catalog.ReciprocityRule.Table)?.rule
+        val isCustomTable = film.kind == "custom" && tableRule != null
+        val fittedSummary = if (isCustomTable && tableRule != null) {
+            when (val preview = com.sangwook.ptimer.customfilm.FittedFormulaPreviewPresenter.preview(tableRule)) {
+                is com.sangwook.ptimer.customfilm.FittedPreview.Available ->
+                    "Fitted (inspection-only): ${preview.parameterText} · ${preview.quality}"
+                is com.sangwook.ptimer.customfilm.FittedPreview.Unavailable -> preview.reason
+            }
+        } else {
+            null
+        }
+
         return CalculatorUiState(
             baseShutterLabel = baseLabel, ndStops = ndStops, filmName = film.canonicalStockName,
             authorityLabel = authorityLabel(profile), adjustedShutterLabel = adjustedLabel,
             correctedExposureLabel = correctedLabel, reciprocityBadge = presentation.shortLabel,
             canStartTimer = canStart, startDisabledHint = hint, availableModels = models,
+            isCustomTable = isCustomTable, fittedPreviewSummary = fittedSummary,
+            selectedCustomFilmId = if (film.kind == "custom") film.id else null,
         )
     }
 

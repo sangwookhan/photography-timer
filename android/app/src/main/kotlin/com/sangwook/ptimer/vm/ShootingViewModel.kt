@@ -8,6 +8,12 @@ import com.sangwook.ptimer.calculator.CalculatorController
 import com.sangwook.ptimer.calculator.CalculatorUiState
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
 import com.sangwook.ptimer.core.exposure.ExposureScale
+import com.sangwook.ptimer.core.reciprocity.TableAnchor
+import com.sangwook.ptimer.customfilm.CreateFormulaFromTable
+import com.sangwook.ptimer.customfilm.CustomFilmFactory
+import com.sangwook.ptimer.customfilm.CustomFilmLibrary
+import com.sangwook.ptimer.customfilm.CustomFilmLibraryCodec
+import com.sangwook.ptimer.customfilm.CustomFilmResult
 import com.sangwook.ptimer.slots.CameraSlotSession
 import com.sangwook.ptimer.slots.SlotSessionCodec
 import com.sangwook.ptimer.timer.TimerStore
@@ -20,7 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class FilmRowUi(val id: String, val name: String, val manufacturer: String?, val iso: Int)
+data class FilmRowUi(val id: String, val name: String, val manufacturer: String?, val iso: Int, val isCustom: Boolean)
 data class SlotChipUi(val id: String, val label: String, val isActive: Boolean)
 data class SlotsUiState(val slots: List<SlotChipUi>, val activeLabel: String)
 
@@ -35,6 +41,10 @@ sealed interface ShootingIntent {
     data class SelectSlot(val id: String) : ShootingIntent
     data class RenameSlot(val id: String, val name: String) : ShootingIntent
     data class ResetSlotName(val id: String) : ShootingIntent
+    data class CreateCustomFormula(val name: String, val exponent: Double, val noCorrectionThroughSeconds: Double) : ShootingIntent
+    data class CreateCustomTable(val name: String, val anchors: List<Pair<Double, Double>>) : ShootingIntent
+    data object CreateFormulaFromSelectedTable : ShootingIntent
+    data class DeleteCustomFilm(val id: String) : ShootingIntent
     data class Pause(val id: String) : ShootingIntent
     data class Resume(val id: String) : ShootingIntent
     data class Remove(val id: String) : ShootingIntent
@@ -42,30 +52,27 @@ sealed interface ShootingIntent {
     data object ClearCompleted : ShootingIntent
 }
 
-/**
- * Owns the per-slot calculator + film selection, the camera-slot session, and
- * the timer workspace. Drives the ~100 ms tick loop from viewModelScope
- * (Composables never tick), persists/restores timers and the slot session,
- * and exposes immutable state. Starting a timer captures the active slot's
- * label into the (immutable) timer name.
- */
 class ShootingViewModel(
     private val timerStore: TimerStore,
     private val sessionStore: TimerStore,
+    private val customStore: TimerStore,
 ) : ViewModel() {
 
     private val catalog = LaunchPresetFilmCatalogLoader.loadBundledCatalog()
     private val calc = CalculatorController(catalog)
     private val timer = TimerWorkspaceController()
     private val session = CameraSlotSession()
+    private var customLib = CustomFilmLibrary()
+    private var customSeq = 0
 
-    val films: List<FilmRowUi> = catalog.map { FilmRowUi(it.id, it.canonicalStockName, it.manufacturer, it.iso) }
     val timerState: StateFlow<TimerWorkspaceUiState> = timer.state
 
     private val _calcState = MutableStateFlow(CalculatorUiState("", 0, null, null, "", null, null, false, null, emptyList()))
     val calcState: StateFlow<CalculatorUiState> = _calcState.asStateFlow()
     private val _slotsState = MutableStateFlow(slotsSnapshot())
     val slotsState: StateFlow<SlotsUiState> = _slotsState.asStateFlow()
+    private val _films = MutableStateFlow(buildFilms())
+    val films: StateFlow<List<FilmRowUi>> = _films.asStateFlow()
 
     private var tickJob: Job? = null
 
@@ -73,12 +80,16 @@ class ShootingViewModel(
         calc.setBaseShutterLadderIndex(nearestBaseIndex(com.sangwook.ptimer.core.exposure.CalculatorDefaults.BASE_SHUTTER_SECONDS))
         viewModelScope.launch {
             timer.restoreFromJson(timerStore.load())
+            customStore.load()?.let { customLib = CustomFilmLibrary(CustomFilmLibraryCodec.decode(it)) }
+            customSeq = customLib.all.size
+            calc.setCustomFilms(customLib.all)
             sessionStore.load()?.let { json ->
                 SlotSessionCodec.decode(json)?.let { restored ->
                     session.restore(restored.activeSlotId, restored.snapshots, restored.names)
                     calc.apply(session.snapshot(session.activeSlotId))
                 }
             }
+            _films.value = buildFilms()
             refreshCalc(); refreshSlots(); ensureTicking()
         }
     }
@@ -100,12 +111,34 @@ class ShootingViewModel(
             }
             is ShootingIntent.SelectSlot -> {
                 session.store(session.activeSlotId, calc.capture())
-                session.activate(intent.id)
-                calc.apply(session.snapshot(intent.id))
+                session.activate(intent.id); calc.apply(session.snapshot(intent.id))
                 refreshCalc(); refreshSlots(); persistSession()
             }
             is ShootingIntent.RenameSlot -> { session.setCustomName(intent.id, intent.name); refreshSlots(); persistSession() }
             is ShootingIntent.ResetSlotName -> { session.resetName(intent.id); refreshSlots(); persistSession() }
+            is ShootingIntent.CreateCustomFormula -> {
+                val id = newCustomId("formula")
+                val r = CustomFilmFactory.buildFormula(id, intent.name, 100, exponent = intent.exponent, noCorrectionThroughSeconds = intent.noCorrectionThroughSeconds)
+                if (r is CustomFilmResult.Success) { adoptCustom(r.film); calc.selectFilm(id); afterCalcChange() }
+            }
+            is ShootingIntent.CreateCustomTable -> {
+                val id = newCustomId("table")
+                val anchors = intent.anchors.map { TableAnchor(it.first, it.second) }
+                val r = CustomFilmFactory.buildTable(id, intent.name, 100, anchors)
+                if (r is CustomFilmResult.Success) { adoptCustom(r.film); calc.selectFilm(id); afterCalcChange() }
+            }
+            ShootingIntent.CreateFormulaFromSelectedTable -> {
+                val tableId = calc.currentFilmId() ?: return
+                val table = customLib.film(tableId) ?: return
+                CreateFormulaFromTable.create(table, newCustomId("formula"))?.let { formula ->
+                    adoptCustom(formula); calc.selectFilm(formula.id); afterCalcChange()
+                }
+            }
+            is ShootingIntent.DeleteCustomFilm -> {
+                customLib.remove(intent.id)
+                if (calc.currentFilmId() == intent.id) calc.clearFilm()
+                calc.setCustomFilms(customLib.all); _films.value = buildFilms(); refreshCalc(); persistCustom()
+            }
             is ShootingIntent.Pause -> { timer.pause(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers() }
@@ -113,6 +146,16 @@ class ShootingViewModel(
             ShootingIntent.ClearCompleted -> { timer.clearCompleted(); persistTimers() }
         }
     }
+
+    private fun adoptCustom(film: com.sangwook.ptimer.core.catalog.FilmIdentity) {
+        customLib.upsert(film); calc.setCustomFilms(customLib.all); _films.value = buildFilms(); persistCustom()
+    }
+
+    private fun newCustomId(prefix: String): String = "custom-$prefix-${customSeq++}"
+
+    private fun buildFilms(): List<FilmRowUi> =
+        catalog.map { FilmRowUi(it.id, it.canonicalStockName, it.manufacturer, it.iso, false) } +
+            customLib.all.map { FilmRowUi(it.id, it.canonicalStockName, it.manufacturer, it.iso, true) }
 
     private fun afterCalcChange() { refreshCalc(); persistSession() }
     private fun refreshCalc() { _calcState.value = calc.uiState() }
@@ -139,22 +182,19 @@ class ShootingViewModel(
         }
     }
 
-    private fun persistTimers() {
-        val json = timer.snapshotJson()
-        viewModelScope.launch { timerStore.save(json) }
-    }
-
+    private fun persistTimers() { val json = timer.snapshotJson(); viewModelScope.launch { timerStore.save(json) } }
     private fun persistSession() {
         session.store(session.activeSlotId, calc.capture())
         val json = SlotSessionCodec.encode(session)
         viewModelScope.launch { sessionStore.save(json) }
     }
+    private fun persistCustom() { val json = CustomFilmLibraryCodec.encode(customLib.all); viewModelScope.launch { customStore.save(json) } }
 
     companion object {
         private const val TICK_MILLIS = 100L
 
-        fun factory(timerStore: TimerStore, sessionStore: TimerStore) = viewModelFactory {
-            initializer { ShootingViewModel(timerStore, sessionStore) }
+        fun factory(timerStore: TimerStore, sessionStore: TimerStore, customStore: TimerStore) = viewModelFactory {
+            initializer { ShootingViewModel(timerStore, sessionStore, customStore) }
         }
     }
 }

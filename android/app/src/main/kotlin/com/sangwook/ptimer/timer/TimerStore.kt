@@ -23,6 +23,7 @@ class InMemoryTimerStore(@Volatile private var value: String? = null) : TimerSto
 
 private val Context.timerDataStore by preferencesDataStore("ptimer_timers")
 private val Context.sessionDataStore by preferencesDataStore("ptimer_session")
+private val Context.customFilmDataStore by preferencesDataStore("ptimer_custom_films")
 
 /** DataStore-backed timer-collection store. */
 class DataStoreTimerStore(private val context: Context) : TimerStore {
@@ -40,4 +41,13 @@ class DataStoreSessionStore(private val context: Context) : TimerStore {
     override suspend fun load(): String? = context.sessionDataStore.data.map { it[key] }.first()
     override suspend fun save(json: String) { context.sessionDataStore.edit { it[key] = json } }
     override suspend fun clear() { context.sessionDataStore.edit { it.remove(key) } }
+}
+
+/** DataStore-backed custom-film library store. */
+class DataStoreCustomFilmStore(private val context: Context) : TimerStore {
+    private val key = stringPreferencesKey("custom_films_json")
+
+    override suspend fun load(): String? = context.customFilmDataStore.data.map { it[key] }.first()
+    override suspend fun save(json: String) { context.customFilmDataStore.edit { it[key] = json } }
+    override suspend fun clear() { context.customFilmDataStore.edit { it.remove(key) } }
 }

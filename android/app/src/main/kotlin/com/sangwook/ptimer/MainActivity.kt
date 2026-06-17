@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sangwook.ptimer.timer.DataStoreCustomFilmStore
 import com.sangwook.ptimer.timer.DataStoreSessionStore
 import com.sangwook.ptimer.timer.DataStoreTimerStore
 import com.sangwook.ptimer.ui.ShootingScreen
@@ -43,14 +44,17 @@ private fun ShootingRoot() {
     val context = LocalContext.current
     val timerStore = remember { DataStoreTimerStore(context.applicationContext) }
     val sessionStore = remember { DataStoreSessionStore(context.applicationContext) }
-    val viewModel: ShootingViewModel = viewModel(factory = ShootingViewModel.factory(timerStore, sessionStore))
+    val customStore = remember { DataStoreCustomFilmStore(context.applicationContext) }
+    val viewModel: ShootingViewModel =
+        viewModel(factory = ShootingViewModel.factory(timerStore, sessionStore, customStore))
     val calcState by viewModel.calcState.collectAsStateWithLifecycle()
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val slotsState by viewModel.slotsState.collectAsStateWithLifecycle()
+    val films by viewModel.films.collectAsStateWithLifecycle()
     ShootingScreen(
         slots = slotsState,
         calc = calcState,
-        films = viewModel.films,
+        films = films,
         timers = timerState,
         onEvent = viewModel::onEvent,
     )

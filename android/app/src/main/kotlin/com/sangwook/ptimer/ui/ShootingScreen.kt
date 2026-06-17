@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -133,6 +134,15 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
                 ResultRow("Corrected exposure", calc.correctedExposureLabel ?: "—")
                 calc.reciprocityBadge?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
             }
+            calc.fittedPreviewSummary?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            if (calc.isCustomTable) {
+                OutlinedButton(onClick = { onEvent(ShootingIntent.CreateFormulaFromSelectedTable) }) {
+                    Text("Create formula from this table")
+                }
+            }
+            calc.selectedCustomFilmId?.let { id ->
+                OutlinedButton(onClick = { onEvent(ShootingIntent.DeleteCustomFilm(id)) }) { Text("Delete custom film") }
+            }
 
             Button(onClick = { onEvent(ShootingIntent.StartFromResult) }, enabled = calc.canStartTimer) {
                 Text("Start timer")
@@ -140,8 +150,83 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
             if (!calc.canStartTimer) calc.startDisabledHint?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall)
             }
+
+            CustomFilmCreators(onEvent)
         }
     }
+}
+
+@Composable
+private fun CustomFilmCreators(onEvent: (ShootingIntent) -> Unit) {
+    var newFormula by remember { mutableStateOf(false) }
+    var newTable by remember { mutableStateOf(false) }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { newFormula = true }) { Text("New custom formula") }
+        OutlinedButton(onClick = { newTable = true }) { Text("New custom table") }
+    }
+    if (newFormula) NewFormulaDialog(onDismiss = { newFormula = false }, onCreate = { n, e, nc ->
+        onEvent(ShootingIntent.CreateCustomFormula(n, e, nc)); newFormula = false
+    })
+    if (newTable) NewTableDialog(onDismiss = { newTable = false }, onCreate = { n, anchors ->
+        onEvent(ShootingIntent.CreateCustomTable(n, anchors)); newTable = false
+    })
+}
+
+@Composable
+private fun NewFormulaDialog(onDismiss: () -> Unit, onCreate: (String, Double, Double) -> Unit) {
+    var name by remember { mutableStateOf("My formula") }
+    var exponent by remember { mutableStateOf("1.3") }
+    var noCorrection by remember { mutableStateOf("1") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New custom formula") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
+                OutlinedTextField(exponent, { exponent = it }, label = { Text("Exponent p") }, singleLine = true)
+                OutlinedTextField(noCorrection, { noCorrection = it }, label = { Text("No correction through (s)") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val e = exponent.toDoubleOrNull(); val nc = noCorrection.toDoubleOrNull()
+                if (e != null && nc != null) onCreate(name, e, nc)
+            }) { Text("Create") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun NewTableDialog(onDismiss: () -> Unit, onCreate: (String, List<Pair<Double, Double>>) -> Unit) {
+    var name by remember { mutableStateOf("My table") }
+    val rows = remember { mutableStateListOf("1" to "2", "10" to "80") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New custom table") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
+                rows.forEachIndexed { i, (m, c) ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(m, { rows[i] = it to rows[i].second }, label = { Text("metered s") }, singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(c, { rows[i] = rows[i].first to it }, label = { Text("corrected s") }, singleLine = true, modifier = Modifier.weight(1f))
+                    }
+                }
+                TextButton(onClick = { rows.add("" to "") }) { Text("Add anchor") }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val anchors = rows.mapNotNull { (m, c) ->
+                    val mm = m.toDoubleOrNull(); val cc = c.toDoubleOrNull()
+                    if (mm != null && cc != null) mm to cc else null
+                }
+                if (anchors.size >= 2) onCreate(name, anchors)
+            }) { Text("Create") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

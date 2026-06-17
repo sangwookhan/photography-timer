@@ -1,5 +1,12 @@
 # PTIMER-146 Android MVP — iOS-to-Android Test-Intent Map
 
+> **Superseded for coverage claims by the individual-test audit in
+> [`PTIMER-146-ios-test-parity-audit.md`](PTIMER-146-ios-test-parity-audit.md).**
+> That document audits all 1,382 iOS test functions at the per-test-case level
+> with explicit Status/Decision and the MVP-blocker list. This file remains the
+> area-level companion (notably §7's user-test corrections to the start-action
+> model and the emulator-verification notes).
+
 Review artifact for a separate verification session. Maps the behavior iOS
 tests protect to the current Android implementation and its tests. iOS tests
 were used as behavior-audit sources, not mechanically translated.

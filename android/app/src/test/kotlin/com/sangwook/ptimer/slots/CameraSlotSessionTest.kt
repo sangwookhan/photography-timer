@@ -3,7 +3,9 @@ package com.sangwook.ptimer.slots
 import com.sangwook.ptimer.calculator.CalculatorController
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Per-slot independence, capture/restore on switch, and rename isolation. */
@@ -62,5 +64,47 @@ class CameraSlotSessionTest {
         s.setCustomName("camera1", "Mamiya")
         assertEquals("Bronica", capturedAtStart) // the captured string never mutates
         assertEquals("Mamiya", s.activeLabel())  // future labels reflect the rename
+    }
+
+    // --- restore-name sanitation (blocker 3) -------------------------------
+
+    @Test
+    fun restoreTrimsCustomNames() {
+        val s = CameraSlotSession()
+        s.restore("camera1", emptyMap(), mapOf("camera1" to "  Leica M6  "))
+        assertEquals("Leica M6", s.label("camera1"))
+    }
+
+    @Test
+    fun restoreDropsBlankCustomNames() {
+        val s = CameraSlotSession()
+        s.restore("camera1", emptyMap(), mapOf("camera1" to "   "))
+        assertEquals("Camera 1", s.label("camera1")) // back to canonical
+        assertTrue(s.customNames().isEmpty())
+    }
+
+    @Test
+    fun restoreIgnoresUnknownSlotIds() {
+        val s = CameraSlotSession()
+        s.restore("camera1", emptyMap(), mapOf("cameraX" to "Ghost", "camera2" to "Hasselblad"))
+        assertFalse(s.customNames().containsKey("cameraX"))
+        assertEquals("Hasselblad", s.label("camera2"))
+    }
+
+    @Test
+    fun restoreReplacesPriorCustomNamesWithoutRetainingStaleEntries() {
+        val s = CameraSlotSession()
+        s.setCustomName("camera1", "Old")
+        s.restore("camera1", emptyMap(), mapOf("camera2" to "New"))
+        assertEquals("Camera 1", s.label("camera1")) // prior entry cleared
+        assertEquals("New", s.label("camera2"))
+        assertEquals(setOf("camera2"), s.customNames().keys)
+    }
+
+    @Test
+    fun setCustomNameIgnoresUnknownSlotIds() {
+        val s = CameraSlotSession()
+        s.setCustomName("cameraX", "Ghost")
+        assertTrue(s.customNames().isEmpty())
     }
 }

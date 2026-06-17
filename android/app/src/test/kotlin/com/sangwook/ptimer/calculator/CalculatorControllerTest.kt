@@ -104,11 +104,52 @@ class CalculatorControllerTest {
     fun applyingSnapshotWithUnknownFilmFallsBackToDigital() {
         val c = controller()
         c.setCustomFilms(emptyList())
-        c.apply(SlotCalculatorSnapshot(1.0, 5, selectedFilmId = "ghost-film", selectedProfileId = null, targetShutterSeconds = null))
+        c.apply(SlotCalculatorSnapshot(1.0, 5, selectedFilmId = "ghost-film", selectedProfileId = "ghost-profile", targetShutterSeconds = null))
         val s = c.uiState()
         assertNull(s.filmName) // unresolvable film id → digital, no crash
         assertTrue(s.adjustedAction.enabled)
         assertNull(s.correctedAction)
+        // Stale ids must not be recaptured into a future snapshot.
+        assertNull(c.capture().selectedFilmId)
+        assertNull(c.capture().selectedProfileId)
+    }
+
+    @Test
+    fun applyingSnapshotWithUnknownProfileNormalizesToPrimaryModel() {
+        val c = controller()
+        c.apply(SlotCalculatorSnapshot(1.0, 0, "kodak-tri-x-400", "bogus-profile", null))
+        assertNull(c.capture().selectedProfileId) // stale profile dropped to primary convention
+        val models = c.uiState().availableModels
+        assertEquals(1, models.count { it.isSelected })
+        assertTrue(models.first().isSelected) // the primary option is the selected one
+    }
+
+    @Test
+    fun applyingSnapshotWithExplicitPrimaryProfileIdNormalizesToNull() {
+        val c = controller()
+        val primaryId = catalog.first { it.id == "kodak-tri-x-400" }.profiles.first().id
+        c.apply(SlotCalculatorSnapshot(1.0, 0, "kodak-tri-x-400", primaryId, null))
+        assertNull(c.capture().selectedProfileId)
+        assertTrue(c.uiState().availableModels.first().isSelected)
+    }
+
+    @Test
+    fun applyingSnapshotWithKnownAlternateKeepsItSelected() {
+        val c = controller()
+        c.apply(SlotCalculatorSnapshot(1.0, 0, "kodak-tri-x-400", "kodak-tri-x-official-table", null))
+        assertEquals("kodak-tri-x-official-table", c.capture().selectedProfileId)
+        val models = c.uiState().availableModels
+        assertEquals(1, models.count { it.isSelected })
+        assertEquals("kodak-tri-x-official-table", models.first { it.isSelected }.profileId)
+    }
+
+    @Test
+    fun activeFilmModelSelectionAlwaysHasExactlyOneSelectedOption() {
+        val c = controller()
+        c.selectFilm("kodak-tri-x-400") // fresh selection → primary
+        assertEquals(1, c.uiState().availableModels.count { it.isSelected })
+        c.selectModel("kodak-tri-x-app-formula") // pick an alternate
+        assertEquals(1, c.uiState().availableModels.count { it.isSelected })
     }
 
     @Test

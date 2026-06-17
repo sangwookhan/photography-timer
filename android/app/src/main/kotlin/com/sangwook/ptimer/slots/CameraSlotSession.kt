@@ -30,6 +30,7 @@ class CameraSlotSession(
 
     /** Set a custom display name; blank/whitespace clears it back to the canonical label. */
     fun setCustomName(id: String, name: String) {
+        if (id !in slotIds) return // ignore unknown slot ids
         val trimmed = name.trim()
         if (trimmed.isEmpty()) customNames.remove(id) else customNames[id] = trimmed
     }
@@ -47,9 +48,22 @@ class CameraSlotSession(
         return if (index >= 0) "Camera ${index + 1}" else id
     }
 
+    /**
+     * Replace runtime state from persistence. Only known slot ids survive;
+     * names are run through the same trim/drop-blank rules as
+     * [setCustomName] so a corrupt snapshot cannot smuggle in
+     * blank/whitespace names or entries for unknown slots, and no stale
+     * prior entry is retained.
+     */
     fun restore(activeSlotId: String, snapshots: Map<String, SlotCalculatorSnapshot>, names: Map<String, String>) {
-        this.snapshots.clear(); this.snapshots.putAll(snapshots)
-        this.customNames.clear(); this.customNames.putAll(names)
+        this.snapshots.clear()
+        for ((id, snapshot) in snapshots) if (id in slotIds) this.snapshots[id] = snapshot
+        this.customNames.clear()
+        for ((id, name) in names) {
+            if (id !in slotIds) continue
+            val trimmed = name.trim()
+            if (trimmed.isNotEmpty()) this.customNames[id] = trimmed
+        }
         this.activeSlotId = if (activeSlotId in slotIds) activeSlotId else slotIds.first()
     }
 

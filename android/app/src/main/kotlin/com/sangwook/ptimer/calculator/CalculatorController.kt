@@ -114,8 +114,35 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
         ndStops = snapshot.ndStops.coerceIn(0, ExposureScale.MAX_WHOLE_ND_STOPS)
         selectedFilmId = snapshot.selectedFilmId
         selectedProfileId = snapshot.selectedProfileId
+        sanitizeFilmSelection()
         // Sanitize a persisted/corrupt target the same way setTarget does.
         targetSeconds = snapshot.targetShutterSeconds?.takeIf { it.isFinite() && it > 0 }
+    }
+
+    /**
+     * Drop a restored film/profile selection that no longer resolves, so a
+     * stale id can never leak into the UI or be recaptured into a later
+     * snapshot. An unknown film id clears both; a profile id that is the
+     * primary profile (or does not resolve to a known alternate of the
+     * selected film) is normalized to the primary-profile convention (null).
+     */
+    private fun sanitizeFilmSelection() {
+        val film = film()
+        if (film == null) {
+            selectedFilmId = null
+            selectedProfileId = null
+            return
+        }
+        val pid = selectedProfileId ?: return
+        // Primary profile is represented by null; never keep its explicit id.
+        if (pid == film.profiles.first().id) {
+            selectedProfileId = null
+            return
+        }
+        // Keep only a profile id that is a known alternate of THIS film.
+        if (AlternateReciprocityModels.alternates(film.id).none { it.id == pid }) {
+            selectedProfileId = null
+        }
     }
 
     private fun film(): FilmIdentity? = selectedFilmId?.let { id ->

@@ -151,3 +151,33 @@ Suggested follow-up: add minimal Compose UI smoke tests; human UX pass.
 - iOS **SwiftUI shell / layout-metric tests** → UI polish, not an MVP gate.
 - iOS **Details graph visual fidelity** → deferred visual polish (functional
   transparency implemented via rows + comparison lines).
+
+## 7. User-test correction — start-action model (post PR #16 review)
+
+**Finding:** PR #16 exposed a single generic `Start timer` action that went
+disabled for limited-guidance films, which also blocked the (valid) adjusted
+timer. Corrected behavior is separate per-source start actions; limited guidance
+disables only the corrected start.
+
+| Behavior | iOS source | Android function/type | Android test | Status |
+|---|---|---|---|---|
+| Adjusted start (digital + film) enabled whenever adjusted is valid | iOS result-card Adjusted row play | `CalculatorController.adjustedAction` | `CalculatorControllerTest.noFilm…`, `…quantifiedFilm…`, `…limitedGuidance…` | Implemented + tested |
+| Corrected start enabled only when quantified positive-finite | iOS Corrected row play | `CalculatorController.correctedAction` | `CalculatorControllerTest.quantifiedFilm…`, `…noCorrectionFilm…` | Implemented + tested |
+| Limited guidance keeps adjusted enabled, disables corrected, no fabricated value | iOS limited-guidance handling | `adjustedAction`/`correctedAction` | `CalculatorControllerTest.limitedGuidanceKeepsAdjustedEnabled…` | Implemented + tested |
+| Target start enabled only when a valid target is set | iOS Target Shutter card play | `CalculatorController.targetAction` | `CalculatorControllerTest.targetActionAppearsOnlyWhenSet` | Implemented + tested |
+| Timer rows show exposure source (title + subtitle + source) | iOS Timers list identity rows | `TimerWorkspaceController` (title/subtitle/`ExposureTimerSource`), `TimerSnapshotCodec` | `TimerWorkspaceControllerTest.sourceIdentity…`, `…startAgainClones…`, `…restoreFromJson…`; `TimerSnapshotCodecTest` | Implemented + tested |
+| Source identity immutable after slot rename | identity-at-start tests | title captured at start; `CameraSlotSession` rename isolated | `CameraSlotSessionTest.startedTimerLabel…`, `TimerWorkspaceControllerTest` | Implemented + tested |
+
+A regression to a single generic start action would now fail
+`CalculatorControllerTest` (it asserts separate `adjustedAction` /
+`correctedAction` / `targetAction`).
+
+**Manual emulator verification (emulator-5554, 2026-06-17):** the result card
+renders Adjusted and Corrected rows each with their own Start button (Reciprocity
+row = basis badge + Details; Target = Set); starting from Corrected created an
+active timer row titled "Camera 3 · Fomapan 100 Classic" with subtitle
+"Corrected Exposure · Official FOMA table · 06:35.159" counting down — confirming
+per-source start actions and timer source identity. The limited-guidance
+adjusted-enabled/corrected-disabled case remains covered by unit tests (not
+separately screenshotted); broader Compose UI smoke (`connectedAndroidTest`)
+still not automated.

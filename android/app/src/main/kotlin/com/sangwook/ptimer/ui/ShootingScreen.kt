@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.calculator.CalculatorUiState
+import com.sangwook.ptimer.calculator.StartActionState
 import com.sangwook.ptimer.details.DetailsUi
 import com.sangwook.ptimer.core.timer.TimerStatus
 import com.sangwook.ptimer.timer.TimerItemUi
@@ -132,14 +133,29 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
             FilmSelector(calc, films, onEvent)
             if (calc.availableModels.isNotEmpty()) ModelSelector(calc, onEvent)
 
-            ResultRow("Adjusted shutter", calc.adjustedShutterLabel)
-            if (calc.filmName != null) {
-                ResultRow("Corrected exposure", calc.correctedExposureLabel ?: "—")
-                calc.reciprocityBadge?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
+            // Adjusted shutter — its own start.
+            ResultActionRow("Adjusted shutter", calc.adjustedShutterLabel, calc.adjustedAction) {
+                onEvent(ShootingIntent.StartAdjusted)
             }
+
             if (calc.filmName != null) {
-                OutlinedButton(onClick = { onEvent(ShootingIntent.OpenDetails) }) { Text("Reciprocity details") }
+                // Reciprocity — basis badge + details, no start.
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    Text("Reciprocity")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        calc.reciprocityBadge?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
+                        TextButton(onClick = { onEvent(ShootingIntent.OpenDetails) }) { Text("Details") }
+                    }
+                }
+                // Corrected exposure — its own start; disabled (with reason) when non-quantified.
+                val corrected = calc.correctedAction
+                ResultActionRow(
+                    "Corrected exposure",
+                    calc.correctedExposureLabel ?: (corrected?.disabledReason ?: "Unavailable"),
+                    corrected,
+                ) { onEvent(ShootingIntent.StartCorrected) }
             }
+
             calc.fittedPreviewSummary?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             if (calc.isCustomTable) {
                 OutlinedButton(onClick = { onEvent(ShootingIntent.CreateFormulaFromSelectedTable) }) {
@@ -151,13 +167,6 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
             }
 
             TargetSection(calc, onEvent)
-
-            Button(onClick = { onEvent(ShootingIntent.StartFromResult) }, enabled = calc.canStartTimer) {
-                Text("Start timer")
-            }
-            if (!calc.canStartTimer) calc.startDisabledHint?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
-            }
 
             CustomFilmCreators(onEvent)
         }
@@ -192,6 +201,9 @@ private fun TargetSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Text(calc.targetSummary ?: "Target shutter: none", style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (calc.targetAction != null) {
+                Button(onClick = { onEvent(ShootingIntent.StartTarget) }, enabled = calc.targetAction.enabled) { Text("Start") }
+            }
             OutlinedButton(onClick = { draft = ""; editing = true }) { Text("Set") }
             if (calc.targetSeconds != null) {
                 OutlinedButton(onClick = { onEvent(ShootingIntent.ClearTarget) }) { Text("Clear") }
@@ -343,10 +355,13 @@ private fun ModelSelector(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
 }
 
 @Composable
-private fun ResultRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-        Text(label)
-        Text(value, fontWeight = FontWeight.Bold)
+private fun ResultActionRow(label: String, value: String, action: StartActionState?, onStart: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(value, fontWeight = FontWeight.Bold)
+        }
+        Button(onClick = onStart, enabled = action?.enabled == true) { Text("Start") }
     }
 }
 
@@ -354,7 +369,8 @@ private fun ResultRow(label: String, value: String) {
 private fun ActiveTimerCard(item: TimerItemUi, onEvent: (ShootingIntent) -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(item.name, style = MaterialTheme.typography.titleMedium)
+            Text(item.title, style = MaterialTheme.typography.titleMedium)
+            Text(item.subtitle, style = MaterialTheme.typography.bodySmall)
             Text(item.remainingLabel, style = MaterialTheme.typography.headlineMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (item.status == TimerStatus.RUNNING) {
@@ -375,8 +391,9 @@ private fun CompletedTimerCard(item: TimerItemUi, onEvent: (ShootingIntent) -> U
             Modifier.fillMaxWidth().padding(12.dp),
             Arrangement.SpaceBetween, Alignment.CenterVertically,
         ) {
-            Column {
-                Text(item.name, style = MaterialTheme.typography.titleMedium)
+            Column(Modifier.weight(1f)) {
+                Text(item.title, style = MaterialTheme.typography.titleMedium)
+                Text(item.subtitle, style = MaterialTheme.typography.bodySmall)
                 Text("Done", style = MaterialTheme.typography.bodyMedium)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

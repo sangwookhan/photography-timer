@@ -1,5 +1,6 @@
 package com.sangwook.ptimer.timer
 
+import com.sangwook.ptimer.core.timer.ExposureTimerSource
 import com.sangwook.ptimer.core.timer.PersistentTimerSnapshot
 import com.sangwook.ptimer.core.timer.TimerState
 import kotlinx.serialization.Serializable
@@ -9,11 +10,10 @@ import kotlinx.serialization.json.Json
 import java.time.Instant
 
 /**
- * Serializes the timer collection (runtime snapshot + display name) to JSON
- * for DataStore persistence, and decodes it back. Greenfield consolidation:
- * runtime + display metadata live in one collection snapshot (schemaVersion
- * 1). Times are epoch-millis. Corrupt or unknown/future-version payloads
- * decode to empty (fail-safe), matching the iOS restore contract.
+ * Serializes the timer collection (runtime snapshot + title + source-identity
+ * subtitle + source) to JSON for DataStore persistence, and decodes it back.
+ * schemaVersion 1; epoch-millis; corrupt or unknown-version payloads decode to
+ * empty (fail-safe), matching the iOS restore contract.
  */
 object TimerSnapshotCodec {
     private const val SCHEMA_VERSION = 1
@@ -22,7 +22,9 @@ object TimerSnapshotCodec {
     @Serializable
     private data class Dto(
         val id: String,
-        val name: String,
+        val title: String,
+        val subtitle: String = "",
+        val source: String = "MANUAL",
         val status: String,
         val durationSeconds: Double,
         val startEpochMs: Long,
@@ -33,22 +35,28 @@ object TimerSnapshotCodec {
     )
 
     @Serializable
-    private data class CollectionDto(
-        val schemaVersion: Int = SCHEMA_VERSION,
-        val timers: List<Dto> = emptyList(),
-    )
+    private data class CollectionDto(val schemaVersion: Int = SCHEMA_VERSION, val timers: List<Dto> = emptyList())
 
     data class Restored(
         val snapshots: List<PersistentTimerSnapshot>,
-        val names: Map<String, String>,
+        val titles: Map<String, String>,
+        val subtitles: Map<String, String>,
+        val sources: Map<String, ExposureTimerSource>,
     )
 
-    fun encode(timers: List<TimerState>, names: Map<String, String>): String {
+    fun encode(
+        timers: List<TimerState>,
+        titles: Map<String, String>,
+        subtitles: Map<String, String>,
+        sources: Map<String, ExposureTimerSource>,
+    ): String {
         val dtos = timers.map { timer ->
             val snap = PersistentTimerSnapshot.fromTimer(timer)
             Dto(
                 id = snap.id,
-                name = names[snap.id] ?: "Timer",
+                title = titles[snap.id] ?: "Timer",
+                subtitle = subtitles[snap.id] ?: "",
+                source = (sources[snap.id] ?: ExposureTimerSource.MANUAL).name,
                 status = snap.status.token,
                 durationSeconds = snap.durationSeconds,
                 startEpochMs = snap.startDate.toEpochMilli(),
@@ -65,17 +73,19 @@ object TimerSnapshotCodec {
         val collection = try {
             json.decodeFromString<CollectionDto>(text)
         } catch (_: Exception) {
-            return Restored(emptyList(), emptyMap())
+            return Restored(emptyList(), emptyMap(), emptyMap(), emptyMap())
         }
-        if (collection.schemaVersion != SCHEMA_VERSION) return Restored(emptyList(), emptyMap())
+        if (collection.schemaVersion != SCHEMA_VERSION) return Restored(emptyList(), emptyMap(), emptyMap(), emptyMap())
 
         val snapshots = ArrayList<PersistentTimerSnapshot>(collection.timers.size)
-        val names = LinkedHashMap<String, String>()
+        val titles = LinkedHashMap<String, String>()
+        val subtitles = LinkedHashMap<String, String>()
+        val sources = LinkedHashMap<String, ExposureTimerSource>()
         for (dto in collection.timers) {
             val status = try {
                 PersistentTimerSnapshot.SnapshotStatus.fromToken(dto.status)
             } catch (_: IllegalArgumentException) {
-                continue // skip an unrecognized status rather than failing the whole load
+                continue
             }
             snapshots += PersistentTimerSnapshot(
                 id = dto.id,
@@ -87,8 +97,10 @@ object TimerSnapshotCodec {
                 pausedAt = dto.pausedAtEpochMs?.let(Instant::ofEpochMilli),
                 completedAt = dto.completedAtEpochMs?.let(Instant::ofEpochMilli),
             )
-            names[dto.id] = dto.name
+            titles[dto.id] = dto.title
+            subtitles[dto.id] = dto.subtitle
+            sources[dto.id] = runCatching { ExposureTimerSource.valueOf(dto.source) }.getOrDefault(ExposureTimerSource.MANUAL)
         }
-        return Restored(snapshots, names)
+        return Restored(snapshots, titles, subtitles, sources)
     }
 }

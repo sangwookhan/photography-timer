@@ -11,10 +11,26 @@ import com.sangwook.ptimer.core.exposure.NdStep
 import com.sangwook.ptimer.core.reciprocity.ReciprocityCalculationPolicyEvaluator
 import com.sangwook.ptimer.core.reciprocity.ReciprocityConfidencePresentationMapper
 import com.sangwook.ptimer.core.reciprocity.ReciprocityResult
+import com.sangwook.ptimer.core.timer.ExposureTimerSource
 import com.sangwook.ptimer.target.TargetShutterPresenter
 import java.util.Locale
 
 data class ModelOptionUi(val profileId: String, val label: String, val isSelected: Boolean)
+
+/**
+ * A single, source-specific start action. Each result row owns one, so the UI
+ * can never present an ambiguous generic "Start timer". `filmContext` becomes
+ * the timer title's film/digital/target part; `subtitle` is the source line.
+ */
+data class StartActionState(
+    val enabled: Boolean,
+    val durationSeconds: Double?,
+    val disabledReason: String?,
+    val source: ExposureTimerSource,
+    val filmContext: String,
+    val subtitle: String,
+    val selectedModelLabel: String?,
+)
 
 /** Immutable calculator/film result state. */
 data class CalculatorUiState(
@@ -25,8 +41,9 @@ data class CalculatorUiState(
     val adjustedShutterLabel: String,
     val correctedExposureLabel: String?,
     val reciprocityBadge: String?,
-    val canStartTimer: Boolean,
-    val startDisabledHint: String?,
+    val adjustedAction: StartActionState,
+    val correctedAction: StartActionState?,
+    val targetAction: StartActionState?,
     val availableModels: List<ModelOptionUi>,
     val isCustomTable: Boolean = false,
     val fittedPreviewSummary: String? = null,
@@ -37,9 +54,6 @@ data class CalculatorUiState(
     val targetUnavailable: Boolean = false,
     val targetSummary: String? = null,
 )
-
-/** What a Start-Timer tap should create, or null when disabled. */
-data class StartTimerRequest(val name: String, val durationSeconds: Double, val selectedModelLabel: String?)
 
 /**
  * Android-free calculator + film-selection logic. Computes the digital
@@ -122,16 +136,79 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
         return com.sangwook.ptimer.details.DetailsPresenter.build(film, profile, result, adjusted, lookup)
     }
 
-    /** The request a Start-Timer tap should create, or null when disabled. */
-    fun startRequest(): StartTimerRequest? {
+    /** Start action for the adjusted shutter (always present; enabled when finite>0). */
+    fun adjustedAction(): StartActionState {
         val adjusted = adjustedShutterSeconds()
-        val film = film() ?: return StartTimerRequest("Digital ${calculator.formatShutter(adjusted)}", adjusted, null)
+        val film = film()
+        val enabled = adjusted.isFinite() && adjusted > 0
+        val source = if (film != null) ExposureTimerSource.FILM_ADJUSTED_SHUTTER else ExposureTimerSource.DIGITAL_RESULT
+        val limited = film != null &&
+            policy.evaluate(activeProfile(film), adjusted) !is ReciprocityResult.Quantified
+        val subtitle = buildString {
+            append("Adjusted Shutter")
+            if (limited) append(" · Limited guidance")
+            append(" · ${calculator.formatShutter(adjusted)}")
+        }
+        return StartActionState(
+            enabled = enabled,
+            durationSeconds = if (enabled) adjusted else null,
+            disabledReason = if (enabled) null else "Adjusted shutter is not a valid duration.",
+            source = source,
+            filmContext = film?.canonicalStockName ?: "Digital",
+            subtitle = subtitle,
+            selectedModelLabel = null,
+        )
+    }
+
+    /** Start action for the corrected exposure; null when no film, disabled when non-quantified. */
+    fun correctedAction(): StartActionState? {
+        val film = film() ?: return null
         val profile = activeProfile(film)
-        val result = policy.evaluate(profile, adjusted)
-        val corrected = (result as? ReciprocityResult.Quantified)?.corrected ?: return null
-        if (!corrected.isFinite() || corrected <= 0) return null
+        val adjusted = adjustedShutterSeconds()
+        val quantified = policy.evaluate(profile, adjusted) as? ReciprocityResult.Quantified
+        val corrected = quantified?.corrected
+        val enabled = corrected != null && corrected.isFinite() && corrected > 0
         val modelLabel = profile.selectorLabel ?: profile.name
-        return StartTimerRequest("${film.canonicalStockName} corrected", corrected, modelLabel)
+        val subtitle = if (enabled) {
+            "Corrected Exposure · $modelLabel · ${calculator.formatExtendedClock(corrected!!)}"
+        } else {
+            "Corrected Exposure · unavailable"
+        }
+        return StartActionState(
+            enabled = enabled,
+            durationSeconds = corrected,
+            disabledReason = if (enabled) null else "No quantified correction for this exposure.",
+            source = ExposureTimerSource.FILM_CORRECTED_EXPOSURE,
+            filmContext = film.canonicalStockName,
+            subtitle = subtitle,
+            selectedModelLabel = modelLabel,
+        )
+    }
+
+    /** Start action for the target shutter; null unless a valid target is set. */
+    fun targetAction(): StartActionState? {
+        val t = targetSeconds ?: return null
+        val film = film()
+        val comparison = if (film != null) {
+            (policy.evaluate(activeProfile(film), adjustedShutterSeconds()) as? ReciprocityResult.Quantified)?.corrected
+        } else {
+            adjustedShutterSeconds()
+        }
+        val cmp = TargetShutterPresenter.compare(t, comparison)
+        val stopPart = when {
+            cmp.isUnavailable -> ""
+            cmp.isMatch -> " · matches"
+            else -> " · ${String.format(Locale.ROOT, "%+.1f", cmp.stopDifference)} stops"
+        }
+        return StartActionState(
+            enabled = true,
+            durationSeconds = t,
+            disabledReason = null,
+            source = ExposureTimerSource.TARGET_SHUTTER,
+            filmContext = "Target Shutter",
+            subtitle = "Target · ${calculator.formatExtendedClock(t)}$stopPart",
+            selectedModelLabel = null,
+        )
     }
 
     fun uiState(): CalculatorUiState {
@@ -145,7 +222,8 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
                 return CalculatorUiState(
                     baseShutterLabel = baseLabel, ndStops = ndStops, filmName = null, authorityLabel = null,
                     adjustedShutterLabel = adjustedLabel, correctedExposureLabel = null, reciprocityBadge = null,
-                    canStartTimer = adjusted.isFinite() && adjusted > 0, startDisabledHint = null, availableModels = emptyList(),
+                    adjustedAction = adjustedAction(), correctedAction = null, targetAction = targetAction(),
+                    availableModels = emptyList(),
                     targetSeconds = tf.seconds, targetStopDifference = tf.stop, targetIsMatch = tf.match,
                     targetUnavailable = tf.unavailable, targetSummary = tf.summary,
                 )
@@ -156,8 +234,6 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
         val presentation = ReciprocityConfidencePresentationMapper.map(result)
         val quantified = result as? ReciprocityResult.Quantified
         val correctedLabel = quantified?.let { calculator.formatExtendedClock(it.corrected) }
-        val canStart = quantified != null
-        val hint = if (canStart) null else "No quantified correction for this exposure — corrected timer unavailable."
 
         val alternates = AlternateReciprocityModels.alternates(film.id)
         val models = if (alternates.isEmpty()) emptyList() else buildList {
@@ -183,7 +259,8 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             baseShutterLabel = baseLabel, ndStops = ndStops, filmName = film.canonicalStockName,
             authorityLabel = authorityLabel(profile), adjustedShutterLabel = adjustedLabel,
             correctedExposureLabel = correctedLabel, reciprocityBadge = presentation.shortLabel,
-            canStartTimer = canStart, startDisabledHint = hint, availableModels = models,
+            adjustedAction = adjustedAction(), correctedAction = correctedAction(), targetAction = targetAction(),
+            availableModels = models,
             isCustomTable = isCustomTable, fittedPreviewSummary = fittedSummary,
             selectedCustomFilmId = if (film.kind == "custom") film.id else null,
             targetSeconds = tf.seconds, targetStopDifference = tf.stop, targetIsMatch = tf.match,

@@ -39,7 +39,9 @@ sealed interface ShootingIntent {
     data class SelectFilm(val id: String?) : ShootingIntent
     data object ClearFilm : ShootingIntent
     data class SelectModel(val profileId: String?) : ShootingIntent
-    data object StartFromResult : ShootingIntent
+    data object StartAdjusted : ShootingIntent
+    data object StartCorrected : ShootingIntent
+    data object StartTarget : ShootingIntent
     data class SelectSlot(val id: String) : ShootingIntent
     data class RenameSlot(val id: String, val name: String) : ShootingIntent
     data class ResetSlotName(val id: String) : ShootingIntent
@@ -74,7 +76,7 @@ class ShootingViewModel(
 
     val timerState: StateFlow<TimerWorkspaceUiState> = timer.state
 
-    private val _calcState = MutableStateFlow(CalculatorUiState("", 0, null, null, "", null, null, false, null, emptyList()))
+    private val _calcState = MutableStateFlow(calc.uiState())
     val calcState: StateFlow<CalculatorUiState> = _calcState.asStateFlow()
     private val _slotsState = MutableStateFlow(slotsSnapshot())
     val slotsState: StateFlow<SlotsUiState> = _slotsState.asStateFlow()
@@ -105,7 +107,7 @@ class ShootingViewModel(
 
     private fun updateOngoing() {
         val rep = timer.representative()
-        if (rep != null) notifier.showOngoing(rep.name, rep.remainingLabel) else notifier.clearOngoing()
+        if (rep != null) notifier.showOngoing(rep.title, rep.remainingLabel) else notifier.clearOngoing()
     }
 
     fun onEvent(intent: ShootingIntent) {
@@ -119,10 +121,9 @@ class ShootingViewModel(
             is ShootingIntent.SelectFilm -> { calc.selectFilm(intent.id); afterCalcChange() }
             ShootingIntent.ClearFilm -> { calc.clearFilm(); afterCalcChange() }
             is ShootingIntent.SelectModel -> { calc.selectModel(intent.profileId); afterCalcChange() }
-            ShootingIntent.StartFromResult -> {
-                calc.startRequest()?.let { timer.start("${session.activeLabel()} · ${it.name}", it.durationSeconds) }
-                persistTimers(); ensureTicking()
-            }
+            ShootingIntent.StartAdjusted -> startFrom(calc.adjustedAction())
+            ShootingIntent.StartCorrected -> calc.correctedAction()?.let { startFrom(it) }
+            ShootingIntent.StartTarget -> calc.targetAction()?.let { startFrom(it) }
             is ShootingIntent.SelectSlot -> {
                 session.store(session.activeSlotId, calc.capture())
                 session.activate(intent.id); calc.apply(session.snapshot(intent.id))
@@ -168,6 +169,13 @@ class ShootingViewModel(
         updateOngoing()
     }
 
+    private fun startFrom(action: com.sangwook.ptimer.calculator.StartActionState) {
+        val duration = action.durationSeconds
+        if (!action.enabled || duration == null) return
+        timer.start("${session.activeLabel()} · ${action.filmContext}", action.subtitle, action.source, duration)
+        persistTimers(); ensureTicking()
+    }
+
     private fun adoptCustom(film: com.sangwook.ptimer.core.catalog.FilmIdentity) {
         customLib.upsert(film); calc.setCustomFilms(customLib.all); _films.value = buildFilms(); persistCustom()
     }
@@ -198,7 +206,7 @@ class ShootingViewModel(
             while (timer.hasRunning()) {
                 delay(TICK_MILLIS)
                 val completed = timer.tick()
-                completed.forEach { notifier.postCompletion(it, timer.nameOf(it) ?: "Timer") }
+                completed.forEach { notifier.postCompletion(it, timer.titleOf(it) ?: "Timer") }
                 if (completed.isNotEmpty()) persistTimers()
                 updateOngoing()
             }

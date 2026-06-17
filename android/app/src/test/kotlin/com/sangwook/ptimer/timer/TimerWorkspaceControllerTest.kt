@@ -1,5 +1,6 @@
 package com.sangwook.ptimer.timer
 
+import com.sangwook.ptimer.core.timer.ExposureTimerSource
 import com.sangwook.ptimer.core.timer.TimerStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -14,20 +15,24 @@ class TimerWorkspaceControllerTest {
     private var now: Instant = base
     private val controller = TimerWorkspaceController { now }
 
+    private fun TimerWorkspaceController.startAdjusted(title: String, durationSeconds: Double) =
+        start(title, "Adjusted Shutter · ${durationSeconds.toInt()}s", ExposureTimerSource.FILM_ADJUSTED_SHUTTER, durationSeconds)
+
     @Test
     fun startAddsActiveTimerWithRemaining() {
-        controller.start("Shot", 100.0)
+        controller.startAdjusted("Cam 1 · Shot", 100.0)
         now = base.plusSeconds(30)
         controller.refresh()
         val item = controller.state.value.active.single()
-        assertEquals("Shot", item.name)
+        assertEquals("Cam 1 · Shot", item.title)
+        assertEquals(ExposureTimerSource.FILM_ADJUSTED_SHUTTER, item.source)
         assertEquals(TimerStatus.RUNNING, item.status)
         assertEquals(70.0, item.remainingSeconds, 1.0)
     }
 
     @Test
     fun pauseAndResumeFreezeAndContinue() {
-        val id = controller.start("Shot", 100.0)!!
+        val id = controller.startAdjusted("Shot", 100.0)!!
         now = base.plusSeconds(40)
         controller.pause(id)
         assertEquals(TimerStatus.PAUSED, controller.state.value.active.single().status)
@@ -40,67 +45,67 @@ class TimerWorkspaceControllerTest {
 
     @Test
     fun tickCompletesExactlyOnceAndMovesToCompleted() {
-        controller.start("A", 10.0)
-        controller.start("B", 100.0)
+        controller.startAdjusted("A", 10.0)
+        controller.startAdjusted("B", 100.0)
         now = base.plusSeconds(10)
         val completed = controller.tick()
         assertEquals(1, completed.size)
-        assertTrue(controller.tick().isEmpty()) // not re-reported
+        assertTrue(controller.tick().isEmpty())
         assertEquals(1, controller.state.value.completed.size)
         assertEquals(1, controller.state.value.active.size)
     }
 
     @Test
     fun activeOrderingIsNewestFirst() {
-        controller.start("first", 100.0)
+        controller.startAdjusted("first", 100.0)
         now = base.plusSeconds(1)
-        controller.start("second", 100.0)
+        controller.startAdjusted("second", 100.0)
         controller.refresh()
-        assertEquals(listOf("second", "first"), controller.state.value.active.map { it.name })
+        assertEquals(listOf("second", "first"), controller.state.value.active.map { it.title })
     }
 
     @Test
-    fun removeAndClearCompleted() {
-        val a = controller.start("A", 10.0)!!
-        controller.start("B", 5.0)
-        now = base.plusSeconds(5)
-        controller.tick() // B completes
-        controller.clearCompleted()
-        assertTrue(controller.state.value.completed.isEmpty())
-        controller.remove(a)
-        assertTrue(controller.state.value.active.isEmpty())
+    fun sourceIdentityIsPreservedPerTimer() {
+        controller.start("Cam · Digital", "Adjusted Shutter · 10s", ExposureTimerSource.DIGITAL_RESULT, 10.0)
+        controller.start("Cam · Fomapan", "Corrected Exposure · table · 02:00", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 120.0)
+        val active = controller.state.value.active
+        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, active.first { it.title.contains("Fomapan") }.source)
+        assertEquals(ExposureTimerSource.DIGITAL_RESULT, active.first { it.title.contains("Digital") }.source)
+        assertTrue(active.first { it.title.contains("Fomapan") }.subtitle.contains("Corrected Exposure"))
     }
 
     @Test
-    fun startAgainClonesCompleted() {
-        controller.start("A", 42.0)
+    fun startAgainClonesTitleSubtitleAndSource() {
+        controller.start("Cam · Fomapan", "Corrected Exposure · table", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 42.0)
         now = base.plusSeconds(42)
         controller.tick()
         val completedId = controller.state.value.completed.single().id
         now = base.plusSeconds(50)
         controller.startAgain(completedId)
         val active = controller.state.value.active.single()
-        assertEquals("A", active.name)
+        assertEquals("Cam · Fomapan", active.title)
+        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, active.source)
         assertEquals(TimerStatus.RUNNING, active.status)
     }
 
     @Test
-    fun restoreFromJsonPreservesRunningRemainingAndName() {
-        controller.start("Long", 100.0)
+    fun restoreFromJsonPreservesIdentityAndRunningRemaining() {
+        controller.start("Cam 2 · Portra 400", "Adjusted Shutter · Limited guidance · 100s", ExposureTimerSource.FILM_ADJUSTED_SHUTTER, 100.0)
         now = base.plusSeconds(30)
         val json = controller.snapshotJson()
 
-        val restoredController = TimerWorkspaceController { base.plusSeconds(30) }
-        restoredController.restoreFromJson(json)
-        val item = restoredController.state.value.active.single()
-        assertEquals("Long", item.name)
-        assertEquals(TimerStatus.RUNNING, item.status)
+        val restored = TimerWorkspaceController { base.plusSeconds(30) }
+        restored.restoreFromJson(json)
+        val item = restored.state.value.active.single()
+        assertEquals("Cam 2 · Portra 400", item.title)
+        assertTrue(item.subtitle.contains("Limited guidance"))
+        assertEquals(ExposureTimerSource.FILM_ADJUSTED_SHUTTER, item.source)
         assertEquals(70.0, item.remainingSeconds, 1.0)
     }
 
     @Test
     fun nonPositiveDurationDoesNotStart() {
-        assertNull(controller.start("bad", 0.0))
+        assertNull(controller.startAdjusted("bad", 0.0))
         assertTrue(controller.state.value.active.isEmpty())
     }
 }

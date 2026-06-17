@@ -158,4 +158,34 @@ class TimerSnapshotCodecTest {
         assertTrue(TimerSnapshotCodec.decode("[1,2,3]").snapshots.isEmpty()) // non-object top level
         assertTrue(TimerSnapshotCodec.decode("42").snapshots.isEmpty())
     }
+
+    // --- duplicate-id ordering (Pass 2, issue 2) ---------------------------
+    // The id is reserved only after validation, so a corrupt item never
+    // shadows a later valid item that reuses the same id.
+
+    @Test
+    fun corruptDuplicateFirstThenValidDuplicateSecondRestoresTheValidOne() {
+        val typeCorrupt = """{"id":"timer-1","status":"running","durationSeconds":"oops","startEpochMs":$baseMs}"""
+        assertEquals(listOf("timer-1"), TimerSnapshotCodec.decode(wrap(typeCorrupt, running("timer-1"))).snapshots.map { it.id })
+
+        val structurallyInvalid = """{"id":"timer-1","title":"t","status":"running","durationSeconds":0.0,"startEpochMs":$baseMs}"""
+        assertEquals(listOf("timer-1"), TimerSnapshotCodec.decode(wrap(structurallyInvalid, running("timer-1"))).snapshots.map { it.id })
+    }
+
+    @Test
+    fun twoValidDuplicatesKeepTheFirst() {
+        val first = """{"id":"dup","title":"FIRST","status":"running","durationSeconds":100.0,"startEpochMs":$baseMs,"expectedCompletionEpochMs":${baseMs + 100_000}}"""
+        val second = """{"id":"dup","title":"SECOND","status":"running","durationSeconds":200.0,"startEpochMs":$baseMs,"expectedCompletionEpochMs":${baseMs + 200_000}}"""
+        val r = TimerSnapshotCodec.decode(wrap(first, second))
+        assertEquals(listOf("dup"), r.snapshots.map { it.id })
+        assertEquals(100.0, r.snapshots.single().durationSeconds, 1e-9) // first valid wins
+        assertEquals("FIRST", r.titles["dup"])
+    }
+
+    @Test
+    fun blankIdItemDoesNotAffectALaterValidItem() {
+        val blank = """{"id":"","title":"t","status":"running","durationSeconds":100.0,"startEpochMs":$baseMs}"""
+        val r = TimerSnapshotCodec.decode(wrap(blank, running("timer-1")))
+        assertEquals(listOf("timer-1"), r.snapshots.map { it.id })
+    }
 }

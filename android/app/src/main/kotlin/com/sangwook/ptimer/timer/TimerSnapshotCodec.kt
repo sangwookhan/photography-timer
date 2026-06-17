@@ -104,7 +104,7 @@ object TimerSnapshotCodec {
             // Items merely missing reconcilable detail (running with no expected
             // completion, paused with no freeze metadata) are kept and safely
             // completed by PersistentTimerSnapshot.restore().
-            if (dto.id.isBlank() || !seen.add(dto.id)) continue
+            if (dto.id.isBlank()) continue
             if (!dto.durationSeconds.isFinite() || dto.durationSeconds <= 0.0) continue
             val startEpochMs = dto.startEpochMs ?: continue
             val pausedRemaining = dto.pausedRemainingSeconds
@@ -112,6 +112,9 @@ object TimerSnapshotCodec {
             val status = runCatching {
                 PersistentTimerSnapshot.SnapshotStatus.fromToken(dto.status)
             }.getOrNull() ?: continue
+            // Reserve the id only AFTER validation, so a corrupt item never
+            // shadows a later valid item that reuses the same id.
+            if (!seen.add(dto.id)) continue
             snapshots += PersistentTimerSnapshot(
                 id = dto.id,
                 status = status,

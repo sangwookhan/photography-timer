@@ -89,6 +89,16 @@ class ShootingViewModel(
 
     private var tickJob: Job? = null
 
+    private val _ready = MutableStateFlow(false)
+    /**
+     * False until the asynchronous restore (timers / custom films / camera-slot
+     * session) has finished. Restore runs on [viewModelScope] and overwrites
+     * calculator/slot state, so a user intent that lands before it completes
+     * could be silently clobbered. While not ready, [onEvent] ignores intents
+     * (see its guard); the UI can also observe this to keep controls inert.
+     */
+    val ready: StateFlow<Boolean> = _ready.asStateFlow()
+
     init {
         calc.setBaseShutterLadderIndex(nearestBaseIndex(com.sangwook.ptimer.core.exposure.CalculatorDefaults.BASE_SHUTTER_SECONDS))
         viewModelScope.launch {
@@ -104,6 +114,7 @@ class ShootingViewModel(
             }
             _films.value = buildFilms()
             refreshCalc(); refreshSlots(); updateOngoing(); ensureTicking()
+            _ready.value = true
         }
     }
 
@@ -113,6 +124,10 @@ class ShootingViewModel(
     }
 
     fun onEvent(intent: ShootingIntent) {
+        // Ignore intents until the async restore completes; otherwise an early
+        // user action would run against default state and then be overwritten
+        // by restore (a lost-update race).
+        if (!_ready.value) return
         when (intent) {
             is ShootingIntent.NudgeBaseShutter -> {
                 val next = (nearestBaseIndex(calc.currentBaseSeconds()) + intent.delta)

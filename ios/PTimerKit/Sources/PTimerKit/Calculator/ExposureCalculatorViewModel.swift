@@ -1330,15 +1330,26 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// Starts a new timer from a completed source timer in the
-    /// workspace. The source timer is unchanged; the new timer
-    /// reuses the source's duration and inherits its identity
-    /// snapshot (camera slot, film display name, profile qualifier,
-    /// exposure source) when present. No-op when `source` is not in
-    /// the completed state, so view layers can route every row through
-    /// this path safely.
-    public func startNewTimer(fromCompleted source: RunningTimerItem) {
-        timerWorkspaceModel.startTimer(cloningCompleted: source)
+    /// Replaces a running or paused timer with a fresh one from the
+    /// same setup and full duration. The source is canceled (kept as a
+    /// terminal canceled record, not removed) so the abandoned exposure
+    /// stays in history and no ghost timer keeps running. No-op when
+    /// `source` is not active.
+    public func startNewTimer(from source: RunningTimerItem) {
+        timerWorkspaceModel.startTimer(replacingActive: source)
+    }
+
+    /// Starts a fresh timer cloned from a terminal (completed or
+    /// canceled) record, leaving the source record intact. No-op when
+    /// `source` is not a terminal record.
+    public func startTimerAgain(from source: RunningTimerItem) {
+        timerWorkspaceModel.startTimer(cloning: source)
+    }
+
+    /// Cancels a running or paused timer, keeping it as a terminal
+    /// canceled record (distinct from `removeTimer`, which deletes it).
+    public func cancelTimer(id: UUID) {
+        timerWorkspaceModel.cancelTimer(id: id)
     }
 
     public func pauseTimer(id: UUID) {
@@ -1451,7 +1462,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         switch timer.status {
         case .running, .paused:
             return "\(targetDisplay.primary) · \(targetDisplay.secondary)"
-        case .completed:
+        case .completed, .canceled:
             return nil
         }
     }
@@ -1463,6 +1474,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             return "Ends \(completionText)"
         case .completed:
             return completedTimeContext(for: timer.completedAt, relativeTo: timer.referenceDate)
+        case .canceled:
+            // Same timestamp + relative-age style as completed, just a
+            // different verb, so canceled rows read e.g.
+            // "Canceled 2026-06-16 23:59:31 · just now".
+            return terminalTimeContext(verb: "Canceled", for: timer.endDate, relativeTo: timer.referenceDate)
         case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
             return "Paused \(pausedText)"
@@ -1470,16 +1486,23 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public func completedTimeContext(for completionDate: Date?, relativeTo referenceDate: Date) -> String {
-        guard let completionDate else {
-            return "Completed --"
+        terminalTimeContext(verb: "Completed", for: completionDate, relativeTo: referenceDate)
+    }
+
+    /// Shared "<verb> <absolute timestamp> · <relative age>" formatter
+    /// for terminal records (completed and canceled), so both surfaces
+    /// share one absolute+relative presentation path.
+    private func terminalTimeContext(verb: String, for date: Date?, relativeTo referenceDate: Date) -> String {
+        guard let date else {
+            return "\(verb) --"
         }
 
-        let absoluteText = formatDateTime(completionDate)
+        let absoluteText = formatDateTime(date)
         let relativeText = timerWorkspaceModel.relativeCompletedText(
-            from: completionDate,
+            from: date,
             relativeTo: referenceDate
         )
-        return "Completed \(absoluteText) · \(relativeText)"
+        return "\(verb) \(absoluteText) · \(relativeText)"
     }
 
     public func compactCompletedSupplementaryText(for timer: RunningTimerItem) -> String? {

@@ -300,12 +300,14 @@ private struct CompactTimerMiniCardView: View {
             return "pause.fill"
         case .completed:
             return "checkmark"
+        case .canceled:
+            return "xmark"
         }
     }
 
     private var sixtySecondFillColor: Color {
         switch item.status {
-        case .completed:
+        case .completed, .canceled:
             return statusColor(for: item.status).opacity(0.72)
         case .paused:
             return Color.orange.opacity(0.88)
@@ -316,7 +318,7 @@ private struct CompactTimerMiniCardView: View {
 
     private var sixtySecondTrackColor: Color {
         switch item.status {
-        case .completed:
+        case .completed, .canceled:
             return statusColor(for: item.status).opacity(0.16)
         case .paused:
             return Color.orange.opacity(0.16)
@@ -327,7 +329,7 @@ private struct CompactTimerMiniCardView: View {
 
     private var sixtyMinuteFillColor: Color {
         switch item.status {
-        case .completed:
+        case .completed, .canceled:
             return statusColor(for: item.status).opacity(0.56)
         case .paused:
             return Color.yellow.opacity(0.72)
@@ -338,7 +340,7 @@ private struct CompactTimerMiniCardView: View {
 
     private var sixtyMinuteTrackColor: Color {
         switch item.status {
-        case .completed:
+        case .completed, .canceled:
             return statusColor(for: item.status).opacity(0.12)
         case .paused:
             return Color.yellow.opacity(0.11)
@@ -349,7 +351,7 @@ private struct CompactTimerMiniCardView: View {
 
     private var originalScaleFillColor: Color {
         switch item.status {
-        case .completed:
+        case .completed, .canceled:
             return statusColor(for: item.status).opacity(0.38)
         case .paused:
             return Color.mint.opacity(0.48)
@@ -360,7 +362,7 @@ private struct CompactTimerMiniCardView: View {
 
     private var originalScaleTrackColor: Color {
         switch item.status {
-        case .completed:
+        case .completed, .canceled:
             return statusColor(for: item.status).opacity(0.08)
         case .paused:
             return Color.mint.opacity(0.08)
@@ -520,7 +522,9 @@ struct BottomSheetLargeWorkspaceView: View {
     let openFocus: TimersOpenFocus
     let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
+    let onCancelTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
+    let onStartNewTimer: (UUID) -> Void
     let onStartTimerAgain: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onCollapse: () -> Void
@@ -662,8 +666,12 @@ struct BottomSheetLargeWorkspaceView: View {
             onPauseTimer(id)
         case .resume:
             onResumeTimer(id)
+        case .cancel:
+            onCancelTimer(id)
         case .remove:
             onRemoveTimer(id)
+        case .startNew:
+            onStartNewTimer(id)
         case .startAgain:
             onStartTimerAgain(id)
         }
@@ -740,6 +748,18 @@ private struct LargeWorkspaceTimerRowView: View {
 
                     Spacer(minLength: 0)
 
+                    // Stable per-timer sequence number, placed in the
+                    // existing trailing space beside the identity badge so
+                    // repeated same-camera/film timers stay distinguishable
+                    // without adding a row.
+                    Text(item.sequenceNumberText)
+                        .font(.caption.monospacedDigit())
+                        // Neutral gray, one step up from the faded metadata
+                        // (.tertiary) so the number is readable at a glance
+                        // while staying secondary to the title and badge.
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Timer \(item.sequenceNumberText)")
+
                     IdentityMarkerBadge(
                         cue: item.identityCue,
                         size: .regular
@@ -798,9 +818,9 @@ private struct LargeWorkspaceTimerRowView: View {
         switch action {
         case .pause:
             return .orange
-        case .resume, .startAgain:
+        case .resume, .startNew, .startAgain:
             return .blue
-        case .remove:
+        case .cancel, .remove:
             return .secondary
         }
     }
@@ -839,7 +859,7 @@ private struct LargeActionButton: View {
 
     var body: some View {
         Group {
-            if action == .remove {
+            if action == .remove || action == .cancel {
                 Button(action.title) {
                     onTap()
                 }
@@ -957,7 +977,7 @@ private func statusColor(for status: TimerStatus) -> Color {
         return .green
     case .paused:
         return .orange
-    case .completed:
+    case .completed, .canceled:
         return .gray
     }
 }
@@ -972,7 +992,9 @@ struct FullScreenTimersWindow: View {
     let openFocus: TimersOpenFocus
     let onPauseTimer: (UUID) -> Void
     let onResumeTimer: (UUID) -> Void
+    let onCancelTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
+    let onStartNewTimer: (UUID) -> Void
     let onStartTimerAgain: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onClose: () -> Void
@@ -984,7 +1006,9 @@ struct FullScreenTimersWindow: View {
                 openFocus: openFocus,
                 onPauseTimer: onPauseTimer,
                 onResumeTimer: onResumeTimer,
+                onCancelTimer: onCancelTimer,
                 onRemoveTimer: onRemoveTimer,
+                onStartNewTimer: onStartNewTimer,
                 onStartTimerAgain: onStartTimerAgain,
                 onClearCompletedTimers: onClearCompletedTimers,
                 onCollapse: onClose

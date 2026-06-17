@@ -1,5 +1,6 @@
 import XCTest
 import PTimerCore
+import PTimerKit
 @testable import PTimer
 
 final class TimerManagerTests: XCTestCase {
@@ -411,5 +412,165 @@ final class TimerManagerTests: XCTestCase {
         XCTAssertFalse(manager.timers.contains {
             $0.updatingStatus(at: currentDate).status == .running
         })
+    }
+}
+
+/// PTIMER-188: Start New / Cancel / Start Again driven through the
+/// **real** `TimerManager` (not a test double), closest proof to the
+/// on-device UI route. Start New must add a *separate* new running
+/// timer and leave the source as its own terminal Canceled record —
+/// never an in-place restart/reset, never an id reuse.
+final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
+    @MainActor
+    private func makeModel(dateProvider: @escaping () -> Date) -> (TimerWorkspaceModel, TimerManager) {
+        let manager = TimerManager(tickInterval: 60, dateProvider: dateProvider)
+        let model = TimerWorkspaceModel(
+            timerManager: manager,
+            metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),
+            defaultName: { duration in "Timer - \(duration)s" }
+        )
+        return (model, manager)
+    }
+
+    @MainActor
+    func testStartNewFromRunningAddsSeparateTimerAndCancelsSourceInPlace() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var now = startDate
+        let (model, _) = makeModel(dateProvider: { now })
+
+        let sourceID = try XCTUnwrap(model.startTimer(
+            duration: 64,
+            name: "Tri-X 400 - 64s",
+            basisSummary: "Base 1s · 6 stops · Tri-X 400",
+            cameraSlot: CameraSlotIdentity(id: .camera2),
+            filmDisplayName: "Tri-X 400",
+            filmProfileQualifier: "Unofficial",
+            exposureSource: .filmCorrectedExposure,
+            selectedModelLabel: "Model X"
+        ))
+        let sourceA = try XCTUnwrap(model.timers.first { $0.id == sourceID })
+        XCTAssertEqual(sourceA.status, .running)
+        let countBefore = model.timers.count
+
+        now = startDate.addingTimeInterval(40)
+        let newID = try XCTUnwrap(model.startTimer(replacingActive: sourceA))
+
+        // separate-timer guarantees
+        XCTAssertNotEqual(newID, sourceID, "Start New must not reuse the source id")
+        XCTAssertEqual(model.timers.count, countBefore + 1, "Start New adds one timer")
+        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 1,
+                       "Exactly one running timer; no ghost duplicate")
+
+        // source A: canceled in place, identity + start date intact
+        let aAfter = try XCTUnwrap(model.timers.first { $0.id == sourceID })
+        XCTAssertEqual(aAfter.status, .canceled)
+        XCTAssertEqual(aAfter.startDate, startDate, "Source A start date unchanged (not reset)")
+        XCTAssertEqual(aAfter.endDate, now, "Source A cancellation timestamp is action time")
+        XCTAssertEqual(aAfter.duration, 64, accuracy: 0.0001)
+        XCTAssertEqual(aAfter.filmDisplayName, "Tri-X 400")
+
+        // new timer B: fresh running from full duration, same setup
+        let timerB = try XCTUnwrap(model.timers.first { $0.id == newID })
+        XCTAssertEqual(timerB.status, .running)
+        XCTAssertEqual(timerB.startDate, now, "New timer starts at action time")
+        XCTAssertEqual(timerB.remainingTime, 64, accuracy: 0.0001, "New timer runs from full duration")
+        XCTAssertEqual(timerB.name, "Tri-X 400 - 64s")
+        XCTAssertEqual(timerB.basisSummary, "Base 1s · 6 stops · Tri-X 400")
+        XCTAssertEqual(timerB.cameraSlot, CameraSlotIdentity(id: .camera2))
+        XCTAssertEqual(timerB.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(timerB.filmProfileQualifier, "Unofficial")
+        XCTAssertEqual(timerB.exposureSource, .filmCorrectedExposure)
+        XCTAssertEqual(timerB.selectedModelLabel, "Model X")
+    }
+
+    @MainActor
+    func testStartNewFromPausedAddsSeparateRunningTimerAndCancelsSource() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var now = startDate
+        let (model, _) = makeModel(dateProvider: { now })
+
+        let sourceID = try XCTUnwrap(model.startTimer(duration: 90, name: "src", basisSummary: "manual"))
+
+        now = startDate.addingTimeInterval(20)
+        model.pauseTimer(id: sourceID)
+        let pausedA = try XCTUnwrap(model.timers.first { $0.id == sourceID })
+        XCTAssertEqual(pausedA.status, .paused)
+
+        now = startDate.addingTimeInterval(35)
+        let newID = try XCTUnwrap(model.startTimer(replacingActive: pausedA))
+
+        XCTAssertNotEqual(newID, sourceID)
+        XCTAssertEqual(model.timers.count, 2)
+        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 1)
+        XCTAssertEqual(model.timers.first { $0.id == sourceID }?.status, .canceled)
+
+        let timerB = try XCTUnwrap(model.timers.first { $0.id == newID })
+        XCTAssertEqual(timerB.status, .running)
+        XCTAssertEqual(timerB.startDate, now)
+        XCTAssertEqual(timerB.remainingTime, 90, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testCancelOnPausedKeepsRecordAndStartsNoNewTimer() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var now = startDate
+        let (model, _) = makeModel(dateProvider: { now })
+
+        let sourceID = try XCTUnwrap(model.startTimer(duration: 60, name: "src", basisSummary: "manual"))
+
+        now = startDate.addingTimeInterval(15)
+        model.pauseTimer(id: sourceID)
+        now = startDate.addingTimeInterval(25)
+        model.cancelTimer(id: sourceID)
+
+        XCTAssertEqual(model.timers.count, 1, "Cancel must not create a new timer")
+        let only = try XCTUnwrap(model.timers.first)
+        XCTAssertEqual(only.id, sourceID)
+        XCTAssertEqual(only.status, .canceled)
+        XCTAssertEqual(only.startDate, startDate)
+    }
+
+    @MainActor
+    func testStartNewRejectsTerminalRecords() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var now = startDate
+        let (model, manager) = makeModel(dateProvider: { now })
+
+        let sourceID = try XCTUnwrap(model.startTimer(duration: 5, name: "src", basisSummary: "manual"))
+        now = startDate.addingTimeInterval(60)
+        manager.tick(now: now)
+        let completed = try XCTUnwrap(model.timers.first { $0.id == sourceID })
+        XCTAssertEqual(completed.status, .completed)
+
+        let rejected = model.startTimer(replacingActive: completed)
+        XCTAssertNil(rejected)
+        XCTAssertEqual(model.timers.count, 1)
+        XCTAssertEqual(model.timers.first?.status, .completed)
+    }
+
+    @MainActor
+    func testStartAgainOnCanceledAddsSeparateTimerAndKeepsSource() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var now = startDate
+        let (model, _) = makeModel(dateProvider: { now })
+
+        let sourceID = try XCTUnwrap(model.startTimer(
+            duration: 45, name: "src", basisSummary: "manual", filmDisplayName: "Tri-X 400"
+        ))
+        now = startDate.addingTimeInterval(10)
+        model.cancelTimer(id: sourceID)
+        let canceled = try XCTUnwrap(model.timers.first { $0.id == sourceID })
+        XCTAssertEqual(canceled.status, .canceled)
+
+        now = startDate.addingTimeInterval(30)
+        let newID = try XCTUnwrap(model.startTimer(cloning: canceled))
+
+        XCTAssertNotEqual(newID, sourceID)
+        XCTAssertEqual(model.timers.count, 2)
+        XCTAssertEqual(model.timers.first { $0.id == sourceID }?.status, .canceled)
+        let timerB = try XCTUnwrap(model.timers.first { $0.id == newID })
+        XCTAssertEqual(timerB.status, .running)
+        XCTAssertEqual(timerB.remainingTime, 45, accuracy: 0.0001)
+        XCTAssertEqual(timerB.filmDisplayName, "Tri-X 400")
     }
 }

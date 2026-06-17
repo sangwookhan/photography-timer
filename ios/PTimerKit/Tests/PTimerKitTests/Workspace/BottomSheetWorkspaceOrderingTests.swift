@@ -97,7 +97,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
     func testLargeSectionsGroupTimersByPresentationStatus() {
         let snapshot = makeSnapshot(from: sampleTimers())
 
-        XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "Recently Completed"])
+        XCTAssertEqual(snapshot.sections.map(\.title), ["Active", "History"])
         XCTAssertEqual(snapshot.sections[0].items.count, 2)
         XCTAssertEqual(snapshot.sections[1].items.count, 2)
     }
@@ -291,6 +291,8 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                     return "Paused recently"
                 case .completed:
                     return "Completed recently"
+                    case .canceled:
+                    return "Canceled recently"
                 }
             },
             compactCompletedSupplementaryText: { timer in
@@ -304,7 +306,7 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                         from: completionDate,
                         relativeTo: timer.referenceDate
                     )
-                case .running, .paused:
+                case .running, .paused, .canceled:
                     return nil
                 }
             }

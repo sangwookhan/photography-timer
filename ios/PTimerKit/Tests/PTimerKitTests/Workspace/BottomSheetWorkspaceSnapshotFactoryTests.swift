@@ -66,7 +66,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
             harness.snapshotStore.snapshot.sections.first(where: { $0.title == "Active" })
         )
         let completedSection = try XCTUnwrap(
-            harness.snapshotStore.snapshot.sections.first(where: { $0.title == "Recently Completed" })
+            harness.snapshotStore.snapshot.sections.first(where: { $0.title == "History" })
         )
 
         XCTAssertEqual(compactItems.count, 2)
@@ -89,7 +89,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
 
         let completedItem = try XCTUnwrap(
             harness.snapshotStore.snapshot.sections
-                .first(where: { $0.title == "Recently Completed" })?
+                .first(where: { $0.title == "History" })?
                 .items
                 .first
         )
@@ -247,7 +247,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         let largeIDs = harness.snapshotStore.snapshot.sections.flatMap(\.items).map(\.id)
 
         XCTAssertEqual(Set(compactIDs), Set(largeIDs))
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Recently Completed"])
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["History"])
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 2)
     }
 
@@ -308,7 +308,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         harness.currentDate = Date(timeIntervalSince1970: 103)
         harness.timerManager.tick(now: harness.currentDate)
 
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active", "Recently Completed"])
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.map(\.title), ["Active", "History"])
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
 
         harness.viewModel.clearCompletedTimers()
@@ -323,7 +323,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue.markerText, "C1")
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.contextText, "Base 1s · 3 stops")
 
-        XCTAssertFalse(harness.snapshotStore.snapshot.sections.contains { $0.title == "Recently Completed" })
+        XCTAssertFalse(harness.snapshotStore.snapshot.sections.contains { $0.title == "History" })
         XCTAssertFalse(harness.snapshotStore.snapshot.sections.flatMap(\.items).contains { $0.timingText == "Completed recently" })
     }
 
@@ -429,6 +429,8 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
                     return "Paused recently"
                 case .completed:
                     return "Completed recently"
+                    case .canceled:
+                    return "Canceled recently"
                 }
             },
             compactCompletedSupplementaryText: { timer in
@@ -442,7 +444,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
                         from: completionDate,
                         relativeTo: timer.referenceDate
                     )
-                case .running, .paused:
+                case .running, .paused, .canceled:
                     return nil
                 }
             }

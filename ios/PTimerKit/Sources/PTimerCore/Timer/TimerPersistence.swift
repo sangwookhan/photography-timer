@@ -43,7 +43,10 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
         self.id = timer.id
         self.duration = timer.duration
         self.startDate = timer.startDate
-        self.pausedRemainingDuration = timer.pausedRemainingTime
+        // For canceled records the `pausedRemainingDuration` slot carries
+        // the remaining-at-cancel value (paused timers carry their frozen
+        // remaining there); both mean "time left when the timer stopped".
+        self.pausedRemainingDuration = timer.pausedRemainingTime ?? timer.remainingAtCancel
         self.pausedAt = timer.pausedAt
 
         switch timer.status {
@@ -63,6 +66,13 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
             self.completedAt = nil
         case .completed:
             self.status = .completed
+            self.expectedCompletionAt = nil
+            self.completedAt = timer.endDate
+        case .canceled:
+            // A canceled record stores its cancellation timestamp in
+            // the same `completedAt` slot completed timers use; the
+            // `canceled` status selects the canceled restore rule.
+            self.status = .canceled
             self.expectedCompletionAt = nil
             self.completedAt = timer.endDate
         }
@@ -120,6 +130,17 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
             )
         case .completed:
             return makeCompletedTimer(completionDate: completedAt)
+        case .canceled:
+            return TimerState(
+                id: id,
+                duration: duration,
+                startDate: startDate,
+                endDate: completedAt ?? startDate.addingTimeInterval(duration),
+                // Restores the remaining-at-cancel captured at stop time.
+                pausedRemainingTime: pausedRemainingDuration,
+                pausedAt: nil,
+                status: .canceled
+            )
         }
     }
 
@@ -139,6 +160,7 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
         case running
         case paused
         case completed
+        case canceled
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
@@ -151,6 +173,8 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
                 self = .paused
             case "completed":
                 self = .completed
+            case "canceled":
+                self = .canceled
             default:
                 throw DecodingError.dataCorruptedError(
                     in: container,

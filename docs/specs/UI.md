@@ -217,9 +217,15 @@ Identity cues (e.g. a tint or badge) sit in the lower metadata area; the remaini
 In the large detent, the workspace presents the full timer list grouped in two sections:
 
 - **Active** — running and paused timers in LIFO-by-creation order. ([Timer Spec](Timer.md) §6)
-- **Recently Completed** — completed timers in completion-time-descending order, presented behind the active group.
+- **History** — terminal records (completed and canceled timers) in terminal-time-descending order, presented behind the active group. Canceled records read *Canceled*, never *Done*, and combine their remaining-at-cancel into the status line (e.g. *Canceled · 51s left*). Canceled timestamps use the same absolute-plus-relative-age style as completed (e.g. *Canceled 2026-06-16 23:59:31 · just now*). Each row also shows a stable per-timer sequence number (creation order) near the identity badge so repeated timers sharing the same camera/film/exposure stay distinguishable.
 
-Each row shows: title (or fallback identity text), state, remaining and total time in a two-line hierarchy with trailing alignment, and inline action affordances (pause, resume, remove) as appropriate to state.
+Each row shows: title (or fallback identity text), state, remaining and total time in a two-line hierarchy with trailing alignment, and inline action affordances as appropriate to state:
+
+- **Running** — pause, start new.
+- **Paused** — resume, start new, cancel, remove.
+- **Completed / Canceled** — start again, remove.
+
+*Start new* (active rows) cancels the current timer — keeping it as a terminal canceled record — and starts a fresh timer from the same setup and full duration, so no duplicate or ghost active timer remains. *Cancel* (paused rows) stops the timer and keeps it as a canceled record without deleting it, distinct from *remove*. *Start again* (terminal rows) clones a fresh timer from the record's setup and full duration, leaving the source record intact.
 
 When the user taps a compact card or the overflow card, the workspace expands and that timer becomes focused — scrolled into view with restrained highlight. Focusing shall not mutate runtime state. The overflow tap shall focus the first hidden timer.
 

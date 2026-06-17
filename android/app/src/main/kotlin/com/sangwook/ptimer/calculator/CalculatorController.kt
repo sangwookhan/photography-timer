@@ -108,11 +108,14 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             targetSeconds = null
             return
         }
-        baseShutterSeconds = snapshot.baseShutterSeconds
-        ndStops = snapshot.ndStops
+        // A corrupt/non-finite persisted base falls back to the default shutter.
+        baseShutterSeconds = snapshot.baseShutterSeconds.takeIf { it.isFinite() && it > 0 }
+            ?: CalculatorDefaults.BASE_SHUTTER_SECONDS
+        ndStops = snapshot.ndStops.coerceIn(0, ExposureScale.MAX_WHOLE_ND_STOPS)
         selectedFilmId = snapshot.selectedFilmId
         selectedProfileId = snapshot.selectedProfileId
-        targetSeconds = snapshot.targetShutterSeconds
+        // Sanitize a persisted/corrupt target the same way setTarget does.
+        targetSeconds = snapshot.targetShutterSeconds?.takeIf { it.isFinite() && it > 0 }
     }
 
     private fun film(): FilmIdentity? = selectedFilmId?.let { id ->

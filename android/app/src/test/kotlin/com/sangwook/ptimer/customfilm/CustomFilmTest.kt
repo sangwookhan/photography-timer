@@ -55,6 +55,28 @@ class CustomFilmTest {
         assertTrue(lib.all.isEmpty())
     }
 
+    @Test
+    fun libraryRejectsMalformedCustomShapes() {
+        val lib = CustomFilmLibrary()
+        val formula = (CustomFilmFactory.buildFormula("f", "F", 100, exponent = 1.3, noCorrectionThroughSeconds = 1.0) as CustomFilmResult.Success).film
+        val table = (CustomFilmFactory.buildTable("t", "T", 100, listOf(TableAnchor(1.0, 2.0), TableAnchor(10.0, 80.0))) as CustomFilmResult.Success).film
+        val profile = formula.profiles.single()
+
+        // Zero rules in the single profile.
+        assertFalse(lib.upsert(formula.copy(id = "m0", profiles = listOf(profile.copy(rules = emptyList())))))
+        // Two rules in one profile (must be exactly one).
+        assertFalse(lib.upsert(formula.copy(id = "m2", profiles = listOf(profile.copy(rules = profile.rules + profile.rules)))))
+        // Mixed formula + table rule in one profile.
+        assertFalse(lib.upsert(formula.copy(id = "mix", profiles = listOf(profile.copy(rules = profile.rules + table.profiles.single().rules)))))
+        // More than one profile (custom films are single-profile).
+        assertFalse(lib.upsert(formula.copy(id = "m2p", profiles = listOf(profile, profile.copy(id = "p2")))))
+
+        assertTrue("no malformed film should have been retained", lib.all.isEmpty())
+        // Sanitizing constructor drops malformed seeds too.
+        val seeded = CustomFilmLibrary(listOf(formula.copy(id = "bad", profiles = emptyList()), formula))
+        assertEquals(listOf("f"), seeded.all.map { it.id })
+    }
+
     // MARK: - fitted preview (inspection-only)
 
     @Test

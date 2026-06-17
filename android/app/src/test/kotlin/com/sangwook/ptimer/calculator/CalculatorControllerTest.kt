@@ -1,6 +1,7 @@
 package com.sangwook.ptimer.calculator
 
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.exposure.CalculatorDefaults
 import com.sangwook.ptimer.core.timer.ExposureTimerSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -97,6 +98,39 @@ class CalculatorControllerTest {
         c.clearFilm()
         assertNull(c.uiState().filmName)
         assertNull(c.uiState().correctedAction)
+    }
+
+    @Test
+    fun applyingSnapshotWithUnknownFilmFallsBackToDigital() {
+        val c = controller()
+        c.setCustomFilms(emptyList())
+        c.apply(SlotCalculatorSnapshot(1.0, 5, selectedFilmId = "ghost-film", selectedProfileId = null, targetShutterSeconds = null))
+        val s = c.uiState()
+        assertNull(s.filmName) // unresolvable film id → digital, no crash
+        assertTrue(s.adjustedAction.enabled)
+        assertNull(s.correctedAction)
+    }
+
+    @Test
+    fun applyingSnapshotSanitizesCorruptTargetAndOutOfRangeNd() {
+        val c = controller()
+        c.apply(SlotCalculatorSnapshot(1.0, 99, null, null, targetShutterSeconds = -5.0))
+        assertNull(c.uiState().targetSeconds) // negative target dropped
+        assertEquals(30, c.uiState().ndStops) // ND clamped to 0..30
+        c.apply(SlotCalculatorSnapshot(1.0, 0, null, null, targetShutterSeconds = Double.NaN))
+        assertNull(c.uiState().targetSeconds) // NaN target dropped
+    }
+
+    @Test
+    fun applyingSnapshotWithCorruptBaseFallsBackToDefaultShutter() {
+        val c = controller()
+        c.apply(SlotCalculatorSnapshot(-3.0, 0, null, null, null)) // negative base
+        assertEquals(CalculatorDefaults.BASE_SHUTTER_SECONDS, c.currentBaseSeconds(), 1e-12)
+        c.apply(SlotCalculatorSnapshot(Double.NaN, 0, null, null, null)) // NaN base
+        assertEquals(CalculatorDefaults.BASE_SHUTTER_SECONDS, c.currentBaseSeconds(), 1e-12)
+        // A valid persisted base is preserved verbatim.
+        c.apply(SlotCalculatorSnapshot(0.5, 0, null, null, null))
+        assertEquals(0.5, c.currentBaseSeconds(), 1e-12)
     }
 
     @Test

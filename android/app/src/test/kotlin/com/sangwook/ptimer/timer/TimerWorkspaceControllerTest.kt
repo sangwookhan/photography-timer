@@ -85,6 +85,32 @@ class TimerWorkspaceControllerTest {
     }
 
     @Test
+    fun timerIdentityIsImmutableAcrossLifecycleAndLaterStarts() {
+        // A timer captures its identity at start; nothing after start (pause,
+        // resume, a later differently-identified start, or a clone) may mutate
+        // it. This is the Android analog of iOS's snapshot-identity-stability
+        // guard against late calculator edits bleeding into a running timer.
+        val id = controller.start(
+            "Cam 1 · Pan F", "Adjusted Shutter · 100s", "Base 1/30 · ND 0 · Adjusted 100s",
+            ExposureTimerSource.FILM_ADJUSTED_SHUTTER, 100.0,
+        )!!
+        fun captured() = controller.state.value.active.first { it.id == id }
+        val before = captured().let { listOf(it.title, it.subtitle, it.metadata, it.source.name) }
+
+        now = base.plusSeconds(20); controller.pause(id)
+        now = base.plusSeconds(50); controller.resume(id); controller.refresh()
+        // A later start with a completely different identity must not touch the first.
+        controller.start(
+            "Cam 2 · Portra 400", "Corrected Exposure · limited", "Base 1/30 · ND 8 · Adjusted 8.5s",
+            ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 30.0,
+        )
+        controller.refresh()
+
+        val after = captured().let { listOf(it.title, it.subtitle, it.metadata, it.source.name) }
+        assertEquals(before, after)
+    }
+
+    @Test
     fun startNewClonesAnActiveRunningTimer() {
         controller.start("Cam · Fomapan", "Corrected Exposure · table", "Base 1/30 · ND 8 · Adjusted 8.5s", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 120.0)
         val original = controller.state.value.active.single().id

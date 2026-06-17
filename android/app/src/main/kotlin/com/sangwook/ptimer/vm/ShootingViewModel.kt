@@ -45,6 +45,8 @@ sealed interface ShootingIntent {
     data class CreateCustomTable(val name: String, val anchors: List<Pair<Double, Double>>) : ShootingIntent
     data object CreateFormulaFromSelectedTable : ShootingIntent
     data class DeleteCustomFilm(val id: String) : ShootingIntent
+    data class SetTarget(val seconds: Double) : ShootingIntent
+    data object ClearTarget : ShootingIntent
     data class Pause(val id: String) : ShootingIntent
     data class Resume(val id: String) : ShootingIntent
     data class Remove(val id: String) : ShootingIntent
@@ -139,6 +141,8 @@ class ShootingViewModel(
                 if (calc.currentFilmId() == intent.id) calc.clearFilm()
                 calc.setCustomFilms(customLib.all); _films.value = buildFilms(); refreshCalc(); persistCustom()
             }
+            is ShootingIntent.SetTarget -> { calc.setTarget(intent.seconds); afterCalcChange() }
+            ShootingIntent.ClearTarget -> { calc.clearTarget(); afterCalcChange() }
             is ShootingIntent.Pause -> { timer.pause(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers() }

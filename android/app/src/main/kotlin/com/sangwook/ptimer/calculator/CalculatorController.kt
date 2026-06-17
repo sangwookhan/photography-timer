@@ -11,6 +11,8 @@ import com.sangwook.ptimer.core.exposure.NdStep
 import com.sangwook.ptimer.core.reciprocity.ReciprocityCalculationPolicyEvaluator
 import com.sangwook.ptimer.core.reciprocity.ReciprocityConfidencePresentationMapper
 import com.sangwook.ptimer.core.reciprocity.ReciprocityResult
+import com.sangwook.ptimer.target.TargetShutterPresenter
+import java.util.Locale
 
 data class ModelOptionUi(val profileId: String, val label: String, val isSelected: Boolean)
 
@@ -29,6 +31,11 @@ data class CalculatorUiState(
     val isCustomTable: Boolean = false,
     val fittedPreviewSummary: String? = null,
     val selectedCustomFilmId: String? = null,
+    val targetSeconds: Double? = null,
+    val targetStopDifference: Double? = null,
+    val targetIsMatch: Boolean = false,
+    val targetUnavailable: Boolean = false,
+    val targetSummary: String? = null,
 )
 
 /** What a Start-Timer tap should create, or null when disabled. */
@@ -50,9 +57,15 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
     private var selectedFilmId: String? = null
     private var selectedProfileId: String? = null // null = primary profile
     private var customFilms: List<FilmIdentity> = emptyList()
+    private var targetSeconds: Double? = null
 
     /** Make custom-library films selectable alongside the preset catalog. */
     fun setCustomFilms(films: List<FilmIdentity>) { customFilms = films }
+
+    fun setTarget(seconds: Double?) {
+        targetSeconds = seconds?.takeIf { it.isFinite() && it > 0 }
+    }
+    fun clearTarget() { targetSeconds = null }
 
     fun setBaseShutterSeconds(seconds: Double) { baseShutterSeconds = seconds }
     fun setBaseShutterLadderIndex(index: Int) {
@@ -69,7 +82,7 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
 
     /** Capture the active calculator inputs for per-slot persistence. */
     fun capture(): SlotCalculatorSnapshot =
-        SlotCalculatorSnapshot(baseShutterSeconds, ndStops, selectedFilmId, selectedProfileId)
+        SlotCalculatorSnapshot(baseShutterSeconds, ndStops, selectedFilmId, selectedProfileId, targetSeconds)
 
     /** Apply a per-slot snapshot (or reset to defaults when null). */
     fun apply(snapshot: SlotCalculatorSnapshot?) {
@@ -78,12 +91,14 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             ndStops = CalculatorDefaults.ND_STOP
             selectedFilmId = null
             selectedProfileId = null
+            targetSeconds = null
             return
         }
         baseShutterSeconds = snapshot.baseShutterSeconds
         ndStops = snapshot.ndStops
         selectedFilmId = snapshot.selectedFilmId
         selectedProfileId = snapshot.selectedProfileId
+        targetSeconds = snapshot.targetShutterSeconds
     }
 
     private fun film(): FilmIdentity? = selectedFilmId?.let { id ->
@@ -116,11 +131,16 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
         val baseLabel = ExposureScale.oneThirdStopShutterCameraLabel(baseShutterSeconds)
             ?: calculator.formatShutter(baseShutterSeconds)
         val film = film()
-            ?: return CalculatorUiState(
-                baseShutterLabel = baseLabel, ndStops = ndStops, filmName = null, authorityLabel = null,
-                adjustedShutterLabel = adjustedLabel, correctedExposureLabel = null, reciprocityBadge = null,
-                canStartTimer = adjusted.isFinite() && adjusted > 0, startDisabledHint = null, availableModels = emptyList(),
-            )
+            ?: run {
+                val tf = targetFields(adjusted)
+                return CalculatorUiState(
+                    baseShutterLabel = baseLabel, ndStops = ndStops, filmName = null, authorityLabel = null,
+                    adjustedShutterLabel = adjustedLabel, correctedExposureLabel = null, reciprocityBadge = null,
+                    canStartTimer = adjusted.isFinite() && adjusted > 0, startDisabledHint = null, availableModels = emptyList(),
+                    targetSeconds = tf.seconds, targetStopDifference = tf.stop, targetIsMatch = tf.match,
+                    targetUnavailable = tf.unavailable, targetSummary = tf.summary,
+                )
+            }
 
         val profile = activeProfile(film)
         val result = policy.evaluate(profile, adjusted)
@@ -148,6 +168,8 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             null
         }
 
+        val tf = targetFields(quantified?.corrected)
+
         return CalculatorUiState(
             baseShutterLabel = baseLabel, ndStops = ndStops, filmName = film.canonicalStockName,
             authorityLabel = authorityLabel(profile), adjustedShutterLabel = adjustedLabel,
@@ -155,7 +177,25 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             canStartTimer = canStart, startDisabledHint = hint, availableModels = models,
             isCustomTable = isCustomTable, fittedPreviewSummary = fittedSummary,
             selectedCustomFilmId = if (film.kind == "custom") film.id else null,
+            targetSeconds = tf.seconds, targetStopDifference = tf.stop, targetIsMatch = tf.match,
+            targetUnavailable = tf.unavailable, targetSummary = tf.summary,
         )
+    }
+
+    private data class TargetFields(
+        val seconds: Double?, val stop: Double?, val match: Boolean, val unavailable: Boolean, val summary: String?,
+    )
+
+    private fun targetFields(comparisonValue: Double?): TargetFields {
+        val t = targetSeconds ?: return TargetFields(null, null, false, false, null)
+        val cmp = TargetShutterPresenter.compare(t, comparisonValue)
+        val label = calculator.formatShutter(t)
+        val summary = when {
+            cmp.isUnavailable -> "Target $label · comparison unavailable"
+            cmp.isMatch -> "Target $label · matches"
+            else -> "Target $label · ${String.format(Locale.ROOT, "%+.1f", cmp.stopDifference)} stops"
+        }
+        return TargetFields(t, cmp.stopDifference, cmp.isMatch, cmp.isUnavailable, summary)
     }
 
     private fun authorityLabel(profile: ReciprocityProfile): String = when (profile.source.authority) {

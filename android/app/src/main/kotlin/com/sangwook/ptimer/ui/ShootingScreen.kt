@@ -144,6 +144,8 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
                 OutlinedButton(onClick = { onEvent(ShootingIntent.DeleteCustomFilm(id)) }) { Text("Delete custom film") }
             }
 
+            TargetSection(calc, onEvent)
+
             Button(onClick = { onEvent(ShootingIntent.StartFromResult) }, enabled = calc.canStartTimer) {
                 Text("Start timer")
             }
@@ -153,6 +155,34 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
 
             CustomFilmCreators(onEvent)
         }
+    }
+}
+
+@Composable
+private fun TargetSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Text(calc.targetSummary ?: "Target shutter: none", style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { draft = ""; editing = true }) { Text("Set") }
+            if (calc.targetSeconds != null) {
+                OutlinedButton(onClick = { onEvent(ShootingIntent.ClearTarget) }) { Text("Clear") }
+            }
+        }
+    }
+    if (editing) {
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text("Target shutter (seconds)") },
+            text = { OutlinedTextField(draft, { draft = it }, singleLine = true, label = { Text("seconds") }) },
+            confirmButton = {
+                TextButton(onClick = {
+                    draft.toDoubleOrNull()?.let { onEvent(ShootingIntent.SetTarget(it)) }; editing = false
+                }) { Text("Set") }
+            },
+            dismissButton = { TextButton(onClick = { editing = false }) { Text("Cancel") } },
+        )
     }
 }
 

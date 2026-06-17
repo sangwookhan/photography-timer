@@ -57,6 +57,7 @@ sealed interface ShootingIntent {
     data class Resume(val id: String) : ShootingIntent
     data class Remove(val id: String) : ShootingIntent
     data class StartAgain(val id: String) : ShootingIntent
+    data class StartNew(val id: String) : ShootingIntent
     data object ClearCompleted : ShootingIntent
 }
 
@@ -164,6 +165,7 @@ class ShootingViewModel(
             is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers() }
             is ShootingIntent.StartAgain -> { timer.startAgain(intent.id); persistTimers(); ensureTicking() }
+            is ShootingIntent.StartNew -> { timer.cloneToNew(intent.id); persistTimers(); ensureTicking() }
             ShootingIntent.ClearCompleted -> { timer.clearCompleted(); persistTimers() }
         }
         updateOngoing()
@@ -172,7 +174,9 @@ class ShootingViewModel(
     private fun startFrom(action: com.sangwook.ptimer.calculator.StartActionState) {
         val duration = action.durationSeconds
         if (!action.enabled || duration == null) return
-        timer.start("${session.activeLabel()} · ${action.filmContext}", action.subtitle, action.source, duration)
+        val cs = _calcState.value
+        val metadata = "Base ${cs.baseShutterLabel} · ND ${cs.ndStops} · Adjusted ${cs.adjustedShutterLabel}"
+        timer.start("${session.activeLabel()} · ${action.filmContext}", action.subtitle, metadata, action.source, duration)
         persistTimers(); ensureTicking()
     }
 

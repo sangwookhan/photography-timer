@@ -16,7 +16,13 @@ class TimerWorkspaceControllerTest {
     private val controller = TimerWorkspaceController { now }
 
     private fun TimerWorkspaceController.startAdjusted(title: String, durationSeconds: Double) =
-        start(title, "Adjusted Shutter · ${durationSeconds.toInt()}s", ExposureTimerSource.FILM_ADJUSTED_SHUTTER, durationSeconds)
+        start(
+            title,
+            "Adjusted Shutter · ${durationSeconds.toInt()}s",
+            "Base 1/30 · ND 0 · Adjusted ${durationSeconds.toInt()}s",
+            ExposureTimerSource.FILM_ADJUSTED_SHUTTER,
+            durationSeconds,
+        )
 
     @Test
     fun startAddsActiveTimerWithRemaining() {
@@ -66,17 +72,33 @@ class TimerWorkspaceControllerTest {
 
     @Test
     fun sourceIdentityIsPreservedPerTimer() {
-        controller.start("Cam · Digital", "Adjusted Shutter · 10s", ExposureTimerSource.DIGITAL_RESULT, 10.0)
-        controller.start("Cam · Fomapan", "Corrected Exposure · table · 02:00", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 120.0)
+        controller.start("Cam · Digital", "Adjusted Shutter · 10s", "Base 1/30 · ND 0 · Adjusted 10s", ExposureTimerSource.DIGITAL_RESULT, 10.0)
+        controller.start("Cam · Fomapan", "Corrected Exposure · table · 02:00", "Base 1/30 · ND 8 · Adjusted 8.5s", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 120.0)
         val active = controller.state.value.active
-        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, active.first { it.title.contains("Fomapan") }.source)
+        val fomapan = active.first { it.title.contains("Fomapan") }
+        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, fomapan.source)
         assertEquals(ExposureTimerSource.DIGITAL_RESULT, active.first { it.title.contains("Digital") }.source)
-        assertTrue(active.first { it.title.contains("Fomapan") }.subtitle.contains("Corrected Exposure"))
+        assertTrue(fomapan.subtitle.contains("Corrected Exposure"))
+        assertTrue(fomapan.metadata.contains("Adjusted"))
+        assertEquals("Running", fomapan.statusLabel)
+        assertTrue(fomapan.endsAtLabel!!.startsWith("Ends "))
+    }
+
+    @Test
+    fun startNewClonesAnActiveRunningTimer() {
+        controller.start("Cam · Fomapan", "Corrected Exposure · table", "Base 1/30 · ND 8 · Adjusted 8.5s", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 120.0)
+        val original = controller.state.value.active.single().id
+        controller.cloneToNew(original)
+        val active = controller.state.value.active
+        assertEquals(2, active.size)
+        // Both carry the same identity/source; they are distinct timers.
+        assertTrue(active.all { it.source == ExposureTimerSource.FILM_CORRECTED_EXPOSURE })
+        assertEquals(2, active.map { it.id }.toSet().size)
     }
 
     @Test
     fun startAgainClonesTitleSubtitleAndSource() {
-        controller.start("Cam · Fomapan", "Corrected Exposure · table", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 42.0)
+        controller.start("Cam · Fomapan", "Corrected Exposure · table", "Base 1/30 · ND 5 · Adjusted 32s", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 42.0)
         now = base.plusSeconds(42)
         controller.tick()
         val completedId = controller.state.value.completed.single().id
@@ -90,7 +112,7 @@ class TimerWorkspaceControllerTest {
 
     @Test
     fun restoreFromJsonPreservesIdentityAndRunningRemaining() {
-        controller.start("Cam 2 · Portra 400", "Adjusted Shutter · Limited guidance · 100s", ExposureTimerSource.FILM_ADJUSTED_SHUTTER, 100.0)
+        controller.start("Cam 2 · Portra 400", "Adjusted Shutter · Limited guidance · 100s", "Base 1/30 · ND 8 · Adjusted 100s", ExposureTimerSource.FILM_ADJUSTED_SHUTTER, 100.0)
         now = base.plusSeconds(30)
         val json = controller.snapshotJson()
 

@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /** Immutable UI state for the timer workspace. */
 data class TimerWorkspaceUiState(
@@ -21,10 +23,13 @@ data class TimerItemUi(
     val id: String,
     val title: String,
     val subtitle: String,
+    val metadata: String,
     val source: ExposureTimerSource,
     val status: TimerStatus,
+    val statusLabel: String,
     val remainingSeconds: Double,
     val remainingLabel: String,
+    val endsAtLabel: String?,
 )
 
 /**
@@ -41,16 +46,25 @@ class TimerWorkspaceController(
     private val calculator = ExposureCalculator()
     private val titles = LinkedHashMap<String, String>()
     private val subtitles = LinkedHashMap<String, String>()
+    private val metadatas = LinkedHashMap<String, String>()
     private val sources = LinkedHashMap<String, ExposureTimerSource>()
     private var counter = 0L
+    private val endsAtFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
 
     private val _state = MutableStateFlow(TimerWorkspaceUiState())
     val state: StateFlow<TimerWorkspaceUiState> = _state.asStateFlow()
 
-    fun start(title: String, subtitle: String, source: ExposureTimerSource, durationSeconds: Double): String? {
+    fun start(
+        title: String,
+        subtitle: String,
+        metadata: String,
+        source: ExposureTimerSource,
+        durationSeconds: Double,
+    ): String? {
         val id = "timer-${counter++}"
         val started = runtime.start(id, durationSeconds, clock()) ?: return null
-        titles[started] = title; subtitles[started] = subtitle; sources[started] = source
+        titles[started] = title; subtitles[started] = subtitle
+        metadatas[started] = metadata; sources[started] = source
         refresh()
         return started
     }
@@ -64,12 +78,17 @@ class TimerWorkspaceController(
     }
 
     /** "Start Again": clone a completed timer (identity preserved) into a fresh running one. */
-    fun startAgain(completedId: String): String? {
+    fun startAgain(completedId: String): String? = cloneToNew(completedId)
+
+    /** "Start New": clone any timer (running/paused/completed) into a fresh running one. */
+    fun cloneToNew(sourceId: String): String? {
+        val src = runtime.timers.firstOrNull { it.id == sourceId } ?: return null
         val newId = "timer-${counter++}"
-        val started = runtime.startAgain(completedId, newId, clock()) ?: return null
-        titles[started] = titles[completedId] ?: "Timer"
-        subtitles[started] = subtitles[completedId] ?: ""
-        sources[started] = sources[completedId] ?: ExposureTimerSource.MANUAL
+        val started = runtime.start(newId, src.durationSeconds, clock()) ?: return null
+        titles[started] = titles[sourceId] ?: "Timer"
+        subtitles[started] = subtitles[sourceId] ?: ""
+        metadatas[started] = metadatas[sourceId] ?: ""
+        sources[started] = sources[sourceId] ?: ExposureTimerSource.MANUAL
         refresh()
         return started
     }
@@ -89,7 +108,7 @@ class TimerWorkspaceController(
     fun titleOf(id: String): String? = titles[id]
     fun subtitleOf(id: String): String? = subtitles[id]
 
-    fun snapshotJson(): String = TimerSnapshotCodec.encode(runtime.timers, titles, subtitles, sources)
+    fun snapshotJson(): String = TimerSnapshotCodec.encode(runtime.timers, titles, subtitles, metadatas, sources)
 
     fun restoreFromJson(json: String?) {
         if (json == null) return
@@ -97,6 +116,7 @@ class TimerWorkspaceController(
         runtime.restoreFrom(restored.snapshots, clock())
         titles.clear(); titles.putAll(restored.titles)
         subtitles.clear(); subtitles.putAll(restored.subtitles)
+        metadatas.clear(); metadatas.putAll(restored.metadatas)
         sources.clear(); sources.putAll(restored.sources)
         refresh()
     }
@@ -110,19 +130,30 @@ class TimerWorkspaceController(
         )
     }
 
-    private fun forget(id: String) { titles.remove(id); subtitles.remove(id); sources.remove(id) }
+    private fun forget(id: String) {
+        titles.remove(id); subtitles.remove(id); metadatas.remove(id); sources.remove(id)
+    }
 
     private fun com.sangwook.ptimer.core.timer.TimerState.toUi(now: Instant): TimerItemUi {
         val remaining = remainingTime(now)
         val label = if (status == TimerStatus.COMPLETED) "Done" else calculator.formatExtendedClock(remaining)
+        val statusLabel = when (status) {
+            TimerStatus.RUNNING -> "Running"
+            TimerStatus.PAUSED -> "Paused"
+            TimerStatus.COMPLETED -> "Done"
+        }
+        val endsAt = if (status == TimerStatus.RUNNING) "Ends ${endsAtFormatter.format(endDate)}" else null
         return TimerItemUi(
             id = id,
             title = titles[id] ?: "Timer",
             subtitle = subtitles[id] ?: "",
+            metadata = metadatas[id] ?: "",
             source = sources[id] ?: ExposureTimerSource.MANUAL,
             status = status,
+            statusLabel = statusLabel,
             remainingSeconds = remaining,
             remainingLabel = label,
+            endsAtLabel = endsAt,
         )
     }
 }

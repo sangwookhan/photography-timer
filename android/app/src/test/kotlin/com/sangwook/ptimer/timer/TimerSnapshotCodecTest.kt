@@ -22,17 +22,19 @@ class TimerSnapshotCodecTest {
         )
         val titles = mapOf("r" to "Cam · Digital", "p" to "Cam · Portra 400", "c" to "Cam · Fomapan")
         val subtitles = mapOf("r" to "Adjusted Shutter · 100s", "p" to "Adjusted Shutter · Limited guidance · 100s", "c" to "Corrected Exposure · table")
+        val metadatas = mapOf("r" to "Base 1/30 · ND 0 · Adjusted 100s", "p" to "Base 1/30 · ND 8 · Adjusted 100s", "c" to "Base 1/30 · ND 8 · Adjusted 8.5s")
         val sources = mapOf(
             "r" to ExposureTimerSource.DIGITAL_RESULT,
             "p" to ExposureTimerSource.FILM_ADJUSTED_SHUTTER,
             "c" to ExposureTimerSource.FILM_CORRECTED_EXPOSURE,
         )
-        val json = TimerSnapshotCodec.encode(timers, titles, subtitles, sources)
+        val json = TimerSnapshotCodec.encode(timers, titles, subtitles, metadatas, sources)
 
         val restored = TimerSnapshotCodec.decode(json)
         assertEquals(3, restored.snapshots.size)
         assertEquals(titles, restored.titles)
         assertEquals(subtitles, restored.subtitles)
+        assertEquals(metadatas, restored.metadatas)
         assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, restored.sources["c"])
 
         val running = restored.snapshots.first { it.id == "r" }.restore(base.plusSeconds(10))

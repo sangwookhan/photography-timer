@@ -12,15 +12,21 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -113,6 +119,7 @@ private fun SlotBar(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
             )
         }
         TextButton(onClick = { draftName = slots.activeLabel; renaming = true }) { Text("Rename") }
+        if (activeId != null) TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeId)) }) { Text("Reset") }
     }
 
     if (renaming && activeId != null) {
@@ -181,20 +188,14 @@ private fun FilmSelector(calc: CalculatorUiState, films: List<FilmRowUi>, onEven
 
 @Composable
 private fun ModelSelector(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = calc.availableModels.firstOrNull { it.isSelected }?.label ?: "Default"
-    Box {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text("Model: $selected", Modifier.weight(1f))
-            OutlinedButton(onClick = { expanded = true }) { Text("Change") }
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            calc.availableModels.forEachIndexed { index, model ->
-                DropdownMenuItem(text = { Text(model.label) }, onClick = {
-                    onEvent(ShootingIntent.SelectModel(if (index == 0) null else model.profileId))
-                    expanded = false
-                })
-            }
+    // iOS-style segmented model picker (replaces the dropdown).
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        calc.availableModels.forEachIndexed { index, model ->
+            SegmentedButton(
+                selected = model.isSelected,
+                onClick = { onEvent(ShootingIntent.SelectModel(if (index == 0) null else model.profileId)) },
+                shape = SegmentedButtonDefaults.itemShape(index, calc.availableModels.size),
+            ) { Text(model.label, style = MaterialTheme.typography.labelMedium) }
         }
     }
 }
@@ -208,13 +209,13 @@ private fun TargetSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
     SectionCard("Target shutter") {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Text(calc.targetSummary ?: "Off", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (calc.targetAction != null) {
-                    Button(onClick = { onEvent(ShootingIntent.StartTarget) }, enabled = calc.targetAction.enabled) { Text("Start") }
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = { draft = ""; editing = true }) { Text("Set") }
                 if (calc.targetSeconds != null) {
                     OutlinedButton(onClick = { onEvent(ShootingIntent.ClearTarget) }) { Text("Clear") }
+                }
+                if (calc.targetAction != null) {
+                    PlayButton(enabled = calc.targetAction.enabled) { onEvent(ShootingIntent.StartTarget) }
                 }
             }
         }
@@ -290,8 +291,14 @@ private fun ResultActionRow(label: String, value: String, action: StartActionSta
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(value, fontWeight = FontWeight.Bold)
         }
-        Button(onClick = onStart, enabled = action?.enabled == true) { Text("Start") }
+        PlayButton(enabled = action?.enabled == true, onStart = onStart)
     }
+}
+
+/** iOS-style filled circular play action. */
+@Composable
+private fun PlayButton(enabled: Boolean, onStart: () -> Unit) {
+    FilledIconButton(onClick = onStart, enabled = enabled) { Text("▶") }
 }
 
 // MARK: - Custom film actions (low priority)
@@ -317,18 +324,26 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 
 @Composable
 private fun TimerCard(item: TimerItemUi, completed: Boolean, onEvent: (ShootingIntent) -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(item.title, style = MaterialTheme.typography.titleMedium)
+    Card(Modifier.fillMaxWidth(), colors = whiteCardColors()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                StatusPill(item.statusLabel)
+            }
             Text(item.subtitle, style = MaterialTheme.typography.bodySmall)
+            if (item.metadata.isNotBlank()) Text(item.metadata, style = MaterialTheme.typography.labelSmall)
             Text(item.remainingLabel, style = MaterialTheme.typography.headlineMedium)
+            item.endsAtLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (completed) {
                     OutlinedButton(onClick = { onEvent(ShootingIntent.StartAgain(item.id)) }) { Text("Start again") }
-                } else if (item.status == TimerStatus.RUNNING) {
-                    OutlinedButton(onClick = { onEvent(ShootingIntent.Pause(item.id)) }) { Text("Pause") }
                 } else {
-                    OutlinedButton(onClick = { onEvent(ShootingIntent.Resume(item.id)) }) { Text("Resume") }
+                    if (item.status == TimerStatus.RUNNING) {
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Pause(item.id)) }) { Text("Pause") }
+                    } else {
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Resume(item.id)) }) { Text("Resume") }
+                    }
+                    OutlinedButton(onClick = { onEvent(ShootingIntent.StartNew(item.id)) }) { Text("Start new") }
                 }
                 OutlinedButton(onClick = { onEvent(ShootingIntent.Remove(item.id)) }) { Text("Remove") }
             }
@@ -336,13 +351,28 @@ private fun TimerCard(item: TimerItemUi, completed: Boolean, onEvent: (ShootingI
     }
 }
 
+@Composable
+private fun StatusPill(label: String) {
+    val color = when (label) {
+        "Running" -> MaterialTheme.colorScheme.primary
+        "Paused" -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.outline
+    }
+    Surface(color = color.copy(alpha = 0.15f), shape = RoundedCornerShape(50)) {
+        Text(label, Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = color)
+    }
+}
+
 // MARK: - shared
 
 @Composable
+private fun whiteCardColors() = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+
+@Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    Card(Modifier.fillMaxWidth(), colors = whiteCardColors()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.labelLarge)
+            Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             content()
         }
     }

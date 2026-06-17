@@ -100,3 +100,13 @@ device/emulator `connectedAndroidTest`.
    quantified Pan F Plus with both starts, active timer rows with source
    identity). Screenshots saved to the owner's Desktop
    (`PTIMER146_android_v2_*.png`).
+3. **iOS look alignment** (`78b75ec`): segmented reciprocity-model picker
+   (replacing the dropdown), filled ▶ play actions on the Adjusted/Corrected/
+   Target rows, white sectioned cards, a camera-header Reset, and iOS-parity
+   timer rows (status pill, source subtitle, Base·ND·Adjusted metadata line,
+   "Ends HH:mm:ss" for running, "Start new" on active + "Start again" on
+   completed). Base/ND stay as steppers (Compose has no iOS-equivalent wheel as
+   a base component; explicitly out of scope). TimerWorkspaceController/codec
+   gained a metadata field + cloneToNew; 72 core + 42 app tests, 0 failures.
+   Visually verified on emulator (Fomapan 100 Classic segmented picker, ▶
+   starts, enriched timer rows). Screenshots: `PTIMER146_android_v3_*.png`.

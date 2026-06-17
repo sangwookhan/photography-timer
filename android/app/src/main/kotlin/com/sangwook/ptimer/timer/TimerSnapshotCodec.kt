@@ -24,6 +24,7 @@ object TimerSnapshotCodec {
         val id: String,
         val title: String,
         val subtitle: String = "",
+        val metadata: String = "",
         val source: String = "MANUAL",
         val status: String,
         val durationSeconds: Double,
@@ -41,6 +42,7 @@ object TimerSnapshotCodec {
         val snapshots: List<PersistentTimerSnapshot>,
         val titles: Map<String, String>,
         val subtitles: Map<String, String>,
+        val metadatas: Map<String, String>,
         val sources: Map<String, ExposureTimerSource>,
     )
 
@@ -48,6 +50,7 @@ object TimerSnapshotCodec {
         timers: List<TimerState>,
         titles: Map<String, String>,
         subtitles: Map<String, String>,
+        metadatas: Map<String, String>,
         sources: Map<String, ExposureTimerSource>,
     ): String {
         val dtos = timers.map { timer ->
@@ -56,6 +59,7 @@ object TimerSnapshotCodec {
                 id = snap.id,
                 title = titles[snap.id] ?: "Timer",
                 subtitle = subtitles[snap.id] ?: "",
+                metadata = metadatas[snap.id] ?: "",
                 source = (sources[snap.id] ?: ExposureTimerSource.MANUAL).name,
                 status = snap.status.token,
                 durationSeconds = snap.durationSeconds,
@@ -70,16 +74,18 @@ object TimerSnapshotCodec {
     }
 
     fun decode(text: String): Restored {
+        val empty = Restored(emptyList(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
         val collection = try {
             json.decodeFromString<CollectionDto>(text)
         } catch (_: Exception) {
-            return Restored(emptyList(), emptyMap(), emptyMap(), emptyMap())
+            return empty
         }
-        if (collection.schemaVersion != SCHEMA_VERSION) return Restored(emptyList(), emptyMap(), emptyMap(), emptyMap())
+        if (collection.schemaVersion != SCHEMA_VERSION) return empty
 
         val snapshots = ArrayList<PersistentTimerSnapshot>(collection.timers.size)
         val titles = LinkedHashMap<String, String>()
         val subtitles = LinkedHashMap<String, String>()
+        val metadatas = LinkedHashMap<String, String>()
         val sources = LinkedHashMap<String, ExposureTimerSource>()
         for (dto in collection.timers) {
             val status = try {
@@ -99,8 +105,9 @@ object TimerSnapshotCodec {
             )
             titles[dto.id] = dto.title
             subtitles[dto.id] = dto.subtitle
+            metadatas[dto.id] = dto.metadata
             sources[dto.id] = runCatching { ExposureTimerSource.valueOf(dto.source) }.getOrDefault(ExposureTimerSource.MANUAL)
         }
-        return Restored(snapshots, titles, subtitles, sources)
+        return Restored(snapshots, titles, subtitles, metadatas, sources)
     }
 }

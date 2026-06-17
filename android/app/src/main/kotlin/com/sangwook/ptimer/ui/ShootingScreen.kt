@@ -1,5 +1,8 @@
 package com.sangwook.ptimer.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,37 +67,63 @@ fun ShootingScreen(
     timers: TimerWorkspaceUiState,
     details: DetailsUi?,
     onEvent: (ShootingIntent) -> Unit,
+    ready: Boolean = true,
 ) {
-    details?.let { DetailsDialog(it, onEvent) }
+    Box(Modifier.fillMaxSize()) {
+        details?.let { DetailsDialog(it, onEvent) }
 
-    LazyColumn(
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+        ) {
+            item { Text(slots.activeLabel, style = MaterialTheme.typography.headlineSmall) }
+            item { SlotBar(slots, onEvent) }
+            item { FilmModelSection(calc, films, onEvent) }
+            item { TargetSection(calc, onEvent) }
+            item { BaseNdSection(calc, onEvent) }
+            item { ResultSection(calc, onEvent) }
+            item { CustomFilmRow(onEvent) }
+
+            if (timers.active.isNotEmpty()) {
+                item { SectionLabel("Active") }
+                items(timers.active, key = { it.id }) { TimerCard(it, completed = false, onEvent) }
+            }
+            if (timers.completed.isNotEmpty()) {
+                item {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        SectionLabel("Recently completed")
+                        TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
+                    }
+                }
+                items(timers.completed, key = { it.id }) { TimerCard(it, completed = true, onEvent) }
+            }
+        }
+
+        // While restore is in progress the ViewModel ignores intents; surface
+        // that with a blocking overlay so input isn't silently dropped.
+        if (!ready) RestoringOverlay()
+    }
+}
+
+/** Simple blocking overlay shown until ShootingViewModel.ready becomes true. */
+@Composable
+private fun RestoringOverlay() {
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { /* swallow input while restoring */ },
+        contentAlignment = Alignment.Center,
     ) {
-        item { Text(slots.activeLabel, style = MaterialTheme.typography.headlineSmall) }
-        item { SlotBar(slots, onEvent) }
-        item { FilmModelSection(calc, films, onEvent) }
-        item { TargetSection(calc, onEvent) }
-        item { BaseNdSection(calc, onEvent) }
-        item { ResultSection(calc, onEvent) }
-        item { CustomFilmRow(onEvent) }
-
-        if (timers.active.isNotEmpty()) {
-            item { SectionLabel("Active") }
-            items(timers.active, key = { it.id }) { TimerCard(it, completed = false, onEvent) }
-        }
-        if (timers.completed.isNotEmpty()) {
-            item {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    SectionLabel("Recently completed")
-                    TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
-                }
-            }
-            items(timers.completed, key = { it.id }) { TimerCard(it, completed = true, onEvent) }
+        Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
+            Text("Restoring…", Modifier.padding(24.dp), style = MaterialTheme.typography.titleMedium)
         }
     }
 }

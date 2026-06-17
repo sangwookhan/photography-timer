@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sangwook.ptimer.timer.DataStoreTimerStore
-import com.sangwook.ptimer.ui.TimerWorkspaceScreen
+import com.sangwook.ptimer.ui.ShootingScreen
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 import com.sangwook.ptimer.vm.ShootingViewModel
 
@@ -42,6 +42,12 @@ private fun ShootingRoot() {
     val context = LocalContext.current
     val store = remember { DataStoreTimerStore(context.applicationContext) }
     val viewModel: ShootingViewModel = viewModel(factory = ShootingViewModel.factory(store))
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    TimerWorkspaceScreen(state = uiState, onEvent = viewModel::onEvent)
+    val calcState by viewModel.calcState.collectAsStateWithLifecycle()
+    val timerState by viewModel.timerState.collectAsStateWithLifecycle()
+    ShootingScreen(
+        calc = calcState,
+        films = viewModel.films,
+        timers = timerState,
+        onEvent = viewModel::onEvent,
+    )
 }

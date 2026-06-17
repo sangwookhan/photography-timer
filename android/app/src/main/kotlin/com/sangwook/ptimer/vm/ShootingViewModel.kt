@@ -11,6 +11,7 @@ import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.reciprocity.TableAnchor
 import com.sangwook.ptimer.customfilm.CreateFormulaFromTable
 import com.sangwook.ptimer.customfilm.CustomFilmFactory
+import com.sangwook.ptimer.customfilm.CustomFilmIdSequencer
 import com.sangwook.ptimer.customfilm.CustomFilmLibrary
 import com.sangwook.ptimer.customfilm.CustomFilmLibraryCodec
 import com.sangwook.ptimer.customfilm.CustomFilmResult
@@ -93,7 +94,7 @@ class ShootingViewModel(
         viewModelScope.launch {
             timer.restoreFromJson(timerStore.load())
             customStore.load()?.let { customLib = CustomFilmLibrary(CustomFilmLibraryCodec.decode(it)) }
-            customSeq = customLib.all.size
+            customSeq = CustomFilmIdSequencer.nextSequence(customLib.all.map { it.id })
             calc.setCustomFilms(customLib.all)
             sessionStore.load()?.let { json ->
                 SlotSessionCodec.decode(json)?.let { restored ->
@@ -184,7 +185,7 @@ class ShootingViewModel(
         customLib.upsert(film); calc.setCustomFilms(customLib.all); _films.value = buildFilms(); persistCustom()
     }
 
-    private fun newCustomId(prefix: String): String = "custom-$prefix-${customSeq++}"
+    private fun newCustomId(prefix: String): String = CustomFilmIdSequencer.id(prefix, customSeq++)
 
     private fun buildFilms(): List<FilmRowUi> =
         catalog.map { FilmRowUi(it.id, it.canonicalStockName, it.manufacturer, it.iso, false) } +

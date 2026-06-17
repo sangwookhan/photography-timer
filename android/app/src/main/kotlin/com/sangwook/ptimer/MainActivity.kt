@@ -51,11 +51,13 @@ private fun ShootingRoot() {
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val slotsState by viewModel.slotsState.collectAsStateWithLifecycle()
     val films by viewModel.films.collectAsStateWithLifecycle()
+    val details by viewModel.detailsState.collectAsStateWithLifecycle()
     ShootingScreen(
         slots = slotsState,
         calc = calcState,
         films = films,
         timers = timerState,
+        details = details,
         onEvent = viewModel::onEvent,
     )
 }

@@ -113,6 +113,15 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
     private fun adjustedShutterSeconds(): Double =
         calculator.calculate(baseShutterSeconds, NdStep(ndStops.toDouble()), ExposureScaleMode.ONE_THIRD_STOP)
 
+    /** Build the reciprocity-details transparency for the active film, or null if digital. */
+    fun details(lookup: (String) -> FilmIdentity?): com.sangwook.ptimer.details.DetailsUi? {
+        val film = film() ?: return null
+        val profile = activeProfile(film)
+        val adjusted = adjustedShutterSeconds()
+        val result = policy.evaluate(profile, adjusted)
+        return com.sangwook.ptimer.details.DetailsPresenter.build(film, profile, result, adjusted, lookup)
+    }
+
     /** The request a Start-Timer tap should create, or null when disabled. */
     fun startRequest(): StartTimerRequest? {
         val adjusted = adjustedShutterSeconds()

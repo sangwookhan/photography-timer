@@ -47,6 +47,8 @@ sealed interface ShootingIntent {
     data class DeleteCustomFilm(val id: String) : ShootingIntent
     data class SetTarget(val seconds: Double) : ShootingIntent
     data object ClearTarget : ShootingIntent
+    data object OpenDetails : ShootingIntent
+    data object CloseDetails : ShootingIntent
     data class Pause(val id: String) : ShootingIntent
     data class Resume(val id: String) : ShootingIntent
     data class Remove(val id: String) : ShootingIntent
@@ -75,6 +77,8 @@ class ShootingViewModel(
     val slotsState: StateFlow<SlotsUiState> = _slotsState.asStateFlow()
     private val _films = MutableStateFlow(buildFilms())
     val films: StateFlow<List<FilmRowUi>> = _films.asStateFlow()
+    private val _detailsState = MutableStateFlow<com.sangwook.ptimer.details.DetailsUi?>(null)
+    val detailsState: StateFlow<com.sangwook.ptimer.details.DetailsUi?> = _detailsState.asStateFlow()
 
     private var tickJob: Job? = null
 
@@ -143,6 +147,10 @@ class ShootingViewModel(
             }
             is ShootingIntent.SetTarget -> { calc.setTarget(intent.seconds); afterCalcChange() }
             ShootingIntent.ClearTarget -> { calc.clearTarget(); afterCalcChange() }
+            ShootingIntent.OpenDetails -> {
+                _detailsState.value = calc.details { id -> customLib.film(id) ?: catalog.firstOrNull { it.id == id } }
+            }
+            ShootingIntent.CloseDetails -> { _detailsState.value = null }
             is ShootingIntent.Pause -> { timer.pause(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); ensureTicking() }
             is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers() }

@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.calculator.CalculatorUiState
+import com.sangwook.ptimer.details.DetailsUi
 import com.sangwook.ptimer.core.timer.TimerStatus
 import com.sangwook.ptimer.timer.TimerItemUi
 import com.sangwook.ptimer.timer.TimerWorkspaceUiState
@@ -49,8 +50,10 @@ fun ShootingScreen(
     calc: CalculatorUiState,
     films: List<FilmRowUi>,
     timers: TimerWorkspaceUiState,
+    details: DetailsUi?,
     onEvent: (ShootingIntent) -> Unit,
 ) {
+    details?.let { DetailsDialog(it, onEvent) }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -134,6 +137,9 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
                 ResultRow("Corrected exposure", calc.correctedExposureLabel ?: "—")
                 calc.reciprocityBadge?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
             }
+            if (calc.filmName != null) {
+                OutlinedButton(onClick = { onEvent(ShootingIntent.OpenDetails) }) { Text("Reciprocity details") }
+            }
             calc.fittedPreviewSummary?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             if (calc.isCustomTable) {
                 OutlinedButton(onClick = { onEvent(ShootingIntent.CreateFormulaFromSelectedTable) }) {
@@ -156,6 +162,27 @@ private fun CalculatorCard(calc: CalculatorUiState, films: List<FilmRowUi>, onEv
             CustomFilmCreators(onEvent)
         }
     }
+}
+
+@Composable
+private fun DetailsDialog(details: DetailsUi, onEvent: (ShootingIntent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onEvent(ShootingIntent.CloseDetails) },
+        title = { Text(details.title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                details.rows.forEach { row ->
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                        Text(row.label, style = MaterialTheme.typography.bodySmall)
+                        Text(row.value, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                details.comparisonTitle?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
+                details.comparisonLines.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onEvent(ShootingIntent.CloseDetails) }) { Text("Close") } },
+    )
 }
 
 @Composable

@@ -84,3 +84,19 @@ assembleDebug` → BUILD SUCCESSFUL; **72 core + 39 app = 111 tests, 0 failures*
 iOS/shared diff vs origin/main = 0. No `BROKEN:` commits. All 10 Round-3 slices
 implemented. Deferred: foreground service + exact background delivery; UI polish;
 device/emulator `connectedAndroidTest`.
+
+---
+
+## Post-user-test follow-ups
+
+1. **Start-action model fix** (`ea68abd`): replaced the single generic Start with
+   separate Adjusted/Corrected/Target start actions; limited guidance keeps
+   Adjusted enabled and disables only Corrected. Visually verified on
+   emulator-5554. Test count rose to 72 core + 41 app.
+2. **Screen-hierarchy cleanup** (`01a2934`): safe-area insets (title clears the
+   status bar / cutout), sectioned cards (Film+model / Target / Base+ND /
+   Result), custom-film actions demoted, vertical non-clipping timer cards.
+   UI-only; tests unchanged + green. Visually verified on emulator (no-film,
+   quantified Pan F Plus with both starts, active timer rows with source
+   identity). Screenshots saved to the owner's Desktop
+   (`PTIMER146_android_v2_*.png`).

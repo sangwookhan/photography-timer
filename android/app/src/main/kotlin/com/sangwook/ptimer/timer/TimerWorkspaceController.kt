@@ -2,6 +2,7 @@ package com.sangwook.ptimer.timer
 
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.timer.PersistentTimerSnapshot
+import com.sangwook.ptimer.core.timer.RepresentativeTimerSelector
 import com.sangwook.ptimer.core.timer.TimerRuntime
 import com.sangwook.ptimer.core.timer.TimerStatus
 import com.sangwook.ptimer.core.timer.TimerWorkspaceOrdering
@@ -74,6 +75,12 @@ class TimerWorkspaceController(
     }
 
     fun hasRunning(): Boolean = runtime.hasRunningTimers(clock())
+
+    /** Representative running timer for the ongoing notification, or null. */
+    fun representative(): TimerItemUi? =
+        RepresentativeTimerSelector.select(runtime.timers, clock())?.toUi(clock())
+
+    fun nameOf(id: String): String? = names[id]
 
     fun snapshotJson(): String = TimerSnapshotCodec.encode(runtime.timers, names)
 

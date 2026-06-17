@@ -14,6 +14,8 @@ import com.sangwook.ptimer.customfilm.CustomFilmFactory
 import com.sangwook.ptimer.customfilm.CustomFilmLibrary
 import com.sangwook.ptimer.customfilm.CustomFilmLibraryCodec
 import com.sangwook.ptimer.customfilm.CustomFilmResult
+import com.sangwook.ptimer.notifications.NoOpTimerNotifier
+import com.sangwook.ptimer.notifications.TimerNotifier
 import com.sangwook.ptimer.slots.CameraSlotSession
 import com.sangwook.ptimer.slots.SlotSessionCodec
 import com.sangwook.ptimer.timer.TimerStore
@@ -60,6 +62,7 @@ class ShootingViewModel(
     private val timerStore: TimerStore,
     private val sessionStore: TimerStore,
     private val customStore: TimerStore,
+    private val notifier: TimerNotifier = NoOpTimerNotifier,
 ) : ViewModel() {
 
     private val catalog = LaunchPresetFilmCatalogLoader.loadBundledCatalog()
@@ -96,8 +99,13 @@ class ShootingViewModel(
                 }
             }
             _films.value = buildFilms()
-            refreshCalc(); refreshSlots(); ensureTicking()
+            refreshCalc(); refreshSlots(); updateOngoing(); ensureTicking()
         }
+    }
+
+    private fun updateOngoing() {
+        val rep = timer.representative()
+        if (rep != null) notifier.showOngoing(rep.name, rep.remainingLabel) else notifier.clearOngoing()
     }
 
     fun onEvent(intent: ShootingIntent) {
@@ -157,6 +165,7 @@ class ShootingViewModel(
             is ShootingIntent.StartAgain -> { timer.startAgain(intent.id); persistTimers(); ensureTicking() }
             ShootingIntent.ClearCompleted -> { timer.clearCompleted(); persistTimers() }
         }
+        updateOngoing()
     }
 
     private fun adoptCustom(film: com.sangwook.ptimer.core.catalog.FilmIdentity) {
@@ -188,9 +197,12 @@ class ShootingViewModel(
         tickJob = viewModelScope.launch {
             while (timer.hasRunning()) {
                 delay(TICK_MILLIS)
-                if (timer.tick().isNotEmpty()) persistTimers()
+                val completed = timer.tick()
+                completed.forEach { notifier.postCompletion(it, timer.nameOf(it) ?: "Timer") }
+                if (completed.isNotEmpty()) persistTimers()
+                updateOngoing()
             }
-            persistTimers(); tickJob = null
+            updateOngoing(); persistTimers(); tickJob = null
         }
     }
 
@@ -205,8 +217,8 @@ class ShootingViewModel(
     companion object {
         private const val TICK_MILLIS = 100L
 
-        fun factory(timerStore: TimerStore, sessionStore: TimerStore, customStore: TimerStore) = viewModelFactory {
-            initializer { ShootingViewModel(timerStore, sessionStore, customStore) }
+        fun factory(timerStore: TimerStore, sessionStore: TimerStore, customStore: TimerStore, notifier: TimerNotifier) = viewModelFactory {
+            initializer { ShootingViewModel(timerStore, sessionStore, customStore, notifier) }
         }
     }
 }

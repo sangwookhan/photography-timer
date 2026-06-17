@@ -102,19 +102,37 @@ class ShootingViewModel(
     init {
         calc.setBaseShutterLadderIndex(nearestBaseIndex(com.sangwook.ptimer.core.exposure.CalculatorDefaults.BASE_SHUTTER_SECONDS))
         viewModelScope.launch {
-            timer.restoreFromJson(timerStore.load())
-            customStore.load()?.let { customLib = CustomFilmLibrary(CustomFilmLibraryCodec.decode(it)) }
-            customSeq = CustomFilmIdSequencer.nextSequence(customLib.all.map { it.id })
-            calc.setCustomFilms(customLib.all)
-            sessionStore.load()?.let { json ->
-                SlotSessionCodec.decode(json)?.let { restored ->
-                    session.restore(restored.activeSlotId, restored.snapshots, restored.names)
-                    calc.apply(session.snapshot(session.activeSlotId))
+            // Restore is fail-safe: each store loads independently behind
+            // runCatching with a documented fallback, and `ready` is set in
+            // `finally` so a failed/throwing load can never leave the app
+            // permanently inert. Only persistence load/decode is caught — pure
+            // wiring below is left to surface genuine programmer errors.
+            try {
+                // timers → on failure, no restored timers
+                runCatching { timer.restoreFromJson(timerStore.load()) }
+                // custom films → on failure, keep the empty default library
+                runCatching {
+                    customStore.load()?.let { customLib = CustomFilmLibrary(CustomFilmLibraryCodec.decode(it)) }
                 }
+                // Seed the id sequencer from whichever library actually loaded.
+                customSeq = CustomFilmIdSequencer.nextSequence(customLib.all.map { it.id })
+                calc.setCustomFilms(customLib.all)
+                // session AFTER custom films, so a session that references a
+                // custom film id resolves it (or falls back to digital via
+                // CalculatorController sanitation if that custom film is absent).
+                runCatching {
+                    sessionStore.load()?.let { json ->
+                        SlotSessionCodec.decode(json)?.let { restored ->
+                            session.restore(restored.activeSlotId, restored.snapshots, restored.names)
+                            calc.apply(session.snapshot(session.activeSlotId))
+                        }
+                    }
+                }
+            } finally {
+                _films.value = buildFilms()
+                refreshCalc(); refreshSlots(); updateOngoing(); ensureTicking()
+                _ready.value = true
             }
-            _films.value = buildFilms()
-            refreshCalc(); refreshSlots(); updateOngoing(); ensureTicking()
-            _ready.value = true
         }
     }
 

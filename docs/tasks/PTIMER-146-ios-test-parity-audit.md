@@ -139,6 +139,26 @@ restore/persistence is added.
 
 ---
 
+## Restore / Persistence Hardening — Pass 3
+
+Pass 2 added a `ready` guard but two gaps remained: a throwing store load could
+leave the app permanently not-ready, and `ready` was not surfaced to the UI.
+Both are now closed.
+
+| # | Risk | Fix | Tests |
+|---|---|---|---|
+| 1 | **A failing/throwing store load could strand restore** — if `timerStore`/`customStore`/`sessionStore` `load()` threw, the init coroutine could exit before `_ready = true`, leaving `onEvent` inert forever (recoverable only by app restart / data clear) | restore wraps each store load in its own `runCatching` with a documented fallback (timers→none, custom→empty library, session→defaults) and sets `_ready = true` in a `finally`, so a failed load can never strand the app. Custom films still load **before** session application, so a session referencing a custom film resolves it (or falls back to digital via `CalculatorController` sanitation if absent). The catch is scoped to persistence load/decode; pure wiring is left to surface genuine programmer errors | `ShootingViewModelRestoreFailSafeTest` (5 JVM tests via `StandardTestDispatcher`): timer/custom/session each-throws-still-ready-and-usable, all-three-throw, and custom-loads-before-session-apply (valid custom film resolves) |
+| 2 | **`ready` not visible in UI** — input during restore was silently ignored with no feedback | `MainActivity` collects `viewModel.ready`; `ShootingScreen` takes a `ready` param and shows a simple blocking *Restoring…* overlay (scrim + label, swallows input) while not ready | not instrumented (see note); the gating behavior is covered by the ViewModel JVM tests |
+
+**Verification scope (no overclaim):** the fail-safe restore behavior is covered
+by plain-JVM tests. The UI `ready` wiring (overlay + `MainActivity` collection)
+is a minimal, non-pixel change and is **not** covered by an instrumented Compose
+test — `connectedAndroidTest` was **not** run this pass. Restore load failures
+now fall back safely and the ready state is surfaced to the UI; the overlay's
+on-device appearance is unverified.
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |

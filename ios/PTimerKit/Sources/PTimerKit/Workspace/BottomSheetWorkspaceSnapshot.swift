@@ -82,6 +82,11 @@ public struct BottomSheetLargeItem: Identifiable, Equatable {
     public let contextText: String?
     public let progress: Double
     public let actions: [BottomSheetLargeAction]
+    /// Stable per-timer sequence number (the timer's creation order),
+    /// shown as a bare number near the identity badge to distinguish
+    /// repeated timers that share the same camera/film/exposure. Stable
+    /// across deletion, sorting, and restore — not a volatile list index.
+    public let sequenceNumberText: String
 }
 
 public struct TimerWorkspaceSection: Identifiable, Equatable {
@@ -91,19 +96,22 @@ public struct TimerWorkspaceSection: Identifiable, Equatable {
     /// (and so a future copy change does not silently desynchronize
     /// the writer and the reader).
     public static let activeTitle = "Active"
-    public static let completedTitle = "Recently Completed"
+    /// Title for the terminal-records section. Holds both completed and
+    /// canceled timers, so it reads "History" rather than naming only
+    /// completion.
+    public static let historyTitle = "History"
 
     public let title: String
     public let items: [BottomSheetLargeItem]
 
     public var id: String { title }
 
-    /// True when this section contains the recently-completed
-    /// timers. Used by the full-screen Timers window to scope the
-    /// `Clear` affordance to this section's header instead of a
-    /// top-level summary strip.
+    /// True when this section contains the terminal (completed +
+    /// canceled) history records. Used by the full-screen Timers window
+    /// to scope the `Clear` affordance to this section's header instead
+    /// of a top-level summary strip.
     public var isCompletedSection: Bool {
-        title == Self.completedTitle
+        title == Self.historyTitle
     }
 }
 
@@ -119,7 +127,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     /// Number of timers not shown in the compact dock due to the visible limit.
     public let hiddenCompactItemCount: Int
 
-    /// Sections for the large workspace list (e.g. "Active", "Recently Completed").
+    /// Sections for the large workspace list (e.g. "Active", "History").
     public let sections: [TimerWorkspaceSection]
 
     /// Defines the number of visible remaining scale layers based on timer duration.
@@ -169,7 +177,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                         compactCompletedSupplementaryText: compactCompletedSupplementaryText
                     ),
                     identityFilmText: compactFilmText(for: timer),
-                    showsDecorativeTimeline: timer.status != .completed,
+                    showsDecorativeTimeline: timer.status == .running || timer.status == .paused,
                     sixtySecondLayer: compactSixtySecondLayer(for: timer),
                     sixtyMinuteLayer: compactSixtyMinuteLayer(for: timer),
                     originalScaleLayer: compactOriginalScaleLayer(for: timer)
@@ -203,8 +211,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         formatRemaining: (TimeInterval) -> String,
         timeContext: (RunningTimerItem) -> String?
     ) -> [TimerWorkspaceSection] {
-        let activeTimers = timers.filter { $0.status != .completed }
-        let completedTimers = timers.filter { $0.status == .completed }
+        let activeTimers = timers.filter { $0.status == .running || $0.status == .paused }
+        let completedTimers = timers.filter { $0.status == .completed || $0.status == .canceled }
 
         return [
             makeSection(
@@ -214,7 +222,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                 timeContext: timeContext
             ),
             makeSection(
-                title: TimerWorkspaceSection.completedTitle,
+                title: TimerWorkspaceSection.historyTitle,
                 timers: completedTimers,
                 formatRemaining: formatRemaining,
                 timeContext: timeContext
@@ -267,7 +275,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                     timingText: timeContext(timer),
                     contextText: contextText,
                     progress: progress(for: timer),
-                    actions: largeActions(for: timer.status)
+                    actions: largeActions(for: timer.status),
+                    sequenceNumberText: "\(timer.order)"
                 )
             }
         )
@@ -433,7 +442,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         }
 
         switch timer.status {
-        case .completed:
+        case .completed, .canceled:
             return CompactRemainingScaleLayer(fraction: 0)
         case .running, .paused:
             let cappedOriginalDuration = min(max(timer.duration, 0), 86_400)
@@ -449,7 +458,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         status: TimerStatus
     ) -> Double {
         switch status {
-        case .completed:
+        case .completed, .canceled:
             return 0
         case .running, .paused:
             guard unitDuration > 0 else {
@@ -473,10 +482,10 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     private static func largeActions(for status: TimerStatus) -> [BottomSheetLargeAction] {
         switch status {
         case .running:
-            return [.pause]
+            return [.pause, .startNew]
         case .paused:
-            return [.resume, .remove]
-        case .completed:
+            return [.resume, .startNew, .cancel, .remove]
+        case .completed, .canceled:
             return [.startAgain, .remove]
         }
     }
@@ -491,6 +500,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
             return compactDurationText(timer.remainingTime)
         case .completed:
             return "Done"
+        case .canceled:
+            return "Canceled"
         }
     }
 
@@ -499,7 +510,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         compactCompletedSupplementaryText: (RunningTimerItem) -> String?
     ) -> String? {
         switch timer.status {
-        case .completed:
+        case .completed, .canceled:
             guard timer.duration > 0 else {
                 return nil
             }
@@ -534,6 +545,13 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
             return formatRemaining(timer.remainingTime)
         case .completed:
             return "Done"
+        case .canceled:
+            // Combine status with the remaining-at-cancel so the row
+            // explains when the timer was stopped, without a new line.
+            guard let remaining = timer.canceledRemainingTime, remaining > 0 else {
+                return "Canceled"
+            }
+            return "Canceled · \(compactDurationText(remaining)) left"
         }
     }
 
@@ -595,6 +613,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
             return "Paused"
         case .completed:
             return "Done"
+        case .canceled:
+            return "Canceled"
         }
     }
 

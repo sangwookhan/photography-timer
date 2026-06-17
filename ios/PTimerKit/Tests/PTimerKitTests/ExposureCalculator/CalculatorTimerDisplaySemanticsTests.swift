@@ -141,6 +141,36 @@ final class CalculatorTimerDisplaySemanticsTests: XCTestCase {
     }
 
     @MainActor
+    func testCanceledTimerTimeContextMatchesCompletedTimestampPlusRelativeAge() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { currentDate }
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager
+        )
+        viewModel.scaleMode = .fullStop
+
+        viewModel.startTimer(from: 60)
+        let runningID = try XCTUnwrap(viewModel.timers.first?.id)
+
+        currentDate = startDate.addingTimeInterval(9)
+        viewModel.cancelTimer(id: runningID)
+
+        let timer = try XCTUnwrap(viewModel.timers.first { $0.id == runningID })
+        XCTAssertEqual(timer.status, .canceled)
+        // Same "<verb> <timestamp> · <relative age>" shape as completed,
+        // with the Canceled verb and the relative-age suffix present.
+        XCTAssertEqual(
+            viewModel.timerTimeContext(for: timer),
+            "Canceled \(viewModel.formatDateTime(try XCTUnwrap(timer.endDate))) · just now"
+        )
+    }
+
+    @MainActor
     func testRunningTimerPrimaryIsRemainingSecondaryIsExactSeconds() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate

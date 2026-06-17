@@ -117,6 +117,11 @@ final class TimerManager: ObservableObject, TimerManaging {
         reconcileTickingLoop()
     }
 
+    func cancel(id: UUID) {
+        runtime.cancel(id: id)
+        reconcileTickingLoop()
+    }
+
     func remove(id: UUID) {
         runtime.remove(id: id)
         reconcileTickingLoop()

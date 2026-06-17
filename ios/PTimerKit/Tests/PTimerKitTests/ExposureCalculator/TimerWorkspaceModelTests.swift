@@ -187,7 +187,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
             return
         }
 
-        let newID = model.startTimer(cloningCompleted: completedSource)
+        let newID = model.startTimer(cloning: completedSource)
 
         XCTAssertNotNil(newID)
         XCTAssertNotEqual(newID, sourceID, "Clone must get a fresh id")
@@ -247,7 +247,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
             return
         }
 
-        let newID = model.startTimer(cloningCompleted: completedSource)
+        let newID = model.startTimer(cloning: completedSource)
         XCTAssertNotNil(newID)
 
         let newTimer = model.timers.first { $0.id == newID }
@@ -283,7 +283,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
             return
         }
 
-        guard let newID = model.startTimer(cloningCompleted: completedSource),
+        guard let newID = model.startTimer(cloning: completedSource),
               let newTimer = model.timers.first(where: { $0.id == newID }) else {
             XCTFail("Cloned timer should be in the workspace")
             return
@@ -325,7 +325,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
             return
         }
 
-        let newID = model.startTimer(cloningCompleted: completedSource)
+        let newID = model.startTimer(cloning: completedSource)
         let newTimer = model.timers.first { $0.id == newID }
 
         XCTAssertEqual(newTimer?.order, nextOrderBeforeClone)
@@ -352,7 +352,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
         }
 
         XCTAssertEqual(runningSource.status, .running)
-        let newID = model.startTimer(cloningCompleted: runningSource)
+        let newID = model.startTimer(cloning: runningSource)
         XCTAssertNil(newID)
         XCTAssertEqual(model.timers.count, 1, "Workspace must not gain a clone for a non-completed source")
     }
@@ -382,7 +382,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
             return
         }
 
-        guard let newID = model.startTimer(cloningCompleted: completedSource) else {
+        guard let newID = model.startTimer(cloning: completedSource) else {
             XCTFail("Clone should start")
             return
         }
@@ -401,6 +401,231 @@ final class TimerWorkspaceModelTests: XCTestCase {
         XCTAssertEqual(sourceAfterPause.status, .completed)
         XCTAssertEqual(sourceAfterPause.completedAt, completedSource.completedAt)
         XCTAssertEqual(sourceAfterPause.duration, completedSource.duration, accuracy: 0.0001)
+    }
+
+    // MARK: - Cancel + Start New (PTIMER-188)
+
+    @MainActor
+    func testCancelTimerKeepsPausedTimerAsCanceledRecordWithMetadata() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 90,
+            name: "Tri-X 400 - 90s",
+            basisSummary: "Base 1s · 6 stops · Tri-X 400",
+            cameraSlot: CameraSlotIdentity(id: .camera2),
+            filmDisplayName: "Tri-X 400",
+            exposureSource: .filmCorrectedExposure
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 130)
+        model.pauseTimer(id: sourceID)
+
+        dateBox.date = Date(timeIntervalSince1970: 150)
+        model.cancelTimer(id: sourceID)
+
+        // The record is kept (not removed) and is now canceled, with its
+        // identity metadata still attached for the clone path.
+        XCTAssertEqual(model.timers.count, 1)
+        guard let canceled = model.timers.first(where: { $0.id == sourceID }) else {
+            XCTFail("Canceled record should remain in the workspace")
+            return
+        }
+        XCTAssertEqual(canceled.status, .canceled)
+        XCTAssertEqual(canceled.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(canceled.exposureSource, .filmCorrectedExposure)
+    }
+
+    @MainActor
+    func testStartingNewFromRunningCancelsSourceAndStartsFreshWithSameContext() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        let cameraSlot = CameraSlotIdentity(id: .camera2)
+        guard let sourceID = model.startTimer(
+            duration: 64,
+            name: "Tri-X 400 - 64s",
+            basisSummary: "Base 1s · 6 stops · Tri-X 400",
+            cameraSlot: cameraSlot,
+            filmDisplayName: "Tri-X 400",
+            filmProfileQualifier: "Unofficial",
+            exposureSource: .filmCorrectedExposure
+        ), let runningSource = model.timers.first(where: { $0.id == sourceID }) else {
+            XCTFail("Source timer should start")
+            return
+        }
+        XCTAssertEqual(runningSource.status, .running)
+
+        // Advance partway so Start New is a genuine abandon.
+        dateBox.date = Date(timeIntervalSince1970: 140)
+        let newID = model.startTimer(replacingActive: runningSource)
+
+        XCTAssertNotNil(newID)
+        XCTAssertNotEqual(newID, sourceID, "Start New must get a fresh id")
+        // Source is kept as a canceled record; the new timer joins it —
+        // exactly one running timer, no ghost/duplicate.
+        XCTAssertEqual(model.timers.count, 2)
+        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 1)
+
+        guard let canceledSource = model.timers.first(where: { $0.id == sourceID }) else {
+            XCTFail("Source should remain as a canceled record")
+            return
+        }
+        XCTAssertEqual(canceledSource.status, .canceled)
+
+        guard let fresh = model.timers.first(where: { $0.id == newID }) else {
+            XCTFail("Fresh timer should be in the workspace")
+            return
+        }
+        XCTAssertEqual(fresh.status, .running)
+        XCTAssertEqual(fresh.duration, 64, accuracy: 0.0001)
+        XCTAssertEqual(fresh.remainingTime, 64, accuracy: 0.0001)
+        XCTAssertEqual(fresh.startDate, dateBox.date)
+        // Shot configuration is preserved on the fresh timer.
+        XCTAssertEqual(fresh.name, "Tri-X 400 - 64s")
+        XCTAssertEqual(fresh.basisSummary, "Base 1s · 6 stops · Tri-X 400")
+        XCTAssertEqual(fresh.cameraSlot, cameraSlot)
+        XCTAssertEqual(fresh.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(fresh.filmProfileQualifier, "Unofficial")
+        XCTAssertEqual(fresh.exposureSource, .filmCorrectedExposure)
+    }
+
+    @MainActor
+    func testStartingNewFromPausedCancelsSourceAndStartsFromFullDuration() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 90,
+            name: "src",
+            basisSummary: "manual"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 130)
+        model.pauseTimer(id: sourceID)
+        guard let pausedSource = model.timers.first(where: { $0.id == sourceID }),
+              pausedSource.status == .paused else {
+            XCTFail("Source timer should be paused before Start New")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 160)
+        let newID = model.startTimer(replacingActive: pausedSource)
+
+        XCTAssertNotNil(newID)
+        XCTAssertEqual(model.timers.count, 2)
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .canceled)
+
+        guard let fresh = model.timers.first(where: { $0.id == newID }) else {
+            XCTFail("Fresh timer should be in the workspace")
+            return
+        }
+        XCTAssertEqual(fresh.status, .running)
+        XCTAssertNil(fresh.pausedAt)
+        XCTAssertNil(fresh.pausedRemainingTime)
+        XCTAssertEqual(fresh.remainingTime, 90, accuracy: 0.0001)
+        XCTAssertEqual(fresh.startDate, dateBox.date)
+    }
+
+    @MainActor
+    func testStartingNewRejectsTerminalTimer() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 30,
+            name: "src",
+            basisSummary: "manual"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 200)
+        timerManager.tick()
+        guard let completedSource = model.timers.first(where: { $0.id == sourceID }),
+              completedSource.status == .completed else {
+            XCTFail("Source timer should be completed")
+            return
+        }
+
+        let newID = model.startTimer(replacingActive: completedSource)
+
+        // Start New leaves terminal rows to the clone (Start Again) path:
+        // no cancel, no new timer.
+        XCTAssertNil(newID)
+        XCTAssertEqual(model.timers.count, 1)
+        XCTAssertEqual(model.timers.first?.id, sourceID)
+        XCTAssertEqual(model.timers.first?.status, .completed)
+    }
+
+    @MainActor
+    func testCloningCanceledRecordStartsFreshTimerAndLeavesSourceIntact() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 45,
+            name: "Tri-X 400 - 45s",
+            basisSummary: "manual",
+            filmDisplayName: "Tri-X 400",
+            exposureSource: .filmCorrectedExposure
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 130)
+        model.cancelTimer(id: sourceID)
+        guard let canceledSource = model.timers.first(where: { $0.id == sourceID }),
+              canceledSource.status == .canceled else {
+            XCTFail("Source should be canceled")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 150)
+        let newID = model.startTimer(cloning: canceledSource)
+
+        XCTAssertNotNil(newID)
+        XCTAssertEqual(model.timers.count, 2)
+        // Source canceled record stays intact.
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .canceled)
+
+        guard let fresh = model.timers.first(where: { $0.id == newID }) else {
+            XCTFail("Cloned timer should be in the workspace")
+            return
+        }
+        XCTAssertEqual(fresh.status, .running)
+        XCTAssertEqual(fresh.duration, 45, accuracy: 0.0001)
+        XCTAssertEqual(fresh.filmDisplayName, "Tri-X 400")
+        XCTAssertEqual(fresh.exposureSource, .filmCorrectedExposure)
     }
 
     // MARK: - Persistence

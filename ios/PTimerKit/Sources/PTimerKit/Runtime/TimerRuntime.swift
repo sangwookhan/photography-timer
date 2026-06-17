@@ -156,6 +156,21 @@ public final class TimerRuntime: ObservableObject {
         persistTimers()
     }
 
+    /// Cancels a running or paused timer, transitioning it to the
+    /// terminal `canceled` record (kept in `timers`, unlike `remove`).
+    /// Pending completion notifications are dropped because the timer
+    /// will no longer finish. Already-terminal timers are left intact.
+    public func cancel(id: UUID) {
+        guard let index = timers.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        let now = dateProvider()
+        timers[index] = timers[index].canceled(at: now)
+        completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
+        persistTimers()
+    }
+
     private func completionEvent(
         from previous: TimerState,
         to updated: TimerState

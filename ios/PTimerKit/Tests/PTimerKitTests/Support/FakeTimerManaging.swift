@@ -50,6 +50,7 @@ final class FakeTimerManaging: TimerManaging {
     // `RuntimeBackedTimerManaging`, not this type.
     func pause(id: UUID) {}
     func resume(id: UUID) {}
+    func cancel(id: UUID) {}
 
     func remove(id: UUID) {
         timers.removeAll { $0.id == id }

@@ -57,6 +57,10 @@ public struct RunningTimerItem: Identifiable, Equatable {
     /// selections; `nil` (default model / older snapshot) renders
     /// exactly as before.
     public let selectedModelLabel: String?
+    /// Remaining time recorded when the timer was canceled. Non-nil
+    /// only for canceled records; lets the history surface show how
+    /// much was left at the stop (e.g. "Canceled · 51s left").
+    public let canceledRemainingTime: TimeInterval?
 
     public init(
         id: UUID,
@@ -76,7 +80,8 @@ public struct RunningTimerItem: Identifiable, Equatable {
         exposureSource: ExposureTimerSource? = nil,
         isOutsideManufacturerGuidance: Bool = false,
         customProfileSummary: String? = nil,
-        selectedModelLabel: String? = nil
+        selectedModelLabel: String? = nil,
+        canceledRemainingTime: TimeInterval? = nil
     ) {
         self.id = id
         self.order = order
@@ -96,6 +101,7 @@ public struct RunningTimerItem: Identifiable, Equatable {
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
         self.selectedModelLabel = selectedModelLabel
+        self.canceledRemainingTime = canceledRemainingTime
     }
 
     /// Convenience packaging of the slot + film + source identity
@@ -134,7 +140,7 @@ public struct RunningTimerItem: Identifiable, Equatable {
             return sanitizeRemainingTime(endDate.timeIntervalSince(referenceDate))
         case .paused:
             return sanitizeRemainingTime(pausedRemainingTime ?? 0)
-        case .completed:
+        case .completed, .canceled:
             return 0
         }
     }
@@ -152,6 +158,19 @@ public struct RunningTimerItem: Identifiable, Equatable {
         return endDate
     }
 
+    /// Terminal timestamp used to order the history area: completion
+    /// time for completed timers, cancellation time for canceled
+    /// timers. `nil` for active (running/paused) timers, which sort in
+    /// their own group ahead of the history section.
+    public var terminalAt: Date? {
+        switch status {
+        case .completed, .canceled:
+            return endDate
+        case .running, .paused:
+            return nil
+        }
+    }
+
     private func sanitizeRemainingTime(_ value: TimeInterval) -> TimeInterval {
         assert(!value.isNaN, "Remaining time input must not be NaN.")
         let clamped = max(0, value)
@@ -160,9 +179,10 @@ public struct RunningTimerItem: Identifiable, Equatable {
 }
 
 /// Stable presentation order for the timer workspace: active timers
-/// (running + paused) first in LIFO insertion order, then completed
-/// timers in completion-desc order, with a final tiebreak on stable
-/// `id.uuidString` so equal keys produce a deterministic sequence.
+/// (running + paused) first in LIFO insertion order, then terminal
+/// records (completed + canceled) in terminal-time-desc order, with a
+/// final tiebreak on stable `id.uuidString` so equal keys produce a
+/// deterministic sequence.
 public enum TimerWorkspaceOrdering {
     public static func sort(_ timers: [RunningTimerItem]) -> [RunningTimerItem] {
         timers.sorted(by: areInPresentationOrder(lhs:rhs:))
@@ -182,8 +202,8 @@ public enum TimerWorkspaceOrdering {
                 return lhs.order > rhs.order
             }
         case 1:
-            if lhs.completedAt != rhs.completedAt {
-                return (lhs.completedAt ?? .distantPast) > (rhs.completedAt ?? .distantPast)
+            if lhs.terminalAt != rhs.terminalAt {
+                return (lhs.terminalAt ?? .distantPast) > (rhs.terminalAt ?? .distantPast)
             }
 
             if lhs.order != rhs.order {
@@ -200,7 +220,7 @@ public enum TimerWorkspaceOrdering {
         switch status {
         case .running, .paused:
             return 0
-        case .completed:
+        case .completed, .canceled:
             return 1
         }
     }

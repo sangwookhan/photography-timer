@@ -104,29 +104,60 @@ public final class TimerWorkspaceModel: ObservableObject {
         return id
     }
 
-    /// Starts a new timer cloned from a completed source timer. The
-    /// new timer gets a fresh id, order, and runtime lifecycle from
-    /// `any TimerManaging`; identity-bearing fields (camera slot, film
-    /// name, profile qualifier, exposure source) come from the
-    /// source's already-captured metadata. The source timer is read
-    /// only — its runtime state, ordering, and persisted metadata are
-    /// untouched.
+    /// Starts a new timer cloned from a terminal (completed or
+    /// canceled) source record. The new timer gets a fresh id, order,
+    /// and runtime lifecycle from `any TimerManaging`; identity-bearing
+    /// fields (camera slot, film name, profile qualifier, exposure
+    /// source) come from the source's already-captured metadata. The
+    /// source record is read only — its runtime state, ordering, and
+    /// persisted metadata are untouched.
     ///
     /// Returns the new timer's id on success; `nil` when `source` is
-    /// not in the `completed` state or `any TimerManaging` rejected the
-    /// duration. The completed-status guard lets the UI route every
-    /// row through this path while staying inert for running or
-    /// paused rows.
+    /// not a terminal record or `any TimerManaging` rejected the
+    /// duration. The terminal-status guard lets the UI route the
+    /// `Start Again` action through this path while staying inert for
+    /// running or paused rows.
     @discardableResult
     public func startTimer(
-        cloningCompleted source: RunningTimerItem,
+        cloning source: RunningTimerItem,
         id: UUID = UUID()
     ) -> UUID? {
-        guard source.status == .completed else {
+        guard source.status == .completed || source.status == .canceled else {
             return nil
         }
 
-        return startTimer(
+        return startTimer(cloningMetadataFrom: source, id: id)
+    }
+
+    /// Replaces an active (running or paused) source timer with a fresh
+    /// one started from full duration. The source is canceled (kept as
+    /// a terminal canceled record, not removed) so the abandoned
+    /// exposure stays in history and no duplicate or ghost timer keeps
+    /// running; the new timer then starts with the source's duration
+    /// and identity snapshot. Returns the new timer's id on success;
+    /// `nil` when `source` is not running or paused.
+    @discardableResult
+    public func startTimer(
+        replacingActive source: RunningTimerItem,
+        id: UUID = UUID()
+    ) -> UUID? {
+        guard source.status == .running || source.status == .paused else {
+            return nil
+        }
+
+        cancelTimer(id: source.id)
+        return startTimer(cloningMetadataFrom: source, id: id)
+    }
+
+    /// Shared body for the Start New / Start Again paths: starts a new
+    /// timer that reuses `source`'s duration and identity-bearing
+    /// metadata.
+    @discardableResult
+    private func startTimer(
+        cloningMetadataFrom source: RunningTimerItem,
+        id: UUID
+    ) -> UUID? {
+        startTimer(
             id: id,
             duration: source.duration,
             name: source.name,
@@ -147,6 +178,14 @@ public final class TimerWorkspaceModel: ObservableObject {
 
     public func resumeTimer(id: UUID) {
         timerManager.resume(id: id)
+    }
+
+    /// Cancels a running or paused timer, keeping it as a terminal
+    /// canceled record. Unlike `removeTimer`, the metadata entry is
+    /// preserved so the canceled record retains its identity and can
+    /// be relaunched via the clone path.
+    public func cancelTimer(id: UUID) {
+        timerManager.cancel(id: id)
     }
 
     public func removeTimer(id: UUID) {
@@ -312,7 +351,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                     exposureSource: metadata?.exposureSource,
                     isOutsideManufacturerGuidance: metadata?.isOutsideManufacturerGuidance ?? false,
                     customProfileSummary: metadata?.customProfileSummary,
-                    selectedModelLabel: metadata?.selectedModelLabel
+                    selectedModelLabel: metadata?.selectedModelLabel,
+                    canceledRemainingTime: state.remainingAtCancel
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))

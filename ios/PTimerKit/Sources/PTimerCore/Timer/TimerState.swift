@@ -19,6 +19,11 @@ public enum TimerStatus: String, Equatable {
     // `paused` is a frozen, resumable state that preserves remaining time.
     case paused
     case completed
+    // `canceled` is a terminal record for a timer the user stopped
+    // before it finished. Like `completed` it no longer runs and is
+    // surfaced in the history area, but it is labeled Canceled rather
+    // than Done so the abandoned shot stays distinguishable.
+    case canceled
 }
 
 /// Payload of a `running` timer. Holds only the fields valid in the
@@ -85,6 +90,30 @@ public struct CompletedTimer: Equatable {
     }
 }
 
+/// Payload of a `canceled` timer. Holds the recorded cancellation
+/// timestamp; surfaced via `endDate` for backward-compatible callers
+/// that read the legacy field. Mirrors `CompletedTimer` because both
+/// are terminal records, but stays a distinct type so the canceled
+/// state can never be confused with a natural completion.
+public struct CanceledTimer: Equatable {
+    public let id: UUID
+    public let duration: TimeInterval
+    public let startDate: Date
+    public let canceledAt: Date
+    /// Remaining time captured at the moment of cancellation, so the
+    /// history surface can explain *when* the timer was stopped
+    /// (e.g. "Canceled · 51s left"). Distinct from `duration`.
+    public let remainingAtCancel: TimeInterval
+
+    public init(id: UUID, duration: TimeInterval, startDate: Date, canceledAt: Date, remainingAtCancel: TimeInterval) {
+        self.id = id
+        self.duration = duration
+        self.startDate = startDate
+        self.canceledAt = canceledAt
+        self.remainingAtCancel = remainingAtCancel
+    }
+}
+
 /// Sum-type representation of a timer's lifecycle state. Each case
 /// carries only the fields valid for that state, so invalid
 /// combinations (e.g. running with a `pausedAt`) cannot be
@@ -98,6 +127,7 @@ public enum TimerState: Identifiable, Equatable {
     case running(RunningTimer)
     case paused(PausedTimer)
     case completed(CompletedTimer)
+    case canceled(CanceledTimer)
 
     /// Compatibility initializer that mirrors the historical struct
     /// `TimerState(id:duration:startDate:endDate:pausedRemainingTime:pausedAt:status:)`
@@ -164,6 +194,20 @@ public enum TimerState: Identifiable, Equatable {
                     completedAt: endDate ?? startDate.addingTimeInterval(duration)
                 )
             )
+        case .canceled:
+            assert(endDate != nil, "TimerState(.canceled) requires a non-nil endDate (cancellation timestamp)")
+            self = .canceled(
+                CanceledTimer(
+                    id: id,
+                    duration: duration,
+                    startDate: startDate,
+                    canceledAt: endDate ?? startDate.addingTimeInterval(duration),
+                    // Canceled records carry their remaining-at-cancel in
+                    // the `pausedRemainingTime` slot (nil-safe for older
+                    // inputs that predate the field).
+                    remainingAtCancel: pausedRemainingTime ?? 0
+                )
+            )
         }
     }
 
@@ -172,6 +216,7 @@ public enum TimerState: Identifiable, Equatable {
         case .running(let payload): return payload.id
         case .paused(let payload): return payload.id
         case .completed(let payload): return payload.id
+        case .canceled(let payload): return payload.id
         }
     }
 
@@ -180,6 +225,7 @@ public enum TimerState: Identifiable, Equatable {
         case .running(let payload): return payload.duration
         case .paused(let payload): return payload.duration
         case .completed(let payload): return payload.duration
+        case .canceled(let payload): return payload.duration
         }
     }
 
@@ -188,6 +234,7 @@ public enum TimerState: Identifiable, Equatable {
         case .running(let payload): return payload.startDate
         case .paused(let payload): return payload.startDate
         case .completed(let payload): return payload.startDate
+        case .canceled(let payload): return payload.startDate
         }
     }
 
@@ -200,6 +247,7 @@ public enum TimerState: Identifiable, Equatable {
         case .running(let payload): return payload.endDate
         case .paused(let payload): return payload.endDate
         case .completed(let payload): return payload.completedAt
+        case .canceled(let payload): return payload.canceledAt
         }
     }
 
@@ -226,6 +274,7 @@ public enum TimerState: Identifiable, Equatable {
         case .running: return .running
         case .paused: return .paused
         case .completed: return .completed
+        case .canceled: return .canceled
         }
     }
 
@@ -236,7 +285,7 @@ public enum TimerState: Identifiable, Equatable {
             return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSinceNow)
         case .paused(let payload):
             return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
-        case .completed:
+        case .completed, .canceled:
             return 0
         }
     }
@@ -248,7 +297,7 @@ public enum TimerState: Identifiable, Equatable {
             return Self.sanitizeRemainingTime(payload.endDate.timeIntervalSince(now))
         case .paused(let payload):
             return Self.sanitizeRemainingTime(payload.pausedRemainingTime)
-        case .completed:
+        case .completed, .canceled:
             return 0
         }
     }
@@ -328,6 +377,37 @@ public enum TimerState: Identifiable, Equatable {
         )
     }
 
+    /// Transitions a running or paused timer to the terminal
+    /// `canceled` record, stamping the supplied cancellation time.
+    /// Already-terminal states (completed, canceled) are returned
+    /// unchanged so a stray cancel cannot rewrite a finished record.
+    public func canceled(at cancellationDate: Date) -> TimerState {
+        switch self {
+        case .running, .paused:
+            return .canceled(
+                CanceledTimer(
+                    id: id,
+                    duration: duration,
+                    startDate: startDate,
+                    canceledAt: cancellationDate,
+                    remainingAtCancel: remainingTime(at: cancellationDate)
+                )
+            )
+        case .completed, .canceled:
+            return self
+        }
+    }
+
+    /// Remaining time recorded when a timer was canceled; `nil` for
+    /// every non-canceled state. Surfaced so the history UI can show
+    /// how much was left when the photographer stopped the timer.
+    public var remainingAtCancel: TimeInterval? {
+        if case .canceled(let payload) = self {
+            return payload.remainingAtCancel
+        }
+        return nil
+    }
+
     private func resolvedCompletionDate() -> Date {
         // Mirrors the legacy `endDate ?? pausedAt + remaining ??
         // startDate + duration` resolution exactly. In the sum-type
@@ -342,6 +422,8 @@ public enum TimerState: Identifiable, Equatable {
             return payload.endDate
         case .completed(let payload):
             return payload.completedAt
+        case .canceled(let payload):
+            return payload.canceledAt
         }
     }
 

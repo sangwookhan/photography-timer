@@ -59,3 +59,28 @@ all verified work kept green:
   notifications + foreground service.
 
 See `PTIMER-146-android-test-intent-map.md` for the per-area status and gap list.
+
+---
+
+## Resumed session (continue from Draft PR #16)
+
+Resumed to complete the deferred Slice 3 remainder and Slices 5–10. Times KST.
+
+| Phase | End | Duration | Result |
+|---|---|---|---|
+| Resume preflight (base clean, build green) | 09:17 | ~2m | clean |
+| Slice 3 remainder — catalog + policy + confidence + alternates + resolver | 09:24:16 | ~6m45s | green `87bff3d`, `5432fb2` |
+| Slice 5 — timer workflow (VM + coordinator + DataStore + UI) | 09:29:29 | ~5m | green `a20bcb6` |
+| Slice 6 — calculator + film + alternate-model | 09:34:05 | ~4m35s | green `8ab3c46` |
+| Slice 7 — camera slots + rename | 09:38:29 | ~4m25s | green `023eba3` |
+| Slice 8 — custom film (formula/table/fitted/create-from-table) | 09:45:22 | ~7m | green `2a1d572` |
+| Slice 9 — Target Shutter | 09:48:40 | ~3m20s | green `7a4e560` |
+| Slice 10a — Reciprocity Details | 09:51:19 | ~2m40s | green `3b52b6a` |
+| Slice 10b — notifications | 09:54:54 | ~3m35s | green `ccde417` |
+| **Resumed total (09:15 → ~09:56)** | — | **~41m** | all slices complete |
+
+Final clean verification: `./gradlew clean :core:test testDebugUnitTest
+assembleDebug` → BUILD SUCCESSFUL; **72 core + 39 app = 111 tests, 0 failures**;
+iOS/shared diff vs origin/main = 0. No `BROKEN:` commits. All 10 Round-3 slices
+implemented. Deferred: foreground service + exact background delivery; UI polish;
+device/emulator `connectedAndroidTest`.

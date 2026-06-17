@@ -6,152 +6,148 @@ were used as behavior-audit sources, not mechanically translated.
 
 ## 1. Summary
 
-- **Stopping point:** end of Slice 4. Pure-Kotlin `:core` foundation complete
-  (exposure, reciprocity calculation primitives, timer engine). App layers and
-  the full catalog domain are not yet implemented.
-- **Completed slices:** 1 (module), 2 (exposure parity), 3-partial (reciprocity
-  calculation primitives), 4 (timer state machine/runtime/snapshot).
-- **Total Android tests added:** **51** (CoreModuleSmokeTest 1, ExposureGoldenTest
-  5, ExposureCoreTest 8, ReciprocityCoreTest 18, TimerStateTest 6,
-  TimerRuntimeTest 13).
+- **Stopping point:** all ten Round-3 slices implemented (1–10). The Android MVP
+  is a working shooting app: per-slot calculator + film selection + reciprocity
+  (formula/table/threshold/limited/unsupported) + alternate-model selection +
+  Start-Timer enablement; timer lifecycle (start/pause/resume/complete/remove/
+  Start-Again) with persistence/restore; camera slots + rename; custom film
+  library (formula + table authoring, inspection-only fitted preview,
+  Create-Formula-from-table + referenceTableFilmID); Target Shutter; Reciprocity
+  Details transparency; and Android completion + ongoing running-timer
+  notifications.
+- **Completed slices:** 1 module, 2 exposure, 3 reciprocity+catalog+policy+
+  confidence+alternates+resolver, 4 timer engine, 5 timer workflow, 6 calculator+
+  film+alternate-model, 7 camera slots+rename, 8 custom film, 9 Target Shutter,
+  10a Details, 10b notifications.
+- **Total Android tests:** **111** (72 `:core`, 39 `:app`), 0 failures.
 - **Final verification:** `./gradlew clean :core:test testDebugUnitTest
-  assembleDebug` → BUILD SUCCESSFUL, 0 failures. iOS source diff vs origin/main:
-  none.
-- **Known gaps:** full catalog JSON domain + 37-film loader/validation, policy
-  evaluator, confidence presentation, alternate-model registry, reference-table
-  resolver; all app layers (ViewModel, persistence/DataStore, Compose UI, camera
-  slots, custom-film UI, Target Shutter, Details, notifications).
-- **Not-applicable iOS-only areas:** ActivityKit/Live Activity, RecordReplay
-  harness, concrete `UserDefaults*Store`, SwiftUI shell/layout-metric tests.
+  assembleDebug` → BUILD SUCCESSFUL. iOS/shared diff vs origin/main: none.
+- **Known gaps:** foreground service for guaranteed background countdown and
+  exact-alarm background delivery (deferred — platform work needing device
+  testing); custom-table/editor/graph/picker UI polish; no
+  `connectedDebugAndroidTest` run (no device; UI smoke not executed).
+- **Not-applicable iOS-only areas:** ActivityKit/Live Activity (replaced by the
+  ongoing notification), RecordReplay harness, concrete UserDefaults stores
+  (replaced by DataStore), SwiftUI shell/layout-metric tests.
 
 ## 2. Test intent inventory
 
-| Area | Test intent | iOS source/test | iOS function/type | Android function/type | Android test | Status |
-|---|---|---|---|---|---|---|
-| Exposure | ND output = base·2^stops; snap; overflow | `ExposureCalculatorTests`, `ExposureCalculationAccuracyTests`, `exposure-golden.json` | `ExposureCalculator.calculate` | `ExposureCalculator.calculate` | `ExposureGoldenTest.calculationCasesMatchFixture` | Implemented + tested |
-| Exposure | snap gated on full-stop scale + whole-stop ND | snap suite | `ExposureCalculator.snapToFullStop` | `ExposureCalculator.snapToFullStop` (private), gating in `calculate` | `ExposureCoreTest.oneThirdScaleDoesNotSnapEvenWhenNdIsWhole` | Implemented + tested |
-| Exposure | shutter/duration formatting, locale-independent | format + timeDisplay fixtures | `formatShutter`, `formatTimeDisplay`, `formatExtendedClock` | same names | `ExposureGoldenTest.{shutterFormatCases,timeDisplayCases}MatchFixture` | Implemented + tested |
-| Exposure | base shutter parsing + typed errors | `errorCases` | `parseBaseShutter`, `ExposureCalculatorError` | `parseBaseShutter`, `ExposureCalcError` | `ExposureGoldenTest.errorCasesMatchFixture` | Implemented + tested |
-| Exposure | 55-entry ⅓ ladder, 19 full-stop, ND 0..30 | `ExposureScale` | `ExposureScale` | `ExposureScale` | `ExposureCoreTest` (ladder sizes) | Implemented + tested |
-| Catalog/reciprocity | formula evaluation (strict no-correction, unsafe-shortening, beyond-range) | `ReciprocityFormula.evaluate` tests | `ReciprocityFormula.evaluate` | `ReciprocityFormula.evaluate` | `ReciprocityCoreTest.formula*` | Implemented + tested |
-| Catalog/reciprocity | log-log table interpolation, anchor exactness, extrapolation, 10% tolerance | `TableInterpolationModel` tests | `TableInterpolationReciprocityRule.evaluate` | `TableInterpolationRule.evaluate` | `ReciprocityCoreTest.table*` | Implemented + tested |
-| Catalog/reciprocity | OLS power-law fit, rejections, order-independence | `ReciprocityFormulaFitterTests` | `ReciprocityFormulaFitter.fit` | `ReciprocityFormulaFitter.fit` | `ReciprocityCoreTest.fitter*` | Implemented + tested |
-| Catalog/reciprocity | 37-film load + 3-shape validation + manufacturer counts | `LaunchPresetFilmCatalog(Shape)Tests`, `catalog-validation-cases.json` | `LaunchPresetFilmCatalogLoader` | (none yet) | (none) | Deferred |
-| Catalog/reciprocity | policy evaluation order + result/basis | `ReciprocityCalculationPolicyEvaluator` tests | `ReciprocityCalculationPolicyEvaluator.evaluate` | (none yet) | (none) | Deferred |
-| Catalog/reciprocity | confidence presentation + vocabulary gate | `ReciprocityConfidencePresentation` tests | `ReciprocityConfidencePresentationMapper.map` | (none yet) | (none) | Deferred |
-| Catalog/reciprocity | preset alternate-model selection | model-picker / `AlternateReciprocityModels` tests | `AlternateReciprocityModels.alternates` | (none yet) | (none) | Deferred |
-| Custom film | no-shortening guard (analytic) | `CustomFilmEditorFormState`/guard tests | `CustomFilmFormulaGuard.passesUsableRangeCheck` | `CustomFilmFormulaGuard.passesUsableRangeCheck` | `ReciprocityCoreTest.guard*` | Implemented + tested |
-| Custom film | duration parsing | editor tests | `CustomFilmDurationParser.parse` | `CustomFilmDurationParser.parse` | `ReciprocityCoreTest.durationParser*` | Implemented + tested |
-| Custom film | fitted preview (quality/error rows, inspection-only) | `CustomTableFittedFormulaPresenterTests` | `CustomTableFittedFormulaPresenter` | (fitter ported; presenter not) | (none) | Partially implemented |
-| Custom film | table-form validation + library CRUD + persistence | `CustomFilmEditorTableFormStateTests`, `CustomFilmLibraryTests` | `CustomFilmEditorFormState`, `CustomFilmLibrary` | (none yet) | (none) | Deferred |
-| Custom film | create-formula-from-table + referenceTableFilmID + resolver | `CustomFilmCreateFormulaTests` | `creatingFormula(fromTable:)`, `CustomFilmReferenceTableResolver.resolve` | (none yet) | (none) | Deferred |
-| Timer | pause/resume/complete transitions; paused→completed only via resume | `TimerStatePauseResumeTests` | `TimerState.{pausing,resume,completed}` | `TimerState.{pausing,resume,completed}` | `TimerStateTest` | Implemented + tested |
-| Timer | multi-timer tick, exactly-once completion, reconcile no-replay | `TimerManager*` (rules) | `TimerRuntime` (iOS) / `TimerManager` | `TimerRuntime.{tick,reconcile}` | `TimerRuntimeTest` | Implemented + tested |
-| Timer | snapshot/restore (auto-complete, paused freeze, corrupt→completed, legacy token) | `TimerManagerPersistenceRestoreTests` | `PersistentTimerSnapshot.restore` | `PersistentTimerSnapshot.restore` | `TimerRuntimeTest.restore*` | Implemented + tested |
-| Timer | ordering active LIFO / completed behind | `BottomSheetWorkspaceOrderingTests` | `TimerWorkspaceOrdering` | `TimerWorkspaceOrdering.order` | `TimerRuntimeTest.ordering*` | Implemented + tested |
-| Timer | Start Again (clone completed) | clone tests (PTIMER-36) | `startTimer(cloningCompleted:)` | `TimerRuntime.startAgain` | `TimerRuntimeTest.startAgainClonesCompletedDuration` | Implemented + tested |
-| Timer | immutable identity capture | `Calculator…MetadataTests` | `ExposureTimerIdentitySnapshot` | `ExposureTimerIdentitySnapshot` (value type) | (type only; capture flow deferred) | Partially implemented |
-| Camera slots | per-slot state, capture/restore, rename isolation | `CameraSlot*` tests | `CameraSlotSessionModel`, `PersistentCameraSlotSessionSnapshot` | (none yet) | (none) | Deferred |
-| Target Shutter | comparison vs adjusted/corrected, nil non-quantified, per-slot | `…TargetShutterTests` | `TargetShutterPresenter`, `TargetShutterModel` | (none yet) | (none) | Deferred |
-| Persistence | timer/session/custom-film round-trip + corrupt fail-safe | `CalculatorContextPersistenceTests`, `PersistentCustomFilmLibraryTests` | `*Storing` + DataStore-equivalents | timer snapshot type only | (restore tested) | Partially implemented |
-| Details/presenter | model/source/calc rows, picker, fitted comparison, vocab | Details presenter tests | `ReciprocityModelMetadataPresenter`, `FilmModeDetailsPresenter` | (none yet) | (none) | Deferred |
-| Notifications | completion exactly-once, cancel/reschedule, representative selection | `TimerManagerNotification/CompletionAlert`, `LockScreenTimerCoordinatorTests` | scheduler/coordinator | (none yet) | (none) | Android replacement (deferred) |
+| Area | Test intent | iOS source/test | Android function/type | Android test | Status |
+|---|---|---|---|---|---|
+| Exposure | ND = base·2^stops; snap; overflow | `ExposureCalculatorTests`, `exposure-golden.json` | `ExposureCalculator.calculate` | `ExposureGoldenTest`, `ExposureCoreTest` | Implemented + tested |
+| Exposure | shutter/duration formatting (locale-independent) | format/timeDisplay fixtures | `formatShutter`/`formatTimeDisplay`/`formatExtendedClock` | `ExposureGoldenTest` | Implemented + tested |
+| Exposure | parse + typed errors; 55/19 ladders; ND 0..30 | `errorCases`, `ExposureScale` | `parseBaseShutter`, `ExposureScale` | `ExposureGoldenTest`, `ExposureCoreTest` | Implemented + tested |
+| Catalog/reciprocity | formula eval (no-correction/within/beyond/unsafe) | `ReciprocityFormula.evaluate` | `ReciprocityFormula.evaluate` | `ReciprocityCoreTest` | Implemented + tested |
+| Catalog/reciprocity | log-log table interpolation + extrapolation | `TableInterpolationModel` | `TableInterpolationRule.evaluate` | `ReciprocityCoreTest` | Implemented + tested |
+| Catalog/reciprocity | 37-film load + manufacturer counts + 3 real shapes | `LaunchPresetFilmCatalog(Shape)Tests`, `catalog-validation-cases.json` | `LaunchPresetFilmCatalogLoader` | `CatalogLoaderTest` | Implemented + tested |
+| Catalog/reciprocity | 11 table films reproduce anchors | catalog goldens | loader + table eval | `CatalogLoaderTest` | Implemented + tested |
+| Catalog/reciprocity | policy order + result/basis; no fabricated value | `ReciprocityCalculationPolicyEvaluator` | `ReciprocityCalculationPolicyEvaluator.evaluate` | `PolicyAndPresentationTest` | Implemented + tested |
+| Catalog/reciprocity | confidence presentation + vocabulary gate | `ReciprocityConfidencePresentation` | `ReciprocityConfidencePresentationMapper.map` | `PolicyAndPresentationTest` | Implemented + tested |
+| Catalog/reciprocity | preset alternate-model selection | model-picker/`AlternateReciprocityModels` | `AlternateReciprocityModels`, `CalculatorController.selectModel` | `CustomReferenceAndAlternatesTest`, `CalculatorControllerTest` | Implemented + tested |
+| Custom film | no-shortening guard; duration parse | guard/editor tests | `CustomFilmFormulaGuard`, `CustomFilmDurationParser` | `ReciprocityCoreTest`, `CustomFilmTest` | Implemented + tested |
+| Custom film | formula + table authoring validation | `CustomFilmEditor(Table)FormStateTests` | `CustomFilmFactory`, `CustomFilmLibrary` | `CustomFilmTest` | Implemented + tested |
+| Custom film | fitted preview (quality/error, inspection-only) | `CustomTableFittedFormulaPresenterTests` | `FittedFormulaPreviewPresenter` | `CustomFilmTest`, `DetailsPresenterTest` | Implemented + tested |
+| Custom film | create-formula-from-table + referenceTableFilmID | `CustomFilmCreateFormulaTests` | `CreateFormulaFromTable`, `CustomFilmReferenceTableResolver` | `CustomFilmTest`, `CustomReferenceAndAlternatesTest` | Implemented + tested |
+| Custom film | library persistence round-trip + fail-safe | `PersistentCustomFilmLibraryTests` | `CustomFilmLibraryCodec`, `DataStoreCustomFilmStore` | `CustomFilmTest` | Implemented + tested (codec); DataStore wiring assemble-only |
+| Timer | pause/resume/complete; paused→completed only via resume | `TimerStatePauseResumeTests` | `TimerState` | `TimerStateTest` | Implemented + tested |
+| Timer | multi-timer tick, exactly-once completion, reconcile | `TimerManager*` rules | `TimerRuntime`, `TimerWorkspaceController` | `TimerRuntimeTest`, `TimerWorkspaceControllerTest` | Implemented + tested |
+| Timer | snapshot/restore (auto-complete, paused-freeze, corrupt→completed, legacy token) | `TimerManagerPersistenceRestoreTests` | `PersistentTimerSnapshot`, `TimerSnapshotCodec` | `TimerRuntimeTest`, `TimerSnapshotCodecTest` | Implemented + tested |
+| Timer | ordering active LIFO / completed behind | `BottomSheetWorkspaceOrderingTests` | `TimerWorkspaceOrdering` | `TimerRuntimeTest`, `TimerWorkspaceControllerTest` | Implemented + tested |
+| Timer | Start Again (clone completed) | clone tests (PTIMER-36) | `TimerRuntime.startAgain` | `TimerRuntimeTest`, `TimerWorkspaceControllerTest` | Implemented + tested |
+| Timer | immutable identity capture | `Calculator…MetadataTests` | `ExposureTimerIdentitySnapshot`; slot label embedded in timer name at start | `CameraSlotSessionTest` (label immutability) | Partially implemented (name-level identity; full snapshot capture not persisted) |
+| Camera slots | per-slot state, capture/restore, rename isolation | `CameraSlot*` tests | `CameraSlotSession`, `SlotSessionCodec` | `CameraSlotSessionTest`, `SlotSessionCodecTest` | Implemented + tested |
+| Target Shutter | comparison vs adjusted/corrected; nil non-quantified; per-slot | `…TargetShutterTests` | `TargetShutterPresenter`, `CalculatorController` | `TargetShutterTest` | Implemented + tested |
+| Persistence | timer/session/custom round-trip + corrupt fail-safe | context/library persistence tests | `*Codec` + `DataStore*Store` | codec tests | Implemented + tested (codecs); DataStore wiring assemble-only |
+| Details/presenter | model/source/calc rows, fitted comparison, reference columns, vocab | Details presenter tests | `DetailsPresenter` | `DetailsPresenterTest` | Implemented + tested |
+| Notifications | representative selection; completion exactly-once; ongoing | `TimerManagerNotification/CompletionAlert`, `LockScreenTimerCoordinatorTests` | `RepresentativeTimerSelector`, `TimerNotifier`/`AndroidTimerNotifier` | `RepresentativeTimerSelectorTest` | Android replacement: selection + rule tested; NotificationManager wiring assemble-only; foreground service deferred |
 
 ## 3. Required areas — status
 
-- **Exposure** — Implemented + tested (fixture parity).
-- **Catalog / reciprocity** — calculation primitives Implemented + tested; catalog
-  loader/validation, policy evaluator, confidence presentation, alternate models
-  Deferred.
-- **Custom film** — guard + duration parser + fitter Implemented + tested; editor
-  state, library, table authoring, fitted-preview presenter, create-formula flow
-  Deferred/Partial.
-- **Timer** — Implemented + tested (state machine, runtime, snapshot/restore,
-  ordering, Start Again). Identity type present; capture flow Deferred.
-- **Camera slots** — Deferred.
-- **Target Shutter** — Deferred.
-- **Persistence** — timer snapshot/restore Implemented + tested; DataStore stores
-  and session/custom-film persistence Deferred.
-- **Details / presenter** — Deferred.
-- **Notifications** — Deferred (Android replacement design recorded in
-  `PTIMER-146-round2-accepted.md` §7 and round2-1 §8).
+- **Exposure** — Implemented + tested.
+- **Catalog / reciprocity** — Implemented + tested (loader/validation, policy,
+  confidence, alternates, resolver).
+- **Custom film** — Implemented + tested (factory/library/fitted/create-from-table/
+  codec); DataStore wiring assemble-only.
+- **Timer** — Implemented + tested; full identity-snapshot persistence partial
+  (name-level capture in place).
+- **Camera slots** — Implemented + tested.
+- **Target Shutter** — Implemented + tested.
+- **Persistence** — Implemented + tested at codec level; DataStore impls
+  assemble-verified (not unit-tested — Android binding).
+- **Details / presenter** — Implemented + tested (graph deferred).
+- **Notifications** — Android replacement: selection + rules tested; manager
+  wiring assemble-only; foreground service + exact background delivery deferred.
 
 ## 4. Function/type mapping (concrete)
 
 | iOS | Android |
 |---|---|
-| `ExposureCalculator.calculate(baseShutterSeconds:ndStep:scaleMode:)` | `ExposureCalculator.calculate(baseShutterSeconds, ndStep, scaleMode)` |
-| `ExposureCalculator.parseBaseShutter` / `formatTimeDisplay` / `snapToFullStop` | same method names on Kotlin `ExposureCalculator` |
-| `ExposureScale` / `NDStep` / `ShutterStep` / `ExposureScaleMode` | `ExposureScale` / `NdStep` / `ShutterStep` / `ExposureScaleMode` |
-| `ReciprocityFormula.evaluate(meteredExposureSeconds:)` | `ReciprocityFormula.evaluate(meteredExposureSeconds)` |
+| `ExposureCalculator.calculate` | `ExposureCalculator.calculate` |
+| `ReciprocityFormula.evaluate` | `ReciprocityFormula.evaluate` |
 | `TableInterpolationReciprocityRule.evaluate` | `TableInterpolationRule.evaluate` |
-| `ReciprocityFormulaFitter.fit(anchors:)` | `ReciprocityFormulaFitter.fit(anchors)` |
-| `ReciprocityNoCorrectionBoundary.isWithinNoCorrection` | `ReciprocityNoCorrectionBoundary.isWithinNoCorrection` |
+| `ReciprocityCalculationPolicyEvaluator.evaluate` | `ReciprocityCalculationPolicyEvaluator.evaluate` |
+| `ReciprocityConfidencePresentationMapper.map` | `ReciprocityConfidencePresentationMapper.map` |
+| `ReciprocityFormulaFitter.fit` | `ReciprocityFormulaFitter.fit` |
 | `CustomFilmFormulaGuard.passesUsableRangeCheck` | `CustomFilmFormulaGuard.passesUsableRangeCheck` |
-| `CustomFilmDurationParser.parse` | `CustomFilmDurationParser.parse` |
-| `TableAnchor` | `TableAnchor` |
-| `TimerState` (Running/Paused/Completed) | `TimerState` sealed (Running/Paused/Completed) |
-| `PersistentTimerSnapshot.restore(at:)` | `PersistentTimerSnapshot.restore(now)` |
-| iOS `TimerRuntime` / `TimerManager` | `TimerRuntime` (pure; Android coordinator deferred) |
-| `TimerWorkspaceOrdering` | `TimerWorkspaceOrdering.order` |
-| `ExposureTimerIdentitySnapshot` / `ExposureTimerSource` | `ExposureTimerIdentitySnapshot` / `ExposureTimerSource` |
-| `CustomTableFittedFormulaPresenter` | (fitter ported; presenter type deferred) |
-| `CustomFilmReferenceTableResolver.resolve` | (deferred) |
-| `LaunchPresetFilmCatalogLoader` | (deferred) |
-| `CameraSlotSessionModel` / `PersistentCameraSlotSessionSnapshot` | (deferred) |
-| `TargetShutterPresenter` / `TargetShutterModel` | (deferred) |
+| `LaunchPresetFilmCatalogLoader` | `LaunchPresetFilmCatalogLoader` |
+| `AlternateReciprocityModels.alternates` | `AlternateReciprocityModels.alternates` |
+| `CustomTableFittedFormulaPresenter` | `FittedFormulaPreviewPresenter` |
+| `CustomFilmReferenceTableResolver.resolve` | `CustomFilmReferenceTableResolver.resolve` |
+| `creatingFormula(fromTable:)` | `CreateFormulaFromTable.create` |
+| `TimerState` / `TimerRuntime` | `TimerState` / `TimerRuntime` |
+| `PersistentTimerSnapshot.restore` | `PersistentTimerSnapshot.restore` (+ `TimerSnapshotCodec`) |
+| `CameraSlotSessionModel` / slot snapshot | `CameraSlotSession` / `SlotCalculatorSnapshot` / `SlotSessionCodec` |
+| `TargetShutterPresenter` | `TargetShutterPresenter` |
+| `ReciprocityModelMetadataPresenter` / details | `DetailsPresenter` |
+| `LockScreenTimerCoordinator` representative selection | `RepresentativeTimerSelector` |
+| `TimerCompletionNotificationScheduler` | `TimerNotifier` / `AndroidTimerNotifier` |
+| `ExposureCalculatorViewModel` | `ShootingViewModel` + `CalculatorController` + `TimerWorkspaceController` |
+| concrete `UserDefaults*Store` | `DataStore*Store` |
 
 ## 5. Gap list
 
 ```
-Missing or partial intent: Catalog domain + 37-film loader + shape validation
-iOS source/test: LaunchPresetFilmCatalogLoader, catalog-validation-cases.json
-Android status: Deferred (not started)
-Reason: Requires modeling the full FilmIdentity/ReciprocityProfile JSON schema
-        (provenance, adjustments, userMetadata) as @Serializable Kotlin; large
-        and best done as its own green checkpoint.
-Risk: No film selection / reciprocity-by-catalog until done. Medium.
-Suggested follow-up: Slice 3-remainder — model domain, copy
-        LaunchPresetFilmCatalog.json into :core resources, port loader +
-        validation, assert 3 real shapes + 37 count + manufacturer counts;
-        add anchor-derived goldens for the 11 table films.
+Missing or partial intent: Guaranteed background timer completion + ongoing
+        notification across Doze / OEM battery
+iOS source/test: TimerManager background/notification behavior, Live Activity
+Android status: Partial — foreground completion + ongoing notification posted;
+        no foreground service, no AlarmManager background scheduling.
+Reason: Foreground service + exact alarms need device-specific testing and
+        permissions; out of a no-device session's safe scope.
+Risk: Background reliability under aggressive battery managers. Medium.
+Suggested follow-up: add a foreground service (type specialUse/shortService) +
+        AlarmManager setExactAndAllowWhileIdle keyed by timer id, with
+        cancel/reschedule on pause/resume/remove; verify on devices.
 ```
 ```
-Missing or partial intent: Policy evaluator + confidence presentation + alternates
-iOS source/test: ReciprocityCalculationPolicyEvaluator, ReciprocityConfidencePresentation
-Android status: Deferred
-Reason: Depends on the catalog domain (ReciprocityProfile rules) above.
-Risk: No end-to-end reciprocity result/badge until done. Medium.
-Suggested follow-up: after catalog domain; reuse the ported formula/table evaluators.
+Missing or partial intent: Full immutable timer identity snapshot persistence
+iOS source/test: ExposureTimerIdentitySnapshot capture/metadata tests
+Android status: Partial — slot label is embedded in the (immutable) timer name
+        at start; the structured ExposureTimerIdentitySnapshot type exists but
+        is not persisted with each timer.
+Reason: Greenfield timer codec persists runtime + name; structured identity
+        persistence not yet wired.
+Risk: Low (display name carries the identity for MVP).
+Suggested follow-up: extend TimerSnapshotCodec to persist the identity snapshot.
 ```
 ```
-Missing or partial intent: App layers (VM, DataStore, Compose UI, slots, custom-film UI,
-        Target Shutter, Details, notifications)
-iOS source/test: ExposureCalculatorViewModel, *Storing, SwiftUI views, etc.
-Android status: Deferred (Slices 5-10 not started)
-Reason: Largest portion of the MVP; out of this session's safe budget.
-Risk: No runnable shooting app yet. High for "working MVP" goal.
-Suggested follow-up: proceed Slice 5 onward per round2-accepted §10 after the
-        catalog/policy core lands.
-```
-```
-Missing or partial intent: Fitted-preview presenter + create-formula-from-table flow
-iOS source/test: CustomTableFittedFormulaPresenter, CustomFilmCreateFormulaTests
-Android status: Partial — OLS fitter ported + tested; presenter/flow not.
-Reason: Presenter needs comparison-row/quality types + editor state (app layer).
-Risk: Low (inspection-only feature).
-Suggested follow-up: Slice 8b/8c per round2-accepted.
+Missing or partial intent: Compose UI smoke tests + visual polish
+iOS source/test: SwiftUI shell/layout tests (iOS-only)
+Android status: Functional Compose UI present; no connectedAndroidTest run
+        (no device); pickers/dialogs/graph are minimal.
+Reason: No emulator/device in session; UI polish is deferred by the plan.
+Risk: Low (behavior is unit-covered).
+Suggested follow-up: add minimal Compose UI smoke tests; human UX pass.
 ```
 
 ## 6. Not applicable / Android replacement
 
-- iOS **ActivityKit / Live Activity** → Android **ongoing foreground-service
-  notification** (planned, deferred — round2-accepted §7).
-- iOS **local completion notification** → Android `NotificationManager` +
-  `AlarmManager` background delivery (planned, deferred).
-- iOS **concrete `UserDefaults*Store`** → Android **typed DataStore** stores
-  (planned, deferred).
+- iOS **ActivityKit / Live Activity** → Android **ongoing notification**
+  (implemented; foreground-service upgrade deferred).
+- iOS **local completion notification** → `AndroidTimerNotifier` completion
+  channel (implemented; AlarmManager background scheduling deferred).
+- iOS **concrete `UserDefaults*Store`** → `DataStore*Store` (implemented).
 - iOS **RecordReplay** harness → not part of Android MVP verification.
-- iOS **SwiftUI shell / layout-metric tests** → UI polish, not an MVP functional
-  gate.
-- iOS **Details graph visual fidelity** → deferred visual polish.
+- iOS **SwiftUI shell / layout-metric tests** → UI polish, not an MVP gate.
+- iOS **Details graph visual fidelity** → deferred visual polish (functional
+  transparency implemented via rows + comparison lines).

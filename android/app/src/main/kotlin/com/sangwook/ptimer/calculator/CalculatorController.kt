@@ -57,6 +57,27 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
     fun clearFilm() { selectedFilmId = null; selectedProfileId = null }
     fun selectModel(profileId: String?) { selectedProfileId = profileId }
 
+    fun currentBaseSeconds(): Double = baseShutterSeconds
+
+    /** Capture the active calculator inputs for per-slot persistence. */
+    fun capture(): SlotCalculatorSnapshot =
+        SlotCalculatorSnapshot(baseShutterSeconds, ndStops, selectedFilmId, selectedProfileId)
+
+    /** Apply a per-slot snapshot (or reset to defaults when null). */
+    fun apply(snapshot: SlotCalculatorSnapshot?) {
+        if (snapshot == null) {
+            baseShutterSeconds = CalculatorDefaults.BASE_SHUTTER_SECONDS
+            ndStops = CalculatorDefaults.ND_STOP
+            selectedFilmId = null
+            selectedProfileId = null
+            return
+        }
+        baseShutterSeconds = snapshot.baseShutterSeconds
+        ndStops = snapshot.ndStops
+        selectedFilmId = snapshot.selectedFilmId
+        selectedProfileId = snapshot.selectedProfileId
+    }
+
     private fun film(): FilmIdentity? = selectedFilmId?.let { id -> catalog.firstOrNull { it.id == id } }
 
     private fun activeProfile(film: FilmIdentity): ReciprocityProfile {

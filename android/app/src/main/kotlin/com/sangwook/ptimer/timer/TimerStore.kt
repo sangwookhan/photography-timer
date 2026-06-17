@@ -22,12 +22,22 @@ class InMemoryTimerStore(@Volatile private var value: String? = null) : TimerSto
 }
 
 private val Context.timerDataStore by preferencesDataStore("ptimer_timers")
+private val Context.sessionDataStore by preferencesDataStore("ptimer_session")
 
-/** DataStore-backed timer store. */
+/** DataStore-backed timer-collection store. */
 class DataStoreTimerStore(private val context: Context) : TimerStore {
     private val key = stringPreferencesKey("timers_json")
 
     override suspend fun load(): String? = context.timerDataStore.data.map { it[key] }.first()
     override suspend fun save(json: String) { context.timerDataStore.edit { it[key] = json } }
     override suspend fun clear() { context.timerDataStore.edit { it.remove(key) } }
+}
+
+/** DataStore-backed camera-slot session store. */
+class DataStoreSessionStore(private val context: Context) : TimerStore {
+    private val key = stringPreferencesKey("session_json")
+
+    override suspend fun load(): String? = context.sessionDataStore.data.map { it[key] }.first()
+    override suspend fun save(json: String) { context.sessionDataStore.edit { it[key] = json } }
+    override suspend fun clear() { context.sessionDataStore.edit { it.remove(key) } }
 }

@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +35,7 @@ import com.sangwook.ptimer.timer.TimerItemUi
 import com.sangwook.ptimer.timer.TimerWorkspaceUiState
 import com.sangwook.ptimer.vm.FilmRowUi
 import com.sangwook.ptimer.vm.ShootingIntent
+import com.sangwook.ptimer.vm.SlotsUiState
 
 /**
  * Minimal, functional shooting screen: a calculator section (base shutter,
@@ -39,6 +44,7 @@ import com.sangwook.ptimer.vm.ShootingIntent
  */
 @Composable
 fun ShootingScreen(
+    slots: SlotsUiState,
     calc: CalculatorUiState,
     films: List<FilmRowUi>,
     timers: TimerWorkspaceUiState,
@@ -50,7 +56,8 @@ fun ShootingScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { Text("PTimer", style = MaterialTheme.typography.headlineSmall) }
+        item { Text("PTimer · ${slots.activeLabel}", style = MaterialTheme.typography.headlineSmall) }
+        item { SlotBar(slots, onEvent) }
         item { CalculatorCard(calc, films, onEvent) }
 
         if (timers.active.isNotEmpty()) {
@@ -66,6 +73,44 @@ fun ShootingScreen(
             }
             items(timers.completed, key = { it.id }) { CompletedTimerCard(it, onEvent) }
         }
+    }
+}
+
+@Composable
+private fun SlotBar(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
+    var renaming by remember { mutableStateOf(false) }
+    var draftName by remember { mutableStateOf("") }
+    val activeId = slots.slots.firstOrNull { it.isActive }?.id
+
+    Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
+        slots.slots.forEach { slot ->
+            FilterChip(
+                selected = slot.isActive,
+                onClick = { onEvent(ShootingIntent.SelectSlot(slot.id)) },
+                label = { Text(slot.label) },
+            )
+        }
+        TextButton(onClick = { draftName = slots.activeLabel; renaming = true }) { Text("Rename") }
+    }
+
+    if (renaming && activeId != null) {
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text("Rename ${slots.activeLabel}") },
+            text = {
+                OutlinedTextField(value = draftName, onValueChange = { draftName = it }, singleLine = true)
+            },
+            confirmButton = {
+                TextButton(onClick = { onEvent(ShootingIntent.RenameSlot(activeId, draftName)); renaming = false }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeId)); renaming = false }) {
+                    Text("Reset")
+                }
+            },
+        )
     }
 }
 

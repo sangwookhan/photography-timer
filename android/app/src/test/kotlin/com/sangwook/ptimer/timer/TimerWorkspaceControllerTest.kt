@@ -1,8 +1,11 @@
 package com.sangwook.ptimer.timer
 
 import com.sangwook.ptimer.core.timer.ExposureTimerSource
+import com.sangwook.ptimer.core.timer.TimerState
 import com.sangwook.ptimer.core.timer.TimerStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -155,5 +158,57 @@ class TimerWorkspaceControllerTest {
     fun nonPositiveDurationDoesNotStart() {
         assertNull(controller.startAdjusted("bad", 0.0))
         assertTrue(controller.state.value.active.isEmpty())
+    }
+
+    // --- restored-id collision hardening (blocker 1) -----------------------
+
+    private fun jsonOf(vararg ids: String): String {
+        val timers = ids.map { TimerState.running(it, 100.0, base) }
+        val m = ids.associateWith { "t" }
+        val srcs = ids.associateWith { ExposureTimerSource.MANUAL }
+        return TimerSnapshotCodec.encode(timers, m, m, m, srcs)
+    }
+
+    @Test
+    fun startAfterRestoringTimerZeroYieldsTimerOne() {
+        controller.restoreFromJson(jsonOf("timer-0"))
+        val newId = controller.start("X", "s", "m", ExposureTimerSource.MANUAL, 50.0)
+        assertEquals("timer-1", newId)
+        // The restored timer is untouched (no overwrite).
+        assertEquals(2, controller.state.value.active.size)
+    }
+
+    @Test
+    fun startAfterRestoringSparseIdsContinuesPastTheMax() {
+        controller.restoreFromJson(jsonOf("timer-0", "timer-3"))
+        assertEquals("timer-4", controller.start("X", "s", "m", ExposureTimerSource.MANUAL, 50.0))
+    }
+
+    @Test
+    fun startAfterRestoringNonMatchingIdsStillProducesAUniqueId() {
+        controller.restoreFromJson(jsonOf("weird-1", "custom-x", "timer-abc"))
+        val newId = controller.start("X", "s", "m", ExposureTimerSource.MANUAL, 50.0)
+        assertNotNull(newId)
+        assertTrue(newId!!.startsWith("timer-"))
+        val restoredIds = controller.state.value.active.map { it.id }.toSet()
+        // Unique: the started id is distinct from every restored id.
+        assertEquals(4, restoredIds.size)
+        assertFalse(setOf("weird-1", "custom-x", "timer-abc").contains(newId))
+    }
+
+    @Test
+    fun startAfterRestoringSnapshotWithCorruptItemSkipsItAndAvoidsCollision() {
+        // One blank-id (corrupt) item is skipped; the valid timer-2 restores and
+        // the counter advances past it. Epochs derive from `base` so timer-2 is
+        // still running under the controller's clock.
+        val startMs = base.toEpochMilli()
+        val expectedMs = base.plusSeconds(100).toEpochMilli()
+        val json = """{"schemaVersion":1,"timers":[""" +
+            """{"id":"","title":"t","status":"running","durationSeconds":100.0,"startEpochMs":$startMs},""" +
+            """{"id":"timer-2","title":"t","status":"running","durationSeconds":100.0,"startEpochMs":$startMs,"expectedCompletionEpochMs":$expectedMs}""" +
+            """]}"""
+        controller.restoreFromJson(json)
+        assertEquals(1, controller.state.value.active.size) // corrupt item skipped
+        assertEquals("timer-3", controller.start("X", "s", "m", ExposureTimerSource.MANUAL, 50.0))
     }
 }

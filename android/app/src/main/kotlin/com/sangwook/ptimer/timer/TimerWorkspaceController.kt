@@ -61,7 +61,7 @@ class TimerWorkspaceController(
         source: ExposureTimerSource,
         durationSeconds: Double,
     ): String? {
-        val id = "timer-${counter++}"
+        val id = nextId()
         val started = runtime.start(id, durationSeconds, clock()) ?: return null
         titles[started] = title; subtitles[started] = subtitle
         metadatas[started] = metadata; sources[started] = source
@@ -83,7 +83,7 @@ class TimerWorkspaceController(
     /** "Start New": clone any timer (running/paused/completed) into a fresh running one. */
     fun cloneToNew(sourceId: String): String? {
         val src = runtime.timers.firstOrNull { it.id == sourceId } ?: return null
-        val newId = "timer-${counter++}"
+        val newId = nextId()
         val started = runtime.start(newId, src.durationSeconds, clock()) ?: return null
         titles[started] = titles[sourceId] ?: "Timer"
         subtitles[started] = subtitles[sourceId] ?: ""
@@ -118,7 +118,30 @@ class TimerWorkspaceController(
         subtitles.clear(); subtitles.putAll(restored.subtitles)
         metadatas.clear(); metadatas.putAll(restored.metadatas)
         sources.clear(); sources.putAll(restored.sources)
+        advanceCounterPast(restored.snapshots.map { it.id })
         refresh()
+    }
+
+    /**
+     * Next generated id, guaranteed not to collide with an existing timer.
+     * Generated ids follow `timer-<n>`; [advanceCounterPast] keeps [counter]
+     * ahead of any restored generated id, and the loop is a final guard
+     * against collisions with non-generated (custom/corrupt) restored ids.
+     */
+    private fun nextId(): String {
+        var id = "timer-${counter++}"
+        while (runtime.timers.any { it.id == id }) id = "timer-${counter++}"
+        return id
+    }
+
+    /** Advance [counter] beyond every restored id matching the generated pattern. */
+    private fun advanceCounterPast(ids: Collection<String>) {
+        var maxN = -1L
+        for (id in ids) {
+            val n = GENERATED_ID.matchEntire(id)?.groupValues?.get(1)?.toLongOrNull() ?: continue
+            if (n > maxN) maxN = n
+        }
+        if (maxN + 1 > counter) counter = maxN + 1
     }
 
     fun refresh() {
@@ -132,6 +155,10 @@ class TimerWorkspaceController(
 
     private fun forget(id: String) {
         titles.remove(id); subtitles.remove(id); metadatas.remove(id); sources.remove(id)
+    }
+
+    private companion object {
+        val GENERATED_ID = Regex("""^timer-(\d+)$""")
     }
 
     private fun com.sangwook.ptimer.core.timer.TimerState.toUi(now: Instant): TimerItemUi {

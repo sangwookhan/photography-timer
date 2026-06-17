@@ -84,6 +84,32 @@ an Android defect.
 
 ---
 
+## Restore / Persistence Hardening — Pass 2
+
+A follow-up source-level review found five restore/persistence risks that Pass 1
+did not cover. All are now fixed and pinned by tests. These were genuine
+robustness gaps in the Android restore paths (not iOS-parity copies); the iOS
+suite protects the same intents via its persistence suites
+(`TimerManagerPersistenceRestoreTests`, `CameraSlotSessionPersistence`,
+`CalculatorContextPersistence`, `CustomFilmLifecycleCorrectnessTests`).
+
+| # | Risk | Fix | Tests |
+|---|---|---|---|
+| 1 | **Timer id collision after restore** — `timer-${counter++}` did not advance past restored ids, so a new timer could re-mint `timer-0` and overwrite a restored timer | `restoreFromJson` advances the counter past the max restored id matching `timer-<n>`; `nextId()` also loops until the id is unused (guards non-generated/custom ids) | `TimerWorkspaceControllerTest`: `startAfterRestoringTimerZero…`, `…SparseIdsContinuesPastTheMax`, `…NonMatchingIdsStillProducesAUniqueId` |
+| 2 | **Stale film/profile id on calculator restore** — unknown film id / foreign or primary-as-explicit profile id kept in state, could blank the model picker, resolve a wrong film's alternate, or be recaptured | `apply()` now `sanitizeFilmSelection()`: unknown film clears both ids; explicit-primary or non-alternate profile id normalizes to the primary convention (null); only a known alternate of the selected film survives | `CalculatorControllerTest`: `applyingSnapshotWithUnknownFilm…` (capture cleared), `…UnknownProfileNormalizesToPrimaryModel`, `…ExplicitPrimaryProfileIdNormalizesToNull`, `…KnownAlternateKeepsItSelected`, `activeFilmModelSelectionAlwaysHasExactlyOneSelectedOption` |
+| 3 | **Camera-slot restore name sanitation** — names restored raw (blank/whitespace/unknown-slot survived; stale entries retained) | `restore()` keeps only known slot ids, trims, drops blanks, and replaces (no stale carryover); `setCustomName()` ignores unknown slot ids | `CameraSlotSessionTest`: `restoreTrimsCustomNames`, `restoreDropsBlankCustomNames`, `restoreIgnoresUnknownSlotIds`, `restoreReplacesPriorCustomNamesWithoutRetainingStaleEntries`, `setCustomNameIgnoresUnknownSlotIds` |
+| 4 | **Custom film id reuse after delete/relaunch** — `customSeq = lib.size` could re-mint an existing id and overwrite a persisted profile | new pure `CustomFilmIdSequencer` derives the next sequence from the max existing numeric suffix (+1), never list size; wired into `ShootingViewModel` | `CustomFilmIdSequencerTest` (5 tests, incl. restore-no-overwrite for formula and table ids) |
+| 5 | **Corrupt timer snapshot item sanitation** — whole-snapshot corruption was handled, but a single invalid item could flow into restore | `decode()` skips only the structurally-impossible item (blank/duplicate id, non-finite/≤0 duration, missing start, negative paused remaining) and keeps valid siblings; items merely lacking reconcilable detail (running w/o expected, paused w/o freeze) are kept and **safely completed** by the core restore contract — never resurrected as phantom active timers | `TimerSnapshotCodecTest`: 6 tests incl. skip-corrupt-keep-sibling, running-missing-expected→completed, never-throws-on-malformed-fields, plus `TimerWorkspaceControllerTest.startAfterRestoringSnapshotWithCorruptItemSkipsItAndAvoidsCollision` |
+
+**Audit-status effect (no overclaim):** these close the previously-implicit gaps in
+the D (timer/persistence) and E (slots) areas. The D/E verdicts are now
+genuinely **already-covered** for restore robustness *including* id generation,
+per-item decode sanitation, and slot-name sanitation. No new parity claim beyond
+restore/persistence is made; the deferred/divergent/iOS-only surfaces below are
+unchanged.
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |
@@ -1119,6 +1145,8 @@ without fabricating freeze, corrupt snapshot → empty
 (`TimerSnapshotCodecTest`), schema-version mismatch → empty, ordering
 active-LIFO + completed-behind, and Start-Again clone. Identity immutability
 is now pinned by `timerIdentityIsImmutableAcrossLifecycleAndLaterStarts`.
+Restored-id collision and per-item snapshot sanitation were hardened in Pass 2
+(see *Restore / Persistence Hardening — Pass 2* above).
 **Notifications** (`TimerManagerNotificationSchedulingTests`,
 `…CompletionAlertTests`) → **follow-up** (background delivery / foreground
 service deferred, round2-accepted §8). `[ios-only]` rows
@@ -1352,7 +1380,9 @@ startable incl. limited guidance; corrected disabled with reason and no
 fabricated value; target separate), film selection + authority/support
 labels, and restore robustness. Restore sanitation (corrupt base/ND/target,
 unknown film → digital, stale profile id → primary, schema/corrupt → defaults)
-is closed this pass (`CalculatorControllerTest`, `SlotSessionCodec`).
+is closed (`CalculatorControllerTest`, `SlotSessionCodec`); Pass 2 added
+stale-profile-id normalization, slot-name restore sanitation, and custom-film
+id-reuse prevention (see *Restore / Persistence Hardening — Pass 2* above).
 Rows tagged `[ui-feel]` are the iOS wheel live-telemetry / momentum / quick↔fine
 input-state behaviors → **android-replacement** (Android uses steppers + a
 simpler target sheet). The 1/3-stop scale rows under `CalculatorModel` →

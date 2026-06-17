@@ -19,16 +19,19 @@ object TimerSnapshotCodec {
     private const val SCHEMA_VERSION = 1
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    // Fields are lenient (defaulted/nullable) so a single malformed item can
+    // be skipped individually instead of throwing and dropping the whole
+    // snapshot. Per-item structural validity is enforced in [decode].
     @Serializable
     private data class Dto(
-        val id: String,
-        val title: String,
+        val id: String = "",
+        val title: String = "Timer",
         val subtitle: String = "",
         val metadata: String = "",
         val source: String = "MANUAL",
-        val status: String,
-        val durationSeconds: Double,
-        val startEpochMs: Long,
+        val status: String = "",
+        val durationSeconds: Double = Double.NaN,
+        val startEpochMs: Long? = null,
         val expectedCompletionEpochMs: Long? = null,
         val pausedRemainingSeconds: Double? = null,
         val pausedAtEpochMs: Long? = null,
@@ -87,7 +90,17 @@ object TimerSnapshotCodec {
         val subtitles = LinkedHashMap<String, String>()
         val metadatas = LinkedHashMap<String, String>()
         val sources = LinkedHashMap<String, ExposureTimerSource>()
+        val seen = HashSet<String>()
         for (dto in collection.timers) {
+            // Skip structurally-impossible items rather than the whole snapshot.
+            // Items that are merely missing reconcilable detail (running with no
+            // expected-completion, paused with no freeze metadata) are kept and
+            // safely completed by PersistentTimerSnapshot.restore().
+            if (dto.id.isBlank() || !seen.add(dto.id)) continue
+            if (!dto.durationSeconds.isFinite() || dto.durationSeconds <= 0.0) continue
+            val startEpochMs = dto.startEpochMs ?: continue
+            val pausedRemaining = dto.pausedRemainingSeconds
+            if (pausedRemaining != null && (!pausedRemaining.isFinite() || pausedRemaining < 0.0)) continue
             val status = try {
                 PersistentTimerSnapshot.SnapshotStatus.fromToken(dto.status)
             } catch (_: IllegalArgumentException) {
@@ -97,9 +110,9 @@ object TimerSnapshotCodec {
                 id = dto.id,
                 status = status,
                 durationSeconds = dto.durationSeconds,
-                startDate = Instant.ofEpochMilli(dto.startEpochMs),
+                startDate = Instant.ofEpochMilli(startEpochMs),
                 expectedCompletionAt = dto.expectedCompletionEpochMs?.let(Instant::ofEpochMilli),
-                pausedRemainingDuration = dto.pausedRemainingSeconds,
+                pausedRemainingDuration = pausedRemaining,
                 pausedAt = dto.pausedAtEpochMs?.let(Instant::ofEpochMilli),
                 completedAt = dto.completedAtEpochMs?.let(Instant::ofEpochMilli),
             )

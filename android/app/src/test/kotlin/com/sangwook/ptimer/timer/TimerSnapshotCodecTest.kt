@@ -53,4 +53,67 @@ class TimerSnapshotCodecTest {
     fun unknownSchemaVersionDecodesToEmpty() {
         assertTrue(TimerSnapshotCodec.decode("""{"schemaVersion":999,"timers":[]}""").snapshots.isEmpty())
     }
+
+    // --- per-item sanitation (blocker 5) -----------------------------------
+    //
+    // Policy: skip only the structurally-impossible item (blank id, non-finite
+    // or non-positive duration, negative paused remaining, missing start,
+    // duplicate id) and keep its valid siblings. Items that merely lack
+    // reconcilable detail (running with no expected-completion, paused with no
+    // freeze metadata) are kept and safely completed by the core restore
+    // contract — never resurrected as impossible active timers.
+
+    private val baseMs = 1_780_000_000_000L
+    private fun wrap(vararg items: String) = """{"schemaVersion":1,"timers":[${items.joinToString(",")}]}"""
+    private fun running(id: String, dur: Double = 100.0) =
+        """{"id":"$id","title":"t","status":"running","durationSeconds":$dur,"startEpochMs":$baseMs,"expectedCompletionEpochMs":${baseMs + 100_000}}"""
+
+    @Test
+    fun corruptItemIsSkippedAndValidSiblingStillRestores() {
+        val json = wrap(
+            """{"id":"","title":"blank","status":"running","durationSeconds":100.0,"startEpochMs":$baseMs}""",
+            running("timer-1"),
+        )
+        val r = TimerSnapshotCodec.decode(json)
+        assertEquals(1, r.snapshots.size)
+        assertEquals("timer-1", r.snapshots.single().id)
+        assertEquals(setOf("timer-1"), r.titles.keys)
+    }
+
+    @Test
+    fun nonFiniteOrNonPositiveDurationItemsAreSkipped() {
+        val json = wrap(running("a", dur = 0.0), running("b", dur = -5.0), running("c"))
+        val r = TimerSnapshotCodec.decode(json)
+        assertEquals(listOf("c"), r.snapshots.map { it.id })
+    }
+
+    @Test
+    fun negativePausedRemainingItemIsSkipped() {
+        val bad = """{"id":"p","title":"t","status":"paused","durationSeconds":100.0,"startEpochMs":$baseMs,"pausedRemainingSeconds":-3.0,"pausedAtEpochMs":$baseMs}"""
+        val r = TimerSnapshotCodec.decode(wrap(bad, running("c")))
+        assertEquals(listOf("c"), r.snapshots.map { it.id })
+    }
+
+    @Test
+    fun duplicateIdItemsAreDedupedKeepingTheFirst() {
+        val r = TimerSnapshotCodec.decode(wrap(running("dup"), running("dup")))
+        assertEquals(listOf("dup"), r.snapshots.map { it.id })
+    }
+
+    @Test
+    fun runningItemMissingExpectedCompletionRestoresAsCompleted() {
+        val noExpected = """{"id":"r","title":"t","status":"running","durationSeconds":100.0,"startEpochMs":$baseMs}"""
+        val r = TimerSnapshotCodec.decode(wrap(noExpected))
+        assertEquals(1, r.snapshots.size) // kept, not dropped
+        val restored = r.snapshots.single().restore(Instant.ofEpochMilli(baseMs))
+        assertEquals(TimerStatus.COMPLETED, restored.status) // safely completed, never a phantom running timer
+    }
+
+    @Test
+    fun decodeNeverThrowsOnMalformedIndividualFieldsAndSkipsThem() {
+        // Missing required-looking fields on one item; a valid sibling survives.
+        val json = wrap("""{"id":"missing","status":"running"}""", running("ok"))
+        val r = TimerSnapshotCodec.decode(json) // must not throw
+        assertEquals(listOf("ok"), r.snapshots.map { it.id })
+    }
 }

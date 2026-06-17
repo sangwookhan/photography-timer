@@ -84,14 +84,14 @@ an Android defect.
 
 ---
 
-## Restore / Persistence Hardening — Pass 2
+## Restore / Persistence Hardening — Pass 1
 
-A follow-up source-level review found five restore/persistence risks that Pass 1
-did not cover. All are now fixed and pinned by tests. These were genuine
-robustness gaps in the Android restore paths (not iOS-parity copies); the iOS
-suite protects the same intents via its persistence suites
-(`TimerManagerPersistenceRestoreTests`, `CameraSlotSessionPersistence`,
-`CalculatorContextPersistence`, `CustomFilmLifecycleCorrectnessTests`).
+A source-level review found five restore/persistence risks. All are fixed and
+pinned by tests. These were genuine robustness gaps in the Android restore paths
+(not iOS-parity copies); the iOS suite protects the same intents via its
+persistence suites (`TimerManagerPersistenceRestoreTests`,
+`CameraSlotSessionPersistence`, `CalculatorContextPersistence`,
+`CustomFilmLifecycleCorrectnessTests`).
 
 | # | Risk | Fix | Tests |
 |---|---|---|---|
@@ -107,6 +107,35 @@ genuinely **already-covered** for restore robustness *including* id generation,
 per-item decode sanitation, and slot-name sanitation. No new parity claim beyond
 restore/persistence is made; the deferred/divergent/iOS-only surfaces below are
 unchanged.
+
+---
+
+## Restore / Persistence Hardening — Pass 2
+
+A second review found that Pass 1's corrupt-snapshot handling was still not
+fully robust, and that the ViewModel restore ordering was unexamined. Three
+issues, all fixed and pinned by tests.
+
+| # | Risk | Fix | Tests |
+|---|---|---|---|
+| 1 | **A malformed typed field could still drop the whole snapshot** — `decode()` parsed the entire collection in one `decodeFromString<CollectionDto>`, so a type mismatch in one item (e.g. `durationSeconds:"oops"`) threw before per-item sanitation, dropping valid siblings | `decode()` now parses only the envelope (`JsonObject`/`schemaVersion`/`timers` array) and decodes **each item individually** with `runCatching`; a per-item type mismatch skips that item only. Fully-malformed / non-object JSON still returns empty; decode never throws | `TimerSnapshotCodecTest`: `badDurationTypeInOneItem…`, `badStartEpochType…`, `badPausedRemainingType…`, `badStatusTypeOrUnknownStatus…`, `badSourceMetadataType…`, `fullyMalformedOrNonObjectJsonReturnsEmptyWithoutThrowing` |
+| 2 | **Duplicate-id tracking ran before validation** — a corrupt item could reserve an id, then a later valid item with the same id was dropped as a duplicate | id is reserved (`seen.add`) only **after** structural validation succeeds; blank ids never reserve | `TimerSnapshotCodecTest`: `corruptDuplicateFirstThenValidDuplicateSecondRestoresTheValidOne`, `twoValidDuplicatesKeepTheFirst`, `blankIdItemDoesNotAffectALaterValidItem` |
+| 3 | **ViewModel restore-ordering race** — restore runs async on `viewModelScope`; an early user intent could mutate default state and then be clobbered by restore (lost update) | `ShootingViewModel` exposes a `ready: StateFlow<Boolean>` (false until restore completes) and `onEvent` ignores intents while not ready | `ShootingViewModelRestoreOrderingTest` (plain-JVM via `Dispatchers.setMain` + `StandardTestDispatcher`): `notReadyUntilRestoreCompletes`, `intentBeforeRestoreCompletesIsIgnored`, `intentAfterRestoreCompletesIsApplied` |
+
+**ViewModel restore ordering (Issue 3 outcome):** the race was **real** (async
+restore overwrites calculator/slot state). Fixed with the smallest safe guard —
+a readiness flag that gates `onEvent` — and it **is** tested at the JVM level
+(the architecture allowed a `StandardTestDispatcher`-driven test without
+Robolectric, using the existing `InMemoryTimerStore`). No ViewModel rewrite, no
+intent queueing (intents during the sub-second restore window are dropped, not
+buffered — acceptable for restore-from-cold-start). The guard gates the whole
+intent surface; a future refinement could allow read-only intents (e.g. open
+details) during restore, but that is not needed for the MVP.
+
+**Audit-status effect (no overclaim):** corrupt timer-snapshot decoding is now
+robust against malformed *typed* fields (not just malformed envelopes), and the
+ViewModel restore-ordering race is closed and tested. No parity claim beyond
+restore/persistence is added.
 
 ---
 
@@ -1145,8 +1174,10 @@ without fabricating freeze, corrupt snapshot → empty
 (`TimerSnapshotCodecTest`), schema-version mismatch → empty, ordering
 active-LIFO + completed-behind, and Start-Again clone. Identity immutability
 is now pinned by `timerIdentityIsImmutableAcrossLifecycleAndLaterStarts`.
-Restored-id collision and per-item snapshot sanitation were hardened in Pass 2
-(see *Restore / Persistence Hardening — Pass 2* above).
+Restored-id collision and per-item snapshot sanitation were hardened in the
+restore/persistence passes; malformed-typed-field isolation and duplicate-id
+ordering were further hardened in Pass 2 (see *Restore / Persistence
+Hardening — Pass 1* and *Pass 2* above).
 **Notifications** (`TimerManagerNotificationSchedulingTests`,
 `…CompletionAlertTests`) → **follow-up** (background delivery / foreground
 service deferred, round2-accepted §8). `[ios-only]` rows
@@ -1380,9 +1411,10 @@ startable incl. limited guidance; corrected disabled with reason and no
 fabricated value; target separate), film selection + authority/support
 labels, and restore robustness. Restore sanitation (corrupt base/ND/target,
 unknown film → digital, stale profile id → primary, schema/corrupt → defaults)
-is closed (`CalculatorControllerTest`, `SlotSessionCodec`); Pass 2 added
-stale-profile-id normalization, slot-name restore sanitation, and custom-film
-id-reuse prevention (see *Restore / Persistence Hardening — Pass 2* above).
+is closed (`CalculatorControllerTest`, `SlotSessionCodec`); the hardening passes
+added stale-profile-id normalization, slot-name restore sanitation, and
+custom-film id-reuse prevention (see *Restore / Persistence Hardening — Pass 1*
+above).
 Rows tagged `[ui-feel]` are the iOS wheel live-telemetry / momentum / quick↔fine
 input-state behaviors → **android-replacement** (Android uses steppers + a
 simpler target sheet). The 1/3-stop scale rows under `CalculatorModel` →

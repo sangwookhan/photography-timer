@@ -2,6 +2,7 @@ package com.sangwook.ptimer.timer
 
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.timer.ExposureTimerSource
+import com.sangwook.ptimer.core.timer.PersistentTimerSnapshot
 import com.sangwook.ptimer.core.timer.RepresentativeTimerSelector
 import com.sangwook.ptimer.core.timer.TimerRuntime
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -107,6 +108,23 @@ class TimerWorkspaceController(
 
     fun titleOf(id: String): String? = titles[id]
     fun subtitleOf(id: String): String? = subtitles[id]
+
+    /** Identity + snapshot of the immutable expected-completion data per running timer. */
+    data class CompletionTarget(val snapshot: PersistentTimerSnapshot, val title: String, val subtitle: String)
+
+    /**
+     * Running timers that still have a pending completion, with the immutable
+     * identity captured at start. Used by the app layer to (re)schedule
+     * OS-level completion alarms. Paused/completed timers are excluded.
+     */
+    fun runningCompletionTargets(): List<CompletionTarget> =
+        runtime.timers.filter { it.status == TimerStatus.RUNNING }.map { timer ->
+            CompletionTarget(
+                snapshot = PersistentTimerSnapshot.fromTimer(timer),
+                title = titles[timer.id] ?: "Timer",
+                subtitle = subtitles[timer.id] ?: "",
+            )
+        }
 
     fun snapshotJson(): String = TimerSnapshotCodec.encode(runtime.timers, titles, subtitles, metadatas, sources)
 

@@ -21,6 +21,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Fires scheduled timer-completion notifications even when the app
+             process is not running. Best-effort alarm; exactness policy lives
+             in AndroidTimerCompletionScheduler. -->
+        <receiver
+            android:name=".timer.CompletionAlarmReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

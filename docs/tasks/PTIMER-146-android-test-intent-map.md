@@ -29,9 +29,12 @@ were used as behavior-audit sources, not mechanically translated.
 - **Total Android tests:** **111** (72 `:core`, 39 `:app`), 0 failures.
 - **Final verification:** `./gradlew clean :core:test testDebugUnitTest
   assembleDebug` → BUILD SUCCESSFUL. iOS/shared diff vs origin/main: none.
-- **Known gaps:** foreground service for guaranteed background countdown and
-  exact-alarm background delivery (deferred — platform work needing device
-  testing); custom-table/editor/graph/picker UI polish; no
+- **Known gaps:** background completion is now a **best-effort scheduled alarm**
+  (`AndroidTimerCompletionScheduler`; exact on API < 31, inexact on API 31+
+  without `SCHEDULE_EXACT_ALARM`) — see audit doc *Background Timer Completion —
+  Pass 5*. A guaranteed exact-alarm permission flow and/or foreground service
+  remain deferred (platform work needing device testing);
+  custom-table/editor/graph/picker UI polish; no
   `connectedDebugAndroidTest` run (no device; UI smoke not executed).
 - **Not-applicable iOS-only areas:** ActivityKit/Live Activity (replaced by the
   ongoing notification), RecordReplay harness, concrete UserDefaults stores
@@ -114,14 +117,19 @@ were used as behavior-audit sources, not mechanically translated.
 ## 5. Gap list
 
 ```
-Missing or partial intent: Guaranteed background timer completion + ongoing
-        notification across Doze / OEM battery
+Missing or partial intent: Fully-guaranteed background timer completion across
+        Doze / OEM battery
 iOS source/test: TimerManager background/notification behavior, Live Activity
-Android status: Partial — foreground completion + ongoing notification posted;
-        no foreground service, no AlarmManager background scheduling.
-Reason: Foreground service + exact alarms need device-specific testing and
-        permissions; out of a no-device session's safe scope.
-Risk: Background reliability under aggressive battery managers. Medium.
+Android status: Improved — in-process completion + ongoing notification posted,
+        AND a best-effort scheduled completion alarm
+        (AndroidTimerCompletionScheduler: exact on API < 31, inexact
+        setAndAllowWhileIdle on API 31+ without SCHEDULE_EXACT_ALARM);
+        schedule/cancel/relaunch-reconcile covered by JVM tests. No exact-alarm
+        permission flow and no foreground service yet.
+Reason: Exact-alarm permission UX + foreground service need device-specific
+        testing and were out of this pass's scope.
+Risk: Inexact delivery may be delayed on API 31+; OEM battery managers / task
+        killers can still suppress delivery. Medium.
 Suggested follow-up: add a foreground service (type specialUse/shortService) +
         AlarmManager setExactAndAllowWhileIdle keyed by timer id, with
         cancel/reschedule on pause/resume/remove; verify on devices.

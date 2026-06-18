@@ -206,11 +206,68 @@ reference resolves.
 
 ---
 
+## Background Timer Completion — Pass 5
+
+Before this pass, completion was **in-process only**: the `viewModelScope` tick
+loop posted the notification, so a force-stopped / reclaimed process never fired
+it. This pass adds a **scheduled completion alarm** behind a testable
+abstraction.
+
+- **`TimerCompletionScheduler`** (`:app`) — `schedule(snapshot,title,subtitle)` /
+  `cancel(id)` / `cancelAll(ids)`. `NoOpTimerCompletionScheduler` is the default
+  and the JVM-test stand-in; `:core` stays pure Kotlin.
+- **`AndroidTimerCompletionScheduler`** — AlarmManager + `CompletionAlarmReceiver`
+  (registered in the manifest, `exported=false`). Stable timer id is the
+  PendingIntent request key; only immutable id/title/subtitle is encoded, so the
+  receiver never reads live state. **Exactness is honestly bounded:** exact
+  (`setExactAndAllowWhileIdle`) on API < 31; on API 31+ exact only if
+  `canScheduleExactAlarms()` is already true, otherwise **best-effort inexact**
+  `setAndAllowWhileIdle` (this pass does not request `SCHEDULE_EXACT_ALARM`).
+- **`ShootingViewModel.syncSchedules()`** reconciles alarms after every timer
+  event and after restore: cancels alarms for no-longer-running timers,
+  (re)schedules running ones (idempotent — same id replaces, so no duplicates),
+  and is wrapped so a scheduler failure cannot break the timer workflow.
+- **Relaunch policy:** the core restore reconciles an overdue running timer to
+  *completed* (silently); on relaunch we do **not** re-post its completion —
+  the scheduled alarm is the background-delivery path, and re-posting on every
+  launch would double-notify. Pending (future) running timers are re-scheduled.
+
+**Background reliability targets: 5**
+```
+Covered before this pass: 1/5 = 20%   (in-process completion notification)
+Covered after this pass:  4/5 = 80%
+Automated coverage:        4/5 = 80%   (scheduler contract via fake, JVM)
+Manual/device-only:        1/5 = 20%   (actual post-kill alarm delivery timing)
+Remaining follow-up:       1/5 = 20%   (exact-alarm permission flow / foreground service)
+```
+- Target 1 (schedule at expectedCompletionAt) — ✅ automated + on-device alarm registration confirmed.
+- Target 2 (cancel on pause/remove/completion) — ✅ automated.
+- Target 3 (relaunch reconciles overdue) — ✅ automated.
+- Target 4 (permission / exact-alarm fallback is safe) — ✅ code falls back to inexact and is wrapped against failure; the *exact-alarm permission flow itself* is the deferred follow-up.
+- Target 5 (scheduler behavior covered by JVM tests) — ✅ `ShootingViewModelSchedulingTest` (12 tests) via a fake.
+
+**Tests:** `ShootingViewModelSchedulingTest` — 12 JVM tests (start schedules; pause/remove cancel; resume reschedules; completed not scheduled; Start-again fresh id; restore pending schedules; restore overdue reconciles + not scheduled; identity immutable across rename; custom-film corrected identity; scheduler-failure no-crash; no duplicate after restore round-trip).
+
+**On-device check (emulator-5554, API 37):** installed the new APK, started an 8.5s
+adjusted timer; `dumpsys alarm` showed a registered `RTC_WAKEUP` alarm with action
+`com.sangwook.ptimer.TIMER_COMPLETION` and a broadcast PendingIntent. On completion
+(app foreground), a notification was posted (channel `ptimer_completion`, title
+"Timer done"), and exactly one completion alarm remained — matching the one
+still-running restored timer (consistent with cancel-on-completion +
+schedule-for-running). **Not verified on device:** actual alarm firing after
+process death — API 37 uses the inexact path (no `SCHEDULE_EXACT_ALARM`), whose
+delivery is delayed/opportunistic, and `am force-stop` cancels alarms so is not a
+faithful kill test. `connectedAndroidTest` was **not** run (no instrumented tests
+exist). The AlarmManager/receiver code is **assemble-only** (framework, not
+JVM-unit-tested); its logic is exercised through the fake scheduler.
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |
 |---|---|---|
-| Notification background delivery + foreground service | `TimerManagerNotificationSchedulingTests`, `…CompletionAlertTests` | Accepted follow-up (round2-accepted §8). Android schedules an exact completion notification (`AndroidTimerNotifier`); background-guaranteed delivery / foreground service is post-MVP. |
+| Fully-guaranteed background completion (exact-alarm permission flow + foreground service) | `TimerManagerNotificationSchedulingTests`, `…CompletionAlertTests` | Android now schedules a **best-effort completion alarm** (`AndroidTimerCompletionScheduler`: exact on API < 31, inexact `setAndAllowWhileIdle` on API 31+ where `SCHEDULE_EXACT_ALARM` is not requested) plus the in-process notification. An exact-alarm permission flow and/or a foreground service for guaranteed, OEM-proof delivery remain post-MVP (see *Background Timer Completion — Pass 5*). |
 | 1/3-stop fractional-ND exposure mode (PTIMER-79) | `ExposureScaleTests`, `ExposureScaleModeUITests`, `OneThirdStopExposureModeTests` (~40) | Android base/ND are whole-stop steppers by design (Compose has no iOS-equivalent wheel base component). Full-stop / camera-ladder snap **is** covered via `exposure-golden.json`. **android-replacement.** |
 | Custom-film **editor UI** suite (`[editor-ui]` ~150) — token editor, anchored-formula form, input modes, live-check, reset/revert, preview graph, inline validation, save-disabled reasons | `CustomFilmEditor*Tests` | Android ships a simpler custom-film create/edit flow (deliberately demoted in priority per owner). Domain validation/sanitation **is** covered. **follow-up / android-replacement.** |
 | Reciprocity **Details graph** + Source-reference/Guidance-boundary section split + secondary-guidance formatter + stop-signal/not-recommended vocabulary + source-reference row sorting | `*GraphPresenterTests`, `Converted/GuardedFormulaPresentation*`, `NotRecommendedBoundary*`, `ReciprocitySecondaryGuidance*`, `SourceReferenceRowSorting*` | Android `DetailsPresenter` is a reduced flat-row model (source/model/basis/corrected/range + fitted comparison), no graph. Region/basis **policy** is covered in `core`. **follow-up / android-replacement.** |

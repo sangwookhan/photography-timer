@@ -19,6 +19,8 @@ import com.sangwook.ptimer.notifications.NoOpTimerNotifier
 import com.sangwook.ptimer.notifications.TimerNotifier
 import com.sangwook.ptimer.slots.CameraSlotSession
 import com.sangwook.ptimer.slots.SlotSessionCodec
+import com.sangwook.ptimer.timer.NoOpTimerCompletionScheduler
+import com.sangwook.ptimer.timer.TimerCompletionScheduler
 import com.sangwook.ptimer.timer.TimerStore
 import com.sangwook.ptimer.timer.TimerWorkspaceController
 import com.sangwook.ptimer.timer.TimerWorkspaceUiState
@@ -67,6 +69,7 @@ class ShootingViewModel(
     private val sessionStore: TimerStore,
     private val customStore: TimerStore,
     private val notifier: TimerNotifier = NoOpTimerNotifier,
+    private val scheduler: TimerCompletionScheduler = NoOpTimerCompletionScheduler,
 ) : ViewModel() {
 
     private val catalog = LaunchPresetFilmCatalogLoader.loadBundledCatalog()
@@ -88,6 +91,8 @@ class ShootingViewModel(
     val detailsState: StateFlow<com.sangwook.ptimer.details.DetailsUi?> = _detailsState.asStateFlow()
 
     private var tickJob: Job? = null
+    /** Ids we currently hold a scheduled completion alarm for (for cancel reconciliation). */
+    private val scheduledIds = mutableSetOf<String>()
 
     private val _ready = MutableStateFlow(false)
     /**
@@ -136,8 +141,31 @@ class ShootingViewModel(
             } finally {
                 _films.value = buildFilms()
                 refreshCalc(); refreshSlots(); updateOngoing(); ensureTicking()
+                // (Re)schedule completion alarms for restored pending timers;
+                // overdue running timers were already reconciled to completed by
+                // the core restore contract, so they are not scheduled here.
+                syncSchedules()
                 _ready.value = true
             }
+        }
+    }
+
+    /**
+     * Reconcile OS-level completion alarms with the current running timers:
+     * cancel alarms for timers we previously scheduled that are no longer
+     * running (paused / completed / removed), and (re)schedule each running
+     * timer at its expected completion. Idempotent — re-scheduling the same id
+     * replaces its alarm, so repeated restore/apply paths never duplicate.
+     * Wrapped so a scheduler failure can never break the timer workflow.
+     */
+    private fun syncSchedules() {
+        runCatching {
+            val targets = timer.runningCompletionTargets()
+            val runningIds = targets.map { it.snapshot.id }.toSet()
+            val stale = scheduledIds - runningIds
+            if (stale.isNotEmpty()) scheduler.cancelAll(stale)
+            targets.forEach { scheduler.schedule(it.snapshot, it.title, it.subtitle) }
+            scheduledIds.clear(); scheduledIds.addAll(runningIds)
         }
     }
 
@@ -200,12 +228,12 @@ class ShootingViewModel(
                 _detailsState.value = calc.details { id -> customLib.film(id) ?: catalog.firstOrNull { it.id == id } }
             }
             ShootingIntent.CloseDetails -> { _detailsState.value = null }
-            is ShootingIntent.Pause -> { timer.pause(intent.id); persistTimers(); ensureTicking() }
-            is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); ensureTicking() }
-            is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers() }
-            is ShootingIntent.StartAgain -> { timer.startAgain(intent.id); persistTimers(); ensureTicking() }
-            is ShootingIntent.StartNew -> { timer.cloneToNew(intent.id); persistTimers(); ensureTicking() }
-            ShootingIntent.ClearCompleted -> { timer.clearCompleted(); persistTimers() }
+            is ShootingIntent.Pause -> { timer.pause(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
+            is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
+            is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers(); syncSchedules() }
+            is ShootingIntent.StartAgain -> { timer.startAgain(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
+            is ShootingIntent.StartNew -> { timer.cloneToNew(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
+            ShootingIntent.ClearCompleted -> { timer.clearCompleted(); persistTimers(); syncSchedules() }
         }
         updateOngoing()
     }
@@ -216,7 +244,7 @@ class ShootingViewModel(
         val cs = _calcState.value
         val metadata = "Base ${cs.baseShutterLabel} · ND ${cs.ndStops} · Adjusted ${cs.adjustedShutterLabel}"
         timer.start("${session.activeLabel()} · ${action.filmContext}", action.subtitle, metadata, action.source, duration)
-        persistTimers(); ensureTicking()
+        persistTimers(); syncSchedules(); ensureTicking()
     }
 
     private fun adoptCustom(film: com.sangwook.ptimer.core.catalog.FilmIdentity) {
@@ -250,7 +278,7 @@ class ShootingViewModel(
                 delay(TICK_MILLIS)
                 val completed = timer.tick()
                 completed.forEach { notifier.postCompletion(it, timer.titleOf(it) ?: "Timer") }
-                if (completed.isNotEmpty()) persistTimers()
+                if (completed.isNotEmpty()) { persistTimers(); syncSchedules() } // consume fired alarms
                 updateOngoing()
             }
             updateOngoing(); persistTimers(); tickJob = null
@@ -268,8 +296,14 @@ class ShootingViewModel(
     companion object {
         private const val TICK_MILLIS = 100L
 
-        fun factory(timerStore: TimerStore, sessionStore: TimerStore, customStore: TimerStore, notifier: TimerNotifier) = viewModelFactory {
-            initializer { ShootingViewModel(timerStore, sessionStore, customStore, notifier) }
+        fun factory(
+            timerStore: TimerStore,
+            sessionStore: TimerStore,
+            customStore: TimerStore,
+            notifier: TimerNotifier,
+            scheduler: TimerCompletionScheduler = NoOpTimerCompletionScheduler,
+        ) = viewModelFactory {
+            initializer { ShootingViewModel(timerStore, sessionStore, customStore, notifier, scheduler) }
         }
     }
 }

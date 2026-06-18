@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sangwook.ptimer.notifications.AndroidTimerNotifier
+import com.sangwook.ptimer.timer.AndroidTimerCompletionScheduler
 import com.sangwook.ptimer.timer.DataStoreCustomFilmStore
 import com.sangwook.ptimer.timer.DataStoreSessionStore
 import com.sangwook.ptimer.timer.DataStoreTimerStore
@@ -60,8 +61,9 @@ private fun ShootingRoot() {
     val sessionStore = remember { DataStoreSessionStore(context.applicationContext) }
     val customStore = remember { DataStoreCustomFilmStore(context.applicationContext) }
     val notifier = remember { AndroidTimerNotifier(context.applicationContext) }
+    val scheduler = remember { AndroidTimerCompletionScheduler(context.applicationContext) }
     val viewModel: ShootingViewModel =
-        viewModel(factory = ShootingViewModel.factory(timerStore, sessionStore, customStore, notifier))
+        viewModel(factory = ShootingViewModel.factory(timerStore, sessionStore, customStore, notifier, scheduler))
     val calcState by viewModel.calcState.collectAsStateWithLifecycle()
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val slotsState by viewModel.slotsState.collectAsStateWithLifecycle()

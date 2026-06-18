@@ -172,6 +172,40 @@ behavior is preserved.
 
 ---
 
+## End-to-End Restore + Custom Film Verification — Pass 4
+
+Prior passes proved restore at the codec/controller level. This pass adds
+**app-level** (ViewModel ↔ stores ↔ codecs ↔ controllers) round-trip coverage
+in `ShootingViewModelEndToEndRestoreTest`: the same `InMemoryTimerStore`
+instances (DataStore stand-ins) are shared between a "before" and an "after
+relaunch" ViewModel so persisted JSON round-trips through the real
+save→load→decode→apply path, driven on a `StandardTestDispatcher` with
+`runCurrent()` (no Robolectric). The restore order was audited and is correct:
+load/decode → `timer.restoreFromJson` → custom library → id sequencer →
+`setCustomFilms` → session restore → `calc.apply` → finally(`ready = true`);
+custom films are applied **before** the session so a session's custom-film
+reference resolves.
+
+**Coverage counts — 34 end-to-end targets:**
+
+| Bucket | Count | % |
+|---|---|---|
+| Covered by **existing** tests (ready/guard + store-failure) | 9 | 26.5% |
+| Covered by **new** tests (active/completed/slot/custom/identity round-trips) | 23 | 67.6% |
+| **Automated total** | **32** | **94.1%** |
+| Manual / instrumented-only (Compose UI) | 2 | 5.9% |
+| Remaining uncovered | 0 | 0% |
+
+- **New (23):** active-timer restore + usable countdown + no-collision-new-timer + source identity (4); completed-timer restore + Start-again + Remove + identity (4); slot/session — selected slot, trimmed name, base, ND, film, model, target (7); custom film — formula reload, table reload, table-created-formula reload, stays-selected, affects-calc, delete-falls-back (6); custom-film corrected timer identity survives restore (2).
+- **Existing (9):** `ShootingViewModelRestoreOrderingTest` (ready false before / intents ignored / ready true after = 4 of group 6) + `ShootingViewModelRestoreFailSafeTest` (timer/custom/session/multiple failure + always-ready = 5 of group 7).
+- **Manual-only (2):** "UI receives ready state" and "ShootingScreen shows a loading indicator while not ready" — these are Compose-UI assertions requiring instrumentation. The `ready` param + `RestoringOverlay` exist in code and were observed **not to trap** the UI on device (overlay cleared, controls interactive), but the overlay being *displayed during* the sub-second restore window was not directly captured.
+
+**On-device check (emulator-5554):** installed the debug APK, launched, force-stopped, relaunched. The app rendered the real shooting screen and, across the kill/relaunch, **restored the selected preset film (Fomapan 100 Classic), the selected model (Official FOMA table), ND stops (8), and the reciprocity result (Table-derived, 8.5s)** via real DataStore, with no crash and no trapped "Restoring…" overlay. On-device custom-film and running-timer restore were **not** exercised this pass (no such state present); they are covered by the JVM round-trip tests above.
+
+**No blocker found.** All eight new round-trip tests passed on the first run, so no restore/custom fix was required this pass.
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |

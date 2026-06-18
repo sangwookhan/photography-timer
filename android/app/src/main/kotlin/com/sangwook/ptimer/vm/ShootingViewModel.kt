@@ -102,31 +102,36 @@ class ShootingViewModel(
     init {
         calc.setBaseShutterLadderIndex(nearestBaseIndex(com.sangwook.ptimer.core.exposure.CalculatorDefaults.BASE_SHUTTER_SECONDS))
         viewModelScope.launch {
-            // Restore is fail-safe: each store loads independently behind
-            // runCatching with a documented fallback, and `ready` is set in
-            // `finally` so a failed/throwing load can never leave the app
-            // permanently inert. Only persistence load/decode is caught — pure
-            // wiring below is left to surface genuine programmer errors.
+            // Restore is fail-safe for PERSISTENCE only: each store's load +
+            // decode runs behind its own runCatching with a documented fallback
+            // (timers→none, custom→empty library, session→defaults), so a
+            // throwing/corrupt store can never leave the app permanently inert.
+            // The application wiring below (restoreFromJson / session.restore /
+            // calc.apply) is intentionally OUTSIDE those catches, so a genuine
+            // programmer error there surfaces instead of being swallowed.
+            // `ready` is always set in `finally`.
             try {
-                // timers → on failure, no restored timers
-                runCatching { timer.restoreFromJson(timerStore.load()) }
-                // custom films → on failure, keep the empty default library
-                runCatching {
-                    customStore.load()?.let { customLib = CustomFilmLibrary(CustomFilmLibraryCodec.decode(it)) }
-                }
+                // 1) Load + decode each store independently (failures swallowed).
+                val timerJson = runCatching { timerStore.load() }.getOrNull()
+                val loadedCustomFilms = runCatching {
+                    customStore.load()?.let { CustomFilmLibraryCodec.decode(it) }
+                }.getOrNull()
+                val restoredSession = runCatching {
+                    sessionStore.load()?.let { SlotSessionCodec.decode(it) }
+                }.getOrNull()
+
+                // 2) Apply the loaded data (NOT swallowed — wiring errors surface).
+                timer.restoreFromJson(timerJson)
+                loadedCustomFilms?.let { customLib = CustomFilmLibrary(it) }
                 // Seed the id sequencer from whichever library actually loaded.
                 customSeq = CustomFilmIdSequencer.nextSequence(customLib.all.map { it.id })
                 calc.setCustomFilms(customLib.all)
-                // session AFTER custom films, so a session that references a
-                // custom film id resolves it (or falls back to digital via
-                // CalculatorController sanitation if that custom film is absent).
-                runCatching {
-                    sessionStore.load()?.let { json ->
-                        SlotSessionCodec.decode(json)?.let { restored ->
-                            session.restore(restored.activeSlotId, restored.snapshots, restored.names)
-                            calc.apply(session.snapshot(session.activeSlotId))
-                        }
-                    }
+                // Session is applied AFTER custom films, so a session that
+                // references a custom film id resolves it (or falls back to
+                // digital via CalculatorController sanitation when absent).
+                restoredSession?.let { restored ->
+                    session.restore(restored.activeSlotId, restored.snapshots, restored.names)
+                    calc.apply(session.snapshot(session.activeSlotId))
                 }
             } finally {
                 _films.value = buildFilms()

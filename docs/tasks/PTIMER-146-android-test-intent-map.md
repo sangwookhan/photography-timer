@@ -121,15 +121,19 @@ Missing or partial intent: Fully-guaranteed background timer completion across
         Doze / OEM battery
 iOS source/test: TimerManager background/notification behavior, Live Activity
 Android status: Improved — in-process completion + ongoing notification posted,
-        AND a best-effort scheduled completion alarm
-        (AndroidTimerCompletionScheduler: exact on API < 31, inexact
-        setAndAllowWhileIdle on API 31+ without SCHEDULE_EXACT_ALARM);
-        schedule/cancel/relaunch-reconcile covered by JVM tests. No exact-alarm
-        permission flow and no foreground service yet.
-Reason: Exact-alarm permission UX + foreground service need device-specific
-        testing and were out of this pass's scope.
-Risk: Inexact delivery may be delayed on API 31+; OEM battery managers / task
-        killers can still suppress delivery. Medium.
+        AND a scheduled completion alarm that uses EXACT when permitted and
+        best-effort INEXACT otherwise. SCHEDULE_EXACT_ALARM is declared, the
+        exact/inexact choice is the pure ExactAlarmPolicy (JVM-tested), and the
+        app surfaces a dismissible in-app request (opens
+        ACTION_REQUEST_SCHEDULE_EXACT_ALARM) when exact is unavailable.
+        schedule/cancel/relaunch-reconcile + exact-policy + prompt covered by
+        JVM tests; both exact/inexact paths confirmed on device. No foreground
+        service yet.
+Reason: Foreground service needs device-specific testing; faithful
+        post-process-death delivery not yet verified. USE_EXACT_ALARM avoided
+        (Play eligibility risk); SCHEDULE_EXACT_ALARM needs a Play declaration.
+Risk: Inexact delivery may be delayed when exact not granted; OEM battery
+        managers / task killers / force-stop can still suppress delivery. Medium.
 Suggested follow-up: add a foreground service (type specialUse/shortService) +
         AlarmManager setExactAndAllowWhileIdle keyed by timer id, with
         cancel/reschedule on pause/resume/remove; verify on devices.

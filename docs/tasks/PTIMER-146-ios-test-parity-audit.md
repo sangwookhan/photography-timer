@@ -309,6 +309,70 @@ the adjusted-shutter timer; on completion the notification showed
 
 ---
 
+## Exact Alarm Permission — Pass 7
+
+Pass 5 used exact alarms only when already permitted and never requested the
+permission, so on API 31+ it always fell to the inexact path. This pass adds the
+exact-alarm permission policy + a user path, closing the enumerated
+background-reliability target set.
+
+**Policy decision:** declare `SCHEDULE_EXACT_ALARM` (not `USE_EXACT_ALARM` —
+eligibility/Play-policy risk) and request it via the system settings deep-link.
+Exact is used when permitted; otherwise the app stays on the best-effort inexact
+path. Using `SCHEDULE_EXACT_ALARM` requires a Play Console exact-alarm
+declaration at publish time — a deliberate, documented MVP decision; if that
+becomes a blocker the permission can be dropped and the app remains on inexact.
+
+- **`ExactAlarmPolicy`** (pure, JVM-tested) — `decide(sdkInt, canScheduleExact,
+  promptDismissed)` → `shouldUseExact` / `shouldShowPermissionPrompt` /
+  `fallbackMode`. API < 31 → exact, no prompt; API 31+ permitted → exact, no
+  prompt; API 31+ denied → inexact + offer prompt (until dismissed).
+- **`ExactAlarmAvailability`** — interface (`AlwaysExactAlarmAvailability`
+  default/test stand-in; `AndroidExactAlarmAvailability` queries
+  `canScheduleExactAlarms()`), injected into the ViewModel.
+- **`AndroidTimerCompletionScheduler`** now routes its exact/inexact choice
+  through `ExactAlarmPolicy`. Manifest declares `SCHEDULE_EXACT_ALARM`.
+- **In-app prompt:** `ShootingViewModel.exactAlarmPrompt` is true only when a
+  timer is running, exact is not permitted, and the user has not dismissed it.
+  `ShootingScreen` shows a compact dismissible notice ("For more reliable
+  background timer alerts, allow exact alarms." / "Open settings" / "Not now");
+  `MainActivity` opens `Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM`. Timer use
+  is never blocked; the notice does not reappear after dismissal.
+
+**Background reliability targets: 5**
+```
+Covered before this pass: 4/5 = 80%
+Covered after this pass:  5/5 = 100%
+Automated coverage:       5/5 = 100%
+Manual/device-only:       0/5 = 0%    (target 4 ALSO confirmed on device, both paths)
+Remaining follow-up:      0/5 = 0%    (within this 5-target set)
+```
+- Target 1 schedule, 2 cancel, 3 relaunch-reconcile, 5 JVM coverage — unchanged ✅.
+- Target 4 (permission / exact-alarm fallback safe) — ✅ closed: exact-when-permitted, inexact fallback, user request path, pure policy JVM-tested, both paths confirmed on device.
+
+**Beyond this 5-target set (still open, not claimed closed):** a **foreground
+service** for guaranteed delivery, and a **faithful post-process-death delivery
+test** (this pass verified exact/inexact *path selection* + alarm *registration*
+on device, not actual firing after the process is gone). Force-stop still cancels
+alarms and is not a supported guarantee.
+
+**Tests (+8):** `ExactAlarmPolicyTest` (4 — below-31 exact, 31+ permitted exact,
+31+ denied inexact+prompt, denied+dismissed no-prompt) and
+`ShootingViewModelExactAlarmPromptTest` (4 — no prompt without a running timer,
+prompt when running+unavailable, no prompt when available, dismissal prevents
+re-nagging). Targets 1/2/3/6/7/8 from the scheduler set remain covered by the
+existing `ShootingViewModelSchedulingTest`.
+
+**On-device check (emulator-5554, API 37):** with `appops … SCHEDULE_EXACT_ALARM
+deny`, starting a timer showed the notice and registered the (inexact) alarm with
+no crash; with `… allow`, a running timer showed **no** notice and registered the
+alarm (exact path selected). **Not verified:** actual alarm firing after process
+death; `connectedAndroidTest` was **not** run; the AlarmManager/receiver +
+settings-intent code remain assemble-only (their decision logic is JVM-tested via
+`ExactAlarmPolicy` and the prompt tests).
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |

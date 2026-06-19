@@ -97,8 +97,10 @@ class ShootingViewModel(
     private var tickJob: Job? = null
     /** Ids we currently hold a scheduled completion alarm for (for cancel reconciliation). */
     private val scheduledIds = mutableSetOf<String>()
-    /** Session flag: once the user dismisses the exact-alarm notice we stop showing it. */
+    /** Session flag: dismissing the exact-alarm notice suppresses it while exact stays denied. */
     private var exactAlarmPromptDismissed = false
+    /** Last observed exact-alarm availability, so a resume refresh can detect a change. */
+    private var lastExactAvailable: Boolean? = null
 
     private val _exactAlarmPrompt = MutableStateFlow(false)
     /**
@@ -187,8 +189,25 @@ class ShootingViewModel(
 
     /** Show the exact-alarm notice only when it can actually help (running timer + not permitted + not dismissed). */
     private fun refreshExactAlarmPrompt() {
-        _exactAlarmPrompt.value =
-            timer.hasRunning() && !exactAlarms.canScheduleExact() && !exactAlarmPromptDismissed
+        val available = exactAlarms.canScheduleExact()
+        lastExactAvailable = available
+        _exactAlarmPrompt.value = timer.hasRunning() && !available && !exactAlarmPromptDismissed
+    }
+
+    /**
+     * Re-check exact-alarm availability — call on resume / return from the
+     * exact-alarm settings screen. When availability has changed, reschedule
+     * running timers through the current exact/inexact policy (a just-granted
+     * permission upgrades them to exact; a revoked one falls back to inexact).
+     * A fresh grant also clears the dismissed-notice suppression so a later
+     * denial can prompt again. Guarded until restore completes, like [onEvent].
+     */
+    fun refreshExactAlarmAvailability() {
+        if (!_ready.value) return
+        val available = exactAlarms.canScheduleExact()
+        val changed = lastExactAvailable != null && available != lastExactAvailable
+        if (available) exactAlarmPromptDismissed = false
+        if (changed) syncSchedules() else refreshExactAlarmPrompt()
     }
 
     private fun updateOngoing() {

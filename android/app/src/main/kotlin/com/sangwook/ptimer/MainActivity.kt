@@ -22,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sangwook.ptimer.notifications.AndroidTimerNotifier
@@ -76,6 +78,10 @@ private fun ShootingRoot() {
     val details by viewModel.detailsState.collectAsStateWithLifecycle()
     val ready by viewModel.ready.collectAsStateWithLifecycle()
     val exactAlarmPrompt by viewModel.exactAlarmPrompt.collectAsStateWithLifecycle()
+    // Re-check exact-alarm availability when returning from the settings screen
+    // (or any resume), so a just-granted permission reschedules running timers
+    // and clears the notice.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshExactAlarmAvailability() }
     ShootingScreen(
         slots = slotsState,
         calc = calcState,

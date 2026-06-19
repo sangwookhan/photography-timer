@@ -127,8 +127,11 @@ Android status: Improved — in-process completion + ongoing notification posted
         app surfaces a dismissible in-app request (opens
         ACTION_REQUEST_SCHEDULE_EXACT_ALARM) when exact is unavailable.
         schedule/cancel/relaunch-reconcile + exact-policy + prompt covered by
-        JVM tests; both exact/inexact paths confirmed on device. No foreground
-        service yet.
+        JVM tests; both exact/inexact paths confirmed on device. Exact
+        availability is also re-checked on resume (refreshExactAlarmAvailability
+        via LifecycleEventEffect ON_RESUME): returning from the settings grant
+        clears the notice and reschedules running timers through the exact path
+        (settings round-trip confirmed on device). No foreground service yet.
 Reason: Foreground service needs device-specific testing; faithful
         post-process-death delivery not yet verified. USE_EXACT_ALARM avoided
         (Play eligibility risk); SCHEDULE_EXACT_ALARM needs a Play declaration.

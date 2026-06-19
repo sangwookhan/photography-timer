@@ -373,6 +373,53 @@ settings-intent code remain assemble-only (their decision logic is JVM-tested vi
 
 ---
 
+## Exact Alarm Settings Return — Pass 8
+
+Pass 7 read exact availability only on timer events, so granting the permission
+in settings and returning did not refresh the notice or upgrade already-running
+timers to the exact path until the next timer action. This pass closes that gap.
+
+- **`ShootingViewModel.refreshExactAlarmAvailability()`** re-reads
+  `ExactAlarmAvailability`; if it changed since the last observation it runs
+  `syncSchedules()` (reschedules running timers through the now-current
+  exact/inexact policy — idempotent, so unchanged availability does not
+  reschedule) and refreshes the notice. A fresh **grant** also clears the
+  dismissed-notice suppression so a later denial can prompt again.
+- **`MainActivity`** calls it from `LifecycleEventEffect(ON_RESUME)`, i.e. on
+  return from the exact-alarm settings screen (and any resume). Guarded until
+  restore completes.
+- **Dismissed-state rule:** dismissal suppresses the notice while exact stays
+  denied; a grant clears suppression and hides the notice; a later
+  denied-while-running can prompt again.
+
+**Exact-alarm settings-return targets: 8**
+```
+Covered before this pass: 2/8 = 25%   (targets 1 & 8 — prompt visibility only)
+Covered after this pass:  8/8 = 100%
+Automated coverage:       8/8 = 100%
+Manual/device-only:       0/8 = 0%    (round-trip ALSO confirmed on device)
+Remaining follow-up:      0/8 = 0%    (within this set)
+```
+- 1 denied schedules inexact + prompt, 8 no-prompt-without-running — already covered.
+- 2 grant→refresh hides prompt, 3 grant→refresh reschedules, 4 still-denied→no
+  reschedule, 5 dismissed+denied→no re-nag, 6 dismissed+granted→hidden+suppression
+  cleared, 7 granted→denied→fallback+prompt — added this pass.
+
+**Tests (+6):** `ShootingViewModelExactAlarmPromptTest` extended from 4 to 10
+(adds the six settings-return cases above, using a flippable `MutableExact`
+availability and a `CountingScheduler` to assert reschedule counts).
+
+**On-device check (emulator-5554, API 37):** `appops … SCHEDULE_EXACT_ALARM deny`,
+launch, start timer → notice shown + (inexact) alarm registered. Then HOME, grant
+via `appops … allow` while backgrounded, resume → `ON_RESUME` fired
+`refreshExactAlarmAvailability`: the notice cleared, the alarm stayed registered
+(rescheduled; an exact-alarm clock icon appeared in the status bar), no crash.
+This used an `appops` toggle while backgrounded + resume (not the system settings
+UI navigation). **Not verified:** actual alarm firing after process death.
+`connectedAndroidTest` was **not** run.
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |

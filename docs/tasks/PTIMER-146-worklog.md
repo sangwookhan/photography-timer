@@ -23,7 +23,8 @@ branch `feature/PTIMER-146-android-mvp` / Draft PR #16 (kept draft throughout; n
 | 6 | End-to-End Restore + Custom Film Verification | `45b0170` | 172 | 8 app-level round-trip tests; on-device kill/relaunch restore confirmed |
 | 7 | Background Timer Completion Reliability | `5ccb538` | 184 | scheduler abstraction + AlarmManager best-effort + 12 tests |
 | 8 | Background Completion Cleanup | `6d52f0d` | 184 | force-stop wording, completion subtitle, ongoing-notif policy |
-| 9 | Exact Alarm Permission + Delivery Verification | (latest branch HEAD) | 192 | exact-when-permitted + request flow; both paths verified on device |
+| 9 | Exact Alarm Permission + Delivery Verification | `f0b32bf` | 192 | exact-when-permitted + request flow; both paths verified on device |
+| 10 | Exact Alarm Settings Return Cleanup | (latest branch HEAD) | 198 | refresh on resume reschedules + clears notice; round-trip verified on device |
 
 Per-test / per-target detail for all passes lives in
 `PTIMER-146-ios-test-parity-audit.md` (Passes 1, and the "Restore/Persistence
@@ -154,6 +155,46 @@ Also: keep a work log of instructions + reports (this file).
   follow-up (outside the 5-target set): foreground service + faithful post-kill
   delivery test.
 - **HEAD:** see PR #16 / latest commit on the branch.
+
+---
+
+## Pass 10 — Exact Alarm Settings Return Cleanup
+
+**Instruction (scope):** Close the exact-alarm settings-return gap (narrow pass;
+no foreground service / UI redesign / iOS changes). On resume / return from the
+exact-alarm settings screen the app must: re-check exact availability, refresh
+the prompt, and reschedule running timers when availability changes
+denied→granted; keep inexact fallback when still denied; choose a sensible
+dismissed-state rule; cover with JVM tests; verify the real round-trip on device
+(appops toggle while backgrounded + resume is acceptable if stated). 8
+settings-return targets.
+
+**Report:**
+
+- **Verdict:** Settings-return gap closed (8/8 targets); MVP still **not**
+  review-ready (post-process-death firing + foreground service remain). PR #16 draft.
+- **Audit (before):** exact availability was read only inside
+  `refreshExactAlarmPrompt()` which ran only on timer events (via
+  `syncSchedules()`); no resume hook; after a settings grant the notice stayed
+  stale and running timers stayed on the old inexact path until the next timer
+  action; `exactAlarmPromptDismissed` was a permanent flag.
+- **What changed:** added `ShootingViewModel.refreshExactAlarmAvailability()`
+  (re-reads availability; reschedules via `syncSchedules()` only when changed;
+  clears dismissed-suppression on grant); `MainActivity` calls it from
+  `LifecycleEventEffect(ON_RESUME)`; `refreshExactAlarmPrompt()` now records
+  `lastExactAvailable` for change detection.
+- **Tests (+6):** `ShootingViewModelExactAlarmPromptTest` 4 → 10 (grant→hide,
+  grant→reschedule, still-denied→no-reschedule, dismissed+denied→no-renag,
+  dismissed+granted→hidden+suppression-cleared, granted→denied→fallback+prompt).
+  198 total (76 core + 122 app), 0 failures.
+- **Manual/emulator (emulator-5554, API 37):** `appops … deny` → start timer →
+  notice + inexact alarm; HOME → `appops … allow` → resume → notice cleared,
+  alarm rescheduled (exact clock icon), no crash. Used appops-while-backgrounded
+  + resume, not the settings UI. Post-process-death firing **not** verified;
+  `connectedAndroidTest` not run.
+- **Coverage:** settings-return targets 2/8 → 8/8 = 100%; automated 8/8;
+  remaining-in-set 0/8. Beyond set: post-kill delivery + foreground service.
+- **HEAD:** see PR #16 / latest branch commit.
 
 ---
 

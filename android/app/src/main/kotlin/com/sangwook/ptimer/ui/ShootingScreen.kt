@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.calculator.CalculatorUiState
@@ -77,6 +78,7 @@ fun ShootingScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .testTag(TestTags.SHOOTING_SCREEN)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -120,6 +122,7 @@ private fun RestoringOverlay() {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .testTag(TestTags.RESTORING_OVERLAY)
             .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -136,7 +139,7 @@ private fun RestoringOverlay() {
 /** Compact, dismissible reliability notice shown when exact alarms are not permitted. */
 @Composable
 private fun ExactAlarmNotice(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
-    Card(Modifier.fillMaxWidth(), colors = whiteCardColors()) {
+    Card(Modifier.fillMaxWidth().testTag(TestTags.EXACT_ALARM_NOTICE), colors = whiteCardColors()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 "For more reliable background timer alerts, allow exact alarms.",
@@ -294,17 +297,19 @@ private fun BaseNdSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
             onPlus = { onEvent(ShootingIntent.NudgeBaseShutter(1)) })
         Stepper("ND stops", calc.ndStops.toString(),
             onMinus = { onEvent(ShootingIntent.SetNdStops(calc.ndStops - 1)) },
-            onPlus = { onEvent(ShootingIntent.SetNdStops(calc.ndStops + 1)) })
+            onPlus = { onEvent(ShootingIntent.SetNdStops(calc.ndStops + 1)) },
+            plusTag = TestTags.ND_PLUS_BUTTON)
     }
 }
 
 @Composable
-private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
+private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit, plusTag: String? = null) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Text("$label: $value", Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onMinus) { Text("−") }
-            OutlinedButton(onClick = onPlus) { Text("+") }
+            val plusModifier = if (plusTag != null) Modifier.testTag(plusTag) else Modifier
+            OutlinedButton(onClick = onPlus, modifier = plusModifier) { Text("+") }
         }
     }
 }
@@ -314,7 +319,7 @@ private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: (
 @Composable
 private fun ResultSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
     SectionCard("Result") {
-        ResultActionRow("Adjusted shutter", calc.adjustedShutterLabel, calc.adjustedAction) {
+        ResultActionRow("Adjusted shutter", calc.adjustedShutterLabel, calc.adjustedAction, buttonTag = TestTags.START_ADJUSTED_BUTTON) {
             onEvent(ShootingIntent.StartAdjusted)
         }
         if (calc.filmName != null) {
@@ -336,20 +341,21 @@ private fun ResultSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
 }
 
 @Composable
-private fun ResultActionRow(label: String, value: String, action: StartActionState?, onStart: () -> Unit) {
+private fun ResultActionRow(label: String, value: String, action: StartActionState?, buttonTag: String? = null, onStart: () -> Unit) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(value, fontWeight = FontWeight.Bold)
         }
-        PlayButton(enabled = action?.enabled == true, onStart = onStart)
+        PlayButton(enabled = action?.enabled == true, tag = buttonTag, onStart = onStart)
     }
 }
 
 /** iOS-style filled circular play action. */
 @Composable
-private fun PlayButton(enabled: Boolean, onStart: () -> Unit) {
-    FilledIconButton(onClick = onStart, enabled = enabled) { Text("▶") }
+private fun PlayButton(enabled: Boolean, tag: String? = null, onStart: () -> Unit) {
+    val modifier = if (tag != null) Modifier.testTag(tag) else Modifier
+    FilledIconButton(onClick = onStart, enabled = enabled, modifier = modifier) { Text("▶") }
 }
 
 // MARK: - Custom film actions (low priority)
@@ -375,7 +381,8 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 
 @Composable
 private fun TimerCard(item: TimerItemUi, completed: Boolean, onEvent: (ShootingIntent) -> Unit) {
-    Card(Modifier.fillMaxWidth(), colors = whiteCardColors()) {
+    val rowModifier = Modifier.fillMaxWidth().let { if (!completed) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
+    Card(rowModifier, colors = whiteCardColors()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)

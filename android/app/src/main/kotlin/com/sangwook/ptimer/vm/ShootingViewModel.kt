@@ -19,6 +19,8 @@ import com.sangwook.ptimer.notifications.NoOpTimerNotifier
 import com.sangwook.ptimer.notifications.TimerNotifier
 import com.sangwook.ptimer.slots.CameraSlotSession
 import com.sangwook.ptimer.slots.SlotSessionCodec
+import com.sangwook.ptimer.timer.AlwaysExactAlarmAvailability
+import com.sangwook.ptimer.timer.ExactAlarmAvailability
 import com.sangwook.ptimer.timer.NoOpTimerCompletionScheduler
 import com.sangwook.ptimer.timer.TimerCompletionScheduler
 import com.sangwook.ptimer.timer.TimerStore
@@ -62,6 +64,7 @@ sealed interface ShootingIntent {
     data class StartAgain(val id: String) : ShootingIntent
     data class StartNew(val id: String) : ShootingIntent
     data object ClearCompleted : ShootingIntent
+    data object DismissExactAlarmPrompt : ShootingIntent
 }
 
 class ShootingViewModel(
@@ -70,6 +73,7 @@ class ShootingViewModel(
     private val customStore: TimerStore,
     private val notifier: TimerNotifier = NoOpTimerNotifier,
     private val scheduler: TimerCompletionScheduler = NoOpTimerCompletionScheduler,
+    private val exactAlarms: ExactAlarmAvailability = AlwaysExactAlarmAvailability,
 ) : ViewModel() {
 
     private val catalog = LaunchPresetFilmCatalogLoader.loadBundledCatalog()
@@ -93,6 +97,17 @@ class ShootingViewModel(
     private var tickJob: Job? = null
     /** Ids we currently hold a scheduled completion alarm for (for cancel reconciliation). */
     private val scheduledIds = mutableSetOf<String>()
+    /** Session flag: once the user dismisses the exact-alarm notice we stop showing it. */
+    private var exactAlarmPromptDismissed = false
+
+    private val _exactAlarmPrompt = MutableStateFlow(false)
+    /**
+     * True only when a timer is running, exact alarms are not currently
+     * permitted, and the user has not dismissed the notice — i.e. completion is
+     * on the best-effort inexact path and a one-tap fix exists. The UI surfaces
+     * a compact, dismissible notice; timer usage is never blocked.
+     */
+    val exactAlarmPrompt: StateFlow<Boolean> = _exactAlarmPrompt.asStateFlow()
 
     private val _ready = MutableStateFlow(false)
     /**
@@ -167,6 +182,13 @@ class ShootingViewModel(
             targets.forEach { scheduler.schedule(it.snapshot, it.title, it.subtitle) }
             scheduledIds.clear(); scheduledIds.addAll(runningIds)
         }
+        refreshExactAlarmPrompt()
+    }
+
+    /** Show the exact-alarm notice only when it can actually help (running timer + not permitted + not dismissed). */
+    private fun refreshExactAlarmPrompt() {
+        _exactAlarmPrompt.value =
+            timer.hasRunning() && !exactAlarms.canScheduleExact() && !exactAlarmPromptDismissed
     }
 
     private fun updateOngoing() {
@@ -234,6 +256,7 @@ class ShootingViewModel(
             is ShootingIntent.StartAgain -> { timer.startAgain(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
             is ShootingIntent.StartNew -> { timer.cloneToNew(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
             ShootingIntent.ClearCompleted -> { timer.clearCompleted(); persistTimers(); syncSchedules() }
+            ShootingIntent.DismissExactAlarmPrompt -> { exactAlarmPromptDismissed = true; refreshExactAlarmPrompt() }
         }
         updateOngoing()
     }
@@ -302,8 +325,9 @@ class ShootingViewModel(
             customStore: TimerStore,
             notifier: TimerNotifier,
             scheduler: TimerCompletionScheduler = NoOpTimerCompletionScheduler,
+            exactAlarms: ExactAlarmAvailability = AlwaysExactAlarmAvailability,
         ) = viewModelFactory {
-            initializer { ShootingViewModel(timerStore, sessionStore, customStore, notifier, scheduler) }
+            initializer { ShootingViewModel(timerStore, sessionStore, customStore, notifier, scheduler, exactAlarms) }
         }
     }
 }

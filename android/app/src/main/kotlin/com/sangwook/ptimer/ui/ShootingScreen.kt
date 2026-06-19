@@ -68,6 +68,8 @@ fun ShootingScreen(
     details: DetailsUi?,
     onEvent: (ShootingIntent) -> Unit,
     ready: Boolean = true,
+    exactAlarmPromptVisible: Boolean = false,
+    onOpenExactAlarmSettings: () -> Unit = {},
 ) {
     Box(Modifier.fillMaxSize()) {
         details?.let { DetailsDialog(it, onEvent) }
@@ -80,6 +82,9 @@ fun ShootingScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
         ) {
+            if (exactAlarmPromptVisible) {
+                item { ExactAlarmNotice(onOpenSettings = onOpenExactAlarmSettings, onDismiss = { onEvent(ShootingIntent.DismissExactAlarmPrompt) }) }
+            }
             item { Text(slots.activeLabel, style = MaterialTheme.typography.headlineSmall) }
             item { SlotBar(slots, onEvent) }
             item { FilmModelSection(calc, films, onEvent) }
@@ -124,6 +129,23 @@ private fun RestoringOverlay() {
     ) {
         Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
             Text("Restoring…", Modifier.padding(24.dp), style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+/** Compact, dismissible reliability notice shown when exact alarms are not permitted. */
+@Composable
+private fun ExactAlarmNotice(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    Card(Modifier.fillMaxWidth(), colors = whiteCardColors()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "For more reliable background timer alerts, allow exact alarms.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onOpenSettings) { Text("Open settings") }
+                TextButton(onClick = onDismiss) { Text("Not now") }
+            }
         }
     }
 }

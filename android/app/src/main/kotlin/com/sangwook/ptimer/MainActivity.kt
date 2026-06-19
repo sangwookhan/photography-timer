@@ -4,9 +4,12 @@
 package com.sangwook.ptimer
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sangwook.ptimer.notifications.AndroidTimerNotifier
+import com.sangwook.ptimer.timer.AndroidExactAlarmAvailability
 import com.sangwook.ptimer.timer.AndroidTimerCompletionScheduler
 import com.sangwook.ptimer.timer.DataStoreCustomFilmStore
 import com.sangwook.ptimer.timer.DataStoreSessionStore
@@ -62,14 +66,16 @@ private fun ShootingRoot() {
     val customStore = remember { DataStoreCustomFilmStore(context.applicationContext) }
     val notifier = remember { AndroidTimerNotifier(context.applicationContext) }
     val scheduler = remember { AndroidTimerCompletionScheduler(context.applicationContext) }
+    val exactAlarms = remember { AndroidExactAlarmAvailability(context.applicationContext) }
     val viewModel: ShootingViewModel =
-        viewModel(factory = ShootingViewModel.factory(timerStore, sessionStore, customStore, notifier, scheduler))
+        viewModel(factory = ShootingViewModel.factory(timerStore, sessionStore, customStore, notifier, scheduler, exactAlarms))
     val calcState by viewModel.calcState.collectAsStateWithLifecycle()
     val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val slotsState by viewModel.slotsState.collectAsStateWithLifecycle()
     val films by viewModel.films.collectAsStateWithLifecycle()
     val details by viewModel.detailsState.collectAsStateWithLifecycle()
     val ready by viewModel.ready.collectAsStateWithLifecycle()
+    val exactAlarmPrompt by viewModel.exactAlarmPrompt.collectAsStateWithLifecycle()
     ShootingScreen(
         slots = slotsState,
         calc = calcState,
@@ -78,5 +84,16 @@ private fun ShootingRoot() {
         details = details,
         onEvent = viewModel::onEvent,
         ready = ready,
+        exactAlarmPromptVisible = exactAlarmPrompt,
+        onOpenExactAlarmSettings = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching {
+                    context.startActivity(
+                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }
+            }
+        },
     )
 }

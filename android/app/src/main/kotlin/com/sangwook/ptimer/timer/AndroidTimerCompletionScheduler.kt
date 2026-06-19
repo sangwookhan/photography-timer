@@ -17,11 +17,13 @@ import com.sangwook.ptimer.core.timer.PersistentTimerSnapshot
  * - On API < 31 (Android 11 and below) it uses `setExactAndAllowWhileIdle`
  *   (exact, Doze-aware, no special permission).
  * - On API 31+ it uses exact scheduling only when `canScheduleExactAlarms()` is
- *   already true; this pass does NOT request `SCHEDULE_EXACT_ALARM`, so by
- *   default it falls back to `setAndAllowWhileIdle` (inexact but Doze-aware).
+ *   true (the app declares `SCHEDULE_EXACT_ALARM` and surfaces an in-app request
+ *   — see [ExactAlarmAvailability] / the ViewModel prompt). When not permitted it
+ *   falls back to `setAndAllowWhileIdle` (inexact but Doze-aware).
+ * - The exact-vs-inexact choice is the pure [ExactAlarmPolicy] (JVM-tested).
  * - OEM background restrictions / aggressive task-killers can still suppress or
- *   delay delivery. A foreground service and/or an exact-alarm permission flow
- *   remain a documented follow-up.
+ *   delay delivery, and an explicit force-stop cancels alarms. A foreground
+ *   service for guaranteed delivery remains a documented follow-up.
  * All scheduling is wrapped so it can never crash the timer workflow.
  */
 class AndroidTimerCompletionScheduler(context: Context) : TimerCompletionScheduler {
@@ -38,10 +40,12 @@ class AndroidTimerCompletionScheduler(context: Context) : TimerCompletionSchedul
             intentFor(snapshot.id, title, subtitle),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val exactAllowed =
+        val canExact =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()
+        // promptDismissed is irrelevant to the scheduler's exact/inexact choice.
+        val useExact = ExactAlarmPolicy.decide(Build.VERSION.SDK_INT, canExact, promptDismissed = true).shouldUseExact
         runCatching {
-            if (exactAllowed) {
+            if (useExact) {
                 manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent)
             } else {
                 manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent)

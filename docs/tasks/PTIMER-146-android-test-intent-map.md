@@ -131,12 +131,20 @@ Android status: Improved — in-process completion + ongoing notification posted
         availability is also re-checked on resume (refreshExactAlarmAvailability
         via LifecycleEventEffect ON_RESUME): returning from the settings grant
         clears the notice and reschedules running timers through the exact path
-        (settings round-trip confirmed on device). No foreground service yet.
-Reason: Foreground service needs device-specific testing; faithful
-        post-process-death delivery not yet verified. USE_EXACT_ALARM avoided
-        (Play eligibility risk); SCHEDULE_EXACT_ALARM needs a Play declaration.
-Risk: Inexact delivery may be delayed when exact not granted; OEM battery
-        managers / task killers / force-stop can still suppress delivery. Medium.
+        (settings round-trip confirmed on device). Exact-granted completion is
+        verified to fire after process death (adb am kill, not force-stop):
+        the alarm cold-started the process and posted the title+subtitle
+        notification with no manual relaunch. Inexact fallback also fired within
+        its window on an active API 37 emulator (best-effort only). No foreground
+        service yet.
+Reason: Exact-granted post-death delivery now verified, so a foreground service
+        is NOT a blocker for basic completion delivery; it remains recommended
+        for a live countdown and for reliability when exact is denied / under
+        OEM limits. USE_EXACT_ALARM avoided (Play eligibility risk);
+        SCHEDULE_EXACT_ALARM needs a Play declaration.
+Risk: Inexact delivery (exact denied) may be deferred under real Doze / OEM
+        battery managers; force-stop cancels alarms (unsupported). Results are
+        from a single emulator, not real OEM devices. Medium.
 Suggested follow-up: add a foreground service (type specialUse/shortService) +
         AlarmManager setExactAndAllowWhileIdle keyed by timer id, with
         cancel/reschedule on pause/resume/remove; verify on devices.

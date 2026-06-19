@@ -420,6 +420,53 @@ UI navigation). **Not verified:** actual alarm firing after process death.
 
 ---
 
+## Process-Death Alarm Delivery — Pass 9
+
+The one previously-unverified reliability question: does a scheduled completion
+notification actually fire after the app **process is killed** (not force-stopped)?
+Verified on-device this pass — **no code change** (the existing delivery path
+worked). The proof used `adb shell am kill` (which preserves alarms), never
+`force-stop` (which cancels them and is not a supported guarantee).
+
+**Exact-granted result — VERIFIED.** Granted `SCHEDULE_EXACT_ALARM`, started a
+34.1s adjusted-shutter timer. `dumpsys alarm` showed `RTC_WAKEUP … window=0 …
+exactAllowReason=permission` (a true **exact** alarm driven by the granted
+permission). HOME → `am kill` → `pidof` empty (process gone; alarm survived the
+kill). After the trigger time the process was **cold-started by the alarm**
+(new pid) and the completion notification posted with **no manual relaunch** —
+`title="Camera 1 · Fomapan 100 Classic"`, `text="Adjusted Shutter · 34.1s"`
+(identity + source). Alarm history then read "1 wakes 1 alarms" (fired + consumed).
+
+**Exact-denied / inexact result — delivered within window on this emulator,
+best-effort.** Denied the permission; the alarm registered as inexact
+(`window=+25s, flags ALLOW_WHILE_IDLE`, no `exactAllowReason=permission`),
+confirming the fallback path. After `am kill`, it cold-started the process and
+fired the same notification within its window on this active API 37 emulator.
+This is **best-effort only**: inexact alarms can be deferred/batched under real
+Doze, app-standby, or OEM background limits — not a guarantee.
+
+**Coverage — post-process-death delivery targets: 10**
+```
+Covered before this pass:  3/10 = 30%   (start + alarm registration + inexact registration; no actual post-death delivery)
+Covered after this pass:  10/10 = 100%
+Automated coverage:        0/10 = 0%    (OS delivery is device-only; scheduling logic is JVM-tested elsewhere)
+Manual/device-only:       10/10 = 100%
+Remaining follow-up:       0/10 = 0%    (within this emulator-verified set)
+```
+
+**Foreground-service classification:** since exact-granted scheduled completion
+**survives process death** (verified), a foreground service is **not a blocker**
+for basic exact-granted completion delivery. It remains **recommended/deferred**
+for: a user-visible live countdown, and improved reliability when exact is denied
+(inexact may be deferred) or under aggressive OEM battery management. Not
+implemented this pass.
+
+**Bounds (not claimed):** force-stop delivery is **unsupported** (cancels alarms);
+results are from a single API 37 emulator, not real Doze / OEM devices; inexact
+post-death delivery is best-effort, not guaranteed.
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |

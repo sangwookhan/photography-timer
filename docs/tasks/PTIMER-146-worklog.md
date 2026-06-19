@@ -24,7 +24,8 @@ branch `feature/PTIMER-146-android-mvp` / Draft PR #16 (kept draft throughout; n
 | 7 | Background Timer Completion Reliability | `5ccb538` | 184 | scheduler abstraction + AlarmManager best-effort + 12 tests |
 | 8 | Background Completion Cleanup | `6d52f0d` | 184 | force-stop wording, completion subtitle, ongoing-notif policy |
 | 9 | Exact Alarm Permission + Delivery Verification | `f0b32bf` | 192 | exact-when-permitted + request flow; both paths verified on device |
-| 10 | Exact Alarm Settings Return Cleanup | (latest branch HEAD) | 198 | refresh on resume reschedules + clears notice; round-trip verified on device |
+| 10 | Exact Alarm Settings Return Cleanup | `b4c4c77` | 198 | refresh on resume reschedules + clears notice; round-trip verified on device |
+| 11 | Post-Process-Death Alarm Delivery Verification | (latest branch HEAD) | 198 | exact-granted delivery after `am kill` verified on device; docs-only |
 
 Per-test / per-target detail for all passes lives in
 `PTIMER-146-ios-test-parity-audit.md` (Passes 1, and the "Restore/Persistence
@@ -194,6 +195,49 @@ settings-return targets.
   `connectedAndroidTest` not run.
 - **Coverage:** settings-return targets 2/8 → 8/8 = 100%; automated 8/8;
   remaining-in-set 0/8. Beyond set: post-kill delivery + foreground service.
+- **HEAD:** see PR #16 / latest branch commit.
+
+---
+
+## Pass 11 — Post-Process-Death Alarm Delivery Verification
+
+**Instruction (scope):** Verify whether a running-timer completion notification
+actually fires after the app process is killed — **without** `force-stop` (use
+`adb shell am kill` or another non-force-stop reclaim; confirm the process is
+gone). Test exact-granted, then exact-denied/inexact if practical. Record
+commands/evidence in the work log. Classify whether a foreground service is
+required for MVP. Apply only a minimal code fix if the delivery path has a clear
+bug; otherwise docs-only. No foreground service / iOS changes. 10 targets.
+
+**Report:**
+
+- **Verdict:** Exact-granted post-process-death delivery **VERIFIED** on device;
+  no code change needed (delivery path worked). Foreground service is **not a
+  blocker** for exact-granted completion delivery. MVP still **not** review-ready.
+  PR #16 draft.
+- **Preflight:** receiver registered (`exported=false`, correct for own-app alarm
+  PendingIntent); RTC_WAKEUP + exact-when-permitted; id/title/subtitle extras
+  passed; completion channel created in notifier init (so it exists on a
+  cold-start delivery). No issue found.
+- **Build:** `clean :core:test testDebugUnitTest assembleDebug` → BUILD
+  SUCCESSFUL; 198 tests (76 core + 122 app), 0 failures; APK installed.
+- **Exact-granted (emulator-5554, API 37):** `appops … allow`; started a 34.1s
+  adjusted timer (ND 10). `dumpsys alarm` → `RTC_WAKEUP window=0
+  exactAllowReason=permission` (true exact). `input keyevent HOME`;
+  `am kill com.sangwook.ptimer`; `pidof` empty (process gone, alarm survived).
+  After the trigger the process cold-started (new pid) and the notification
+  posted with **no manual relaunch**: `title="Camera 1 · Fomapan 100 Classic"`,
+  `text="Adjusted Shutter · 34.1s"`. Alarm history: "1 wakes 1 alarms" (fired).
+- **Exact-denied / inexact:** `appops … deny`; alarm registered inexact
+  (`window=+25s, ALLOW_WHILE_IDLE`, no `exactAllowReason`). After `am kill` it
+  cold-started + fired within the window on this active emulator — best-effort
+  only; can be deferred under real Doze / OEM. Not a guarantee.
+- **What changed:** docs/worklog only — `am kill` proved no delivery bug exists.
+- **Coverage (post-death delivery, 10 targets):** before 3/10 = 30% → after
+  10/10 = 100%; automated 0/10 (OS delivery is device-only; scheduling logic
+  JVM-tested elsewhere); manual/device-only 10/10; remaining-in-set 0/10.
+- **Bounds:** force-stop unsupported (cancels alarms); single emulator, not real
+  OEM/Doze; inexact post-death delivery best-effort.
 - **HEAD:** see PR #16 / latest branch commit.
 
 ---

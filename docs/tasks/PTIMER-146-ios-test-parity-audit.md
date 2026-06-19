@@ -467,6 +467,49 @@ post-death delivery is best-effort, not guaranteed.
 
 ---
 
+## Compose UI Smoke — Pass 10
+
+Instrumented Compose smoke coverage was effectively 0 (all prior tests are JVM).
+This pass adds a minimal instrumented smoke layer — **not** a pixel / visual
+parity test. It asserts the app launches, restore settles, and the minimum
+shooting flow runs without crashing.
+
+- **Selectors (no behavior/layout change):** a `TestTags` object + `Modifier.testTag`
+  on stable nodes — `ShootingScreen` (the scrollable content), `RestoringOverlay`,
+  `ExactAlarmNotice`, `StartAdjustedButton`, `ActiveTimerRow`, `NdPlusButton`.
+- **`ShootingScreenSmokeTest`** (`androidTest`, 3 tests): launch → ready screen
+  visible; start adjusted timer → active row appears with source identity
+  ("Camera …" + "Adjusted Shutter …"); active row exposes Pause/Remove and
+  Pause→Resume. It raises ND first so the started timer stays running, counts
+  row deltas (robust to pre-existing state), grants `POST_NOTIFICATIONS` via
+  `GrantPermissionRule`, and passes whether or not the exact-alarm notice is shown.
+
+**Result — authored & runner-executed, NOT verified passing in this environment.**
+`connectedDebugAndroidTest` was **run** on emulator-5554 (Pixel_10 AVD, **API 37
+preview**): the app installed and launched with **no app crash**, but all three
+tests failed uniformly in Espresso's idle-sync with
+`NoSuchMethodException: android.hardware.input.InputManager.getInstance []`. This
+is a **test-library ↔ preview-API incompatibility** (stable Espresso 3.6.1 uses
+an `InputManager.getInstance()` reflection that the API 37 preview removed), **not
+an app-behavior failure**. The tests are expected to pass on a stable-API
+emulator; not chased further here to avoid alpha-dependency churn.
+
+**Coverage — Compose UI smoke targets: 10**
+```
+Covered before this pass:                       0/10 = 0%
+Instrumented tests authored + compiling after:  8/10 = 80%   (targets 1–8)
+Instrumented tests verified PASSING on device:  0/10 = 0%    (env block: Espresso 3.6.1 ↔ API 37 preview)
+Automated JVM coverage:                          0/10 = 0%    (smoke is instrumented, not JVM)
+Manual/device-only (run + honest reporting):     2/10 = 20%   (target 9 run; target 10 honored)
+Remaining follow-up:                            10/10 = 100%  (verify on a stable-API emulator, or add a Robolectric JVM Compose layer)
+```
+
+**Bounds:** visual / UI parity is **not** complete and not attempted; no
+screenshot/pixel tests were added; Compose UI smoke is separate from full UI
+parity work. JVM build remains green (198 tests).
+
+---
+
 ## Not implemented, and why (deferred / divergent / iOS-only)
 
 | Area | iOS tests | Why not an MVP blocker |

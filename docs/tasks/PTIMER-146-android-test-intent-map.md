@@ -163,11 +163,20 @@ Suggested follow-up: extend TimerSnapshotCodec to persist the identity snapshot.
 ```
 Missing or partial intent: Compose UI smoke tests + visual polish
 iOS source/test: SwiftUI shell/layout tests (iOS-only)
-Android status: Functional Compose UI present; no connectedAndroidTest run
-        (no device); pickers/dialogs/graph are minimal.
-Reason: No emulator/device in session; UI polish is deferred by the plan.
-Risk: Low (behavior is unit-covered).
-Suggested follow-up: add minimal Compose UI smoke tests; human UX pass.
+Android status: Minimal instrumented Compose smoke tests ADDED
+        (ShootingScreenSmokeTest: launch/ready, start-adjusted-creates-row with
+        source identity, pause/resume/remove) with stable testTags. They compile
+        and the runner executes them, but connectedDebugAndroidTest could NOT
+        verify them passing on the only available emulator (API 37 preview):
+        Espresso 3.6.1's InputManager.getInstance reflection is removed there —
+        a test-library/preview-API incompatibility, not an app failure (no app
+        crash). pickers/dialogs/graph still minimal; visual/UI parity not done.
+Reason: Only a preview-API emulator is available; stable AndroidX test/Espresso
+        cannot drive it. Visual polish/parity deferred by the plan.
+Risk: Low for behavior (unit-covered); UI verified only by build + a runner that
+        is env-blocked from completing assertions.
+Suggested follow-up: run the smoke tests on a stable-API emulator, OR add a
+        Robolectric JVM Compose layer to run them without an emulator; human UX pass.
 ```
 
 ## 6. Not applicable / Android replacement

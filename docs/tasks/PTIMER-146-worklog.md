@@ -25,7 +25,8 @@ branch `feature/PTIMER-146-android-mvp` / Draft PR #16 (kept draft throughout; n
 | 8 | Background Completion Cleanup | `6d52f0d` | 184 | force-stop wording, completion subtitle, ongoing-notif policy |
 | 9 | Exact Alarm Permission + Delivery Verification | `f0b32bf` | 192 | exact-when-permitted + request flow; both paths verified on device |
 | 10 | Exact Alarm Settings Return Cleanup | `b4c4c77` | 198 | refresh on resume reschedules + clears notice; round-trip verified on device |
-| 11 | Post-Process-Death Alarm Delivery Verification | (latest branch HEAD) | 198 | exact-granted delivery after `am kill` verified on device; docs-only |
+| 11 | Post-Process-Death Alarm Delivery Verification | `103fd0f` | 198 | exact-granted delivery after `am kill` verified on device; docs-only |
+| 12 | Compose UI Smoke Test | (latest branch HEAD) | 198 JVM + 3 instrumented (env-blocked) | testTags + smoke tests; connected run blocked by Espresso↔API37-preview |
 
 Per-test / per-target detail for all passes lives in
 `PTIMER-146-ios-test-parity-audit.md` (Passes 1, and the "Restore/Persistence
@@ -238,6 +239,47 @@ bug; otherwise docs-only. No foreground service / iOS changes. 10 targets.
   JVM-tested elsewhere); manual/device-only 10/10; remaining-in-set 0/10.
 - **Bounds:** force-stop unsupported (cancels alarms); single emulator, not real
   OEM/Doze; inexact post-death delivery best-effort.
+- **HEAD:** see PR #16 / latest branch commit.
+
+---
+
+## Pass 12 — Compose UI Smoke Test
+
+**Instruction (scope):** Add a small, reliable Compose UI smoke layer proving the
+app launches and the minimum shooting flow runs without crashing — not pixel /
+visual parity. Add stable testTags only where needed; cover launch/ready,
+start-adjusted→active-row with source identity, pause/resume/remove; handle
+POST_NOTIFICATIONS without manual tapping; pass whether or not the exact-alarm
+notice is present; run `connectedDebugAndroidTest` if a device is available and
+do not falsely report it as passing. No UI parity / redesign / iOS changes.
+
+**Report:**
+
+- **Verdict:** Smoke tests **added** and runner-executed, but **not verified
+  passing** on the only available emulator (API 37 preview) due to a test-library
+  incompatibility — not an app failure. JVM build green (198). MVP **not**
+  review-ready; UI parity not attempted. PR #16 draft.
+- **Preflight:** Compose test deps present (`ui-test-junit4`, debug
+  `ui-test-manifest`, `AndroidJUnitRunner`); no `androidTest` source set existed;
+  added `androidx.test:rules` for `GrantPermissionRule`.
+- **What changed (code):** `TestTags` + `Modifier.testTag` on ShootingScreen
+  content, RestoringOverlay, ExactAlarmNotice, StartAdjustedButton,
+  ActiveTimerRow, NdPlusButton (selectors only — no behavior/layout change). New
+  `ShootingScreenSmokeTest` (3 instrumented tests).
+- **Verification:** `clean :core:test testDebugUnitTest assembleDebug` → BUILD
+  SUCCESSFUL, 198 tests (76 core + 122 app), 0 failures. `pm clear` then
+  `connectedDebugAndroidTest` on emulator-5554 (Pixel_10, API 37 preview) →
+  compiled, installed, launched (no app crash), but all 3 failed in Espresso
+  `onIdle` with `NoSuchMethodException: InputManager.getInstance []` (Espresso
+  3.6.1 ↔ API 37 preview). Distinguished as a Gradle/test-library environment
+  issue, not app behavior.
+- **Coverage (10 targets):** before 0/10; authored+compiling 8/10 = 80%
+  (targets 1–8); verified-passing-on-device 0/10 (env block); target 9 run,
+  target 10 honored. Remaining follow-up: verify on a stable-API emulator or add
+  a Robolectric JVM Compose layer.
+- **Test counts:** JVM before 198 / after 198 (no JVM tests added; tags don't
+  change unit count); instrumented added 3; instrumented run 3; instrumented
+  passed 0 (env-blocked).
 - **HEAD:** see PR #16 / latest branch commit.
 
 ---

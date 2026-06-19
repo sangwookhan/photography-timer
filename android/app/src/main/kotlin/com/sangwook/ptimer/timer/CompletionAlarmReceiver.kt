@@ -15,7 +15,8 @@ class CompletionAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra(EXTRA_ID) ?: return
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Timer"
-        AndroidTimerNotifier(context.applicationContext).postCompletion(id, title)
+        val subtitle = intent.getStringExtra(EXTRA_SUBTITLE)
+        AndroidTimerNotifier(context.applicationContext).postCompletion(id, title, subtitle)
     }
 
     companion object {

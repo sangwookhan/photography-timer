@@ -277,7 +277,7 @@ class ShootingViewModel(
             while (timer.hasRunning()) {
                 delay(TICK_MILLIS)
                 val completed = timer.tick()
-                completed.forEach { notifier.postCompletion(it, timer.titleOf(it) ?: "Timer") }
+                completed.forEach { notifier.postCompletion(it, timer.titleOf(it) ?: "Timer", timer.subtitleOf(it)) }
                 if (completed.isNotEmpty()) { persistTimers(); syncSchedules() } // consume fired alarms
                 updateOngoing()
             }

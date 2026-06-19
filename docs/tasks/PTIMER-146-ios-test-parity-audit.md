@@ -209,9 +209,9 @@ reference resolves.
 ## Background Timer Completion — Pass 5
 
 Before this pass, completion was **in-process only**: the `viewModelScope` tick
-loop posted the notification, so a force-stopped / reclaimed process never fired
-it. This pass adds a **scheduled completion alarm** behind a testable
-abstraction.
+loop posted the notification, so once the app process was no longer alive
+(backgrounded-and-reclaimed or killed) completion never fired. This pass adds a
+**scheduled completion alarm** behind a testable abstraction.
 
 - **`TimerCompletionScheduler`** (`:app`) — `schedule(snapshot,title,subtitle)` /
   `cancel(id)` / `cancelAll(ids)`. `NoOpTimerCompletionScheduler` is the default
@@ -260,6 +260,52 @@ delivery is delayed/opportunistic, and `am force-stop` cancels alarms so is not 
 faithful kill test. `connectedAndroidTest` was **not** run (no instrumented tests
 exist). The AlarmManager/receiver code is **assemble-only** (framework, not
 JVM-unit-tested); its logic is exercised through the fake scheduler.
+
+---
+
+## Background Completion Cleanup — Pass 6
+
+Three small follow-ups from review of the Pass-5 scheduler (no exact-alarm /
+foreground work in this pass).
+
+1. **Force-stop wording corrected.** The `TimerCompletionScheduler` doc no longer
+   implies alarms survive force-stop. Precise framing: completion can still be
+   delivered when the app is backgrounded or its process is later reclaimed; an
+   explicit **force-stop cancels the app's pending alarms**, so delivery then
+   resumes only on next launch — force-stop is **not** a supported delivery
+   guarantee. (Exactness still bounded: exact on API < 31, best-effort inexact
+   `setAndAllowWhileIdle` on API 31+ without `SCHEDULE_EXACT_ALARM`.)
+
+2. **Completion notification preserves source identity.** The scheduled alarm
+   already encoded title **and** subtitle, but the notification displayed title
+   only. `TimerNotifier.postCompletion` now takes an optional `subtitle`;
+   `AndroidTimerNotifier` shows the timer **identity as the title** and the
+   **source line as the body** (e.g. "Camera 1 · Fomapan 100 Classic" /
+   "Adjusted Shutter · 8.5s"); `CompletionAlarmReceiver` passes `EXTRA_SUBTITLE`
+   through and the in-process path passes `subtitleOf(id)`. So a corrected /
+   custom / limited-guidance source line is not lost when a timer completes via
+   the alarm receiver. Covered by `ShootingViewModelSchedulingTest` (the
+   custom-film corrected case now asserts the scheduled subtitle carries
+   "Corrected Exposure") and confirmed on-device.
+
+3. **Ongoing-notification reconciliation policy (documented; no code change).**
+   PTIMER supports multiple running timers but the notifier exposes only a single
+   global ongoing notification (`showOngoing`/`clearOngoing`, one id). Policy:
+   - `CompletionAlarmReceiver` posts only the **completed** timer's done
+     notification from immutable extras; it deliberately does **not** call
+     `clearOngoing` (that would hide a still-running sibling timer).
+   - Ongoing-notification reconciliation remains tied to live ViewModel state
+     (`ShootingViewModel.updateOngoing` → representative running timer) and runs
+     while the app is alive. The receiver does **not** reconcile ongoing
+     notifications. Per-timer ongoing notifications and a foreground service that
+     reconciles them in the background remain a later notification/foreground
+     pass — not claimed here.
+
+**On-device check (emulator-5554, API 37):** after allowing notifications, started
+the adjusted-shutter timer; on completion the notification showed
+`title="Camera 1 · Fomapan 100 Classic"` and `text="Adjusted Shutter · 8.5s"`
+(`dumpsys notification`), confirming the identity + source-line display.
+`connectedAndroidTest` was **not** run.
 
 ---
 

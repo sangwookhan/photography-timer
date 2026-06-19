@@ -7,14 +7,21 @@ package com.sangwook.ptimer.notifications
  * Activity).
  */
 interface TimerNotifier {
-    fun postCompletion(id: String, name: String)
+    /**
+     * Post a completion notification. [name] is the primary timer identity
+     * (e.g. "Camera 1 · Velvia 50"); [subtitle] is the optional source line
+     * (e.g. "Corrected Exposure · …") shown as the body, so corrected / custom /
+     * limited-guidance source identity is not lost when a timer completes
+     * through the scheduled alarm.
+     */
+    fun postCompletion(id: String, name: String, subtitle: String? = null)
     fun showOngoing(name: String, remainingLabel: String)
     fun clearOngoing()
 }
 
 /** No-op notifier for tests / previews. */
 object NoOpTimerNotifier : TimerNotifier {
-    override fun postCompletion(id: String, name: String) {}
+    override fun postCompletion(id: String, name: String, subtitle: String?) {}
     override fun showOngoing(name: String, remainingLabel: String) {}
     override fun clearOngoing() {}
 }

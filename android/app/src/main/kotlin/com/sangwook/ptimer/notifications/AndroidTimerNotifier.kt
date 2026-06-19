@@ -28,13 +28,17 @@ class AndroidTimerNotifier(private val context: Context) : TimerNotifier {
         }
     }
 
-    override fun postCompletion(id: String, name: String) {
+    override fun postCompletion(id: String, name: String, subtitle: String?) {
+        // Primary line is the timer identity; the source/subtitle line is shown
+        // as the body when present (else a generic completion line on the
+        // already-named "Timer completion" channel).
+        val body = subtitle?.takeIf { it.isNotBlank() } ?: "Timer complete"
         notify(
             id.hashCode(),
             NotificationCompat.Builder(context, COMPLETION_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("Timer done")
-                .setContentText(name)
+                .setContentTitle(name)
+                .setContentText(body)
                 .setAutoCancel(true)
                 .build(),
         )

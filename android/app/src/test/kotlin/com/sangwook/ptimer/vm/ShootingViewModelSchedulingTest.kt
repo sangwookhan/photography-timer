@@ -43,9 +43,11 @@ class ShootingViewModelSchedulingTest {
     private open class FakeScheduler : TimerCompletionScheduler {
         val scheduleCalls = mutableListOf<PersistentTimerSnapshot>()
         val titleById = mutableMapOf<String, String>()
+        val subtitleById = mutableMapOf<String, String>()
         val current = linkedMapOf<String, PersistentTimerSnapshot>()
         override fun schedule(snapshot: PersistentTimerSnapshot, title: String, subtitle: String) {
-            scheduleCalls += snapshot; titleById[snapshot.id] = title; current[snapshot.id] = snapshot
+            scheduleCalls += snapshot; titleById[snapshot.id] = title
+            subtitleById[snapshot.id] = subtitle; current[snapshot.id] = snapshot
         }
         override fun cancel(timerId: String) { current.remove(timerId) }
         override fun cancelAll(timerIds: Collection<String>) = timerIds.forEach { cancel(it) }
@@ -197,7 +199,10 @@ class ShootingViewModelSchedulingTest {
         val active = model.timerState.value.active.single()
         assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, active.source)
         assertTrue(s.current.containsKey(active.id))
-        assertTrue(s.titleById[active.id]!!.contains("Acme 100"))
+        assertTrue(s.titleById[active.id]!!.contains("Acme 100"))            // primary identity
+        // Source/subtitle line is captured into the scheduled completion, so the
+        // alarm receiver can display it and corrected-source identity is not lost.
+        assertTrue(s.subtitleById[active.id]!!.contains("Corrected Exposure"))
     }
 
     // 11 — scheduler failure does not crash the workflow

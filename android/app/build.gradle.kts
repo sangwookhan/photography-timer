@@ -40,6 +40,11 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        // Robolectric host-side tests need merged Android resources + manifest.
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 kotlin {
@@ -71,6 +76,12 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    // Host-side (Robolectric) Compose smoke — JVM fallback while a stable-API
+    // emulator is unavailable. Does NOT replace instrumented connected tests.
+    testImplementation(composeBom)
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.compose.ui:ui-test-manifest")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")

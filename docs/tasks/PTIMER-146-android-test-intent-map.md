@@ -172,11 +172,16 @@ Android status: Minimal instrumented Compose smoke tests ADDED
         a test-library/preview-API incompatibility, not an app failure (no app
         crash). pickers/dialogs/graph still minimal; visual/UI parity not done.
 Reason: Only a preview-API emulator is available; stable AndroidX test/Espresso
-        cannot drive it. Visual polish/parity deferred by the plan.
+        cannot drive it. A stable-emulator retry was attempted and is blocked:
+        the only AVD is Pixel_10 (API 37 preview), the only installed image is
+        android-37.0 (arm64), no API 34/35 image is present, and sdkmanager
+        --list timed out (SDK repo unreachable) so a stable image cannot be
+        downloaded / a stable AVD cannot be created here. Visual parity deferred.
 Risk: Low for behavior (unit-covered); UI verified only by build + a runner that
         is env-blocked from completing assertions.
-Suggested follow-up: run the smoke tests on a stable-API emulator, OR add a
-        Robolectric JVM Compose layer to run them without an emulator; human UX pass.
+Suggested follow-up: run the smoke tests on a stable-API emulator where one is
+        available, OR add a Robolectric JVM Compose layer to run them without an
+        emulator; human UX pass.
 ```
 
 ## 6. Not applicable / Android replacement

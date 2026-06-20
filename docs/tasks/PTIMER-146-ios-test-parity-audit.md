@@ -508,6 +508,17 @@ Remaining follow-up:                            10/10 = 100%  (verify on a stabl
 screenshot/pixel tests were added; Compose UI smoke is separate from full UI
 parity work. JVM build remains green (198 tests).
 
+**Stable-emulator retry (follow-up to Pass 10) — environment-blocked.** Attempted
+to verify the 3 smoke tests on a stable API 34/35 emulator instead of the API 37
+preview. Findings: the only AVD is `Pixel_10` (API 37 preview); the only installed
+system image is `android-37.0;google_apis_playstore_ps16k;arm64-v8a`; no API 34/35
+image is installed; and `sdkmanager --list` (SDK repository query) timed out at 90s
+— the repo is unreachable, so a stable image **cannot be downloaded** and no stable
+AVD can be created here. The smoke tests therefore remain **authored (3/3) but not
+verified green on a stable API** (0/3). API 37 preview is **not** used as the green
+target. Next: run on a stable-API emulator where one is available, or add a
+Robolectric host-side Compose smoke layer (a future pass). No code changed.
+
 ---
 
 ## Not implemented, and why (deferred / divergent / iOS-only)

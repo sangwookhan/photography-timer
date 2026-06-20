@@ -26,7 +26,8 @@ branch `feature/PTIMER-146-android-mvp` / Draft PR #16 (kept draft throughout; n
 | 9 | Exact Alarm Permission + Delivery Verification | `f0b32bf` | 192 | exact-when-permitted + request flow; both paths verified on device |
 | 10 | Exact Alarm Settings Return Cleanup | `b4c4c77` | 198 | refresh on resume reschedules + clears notice; round-trip verified on device |
 | 11 | Post-Process-Death Alarm Delivery Verification | `103fd0f` | 198 | exact-granted delivery after `am kill` verified on device; docs-only |
-| 12 | Compose UI Smoke Test | (latest branch HEAD) | 198 JVM + 3 instrumented (env-blocked) | testTags + smoke tests; connected run blocked by Espresso↔API37-preview |
+| 12 | Compose UI Smoke Test | `5bbf0c1` | 198 JVM + 3 instrumented (env-blocked) | testTags + smoke tests; connected run blocked by Espresso↔API37-preview |
+| 13 | Stable Emulator Compose Smoke Retry | (latest branch HEAD) | 198 JVM; smoke 0/3 verified | stable API emulator unavailable + uncreatable (no image, SDK repo unreachable); docs-only |
 
 Per-test / per-target detail for all passes lives in
 `PTIMER-146-ios-test-parity-audit.md` (Passes 1, and the "Restore/Persistence
@@ -280,6 +281,41 @@ do not falsely report it as passing. No UI parity / redesign / iOS changes.
 - **Test counts:** JVM before 198 / after 198 (no JVM tests added; tags don't
   change unit count); instrumented added 3; instrumented run 3; instrumented
   passed 0 (env-blocked).
+- **HEAD:** see PR #16 / latest branch commit.
+
+---
+
+## Pass 13 — Stable Emulator Compose Smoke Retry
+
+**Instruction (scope):** Actually attempt to verify the 3 existing Compose smoke
+tests on a **stable** API 34/35 emulator (not the API 37 preview): list AVDs +
+installed system images; if a stable emulator exists, run
+`connectedDebugAndroidTest`; if not, determine whether one can be created; if
+creation is impossible, stop and report the environment block. Do not use API 37
+preview as the green target; do not change app code unless a minimal test fix is
+needed; do not repeat the old Pass 12 report.
+
+**Report — Outcome C (stable emulator unavailable, cannot be created):**
+
+- **Preflight:** `emulator` not on PATH but `ANDROID_HOME=…/Library/Android/sdk`.
+  AVDs: **only `Pixel_10`** (the running **API 37 preview**, `ro.build.version.sdk=37`,
+  release 17, `sdk_gphone16k_arm64`). Installed system images: **only
+  `android-37.0;google_apis_playstore_ps16k;arm64-v8a`**. No API 34/35 image.
+- **Creation probe:** `sdkmanager --list` (SDK-repository query) **timed out at
+  90s** → the repo is unreachable / network-blocked, so a stable system image
+  **cannot be downloaded** and no stable AVD can be created in this environment.
+- **Result:** the 3 smoke tests remain **authored (3/3) but 0/3 verified green on
+  a stable API**. `connectedDebugAndroidTest` was **not** run this pass (no stable
+  target; API 37 preview excluded as a green target by the instruction).
+- **What changed:** docs/worklog only — **no app code changed** (per the
+  environment-block instruction).
+- **Verification:** `clean :core:test testDebugUnitTest assembleDebug` → BUILD
+  SUCCESSFUL, 198 tests, 0 failures.
+- **Counts:** authored 3; passing before 0/3; stable-API run attempted 0/1
+  (uncreatable); passing after 0/3; environment-blocked 1/1 = 100%; remaining
+  follow-up 3/3.
+- **Next:** run on a stable-API (34/35) emulator where one is installable/available,
+  or add a Robolectric host-side Compose smoke layer (future pass).
 - **HEAD:** see PR #16 / latest branch commit.
 
 ---

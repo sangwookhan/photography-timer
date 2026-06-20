@@ -177,11 +177,17 @@ Reason: Only a preview-API emulator is available; stable AndroidX test/Espresso
         android-37.0 (arm64), no API 34/35 image is present, and sdkmanager
         --list timed out (SDK repo unreachable) so a stable image cannot be
         downloaded / a stable AVD cannot be created here. Visual parity deferred.
-Risk: Low for behavior (unit-covered); UI verified only by build + a runner that
-        is env-blocked from completing assertions.
-Suggested follow-up: run the smoke tests on a stable-API emulator where one is
-        available, OR add a Robolectric JVM Compose layer to run them without an
-        emulator; human UX pass.
+        A Robolectric host-side Compose smoke layer was ADDED and is green in JVM
+        (ShootingScreenHostSmokeTest, 3 tests under testDebugUnitTest, @Config
+        sdk=33): renders stateless ShootingScreen with fake state and asserts
+        selectors + active-row source identity. It is a fallback safety net, NOT
+        a replacement for instrumented connected tests (which still need a stable
+        emulator) and proves composition/selectors, not interaction or visual
+        parity.
+Risk: Low for behavior (unit-covered + host-side render smoke); real on-device UI
+        interaction still verified only by the env-blocked instrumented runner.
+Suggested follow-up: run the instrumented smoke on a stable-API emulator where one
+        is available (real interaction); human UX pass.
 ```
 
 ## 6. Not applicable / Android replacement

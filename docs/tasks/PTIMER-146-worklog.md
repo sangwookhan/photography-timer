@@ -27,7 +27,8 @@ branch `feature/PTIMER-146-android-mvp` / Draft PR #16 (kept draft throughout; n
 | 10 | Exact Alarm Settings Return Cleanup | `b4c4c77` | 198 | refresh on resume reschedules + clears notice; round-trip verified on device |
 | 11 | Post-Process-Death Alarm Delivery Verification | `103fd0f` | 198 | exact-granted delivery after `am kill` verified on device; docs-only |
 | 12 | Compose UI Smoke Test | `5bbf0c1` | 198 JVM + 3 instrumented (env-blocked) | testTags + smoke tests; connected run blocked by Espresso↔API37-preview |
-| 13 | Stable Emulator Compose Smoke Retry | (latest branch HEAD) | 198 JVM; smoke 0/3 verified | stable API emulator unavailable + uncreatable (no image, SDK repo unreachable); docs-only |
+| 13 | Stable Emulator Compose Smoke Retry | `a5cfb90` | 198 JVM; smoke 0/3 verified | stable API emulator unavailable + uncreatable (no image, SDK repo unreachable); docs-only |
+| 14 | Robolectric Host-Side Compose Smoke | (latest branch HEAD) | 201 JVM (host-side smoke 3/3 green) | Robolectric host-side ShootingScreen smoke added + passing in JVM; not a replacement for connected tests |
 
 Per-test / per-target detail for all passes lives in
 `PTIMER-146-ios-test-parity-audit.md` (Passes 1, and the "Restore/Persistence
@@ -316,6 +317,47 @@ needed; do not repeat the old Pass 12 report.
   follow-up 3/3.
 - **Next:** run on a stable-API (34/35) emulator where one is installable/available,
   or add a Robolectric host-side Compose smoke layer (future pass).
+- **HEAD:** see PR #16 / latest branch commit.
+
+---
+
+## Pass 14 — Robolectric Host-Side Compose Smoke
+
+**Instruction (scope):** Feasibility + minimal implementation of a host-side
+(Robolectric) Compose smoke safety net that runs under JVM tests without an
+emulator — a fallback for the blocked environment, NOT a replacement for
+`connectedDebugAndroidTest`. Prefer rendering the stateless `ShootingScreen`
+(avoid MainActivity full stack); add minimal deps only if needed; assert
+selectors + (optionally) active-row identity; keep product behavior unchanged;
+document what it does/doesn't prove. If deps can't be downloaded, stop + report.
+
+**Report — feasible and implemented (green in JVM):**
+
+- **Feasibility:** `ShootingScreen` is **stateless** (plain state + `onEvent`
+  lambda, no ViewModel) → renderable with fakes (Option A). Robolectric 4.16.1 +
+  compose `ui-test-junit4`/`ui-test-manifest` are cached; `android-all`
+  runtimes cached for SDK 11/12/13/16 (NOT 14/15), so pinned `@Config(sdk = 33)`.
+  Maven resolution works (distinct from the blocked SDK-image repo).
+- **What changed:** `app/build.gradle.kts` — `testOptions.unitTests.isIncludeAndroidResources=true`
+  and `testImplementation` for Robolectric 4.16.1 + compose `ui-test-junit4` +
+  `ui-test-manifest` (+ compose BOM on the test classpath). New
+  `ShootingScreenHostSmokeTest`. **No product code changed** (one test-only
+  scroll fix so the Result row composes on Robolectric's small screen).
+- **Tests (+3):** `hostSmoke_rendersReadyShootingScreen`,
+  `hostSmoke_rendersAdjustedStartAction`, `hostSmoke_rendersActiveTimerRowWithSourceIdentity`
+  — all pass under `./gradlew testDebugUnitTest`. JVM suite 198 → 201.
+- **What it proves / doesn't:** proves the screen composes, smoke selectors
+  exist, and an active row renders with title + source line. Does **not** prove
+  real interaction/behavior (fake `onEvent` no-op), the MainActivity/DataStore/
+  alarm/permission stack, or visual parity. **Does not replace** instrumented
+  connected smoke (still emulator-blocked: API 37 preview Espresso issue; no
+  stable emulator).
+- **Verification:** `clean :core:test testDebugUnitTest assembleDebug` → BUILD
+  SUCCESSFUL, 201 tests, 0 failures. `connectedDebugAndroidTest` not run
+  (unchanged, still blocked).
+- **Counts:** host-side targets — feasibility 10/10, implemented 10/10, passing
+  in JVM 3/3 host-side tests; environment-blocked 0/10 (host path works);
+  remaining follow-up = real interaction smoke on a stable emulator.
 - **HEAD:** see PR #16 / latest branch commit.
 
 ---

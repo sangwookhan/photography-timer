@@ -519,6 +519,22 @@ verified green on a stable API** (0/3). API 37 preview is **not** used as the gr
 target. Next: run on a stable-API emulator where one is available, or add a
 Robolectric host-side Compose smoke layer (a future pass). No code changed.
 
+**Host-side (Robolectric) Compose smoke — ADDED and green in JVM.** As the
+fallback safety net for this emulator-blocked environment, a Robolectric
+host-side Compose layer now renders the **stateless** `ShootingScreen` with fake
+state (no MainActivity / ViewModel / DataStore / alarms / permissions) under
+`./gradlew testDebugUnitTest` — no emulator. `ShootingScreenHostSmokeTest`
+(3 tests, all passing, `@Config(sdk = 33)` because that is the highest
+`android-all` runtime cached locally): ready screen renders, the adjusted
+start-action selector renders, and an active timer row renders with its source
+identity. Maven dependency resolution worked (Robolectric 4.16.1 cached +
+transitive metadata reachable), distinct from the blocked Android SDK *image*
+repo. **This does NOT replace the instrumented `connectedDebugAndroidTest` smoke**
+— it proves composition + selectors + identity rendering, **not** real
+interaction/behavior (the fake `onEvent` is a no-op) and not visual parity.
+Connected Compose smoke still requires a stable-API emulator/device. JVM suite is
+now 201 (was 198).
+
 ---
 
 ## Not implemented, and why (deferred / divergent / iOS-only)

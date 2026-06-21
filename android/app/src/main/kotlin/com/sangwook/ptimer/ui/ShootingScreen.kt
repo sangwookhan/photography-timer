@@ -104,7 +104,7 @@ fun ShootingScreen(
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
             ) {
                 if (exactAlarmPromptVisible) {
                     item { ExactAlarmNotice(onOpenSettings = onOpenExactAlarmSettings, onDismiss = { onEvent(ShootingIntent.DismissExactAlarmPrompt) }) }
@@ -446,10 +446,16 @@ private fun ReciprocityBadge(text: String) {
 private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
     var newFormula by remember { mutableStateOf(false) }
     var newTable by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-        Text("Custom films", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = { newFormula = true }) { Text("New formula") }
-        TextButton(onClick = { newTable = true }) { Text("New table") }
+    // Low-priority support row: a muted caption with compact text actions, so
+    // it reads as utilities under the result rather than a new section header.
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), Arrangement.spacedBy(4.dp), Alignment.CenterVertically) {
+        Text("Custom films", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = { newFormula = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+            Text("New formula", style = MaterialTheme.typography.labelMedium)
+        }
+        TextButton(onClick = { newTable = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+            Text("New table", style = MaterialTheme.typography.labelMedium)
+        }
     }
     if (newFormula) NewFormulaDialog(onDismiss = { newFormula = false }, onCreate = { n, e, nc ->
         onEvent(ShootingIntent.CreateCustomFormula(n, e, nc)); newFormula = false
@@ -465,7 +471,7 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIntent) -> Unit) {
     val rowModifier = Modifier.fillMaxWidth().let { if (!terminal) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
     ElevatedCard(rowModifier) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 StatusPill(item.statusLabel)
@@ -487,25 +493,37 @@ private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIn
             //   running            -> Pause, Start new
             //   paused             -> Resume, Start new, Cancel, Remove
             //   completed/canceled -> Start again, Remove
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when {
                     terminal -> {
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.StartAgain(item.id)) }) { Text("Start again") }
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Remove(item.id)) }) { Text("Remove") }
+                        TimerActionButton("Start again") { onEvent(ShootingIntent.StartAgain(item.id)) }
+                        TimerActionButton("Remove") { onEvent(ShootingIntent.Remove(item.id)) }
                     }
                     item.status == TimerStatus.RUNNING -> {
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Pause(item.id)) }) { Text("Pause") }
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.StartNew(item.id)) }) { Text("Start new") }
+                        TimerActionButton("Pause") { onEvent(ShootingIntent.Pause(item.id)) }
+                        TimerActionButton("Start new") { onEvent(ShootingIntent.StartNew(item.id)) }
                     }
                     else -> { // paused
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Resume(item.id)) }) { Text("Resume") }
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.StartNew(item.id)) }) { Text("Start new") }
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Cancel(item.id)) }) { Text("Cancel") }
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Remove(item.id)) }) { Text("Remove") }
+                        TimerActionButton("Resume") { onEvent(ShootingIntent.Resume(item.id)) }
+                        TimerActionButton("Start new") { onEvent(ShootingIntent.StartNew(item.id)) }
+                        TimerActionButton("Cancel") { onEvent(ShootingIntent.Cancel(item.id)) }
+                        TimerActionButton("Remove") { onEvent(ShootingIntent.Remove(item.id)) }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Compact outlined action for timer rows: trimmed content padding and a label
+ * style keep the action row from looking bottom-heavy on the main screen while
+ * the button keeps its default minimum touch height.
+ */
+@Composable
+private fun TimerActionButton(label: String, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -528,8 +546,8 @@ private fun StatusPill(label: String) {
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             content()

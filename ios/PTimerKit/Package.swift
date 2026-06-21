@@ -1,4 +1,6 @@
 // swift-tools-version:5.9
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
 import PackageDescription
 
 // PTIMER-177 / PTIMER-174 — Reusable Kit Architecture.

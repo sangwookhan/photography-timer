@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import SwiftUI
 
 /// Minimal page indicator for the camera-slot pager. Renders a row of

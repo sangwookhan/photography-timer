@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import PTimerCore
 
 /// Shared reciprocity policy scenario fixtures (Core-only). Duplicated

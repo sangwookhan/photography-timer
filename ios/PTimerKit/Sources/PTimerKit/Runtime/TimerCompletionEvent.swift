@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import Foundation
 
 /// Value type describing a timer transition from running to completed.

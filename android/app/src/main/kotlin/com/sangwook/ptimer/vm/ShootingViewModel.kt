@@ -60,6 +60,7 @@ sealed interface ShootingIntent {
     data object CloseDetails : ShootingIntent
     data class Pause(val id: String) : ShootingIntent
     data class Resume(val id: String) : ShootingIntent
+    data class Cancel(val id: String) : ShootingIntent
     data class Remove(val id: String) : ShootingIntent
     data class StartAgain(val id: String) : ShootingIntent
     data class StartNew(val id: String) : ShootingIntent
@@ -271,6 +272,7 @@ class ShootingViewModel(
             ShootingIntent.CloseDetails -> { _detailsState.value = null }
             is ShootingIntent.Pause -> { timer.pause(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
             is ShootingIntent.Resume -> { timer.resume(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
+            is ShootingIntent.Cancel -> { timer.cancel(intent.id); persistTimers(); syncSchedules() }
             is ShootingIntent.Remove -> { timer.remove(intent.id); persistTimers(); syncSchedules() }
             is ShootingIntent.StartAgain -> { timer.startAgain(intent.id); persistTimers(); syncSchedules(); ensureTicking() }
             is ShootingIntent.StartNew -> { timer.cloneToNew(intent.id); persistTimers(); syncSchedules(); ensureTicking() }

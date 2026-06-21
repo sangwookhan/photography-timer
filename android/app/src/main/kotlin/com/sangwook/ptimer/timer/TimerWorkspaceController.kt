@@ -72,24 +72,50 @@ class TimerWorkspaceController(
 
     fun pause(id: String) { runtime.pause(id, clock()); refresh() }
     fun resume(id: String) { runtime.resume(id, clock()); refresh() }
+    /** Cancel a running/paused timer, keeping it as a terminal canceled record (distinct from [remove]). */
+    fun cancel(id: String) { runtime.cancel(id, clock()); refresh() }
     fun remove(id: String) { runtime.remove(id); forget(id); refresh() }
+    /**
+     * Clear completed records only. Canceled records survive in history (iOS
+     * parity — `clearCompletedTimers` removes only `.completed`).
+     */
     fun clearCompleted() {
         val completedIds = runtime.timers.filter { it.status == TimerStatus.COMPLETED }.map { it.id }
         runtime.removeCompleted(); completedIds.forEach { forget(it) }; refresh()
     }
 
-    /** "Start Again": clone a completed timer (identity preserved) into a fresh running one. */
-    fun startAgain(completedId: String): String? = cloneToNew(completedId)
+    /**
+     * "Start Again": clone a terminal (completed or canceled) record into a
+     * fresh running timer, preserving identity. The source record is left
+     * intact. Returns null when the source is not a terminal record.
+     */
+    fun startAgain(terminalId: String): String? {
+        val src = runtime.timers.firstOrNull { it.id == terminalId } ?: return null
+        if (src.status != TimerStatus.COMPLETED && src.status != TimerStatus.CANCELED) return null
+        return cloneIdentityToNew(src)
+    }
 
-    /** "Start New": clone any timer (running/paused/completed) into a fresh running one. */
+    /**
+     * "Start New": cancel the active (running/paused) source — keeping it as a
+     * terminal canceled record in history — and start a fresh timer from the
+     * same identity and full duration, so no duplicate or ghost active timer
+     * remains. Returns null when the source is not running or paused.
+     */
     fun cloneToNew(sourceId: String): String? {
         val src = runtime.timers.firstOrNull { it.id == sourceId } ?: return null
+        if (src.status != TimerStatus.RUNNING && src.status != TimerStatus.PAUSED) return null
+        runtime.cancel(sourceId, clock())
+        return cloneIdentityToNew(src)
+    }
+
+    /** Start a fresh running timer reusing [src]'s duration and captured identity. */
+    private fun cloneIdentityToNew(src: com.sangwook.ptimer.core.timer.TimerState): String? {
         val newId = nextId()
         val started = runtime.start(newId, src.durationSeconds, clock()) ?: return null
-        titles[started] = titles[sourceId] ?: "Timer"
-        subtitles[started] = subtitles[sourceId] ?: ""
-        metadatas[started] = metadatas[sourceId] ?: ""
-        sources[started] = sources[sourceId] ?: ExposureTimerSource.MANUAL
+        titles[started] = titles[src.id] ?: "Timer"
+        subtitles[started] = subtitles[src.id] ?: ""
+        metadatas[started] = metadatas[src.id] ?: ""
+        sources[started] = sources[src.id] ?: ExposureTimerSource.MANUAL
         refresh()
         return started
     }
@@ -171,6 +197,14 @@ class TimerWorkspaceController(
         )
     }
 
+    /**
+     * Large remaining label for a canceled record: combines the status with the
+     * remaining-at-cancel ("Canceled · 51s left") when positive, else just
+     * "Canceled". Mirrors iOS canceled large-remaining text.
+     */
+    private fun canceledLargeLabel(remainingAtCancel: Double): String =
+        if (remainingAtCancel > 0) "Canceled · ${calculator.formatExtendedClock(remainingAtCancel)} left" else "Canceled"
+
     private fun forget(id: String) {
         titles.remove(id); subtitles.remove(id); metadatas.remove(id); sources.remove(id)
     }
@@ -181,11 +215,16 @@ class TimerWorkspaceController(
 
     private fun com.sangwook.ptimer.core.timer.TimerState.toUi(now: Instant): TimerItemUi {
         val remaining = remainingTime(now)
-        val label = if (status == TimerStatus.COMPLETED) "Done" else calculator.formatExtendedClock(remaining)
+        val label = when (this) {
+            is com.sangwook.ptimer.core.timer.TimerState.Completed -> "Done"
+            is com.sangwook.ptimer.core.timer.TimerState.Canceled -> canceledLargeLabel(remainingAtCancelSeconds)
+            else -> calculator.formatExtendedClock(remaining)
+        }
         val statusLabel = when (status) {
             TimerStatus.RUNNING -> "Running"
             TimerStatus.PAUSED -> "Paused"
             TimerStatus.COMPLETED -> "Done"
+            TimerStatus.CANCELED -> "Canceled"
         }
         val endsAt = if (status == TimerStatus.RUNNING) "Ends ${endsAtFormatter.format(endDate)}" else null
         return TimerItemUi(

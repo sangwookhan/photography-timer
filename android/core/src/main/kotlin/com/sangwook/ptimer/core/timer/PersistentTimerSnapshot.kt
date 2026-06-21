@@ -25,7 +25,8 @@ data class PersistentTimerSnapshot(
     enum class SnapshotStatus(val token: String) {
         RUNNING("running"),
         PAUSED("paused"),
-        COMPLETED("completed");
+        COMPLETED("completed"),
+        CANCELED("canceled");
 
         companion object {
             /** Backward-compatible: "stopped" decodes to PAUSED. */
@@ -33,6 +34,7 @@ data class PersistentTimerSnapshot(
                 "running" -> RUNNING
                 "paused", "stopped" -> PAUSED
                 "completed" -> COMPLETED
+                "canceled" -> CANCELED
                 else -> throw IllegalArgumentException("Unsupported snapshot status: $token")
             }
         }
@@ -57,6 +59,16 @@ data class PersistentTimerSnapshot(
             }
         }
         SnapshotStatus.COMPLETED -> makeCompleted(completedAt)
+        SnapshotStatus.CANCELED -> TimerState.Canceled(
+            id = id,
+            durationSeconds = durationSeconds,
+            startDate = startDate,
+            // The cancellation timestamp rides in the same `completedAt` slot a
+            // completed record uses; remaining-at-cancel rides in the
+            // `pausedRemainingDuration` slot. Mirrors iOS canceled restore.
+            canceledAt = completedAt ?: startDate.plusSeconds(durationSeconds),
+            remainingAtCancelSeconds = pausedRemainingDuration ?: 0.0,
+        )
     }
 
     private fun makeCompleted(completionDate: Instant?): TimerState =
@@ -87,6 +99,14 @@ data class PersistentTimerSnapshot(
                 id = timer.id, status = SnapshotStatus.COMPLETED, durationSeconds = timer.durationSeconds,
                 startDate = timer.startDate, expectedCompletionAt = null,
                 pausedRemainingDuration = null, pausedAt = null, completedAt = timer.completedAt,
+            )
+            is TimerState.Canceled -> PersistentTimerSnapshot(
+                id = timer.id, status = SnapshotStatus.CANCELED, durationSeconds = timer.durationSeconds,
+                startDate = timer.startDate, expectedCompletionAt = null,
+                // Cancellation timestamp in the completedAt slot; remaining-at-cancel
+                // in the pausedRemainingDuration slot. Matches iOS storage intent.
+                pausedRemainingDuration = timer.remainingAtCancelSeconds, pausedAt = null,
+                completedAt = timer.canceledAt,
             )
         }
     }

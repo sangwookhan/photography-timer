@@ -114,15 +114,72 @@ class TimerWorkspaceControllerTest {
     }
 
     @Test
-    fun startNewClonesAnActiveRunningTimer() {
+    fun startNewCancelsActiveSourceAndStartsFresh() {
         controller.start("Cam · Fomapan", "Corrected Exposure · table", "Base 1/30 · ND 8 · Adjusted 8.5s", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 120.0)
         val original = controller.state.value.active.single().id
+        now = base.plusSeconds(20)
         controller.cloneToNew(original)
+        // Start New cancels the source (kept in history) and leaves exactly one active timer.
         val active = controller.state.value.active
-        assertEquals(2, active.size)
-        // Both carry the same identity/source; they are distinct timers.
-        assertTrue(active.all { it.source == ExposureTimerSource.FILM_CORRECTED_EXPOSURE })
-        assertEquals(2, active.map { it.id }.toSet().size)
+        assertEquals(1, active.size)
+        assertTrue(active.single().id != original)
+        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, active.single().source)
+        // The source survives as a terminal canceled record in history.
+        val history = controller.state.value.completed
+        val canceled = history.single { it.id == original }
+        assertEquals(TimerStatus.CANCELED, canceled.status)
+        assertEquals("Canceled", canceled.statusLabel)
+    }
+
+    @Test
+    fun startNewFromPausedAlsoCancelsSource() {
+        val id = controller.start("Cam · Pan F", "Adjusted Shutter · 100s", "m", ExposureTimerSource.FILM_ADJUSTED_SHUTTER, 100.0)!!
+        now = base.plusSeconds(40); controller.pause(id)
+        controller.cloneToNew(id)
+        assertEquals(1, controller.state.value.active.size)
+        assertEquals(TimerStatus.CANCELED, controller.state.value.completed.single { it.id == id }.status)
+    }
+
+    @Test
+    fun cancelRunningRowMovesItToHistoryWithRemainingLabel() {
+        val id = controller.start("Cam · Fomapan", "Corrected Exposure · table", "m", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 100.0)!!
+        now = base.plusSeconds(49)
+        controller.cancel(id)
+        assertTrue(controller.state.value.active.isEmpty())
+        val canceled = controller.state.value.completed.single()
+        assertEquals(TimerStatus.CANCELED, canceled.status)
+        assertEquals("Canceled", canceled.statusLabel)
+        assertTrue(canceled.remainingLabel.startsWith("Canceled · "))
+        assertTrue(canceled.remainingLabel.endsWith(" left"))
+    }
+
+    @Test
+    fun startAgainFromCanceledStartsFreshPreservingIdentity() {
+        val id = controller.start("Cam · Fomapan", "Corrected Exposure · table", "m", ExposureTimerSource.FILM_CORRECTED_EXPOSURE, 42.0)!!
+        now = base.plusSeconds(10); controller.cancel(id)
+        now = base.plusSeconds(20)
+        controller.startAgain(id)
+        val active = controller.state.value.active.single()
+        assertEquals("Cam · Fomapan", active.title)
+        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, active.source)
+        assertEquals(TimerStatus.RUNNING, active.status)
+        // Source canceled record is untouched.
+        assertEquals(TimerStatus.CANCELED, controller.state.value.completed.single { it.id == id }.status)
+    }
+
+    @Test
+    fun clearCompletedRemovesCompletedOnlyAndKeepsCanceled() {
+        controller.start("done", "s", "m", ExposureTimerSource.MANUAL, 5.0)
+        now = base.plusSeconds(5); controller.tick()
+        val gone = controller.start("gone", "s", "m", ExposureTimerSource.MANUAL, 100.0)!!
+        controller.cancel(gone)
+        controller.start("live", "s", "m", ExposureTimerSource.MANUAL, 100.0)
+        controller.clearCompleted()
+        // iOS parity: completed dropped, the canceled record survives in history.
+        val history = controller.state.value.completed
+        assertEquals(listOf(gone), history.map { it.id })
+        assertEquals(TimerStatus.CANCELED, history.single().status)
+        assertEquals(1, controller.state.value.active.size)
     }
 
     @Test

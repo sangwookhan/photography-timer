@@ -58,4 +58,40 @@ class TimerStateTest {
         val running = TimerState.running("t", 100.0, base)
         assertEquals(70.0, running.remainingTime(base.plusSeconds(30)), 1e-6)
     }
+
+    @Test
+    fun cancelRunningIsTerminalAndCapturesRemaining() {
+        val running = TimerState.running("t", 100.0, base)
+        val canceled = running.canceled(base.plusSeconds(30))
+        assertTrue(canceled is TimerState.Canceled)
+        canceled as TimerState.Canceled
+        assertEquals(base.plusSeconds(30), canceled.canceledAt)
+        assertEquals(70.0, canceled.remainingAtCancelSeconds, 1e-6)
+        assertEquals(0.0, canceled.remainingTime(base.plusSeconds(30)), 0.0)
+    }
+
+    @Test
+    fun cancelPausedUsesFrozenRemaining() {
+        val paused = TimerState.Paused("t", 100.0, base, pausedRemainingSeconds = 60.0, pausedAt = base.plusSeconds(40))
+        val canceled = paused.canceled(base.plusSeconds(9999)) as TimerState.Canceled
+        assertEquals(60.0, canceled.remainingAtCancelSeconds, 1e-6)
+    }
+
+    @Test
+    fun cancelLeavesAlreadyTerminalRecordsUnchanged() {
+        val completed = TimerState.Completed("t", 10.0, base, completedAt = base.plusSeconds(10))
+        assertTrue(completed.canceled(base.plusSeconds(20)) === completed)
+        val canceled = TimerState.running("t", 10.0, base).canceled(base.plusSeconds(3))
+        assertTrue(canceled.canceled(base.plusSeconds(5)) === canceled)
+    }
+
+    @Test
+    fun terminalStatesCannotPauseOrResume() {
+        val canceled = TimerState.running("t", 10.0, base).canceled(base.plusSeconds(3))
+        assertTrue(canceled.pausing(base.plusSeconds(4)) === canceled)
+        assertTrue(canceled.resume(base.plusSeconds(4)) === canceled)
+        val completed = TimerState.Completed("t", 10.0, base, completedAt = base.plusSeconds(10))
+        assertTrue(completed.pausing(base.plusSeconds(11)) === completed)
+        assertTrue(completed.resume(base.plusSeconds(11)) === completed)
+    }
 }

@@ -68,6 +68,89 @@ class TimerRuntimeTest {
     }
 
     @Test
+    fun cancelRunningMovesToTerminalCanceledCapturingRemaining() {
+        val r = TimerRuntime()
+        r.start("a", 100.0, base)
+        r.cancel("a", base.plusSeconds(40))
+        val canceled = r.timers.first { it.id == "a" }
+        assertTrue(canceled is TimerState.Canceled)
+        assertEquals(TimerStatus.CANCELED, canceled.status)
+        assertEquals(60.0, (canceled as TimerState.Canceled).remainingAtCancelSeconds, 1e-6)
+        assertEquals(0.0, canceled.remainingTime(base.plusSeconds(40)), 0.0)
+    }
+
+    @Test
+    fun cancelPausedPreservesPausedRemaining() {
+        val r = TimerRuntime()
+        r.start("a", 100.0, base)
+        r.pause("a", base.plusSeconds(40)) // 60 remaining, frozen
+        r.cancel("a", base.plusSeconds(9999))
+        val canceled = r.timers.first { it.id == "a" } as TimerState.Canceled
+        assertEquals(60.0, canceled.remainingAtCancelSeconds, 1e-6)
+    }
+
+    @Test
+    fun completedAndCanceledCannotResumeOrPause() {
+        val r = TimerRuntime()
+        r.start("a", 10.0, base)
+        r.tick(base.plusSeconds(10)) // completed
+        r.pause("a", base.plusSeconds(11)); r.resume("a", base.plusSeconds(12))
+        assertEquals(TimerStatus.COMPLETED, r.timers.first { it.id == "a" }.status)
+        r.start("b", 100.0, base)
+        r.cancel("b", base.plusSeconds(5))
+        r.pause("b", base.plusSeconds(6)); r.resume("b", base.plusSeconds(7))
+        assertEquals(TimerStatus.CANCELED, r.timers.first { it.id == "b" }.status)
+    }
+
+    @Test
+    fun removeCompletedRemovesCompletedOnlyAndKeepsCanceled() {
+        val r = TimerRuntime()
+        r.start("done", 5.0, base); r.tick(base.plusSeconds(5))
+        r.start("gone", 100.0, base); r.cancel("gone", base.plusSeconds(10))
+        r.start("live", 100.0, base)
+        r.removeCompleted()
+        // completed dropped; canceled record and the running timer both survive.
+        assertEquals(setOf("gone", "live"), r.timers.map { it.id }.toSet())
+        assertEquals(TimerStatus.CANCELED, r.timers.first { it.id == "gone" }.status)
+    }
+
+    @Test
+    fun orderingPlacesCanceledInHistoryNotActive() {
+        val r = TimerRuntime()
+        r.start("live", 100.0, base)
+        r.start("x", 100.0, base.plusSeconds(1))
+        r.cancel("x", base.plusSeconds(5))
+        val ordered = TimerWorkspaceOrdering.order(r.timers)
+        assertEquals(listOf("live"), ordered.active.map { it.id })
+        assertEquals(listOf("x"), ordered.completed.map { it.id })
+    }
+
+    @Test
+    fun restoreCanceledSnapshotKeepsCancellationStampAndRemaining() {
+        val snap = PersistentTimerSnapshot(
+            "a", PersistentTimerSnapshot.SnapshotStatus.CANCELED, 100.0, base,
+            expectedCompletionAt = null, pausedRemainingDuration = 60.0, pausedAt = null,
+            completedAt = base.plusSeconds(40),
+        )
+        val restored = snap.restore(base.plusSeconds(9999))
+        assertTrue(restored is TimerState.Canceled)
+        restored as TimerState.Canceled
+        assertEquals(base.plusSeconds(40), restored.canceledAt)
+        assertEquals(60.0, restored.remainingAtCancelSeconds, 1e-6)
+    }
+
+    @Test
+    fun startAgainClonesCanceledDuration() {
+        val r = TimerRuntime()
+        r.start("a", 42.0, base)
+        r.cancel("a", base.plusSeconds(10))
+        assertEquals("a2", r.startAgain("a", "a2", base.plusSeconds(50)))
+        val clone = r.timers.first { it.id == "a2" }
+        assertEquals(42.0, clone.durationSeconds, 0.0)
+        assertEquals(TimerStatus.RUNNING, clone.status)
+    }
+
+    @Test
     fun hasRunningTimersGatesLoop() {
         val r = TimerRuntime()
         r.start("a", 10.0, base)

@@ -97,16 +97,20 @@ fun ShootingScreen(
 
             if (timers.active.isNotEmpty()) {
                 item { SectionLabel("Active") }
-                items(timers.active, key = { it.id }) { TimerCard(it, completed = false, onEvent) }
+                items(timers.active, key = { it.id }) { TimerCard(it, terminal = false, onEvent) }
             }
             if (timers.completed.isNotEmpty()) {
                 item {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        SectionLabel("Recently completed")
-                        TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
+                        SectionLabel("History")
+                        // Clear removes completed records only (iOS parity); canceled
+                        // records stay, so the button only shows when a completed exists.
+                        if (timers.completed.any { it.status == TimerStatus.COMPLETED }) {
+                            TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
+                        }
                     }
                 }
-                items(timers.completed, key = { it.id }) { TimerCard(it, completed = true, onEvent) }
+                items(timers.completed, key = { it.id }) { TimerCard(it, terminal = true, onEvent) }
             }
         }
 
@@ -380,8 +384,8 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 // MARK: - Timer cards (vertical so long names never clip the actions)
 
 @Composable
-private fun TimerCard(item: TimerItemUi, completed: Boolean, onEvent: (ShootingIntent) -> Unit) {
-    val rowModifier = Modifier.fillMaxWidth().let { if (!completed) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
+private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIntent) -> Unit) {
+    val rowModifier = Modifier.fillMaxWidth().let { if (!terminal) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
     Card(rowModifier, colors = whiteCardColors()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -392,18 +396,27 @@ private fun TimerCard(item: TimerItemUi, completed: Boolean, onEvent: (ShootingI
             if (item.metadata.isNotBlank()) Text(item.metadata, style = MaterialTheme.typography.labelSmall)
             Text(item.remainingLabel, style = MaterialTheme.typography.headlineMedium)
             item.endsAtLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+            // Per-state action set, matching the iOS action model:
+            //   running           -> Pause, Start new
+            //   paused            -> Resume, Start new, Cancel, Remove
+            //   completed/canceled -> Start again, Remove
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (completed) {
-                    OutlinedButton(onClick = { onEvent(ShootingIntent.StartAgain(item.id)) }) { Text("Start again") }
-                } else {
-                    if (item.status == TimerStatus.RUNNING) {
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Pause(item.id)) }) { Text("Pause") }
-                    } else {
-                        OutlinedButton(onClick = { onEvent(ShootingIntent.Resume(item.id)) }) { Text("Resume") }
+                when {
+                    terminal -> {
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.StartAgain(item.id)) }) { Text("Start again") }
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Remove(item.id)) }) { Text("Remove") }
                     }
-                    OutlinedButton(onClick = { onEvent(ShootingIntent.StartNew(item.id)) }) { Text("Start new") }
+                    item.status == TimerStatus.RUNNING -> {
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Pause(item.id)) }) { Text("Pause") }
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.StartNew(item.id)) }) { Text("Start new") }
+                    }
+                    else -> { // paused
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Resume(item.id)) }) { Text("Resume") }
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.StartNew(item.id)) }) { Text("Start new") }
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Cancel(item.id)) }) { Text("Cancel") }
+                        OutlinedButton(onClick = { onEvent(ShootingIntent.Remove(item.id)) }) { Text("Remove") }
+                    }
                 }
-                OutlinedButton(onClick = { onEvent(ShootingIntent.Remove(item.id)) }) { Text("Remove") }
             }
         }
     }
@@ -414,6 +427,7 @@ private fun StatusPill(label: String) {
     val color = when (label) {
         "Running" -> MaterialTheme.colorScheme.primary
         "Paused" -> MaterialTheme.colorScheme.tertiary
+        "Canceled" -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.outline
     }
     Surface(color = color.copy(alpha = 0.15f), shape = RoundedCornerShape(50)) {

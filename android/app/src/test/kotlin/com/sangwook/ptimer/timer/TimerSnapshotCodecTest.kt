@@ -44,6 +44,25 @@ class TimerSnapshotCodecTest {
     }
 
     @Test
+    fun roundTripsCanceledPreservingRemainingAtCancel() {
+        val timers = listOf(
+            TimerState.Canceled("x", 100.0, base, canceledAt = base.plusSeconds(40), remainingAtCancelSeconds = 60.0),
+        )
+        val m = mapOf("x" to "Cam · Fomapan")
+        val sources = mapOf("x" to ExposureTimerSource.FILM_CORRECTED_EXPOSURE)
+        val json = TimerSnapshotCodec.encode(timers, m, m, m, sources)
+
+        val restored = TimerSnapshotCodec.decode(json)
+        assertEquals(1, restored.snapshots.size)
+        val state = restored.snapshots.single().restore(base.plusSeconds(9999))
+        assertEquals(TimerStatus.CANCELED, state.status)
+        state as TimerState.Canceled
+        assertEquals(base.plusSeconds(40), state.canceledAt)
+        assertEquals(60.0, state.remainingAtCancelSeconds, 1e-6)
+        assertEquals(ExposureTimerSource.FILM_CORRECTED_EXPOSURE, restored.sources["x"])
+    }
+
+    @Test
     fun corruptPayloadDecodesToEmpty() {
         assertTrue(TimerSnapshotCodec.decode("{ not json").snapshots.isEmpty())
         assertTrue(TimerSnapshotCodec.decode("").snapshots.isEmpty())

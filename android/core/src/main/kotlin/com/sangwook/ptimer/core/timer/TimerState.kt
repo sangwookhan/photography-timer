@@ -10,7 +10,7 @@ import java.time.Instant
  */
 const val TIMER_STABILITY_EPSILON: Double = 0.000_001
 
-enum class TimerStatus { RUNNING, PAUSED, COMPLETED }
+enum class TimerStatus { RUNNING, PAUSED, COMPLETED, CANCELED }
 
 /** Seconds from [from] to [to] (positive when [to] is later). */
 internal fun secondsBetween(from: Instant, to: Instant): Double {
@@ -60,20 +60,42 @@ sealed interface TimerState {
         override val endDate: Instant get() = completedAt
     }
 
+    /**
+     * Terminal record for a timer the user stopped before it finished. Like
+     * [Completed] it no longer runs and is surfaced in the history area, but it
+     * is labeled Canceled rather than Done. [remainingAtCancelSeconds] is the
+     * remaining time captured at the cancellation moment (distinct from
+     * [durationSeconds]) so the history surface can show how much was left.
+     * Mirrors iOS `CanceledTimer`.
+     */
+    data class Canceled(
+        override val id: String,
+        override val durationSeconds: Double,
+        override val startDate: Instant,
+        val canceledAt: Instant,
+        val remainingAtCancelSeconds: Double,
+    ) : TimerState {
+        override val endDate: Instant get() = canceledAt
+    }
+
     val status: TimerStatus
         get() = when (this) {
             is Running -> TimerStatus.RUNNING
             is Paused -> TimerStatus.PAUSED
             is Completed -> TimerStatus.COMPLETED
+            is Canceled -> TimerStatus.CANCELED
         }
 
     val pausedRemainingOrNull: Double? get() = (this as? Paused)?.pausedRemainingSeconds
     val pausedAtOrNull: Instant? get() = (this as? Paused)?.pausedAt
 
+    /** Remaining time recorded at cancellation; null for every non-canceled state. */
+    val remainingAtCancelOrNull: Double? get() = (this as? Canceled)?.remainingAtCancelSeconds
+
     fun remainingTime(now: Instant): Double = when (this) {
         is Running -> sanitizeRemainingTime(secondsBetween(now, endDate))
         is Paused -> sanitizeRemainingTime(pausedRemainingSeconds)
-        is Completed -> 0.0
+        is Completed, is Canceled -> 0.0
     }
 
     fun statusAt(now: Instant): TimerStatus {
@@ -90,22 +112,50 @@ sealed interface TimerState {
         return this
     }
 
-    /** Pause; a pause whose remaining already reached zero short-circuits to completed. */
+    /**
+     * Pause; a pause whose remaining already reached zero short-circuits to
+     * completed. Terminal states (completed, canceled) cannot pause and are
+     * returned unchanged.
+     */
     fun pausing(now: Instant): TimerState {
+        if (this is Completed || this is Canceled) return this
         val remaining = remainingTime(now)
         if (remaining <= 0) return completed(endDate)
         return Paused(id, durationSeconds, startDate, remaining, now)
     }
 
-    /** Resume from a frozen paused state; resuming at/after zero remaining completes. */
+    /**
+     * Resume from a frozen paused state; resuming at/after zero remaining
+     * completes. Only a paused timer can resume; any other state (running or
+     * terminal) is returned unchanged.
+     */
     fun resume(now: Instant): TimerState {
-        val remaining = sanitizeRemainingTime(pausedRemainingOrNull ?: 0.0)
+        if (this !is Paused) return this
+        val remaining = sanitizeRemainingTime(pausedRemainingSeconds)
         if (remaining <= 0) return completed(resolvedCompletionDate())
         return Running(id, durationSeconds, startDate, now.plusSeconds(remaining))
     }
 
     fun completed(completionDate: Instant? = null): TimerState =
         Completed(id, durationSeconds, startDate, completionDate ?: resolvedCompletionDate())
+
+    /**
+     * Transition a running or paused timer to the terminal [Canceled] record,
+     * stamping [cancellationDate] and capturing the remaining time at that
+     * instant. Already-terminal states (completed, canceled) are returned
+     * unchanged so a stray cancel cannot rewrite a finished record. Mirrors iOS
+     * `TimerState.canceled(at:)`.
+     */
+    fun canceled(cancellationDate: Instant): TimerState = when (this) {
+        is Running, is Paused -> Canceled(
+            id = id,
+            durationSeconds = durationSeconds,
+            startDate = startDate,
+            canceledAt = cancellationDate,
+            remainingAtCancelSeconds = remainingTime(cancellationDate),
+        )
+        is Completed, is Canceled -> this
+    }
 
     private fun resolvedCompletionDate(): Instant = endDate
 

@@ -30,6 +30,7 @@ branch `feature/PTIMER-146-android-mvp` / Draft PR #16 (kept draft throughout; n
 | 13 | Stable Emulator Compose Smoke Retry | `a5cfb90` | 198 JVM; smoke 0/3 verified | stable API emulator unavailable + uncreatable (no image, SDK repo unreachable); docs-only |
 | 14 | Robolectric Host-Side Compose Smoke | `f3c8dc7` | 201 JVM (host-side smoke 3/3 green) | Robolectric host-side ShootingScreen smoke added + passing in JVM; not a replacement for connected tests |
 | 15 | Recovery before continuing | (latest branch HEAD) | 201 JVM | restored full worklog from f3c8dc7 (a prior pass had compacted it 365→52); removed inventory doc; deleted dummy-test branch; docs-only |
+| 16 | Canceled Timer State Parity | (this commit) | 217 JVM | 4-state model (running/paused/completed/canceled); cancel transition; "canceled" persistence token; Start New cancels source; History section; clear = completed-only; running row = Pause/Start new (no Remove); +16 tests |
 
 Per-test / per-target detail for all passes lives in
 `PTIMER-146-ios-test-parity-audit.md` (Passes 1, and the "Restore/Persistence
@@ -394,6 +395,87 @@ assembleDebug`.
   BUILD SUCCESSFUL, 201 tests, 0 failures. PR #16 stays draft/open. No Details
   UI parity implementation started (deferred until recovery is confirmed clean).
 - **HEAD:** see PR #16 / latest branch commit.
+
+---
+
+## Pass 16 — Canceled Timer State Parity
+
+**Instruction (scope):** Bring Android to parity with the iOS canceled timer
+state recently added on `main` (commits ec0e61b / bdd6941). Truth-mode preflight
+first (git state, branch vs origin/main, diff = android+docs only, PR draft/open,
+plus reading the iOS source-of-truth AND the current Android timer source before
+coding). Then: (1) core timer model — `TimerStatus.CANCELED` + a terminal
+`Canceled` state storing `canceledAt` + `remainingAtCancel`, `remainingTime`=0;
+(2) runtime cancel transition for running AND paused; completed/canceled cannot
+pause/resume; completion behavior unchanged; (3) persistence — `"canceled"`
+token, cancellation timestamp in the `completedAt` slot, remaining-at-cancel in
+the `pausedRemainingDuration` slot, `"stopped"`→paused legacy kept; (4) app
+controller — cancel action; `Start New` cancels the active source (kept as a
+canceled history record) then starts fresh with the same identity/duration;
+`Start Again` from a terminal record starts fresh preserving identity; clear
+history clears completed AND canceled; (5) UI — "Recently completed" → "History";
+canceled rows read `Canceled` and a large label `Canceled · <remaining> left`
+(else `Canceled`); paused rows expose Cancel; terminal rows show Start again +
+Remove; (6) focused tests; (7) worklog entry. Verify `clean :core:test
+testDebugUnitTest assembleDebug`. One logical commit; no Details UI parity this
+pass; no iOS changes.
+
+**Report:**
+
+- **Preflight:** clean tree; branch `feature/PTIMER-146-android-mvp`; behind 0 /
+  ahead of origin/main; `origin/main` is an ancestor; branch diff touches only
+  `android/` + `docs/` (no `ios/` or `shared/`); PR #16 draft + open. Read the
+  iOS canceled source on `main` (`TimerState.swift` `CanceledTimer` +
+  `canceled(at:)`, `TimerPersistence.swift` canceled encode/restore,
+  `TimerRuntime.swift` `cancel`/`removeCompletedTimers`,
+  `TimerWorkspaceModel.swift` `startTimer(replacingActive:)`/`clearCompletedTimers`,
+  `RunningTimerItem.swift` ordering, `BottomSheetWorkspaceSnapshot.swift`
+  large-label) and the current Android timer source before coding.
+- **What changed (one commit):**
+  - **Core** — `TimerStatus.CANCELED`; new terminal `TimerState.Canceled`
+    (`canceledAt`, `remainingAtCancelSeconds`, `endDate`=`canceledAt`,
+    `remainingTime`=0); `canceled(at)` transition from running/paused only
+    (already-terminal returns `this`); `pausing`/`resume` now no-op on terminal
+    states. `PersistentTimerSnapshot`: `CANCELED("canceled")` token + `"stopped"`
+    legacy retained; restore reads `completedAt`→`canceledAt`,
+    `pausedRemainingDuration`→`remainingAtCancel`; `fromTimer` writes them back
+    (matches iOS slot intent). `TimerRuntime`: `cancel(id, now)`;
+    `removeCompleted`→`removeTerminal` (completed + canceled); `startAgain`
+    broadened to any terminal source. `TimerWorkspaceOrdering`: active =
+    running/paused only; history = completed + canceled, ordered by terminal
+    timestamp.
+  - **App** — controller `cancel(id)`; `cloneToNew` (Start New) cancels the
+    active source then clones identity to a fresh timer; `startAgain` guards
+    terminal + clones identity, source untouched; `clearCompleted` removes
+    completed records only (canceled survive); `toUi` maps canceled → status
+    `Canceled` and large label `Canceled · <remaining> left` / `Canceled`.
+    ViewModel: `Cancel` intent. UI: section "Recently completed"→"History"; the
+    History "Clear" button shows only when a completed record exists; per-state
+    action set matches iOS — running = Pause/Start new, paused = Resume/Start
+    new/Cancel/Remove, completed/canceled = Start again/Remove. The codec needed
+    no change (generic over the snapshot).
+- **Android/iOS parity:** matches iOS storage intent, the 4-state model, and the
+  action model in `docs/specs/Timer.md` / `docs/specs/UI.md`. Clear removes
+  completed only (iOS `removeCompletedTimers` parity; canceled records stay in
+  history). Running rows expose no Remove (iOS `largeActions(.running)` =
+  `[.pause, .startNew]`).
+- **Tests:** `clean :core:test testDebugUnitTest assembleDebug` → BUILD
+  SUCCESSFUL, **217 tests, 0 failures** (was 201; +16: core cancel/terminal/
+  ordering/restore + completed-only clear, codec canceled round-trip, controller
+  Start New-cancels-source / cancel-row label / Start Again-from-canceled /
+  clear-completed-keeps-canceled). No connected/instrumented run (no stable
+  emulator; unchanged from Pass 13/14).
+- **Follow-up review fixes (folded into this commit via amend):** the initial
+  cut cleared completed + canceled and kept Remove on running rows; both were
+  corrected to the iOS behavior above after re-reading
+  `TimerWorkspaceModelTests.testClearCompletedTimersOnlyRemovesCompletedEntries`
+  and `BottomSheetWorkspaceSnapshot.largeActions`.
+- **Not done (out of scope):** Details UI parity; iOS files untouched.
+- **Files:** 11 Kotlin (`TimerState`, `PersistentTimerSnapshot`, `TimerRuntime`,
+  `TimerWorkspaceOrdering`, `TimerWorkspaceController`, `ShootingViewModel`,
+  `ShootingScreen` + `TimerStateTest`, `TimerRuntimeTest`,
+  `TimerSnapshotCodecTest`, `TimerWorkspaceControllerTest`) + this worklog.
+- **HEAD:** see PR #16 / this commit. PR stays draft/open.
 
 ---
 

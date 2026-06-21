@@ -28,10 +28,24 @@ class TimerRuntime {
         byId[id]?.let { byId[id] = it.resume(now) }
     }
 
+    /**
+     * Cancel a running or paused timer, transitioning it to the terminal
+     * [TimerState.Canceled] record (kept in the collection, unlike [remove]).
+     * Already-terminal timers are left intact. Mirrors iOS `TimerRuntime.cancel`.
+     */
+    fun cancel(id: String, now: Instant) {
+        byId[id]?.let { byId[id] = it.canceled(now) }
+    }
+
     fun remove(id: String) {
         byId.remove(id)
     }
 
+    /**
+     * Remove completed records only. Canceled records survive — they are
+     * terminal history the photographer deliberately stopped. Mirrors iOS
+     * `TimerRuntime.removeCompletedTimers`.
+     */
     fun removeCompleted() {
         byId.entries.removeAll { it.value.status == TimerStatus.COMPLETED }
     }
@@ -78,9 +92,10 @@ class TimerRuntime {
         }
     }
 
-    /** "Start Again": clone a completed timer into a fresh running timer. */
-    fun startAgain(completedId: String, newId: String, now: Instant): String? {
-        val source = byId[completedId] as? TimerState.Completed ?: return null
+    /** "Start Again": clone a terminal (completed or canceled) timer into a fresh running timer. */
+    fun startAgain(terminalId: String, newId: String, now: Instant): String? {
+        val source = byId[terminalId] ?: return null
+        if (source.status != TimerStatus.COMPLETED && source.status != TimerStatus.CANCELED) return null
         return start(newId, source.durationSeconds, now)
     }
 }

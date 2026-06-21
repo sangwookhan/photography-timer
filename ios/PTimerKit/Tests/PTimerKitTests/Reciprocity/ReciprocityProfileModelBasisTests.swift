@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import Foundation
 import PTimerKit
 import PTimerCore
@@ -271,7 +274,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -300,7 +303,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -329,7 +332,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -358,7 +361,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -387,7 +390,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -416,7 +419,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -445,7 +448,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -480,7 +483,7 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
                 )
             )
         )
-        let data = try JSONEncoder().encode([probeFilm])
+        let data = try encodeCatalog([probeFilm])
 
         let loaded = try LaunchPresetFilmCatalogLoader().loadCatalog(from: data)
         XCTAssertEqual(loaded.count, 1)
@@ -502,6 +505,11 @@ final class ReciprocityProfileModelBasisTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private func encodeCatalog(_ films: [FilmIdentity]) throws -> Data {
+        struct Wrapper: Encodable { let films: [FilmIdentity] }
+        return try JSONEncoder().encode(Wrapper(films: films))
+    }
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {
         LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName }

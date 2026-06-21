@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import Foundation
 
 /// PTIMER-179 runtime fit of a narrow two-parameter power law

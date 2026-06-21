@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # PTimer — Requirements
 
 **Type**: User-scenario-driven requirements document.

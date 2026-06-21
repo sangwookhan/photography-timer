@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import SwiftUI
 
 /// Layout metrics for a result row, injected by the host instead of the app's

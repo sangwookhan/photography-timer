@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 // PTimerKit — reusable iOS app logic + SwiftUI component kit, built on PTimerCore.
 //
 // Skeleton placeholder for PTIMER-177 commit 1 (package + API skeleton, no

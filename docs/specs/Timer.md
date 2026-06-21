@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Timer Spec
 
 **Domain**: Countdown timer lifecycle, persistence, completion notification, and lock-screen surface.

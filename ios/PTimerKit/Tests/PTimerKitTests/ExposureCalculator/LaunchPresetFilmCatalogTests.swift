@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import Foundation
 import PTimerKit
 import PTimerCore
@@ -623,17 +626,19 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         // coding path so the developer can locate the bad entry.
         let invalidJSON = Data(
             """
-            [
-              {
-                "id": "kodak-tri-x-400",
-                "kind": "preset",
-                "canonicalStockName": "Tri-X 400",
-                "manufacturer": "Kodak",
-                "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
-                "aliases": ["TRI-X", "TX 400"],
-                "productionStatus": "current"
-              }
-            ]
+            {
+              "films": [
+                {
+                  "id": "kodak-tri-x-400",
+                  "kind": "preset",
+                  "canonicalStockName": "Tri-X 400",
+                  "manufacturer": "Kodak",
+                  "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
+                  "aliases": ["TRI-X", "TX 400"],
+                  "productionStatus": "current"
+                }
+              ]
+            }
             """.utf8
         )
 
@@ -683,7 +688,8 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     }
 
     private func encodeCatalog(_ films: [FilmIdentity]) throws -> Data {
-        try JSONEncoder().encode(films)
+        struct Wrapper: Encodable { let films: [FilmIdentity] }
+        return try JSONEncoder().encode(Wrapper(films: films))
     }
 
     private func copyFilm(

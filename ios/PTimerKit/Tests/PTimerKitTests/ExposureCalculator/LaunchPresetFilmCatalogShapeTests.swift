@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import XCTest
 import PTimerKit
 import PTimerCore
@@ -274,7 +277,7 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
         let invalidFilm = try shapeProbeFilm(
             profile: MixedShapeFactory.officialFormulaPlusThreshold()
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -293,7 +296,7 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
 
     func testLoaderRejectsProfileMixingFormulaAndLimitedGuidance() throws {
         let invalidFilm = try shapeProbeFilm(profile: MixedShapeFactory.officialFormulaPlusLimitedGuidance())
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -312,7 +315,7 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
 
     func testLoaderRejectsThresholdOnlyProfile() throws {
         let invalidFilm = try shapeProbeFilm(profile: MixedShapeFactory.officialThresholdOnly())
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -333,7 +336,7 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
         let invalidFilm = try shapeProbeFilm(
             profile: MixedShapeFactory.officialLimitedGuidanceWithSourceEvidence()
         )
-        let data = try JSONEncoder().encode([invalidFilm])
+        let data = try encodeCatalog([invalidFilm])
 
         let error = try XCTUnwrap(
             assertThrowsAndReturn(
@@ -376,6 +379,11 @@ final class LaunchPresetFilmCatalogShapeTests: XCTestCase {
             userMetadata: profile.userMetadata,
             sourceEvidence: profile.sourceEvidence
         )
+    }
+
+    private func encodeCatalog(_ films: [FilmIdentity]) throws -> Data {
+        struct Wrapper: Encodable { let films: [FilmIdentity] }
+        return try JSONEncoder().encode(Wrapper(films: films))
     }
 
     private func assertThrowsAndReturn<T>(

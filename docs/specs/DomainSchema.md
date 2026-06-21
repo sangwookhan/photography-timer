@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Domain Schema Spec
 
 **Domain**: The data model behind film identities, reciprocity profiles, manufacturer rules, and the launch preset catalog.

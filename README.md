@@ -82,6 +82,11 @@ Configuration lives in `ios/.swiftlint.yml`. Phase 0 baseline is
 intentionally relaxed; size and complexity thresholds are added in a
 later phase.
 
+## License
+
+Copyright © 2026 Sangwook Han. Licensed under the
+[Apache License, Version 2.0](LICENSE).
+
 ## Android skeleton
 
 A minimal native Android project lives under `android/`. It builds

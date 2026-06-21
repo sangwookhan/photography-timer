@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # UI Spec
 
 **Domain**: User-facing surfaces — calculator screen, bottom-sheet timer workspace, film picker sheet, reciprocity details sheet, lock-screen widget.

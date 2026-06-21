@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Background Notification Delivery — Manual Verification
 
 알림 코드 변경 시 본 절차를 재실행해 background/lock-screen completion notification 동작을 검증한다.

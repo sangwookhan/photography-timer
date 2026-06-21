@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Calculator Spec
 
 **Domain**: Exposure calculation (ND filter adjustment) and reciprocity correction (film-specific time correction).

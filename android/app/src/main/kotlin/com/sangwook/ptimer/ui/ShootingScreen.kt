@@ -2,36 +2,40 @@ package com.sangwook.ptimer.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -54,12 +58,14 @@ import com.sangwook.ptimer.vm.ShootingIntent
 import com.sangwook.ptimer.vm.SlotsUiState
 
 /**
- * Functional shooting screen organized into the iOS hierarchy: camera/slot
- * header, film + model, target shutter, base + ND, result (adjusted /
- * reciprocity / corrected, each with its own start), then active + completed
- * timers. Sectioned cards (not one giant card) and safe-area insets so the
- * title clears the status bar / camera cutout. Functional clarity over polish.
+ * Material 3 shooting screen. Mirrors the iOS information architecture (camera
+ * context, film + model, target shutter, base + ND, result outcomes, then
+ * Active / History) but expresses it with Android-native components: a
+ * [Scaffold] + [TopAppBar], grouped [ElevatedCard] sections, [FilterChip] slot
+ * switching, segmented model picker, tonal stepper icon buttons, and labeled
+ * Material buttons for start actions. No iOS wheels or sheet styling are cloned.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShootingScreen(
     slots: SlotsUiState,
@@ -72,51 +78,85 @@ fun ShootingScreen(
     exactAlarmPromptVisible: Boolean = false,
     onOpenExactAlarmSettings: () -> Unit = {},
 ) {
+    var renaming by remember { mutableStateOf(false) }
+    var renameDraft by remember { mutableStateOf("") }
+    val activeSlotId = slots.slots.firstOrNull { it.isActive }?.id
+
     Box(Modifier.fillMaxSize()) {
         details?.let { DetailsDialog(it, onEvent) }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag(TestTags.SHOOTING_SCREEN)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
-        ) {
-            if (exactAlarmPromptVisible) {
-                item { ExactAlarmNotice(onOpenSettings = onOpenExactAlarmSettings, onDismiss = { onEvent(ShootingIntent.DismissExactAlarmPrompt) }) }
-            }
-            item { Text(slots.activeLabel, style = MaterialTheme.typography.headlineSmall) }
-            item { SlotBar(slots, onEvent) }
-            item { FilmModelSection(calc, films, onEvent) }
-            item { TargetSection(calc, onEvent) }
-            item { BaseNdSection(calc, onEvent) }
-            item { ResultSection(calc, onEvent) }
-            item { CustomFilmRow(onEvent) }
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(slots.activeLabel) },
+                    actions = {
+                        TextButton(onClick = { renameDraft = slots.activeLabel; renaming = true }) {
+                            Text("Rename")
+                        }
+                    },
+                )
+            },
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(TestTags.SHOOTING_SCREEN)
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 12.dp),
+            ) {
+                if (exactAlarmPromptVisible) {
+                    item { ExactAlarmNotice(onOpenSettings = onOpenExactAlarmSettings, onDismiss = { onEvent(ShootingIntent.DismissExactAlarmPrompt) }) }
+                }
+                item { SlotChips(slots, onEvent) }
+                item { FilmModelSection(calc, films, onEvent) }
+                item { TargetSection(calc, onEvent) }
+                item { BaseNdSection(calc, onEvent) }
+                item { ResultSection(calc, onEvent) }
+                item { CustomFilmRow(onEvent) }
 
-            if (timers.active.isNotEmpty()) {
-                item { SectionLabel("Active") }
-                items(timers.active, key = { it.id }) { TimerCard(it, terminal = false, onEvent) }
-            }
-            if (timers.completed.isNotEmpty()) {
-                item {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        SectionLabel("History")
-                        // Clear removes completed records only (iOS parity); canceled
-                        // records stay, so the button only shows when a completed exists.
-                        if (timers.completed.any { it.status == TimerStatus.COMPLETED }) {
-                            TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
+                if (timers.active.isNotEmpty()) {
+                    item { SectionLabel("Active") }
+                    items(timers.active, key = { it.id }) { TimerCard(it, terminal = false, onEvent) }
+                }
+                if (timers.completed.isNotEmpty()) {
+                    item {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            SectionLabel("History")
+                            // Clear removes completed records only (iOS parity); canceled
+                            // records stay, so the button only shows when a completed exists.
+                            if (timers.completed.any { it.status == TimerStatus.COMPLETED }) {
+                                TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
+                            }
                         }
                     }
+                    items(timers.completed, key = { it.id }) { TimerCard(it, terminal = true, onEvent) }
                 }
-                items(timers.completed, key = { it.id }) { TimerCard(it, terminal = true, onEvent) }
             }
         }
 
         // While restore is in progress the ViewModel ignores intents; surface
         // that with a blocking overlay so input isn't silently dropped.
         if (!ready) RestoringOverlay()
+    }
+
+    if (renaming && activeSlotId != null) {
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text("Rename ${slots.activeLabel}") },
+            text = { OutlinedTextField(renameDraft, { renameDraft = it }, singleLine = true) },
+            confirmButton = {
+                TextButton(onClick = { onEvent(ShootingIntent.RenameSlot(activeSlotId, renameDraft)); renaming = false }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeSlotId)); renaming = false }) {
+                    Text("Reset")
+                }
+            },
+        )
     }
 }
 
@@ -143,8 +183,8 @@ private fun RestoringOverlay() {
 /** Compact, dismissible reliability notice shown when exact alarms are not permitted. */
 @Composable
 private fun ExactAlarmNotice(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
-    Card(Modifier.fillMaxWidth().testTag(TestTags.EXACT_ALARM_NOTICE), colors = whiteCardColors()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    ElevatedCard(Modifier.fillMaxWidth().testTag(TestTags.EXACT_ALARM_NOTICE)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 "For more reliable background timer alerts, allow exact alarms.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -160,15 +200,15 @@ private fun ExactAlarmNotice(onOpenSettings: () -> Unit, onDismiss: () -> Unit) 
 @Composable
 private fun SectionLabel(text: String) = Text(text, style = MaterialTheme.typography.titleMedium)
 
-// MARK: - Camera / slot header
+// MARK: - Camera / slot switcher
 
 @Composable
-private fun SlotBar(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
-    var renaming by remember { mutableStateOf(false) }
-    var draftName by remember { mutableStateOf("") }
-    val activeId = slots.slots.firstOrNull { it.isActive }?.id
-
-    Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
+private fun SlotChips(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         slots.slots.forEach { slot ->
             FilterChip(
                 selected = slot.isActive,
@@ -176,26 +216,6 @@ private fun SlotBar(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
                 label = { Text(slot.label) },
             )
         }
-        TextButton(onClick = { draftName = slots.activeLabel; renaming = true }) { Text("Rename") }
-        if (activeId != null) TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeId)) }) { Text("Reset") }
-    }
-
-    if (renaming && activeId != null) {
-        AlertDialog(
-            onDismissRequest = { renaming = false },
-            title = { Text("Rename ${slots.activeLabel}") },
-            text = { OutlinedTextField(draftName, { draftName = it }, singleLine = true) },
-            confirmButton = {
-                TextButton(onClick = { onEvent(ShootingIntent.RenameSlot(activeId, draftName)); renaming = false }) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeId)); renaming = false }) {
-                    Text("Reset")
-                }
-            },
-        )
     }
 }
 
@@ -207,7 +227,7 @@ private fun FilmModelSection(calc: CalculatorUiState, films: List<FilmRowUi>, on
         FilmSelector(calc, films, onEvent)
         if (calc.availableModels.isNotEmpty()) ModelSelector(calc, onEvent)
         // Custom-film extras stay with the film, not the result rows.
-        calc.fittedPreviewSummary?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        calc.fittedPreviewSummary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (calc.isCustomTable) {
             TextButton(onClick = { onEvent(ShootingIntent.CreateFormulaFromSelectedTable) }) {
                 Text("Create formula from this table")
@@ -223,12 +243,18 @@ private fun FilmModelSection(calc: CalculatorUiState, films: List<FilmRowUi>, on
 private fun FilmSelector(calc: CalculatorUiState, films: List<FilmRowUi>, onEvent: (ShootingIntent) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().clickable { expanded = true },
+            Arrangement.SpaceBetween,
+            Alignment.CenterVertically,
+        ) {
             Column(Modifier.weight(1f)) {
                 Text(calc.filmName ?: "No film (digital)", style = MaterialTheme.typography.titleMedium)
-                calc.authorityLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+                calc.authorityLabel?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            OutlinedButton(onClick = { expanded = true }) { Text("Choose") }
+            TextButton(onClick = { expanded = true }) { Text(if (calc.filmName == null) "Choose" else "Change") }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(text = { Text("No film (digital)") }, onClick = {
@@ -246,7 +272,6 @@ private fun FilmSelector(calc: CalculatorUiState, films: List<FilmRowUi>, onEven
 
 @Composable
 private fun ModelSelector(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
-    // iOS-style segmented model picker (replaces the dropdown).
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
         calc.availableModels.forEachIndexed { index, model ->
             SegmentedButton(
@@ -266,14 +291,19 @@ private fun TargetSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
     var draft by remember { mutableStateOf("") }
     SectionCard("Target shutter") {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text(calc.targetSummary ?: "Off", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                calc.targetSummary ?: "Off",
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (calc.targetSeconds == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { draft = ""; editing = true }) { Text("Set") }
                 if (calc.targetSeconds != null) {
-                    OutlinedButton(onClick = { onEvent(ShootingIntent.ClearTarget) }) { Text("Clear") }
+                    TextButton(onClick = { onEvent(ShootingIntent.ClearTarget) }) { Text("Clear") }
                 }
+                OutlinedButton(onClick = { draft = ""; editing = true }) { Text("Set") }
                 if (calc.targetAction != null) {
-                    PlayButton(enabled = calc.targetAction.enabled) { onEvent(ShootingIntent.StartTarget) }
+                    StartButton(enabled = calc.targetAction.enabled) { onEvent(ShootingIntent.StartTarget) }
                 }
             }
         }
@@ -309,11 +339,14 @@ private fun BaseNdSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
 @Composable
 private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit, plusTag: String? = null) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        Text("$label: $value", Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onMinus) { Text("−") }
+            FilledTonalIconButton(onClick = onMinus) { Text("−", style = MaterialTheme.typography.titleMedium) }
             val plusModifier = if (plusTag != null) Modifier.testTag(plusTag) else Modifier
-            OutlinedButton(onClick = onPlus, modifier = plusModifier) { Text("+") }
+            FilledTonalIconButton(onClick = onPlus, modifier = plusModifier) { Text("+", style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
@@ -327,39 +360,68 @@ private fun ResultSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
             onEvent(ShootingIntent.StartAdjusted)
         }
         if (calc.filmName != null) {
+            HorizontalDivider()
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Text("Reciprocity")
+                Text("Reciprocity", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    calc.reciprocityBadge?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
+                    calc.reciprocityBadge?.let { ReciprocityBadge(it) }
                     TextButton(onClick = { onEvent(ShootingIntent.OpenDetails) }) { Text("Details") }
                 }
             }
+            HorizontalDivider()
             val corrected = calc.correctedAction
+            // Stay truthful for limited/unsupported films: show the reason
+            // (never a fabricated value) and keep the start action disabled.
+            val correctedValue = calc.correctedExposureLabel ?: corrected?.disabledReason ?: "No corrected value"
+            val correctedUnavailable = calc.correctedExposureLabel == null
             ResultActionRow(
                 "Corrected exposure",
-                calc.correctedExposureLabel ?: (corrected?.disabledReason ?: "Unavailable"),
+                correctedValue,
                 corrected,
+                valueColor = if (correctedUnavailable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             ) { onEvent(ShootingIntent.StartCorrected) }
         }
     }
 }
 
 @Composable
-private fun ResultActionRow(label: String, value: String, action: StartActionState?, buttonTag: String? = null, onStart: () -> Unit) {
+private fun ResultActionRow(
+    label: String,
+    value: String,
+    action: StartActionState?,
+    buttonTag: String? = null,
+    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    onStart: () -> Unit,
+) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(value, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = valueColor)
         }
-        PlayButton(enabled = action?.enabled == true, tag = buttonTag, onStart = onStart)
+        StartButton(enabled = action?.enabled == true, tag = buttonTag, onStart = onStart)
     }
 }
 
-/** iOS-style filled circular play action. */
+/** Labeled Material start action (replaces the iOS circular play glyph). */
 @Composable
-private fun PlayButton(enabled: Boolean, tag: String? = null, onStart: () -> Unit) {
+private fun StartButton(enabled: Boolean, tag: String? = null, onStart: () -> Unit) {
     val modifier = if (tag != null) Modifier.testTag(tag) else Modifier
-    FilledIconButton(onClick = onStart, enabled = enabled, modifier = modifier) { Text("▶") }
+    FilledTonalButton(onClick = onStart, enabled = enabled, modifier = modifier) { Text("Start") }
+}
+
+@Composable
+private fun ReciprocityBadge(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(50),
+    ) {
+        Text(
+            text,
+            Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
 }
 
 // MARK: - Custom film actions (low priority)
@@ -369,7 +431,7 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
     var newFormula by remember { mutableStateOf(false) }
     var newTable by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-        Text("Custom films", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+        Text("Custom films", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         TextButton(onClick = { newFormula = true }) { Text("New formula") }
         TextButton(onClick = { newTable = true }) { Text("New table") }
     }
@@ -386,19 +448,28 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 @Composable
 private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIntent) -> Unit) {
     val rowModifier = Modifier.fillMaxWidth().let { if (!terminal) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
-    Card(rowModifier, colors = whiteCardColors()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    ElevatedCard(rowModifier) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 StatusPill(item.statusLabel)
             }
-            Text(item.subtitle, style = MaterialTheme.typography.bodySmall)
-            if (item.metadata.isNotBlank()) Text(item.metadata, style = MaterialTheme.typography.labelSmall)
-            Text(item.remainingLabel, style = MaterialTheme.typography.headlineMedium)
-            item.endsAtLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+            Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (item.metadata.isNotBlank()) Text(item.metadata, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Active timers lead with the large countdown; completed rows omit it
+            // (the Done pill already says so); canceled rows show the compact
+            // "Canceled / Canceled · <remaining> left" label as supporting text.
+            when {
+                !terminal -> {
+                    Text(item.remainingLabel, style = MaterialTheme.typography.headlineMedium)
+                    item.endsAtLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                item.status == TimerStatus.CANCELED ->
+                    Text(item.remainingLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             // Per-state action set, matching the iOS action model:
-            //   running           -> Pause, Start new
-            //   paused            -> Resume, Start new, Cancel, Remove
+            //   running            -> Pause, Start new
+            //   paused             -> Resume, Start new, Cancel, Remove
             //   completed/canceled -> Start again, Remove
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when {
@@ -438,12 +509,9 @@ private fun StatusPill(label: String) {
 // MARK: - shared
 
 @Composable
-private fun whiteCardColors() = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-
-@Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth(), colors = whiteCardColors()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    ElevatedCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             content()
         }

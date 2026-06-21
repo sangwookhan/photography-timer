@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # 검증 전략 (Verification Strategy)
 
 **작성일**: 2026-04-27

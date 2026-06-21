@@ -1,3 +1,6 @@
+<!-- Copyright © 2026 Sangwook Han -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # PTimer — Code, API, and Architecture Improvement Backlog
 
 **Type**: Assessment of current quality debt — app-target code,

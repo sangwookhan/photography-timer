@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import SwiftUI
 
 /// Layout metrics for a timer-action control, injected by the host instead of

@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 import Foundation
 
 /// Pure value type shared by the app's Live Activity, the widget extension,

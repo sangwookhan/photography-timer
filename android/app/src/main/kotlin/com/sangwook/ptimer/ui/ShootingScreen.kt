@@ -2,7 +2,6 @@ package com.sangwook.ptimer.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -46,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.calculator.CalculatorUiState
 import com.sangwook.ptimer.calculator.StartActionState
@@ -103,8 +103,8 @@ fun ShootingScreen(
                     .testTag(TestTags.SHOOTING_SCREEN)
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 if (exactAlarmPromptVisible) {
                     item { ExactAlarmNotice(onOpenSettings = onOpenExactAlarmSettings, onDismiss = { onEvent(ShootingIntent.DismissExactAlarmPrompt) }) }
@@ -204,16 +204,26 @@ private fun SectionLabel(text: String) = Text(text, style = MaterialTheme.typogr
 
 @Composable
 private fun SlotChips(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
+    // Equal-weight chips fill the row so all slots stay fully visible on a
+    // phone width (no horizontal clipping of the last camera).
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         slots.slots.forEach { slot ->
             FilterChip(
+                modifier = Modifier.weight(1f),
                 selected = slot.isActive,
                 onClick = { onEvent(ShootingIntent.SelectSlot(slot.id)) },
-                label = { Text(slot.label) },
+                label = {
+                    Text(
+                        slot.label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                },
             )
         }
     }
@@ -339,14 +349,20 @@ private fun BaseNdSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
 @Composable
 private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit, plusTag: String? = null) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
+        // Value is the focus; the inline label keeps the row to a single line so
+        // the two steppers stay compact.
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalIconButton(onClick = onMinus) { Text("−", style = MaterialTheme.typography.titleMedium) }
-            val plusModifier = if (plusTag != null) Modifier.testTag(plusTag) else Modifier
-            FilledTonalIconButton(onClick = onPlus, modifier = plusModifier) { Text("+", style = MaterialTheme.typography.titleMedium) }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(36.dp)) {
+                Text("−", style = MaterialTheme.typography.titleMedium)
+            }
+            val plusModifier = Modifier.size(36.dp).let { if (plusTag != null) it.testTag(plusTag) else it }
+            FilledTonalIconButton(onClick = onPlus, modifier = plusModifier) {
+                Text("+", style = MaterialTheme.typography.titleMedium)
+            }
         }
     }
 }
@@ -449,7 +465,7 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIntent) -> Unit) {
     val rowModifier = Modifier.fillMaxWidth().let { if (!terminal) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
     ElevatedCard(rowModifier) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 StatusPill(item.statusLabel)
@@ -511,7 +527,10 @@ private fun StatusPill(label: String) {
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             content()
         }

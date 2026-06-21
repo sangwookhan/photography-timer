@@ -103,8 +103,8 @@ fun ShootingScreen(
                     .testTag(TestTags.SHOOTING_SCREEN)
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(top = 6.dp, bottom = 16.dp),
             ) {
                 if (exactAlarmPromptVisible) {
                     item { ExactAlarmNotice(onOpenSettings = onOpenExactAlarmSettings, onDismiss = { onEvent(ShootingIntent.DismissExactAlarmPrompt) }) }
@@ -356,10 +356,10 @@ private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: (
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(36.dp)) {
+            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(32.dp)) {
                 Text("−", style = MaterialTheme.typography.titleMedium)
             }
-            val plusModifier = Modifier.size(36.dp).let { if (plusTag != null) it.testTag(plusTag) else it }
+            val plusModifier = Modifier.size(32.dp).let { if (plusTag != null) it.testTag(plusTag) else it }
             FilledTonalIconButton(onClick = onPlus, modifier = plusModifier) {
                 Text("+", style = MaterialTheme.typography.titleMedium)
             }
@@ -471,7 +471,7 @@ private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
 private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIntent) -> Unit) {
     val rowModifier = Modifier.fillMaxWidth().let { if (!terminal) it.testTag(TestTags.ACTIVE_TIMER_ROW) else it }
     ElevatedCard(rowModifier) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 StatusPill(item.statusLabel)
@@ -546,8 +546,8 @@ private fun StatusPill(label: String) {
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             content()

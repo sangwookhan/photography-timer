@@ -74,22 +74,22 @@ behavior:
 
 | Scope item | Stable? | Note |
 |---|---|---|
-| Exposure calculation; base ladder; ND `0..30`; formatting | ✅ | fixture-backed |
-| Film catalog/profile loading | ✅ | 37 films, 3 shapes |
-| Reciprocity formula / table / threshold / limited / unsupported | ✅ | table evaluator required (11 films) |
-| Preset alternate-model selection | ✅ | `AlternateReciprocityModels` (preset-only) |
-| Film select/clear; adjusted/corrected results; Start enablement | ✅ | limited/unsupported blocks corrected timer |
-| Timer lifecycle; **Start Again** (completed clone); multiple + ordering | ✅ | PTIMER-36 clone present in source |
-| Camera slots + rename; per-slot calc/film/target/selected-model; immutable identity | ✅ | identity incl. `selectedModelLabel` + custom descriptor |
-| Target Shutter | ✅ | per-slot; nil when non-quantified |
-| Custom formula profile; custom table profile; table anchors | ✅ | single rule formula XOR table |
-| Fitted formula preview/generation **inspection-only** | ✅ | never the active calc — verified |
-| Create-Formula-from-table; `referenceTableFilmID` | ✅ | separate linked formula film; resolver display-only |
-| Custom-profile persistence/restore | ✅ | incl. `referenceTableFilmID` |
-| Details source/model/calculation transparency | ✅ | model picker; custom rows; fitted comparison; linked reference/error |
-| Android completion + running-timer notifications | ✅ | functional; OEM background guarantees deferred |
-| Persistence/restore for all included state | ✅ | greenfield consolidation |
-| Android parity tests | ✅ | see §4 |
+| Exposure calculation; base ladder; ND `0..30`; formatting | [x] | fixture-backed |
+| Film catalog/profile loading | [x] | 37 films, 3 shapes |
+| Reciprocity formula / table / threshold / limited / unsupported | [x] | table evaluator required (11 films) |
+| Preset alternate-model selection | [x] | `AlternateReciprocityModels` (preset-only) |
+| Film select/clear; adjusted/corrected results; Start enablement | [x] | limited/unsupported blocks corrected timer |
+| Timer lifecycle; **Start Again** (completed clone); multiple + ordering | [x] | PTIMER-36 clone present in source |
+| Camera slots + rename; per-slot calc/film/target/selected-model; immutable identity | [x] | identity incl. `selectedModelLabel` + custom descriptor |
+| Target Shutter | [x] | per-slot; nil when non-quantified |
+| Custom formula profile; custom table profile; table anchors | [x] | single rule formula XOR table |
+| Fitted formula preview/generation **inspection-only** | [x] | never the active calc — verified |
+| Create-Formula-from-table; `referenceTableFilmID` | [x] | separate linked formula film; resolver display-only |
+| Custom-profile persistence/restore | [x] | incl. `referenceTableFilmID` |
+| Details source/model/calculation transparency | [x] | model picker; custom rows; fitted comparison; linked reference/error |
+| Android completion + running-timer notifications | [x] | functional; OEM background guarantees deferred |
+| Persistence/restore for all included state | [x] | greenfield consolidation |
+| Android parity tests | [x] | see §4 |
 
 No scope item is unstable. **No previously-deferred function reappeared as Must
 without a basis in current source.**
@@ -103,14 +103,14 @@ product functionality**:
 
 | Deferred item | Classification | Confirmed polish/limit? |
 |---|---|---|
-| Picker feel / wheel tuning | UI/UX polish | ✅ (function — picker entry — is included) |
-| Details graph visual fidelity | UI/UX polish | ✅ (model/calc transparency included via rows/comparison) |
-| Editor layout polish | UI/UX polish | ✅ (authoring + validation function included) |
-| Bottom-sheet drag choreography, density tiers, slot-pager animation | UI/UX polish | ✅ (timer list + slots function included) |
-| Home-screen widget visual design | Platform polish | ✅ (ongoing notification covers monitoring) |
-| Guaranteed exact background delivery across Doze/OEM | Platform limit | ✅ (best-effort scheduling included; not fully controllable) |
-| iOS ActivityKit/RecordReplay/layout metrics | iOS-only | ✅ (replaced functionally by Android notification plan) |
-| Notification action buttons (if not low-risk) | Conditional polish | ✅ (notification feature itself included) |
+| Picker feel / wheel tuning | UI/UX polish | [x] (function — picker entry — is included) |
+| Details graph visual fidelity | UI/UX polish | [x] (model/calc transparency included via rows/comparison) |
+| Editor layout polish | UI/UX polish | [x] (authoring + validation function included) |
+| Bottom-sheet drag choreography, density tiers, slot-pager animation | UI/UX polish | [x] (timer list + slots function included) |
+| Home-screen widget visual design | Platform polish | [x] (ongoing notification covers monitoring) |
+| Guaranteed exact background delivery across Doze/OEM | Platform limit | [x] (best-effort scheduling included; not fully controllable) |
+| iOS ActivityKit/RecordReplay/layout metrics | iOS-only | [x] (replaced functionally by Android notification plan) |
+| Notification action buttons (if not low-risk) | Conditional polish | [x] (notification feature itself included) |
 
 **Flag:** none. The one item to watch is "ongoing running-timer notification" —
 its *core function* (a live notification for the representative running timer) is
@@ -124,15 +124,15 @@ function cut.
 
 | Architecture requirement | Ready? | Note |
 |---|---|---|
-| Pure-Kotlin `:core`, no Android dependency | ✅ | `kotlin.jvm` module; enforced by classpath |
-| No version catalog for PTIMER-146 | ✅ | inline versions; revisit if modules grow |
-| Minimal dependencies | ✅ | serialization (`:core`); coroutines, viewmodel-compose, datastore (`:app`) |
-| `:app` owns ViewModel, Compose UI, DataStore, timer coordinator, notifications | ✅ | clear ownership |
-| One-way UI event flow | ✅ | `onEvent(ShootingIntent)` → `StateFlow<ShootingUiState>` |
-| Persistence behind interfaces | ✅ | `*Store` in `:core`; DataStore impls in `:app` |
-| Timer tick owned by coordinator/runtime, not Composables | ✅ | `AndroidTimerCoordinator` drives `TimerRuntime.tick(now)` |
-| Fitted formula + reference-table link remain display-only unless the user explicitly creates a separate formula profile | ✅ | matches verified iOS invariant; explicit "never active" test required |
-| No iOS source changes required | ✅ | migration is additive under `android/` |
+| Pure-Kotlin `:core`, no Android dependency | [x] | `kotlin.jvm` module; enforced by classpath |
+| No version catalog for PTIMER-146 | [x] | inline versions; revisit if modules grow |
+| Minimal dependencies | [x] | serialization (`:core`); coroutines, viewmodel-compose, datastore (`:app`) |
+| `:app` owns ViewModel, Compose UI, DataStore, timer coordinator, notifications | [x] | clear ownership |
+| One-way UI event flow | [x] | `onEvent(ShootingIntent)` → `StateFlow<ShootingUiState>` |
+| Persistence behind interfaces | [x] | `*Store` in `:core`; DataStore impls in `:app` |
+| Timer tick owned by coordinator/runtime, not Composables | [x] | `AndroidTimerCoordinator` drives `TimerRuntime.tick(now)` |
+| Fitted formula + reference-table link remain display-only unless the user explicitly creates a separate formula profile | [x] | matches verified iOS invariant; explicit "never active" test required |
+| No iOS source changes required | [x] | migration is additive under `android/` |
 
 Architecture is **ready**. One explicit guardrail to carry into implementation:
 the inspection-only invariant (fitted formula and `referenceTableFilmID` never
@@ -146,16 +146,16 @@ For each group, behavior is clear enough to implement:
 
 | Test group | Behavior clear? | Source of truth |
 |---|---|---|
-| Fixture-driven (exposure, catalog) | ✅ | `shared/test-fixtures/*` |
-| Core parity (exposure, reciprocity, fitter, guard, resolver, table, timer) | ✅ | iOS behavior + fixtures |
-| ViewModel (calc+film, Start enablement, alternate-model, lifecycle, identity, Start-Again) | ✅ | iOS ViewModel/timer tests as audit source |
-| Persistence (timer/session/custom-film round-trip + restore + corrupt fail-safe) | ✅ | schemas defined; greenfield |
-| Custom film (table form, fitted preview, create-formula, library CRUD, codable) | ✅ | iOS custom-film tests |
-| Timer / notification (exactly-once, cancel-on-pause, representative selection) | ✅ | iOS notification/coordinator rules |
-| Camera slot (independence, capture/restore, rename isolation) | ✅ | iOS slot tests |
-| Target Shutter (comparison, match, nil, per-slot, lastUsed) | ✅ | iOS target tests |
-| Details / presenter (rows, picker, fitted comparison, reference/error, vocab) | ✅ | iOS presenter tests |
-| Compose UI smoke (render, start/pause/remove, slot switch, open picker/details) | ✅ | kept minimal |
+| Fixture-driven (exposure, catalog) | [x] | `shared/test-fixtures/*` |
+| Core parity (exposure, reciprocity, fitter, guard, resolver, table, timer) | [x] | iOS behavior + fixtures |
+| ViewModel (calc+film, Start enablement, alternate-model, lifecycle, identity, Start-Again) | [x] | iOS ViewModel/timer tests as audit source |
+| Persistence (timer/session/custom-film round-trip + restore + corrupt fail-safe) | [x] | schemas defined; greenfield |
+| Custom film (table form, fitted preview, create-formula, library CRUD, codable) | [x] | iOS custom-film tests |
+| Timer / notification (exactly-once, cancel-on-pause, representative selection) | [x] | iOS notification/coordinator rules |
+| Camera slot (independence, capture/restore, rename isolation) | [x] | iOS slot tests |
+| Target Shutter (comparison, match, nil, per-slot, lastUsed) | [x] | iOS target tests |
+| Details / presenter (rows, picker, fitted comparison, reference/error, vocab) | [x] | iOS presenter tests |
+| Compose UI smoke (render, start/pause/remove, slot switch, open picker/details) | [x] | kept minimal |
 
 **iOS tests are used as behavior-audit sources, not mechanically translated** —
 restated and accepted.

@@ -21,9 +21,9 @@ the MVP-blocker list and the blockers implemented this pass.
 
 | Status | Meaning |
 |---|---|
-| ✅ covered | Android test fails if the behavior regresses |
-| 🟡 partial | covered by construction or partially asserted, not pinned by a dedicated test |
-| ❌ missing | no Android coverage |
+| [x] covered | Android test fails if the behavior regresses |
+| [~] partial | covered by construction or partially asserted, not pinned by a dedicated test |
+| [ ] missing | no Android coverage |
 | N/A | not applicable to the Android MVP (iOS-only surface or deliberate design divergence) |
 
 | Decision | Meaning |
@@ -240,11 +240,11 @@ Automated coverage:        4/5 = 80%   (scheduler contract via fake, JVM)
 Manual/device-only:        1/5 = 20%   (actual post-kill alarm delivery timing)
 Remaining follow-up:       1/5 = 20%   (exact-alarm permission flow / foreground service)
 ```
-- Target 1 (schedule at expectedCompletionAt) — ✅ automated + on-device alarm registration confirmed.
-- Target 2 (cancel on pause/remove/completion) — ✅ automated.
-- Target 3 (relaunch reconciles overdue) — ✅ automated.
-- Target 4 (permission / exact-alarm fallback is safe) — ✅ code falls back to inexact and is wrapped against failure; the *exact-alarm permission flow itself* is the deferred follow-up.
-- Target 5 (scheduler behavior covered by JVM tests) — ✅ `ShootingViewModelSchedulingTest` (12 tests) via a fake.
+- Target 1 (schedule at expectedCompletionAt) — [x] automated + on-device alarm registration confirmed.
+- Target 2 (cancel on pause/remove/completion) — [x] automated.
+- Target 3 (relaunch reconciles overdue) — [x] automated.
+- Target 4 (permission / exact-alarm fallback is safe) — [x] code falls back to inexact and is wrapped against failure; the *exact-alarm permission flow itself* is the deferred follow-up.
+- Target 5 (scheduler behavior covered by JVM tests) — [x] `ShootingViewModelSchedulingTest` (12 tests) via a fake.
 
 **Tests:** `ShootingViewModelSchedulingTest` — 12 JVM tests (start schedules; pause/remove cancel; resume reschedules; completed not scheduled; Start-again fresh id; restore pending schedules; restore overdue reconciles + not scheduled; identity immutable across rename; custom-film corrected identity; scheduler-failure no-crash; no duplicate after restore round-trip).
 
@@ -347,8 +347,8 @@ Automated coverage:       5/5 = 100%
 Manual/device-only:       0/5 = 0%    (target 4 ALSO confirmed on device, both paths)
 Remaining follow-up:      0/5 = 0%    (within this 5-target set)
 ```
-- Target 1 schedule, 2 cancel, 3 relaunch-reconcile, 5 JVM coverage — unchanged ✅.
-- Target 4 (permission / exact-alarm fallback safe) — ✅ closed: exact-when-permitted, inexact fallback, user request path, pure policy JVM-tested, both paths confirmed on device.
+- Target 1 schedule, 2 cancel, 3 relaunch-reconcile, 5 JVM coverage — unchanged [x].
+- Target 4 (permission / exact-alarm fallback safe) — [x] closed: exact-when-permitted, inexact fallback, user request path, pure policy JVM-tested, both paths confirmed on device.
 
 **Beyond this 5-target set (still open, not claimed closed):** a **foreground
 service** for guaranteed delivery, and a **faithful post-process-death delivery
@@ -554,12 +554,12 @@ now 201 (was 198).
 
 | Area | iOS tests (≈) | Protected behavior parity | Android tests |
 |---|---|---|---|
-| A — Exposure core | 87 | ✅ full-stop/camera-ladder/snap/format via golden fixture; 1/3-stop wheel = android-replacement | `ExposureCoreTest`, `SharedFixtureGoldenTest` (core) |
-| B — Reciprocity policy | ~210 | ✅ formula / log-log table / threshold+limited / OLS fitter / no-shortening guard / basis & confidence mapping | `ReciprocityCoreTest`, `…PolicyTest`, `…FitterTest`, `CatalogPerFilmParityTest`, `ConfidencePresentationTest` (core) |
-| C — Catalog + custom domain | ~190 | ✅ 37-film load/shape/provenance/per-film params; ✅ custom domain sanitation; editor-UI = follow-up | `CatalogCoreTest`, `CatalogPerFilmParityTest`, `CustomFilmTest` |
-| D — Timer + persistence | ~110 | ✅ state machine / pause-resume-complete / restore / ordering / clone / identity; notifications = follow-up; lock-screen/RecordReplay = ios-only | `TimerStateTest`, `TimerRuntimeTest`, `TimerSnapshotCodecTest`, `TimerWorkspaceControllerTest`, `RepresentativeTimerSelectorTest` |
-| E — Slots + Target + Film | ~140 | ✅ 4-slot isolation / rename / per-slot target & restore / film-selection / start-action model | `CalculatorControllerTest`, `SlotSessionCodecTest`, slot/session tests |
-| F — Presentation | ~120 | ✅ region/basis policy + representative selection; graph/vocabulary/dock = follow-up/ios-only | covered via core policy + selector tests |
+| A — Exposure core | 87 | [x] full-stop/camera-ladder/snap/format via golden fixture; 1/3-stop wheel = android-replacement | `ExposureCoreTest`, `SharedFixtureGoldenTest` (core) |
+| B — Reciprocity policy | ~210 | [x] formula / log-log table / threshold+limited / OLS fitter / no-shortening guard / basis & confidence mapping | `ReciprocityCoreTest`, `…PolicyTest`, `…FitterTest`, `CatalogPerFilmParityTest`, `ConfidencePresentationTest` (core) |
+| C — Catalog + custom domain | ~190 | [x] 37-film load/shape/provenance/per-film params; [x] custom domain sanitation; editor-UI = follow-up | `CatalogCoreTest`, `CatalogPerFilmParityTest`, `CustomFilmTest` |
+| D — Timer + persistence | ~110 | [x] state machine / pause-resume-complete / restore / ordering / clone / identity; notifications = follow-up; lock-screen/RecordReplay = ios-only | `TimerStateTest`, `TimerRuntimeTest`, `TimerSnapshotCodecTest`, `TimerWorkspaceControllerTest`, `RepresentativeTimerSelectorTest` |
+| E — Slots + Target + Film | ~140 | [x] 4-slot isolation / rename / per-slot target & restore / film-selection / start-action model | `CalculatorControllerTest`, `SlotSessionCodecTest`, slot/session tests |
+| F — Presentation | ~120 | [x] region/basis policy + representative selection; graph/vocabulary/dock = follow-up/ios-only | covered via core policy + selector tests |
 
 ---
 
@@ -572,7 +572,7 @@ companion and the user-test corrections to the start-action model.
 
 ## A — Exposure core (87 tests)
 
-**[verdict]** ✅ **already-covered** for full-stop / camera-ladder / snap /
+**[verdict]** [x] **already-covered** for full-stop / camera-ladder / snap /
 doubling / format behavior — pinned by Android `ExposureCoreTest` and the
 cross-platform `SharedFixtureGoldenTest` (`exposure-golden.json`).
 Files `ExposureScaleTests`, `ExposureScaleModeUITests`,
@@ -672,7 +672,7 @@ ND steppers; only the whole-stop path is in scope). The coarse
 | SharedFixtureGoldenTests · testLaunchCatalogMatchesSharedFixtureExpectations  | shared catalog-validation-cases.json: LaunchPresetFilmCatalog film count, canonicalStockName order, and ids match fixture expectations |
 ## B — Reciprocity policy (~210 tests)
 
-**[verdict]** ✅ **already-covered** for the protected policy core: formula
+**[verdict]** [x] **already-covered** for the protected policy core: formula
 (modified-Schwarzschild) evaluation, log-log table interpolation, the OLS
 power-law fitter (inspection-only), the no-shortening guard, the policy
 evaluator order (formula→table→threshold→limited→unsupported), region/basis
@@ -1088,7 +1088,7 @@ Recorded intent (iOS file · test — intent):
 
 ## C — Catalog + custom-film domain (~190 tests)
 
-**[verdict]** ✅ **already-covered / blocker→done** for the protected
+**[verdict]** [x] **already-covered / blocker→done** for the protected
 catalog and custom **domain**: 37-film load / canonical order / launch-policy
 shape rules / per-manufacturer membership / per-film formula+threshold
 constants / provenance (`CatalogCoreTest` + new `CatalogPerFilmParityTest`),
@@ -1561,7 +1561,7 @@ Recorded intent (iOS file · test — intent):
 
 ## D — Timer + persistence + notification (~110 tests)
 
-**[verdict]** ✅ **already-covered** for the protected timer core and restore
+**[verdict]** [x] **already-covered** for the protected timer core and restore
 contract — verified directly against Android `core`: completion fires
 exactly once and is then quiet (`tickCompletesExpiredOnceThenIsQuiet`),
 reconcile completes-without-alert (`reconcileCompletesWithoutReportingAlerts`),
@@ -1800,7 +1800,7 @@ Recorded intent:
 
 ## E — Camera slots + Target Shutter + film selection (~140 tests)
 
-**[verdict]** ✅ **already-covered / blocker→done** for the protected
+**[verdict]** [x] **already-covered / blocker→done** for the protected
 behavior: 4-slot session isolation, per-slot calculator/film/target state,
 slot rename (trim/clear/isolation/immutable-after-start), per-slot Target
 Shutter set/clear/restore + stop-difference presentation (no signed zero,
@@ -2074,7 +2074,7 @@ Recorded intent (iOS file · test — intent):
 
 ## F — Presentation / snapshot / shell (~120 tests)
 
-**[verdict]** Two behavior-relevant areas are ✅ **already-covered** in
+**[verdict]** Two behavior-relevant areas are [x] **already-covered** in
 Android `core`: region/basis policy (`GuardedFormulaRegionBasisContractTests`
 → `ReciprocityCalculationPolicyEvaluator`) and representative-timer / lock-screen
 **selection** (`CalculatorTimerLockScreenTests` kit copy →
@@ -2082,7 +2082,7 @@ Android `core`: region/basis policy (`GuardedFormulaRegionBasisContractTests`
 presentation contracts (Details Source-reference/Guidance-boundary section
 split, secondary-guidance formatter, stop-signal/not-recommended vocabulary,
 source-reference row sorting, display-state snapshot harness) are
-🟡 **partial / follow-up** — Android `DetailsPresenter` is a reduced flat-row
+[~] **partial / follow-up** — Android `DetailsPresenter` is a reduced flat-row
 model with no graph. All `*Graph*`, dock/shell/theme/layout-metric, ActivityKit,
 and RecordReplay suites are **ios-only / deferred-presentation**.
 

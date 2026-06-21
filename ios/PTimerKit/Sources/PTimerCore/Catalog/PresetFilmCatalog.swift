@@ -59,7 +59,7 @@ public struct LaunchPresetFilmCatalogLoader {
         let films: [FilmIdentity]
 
         do {
-            films = try decoder.decode([FilmIdentity].self, from: data)
+            films = try decoder.decode(CatalogDocument.self, from: data).films
         } catch let decodingError as DecodingError {
             throw LaunchPresetFilmCatalogLoaderError.malformedResource(
                 Self.describe(decodingError: decodingError)
@@ -501,6 +501,10 @@ extension LaunchPresetFilmCatalogLoaderError: LocalizedError {
             return "Bundled launch preset film catalog film '\(filmID)' has an unsupported reciprocity rule shape: \(reason)."
         }
     }
+}
+
+private struct CatalogDocument: Decodable {
+    let films: [FilmIdentity]
 }
 
 private final class LaunchPresetFilmCatalogBundleMarker: NSObject {}

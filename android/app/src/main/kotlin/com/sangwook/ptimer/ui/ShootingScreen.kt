@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.sangwook.ptimer.ui
 
 import androidx.compose.foundation.background
@@ -10,12 +12,18 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -25,6 +33,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -32,40 +41,54 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.calculator.CalculatorUiState
 import com.sangwook.ptimer.calculator.StartActionState
+import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.timer.TimerStatus
 import com.sangwook.ptimer.details.DetailsUi
+import com.sangwook.ptimer.target.TargetDurationFormat
+import com.sangwook.ptimer.target.TargetQuickPresets
 import com.sangwook.ptimer.timer.TimerItemUi
 import com.sangwook.ptimer.timer.TimerWorkspaceUiState
 import com.sangwook.ptimer.vm.FilmRowUi
 import com.sangwook.ptimer.vm.ShootingIntent
 import com.sangwook.ptimer.vm.SlotsUiState
+import kotlinx.coroutines.launch
+
+/** Default draft when the photographer has no current target: 1 minute (iOS parity). */
+private const val TARGET_DEFAULT_SECONDS: Double = 60.0
 
 /**
- * Material 3 shooting screen. Mirrors the iOS information architecture (camera
- * context, film + model, target shutter, base + ND, result outcomes, then
- * Active / History) but expresses it with Android-native components: a
- * [Scaffold] + [TopAppBar], grouped [ElevatedCard] sections, [FilterChip] slot
- * switching, segmented model picker, tonal stepper icon buttons, and labeled
- * Material buttons for start actions. No iOS wheels or sheet styling are cloned.
+ * Material 3 shooting control panel. The main scroll is the calculator only
+ * (camera, film, target, base/ND, results with source-specific Starts, a timer
+ * summary); the full Active/History timer list lives in a separate Timers
+ * workspace opened on demand, so starting a timer never turns the calculator
+ * into an archive view. Base shutter, ND, and target use fast bottom-sheet
+ * pickers (plus/minus remain as secondary fine controls).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShootingScreen(
     slots: SlotsUiState,
@@ -80,6 +103,10 @@ fun ShootingScreen(
 ) {
     var renaming by remember { mutableStateOf(false) }
     var renameDraft by remember { mutableStateOf("") }
+    var baseSheet by remember { mutableStateOf(false) }
+    var ndSheet by remember { mutableStateOf(false) }
+    var targetSheet by remember { mutableStateOf(false) }
+    var timersOpen by remember { mutableStateOf(false) }
     val activeSlotId = slots.slots.firstOrNull { it.isActive }?.id
 
     Box(Modifier.fillMaxSize()) {
@@ -90,9 +117,7 @@ fun ShootingScreen(
                 TopAppBar(
                     title = { Text(slots.activeLabel) },
                     actions = {
-                        TextButton(onClick = { renameDraft = slots.activeLabel; renaming = true }) {
-                            Text("Rename")
-                        }
+                        TextButton(onClick = { renameDraft = slots.activeLabel; renaming = true }) { Text("Rename") }
                     },
                 )
             },
@@ -111,34 +136,16 @@ fun ShootingScreen(
                 }
                 item { SlotChips(slots, onEvent) }
                 item { FilmModelSection(calc, films, onEvent) }
-                item { TargetSection(calc, onEvent) }
-                item { BaseNdSection(calc, onEvent) }
+                item { TargetCard(calc, onEdit = { targetSheet = true }, onEvent) }
+                item { BaseNdCard(calc, onPickBase = { baseSheet = true }, onPickNd = { ndSheet = true }, onEvent) }
                 item { ResultSection(calc, onEvent) }
                 item { CustomFilmRow(onEvent) }
-
-                if (timers.active.isNotEmpty()) {
-                    item { SectionLabel("Active") }
-                    items(timers.active, key = { it.id }) { TimerCard(it, terminal = false, onEvent) }
-                }
-                if (timers.completed.isNotEmpty()) {
-                    item {
-                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                            SectionLabel("History")
-                            // Clear removes completed records only (iOS parity); canceled
-                            // records stay, so the button only shows when a completed exists.
-                            if (timers.completed.any { it.status == TimerStatus.COMPLETED }) {
-                                TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
-                            }
-                        }
-                    }
-                    items(timers.completed, key = { it.id }) { TimerCard(it, terminal = true, onEvent) }
-                }
+                item { TimerSummaryCard(timers, onOpen = { timersOpen = true }) }
             }
         }
 
-        // While restore is in progress the ViewModel ignores intents; surface
-        // that with a blocking overlay so input isn't silently dropped.
         if (!ready) RestoringOverlay()
+        if (timersOpen) TimersWorkspace(timers, onEvent, onClose = { timersOpen = false })
     }
 
     if (renaming && activeSlotId != null) {
@@ -147,15 +154,26 @@ fun ShootingScreen(
             title = { Text("Rename ${slots.activeLabel}") },
             text = { OutlinedTextField(renameDraft, { renameDraft = it }, singleLine = true) },
             confirmButton = {
-                TextButton(onClick = { onEvent(ShootingIntent.RenameSlot(activeSlotId, renameDraft)); renaming = false }) {
-                    Text("Save")
-                }
+                TextButton(onClick = { onEvent(ShootingIntent.RenameSlot(activeSlotId, renameDraft)); renaming = false }) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeSlotId)); renaming = false }) {
-                    Text("Reset")
-                }
+                TextButton(onClick = { onEvent(ShootingIntent.ResetSlotName(activeSlotId)); renaming = false }) { Text("Reset") }
             },
+        )
+    }
+
+    if (baseSheet) {
+        BaseShutterSheet(calc, onSelect = { onEvent(ShootingIntent.SelectBaseShutterIndex(it)) }, onDismiss = { baseSheet = false })
+    }
+    if (ndSheet) {
+        NdSheet(calc, onSelect = { onEvent(ShootingIntent.SetNdStops(it)) }, onDismiss = { ndSheet = false })
+    }
+    if (targetSheet) {
+        TargetSheet(
+            calc,
+            onSet = { onEvent(ShootingIntent.SetTarget(it)) },
+            onClear = { onEvent(ShootingIntent.ClearTarget) },
+            onDismiss = { targetSheet = false },
         )
     }
 }
@@ -168,10 +186,7 @@ private fun RestoringOverlay() {
             .fillMaxSize()
             .testTag(TestTags.RESTORING_OVERLAY)
             .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { /* swallow input while restoring */ },
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
         contentAlignment = Alignment.Center,
     ) {
         Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
@@ -185,10 +200,7 @@ private fun RestoringOverlay() {
 private fun ExactAlarmNotice(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth().testTag(TestTags.EXACT_ALARM_NOTICE)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                "For more reliable background timer alerts, allow exact alarms.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text("For more reliable background timer alerts, allow exact alarms.", style = MaterialTheme.typography.bodyMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onOpenSettings) { Text("Open settings") }
                 TextButton(onClick = onDismiss) { Text("Not now") }
@@ -204,8 +216,6 @@ private fun SectionLabel(text: String) = Text(text, style = MaterialTheme.typogr
 
 @Composable
 private fun SlotChips(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
-    // Equal-weight chips fill the row so all slots stay fully visible on a
-    // phone width (no horizontal clipping of the last camera).
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -216,14 +226,7 @@ private fun SlotChips(slots: SlotsUiState, onEvent: (ShootingIntent) -> Unit) {
                 modifier = Modifier.weight(1f),
                 selected = slot.isActive,
                 onClick = { onEvent(ShootingIntent.SelectSlot(slot.id)) },
-                label = {
-                    Text(
-                        slot.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                },
+                label = { Text(slot.label, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium) },
             )
         }
     }
@@ -236,12 +239,9 @@ private fun FilmModelSection(calc: CalculatorUiState, films: List<FilmRowUi>, on
     SectionCard("Film") {
         FilmSelector(calc, films, onEvent)
         if (calc.availableModels.isNotEmpty()) ModelSelector(calc, onEvent)
-        // Custom-film extras stay with the film, not the result rows.
         calc.fittedPreviewSummary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (calc.isCustomTable) {
-            TextButton(onClick = { onEvent(ShootingIntent.CreateFormulaFromSelectedTable) }) {
-                Text("Create formula from this table")
-            }
+            TextButton(onClick = { onEvent(ShootingIntent.CreateFormulaFromSelectedTable) }) { Text("Create formula from this table") }
         }
         calc.selectedCustomFilmId?.let { id ->
             TextButton(onClick = { onEvent(ShootingIntent.DeleteCustomFilm(id)) }) { Text("Delete custom film") }
@@ -253,28 +253,18 @@ private fun FilmModelSection(calc: CalculatorUiState, films: List<FilmRowUi>, on
 private fun FilmSelector(calc: CalculatorUiState, films: List<FilmRowUi>, onEvent: (ShootingIntent) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        Row(
-            Modifier.fillMaxWidth().clickable { expanded = true },
-            Arrangement.SpaceBetween,
-            Alignment.CenterVertically,
-        ) {
+        Row(Modifier.fillMaxWidth().clickable { expanded = true }, Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(calc.filmName ?: "No film (digital)", style = MaterialTheme.typography.titleMedium)
-                calc.authorityLabel?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                calc.authorityLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
             TextButton(onClick = { expanded = true }) { Text(if (calc.filmName == null) "Choose" else "Change") }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("No film (digital)") }, onClick = {
-                onEvent(ShootingIntent.ClearFilm); expanded = false
-            })
+            DropdownMenuItem(text = { Text("No film (digital)") }, onClick = { onEvent(ShootingIntent.ClearFilm); expanded = false })
             films.forEach { film ->
                 val suffix = if (film.isCustom) " · custom" else ""
-                DropdownMenuItem(text = { Text("${film.name} · ISO ${film.iso}$suffix") }, onClick = {
-                    onEvent(ShootingIntent.SelectFilm(film.id)); expanded = false
-                })
+                DropdownMenuItem(text = { Text("${film.name} · ISO ${film.iso}$suffix") }, onClick = { onEvent(ShootingIntent.SelectFilm(film.id)); expanded = false })
             }
         }
     }
@@ -293,81 +283,115 @@ private fun ModelSelector(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
     }
 }
 
-// MARK: - Target shutter
+// MARK: - Target shutter (picker-driven; keeps its own Start)
 
 @Composable
-private fun TargetSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
-    var editing by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf("") }
+private fun TargetCard(calc: CalculatorUiState, onEdit: () -> Unit, onEvent: (ShootingIntent) -> Unit) {
     SectionCard("Target shutter") {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text(
-                calc.targetSummary ?: "Off",
-                Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (calc.targetSeconds == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (calc.targetSeconds != null) {
-                    TextButton(onClick = { onEvent(ShootingIntent.ClearTarget) }) { Text("Clear") }
+        if (calc.targetSeconds == null) {
+            // Off: whole row taps through to the input sheet (iOS "Off >").
+            // Removal lives in the sheet's Use-target-shutter switch, so the
+            // card never carries a Clear button and the row stays stable.
+            Row(
+                Modifier.fillMaxWidth().clickable { onEdit() },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Off", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Set", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
+        } else {
+            // Active: one compact row — [value · stop difference] | [Start].
+            // The value/diff area opens the sheet; Start is an independent
+            // sibling that stays available whenever a valid target is set.
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Row(
+                    Modifier.weight(1f).clickable { onEdit() },
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        calc.targetDurationLabel ?: "",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    TargetStopDifference(calc)
                 }
-                OutlinedButton(onClick = { draft = ""; editing = true }) { Text("Set") }
                 if (calc.targetAction != null) {
                     StartButton(enabled = calc.targetAction.enabled) { onEvent(ShootingIntent.StartTarget) }
                 }
             }
         }
     }
-    if (editing) {
-        AlertDialog(
-            onDismissRequest = { editing = false },
-            title = { Text("Target shutter (seconds)") },
-            text = { OutlinedTextField(draft, { draft = it }, singleLine = true, label = { Text("seconds") }) },
-            confirmButton = {
-                TextButton(onClick = { draft.toDoubleOrNull()?.let { onEvent(ShootingIntent.SetTarget(it)) }; editing = false }) { Text("Set") }
-            },
-            dismissButton = { TextButton(onClick = { editing = false }) { Text("Cancel") } },
+}
+
+/**
+ * Compact stop-difference glyph for the active target row, mirroring iOS:
+ * a direction arrow plus the signed stop text, color-coded by direction.
+ * Comparison unavailable renders a stable em dash so the row never wraps
+ * (the Result card below carries the explicit unavailable wording).
+ */
+@Composable
+private fun TargetStopDifference(calc: CalculatorUiState) {
+    if (calc.targetUnavailable) {
+        Text("—", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    val stops = calc.targetStopDifference ?: 0.0
+    val (arrow, color) = when {
+        calc.targetIsMatch -> "=" to MaterialTheme.colorScheme.primary
+        stops > 0 -> "↑" to MaterialTheme.colorScheme.primary
+        else -> "↓" to MaterialTheme.colorScheme.tertiary
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(arrow, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+        Text(
+            calc.targetComparisonLabel ?: "",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+            maxLines = 1,
         )
     }
 }
 
-// MARK: - Base shutter + ND
+// MARK: - Base shutter + ND (tap value to open a fast picker; +/- secondary)
 
 @Composable
-private fun BaseNdSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
+private fun BaseNdCard(calc: CalculatorUiState, onPickBase: () -> Unit, onPickNd: () -> Unit, onEvent: (ShootingIntent) -> Unit) {
     SectionCard("Base shutter + ND") {
-        Stepper("Base shutter", calc.baseShutterLabel,
+        PickerRow(
+            label = "Base shutter", value = calc.baseShutterLabel, onTap = onPickBase,
             onMinus = { onEvent(ShootingIntent.NudgeBaseShutter(-1)) },
-            onPlus = { onEvent(ShootingIntent.NudgeBaseShutter(1)) })
-        Stepper("ND stops", calc.ndStops.toString(),
+            onPlus = { onEvent(ShootingIntent.NudgeBaseShutter(1)) },
+        )
+        PickerRow(
+            label = "ND stops", value = calc.ndStops.toString(), onTap = onPickNd,
             onMinus = { onEvent(ShootingIntent.SetNdStops(calc.ndStops - 1)) },
             onPlus = { onEvent(ShootingIntent.SetNdStops(calc.ndStops + 1)) },
-            plusTag = TestTags.ND_PLUS_BUTTON)
+            plusTag = TestTags.ND_PLUS_BUTTON,
+        )
     }
 }
 
 @Composable
-private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit, plusTag: String? = null) {
+private fun PickerRow(label: String, value: String, onTap: () -> Unit, onMinus: () -> Unit, onPlus: () -> Unit, plusTag: String? = null) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        // Value is the focus; the inline label keeps the row to a single line so
-        // the two steppers stay compact.
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+        // Tapping the value is the primary, fast path (opens a picker); the
+        // plus/minus buttons remain as secondary one-third-stop fine control.
+        Row(Modifier.weight(1f).clickable { onTap() }, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(32.dp)) {
-                Text("−", style = MaterialTheme.typography.titleMedium)
-            }
+            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(32.dp)) { Text("−", style = MaterialTheme.typography.titleMedium) }
             val plusModifier = Modifier.size(32.dp).let { if (plusTag != null) it.testTag(plusTag) else it }
-            FilledTonalIconButton(onClick = onPlus, modifier = plusModifier) {
-                Text("+", style = MaterialTheme.typography.titleMedium)
-            }
+            FilledTonalIconButton(onClick = onPlus, modifier = plusModifier) { Text("+", style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
 
-// MARK: - Result (adjusted / reciprocity / corrected)
+// MARK: - Result (adjusted / reciprocity / corrected) — source-specific Starts
 
 @Composable
 private fun ResultSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> Unit) {
@@ -386,8 +410,6 @@ private fun ResultSection(calc: CalculatorUiState, onEvent: (ShootingIntent) -> 
             }
             HorizontalDivider()
             val corrected = calc.correctedAction
-            // Stay truthful for limited/unsupported films: show the reason
-            // (never a fabricated value) and keep the start action disabled.
             val correctedValue = calc.correctedExposureLabel ?: corrected?.disabledReason ?: "No corrected value"
             val correctedUnavailable = calc.correctedExposureLabel == null
             ResultActionRow(
@@ -418,7 +440,6 @@ private fun ResultActionRow(
     }
 }
 
-/** Labeled Material start action (replaces the iOS circular play glyph). */
 @Composable
 private fun StartButton(enabled: Boolean, tag: String? = null, onStart: () -> Unit) {
     val modifier = if (tag != null) Modifier.testTag(tag) else Modifier
@@ -427,45 +448,360 @@ private fun StartButton(enabled: Boolean, tag: String? = null, onStart: () -> Un
 
 @Composable
 private fun ReciprocityBadge(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(50),
-    ) {
-        Text(
-            text,
-            Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(50)) {
+        Text(text, Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
     }
 }
 
-// MARK: - Custom film actions (low priority)
+// MARK: - Custom film actions (low priority support row)
 
 @Composable
 private fun CustomFilmRow(onEvent: (ShootingIntent) -> Unit) {
     var newFormula by remember { mutableStateOf(false) }
     var newTable by remember { mutableStateOf(false) }
-    // Low-priority support row: a muted caption with compact text actions, so
-    // it reads as utilities under the result rather than a new section header.
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), Arrangement.spacedBy(4.dp), Alignment.CenterVertically) {
         Text("Custom films", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = { newFormula = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
-            Text("New formula", style = MaterialTheme.typography.labelMedium)
-        }
-        TextButton(onClick = { newTable = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
-            Text("New table", style = MaterialTheme.typography.labelMedium)
-        }
+        TextButton(onClick = { newFormula = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("New formula", style = MaterialTheme.typography.labelMedium) }
+        TextButton(onClick = { newTable = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("New table", style = MaterialTheme.typography.labelMedium) }
     }
-    if (newFormula) NewFormulaDialog(onDismiss = { newFormula = false }, onCreate = { n, e, nc ->
-        onEvent(ShootingIntent.CreateCustomFormula(n, e, nc)); newFormula = false
-    })
-    if (newTable) NewTableDialog(onDismiss = { newTable = false }, onCreate = { n, anchors ->
-        onEvent(ShootingIntent.CreateCustomTable(n, anchors)); newTable = false
-    })
+    if (newFormula) NewFormulaDialog(onDismiss = { newFormula = false }, onCreate = { n, e, nc -> onEvent(ShootingIntent.CreateCustomFormula(n, e, nc)); newFormula = false })
+    if (newTable) NewTableDialog(onDismiss = { newTable = false }, onCreate = { n, anchors -> onEvent(ShootingIntent.CreateCustomTable(n, anchors)); newTable = false })
 }
 
-// MARK: - Timer cards (vertical so long names never clip the actions)
+// MARK: - Timer summary (main) + workspace (separate surface)
+
+@Composable
+private fun TimerSummaryCard(timers: TimerWorkspaceUiState, onOpen: () -> Unit) {
+    val running = timers.active.count { it.status == TimerStatus.RUNNING }
+    val paused = timers.active.count { it.status == TimerStatus.PAUSED }
+    val history = timers.completed.size
+    val summary = when {
+        running == 0 && paused == 0 && history == 0 -> "No timers yet"
+        else -> buildList {
+            if (running > 0) add("$running running")
+            if (paused > 0) add("$paused paused")
+            add("$history in history")
+        }.joinToString(" · ")
+    }
+    ElevatedCard(Modifier.fillMaxWidth().clickable { onOpen() }) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Timers", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            FilledTonalButton(onClick = onOpen, modifier = Modifier.testTag(TestTags.OPEN_TIMERS_BUTTON)) { Text("Open") }
+        }
+    }
+}
+
+/** Full-screen Timers workspace surface; keeps the full Active/History list off the main calculator. */
+@Composable
+private fun TimersWorkspace(timers: TimerWorkspaceUiState, onEvent: (ShootingIntent) -> Unit, onClose: () -> Unit) {
+    Surface(Modifier.fillMaxSize().testTag(TestTags.TIMERS_WORKSPACE), color = MaterialTheme.colorScheme.background) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Timers") },
+                    navigationIcon = { TextButton(onClick = onClose) { Text("Close") } },
+                )
+            },
+        ) { innerPadding ->
+            if (timers.active.isEmpty() && timers.completed.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                    Text("No timers yet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                ) {
+                    if (timers.active.isNotEmpty()) {
+                        item { SectionLabel("Active") }
+                        items(timers.active, key = { it.id }) { TimerCard(it, terminal = false, onEvent) }
+                    }
+                    if (timers.completed.isNotEmpty()) {
+                        item {
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                SectionLabel("History")
+                                if (timers.completed.any { it.status == TimerStatus.COMPLETED }) {
+                                    TextButton(onClick = { onEvent(ShootingIntent.ClearCompleted) }) { Text("Clear") }
+                                }
+                            }
+                        }
+                        items(timers.completed, key = { it.id }) { TimerCard(it, terminal = true, onEvent) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Fast pickers (Material bottom sheets)
+
+@Composable
+private fun BaseShutterSheet(calc: CalculatorUiState, onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text("Base shutter", Modifier.padding(start = 24.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium)
+        PickerList(
+            labels = calc.baseShutterLadder,
+            selectedIndex = calc.baseShutterIndex,
+            onSelect = { onSelect(it); onDismiss() },
+        )
+    }
+}
+
+@Composable
+private fun NdSheet(calc: CalculatorUiState, onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+    val labels = (0..ExposureScale.MAX_WHOLE_ND_STOPS).map { if (it == 0) "0 (none)" else "$it stops" }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text("ND stops", Modifier.padding(start = 24.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium)
+        PickerList(
+            labels = labels,
+            selectedIndex = calc.ndStops.coerceIn(0, ExposureScale.MAX_WHOLE_ND_STOPS),
+            onSelect = { onSelect(it); onDismiss() },
+        )
+    }
+}
+
+@Composable
+private fun TargetSheet(calc: CalculatorUiState, onSet: (Double) -> Unit, onClear: () -> Unit, onDismiss: () -> Unit) {
+    // Draft session, local to the sheet (iOS parity): Quick and Fine Tune are
+    // two views of one draft; Confirm commits it (or removes the target when
+    // the switch is off), Cancel / dismiss discards. The committed target only
+    // changes on Confirm.
+    var useTarget by remember { mutableStateOf(true) }
+    var draftSeconds by remember { mutableStateOf((calc.targetSeconds ?: TARGET_DEFAULT_SECONDS).coerceAtLeast(1.0)) }
+    var quickMode by remember { mutableStateOf(true) }
+    val editorAlpha = if (useTarget) 1f else 0.38f
+    // Open expanded so the Cancel / Confirm row is fully visible without a
+    // drag; the content is short enough that expanded is not oversized.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Quick mode expresses presets only: entering it parks the draft on the
+    // nearest preset (e.g. a 12m fine value parks at 15m) so the wheel's
+    // centered value and the readout always agree.
+    LaunchedEffect(quickMode, useTarget) {
+        if (quickMode && useTarget) {
+            draftSeconds = TargetQuickPresets.seconds[TargetQuickPresets.nearestIndex(draftSeconds)]
+        }
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            // navigationBarsPadding keeps the action row clear of the gesture
+            // bar / home indicator.
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("Target shutter", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
+
+            // Use-target-shutter switch owns removal (iOS parity): off + Confirm
+            // removes the target; Cancel after off keeps the committed value.
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Text("Use target shutter", style = MaterialTheme.typography.bodyLarge)
+                Switch(checked = useTarget, onCheckedChange = { useTarget = it })
+            }
+
+            // Prominent draft readout — the source of truth while editing.
+            // Dimmed when off to preview the removal Confirm would apply.
+            Text(
+                targetDraftLabel(draftSeconds),
+                Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = if (useTarget) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            // Quick / Fine tune mode switch — the Material analog of the iOS
+            // horizontal wheel pager.
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().alpha(editorAlpha)) {
+                SegmentedButton(
+                    selected = quickMode,
+                    onClick = { if (useTarget) quickMode = true },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                ) { Text("Quick") }
+                SegmentedButton(
+                    selected = !quickMode,
+                    onClick = { if (useTarget) quickMode = false },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                ) { Text("Fine tune") }
+            }
+
+            Box(Modifier.fillMaxWidth().height(212.dp).alpha(editorAlpha), contentAlignment = Alignment.Center) {
+                if (quickMode) {
+                    // Wheel-like: scrolling parks on the centered preset and
+                    // commits it to the draft on settle (tap is a shortcut).
+                    WheelPicker(
+                        items = TargetQuickPresets.seconds.map { targetDraftLabel(it) },
+                        selectedIndex = TargetQuickPresets.nearestIndex(draftSeconds),
+                        enabled = useTarget,
+                        onSelect = { if (useTarget) draftSeconds = TargetQuickPresets.seconds[it] },
+                    )
+                } else {
+                    TargetFineTune(draftSeconds, enabled = useTarget, onChange = { if (useTarget) draftSeconds = it })
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                Button(
+                    onClick = {
+                        if (useTarget) onSet(draftSeconds) else onClear()
+                        onDismiss()
+                    },
+                    enabled = !useTarget || draftSeconds > 0,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Confirm") }
+            }
+        }
+    }
+}
+
+/** Compact h/m/s draft label, shared with the card via [TargetDurationFormat]. */
+private fun targetDraftLabel(seconds: Double): String = TargetDurationFormat.compact(seconds)
+
+/**
+ * Fine Tune h / m / s scroll wheels — faster than tap-repeat steppers and the
+ * Material counterpart of the iOS Fine Tune wheels. Each column edits one
+ * field of the single draft, so Quick <-> Fine transfer is preserved.
+ */
+@Composable
+private fun TargetFineTune(seconds: Double, enabled: Boolean, onChange: (Double) -> Unit) {
+    val total = seconds.toInt().coerceAtLeast(0)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val s = total % 60
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TargetFineWheel("h", h, 24, enabled, Modifier.weight(1f)) { onChange((it * 3600 + m * 60 + s).toDouble()) }
+        TargetFineWheel("m", m, 60, enabled, Modifier.weight(1f)) { onChange((h * 3600 + it * 60 + s).toDouble()) }
+        TargetFineWheel("s", s, 60, enabled, Modifier.weight(1f)) { onChange((h * 3600 + m * 60 + it).toDouble()) }
+    }
+}
+
+@Composable
+private fun TargetFineWheel(label: String, value: Int, count: Int, enabled: Boolean, modifier: Modifier, onSet: (Int) -> Unit) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        WheelPicker(
+            items = (0 until count).map { it.toString() },
+            selectedIndex = value.coerceIn(0, count - 1),
+            enabled = enabled,
+            onSelect = onSet,
+        )
+    }
+}
+
+/**
+ * A lightweight wheel-style scroll selector. The item nearest the viewport
+ * center is the current selection: it is highlighted live while scrolling and
+ * committed via [onSelect] when the scroll settles (a row tap centers and
+ * selects it as a shortcut). An external [selectedIndex] change recenters the
+ * wheel without animation. This is the Target-only wheel; the shared
+ * [PickerList] (Base / ND) keeps its plain tap-to-select behavior.
+ */
+@Composable
+private fun WheelPicker(
+    items: List<String>,
+    selectedIndex: Int,
+    enabled: Boolean,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (items.isEmpty()) return
+    val itemHeight = 40.dp
+    val visible = 5
+    val state = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    // Recenter when the selection is driven from outside (first open, or
+    // entering this mode from the other one) — but never fight a live scroll.
+    // The vertical contentPadding already centers index 0 at rest, so a plain
+    // scrollToItem(index) lands the target item in the center band.
+    LaunchedEffect(selectedIndex) {
+        if (!state.isScrollInProgress) {
+            state.scrollToItem(selectedIndex.coerceIn(items.indices))
+        }
+    }
+
+    val centeredIndex by remember(items.size) {
+        derivedStateOf {
+            val info = state.layoutInfo
+            if (info.visibleItemsInfo.isEmpty()) {
+                selectedIndex
+            } else {
+                val center = (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                info.visibleItemsInfo.minByOrNull { kotlin.math.abs(it.offset + it.size / 2f - center) }?.index ?: selectedIndex
+            }
+        }
+    }
+
+    // Commit the centered item only after a real user scroll settles (a
+    // true -> false transition). The initial / programmatic-centering state
+    // is false and must not commit, or it would overwrite the draft.
+    LaunchedEffect(state, enabled) {
+        var wasScrolling = false
+        snapshotFlow { state.isScrollInProgress }.collect { scrolling ->
+            if (wasScrolling && !scrolling && enabled) onSelect(centeredIndex)
+            wasScrolling = scrolling
+        }
+    }
+
+    Box(modifier.fillMaxWidth().height(itemHeight * visible)) {
+        // Center selection band.
+        Box(
+            Modifier.align(Alignment.Center).fillMaxWidth().height(itemHeight)
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+        )
+        LazyColumn(
+            state = state,
+            userScrollEnabled = enabled,
+            contentPadding = PaddingValues(vertical = itemHeight * (visible / 2)),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            itemsIndexed(items) { index, label ->
+                val isCenter = index == centeredIndex
+                Box(
+                    Modifier.fillMaxWidth().height(itemHeight)
+                        .clickable(enabled = enabled) { scope.launch { state.animateScrollToItem(index) } },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        style = if (isCenter) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                        fontWeight = if (isCenter) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isCenter) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Vertical, scrollable selection list with the current value highlighted and scrolled into view. */
+@Composable
+private fun PickerList(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(selectedIndex, labels.size) {
+        if (selectedIndex in labels.indices) listState.scrollToItem(maxOf(0, selectedIndex - 2))
+    }
+    LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+        itemsIndexed(labels) { index, label ->
+            val isSelected = index == selectedIndex
+            val bg = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent
+            Text(
+                label,
+                Modifier.fillMaxWidth().clickable { onSelect(index) }.background(bg).padding(horizontal = 24.dp, vertical = 14.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+// MARK: - Timer cards (used inside the Timers workspace)
 
 @Composable
 private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIntent) -> Unit) {
@@ -478,9 +814,6 @@ private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIn
             }
             Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (item.metadata.isNotBlank()) Text(item.metadata, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            // Active timers lead with the large countdown; completed rows omit it
-            // (the Done pill already says so); canceled rows show the compact
-            // "Canceled / Canceled · <remaining> left" label as supporting text.
             when {
                 !terminal -> {
                     Text(item.remainingLabel, style = MaterialTheme.typography.headlineMedium)
@@ -515,11 +848,6 @@ private fun TimerCard(item: TimerItemUi, terminal: Boolean, onEvent: (ShootingIn
     }
 }
 
-/**
- * Compact outlined action for timer rows: trimmed content padding and a label
- * style keep the action row from looking bottom-heavy on the main screen while
- * the button keeps its default minimum touch height.
- */
 @Composable
 private fun TimerActionButton(label: String, onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
@@ -545,10 +873,7 @@ private fun StatusPill(label: String) {
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             content()
         }

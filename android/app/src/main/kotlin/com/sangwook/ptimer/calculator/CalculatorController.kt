@@ -12,8 +12,10 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityCalculationPolicyEvaluato
 import com.sangwook.ptimer.core.reciprocity.ReciprocityConfidencePresentationMapper
 import com.sangwook.ptimer.core.reciprocity.ReciprocityResult
 import com.sangwook.ptimer.core.timer.ExposureTimerSource
+import com.sangwook.ptimer.target.TargetDurationFormat
 import com.sangwook.ptimer.target.TargetShutterPresenter
 import java.util.Locale
+import kotlin.math.abs
 
 data class ModelOptionUi(val profileId: String, val label: String, val isSelected: Boolean)
 
@@ -52,7 +54,14 @@ data class CalculatorUiState(
     val targetStopDifference: Double? = null,
     val targetIsMatch: Boolean = false,
     val targetUnavailable: Boolean = false,
-    val targetSummary: String? = null,
+    // Two-line target presentation: a primary duration ("900s") and a secondary
+    // comparison line ("+7.1 stops" / "Matches" / "Comparison unavailable").
+    val targetDurationLabel: String? = null,
+    val targetComparisonLabel: String? = null,
+    // Full one-third-stop base-shutter ladder (camera labels) and the current
+    // selection index, so the UI can present a fast picker instead of only +/-.
+    val baseShutterLadder: List<String> = emptyList(),
+    val baseShutterIndex: Int = 0,
 )
 
 /**
@@ -241,11 +250,27 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
         )
     }
 
+    /** One-third-stop base-shutter ladder as camera labels, UI picker source. */
+    private fun baseShutterLadder(): List<String> {
+        val steps = ExposureScale.oneThirdStop.shutterSteps
+        return steps.map {
+            ExposureScale.oneThirdStopShutterCameraLabel(it.seconds) ?: calculator.formatShutter(it.seconds)
+        }
+    }
+
+    /** Index in [baseShutterLadder] closest to the current base shutter. */
+    private fun baseShutterIndex(): Int {
+        val steps = ExposureScale.oneThirdStop.shutterSteps
+        return steps.indices.minByOrNull { kotlin.math.abs(steps[it].seconds - baseShutterSeconds) } ?: 0
+    }
+
     fun uiState(): CalculatorUiState {
         val adjusted = adjustedShutterSeconds()
         val adjustedLabel = calculator.formatShutter(adjusted)
         val baseLabel = ExposureScale.oneThirdStopShutterCameraLabel(baseShutterSeconds)
             ?: calculator.formatShutter(baseShutterSeconds)
+        val ladder = baseShutterLadder()
+        val baseIndex = baseShutterIndex()
         val film = film()
             ?: run {
                 val tf = targetFields(adjusted)
@@ -255,7 +280,9 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
                     adjustedAction = adjustedAction(), correctedAction = null, targetAction = targetAction(),
                     availableModels = emptyList(),
                     targetSeconds = tf.seconds, targetStopDifference = tf.stop, targetIsMatch = tf.match,
-                    targetUnavailable = tf.unavailable, targetSummary = tf.summary,
+                    targetUnavailable = tf.unavailable,
+                    targetDurationLabel = tf.durationLabel, targetComparisonLabel = tf.comparisonLabel,
+                    baseShutterLadder = ladder, baseShutterIndex = baseIndex,
                 )
             }
 
@@ -294,24 +321,33 @@ class CalculatorController(private val catalog: List<FilmIdentity>) {
             isCustomTable = isCustomTable, fittedPreviewSummary = fittedSummary,
             selectedCustomFilmId = if (film.kind == "custom") film.id else null,
             targetSeconds = tf.seconds, targetStopDifference = tf.stop, targetIsMatch = tf.match,
-            targetUnavailable = tf.unavailable, targetSummary = tf.summary,
+            targetUnavailable = tf.unavailable,
+            targetDurationLabel = tf.durationLabel, targetComparisonLabel = tf.comparisonLabel,
+            baseShutterLadder = ladder, baseShutterIndex = baseIndex,
         )
     }
 
     private data class TargetFields(
-        val seconds: Double?, val stop: Double?, val match: Boolean, val unavailable: Boolean, val summary: String?,
+        val seconds: Double?, val stop: Double?, val match: Boolean, val unavailable: Boolean,
+        val durationLabel: String?, val comparisonLabel: String?,
     )
 
     private fun targetFields(comparisonValue: Double?): TargetFields {
-        val t = targetSeconds ?: return TargetFields(null, null, false, false, null)
+        val t = targetSeconds ?: return TargetFields(null, null, false, false, null, null)
         val cmp = TargetShutterPresenter.compare(t, comparisonValue)
-        val label = calculator.formatShutter(t)
-        val summary = when {
-            cmp.isUnavailable -> "Target $label · comparison unavailable"
-            cmp.isMatch -> "Target $label · matches"
-            else -> "Target $label · ${String.format(Locale.ROOT, "%+.1f", cmp.stopDifference)} stops"
+        val durationLabel = TargetDurationFormat.compact(t)
+        val comparisonLabel = when {
+            cmp.isUnavailable -> "Comparison unavailable"
+            cmp.isMatch -> "0 stops"
+            else -> {
+                val stops = cmp.stopDifference ?: 0.0
+                // Signed like iOS: "+1.0 stops" / "−2.5 stops" (true minus,
+                // not a hyphen). The arrow + color carry direction in the card.
+                val sign = if (stops > 0) "+" else "−"
+                "$sign${String.format(Locale.ROOT, "%.1f", abs(stops))} stops"
+            }
         }
-        return TargetFields(t, cmp.stopDifference, cmp.isMatch, cmp.isUnavailable, summary)
+        return TargetFields(t, cmp.stopDifference, cmp.isMatch, cmp.isUnavailable, durationLabel, comparisonLabel)
     }
 
     private fun authorityLabel(profile: ReciprocityProfile): String = when (profile.source.authority) {

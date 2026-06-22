@@ -11,4 +11,6 @@ object TestTags {
     const val START_ADJUSTED_BUTTON = "StartAdjustedButton"
     const val ACTIVE_TIMER_ROW = "ActiveTimerRow"
     const val ND_PLUS_BUTTON = "NdPlusButton"
+    const val OPEN_TIMERS_BUTTON = "OpenTimersButton"
+    const val TIMERS_WORKSPACE = "TimersWorkspace"
 }

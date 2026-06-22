@@ -40,6 +40,7 @@ data class SlotsUiState(val slots: List<SlotChipUi>, val activeLabel: String)
 /** One-way UI events for the shooting/timer workspace. */
 sealed interface ShootingIntent {
     data class NudgeBaseShutter(val delta: Int) : ShootingIntent
+    data class SelectBaseShutterIndex(val index: Int) : ShootingIntent
     data class SetNdStops(val stops: Int) : ShootingIntent
     data class SelectFilm(val id: String?) : ShootingIntent
     data object ClearFilm : ShootingIntent
@@ -227,6 +228,7 @@ class ShootingViewModel(
                     .coerceIn(0, ExposureScale.oneThirdStop.shutterSteps.lastIndex)
                 calc.setBaseShutterLadderIndex(next); afterCalcChange()
             }
+            is ShootingIntent.SelectBaseShutterIndex -> { calc.setBaseShutterLadderIndex(intent.index); afterCalcChange() }
             is ShootingIntent.SetNdStops -> { calc.setNdStops(intent.stops); afterCalcChange() }
             is ShootingIntent.SelectFilm -> { calc.selectFilm(intent.id); afterCalcChange() }
             ShootingIntent.ClearFilm -> { calc.clearFilm(); afterCalcChange() }

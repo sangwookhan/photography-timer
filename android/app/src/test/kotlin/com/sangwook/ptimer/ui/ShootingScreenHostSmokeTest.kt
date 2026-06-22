@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.sangwook.ptimer.calculator.CalculatorUiState
 import com.sangwook.ptimer.calculator.StartActionState
@@ -126,10 +127,14 @@ class ShootingScreenHostSmokeTest {
     }
 
     @Test
-    fun hostSmoke_rendersActiveTimerRowWithSourceIdentity() {
+    fun hostSmoke_opensTimersWorkspaceShowingActiveRowWithSourceIdentity() {
+        // The main scroll now shows only a timer summary; the full active row
+        // lives in the Timers workspace, opened via the summary's Open button.
         renderReady(timersWithActive())
         composeRule.onNodeWithTag(TestTags.SHOOTING_SCREEN)
-            .performScrollToNode(hasTestTag(TestTags.ACTIVE_TIMER_ROW))
+            .performScrollToNode(hasTestTag(TestTags.OPEN_TIMERS_BUTTON))
+        composeRule.onNodeWithTag(TestTags.OPEN_TIMERS_BUTTON).performClick()
+        composeRule.onNodeWithTag(TestTags.TIMERS_WORKSPACE).assertExists()
         composeRule.onNodeWithTag(TestTags.ACTIVE_TIMER_ROW).assertExists()
         composeRule.onNodeWithText("Camera 1 · Fomapan 100 Classic").assertExists() // title identity
         composeRule.onNodeWithText("Adjusted Shutter · 34.1s").assertExists()        // source line

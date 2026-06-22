@@ -21,6 +21,20 @@ class CalculatorControllerTest {
     private fun controller() = CalculatorController(catalog)
 
     @Test
+    fun baseShutterLadderIsExposedAndIndexSelectionDrivesTheValue() {
+        val c = controller()
+        val ladder = c.uiState().baseShutterLadder
+        assertTrue(ladder.size > 5)
+        // Selecting a ladder index sets the corresponding base shutter and the
+        // reported index round-trips, so a fast picker can drive selection.
+        val target = ladder.size / 2
+        c.setBaseShutterLadderIndex(target)
+        val s = c.uiState()
+        assertEquals(target, s.baseShutterIndex)
+        assertEquals(ladder[target], s.baseShutterLabel)
+    }
+
+    @Test
     fun noFilmExposesAdjustedStartAndNoCorrected() {
         val c = controller()
         c.setBaseShutterSeconds(1.0); c.setNdStops(5)

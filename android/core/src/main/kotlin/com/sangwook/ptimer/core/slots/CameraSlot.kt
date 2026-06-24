@@ -1,11 +1,14 @@
 package com.sangwook.ptimer.core.slots
 
+import kotlinx.serialization.Serializable
+
 /**
  * Stable identity for a shooting-session camera slot. The MVP ships
  * Camera 1 through Camera 4; identities stay stable across slot switches
  * and persist into timer metadata so a timer can be associated with the
  * camera that started it. (iOS: CameraSlotID.)
  */
+@Serializable
 enum class CameraSlotId {
     camera1,
     camera2,
@@ -54,6 +57,7 @@ data class CameraSlotIdentity(
  * profile ids) rather than re-deriving seconds. (iOS:
  * CameraSlotCalculatorSnapshot.)
  */
+@Serializable
 data class SlotCalculatorSnapshot(
     val shutterIndex: Int,
     val ndIndex: Int,
@@ -147,6 +151,12 @@ class CameraSlotSession(
         activeSlotId = targetSlotId
         return incoming
     }
+
+    /** Snapshot of every inactive slot (the active slot's live state lives on the caller). */
+    fun currentInactiveSnapshots(): Map<CameraSlotId, SlotCalculatorSnapshot> = inactiveSnapshots.toMap()
+
+    /** Current photographer-supplied display names, keyed by slot. */
+    fun currentCustomNames(): Map<CameraSlotId, String> = customNames.toMap()
 
     private fun sanitizeCustomNames(names: Map<CameraSlotId, String>): Map<CameraSlotId, String> {
         val allowed = availableSlots.toSet()

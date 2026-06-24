@@ -16,7 +16,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -53,16 +52,16 @@ private val endFormatter: DateTimeFormatter =
 fun TimerListScreen(
     state: ShootingUiState,
     onEvent: (ShootingIntent) -> Unit,
-    onStartSample: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Timers") }) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onStartSample) {
-                Text("+", style = MaterialTheme.typography.headlineSmall)
-            }
+        topBar = {
+            TopAppBar(
+                title = { Text("Timers") },
+                navigationIcon = { TextButton(onClick = onBack) { Text("‹ Shooting") } },
+            )
         },
     ) { padding ->
         LazyColumn(

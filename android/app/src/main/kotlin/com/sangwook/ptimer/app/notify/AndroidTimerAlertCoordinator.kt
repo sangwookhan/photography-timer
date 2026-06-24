@@ -1,0 +1,60 @@
+package com.sangwook.ptimer.app.notify
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import java.util.UUID
+
+/**
+ * Reconciles a [TimerAlertPlan] with the OS: schedules one exact AlarmManager
+ * alarm per running timer (→ [TimerCompletionReceiver] posts the alert + sound
+ * at the end instant, even backgrounded) and starts/updates/stops the ongoing
+ * [TimerForegroundService]. Stateful only in the set of currently scheduled
+ * timer ids so removed timers' alarms get cancelled. Verify on a device.
+ */
+class AndroidTimerAlertCoordinator(private val context: Context) {
+    private val alarmManager = context.getSystemService(AlarmManager::class.java)
+    private val scheduled = mutableSetOf<UUID>()
+
+    fun sync(plan: TimerAlertPlan) {
+        val desired = plan.alarms.associateBy { it.timerId }
+
+        // Cancel alarms for timers no longer running.
+        (scheduled - desired.keys).forEach { cancelAlarm(it) }
+        // Schedule / refresh the desired alarms.
+        desired.values.forEach { scheduleAlarm(it) }
+        scheduled.clear()
+        scheduled.addAll(desired.keys)
+
+        // Ongoing foreground notification mirrors "any timer running".
+        val ongoing = plan.ongoing
+        if (ongoing != null) TimerForegroundService.start(context, ongoing) else TimerForegroundService.stop(context)
+    }
+
+    private fun scheduleAlarm(alarm: CompletionAlarm) {
+        val pending = pendingIntent(alarm.timerId, alarm.title, create = true) ?: return
+        // Exact when allowed (Android 12+ gates it behind a permission); fall
+        // back to an inexact allow-while-idle alarm rather than risk a crash.
+        val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
+        if (canExact) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending)
+        } else {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending)
+        }
+    }
+
+    private fun cancelAlarm(timerId: UUID) {
+        pendingIntent(timerId, title = "", create = false)?.let { alarmManager.cancel(it) }
+    }
+
+    private fun pendingIntent(timerId: UUID, title: String, create: Boolean): PendingIntent? {
+        val intent = Intent(context, TimerCompletionReceiver::class.java)
+            .putExtra(TimerCompletionReceiver.EXTRA_TIMER_ID, timerId.toString())
+            .putExtra(TimerCompletionReceiver.EXTRA_TITLE, title)
+        val flags = (if (create) PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_NO_CREATE) or
+            PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getBroadcast(context, timerId.hashCode(), intent, flags)
+    }
+}

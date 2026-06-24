@@ -2,10 +2,14 @@ package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.app.calc.ShootingCalculator
 import com.sangwook.ptimer.app.calc.ShootingResult
+import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
+import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModels
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
+import com.sangwook.ptimer.core.reciprocity.ReciprocityAuthority
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenter
 import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
@@ -19,7 +23,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-data class FilmOption(val id: String?, val name: String)
+data class FilmOption(
+    val id: String?,
+    val name: String,
+    val manufacturer: String? = null,
+    val iso: Int? = null,
+    val isUnofficial: Boolean = false,
+    val hasReciprocityCurve: Boolean = false,
+    val isCustom: Boolean = false,
+)
+
 data class ModelOption(val id: String, val label: String)
 data class SlotTab(val id: CameraSlotId, val displayName: String, val isActive: Boolean)
 
@@ -55,7 +68,7 @@ data class CalculatorUiState(
  * deterministic and unit-testable.
  */
 class CalculatorController(
-    private val films: List<FilmIdentity>,
+    private var films: List<FilmIdentity>,
     private val calculator: ShootingCalculator = ShootingCalculator(),
     private val exposure: ExposureCalculator = ExposureCalculator(),
     private val onStart: (duration: Double, identity: TimerIdentity) -> Unit = { _, _ -> },
@@ -89,6 +102,48 @@ class CalculatorController(
     }
 
     fun selectProfile(id: String) { selectedProfileId = id; publish() }
+
+    /** Replaces the available film list (preset + custom library) and republishes. */
+    fun setFilms(list: List<FilmIdentity>) { films = list; publish() }
+
+    // --- Custom-film editing (delegated to CustomFilmEditingPresenter) ---
+
+    fun previewTableFit(input: CustomTableFilmInput) =
+        CustomFilmEditingPresenter.previewTableFit(input)
+
+    fun buildFormulaFilmFromTableInput(
+        input: CustomTableFilmInput,
+        filmId: String,
+        profileId: String,
+        referenceTableFilmId: String? = null,
+    ) = CustomFilmEditingPresenter.buildFormulaFilmFromTableInput(input, filmId, profileId, referenceTableFilmId)
+
+    fun referencePoints(input: CustomFormulaFilmInput, anchors: List<Pair<Double, Double>>) =
+        CustomFilmEditingPresenter.referencePoints(input, anchors)
+
+    fun tableAnchorsOf(filmId: String?) = CustomFilmEditingPresenter.tableAnchorsOf(films, filmId)
+
+    fun previewFormulaGraph(input: CustomFormulaFilmInput) =
+        CustomFilmEditingPresenter.previewFormulaGraph(input, currentAdjustedSeconds())
+
+    fun previewTableGraph(input: CustomTableFilmInput) =
+        CustomFilmEditingPresenter.previewTableGraph(input, currentAdjustedSeconds())
+
+    fun previewFormulaCheckpoints(input: CustomFormulaFilmInput) =
+        CustomFilmEditingPresenter.previewFormulaCheckpoints(input)
+
+    fun previewTableCheckpoints(input: CustomTableFilmInput) =
+        CustomFilmEditingPresenter.previewTableCheckpoints(input)
+
+    fun calculationBasis(input: CustomFormulaFilmInput) =
+        CustomFilmEditingPresenter.calculationBasis(input)
+
+    private fun currentAdjustedSeconds(): Double =
+        calculator.result(shutterIndex, ndIndex, null).adjustedShutterSeconds
+
+    fun customFilmDraft(filmId: String) = CustomFilmEditingPresenter.customFilmDraft(films, filmId)
+
+    fun customFilmProfileId(filmId: String) = CustomFilmEditingPresenter.customFilmProfileId(films, filmId)
 
     /** Sets the active slot's Target Shutter duration; a non-finite/≤0 value clears it. */
     fun setTargetShutter(seconds: Double?) {
@@ -215,7 +270,20 @@ class CalculatorController(
             ndLabels = ndLabels,
             ndIndex = ndIndex,
             filmOptions = listOf(FilmOption(null, "No film")) +
-                films.map { FilmOption(it.id, it.canonicalStockName) },
+                films.map { f ->
+                    val primary = f.profiles.firstOrNull()
+                    FilmOption(
+                        id = f.id,
+                        name = f.canonicalStockName,
+                        manufacturer = f.manufacturer,
+                        iso = f.iso,
+                        isUnofficial = primary?.source?.authority == ReciprocityAuthority.unofficial,
+                        hasReciprocityCurve = primary?.rules?.any {
+                            it.formula != null || it.tableInterpolation != null
+                        } == true,
+                        isCustom = f.kind == FilmIdentityKind.custom,
+                    )
+                },
             selectedFilmId = selectedFilmId,
             selectedFilmName = film?.canonicalStockName ?: "No film",
             modelOptions = modelOptions,

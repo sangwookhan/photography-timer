@@ -1,9 +1,11 @@
-package com.sangwook.ptimer.app.ui.component
+package com.sangwook.ptimer.ui.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -63,6 +65,12 @@ fun ReciprocityGraphView(graph: ReciprocityGraph, modifier: Modifier) {
         graph.sourceRangeFraction?.let { f ->
             drawRect(redBand, topLeft = Offset(px(f), plotTop), size = Size((1f - f.toFloat()) * plotW, plotH))
         }
+        // Not-recommended manufacturer boundary: a vertical danger line (iOS marks
+        // the metered exposure its stop-signal flags).
+        graph.notRecommendedBoundaryFraction?.let { f ->
+            val x = px(f)
+            drawLine(StatusDanger, Offset(x, plotTop), Offset(x, plotTop + plotH), strokeWidth = 1.5.dp.toPx())
+        }
 
         graph.xTicks.forEach { t ->
             val x = px(t.position)
@@ -85,6 +93,9 @@ fun ReciprocityGraphView(graph: ReciprocityGraph, modifier: Modifier) {
             drawPath(path, curveColor, style = Stroke(width = 2.dp.toPx()))
         }
         graph.anchors.forEach { p ->
+            drawCircle(anchorColor, radius = 3.5.dp.toPx(), center = Offset(px(p.x), py(p.y)))
+        }
+        graph.referenceMarkers.forEach { p ->
             drawCircle(anchorColor, radius = 3.5.dp.toPx(), center = Offset(px(p.x), py(p.y)))
         }
         graph.current?.let { p ->
@@ -112,12 +123,28 @@ fun ReciprocityGraphView(graph: ReciprocityGraph, modifier: Modifier) {
     }
 }
 
+/**
+ * Legend chips built from the graph's own geometry, matching iOS
+ * `FilmModeDetailsDisplayStates.legendChipLabels`. Each chip reuses the exact
+ * color the canvas draws for that element so the key reads against the plot.
+ * Ordering mirrors iOS `legendChipLabels`.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun GraphLegend(showAnchors: Boolean) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        LegendItem(MaterialTheme.colorScheme.primary, "Calculation curve")
-        if (showAnchors) LegendItem(StatusSuccess, "Source anchors")
-        LegendItem(MaterialTheme.colorScheme.primary, "Current result")
+fun GraphLegend(graph: ReciprocityGraph) {
+    val curveColor = MaterialTheme.colorScheme.primary
+    val hasReference = graph.anchors.isNotEmpty() || graph.referenceMarkers.isNotEmpty()
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        LegendItem(curveColor, "Calculation curve")
+        LegendItem(curveColor, "Current result")
+        if (hasReference) LegendItem(StatusSuccess, "Source reference")
+        if (graph.noCorrectionFraction != null) LegendItem(StatusSuccess.copy(alpha = 0.2f), "No-correction range")
+        if (graph.notRecommendedBoundaryFraction != null) LegendItem(StatusDanger, "Not-recommended boundary")
+        if (graph.sourceRangeFraction != null) LegendItem(StatusDanger.copy(alpha = 0.2f), "Beyond source range")
+        if (graph.currentOutOfRange) LegendItem(StatusWarning, "Outside visible range")
     }
 }
 

@@ -1,54 +1,54 @@
 package com.sangwook.ptimer.app.ui.shooting
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clip
 import com.sangwook.ptimer.core.customfilm.CustomFilmCheckpointRow
 import com.sangwook.ptimer.core.customfilm.CustomFilmReferencePointRow
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
@@ -61,6 +61,7 @@ import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 
+
 /**
  * Tier-2 shooting screen: film selection + alternate model, the shared
  * SnapWheel for base shutter and ND, the adjusted/corrected result with its
@@ -70,7 +71,6 @@ import com.sangwook.ptimer.app.vm.CustomFilmDraft
 @Composable
 fun ShootingScreen(
     state: CalculatorUiState,
-    timersCount: Int,
     onShutterIndex: (Int) -> Unit,
     onNdIndex: (Int) -> Unit,
     onSelectFilm: (String?) -> Unit,
@@ -79,7 +79,10 @@ fun ShootingScreen(
     onRenameSlot: (String?) -> Unit,
     onSetTarget: (Double?) -> Unit,
     onStartTarget: () -> Unit,
+    onStartAdjusted: () -> Unit,
+    onStartCorrected: () -> Unit,
     onOpenDetails: () -> Unit,
+    onReset: () -> Unit,
     onCreateCustomFilm: (CustomFormulaFilmInput, editFilmId: String?) -> Boolean,
     onCreateCustomTableFilm: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onEditCustomFilm: (String) -> CustomFilmDraft?,
@@ -92,20 +95,21 @@ fun ShootingScreen(
     onPreviewTableFit: (CustomTableFilmInput) -> CustomTableFittedFormula.Outcome?,
     onCreateFormulaFromTable: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
-    onStart: () -> Unit,
-    onOpenTimers: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showFilmPicker by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
+    // Non-null when editing an existing custom film (prefilled dialog, save in place).
+    var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
     var showTarget by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
-    var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
 
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
-    // Swiping settles on a page -> make that camera active (capture-on-switch);
-    // the reverse effect realigns the pager when the slot changes elsewhere.
+
+    // Swiping the pager settles on a page → make that camera the active slot
+    // (capture-on-switch). The reverse effect keeps the pager aligned when the
+    // slot changes from elsewhere (e.g. a restored session).
     LaunchedEffect(pagerState.settledPage) {
         val idx = pagerState.settledPage
         if (idx in state.slots.indices) onSelectSlot(state.slots[idx].id)
@@ -116,87 +120,131 @@ fun ShootingScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                state.activeSlotName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { showRename = true },
-            )
-            OutlinedButton(onClick = onOpenTimers) { Text("Timers ($timersCount)") }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        PagerDots(count = state.slots.size, current = pagerState.currentPage)
-        Spacer(Modifier.height(8.dp))
-
-        // Each page renders its own slot's state so a swipe reveals that camera;
-        // editing controls still target the active slot, which the settle handler
-        // keeps aligned with the on-screen page (capture-on-switch).
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
-            val pageState = state.slotStates.getOrNull(page) ?: state
-            Column {
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    Scaffold(modifier = modifier) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+            ) { page ->
+                // Each page renders its OWN slot's state so a swipe reveals the
+                // destination camera immediately (no clone-until-settle). Editing
+                // controls still target the active slot, which the settle handler
+                // keeps aligned with the on-screen page (capture-on-switch).
+                // No vertical scroll: the whole calculator must fit at a glance.
+                val pageState = state.slotStates.getOrNull(page) ?: state
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
                 ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Film", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(pageState.selectedFilmName, style = MaterialTheme.typography.titleMedium)
+                    // Header: camera name (tap to rename) + Reset.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.clickable { showRename = true },
+                        ) {
+                            Text(
+                                pageState.activeSlotName,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "Rename camera",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = onReset) { Text("Reset") }
                     }
-                }
 
-                if (pageState.modelOptions.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        pageState.modelOptions.forEach { option ->
-                            FilterChip(
-                                selected = option.id == pageState.selectedProfileId,
-                                onClick = { onSelectProfile(option.id) },
-                                label = { Text(option.label) },
+                    // Film selector
+                    Text("Film", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(pageState.selectedFilmName, style = MaterialTheme.typography.titleMedium)
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Choose film",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-                }
 
-                Spacer(Modifier.height(16.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Base shutter", style = MaterialTheme.typography.labelMedium)
-                        SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterIndex)
+                    if (pageState.modelOptions.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            pageState.modelOptions.forEach { option ->
+                                FilterChip(
+                                    selected = option.id == pageState.selectedProfileId,
+                                    onClick = { onSelectProfile(option.id) },
+                                    label = { Text(option.label) },
+                                )
+                            }
+                        }
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("ND (stops)", style = MaterialTheme.typography.labelMedium)
-                        SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdIndex)
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Target Shutter row (value + stop-diff + ▶), tap to edit.
+                    TargetShutterRow(
+                        display = pageState.targetDisplay,
+                        onEdit = { showTarget = true },
+                        onStartTarget = onStartTarget,
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Base shutter + ND wheels (compact: 3 visible rows).
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text("Base Shutter", style = MaterialTheme.typography.labelMedium)
+                                SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterIndex, visibleCount = 3, itemHeight = 34.dp)
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text("ND Filter", style = MaterialTheme.typography.labelMedium)
+                                SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdIndex, visibleCount = 3, itemHeight = 34.dp)
+                            }
+                        }
                     }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    ResultCard(
+                        state = pageState,
+                        onStartAdjusted = onStartAdjusted,
+                        onStartCorrected = onStartCorrected,
+                        onOpenDetails = onOpenDetails,
+                    )
                 }
-
-                Spacer(Modifier.height(16.dp))
-
-                ResultBlock(pageState, onOpenDetails)
-
-                Spacer(Modifier.height(12.dp))
-
-                TargetShutterRow(
-                    display = pageState.targetDisplay,
-                    onEdit = { showTarget = true },
-                    onStartTarget = onStartTarget,
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                Button(
-                    onClick = onStart,
-                    enabled = pageState.startEnabled,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Start timer") }
             }
+
+            // Page dots + "N of M" at the bottom; swipe to change camera.
+            PagerDots(count = state.slots.size, current = pagerState.currentPage)
+            Spacer(Modifier.height(8.dp))
         }
     }
 
@@ -259,14 +307,117 @@ fun ShootingScreen(
     }
 }
 
+
+/** Small circular start button used next to each computed exposure value. */
 @Composable
 internal fun StartButton(onClick: () -> Unit, enabled: Boolean) {
+    // No explicit size: the default 40dp container keeps the 48dp interactive
+    // touch target Material enforces (the old size(32) defeated it).
     FilledIconButton(onClick = onClick, enabled = enabled) {
         Icon(
             Icons.Filled.PlayArrow,
             contentDescription = "Start timer",
             modifier = Modifier.size(20.dp),
         )
+    }
+}
+
+@Composable
+private fun ResultCard(
+    state: CalculatorUiState,
+    onStartAdjusted: () -> Unit,
+    onStartCorrected: () -> Unit,
+    onOpenDetails: () -> Unit,
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+            ResultRow(
+                label = "Adjusted Shutter",
+                value = state.adjustedText,
+                secondary = state.adjustedSecondsText,
+                valueColor = MaterialTheme.colorScheme.onSurface,
+                numeric = true,
+                onStart = onStartAdjusted,
+                startEnabled = state.adjustedStartEnabled,
+            )
+
+            if (state.hasFilm) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                // Reciprocity status + details entry (ⓘ) between the two values.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Reciprocity", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.confidenceLabel?.let { Pill(it) }
+                        IconButton(onClick = onOpenDetails) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = "Reciprocity details",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                ResultRow(
+                    label = "Corrected Exposure",
+                    value = state.correctedText ?: "No corrected value",
+                    secondary = state.correctedSecondsText,
+                    valueColor = if (state.correctedText == null) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
+                    numeric = state.correctedText != null,
+                    onStart = onStartCorrected,
+                    startEnabled = state.correctedStartEnabled,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResultRow(
+    label: String,
+    value: String,
+    secondary: String?,
+    valueColor: androidx.compose.ui.graphics.Color,
+    numeric: Boolean,
+    onStart: () -> Unit,
+    startEnabled: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.weight(1f))
+        // Value + the whole-seconds comparison sit side by side on one line so
+        // the row height never changes whether or not the seconds are shown
+        // (iOS dual-duration display).
+        secondary?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontFamily = if (numeric) FontFamily.Monospace else FontFamily.Default,
+            color = valueColor,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+        )
+        StartButton(onClick = onStart, enabled = startEnabled)
     }
 }
 
@@ -279,6 +430,33 @@ internal fun Pill(text: String) {
     ) {
         Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
     }
+}
+
+/** Manufacturer section header in the film picker (iOS groups films by maker). */
+@Composable
+private fun RenameSlotDialog(
+    initial: String,
+    onConfirm: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename camera") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                label = { Text("Camera name") },
+            )
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("Save") } },
+        dismissButton = {
+            // Empty name clears the custom label back to the canonical default.
+            TextButton(onClick = { onConfirm(null) }) { Text("Reset") }
+        },
+    )
 }
 
 @Composable
@@ -308,62 +486,5 @@ internal fun PagerDots(count: Int, current: Int) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun RenameSlotDialog(
-    initial: String,
-    onConfirm: (String?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var text by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Rename camera") },
-        text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                label = { Text("Camera name") },
-            )
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("Save") } },
-        dismissButton = {
-            // Empty name clears the custom label back to the canonical default.
-            TextButton(onClick = { onConfirm(null) }) { Text("Reset") }
-        },
-    )
-}
-
-@Composable
-private fun ResultBlock(state: CalculatorUiState, onOpenDetails: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text("Adjusted shutter", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(state.adjustedText, style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Monospace)
-
-            if (state.correctedText != null) {
-                Spacer(Modifier.height(8.dp))
-                Text("Corrected exposure", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(state.correctedText, style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Monospace)
-            }
-            if (state.confidenceLabel != null) {
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(state.confidenceLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    TextButton(onClick = onOpenDetails) { Text("Details") }
-                }
-            }
-            if (state.hint != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(state.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
-        }
     }
 }

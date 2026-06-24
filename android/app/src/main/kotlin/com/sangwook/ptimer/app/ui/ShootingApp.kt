@@ -9,9 +9,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
+import com.sangwook.ptimer.app.notify.TimerAlertPlanner
+import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
 import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
+import com.sangwook.ptimer.core.timer.TimerStatus
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.TimerListScreen
@@ -49,11 +59,37 @@ fun ShootingApp() {
 
     LaunchedEffect(Unit) { viewModel.restore() }
 
+    // Notifications: ensure channels, request POST_NOTIFICATIONS (API 33+), and
+    // reconcile the AlarmManager alarms + ongoing foreground service with state.
+    val alertCoordinator = remember { AndroidTimerAlertCoordinator(context) }
+    val clockFormatter = remember {
+        DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* posting is guarded; nothing to do on the result */ }
+    LaunchedEffect(Unit) {
+        TimerNotifications.ensureChannels(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val timerState by viewModel.uiState.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(timerState.active.size, viewModel.hasRunningTimers) {
         if (viewModel.hasRunningTimers) coordinator.start() else coordinator.stop()
+    }
+
+    // Re-sync alarms/service only when the running set (ids + end instants)
+    // changes — not on every per-second tick.
+    val runningSignature = timerState.active
+        .filter { it.status == TimerStatus.running }
+        .joinToString(",") { "${it.id}@${it.endDate.toEpochMilli()}" }
+    LaunchedEffect(runningSignature) {
+        val plan = TimerAlertPlanner.plan(timerState.active) { clockFormatter.format(java.time.Instant.ofEpochMilli(it)) }
+        alertCoordinator.sync(plan)
     }
 
     var showTimers by remember { mutableStateOf(false) }
@@ -83,7 +119,7 @@ fun ShootingApp() {
             onSelectSlot = controller::selectSlot,
             onRenameSlot = controller::renameActiveSlot,
             onSetTarget = controller::setTargetShutter,
-            onStartTarget = controller::startFromTarget,
+            onStartTarget = { controller.startFromTarget(); showTimers = true },
             onOpenDetails = { details = controller.detailsState() },
             onCreateCustomFilm = { input, editId ->
                 val film = CustomFilmBuilder.buildFormulaFilm(
@@ -154,7 +190,7 @@ fun ShootingApp() {
                 }
             },
             onReferencePoints = { input, anchors -> controller.referencePoints(input, anchors) },
-            onStart = controller::start,
+            onStart = { controller.start(); showTimers = true },
             onOpenTimers = { showTimers = true },
         )
     }

@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -36,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +102,20 @@ fun ShootingScreen(
     var showEditor by remember { mutableStateOf(false) }
     var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
 
+    val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
+    // Swiping settles on a page -> make that camera active (capture-on-switch);
+    // the reverse effect realigns the pager when the slot changes elsewhere.
+    LaunchedEffect(pagerState.settledPage) {
+        val idx = pagerState.settledPage
+        if (idx in state.slots.indices) onSelectSlot(state.slots[idx].id)
+    }
+    LaunchedEffect(activeIndex) {
+        if (!pagerState.isScrollInProgress && pagerState.currentPage != activeIndex) {
+            pagerState.animateScrollToPage(activeIndex)
+        }
+    }
+
     Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -115,77 +132,72 @@ fun ShootingScreen(
         }
 
         Spacer(Modifier.height(8.dp))
+        PagerDots(count = state.slots.size, current = pagerState.currentPage)
+        Spacer(Modifier.height(8.dp))
 
-        // Camera-slot pager: switching captures the active slot's inputs and
-        // restores the target slot's. Tap the camera name to rename it.
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(state.slots, key = { it.id }) { slot ->
-                FilterChip(
-                    selected = slot.isActive,
-                    onClick = { onSelectSlot(slot.id) },
-                    label = { Text(slot.displayName) },
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Film selector
-        Card(
-            modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Film", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(state.selectedFilmName, style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        if (state.modelOptions.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                state.modelOptions.forEach { option ->
-                    FilterChip(
-                        selected = option.id == state.selectedProfileId,
-                        onClick = { onSelectProfile(option.id) },
-                        label = { Text(option.label) },
-                    )
+        // Each page renders its own slot's state so a swipe reveals that camera;
+        // editing controls still target the active slot, which the settle handler
+        // keeps aligned with the on-screen page (capture-on-switch).
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
+            val pageState = state.slotStates.getOrNull(page) ?: state
+            Column {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Film", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(pageState.selectedFilmName, style = MaterialTheme.typography.titleMedium)
+                    }
                 }
+
+                if (pageState.modelOptions.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        pageState.modelOptions.forEach { option ->
+                            FilterChip(
+                                selected = option.id == pageState.selectedProfileId,
+                                onClick = { onSelectProfile(option.id) },
+                                label = { Text(option.label) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Base shutter", style = MaterialTheme.typography.labelMedium)
+                        SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterIndex)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("ND (stops)", style = MaterialTheme.typography.labelMedium)
+                        SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdIndex)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                ResultBlock(pageState, onOpenDetails)
+
+                Spacer(Modifier.height(12.dp))
+
+                TargetShutterRow(
+                    display = pageState.targetDisplay,
+                    onEdit = { showTarget = true },
+                    onStartTarget = onStartTarget,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Button(
+                    onClick = onStart,
+                    enabled = pageState.startEnabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Start timer") }
             }
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Base shutter", style = MaterialTheme.typography.labelMedium)
-                SnapWheel(state.shutterLabels, state.shutterIndex, onShutterIndex)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("ND (stops)", style = MaterialTheme.typography.labelMedium)
-                SnapWheel(state.ndLabels, state.ndIndex, onNdIndex)
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        ResultBlock(state, onOpenDetails)
-
-        Spacer(Modifier.height(12.dp))
-
-        TargetShutterRow(
-            display = state.targetDisplay,
-            onEdit = { showTarget = true },
-            onStartTarget = onStartTarget,
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(
-            onClick = onStart,
-            enabled = state.startEnabled,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Start timer") }
     }
 
     if (showFilmPicker) {

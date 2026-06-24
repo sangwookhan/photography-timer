@@ -68,6 +68,8 @@ fun ShootingApp() {
             onSelectProfile = controller::selectProfile,
             onSelectSlot = controller::selectSlot,
             onRenameSlot = controller::renameActiveSlot,
+            onSetTarget = controller::setTargetShutter,
+            onStartTarget = controller::startFromTarget,
             onStart = controller::start,
             onOpenTimers = { showTimers = true },
         )

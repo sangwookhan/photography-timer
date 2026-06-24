@@ -59,6 +59,8 @@ data class SlotCalculatorSnapshot(
     val ndIndex: Int,
     val selectedFilmId: String?,
     val selectedProfileId: String?,
+    /** Per-slot Target Shutter duration in seconds; `null` when unset. */
+    val targetSeconds: Double? = null,
 )
 
 /**

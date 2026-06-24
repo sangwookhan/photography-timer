@@ -10,6 +10,8 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotSession
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
+import com.sangwook.ptimer.core.target.TargetShutterDisplayState
+import com.sangwook.ptimer.core.target.TargetShutterPresenter
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +39,7 @@ data class CalculatorUiState(
     val confidenceLabel: String?,
     val startEnabled: Boolean,
     val hint: String?,
+    val targetDisplay: TargetShutterDisplayState,
 )
 
 /**
@@ -64,6 +67,7 @@ class CalculatorController(
     private var ndIndex = 0
     private var selectedFilmId: String? = null
     private var selectedProfileId: String? = null
+    private var targetSeconds: Double? = null
 
     private val session = CameraSlotSession(
         defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null),
@@ -84,6 +88,18 @@ class CalculatorController(
 
     fun selectProfile(id: String) { selectedProfileId = id; publish() }
 
+    /** Sets the active slot's Target Shutter duration; a non-finite/≤0 value clears it. */
+    fun setTargetShutter(seconds: Double?) {
+        targetSeconds = seconds?.takeIf { it.isFinite() && it > 0 }
+        publish()
+    }
+
+    /** Starts a timer from the active slot's target duration (no-op when unset). */
+    fun startFromTarget() {
+        val target = targetSeconds ?: return
+        onStart(target, targetIdentity())
+    }
+
     /** Switches the active camera slot, capturing the current slot's inputs and restoring the target's. */
     fun selectSlot(id: CameraSlotId) {
         val incoming = session.switchActiveSlot(id, captureSnapshot()) ?: return
@@ -103,13 +119,15 @@ class CalculatorController(
         onStart(duration, identity(result))
     }
 
-    private fun captureSnapshot() = SlotCalculatorSnapshot(shutterIndex, ndIndex, selectedFilmId, selectedProfileId)
+    private fun captureSnapshot() =
+        SlotCalculatorSnapshot(shutterIndex, ndIndex, selectedFilmId, selectedProfileId, targetSeconds)
 
     private fun loadSnapshot(snapshot: SlotCalculatorSnapshot) {
         shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices)
         ndIndex = snapshot.ndIndex.coerceIn(ndLabels.indices)
         selectedFilmId = snapshot.selectedFilmId
         selectedProfileId = snapshot.selectedProfileId
+        targetSeconds = snapshot.targetSeconds?.takeIf { it.isFinite() && it > 0 }
     }
 
     private fun publish() { _state.value = compute() }
@@ -138,6 +156,27 @@ class CalculatorController(
             baseLine = "Base ${shutterLabels[shutterIndex]} · $stops stops",
             slotLabel = slot.id.shortLabel,
         )
+    }
+
+    private fun targetIdentity(): TimerIdentity {
+        val film = selectedFilm()
+        val filmName = film?.canonicalStockName ?: "No film"
+        val slot = session.activeIdentity
+        return TimerIdentity(
+            title = "${slot.displayName} · $filmName",
+            subtitle = "Target shutter",
+            baseLine = "Target ${exposure.formatExtendedClock(targetSeconds ?: 0.0)}",
+            slotLabel = slot.id.shortLabel,
+        )
+    }
+
+    private fun comparisonSource(result: ShootingResult): TargetShutterPresenter.ComparisonSource {
+        val corrected = result.correctedSeconds
+        return if (corrected != null && corrected.isFinite() && corrected > 0) {
+            TargetShutterPresenter.ComparisonSource.CorrectedExposure(corrected)
+        } else {
+            TargetShutterPresenter.ComparisonSource.AdjustedShutter(result.adjustedShutterSeconds)
+        }
     }
 
     private fun compute(): CalculatorUiState {
@@ -169,6 +208,7 @@ class CalculatorController(
             confidenceLabel = result.confidenceLabel,
             startEnabled = result.startEnabled,
             hint = result.hint,
+            targetDisplay = TargetShutterPresenter.makeDisplayState(targetSeconds, comparisonSource(result)),
         )
     }
 }

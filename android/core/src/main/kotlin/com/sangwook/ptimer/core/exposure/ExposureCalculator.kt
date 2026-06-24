@@ -172,6 +172,32 @@ class ExposureCalculator {
     }
 
     /**
+     * Compact, single-glance duration for result cards (iOS coarse style):
+     * the largest one or two units — "10d", "9h 42m", "3m 20s" — so long
+     * exposures stay on one line. Sub-minute values reuse [formatExtendedClock].
+     */
+    fun formatCoarse(seconds: Double): String {
+        val safeSeconds = normalizeDuration(seconds)
+        if (safeSeconds < 60) return formatExtendedClock(safeSeconds)
+        val secondsPerMinute = 60L
+        val secondsPerHour = 60 * secondsPerMinute
+        val secondsPerDay = 24 * secondsPerHour
+        return when {
+            safeSeconds >= secondsPerDay -> "${(safeSeconds / secondsPerDay).toLong()}d"
+            safeSeconds >= secondsPerHour -> {
+                val h = (safeSeconds / secondsPerHour).toLong()
+                val m = ((safeSeconds % secondsPerHour) / secondsPerMinute).toLong()
+                "${h}h ${m}m"
+            }
+            else -> {
+                val m = (safeSeconds / secondsPerMinute).toLong()
+                val s = (safeSeconds % secondsPerMinute).toLong()
+                "${m}m ${s}s"
+            }
+        }
+    }
+
+    /**
      * Reconstructs the whole ND stop that maps [baseShutterSeconds] to
      * [resultShutterSeconds] under the snap model, preferring the smallest
      * stop on ties. Null when inputs are invalid.

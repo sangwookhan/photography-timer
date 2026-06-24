@@ -30,3 +30,7 @@ Signing.local.xcconfig
 *.tmp
 ptimer_claude_*_pack_*/
 ptimer_claude_handoff_*/
+scratch/
+
+# Xcode auto-generated workspace data (not tracked upstream)
+ios/PTimer.xcodeproj/project.xcworkspace/contents.xcworkspacedata

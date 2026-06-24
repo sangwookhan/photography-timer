@@ -1,6 +1,7 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -62,5 +63,37 @@ class CalculatorControllerTest {
         val before = c.state.value.adjustedText
         c.setNdIndex(10)
         assertTrue(c.state.value.adjustedText != before)
+    }
+
+    @Test
+    fun switchingSlotCapturesAndRestoresPerSlotInputs() {
+        val c = controller()
+        c.selectFilm("ilford-pan-f-plus-50")
+        c.setNdIndex(6)
+        val camera1State = c.state.value
+
+        // Camera 2 starts fresh: no film, default ND.
+        c.selectSlot(CameraSlotId.camera2)
+        val camera2State = c.state.value
+        assertEquals("Camera 2", camera2State.activeSlotName)
+        assertEquals("No film", camera2State.selectedFilmName)
+        assertEquals(0, camera2State.ndIndex)
+
+        // Returning to Camera 1 restores its film + ND.
+        c.selectSlot(CameraSlotId.camera1)
+        val restored = c.state.value
+        assertEquals(camera1State.selectedFilmName, restored.selectedFilmName)
+        assertEquals(camera1State.ndIndex, restored.ndIndex)
+    }
+
+    @Test
+    fun renameActiveSlotFlowsIntoStateAndTimerIdentity() {
+        var identity: TimerIdentity? = null
+        val c = controller { _, id -> identity = id }
+        c.renameActiveSlot("Hasselblad")
+        assertEquals("Hasselblad", c.state.value.activeSlotName)
+        c.start()
+        assertTrue(identity!!.title.startsWith("Hasselblad"))
+        assertEquals("C1", identity!!.slotLabel)
     }
 }

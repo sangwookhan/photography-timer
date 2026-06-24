@@ -66,6 +66,8 @@ fun ShootingApp() {
             onNdIndex = controller::setNdIndex,
             onSelectFilm = controller::selectFilm,
             onSelectProfile = controller::selectProfile,
+            onSelectSlot = controller::selectSlot,
+            onRenameSlot = controller::renameActiveSlot,
             onStart = controller::start,
             onOpenTimers = { showTimers = true },
         )

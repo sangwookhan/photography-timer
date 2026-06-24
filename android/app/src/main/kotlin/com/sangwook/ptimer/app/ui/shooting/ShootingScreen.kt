@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,7 +22,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 
@@ -49,11 +54,14 @@ fun ShootingScreen(
     onNdIndex: (Int) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
+    onSelectSlot: (CameraSlotId) -> Unit,
+    onRenameSlot: (String?) -> Unit,
     onStart: () -> Unit,
     onOpenTimers: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showFilmPicker by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
         Row(
@@ -61,8 +69,27 @@ fun ShootingScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Camera 1", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                state.activeSlotName,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { showRename = true },
+            )
             OutlinedButton(onClick = onOpenTimers) { Text("Timers ($timersCount)") }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Camera-slot pager: switching captures the active slot's inputs and
+        // restores the target slot's. Tap the camera name to rename it.
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(state.slots, key = { it.id }) { slot ->
+                FilterChip(
+                    selected = slot.isActive,
+                    onClick = { onSelectSlot(slot.id) },
+                    label = { Text(slot.displayName) },
+                )
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -135,6 +162,40 @@ fun ShootingScreen(
             }
         }
     }
+
+    if (showRename) {
+        RenameSlotDialog(
+            initial = state.activeSlotName,
+            onConfirm = { name -> onRenameSlot(name); showRename = false },
+            onDismiss = { showRename = false },
+        )
+    }
+}
+
+@Composable
+private fun RenameSlotDialog(
+    initial: String,
+    onConfirm: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename camera") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                label = { Text("Camera name") },
+            )
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("Save") } },
+        dismissButton = {
+            // Empty name clears the custom label back to the canonical default.
+            TextButton(onClick = { onConfirm(null) }) { Text("Reset") }
+        },
+    )
 }
 
 @Composable

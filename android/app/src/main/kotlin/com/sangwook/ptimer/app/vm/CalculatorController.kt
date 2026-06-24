@@ -1,11 +1,15 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.app.calc.ShootingCalculator
+import com.sangwook.ptimer.app.calc.ShootingResult
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModels
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
 import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
+import com.sangwook.ptimer.core.slots.CameraSlotId
+import com.sangwook.ptimer.core.slots.CameraSlotSession
+import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,9 +17,12 @@ import kotlinx.coroutines.flow.asStateFlow
 
 data class FilmOption(val id: String?, val name: String)
 data class ModelOption(val id: String, val label: String)
+data class SlotTab(val id: CameraSlotId, val displayName: String, val isActive: Boolean)
 
 /** Immutable state the shooting calculator surface renders. */
 data class CalculatorUiState(
+    val slots: List<SlotTab>,
+    val activeSlotName: String,
     val shutterLabels: List<String>,
     val shutterIndex: Int,
     val ndLabels: List<String>,
@@ -33,10 +40,14 @@ data class CalculatorUiState(
 )
 
 /**
- * Owns the shooting calculator surface: base-shutter / ND wheel indices, film
- * + alternate-model selection, and the derived result. Start delegates the
- * computed duration + captured identity to the timer workspace via [onStart].
- * Pure of Android; deterministic and unit-testable.
+ * Owns the shooting calculator surface across camera slots: base-shutter /
+ * ND wheel indices, film + alternate-model selection, and the derived
+ * result for the active slot. A slot switch captures the active slot's live
+ * inputs into the [CameraSlotSession] and restores the incoming slot's
+ * snapshot, so each camera keeps its own exposure context (iOS
+ * capture-on-switch). Start delegates the computed duration + captured
+ * identity to the timer workspace via [onStart]. Pure of Android;
+ * deterministic and unit-testable.
  */
 class CalculatorController(
     private val films: List<FilmIdentity>,
@@ -45,13 +56,18 @@ class CalculatorController(
     private val onStart: (duration: Double, identity: TimerIdentity) -> Unit = { _, _ -> },
 ) {
     private val shutterLabels = ExposureScale.oneThirdStopShutterCameraLabels
-    private val shutterSteps = ExposureScale.oneThirdStop.shutterSteps
     private val ndLabels = (0..ExposureScale.MAXIMUM_WHOLE_ND_STOPS).map { it.toString() }
+    private val defaultShutterIndex = shutterLabels.indexOf("1/30").coerceAtLeast(0)
 
-    private var shutterIndex = shutterLabels.indexOf("1/30").coerceAtLeast(0)
+    // Live state for the active slot.
+    private var shutterIndex = defaultShutterIndex
     private var ndIndex = 0
     private var selectedFilmId: String? = null
     private var selectedProfileId: String? = null
+
+    private val session = CameraSlotSession(
+        defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null),
+    )
 
     private val _state = MutableStateFlow(compute())
     val state: StateFlow<CalculatorUiState> = _state.asStateFlow()
@@ -68,10 +84,32 @@ class CalculatorController(
 
     fun selectProfile(id: String) { selectedProfileId = id; publish() }
 
+    /** Switches the active camera slot, capturing the current slot's inputs and restoring the target's. */
+    fun selectSlot(id: CameraSlotId) {
+        val incoming = session.switchActiveSlot(id, captureSnapshot()) ?: return
+        loadSnapshot(incoming)
+        publish()
+    }
+
+    /** Renames the active slot; a blank name clears the custom name back to `Camera N`. */
+    fun renameActiveSlot(name: String?) {
+        session.setCustomName(name, session.activeSlotId)
+        publish()
+    }
+
     fun start() {
         val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
         val duration = result.startDurationSeconds ?: return
         onStart(duration, identity(result))
+    }
+
+    private fun captureSnapshot() = SlotCalculatorSnapshot(shutterIndex, ndIndex, selectedFilmId, selectedProfileId)
+
+    private fun loadSnapshot(snapshot: SlotCalculatorSnapshot) {
+        shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices)
+        ndIndex = snapshot.ndIndex.coerceIn(ndLabels.indices)
+        selectedFilmId = snapshot.selectedFilmId
+        selectedProfileId = snapshot.selectedProfileId
     }
 
     private fun publish() { _state.value = compute() }
@@ -89,15 +127,16 @@ class CalculatorController(
         return options.firstOrNull { it.id == selectedProfileId } ?: film.profiles.first()
     }
 
-    private fun identity(result: com.sangwook.ptimer.app.calc.ShootingResult): TimerIdentity {
+    private fun identity(result: ShootingResult): TimerIdentity {
         val film = selectedFilm()
         val filmName = film?.canonicalStockName ?: "No film"
+        val slot = session.activeIdentity
         val stops = ndIndex
         return TimerIdentity(
-            title = "Camera 1 · $filmName",
+            title = "${slot.displayName} · $filmName",
             subtitle = result.confidenceLabel?.let { "Calculated · $it" } ?: "Calculated · $stops stops",
             baseLine = "Base ${shutterLabels[shutterIndex]} · $stops stops",
-            slotLabel = "C1",
+            slotLabel = slot.id.shortLabel,
         )
     }
 
@@ -111,6 +150,10 @@ class CalculatorController(
         } ?: emptyList()
 
         return CalculatorUiState(
+            slots = session.availableSlots.map {
+                SlotTab(it, session.identity(it).displayName, it == session.activeSlotId)
+            },
+            activeSlotName = session.activeIdentity.displayName,
             shutterLabels = shutterLabels,
             shutterIndex = shutterIndex,
             ndLabels = ndLabels,

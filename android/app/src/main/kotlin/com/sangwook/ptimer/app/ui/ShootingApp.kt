@@ -11,9 +11,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
 import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
+import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.TimerListScreen
 import com.sangwook.ptimer.app.vm.CalculatorController
+import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState
 import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingViewModel
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalog
@@ -51,8 +53,16 @@ fun ShootingApp() {
     }
 
     var showTimers by remember { mutableStateOf(false) }
+    var details by remember { mutableStateOf<ReciprocityDetailsDisplayState?>(null) }
 
-    if (showTimers) {
+    val activeDetails = details
+    if (activeDetails != null) {
+        ReciprocityDetailsScreen(
+            state = activeDetails,
+            onBack = { details = null },
+            onSelectModel = { id -> controller.selectProfile(id); details = controller.detailsState() },
+        )
+    } else if (showTimers) {
         TimerListScreen(
             state = timerState,
             onEvent = viewModel::onEvent,
@@ -70,6 +80,7 @@ fun ShootingApp() {
             onRenameSlot = controller::renameActiveSlot,
             onSetTarget = controller::setTargetShutter,
             onStartTarget = controller::startFromTarget,
+            onOpenDetails = { details = controller.detailsState() },
             onStart = controller::start,
             onOpenTimers = { showTimers = true },
         )

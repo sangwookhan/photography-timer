@@ -68,6 +68,7 @@ fun ShootingScreen(
     onRenameSlot: (String?) -> Unit,
     onSetTarget: (Double?) -> Unit,
     onStartTarget: () -> Unit,
+    onOpenDetails: () -> Unit,
     onStart: () -> Unit,
     onOpenTimers: () -> Unit,
     modifier: Modifier = Modifier,
@@ -146,7 +147,7 @@ fun ShootingScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        ResultBlock(state)
+        ResultBlock(state, onOpenDetails)
 
         Spacer(Modifier.height(12.dp))
 
@@ -270,7 +271,7 @@ private fun RenameSlotDialog(
 }
 
 @Composable
-private fun ResultBlock(state: CalculatorUiState) {
+private fun ResultBlock(state: CalculatorUiState, onOpenDetails: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Text("Adjusted shutter", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -283,7 +284,14 @@ private fun ResultBlock(state: CalculatorUiState) {
             }
             if (state.confidenceLabel != null) {
                 Spacer(Modifier.height(4.dp))
-                Text(state.confidenceLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(state.confidenceLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    TextButton(onClick = onOpenDetails) { Text("Details") }
+                }
             }
             if (state.hint != null) {
                 Spacer(Modifier.height(4.dp))

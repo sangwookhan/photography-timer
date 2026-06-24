@@ -6,6 +6,8 @@ import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModels
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState
+import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenter
 import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotSession
@@ -117,6 +119,21 @@ class CalculatorController(
         val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
         val duration = result.startDurationSeconds ?: return
         onStart(duration, identity(result))
+    }
+
+    /** Reciprocity details for the active film/profile; null in the digital (no-film) workflow. */
+    fun detailsState(): ReciprocityDetailsDisplayState? {
+        val film = selectedFilm() ?: return null
+        val profile = resolvedProfile() ?: return null
+        val result = calculator.result(shutterIndex, ndIndex, profile)
+        val recip = result.reciprocity ?: return null
+        return ReciprocityDetailsPresenter.make(
+            film = film,
+            profile = profile,
+            result = recip,
+            adjustedShutterSeconds = result.adjustedShutterSeconds,
+            formatDuration = exposure::formatCoarse,
+        )
     }
 
     private fun captureSnapshot() =

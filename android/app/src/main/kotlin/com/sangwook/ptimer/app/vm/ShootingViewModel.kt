@@ -29,6 +29,7 @@ sealed interface ShootingIntent {
 /** Read-only display card for one timer. */
 data class TimerCardState(
     val id: UUID,
+    val order: Int,
     val identity: TimerIdentity,
     val status: TimerStatus,
     val remainingSeconds: Double,
@@ -40,6 +41,7 @@ data class TimerCardState(
 data class ShootingUiState(
     val active: List<TimerCardState> = emptyList(),
     val history: List<TimerCardState> = emptyList(),
+    val now: Instant = Instant.EPOCH,
 )
 
 /**
@@ -112,10 +114,12 @@ class ShootingViewModel(
         ShootingUiState(
             active = ws.active().map { card(it, n) },
             history = ws.history().map { card(it, n) },
+            now = n,
         )
 
     private fun card(wt: WorkspaceTimer, n: Instant): TimerCardState = TimerCardState(
         id = wt.id,
+        order = wt.order,
         identity = wt.identity,
         status = wt.state.status,
         remainingSeconds = wt.state.remainingTime(n),

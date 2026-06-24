@@ -79,6 +79,20 @@ fun SnapWheel(
             .collect(onSelectedIndexChange)
     }
 
+    // Re-center when the selection is set from outside the wheel (Quick/Fine
+    // parking, slot switch, reset) rather than by the user's own scroll. Skipped
+    // while a scroll/fling is in flight so it never fights an active spin, and
+    // only when the centered row actually differs from the requested index.
+    LaunchedEffect(selectedIndex) {
+        if (!listState.isScrollInProgress &&
+            centeredIndex != null &&
+            centeredIndex != selectedIndex &&
+            selectedIndex in labels.indices
+        ) {
+            listState.scrollToItem(selectedIndex)
+        }
+    }
+
     Box(
         modifier = modifier.height(itemHeight * visibleCount),
     ) {

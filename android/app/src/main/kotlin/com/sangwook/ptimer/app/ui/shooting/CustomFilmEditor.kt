@@ -379,10 +379,20 @@ internal fun CustomFilmEditorDialog(
     initial: CustomFilmDraft?,
     onCreateFormula: (CustomFormulaFilmInput, String?) -> Boolean,
     onCreateTable: (CustomTableFilmInput, String?) -> Boolean,
+    onPreviewFormula: (CustomFormulaFilmInput) -> ReciprocityGraph?,
+    onPreviewTable: (CustomTableFilmInput) -> ReciprocityGraph?,
+    onFormulaCheckpoints: (CustomFormulaFilmInput) -> List<CustomFilmCheckpointRow>,
+    onTableCheckpoints: (CustomTableFilmInput) -> List<CustomFilmCheckpointRow>,
+    onCalculationBasis: (CustomFormulaFilmInput) -> String,
     onPreviewTableFit: (CustomTableFilmInput) -> CustomTableFittedFormula.Outcome?,
     onCreateFormulaFromTable: (CustomTableFilmInput, String?) -> Boolean,
+    onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
     onDismiss: () -> Unit,
 ) {
+    // A formula derived from a table keeps a link back to it; its current anchors
+    // (resolved when the editor opened) drive the live reference-points table.
+    val referenceTableFilmId = initial?.referenceTableFilmId
+    val linkedTableAnchors = initial?.linkedTableAnchors ?: emptyList()
     val editId = initial?.filmId
     val isEditing = initial != null
     var isTable by remember { mutableStateOf(initial?.isTable ?: false) }
@@ -461,6 +471,7 @@ internal fun CustomFilmEditorDialog(
             coefficientSeconds = tc, referenceMeteredTimeSeconds = tm, exponent = exp, offsetSeconds = off,
             noCorrectionThroughSeconds = parsedNoCorrection(), sourceRangeThroughSeconds = through,
             manufacturer = manufacturer.trim().ifEmpty { null },
+            referenceTableFilmId = referenceTableFilmId,
         )
     }
 
@@ -613,6 +624,10 @@ internal fun CustomFilmEditorDialog(
                     )
                 }
             }
+            ReciprocityPreviewSection(
+                graph = parsedTable()?.let(onPreviewTable),
+                checkpoints = parsedTable()?.let(onTableCheckpoints) ?: emptyList(),
+            )
             // App-derived formula preview (iOS PTIMER-179/180): the fit from the
             // current anchors, inspection-only, with a Create Custom Formula CTA.
             parsedTable()?.let(onPreviewTableFit)?.let { outcome ->
@@ -700,6 +715,18 @@ internal fun CustomFilmEditorDialog(
                         hint = "The longest metered time the formula is backed by. Past it the result still computes but reads as \"beyond source range\". Use Unlimited if there's no published limit.",
                     )
                 }
+            }
+            ReciprocityPreviewSection(
+                graph = parsedFormula()?.let(onPreviewFormula),
+                basis = parsedFormula()?.let(onCalculationBasis),
+                checkpoints = parsedFormula()?.let(onFormulaCheckpoints) ?: emptyList(),
+            )
+            // Reference points vs the source table (iOS PTIMER-180): when this
+            // formula was derived from a table, compare it against that table's
+            // current anchors so added/changed anchors show up here.
+            if (linkedTableAnchors.isNotEmpty()) {
+                val refRows = parsedFormula()?.let { onReferencePoints(it, linkedTableAnchors) } ?: emptyList()
+                if (refRows.isNotEmpty()) ReferencePointsSection(refRows)
             }
         }
 

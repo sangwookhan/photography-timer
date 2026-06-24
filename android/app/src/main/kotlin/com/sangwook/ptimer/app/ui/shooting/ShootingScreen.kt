@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -45,10 +46,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sangwook.ptimer.core.customfilm.CustomFilmCheckpointRow
+import com.sangwook.ptimer.core.customfilm.CustomFilmReferencePointRow
+import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
+import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
+import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
+import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.app.vm.CalculatorUiState
+import com.sangwook.ptimer.app.vm.CustomFilmDraft
 
 /**
  * Tier-2 shooting screen: film selection + alternate model, the shared
@@ -69,6 +77,18 @@ fun ShootingScreen(
     onSetTarget: (Double?) -> Unit,
     onStartTarget: () -> Unit,
     onOpenDetails: () -> Unit,
+    onCreateCustomFilm: (CustomFormulaFilmInput, editFilmId: String?) -> Boolean,
+    onCreateCustomTableFilm: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
+    onEditCustomFilm: (String) -> CustomFilmDraft?,
+    onDeleteCustomFilm: (String) -> Unit,
+    onPreviewCustomFilm: (CustomFormulaFilmInput) -> ReciprocityGraph?,
+    onPreviewCustomTableFilm: (CustomTableFilmInput) -> ReciprocityGraph?,
+    onFormulaCheckpoints: (CustomFormulaFilmInput) -> List<CustomFilmCheckpointRow>,
+    onTableCheckpoints: (CustomTableFilmInput) -> List<CustomFilmCheckpointRow>,
+    onCalculationBasis: (CustomFormulaFilmInput) -> String,
+    onPreviewTableFit: (CustomTableFilmInput) -> CustomTableFittedFormula.Outcome?,
+    onCreateFormulaFromTable: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
+    onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
     onStart: () -> Unit,
     onOpenTimers: () -> Unit,
     modifier: Modifier = Modifier,
@@ -76,6 +96,8 @@ fun ShootingScreen(
     var showFilmPicker by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
     var showTarget by remember { mutableStateOf(false) }
+    var showEditor by remember { mutableStateOf(false) }
+    var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
 
     Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
         Row(
@@ -167,22 +189,44 @@ fun ShootingScreen(
     }
 
     if (showFilmPicker) {
-        ModalBottomSheet(
-            onDismissRequest = { showFilmPicker = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        ) {
-            LazyColumn {
-                items(state.filmOptions, key = { it.id ?: "__none__" }) { option ->
-                    ListItem(
-                        headlineContent = { Text(option.name) },
-                        modifier = Modifier.clickable {
-                            onSelectFilm(option.id)
-                            showFilmPicker = false
-                        },
-                    )
+        FilmPickerSheet(
+            filmOptions = state.filmOptions,
+            selectedFilmId = state.selectedFilmId,
+            onSelect = { id -> onSelectFilm(id); showFilmPicker = false },
+            onCreateNew = { showFilmPicker = false; editDraft = null; showEditor = true },
+            onEditFilm = { id ->
+                onEditCustomFilm(id)?.let { draft ->
+                    showFilmPicker = false
+                    editDraft = draft
+                    showEditor = true
                 }
-            }
-        }
+            },
+            onDeleteFilm = { id -> onDeleteCustomFilm(id) },
+            onDismiss = { showFilmPicker = false },
+        )
+    }
+
+    if (showEditor) {
+        CustomFilmEditorDialog(
+            initial = editDraft,
+            onCreateFormula = { input, editId ->
+                onCreateCustomFilm(input, editId).also { if (it) { showEditor = false; editDraft = null } }
+            },
+            onCreateTable = { input, editId ->
+                onCreateCustomTableFilm(input, editId).also { if (it) { showEditor = false; editDraft = null } }
+            },
+            onPreviewFormula = onPreviewCustomFilm,
+            onPreviewTable = onPreviewCustomTableFilm,
+            onFormulaCheckpoints = onFormulaCheckpoints,
+            onTableCheckpoints = onTableCheckpoints,
+            onCalculationBasis = onCalculationBasis,
+            onPreviewTableFit = onPreviewTableFit,
+            onCreateFormulaFromTable = { input, editId ->
+                onCreateFormulaFromTable(input, editId).also { if (it) { showEditor = false; editDraft = null } }
+            },
+            onReferencePoints = onReferencePoints,
+            onDismiss = { showEditor = false; editDraft = null },
+        )
     }
 
     if (showRename) {
@@ -211,6 +255,17 @@ internal fun StartButton(onClick: () -> Unit, enabled: Boolean) {
             contentDescription = "Start timer",
             modifier = Modifier.size(20.dp),
         )
+    }
+}
+
+@Composable
+internal fun Pill(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
     }
 }
 

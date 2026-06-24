@@ -17,7 +17,8 @@ const val TIMER_STABILITY_EPSILON: Double = 0.000_001
 internal fun secondsBetween(from: Instant, to: Instant): Double =
     Duration.between(from, to).toNanos() / 1_000_000_000.0
 
-internal fun Instant.plusSecondsDouble(seconds: Double): Instant =
+/** Adds a Double-seconds interval to an Instant (nanosecond precision). */
+fun Instant.plusSecondsDouble(seconds: Double): Instant =
     this.plusNanos((seconds * 1_000_000_000.0).roundToLong())
 
 enum class TimerStatus { running, paused, completed, canceled }

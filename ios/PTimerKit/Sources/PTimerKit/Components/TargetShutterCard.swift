@@ -117,6 +117,11 @@ public struct TargetShutterCard: View {
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                     Spacer(minLength: 8)
+                    // Stop-difference first so the variable-width arrow + text
+                    // floats on the left; the target value stays pinned next to
+                    // the play button on the right and no longer slides as the
+                    // stop difference changes.
+                    compactStopDifference(state)
                     Text(targetText(state.targetSeconds))
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
@@ -124,7 +129,6 @@ public struct TargetShutterCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .accessibilityIdentifier("target-shutter-target-value")
-                    compactStopDifference(state)
                 }
                 // Broad tap target — without `.frame(maxWidth:.infinity)`
                 // the Button's label would shrink-wrap, leaving the

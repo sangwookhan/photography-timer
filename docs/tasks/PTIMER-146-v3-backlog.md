@@ -108,11 +108,37 @@ localization, 184 About, 189). Re-evaluate only if owner explicitly pulls one in
 
 - **Theme — DECIDED: dark only** (used day and night). Android app ships a single
   dark theme; captures are dark.
-- **ND control — decide at unit 2.5** SnapWheel spike (wheel parity vs stepper),
-  empirically on device.
+- **ND control — DECIDED: wheel** (unify with iOS; validated on device at unit
+  2.5). No stepper. The shared SnapWheel drives base shutter, ND, and target
+  shutter.
+- **SnapWheel feel — accepted at unit 2.5.** Live-during-fling recompute
+  confirmed on device; selection uses dimmed edges + a clear center with
+  hairline bounds (not a fill band). Fling damping is slightly lighter than
+  iOS — tunable later via the snap fling decay, not a blocker.
 - **Notification action buttons** (open) — include if low-risk at unit 12, else
   defer the buttons (not the notification feature).
 
 Unit 2.5 is a **validation gate**: the SnapWheel API is locked only after the
 live-during-fling behavior is confirmed on a device; units 6/7/10 build on the
 locked component.
+
+## Device-test polish backlog (deferred refinements)
+
+Surface-level refinements found during device review, deferred so they don't
+interrupt the current feature flow. Not blockers.
+
+- **[DONE 2026-06-24] Target Shutter — quick + fine adjustment (unit 10).** Added
+  a Quick/Fine segmented toggle to `TargetShutterSheet`; Quick is a single
+  SnapWheel of presets (1s…8h) parking on the nearest to the current value, Fine
+  keeps the h/m/s wheels — both edit the same total (iOS Quick/Fine pages).
+- **[DONE 2026-06-24] Target Shutter — tone down the row.** `TargetShutterRow`
+  value is now `bodyLarge` SemiBold in `onSurface` (brighter, lighter); the ↑/↓
+  arrow + stop-diff dropped to `bodyMedium` and are coloured by direction like
+  iOS — accent (longer) / amber (shorter) / green (match) — instead of bold amber
+  for everything.
+- **[DONE] MiniTimerBar — show all statuses + portrait cards.** The peeking
+  `MiniTimerBar` now shows the top-3 timers across every status (active first,
+  then most-recent history) with a "+N / View all" overflow tile, so a very
+  short / just-finished timer stays briefly visible instead of vanishing the
+  instant it leaves the active set (the registered bug). Cards switched from a
+  wide 180-dp landscape strip to iOS-style tall portrait cards (96×116).

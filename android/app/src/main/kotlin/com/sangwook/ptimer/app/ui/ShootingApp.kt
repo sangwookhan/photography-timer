@@ -17,11 +17,17 @@ import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
+import com.sangwook.ptimer.app.persistence.DataStoreSlotSessionStore
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
 import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
 import com.sangwook.ptimer.core.timer.TimerStatus
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.withContext
 import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.TimerListScreen
@@ -40,6 +46,7 @@ import java.time.Instant
  * switches between the shooting screen and the full-screen timer list. The
  * coordinator ticks only while a timer is running.
  */
+@OptIn(FlowPreview::class)
 @Composable
 fun ShootingApp() {
     val context = LocalContext.current.applicationContext
@@ -49,15 +56,25 @@ fun ShootingApp() {
         ShootingViewModel(store = DataStoreTimerWorkspaceStore(context), clock = { Instant.now() })
     }
     val coordinator = remember { AndroidTimerCoordinator(scope, viewModel, clock = { Instant.now() }) }
+    val slotStore = remember { DataStoreSlotSessionStore(context) }
     val library = remember { CustomFilmLibrary(store = DataStoreCustomFilmLibraryStore(context)) }
     val controller = remember {
         CalculatorController(
             films = LaunchPresetFilmCatalog.films + library.customFilms,
             onStart = { duration, identity -> viewModel.onEvent(ShootingIntent.StartTimer(duration, identity)) },
+            initialSession = slotStore.loadSession(),
         )
     }
 
     LaunchedEffect(Unit) { viewModel.restore() }
+
+    // Persist the slot session off the hot wheel-tick path: debounce the state
+    // stream and write the latest exported session (drop the initial emission).
+    LaunchedEffect(Unit) {
+        controller.state.drop(1).debounce(400).collect {
+            withContext(Dispatchers.IO) { slotStore.saveSession(controller.exportSession()) }
+        }
+    }
 
     // Notifications: ensure channels, request POST_NOTIFICATIONS (API 33+), and
     // reconcile the AlarmManager alarms + ongoing foreground service with state.

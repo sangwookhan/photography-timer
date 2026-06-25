@@ -26,6 +26,7 @@ class TimerForegroundService : Service() {
         }
         val title = intent?.getStringExtra(EXTRA_TITLE).orEmpty()
         val text = intent?.getStringExtra(EXTRA_TEXT).orEmpty()
+        val endAt = intent?.getLongExtra(EXTRA_END, 0L) ?: 0L
         TimerNotifications.ensureChannels(this)
         // ServiceCompat with an explicit FGS type is required on API 34+;
         // passing the type also avoids the silent startForeground failures some
@@ -38,7 +39,7 @@ class TimerForegroundService : Service() {
         ServiceCompat.startForeground(
             this,
             TimerNotifications.ONGOING_NOTIFICATION_ID,
-            TimerNotifications.buildOngoing(this, OngoingContent(title, text)),
+            TimerNotifications.buildOngoing(this, OngoingContent(title, text, endAt)),
             type,
         )
         return START_STICKY
@@ -48,11 +49,13 @@ class TimerForegroundService : Service() {
         private const val ACTION_STOP = "com.sangwook.ptimer.action.STOP_TIMER_SERVICE"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_TEXT = "text"
+        private const val EXTRA_END = "endAtEpochMillis"
 
         fun start(context: Context, content: OngoingContent) {
             val intent = Intent(context, TimerForegroundService::class.java)
                 .putExtra(EXTRA_TITLE, content.title)
                 .putExtra(EXTRA_TEXT, content.text)
+                .putExtra(EXTRA_END, content.endAtEpochMillis)
             context.startForegroundService(intent)
         }
 

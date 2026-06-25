@@ -43,9 +43,12 @@ class TimerAlertPlannerTest {
 
         assertEquals(2, plan.alarms.size)
         assertEquals(setOf(9000L, 3000L), plan.alarms.map { it.triggerAtEpochMillis }.toSet())
-        // Ongoing reflects the soonest-ending running timer and the running count.
+        // Ongoing reflects the soonest-ending running timer (the live-countdown
+        // representative) and the running count, in the iOS wording.
         assertEquals("Camera 2", plan.ongoing!!.title)
-        assertTrue(plan.ongoing!!.text.contains("2 timers running"))
+        assertEquals(3000L, plan.ongoing!!.endAtEpochMillis)
+        assertTrue(plan.ongoing!!.text.contains("Expected completion"))
         assertTrue(plan.ongoing!!.text.contains("@3000"))
+        assertTrue(plan.ongoing!!.text.contains("2 timers"))
     }
 }

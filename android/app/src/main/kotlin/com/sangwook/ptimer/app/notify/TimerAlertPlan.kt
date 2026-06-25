@@ -11,8 +11,13 @@ data class CompletionAlarm(
     val title: String,
 )
 
-/** Content for the ongoing foreground-service notification. */
-data class OngoingContent(val title: String, val text: String)
+/**
+ * Content for the ongoing foreground-service notification — the Android
+ * lock-screen analogue of the iOS Live Activity. [endAtEpochMillis] is the
+ * representative (soonest) running timer's end instant, used to drive a live
+ * count-down chronometer on the notification.
+ */
+data class OngoingContent(val title: String, val text: String, val endAtEpochMillis: Long)
 
 /**
  * Desired notification side-effects derived purely from the workspace state:
@@ -45,11 +50,19 @@ object TimerAlertPlanner {
             null
         } else {
             val soonest = running.minByOrNull { it.endDate }!!
+            val endMillis = soonest.endDate.toEpochMilli()
             val count = running.size
-            val countText = if (count == 1) "1 timer running" else "$count timers running"
+            // iOS Live Activity wording: "Expected completion {time}", plus a
+            // count suffix when more than one timer is running.
+            val text = if (count == 1) {
+                "Expected completion ${formatClock(endMillis)}"
+            } else {
+                "Expected completion ${formatClock(endMillis)} · $count timers"
+            }
             OngoingContent(
                 title = soonest.identity.title,
-                text = "$countText · ends ${formatClock(soonest.endDate.toEpochMilli())}",
+                text = text,
+                endAtEpochMillis = endMillis,
             )
         }
         return TimerAlertPlan(alarms, ongoing)

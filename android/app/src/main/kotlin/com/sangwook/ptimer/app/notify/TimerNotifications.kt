@@ -48,12 +48,23 @@ object TimerNotifications {
         )
     }
 
-    /** The ongoing foreground-service notification; tapping it returns to the app. */
+    /**
+     * The ongoing foreground-service notification — the Android lock-screen
+     * analogue of the iOS Live Activity. Shows the representative timer name,
+     * the "Expected completion {time}" line, and a live count-down chronometer
+     * to the representative end (the ticking element). Tapping it opens the
+     * timer list.
+     */
     fun buildOngoing(context: Context, content: OngoingContent): Notification =
         NotificationCompat.Builder(context, ONGOING_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(content.title)
             .setContentText(content.text)
+            // Live count-down to the representative timer's end (API 24+).
+            .setWhen(content.endAtEpochMillis)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(appContentIntent(context))

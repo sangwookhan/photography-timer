@@ -1,0 +1,3812 @@
+[
+  {
+    "aliases": [
+      "Pan F+"
+    ],
+    "brandLabel": "ILFORD PAN F PLUS",
+    "canonicalStockName": "Pan F Plus",
+    "id": "ilford-pan-f-plus-50",
+    "iso": 50,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-pan-f-plus-50-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.33,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.33."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "FP4+"
+    ],
+    "brandLabel": "ILFORD FP4 PLUS",
+    "canonicalStockName": "FP4 Plus",
+    "id": "ilford-fp4-plus-125",
+    "iso": 125,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-fp4-plus-125-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.26,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.26."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Delta 100 Pro"
+    ],
+    "brandLabel": "ILFORD DELTA 100 PROFESSIONAL",
+    "canonicalStockName": "Delta 100",
+    "id": "ilford-delta-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-delta-100-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.26,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.26."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Delta 400 Pro"
+    ],
+    "brandLabel": "ILFORD DELTA 400 PROFESSIONAL",
+    "canonicalStockName": "Delta 400",
+    "id": "ilford-delta-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-delta-400-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.41,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.41."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Delta 3200 Pro"
+    ],
+    "brandLabel": "ILFORD DELTA 3200 PROFESSIONAL",
+    "canonicalStockName": "Delta 3200",
+    "id": "ilford-delta-3200",
+    "iso": 3200,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-delta-3200-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.33,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.33."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "HP5+",
+      "HP5 Plus 400"
+    ],
+    "brandLabel": "ILFORD HP5 PLUS",
+    "canonicalStockName": "HP5 Plus",
+    "id": "ilford-hp5-plus-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-hp5-plus-400-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerFormula"
+        },
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.31,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.31."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "XP2"
+    ],
+    "brandLabel": "ILFORD XP2 SUPER",
+    "canonicalStockName": "XP2 Super",
+    "id": "ilford-xp2-super-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-xp2-super-400-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.31,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.31."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "ILFORD SFX 200",
+    "canonicalStockName": "SFX 200",
+    "id": "ilford-sfx-200",
+    "iso": 200,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-sfx-200-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.43,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.43."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "ILFORD ORTHO PLUS",
+    "canonicalStockName": "Ortho Plus",
+    "id": "ilford-ortho-plus-80",
+    "iso": 80,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-ortho-plus-80-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.25,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.25."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Kentmere Pan 100"
+    ],
+    "brandLabel": "KENTMERE PAN 100",
+    "canonicalStockName": "Kentmere 100",
+    "id": "ilford-kentmere-pan-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-kentmere-pan-100-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.26,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.26."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Kentmere Pan 200"
+    ],
+    "brandLabel": "KENTMERE PAN 200",
+    "canonicalStockName": "Kentmere 200",
+    "id": "ilford-kentmere-pan-200",
+    "iso": 200,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-kentmere-pan-200-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.26,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.26."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Kentmere Pan 400"
+    ],
+    "brandLabel": "KENTMERE PAN 400",
+    "canonicalStockName": "Kentmere 400",
+    "id": "ilford-kentmere-pan-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "ILFORD / HARMAN",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "ilford-kentmere-pan-400-official-formula",
+        "name": "Official formula",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.3,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1
+              },
+              "notes": [
+                "Exponent p = 1.3."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Technical information sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Ilford Photo",
+          "sourceVersion": "2026",
+          "title": "Reciprocity characteristics"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "TRI-X",
+      "TX 400"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
+    "canonicalStockName": "Tri-X 400",
+    "id": "kodak-tri-x-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-tri-x-official-graph-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerGraphTable"
+        },
+        "name": "Official Kodak graph/table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 2, "meteredSeconds": 1 },
+                { "correctedSeconds": 5, "meteredSeconds": 2 },
+                { "correctedSeconds": 10, "meteredSeconds": 3 },
+                { "correctedSeconds": 20, "meteredSeconds": 5 },
+                { "correctedSeconds": 32, "meteredSeconds": 7 },
+                { "correctedSeconds": 50, "meteredSeconds": 10 },
+                { "correctedSeconds": 120, "meteredSeconds": 20 },
+                { "correctedSeconds": 200, "meteredSeconds": 30 },
+                { "correctedSeconds": 420, "meteredSeconds": 50 },
+                { "correctedSeconds": 720, "meteredSeconds": 70 },
+                { "correctedSeconds": 1200, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.1,
+              "notes": [
+                "Default Kodak model for Tri-X 400. Combines the published E-31 table rows (1 sec → 2 sec, 10 sec → 50 sec, 100 sec → 1200 sec; Dev -10/-20/-30%) with points sampled from Kodak's adjusted-exposure graph between them (2/3/5/7/20/30/50/70 sec). Kodak lists no adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec and corrected exposure interpolates in log-log space from the 0.1 sec knee through the anchors (the three published rows reproduce exactly; the intermediate points are graph estimates, not published table values). Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
+          }
+        ],
+        "selectorLabel": "Graph table",
+        "source": {
+          "authority": "official",
+          "citation": "Publication F-4017",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL TRI-X 400 Film — Technical Data"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-10% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → +1 stop, corrected 2 sec, develop -10%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 5,
+                    "isApproximate": true,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → corrected 5 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 10,
+                    "isApproximate": true,
+                    "meteredSeconds": 3
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 3,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "3 sec → corrected 10 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "isApproximate": true,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 20 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 32,
+                    "isApproximate": true,
+                    "meteredSeconds": 7
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 7,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "7 sec → corrected 32 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-20% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → +2 stops, corrected 50 sec, develop -20%."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 120,
+                    "isApproximate": true,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 120 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 200,
+                    "isApproximate": true,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 200 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 420,
+                    "isApproximate": true,
+                    "meteredSeconds": 50
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 50,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "50 sec → corrected 420 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 720,
+                    "isApproximate": true,
+                    "meteredSeconds": 70
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 70,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "70 sec → corrected 720 sec (graph-sampled)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1200,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              },
+              {
+                "development": {
+                  "instruction": "-30% development"
+                },
+                "kind": "development"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec → +3 stops, corrected 1200 sec, develop -30%."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "TMX",
+      "T-MAX 100"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL T-MAX 100",
+    "canonicalStockName": "T-MAX 100",
+    "id": "kodak-tmax-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-tmax-100-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Kodak table",
+        "notes": [
+          "Source data sheet states no exposure adjustment is required from 1/1,000 sec to 1/10 sec.",
+          "Source data sheet also lists +1/3 stop at 1/10,000 sec for short-exposure (high-speed) photography; the long-exposure reciprocity table deliberately excludes that short-exposure anchor — it is preserved as a profile-level note only."
+        ],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 1.2599210498948732, "meteredSeconds": 1 },
+                { "correctedSeconds": 15, "meteredSeconds": 10 },
+                { "correctedSeconds": 200, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.1,
+              "notes": [
+                "Kodak lists no exposure adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec. At 1 sec Kodak's table gives +1/3 stop as an aperture/stop adjustment (no published corrected shutter time); the table uses the time-equivalent ≈1.26 sec (1 × 2^(1/3)) as a calculation anchor only — it is not presented as a Kodak-published corrected time. The 10 sec → 15 sec and 100 sec → 200 sec published corrected times reproduce exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication F-4016",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL T-MAX 100 Film — Technical Data"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.2599210498948732,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → +1/3 stop. Kodak publishes this as an aperture/stop adjustment, not a corrected shutter time; the ≈1.26 sec shown is the derived time-equivalent (1 × 2^(1/3)) used as a calculation anchor, not a Kodak-published corrected time."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 15,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → +1/2 stop, corrected 15 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 200,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec → +1 stop, corrected 200 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "TMY-2",
+      "T-MAX 400"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL T-MAX 400",
+    "canonicalStockName": "T-MAX 400",
+    "id": "kodak-tmax-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-tmax-400-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Kodak table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 1.2599210498948732, "meteredSeconds": 1 },
+                { "correctedSeconds": 15, "meteredSeconds": 10 },
+                { "correctedSeconds": 300, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.1,
+              "notes": [
+                "Kodak lists no exposure adjustment through 1/10 sec, so the no-correction band ends at 0.1 sec. At 1 sec Kodak's table gives +1/3 stop as an aperture/stop adjustment (no published corrected shutter time); the table uses the time-equivalent ≈1.26 sec (1 × 2^(1/3)) as a calculation anchor only — it is not presented as a Kodak-published corrected time. The 10 sec → 15 sec and 100 sec → 300 sec published corrected times reproduce exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication F-4043",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL T-MAX 400 Film — Technical Data"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.2599210498948732,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → +1/3 stop. Kodak publishes this as an aperture/stop adjustment, not a corrected shutter time; the ≈1.26 sec shown is the derived time-equivalent (1 × 2^(1/3)) used as a calculation anchor, not a Kodak-published corrected time."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 15,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → +1/2 stop, corrected 15 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 300,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec → +1 1/2 stops, corrected 300 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "EKTAR 100"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL EKTAR 100",
+    "canonicalStockName": "Ektar 100",
+    "id": "kodak-ektar-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-ektar-100-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
+        "name": "Official threshold guidance",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "threshold",
+            "threshold": {
+              "adjustments": [],
+              "noCorrectionRange": {
+                "maximumSeconds": 1,
+                "minimumSeconds": 0.0001
+              },
+              "notes": [
+                "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+              ]
+            }
+          },
+          {
+            "kind": "limitedGuidance",
+            "limitedGuidance": {
+              "adjustments": [
+                {
+                  "kind": "note",
+                  "note": {
+                    "text": "Longer exposures: test under your conditions."
+                  }
+                }
+              ],
+              "appliesWhenMetered": {
+                "minimumSeconds": 1
+              },
+              "notes": []
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication E-4046",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL Ektar 100 Film — Technical Data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "PORTRA 160"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL PORTRA 160",
+    "canonicalStockName": "Portra 160",
+    "id": "kodak-portra-160",
+    "iso": 160,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-portra-160-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
+        "name": "Official threshold guidance",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "threshold",
+            "threshold": {
+              "adjustments": [],
+              "noCorrectionRange": {
+                "maximumSeconds": 10,
+                "minimumSeconds": 0.0001
+              },
+              "notes": [
+                "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
+              ]
+            }
+          },
+          {
+            "kind": "limitedGuidance",
+            "limitedGuidance": {
+              "adjustments": [
+                {
+                  "kind": "note",
+                  "note": {
+                    "text": "Beyond 10 sec is not recommended; test under your conditions."
+                  }
+                }
+              ],
+              "appliesWhenMetered": {
+                "minimumSeconds": 10
+              },
+              "notes": []
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication E-4051",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL Portra 160 Film — Technical Data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "PORTRA 400"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL PORTRA 400",
+    "canonicalStockName": "Portra 400",
+    "id": "kodak-portra-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-portra-400-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
+        "name": "Official threshold guidance",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "threshold",
+            "threshold": {
+              "adjustments": [],
+              "noCorrectionRange": {
+                "maximumSeconds": 10,
+                "minimumSeconds": 0.0001
+              },
+              "notes": [
+                "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
+              ]
+            }
+          },
+          {
+            "kind": "limitedGuidance",
+            "limitedGuidance": {
+              "adjustments": [
+                {
+                  "kind": "note",
+                  "note": {
+                    "text": "Beyond 10 sec is not recommended; test under your conditions."
+                  }
+                }
+              ],
+              "appliesWhenMetered": {
+                "minimumSeconds": 10
+              },
+              "notes": []
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication E-4050",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL Portra 400 Film — Technical Data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "GOLD 200"
+    ],
+    "brandLabel": "KODAK GOLD 200",
+    "canonicalStockName": "Gold 200",
+    "id": "kodak-gold-200",
+    "iso": 200,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-gold-200-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
+        "name": "Official threshold guidance",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "threshold",
+            "threshold": {
+              "adjustments": [],
+              "noCorrectionRange": {
+                "maximumSeconds": 1,
+                "minimumSeconds": 0.0001
+              },
+              "notes": [
+                "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+              ]
+            }
+          },
+          {
+            "kind": "limitedGuidance",
+            "limitedGuidance": {
+              "adjustments": [
+                {
+                  "kind": "note",
+                  "note": {
+                    "text": "Longer exposures: test under your conditions."
+                  }
+                }
+              ],
+              "appliesWhenMetered": {
+                "minimumSeconds": 1
+              },
+              "notes": []
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication E-7022",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL Gold 200 Film — Technical Data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "ULTRA MAX 400"
+    ],
+    "brandLabel": "KODAK ULTRA MAX 400",
+    "canonicalStockName": "Ultra Max 400",
+    "id": "kodak-ultra-max-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-ultra-max-400-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
+        "name": "Official threshold guidance",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "threshold",
+            "threshold": {
+              "adjustments": [],
+              "noCorrectionRange": {
+                "maximumSeconds": 1,
+                "minimumSeconds": 0.0001
+              },
+              "notes": [
+                "No filter correction or exposure compensation required from 1/10,000 sec to 1 sec."
+              ]
+            }
+          },
+          {
+            "kind": "limitedGuidance",
+            "limitedGuidance": {
+              "adjustments": [
+                {
+                  "kind": "note",
+                  "note": {
+                    "text": "Longer exposures may require exposure compensation and color filtration; test under your conditions."
+                  }
+                }
+              ],
+              "appliesWhenMetered": {
+                "minimumSeconds": 1
+              },
+              "notes": []
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication E-7023",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL Ultra Max 400 Film — Technical Data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "EKTACHROME E100",
+      "E100"
+    ],
+    "brandLabel": "KODAK PROFESSIONAL EKTACHROME E100",
+    "canonicalStockName": "Ektachrome E100",
+    "id": "kodak-ektachrome-e100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Kodak",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "kodak-ektachrome-e100-official-threshold",
+        "modelBasis": {
+          "calculationModel": "limitedGuidance",
+          "sourceModel": "manufacturerLimitedGuidance"
+        },
+        "name": "Official threshold and 120 sec filtration guidance",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "threshold",
+            "threshold": {
+              "adjustments": [],
+              "noCorrectionRange": {
+                "maximumSeconds": 10,
+                "minimumSeconds": 0.0001
+              },
+              "notes": [
+                "No filter correction or exposure compensation required from 1/10,000 sec to 10 sec."
+              ]
+            }
+          },
+          {
+            "kind": "limitedGuidance",
+            "limitedGuidance": {
+              "adjustments": [
+                {
+                  "colorFilter": {
+                    "filterName": "CC10R",
+                    "note": "At 120 sec, add CC10R filtration per the published guidance."
+                  },
+                  "kind": "colorFilter"
+                },
+                {
+                  "kind": "note",
+                  "note": {
+                    "text": "Beyond 10 sec, follow the published 120 sec CC10R reference point; intermediate exposures are not quantified by the source."
+                  }
+                }
+              ],
+              "appliesWhenMetered": {
+                "minimumSeconds": 10
+              },
+              "notes": []
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Publication E-4000",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Kodak",
+          "title": "KODAK PROFESSIONAL EKTACHROME E100 Film — Technical Data"
+        }
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "NEOPAN 100 ACROS II",
+      "Acros II"
+    ],
+    "brandLabel": "FUJIFILM NEOPAN 100 ACROS II",
+    "canonicalStockName": "Acros II",
+    "id": "fujifilm-acros-ii",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Fujifilm",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "fujifilm-acros-ii-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerRangeGuidance"
+        },
+        "name": "Official constant correction across published 120–1000 s range",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficientSeconds": 1.4142135623730951,
+                "exponent": 1,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 119.999999,
+                "sourceRangeThroughSeconds": 1000.0
+              },
+              "notes": [
+                "Tc = √2 × Tm (constant +1/2 stop). Encodes Fujifilm's published 120–1000 sec range guidance verbatim. Above 1000 sec the same +1/2 stop continues as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Acros II support page",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Fujifilm",
+          "title": "NEOPAN 100 ACROS II — Reciprocity guidance"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "kind": "range",
+              "range": {
+                "maximumSeconds": 1000,
+                "minimumSeconds": 120
+              }
+            },
+            "notes": [
+              "120 to 1000 sec → +1/2 stop."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "RVP 50",
+      "Velvia"
+    ],
+    "brandLabel": "FUJICHROME Velvia 50",
+    "canonicalStockName": "Velvia 50",
+    "id": "fujifilm-velvia-50",
+    "iso": 50,
+    "kind": "preset",
+    "manufacturer": "Fujifilm",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "fujifilm-velvia-50-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official formula anchored to 1 s threshold",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.1821,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1,
+                "sourceRangeThroughSeconds": 32.0
+              },
+              "notes": [
+                "Tc = Tm^p, p ≈ 1.1821. Threshold-anchored constrained log-log fit through Fujifilm's published 4/8/16/32 sec source references. 64 sec is not recommended."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Velvia 50 product page",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Fujifilm",
+          "title": "FUJICHROME Velvia 50 — Long exposure guide"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec → +1/3 stop, 5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "7.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec → +1/2 stop, 7.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.6666666666666666
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "10M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 16,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "16 sec → +2/3 stop, 10M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "12.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 32,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "32 sec → +1 stop, 12.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "64 sec is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 64,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "RVP 100"
+    ],
+    "brandLabel": "FUJICHROME Velvia 100",
+    "canonicalStockName": "Velvia 100",
+    "id": "fujifilm-velvia-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Fujifilm",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "fujifilm-velvia-100-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official formula anchored to 60 s threshold",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficientSeconds": 60.0,
+                "exponent": 1.2667,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 60,
+                "referenceMeteredTimeSeconds": 60.0,
+                "sourceRangeThroughSeconds": 240.0
+              },
+              "notes": [
+                "Tc = 60 × (Tm / 60)^p, p ≈ 1.2667. Threshold-anchored constrained log-log fit through the 60 s no-correction boundary and Fujifilm's published 2-min (+1/3 stop) and 4-min (+1/2 stop) references. Inputs above 240 sec are formula predictions outside the published source range."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Velvia 100 product page",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Fujifilm",
+          "title": "FUJICHROME Velvia 100 — Long exposure guide"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 120,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 min → +1/3 stop, 2.5M."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5M"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 240,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 min → +1/2 stop, 2.5M."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "RDP III"
+    ],
+    "brandLabel": "FUJICHROME PROVIA 100F PROFESSIONAL",
+    "canonicalStockName": "Provia 100F",
+    "id": "fujifilm-provia-100f",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Fujifilm",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "fujifilm-provia-100f-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official formula anchored to 240 s reference",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficientSeconds": 128.0,
+                "exponent": 1.3676,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 128,
+                "referenceMeteredTimeSeconds": 128.0,
+                "sourceRangeThroughSeconds": 240.0
+              },
+              "notes": [
+                "Tc = 128 × (Tm / 128)^p, p ≈ 1.3676. Anchored to Fujifilm's published 4-min (240 s) +1/3-stop reference. 8 min is not recommended."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Provia 100F support page",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Fujifilm",
+          "title": "FUJICHROME PROVIA 100F — Long exposure guide"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.3333333333333333
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "colorFilter": {
+                  "filterName": "2.5G"
+                },
+                "kind": "colorFilter"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 240,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 min → +1/3 stop, 2.5G."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "8 min is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 480,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Fomapan 100"
+    ],
+    "brandLabel": "FOMAPAN 100 CLASSIC",
+    "canonicalStockName": "Fomapan 100 Classic",
+    "id": "foma-fomapan-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "FOMA BOHEMIA",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "foma-fomapan-100-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official FOMA table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 2, "meteredSeconds": 1 },
+                { "correctedSeconds": 80, "meteredSeconds": 10 },
+                { "correctedSeconds": 1600, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
+              "notes": [
+                "Official FOMA BOHEMIA multiplier rows at 1/10/100 sec (×2 / ×8 / ×16 → 2 / 80 / 1600 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Foma technical sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "FOMA BOHEMIA",
+          "title": "FOMAPAN 100 CLASSIC — Technical sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → ×2 (corrected 2 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 8
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → ×8 (corrected 80 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 16
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1600,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec → ×16 (corrected 1600 sec)."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Fomapan 200"
+    ],
+    "brandLabel": "FOMAPAN 200 CREATIVE",
+    "canonicalStockName": "Fomapan 200 Creative",
+    "id": "foma-fomapan-200",
+    "iso": 200,
+    "kind": "preset",
+    "manufacturer": "FOMA BOHEMIA",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "foma-fomapan-200-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official FOMA table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 1 },
+                { "correctedSeconds": 90, "meteredSeconds": 10 },
+                { "correctedSeconds": 1800, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
+              "notes": [
+                "Official FOMA BOHEMIA multiplier rows at 1/10/100 sec (×3 / ×9 / ×18 → 3 / 90 / 1800 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Foma technical sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "FOMA BOHEMIA",
+          "title": "FOMAPAN 200 CREATIVE — Technical sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → ×3 (corrected 3 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 9
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 90,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → ×9 (corrected 90 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 18
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1800,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec → ×18 (corrected 1800 sec)."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "Fomapan 400"
+    ],
+    "brandLabel": "FOMAPAN 400 ACTION",
+    "canonicalStockName": "Fomapan 400 Action",
+    "id": "foma-fomapan-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "FOMA BOHEMIA",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "foma-fomapan-400-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official FOMA table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 1.5, "meteredSeconds": 1 },
+                { "correctedSeconds": 60, "meteredSeconds": 10 },
+                { "correctedSeconds": 800, "meteredSeconds": 100 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
+              "notes": [
+                "Official FOMA BOHEMIA multiplier rows at 1/10/100 sec (×1.5 / ×6 / ×8 → 1.5 / 60 / 800 sec). Corrected exposure is interpolated between the published anchors in log-log space, so the anchors reproduce the data-sheet values exactly. FOMA's published rows do not lie on a single power law, so the curve bends between the 10 sec and 100 sec anchors; the published rows stay visible as source evidence. Inputs above 100 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 100.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "Foma technical sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "FOMA BOHEMIA",
+          "title": "FOMAPAN 400 ACTION — Technical sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.5,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → ×1.5 (corrected 1.5 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 6
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → ×6 (corrected 60 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 8
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 800,
+                    "meteredSeconds": 100
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "100 sec → ×8 (corrected 800 sec)."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei RPX 25",
+    "canonicalStockName": "RPX 25",
+    "id": "rollei-rpx-25",
+    "iso": 25,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-rpx-25-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 2 },
+                { "correctedSeconds": 20, "meteredSeconds": 10 },
+                { "correctedSeconds": 50, "meteredSeconds": 20 },
+                { "correctedSeconds": 180, "meteredSeconds": 50 }
+              ],
+              "noCorrectionThroughSeconds": 1.0,
+              "notes": [
+                "Official Rollei corrected-time rows (2 sec → 3 sec, 10 sec → 20 sec, 20 sec → 50 sec, 50 sec → 180 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 50 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 50.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "RPX 25 data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei RPX 25 — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → corrected 3 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 20 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 50 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 180,
+                    "meteredSeconds": 50
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 50,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "50 sec → corrected 180 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei RPX 100",
+    "canonicalStockName": "RPX 100",
+    "id": "rollei-rpx-100",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-rpx-100-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 2 },
+                { "correctedSeconds": 8, "meteredSeconds": 5 },
+                { "correctedSeconds": 25, "meteredSeconds": 10 },
+                { "correctedSeconds": 75, "meteredSeconds": 20 },
+                { "correctedSeconds": 150, "meteredSeconds": 30 }
+              ],
+              "noCorrectionThroughSeconds": 1.0,
+              "notes": [
+                "Official Rollei corrected-time rows (2 sec → 3 sec, 5 sec → 8 sec, 10 sec → 25 sec, 20 sec → 75 sec, 30 sec → 150 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 30 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 30.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "RPX 100 data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei RPX 100 — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → corrected 3 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 8 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 25,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 25 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 75,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 75 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 150,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 150 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei RPX 400",
+    "canonicalStockName": "RPX 400",
+    "id": "rollei-rpx-400",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-rpx-400-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 2, "meteredSeconds": 1 },
+                { "correctedSeconds": 10, "meteredSeconds": 5 },
+                { "correctedSeconds": 30, "meteredSeconds": 10 },
+                { "correctedSeconds": 55, "meteredSeconds": 15 },
+                { "correctedSeconds": 80, "meteredSeconds": 20 }
+              ],
+              "noCorrectionThroughSeconds": 0.5,
+              "notes": [
+                "Official Rollei corrected-time rows (1 sec → 2 sec, 5 sec → 10 sec, 10 sec → 30 sec, 15 sec → 55 sec, 20 sec → 80 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 20 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 20.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "RPX 400 data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei RPX 400 — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 2,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → corrected 2 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 10,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 10 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 30,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 30 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 55,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec → corrected 55 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 80 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei ORTHO 25 plus",
+    "canonicalStockName": "ORTHO 25 plus",
+    "id": "rollei-ortho-25-plus",
+    "iso": 25,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-ortho-25-plus-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official Rollei table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 7.5, "meteredSeconds": 5 },
+                { "correctedSeconds": 20, "meteredSeconds": 10 },
+                { "correctedSeconds": 50, "meteredSeconds": 20 },
+                { "correctedSeconds": 75, "meteredSeconds": 30 },
+                { "correctedSeconds": 100, "meteredSeconds": 40 },
+                { "correctedSeconds": 150, "meteredSeconds": 50 }
+              ],
+              "noCorrectionThroughSeconds": 1.0,
+              "notes": [
+                "Official Rollei corrected-time rows (5 sec → 7.5 sec, 10 sec → 20 sec, 20 sec → 50 sec, 30 sec → 75 sec, 40 sec → 100 sec, 50 sec → 150 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. Rollei's published rows do not lie on a single power law, so the curve bends between anchors; the published rows stay visible as source evidence. Inputs above 50 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 50.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "ORTHO 25 plus data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei ORTHO 25 plus — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 7.5,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 7.5 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 20 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 50,
+                    "meteredSeconds": 20
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 20,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "20 sec → corrected 50 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 75,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 75 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 100,
+                    "meteredSeconds": 40
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 40,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "40 sec → corrected 100 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 150,
+                    "meteredSeconds": 50
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 50,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "50 sec → corrected 150 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei RETRO 80S",
+    "canonicalStockName": "RETRO 80S",
+    "id": "rollei-retro-80s",
+    "iso": 80,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-retro-80s-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official log-log formula fit through published quantified rows",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficientSeconds": 0.9601,
+                "exponent": 1.5361,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 0.5,
+                "sourceRangeThroughSeconds": 30.0
+              },
+              "notes": [
+                "Tc = 0.9601 × Tm^p, p ≈ 1.5361. Free log-log fit through Rollei's four published quantified corrected-time rows (4/8/15/30 sec). The 1 sec and 2 sec published rows give corrected exposure as ranges (1–2 sec and 3–4 sec) and are preserved as source-evidence notes — they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "RETRO 80S data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei RETRO 80S — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → effective exposure 1 to 2 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → effective exposure 3 to 4 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec → corrected 8 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 24,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec → corrected 24 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec → corrected 60 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 180,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 180 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei RETRO 400S",
+    "canonicalStockName": "RETRO 400S",
+    "id": "rollei-retro-400s",
+    "iso": 400,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-retro-400s-unofficial-practical",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "practicalCommunityGuidance"
+        },
+        "name": "Unofficial practical approximation",
+        "notes": [
+          "Unofficial practical approximation from Stéphane Lafitte. Not Rollei-published reciprocity guidance.",
+          "Formula: Tc = Tm^1.62 for Tm > 1 sec. Lafitte context: long exposure with a B+W 10-stop ND filter.",
+          "Official Rollei product pages and PDFs identify the film stock but do not publish a Schwarzschild / reciprocity table for RETRO 400S."
+        ],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "exponent": 1.62,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1.0,
+                "sourceRangeThroughSeconds": 15.0
+              },
+              "notes": [
+                "Tc = Tm^1.62. Lafitte's published anchor examples (5 sec → 13.5 sec, 10 sec → 41 sec, 15 sec → 80 sec) define the practical source range through 15 sec; inputs above 15 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "unofficial",
+          "citation": "Rollei Retro 400S — Réciprocité",
+          "confidence": "medium",
+          "kind": "thirdPartyPublication",
+          "publisher": "Stéphane Lafitte",
+          "title": "Rollei Retro 400S"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 13.5,
+                    "meteredSeconds": 5
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 5,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "5 sec → corrected 13.5 sec. Lafitte context: long exposure with a B+W 10-stop ND filter."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 41,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → corrected 41 sec. Lafitte context: long exposure with a B+W 10-stop ND filter."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 80,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec → corrected 80 sec. Lafitte context: long exposure with a B+W 10-stop ND filter."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [],
+    "brandLabel": "Rollei SUPERPAN 200",
+    "canonicalStockName": "SUPERPAN 200",
+    "id": "rollei-superpan-200",
+    "iso": 200,
+    "kind": "preset",
+    "manufacturer": "Rollei",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "rollei-superpan-200-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official log-log formula fit through published quantified rows",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficientSeconds": 0.9601,
+                "exponent": 1.5361,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 0.5,
+                "sourceRangeThroughSeconds": 30.0
+              },
+              "notes": [
+                "Tc = 0.9601 × Tm^p, p ≈ 1.5361. Free log-log fit through Rollei's four published quantified corrected-time rows (4/8/15/30 sec); identical shape to RETRO 80S because Rollei publishes the same correction values for both films. The 1 sec and 2 sec published rows give corrected exposure as ranges (1–2 sec and 3–4 sec) and are preserved as source-evidence notes — they are never used as exact fitting points. Residuals at the four quantified rows stay within ~1/30 stop. Inputs above 30 sec continue on the same curve as numeric continuation outside the published source range."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "SUPERPAN 200 data sheet",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "Rollei",
+          "title": "Rollei SUPERPAN 200 — Data sheet"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 1 to 2 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → effective exposure 1 to 2 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "note",
+                "note": {
+                  "text": "Effective exposure 3 to 4 sec per published data sheet (range preserved as note)."
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → effective exposure 3 to 4 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec → corrected 8 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 24,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec → corrected 24 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 60,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec → corrected 60 sec."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 180,
+                    "meteredSeconds": 30
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 30,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "30 sec → corrected 180 sec."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "CHS II 100"
+    ],
+    "brandLabel": "ADOX CHS 100 II",
+    "canonicalStockName": "CHS 100 II",
+    "id": "adox-chs-100-ii",
+    "iso": 100,
+    "kind": "preset",
+    "manufacturer": "ADOX",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "adox-chs-100-ii-official-table",
+        "modelBasis": {
+          "calculationModel": "tableLogLogInterpolation",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official ADOX table",
+        "notes": [],
+        "rules": [
+          {
+            "kind": "tableInterpolation",
+            "tableInterpolation": {
+              "additionalAdjustments": [],
+              "anchors": [
+                { "correctedSeconds": 3, "meteredSeconds": 2 },
+                { "correctedSeconds": 8, "meteredSeconds": 4 },
+                { "correctedSeconds": 20, "meteredSeconds": 8 },
+                { "correctedSeconds": 45, "meteredSeconds": 15 }
+              ],
+              "noCorrectionThroughSeconds": 1,
+              "notes": [
+                "Official ADOX corrected-time rows from the 2024 CHS 100 II technical sheet (2 sec → 3 sec, 4 sec → 8 sec, 8 sec → 20 sec, 15 sec → 45 sec), interpolated between the published anchors in log-log space so the anchors reproduce the data-sheet values exactly. The published multiplier rows stay visible as source evidence. The sheet does not publish reciprocity rows past 15 sec; inputs above 15 sec extrapolate the last segment and are flagged beyond the published source range."
+              ],
+              "sourceRangeThroughSeconds": 15.0
+            }
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "ADOX CHS 100 II technical sheet (11 July 2024)",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "ADOX",
+          "title": "ADOX CHS 100 II S/W Film — Technische Beschreibung, 11. Juli 2024"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 1.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 3,
+                    "meteredSeconds": 2
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 2,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "2 sec → ×1.5 (corrected 3 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 8,
+                    "meteredSeconds": 4
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 4,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "4 sec → ×2 (corrected 8 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 2.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 8
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 8,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "8 sec → ×2.5 (corrected 20 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "multiplier",
+                  "multiplier": {
+                    "factor": 3
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 45,
+                    "meteredSeconds": 15
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 15,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "15 sec → ×3 (corrected 45 sec)."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "aliases": [
+      "CMS II 20"
+    ],
+    "brandLabel": "ADOX CMS 20 II",
+    "canonicalStockName": "CMS 20 II",
+    "id": "adox-cms-20-ii",
+    "iso": 20,
+    "kind": "preset",
+    "manufacturer": "ADOX",
+    "productionStatus": "current",
+    "profiles": [
+      {
+        "id": "adox-cms-20-ii-official-formula",
+        "modelBasis": {
+          "calculationModel": "guardedFormula",
+          "sourceModel": "manufacturerTable"
+        },
+        "name": "Official log-log formula anchored to 1 s and 10 s reference points",
+        "notes": [],
+        "rules": [
+          {
+            "formula": {
+              "additionalAdjustments": [],
+              "formula": {
+                "coefficientSeconds": 1.4142136,
+                "exponent": 1.150515,
+                "formulaFamily": "modifiedSchwarzschild",
+                "noCorrectionThroughSeconds": 1,
+                "sourceRangeThroughSeconds": 10.0
+              },
+              "notes": [
+                "Tc = 1.4142 × Tm^p, p ≈ 1.150515. Log-log fit through ADOX's published anchors at 1 sec (+1/2 stop) and 10 sec (+1 stop). Source-backed range ends at 10 sec; the 100 sec row is preserved as a 'Not recommended' warning marker (not a corrected-time anchor). Inputs above 10 sec still compute a formula-derived continuation but are classified outside source range; the user must read those values as formula prediction, not manufacturer guidance."
+              ]
+            },
+            "kind": "formula"
+          }
+        ],
+        "source": {
+          "authority": "official",
+          "citation": "CMS 20 II ADOTECH instructions",
+          "confidence": "high",
+          "kind": "manufacturerPublished",
+          "publisher": "ADOX",
+          "title": "ADOX CMS 20 II — Technical information"
+        },
+        "sourceEvidence": [
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              }
+            ],
+            "isSourceEvidenceOnly": true,
+            "meteredExposure": {
+              "exactSeconds": 0.001,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1/1000 sec → +1/2 stop. Preserved as published evidence only; the calculation path stays no-correction across the entire sub-1 sec band."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 0.5
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 1.4142136,
+                    "isApproximate": true,
+                    "meteredSeconds": 1
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 1,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "1 sec → +1/2 stop (≈1.4 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "exposure": {
+                  "kind": "stopDelta",
+                  "stopDelta": {
+                    "stopDelta": 1
+                  }
+                },
+                "kind": "exposure"
+              },
+              {
+                "exposure": {
+                  "correctedTime": {
+                    "correctedSeconds": 20,
+                    "meteredSeconds": 10
+                  },
+                  "kind": "correctedTime"
+                },
+                "kind": "exposure"
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 10,
+              "kind": "exactSeconds"
+            },
+            "notes": [
+              "10 sec → +1 stop (20 sec)."
+            ]
+          },
+          {
+            "adjustments": [
+              {
+                "kind": "warning",
+                "warning": {
+                  "message": "100 sec is not recommended.",
+                  "severity": "notRecommended"
+                }
+              }
+            ],
+            "meteredExposure": {
+              "exactSeconds": 100,
+              "kind": "exactSeconds"
+            },
+            "notes": []
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -3,64 +3,51 @@
 
 package com.sangwook.ptimer
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.sangwook.ptimer.app.notify.TimerNotifications
+import com.sangwook.ptimer.app.ui.ShootingApp
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 
 class MainActivity : ComponentActivity() {
+    // Incremented each time the app is opened from a timer notification so the
+    // shell opens the (expanded) timer list. A counter, not a flag, so a repeat
+    // tap while the activity is already running still triggers via onNewIntent.
+    private val openTimersSignal = mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        consumeShowTimers(intent)
         setContent {
-            PTimerTheme {
+            // Dark theme only (product decision), dynamic color off to match the
+            // iOS dark reference captures.
+            PTimerTheme(darkTheme = true, dynamicColor = false) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background,
                 ) {
-                    PlaceholderScreen()
+                    ShootingApp(openTimersSignal = openTimersSignal.intValue)
                 }
             }
         }
     }
-}
 
-@Composable
-private fun PlaceholderScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Text(
-            text = stringResource(R.string.placeholder_message),
-            style = MaterialTheme.typography.bodyMedium
-        )
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeShowTimers(intent)
     }
-}
 
-@Preview(showBackground = true)
-@Composable
-private fun PlaceholderScreenPreview() {
-    PTimerTheme {
-        PlaceholderScreen()
+    private fun consumeShowTimers(intent: Intent?) {
+        if (intent?.getBooleanExtra(TimerNotifications.EXTRA_SHOW_TIMERS, false) == true) {
+            openTimersSignal.intValue++
+        }
     }
 }

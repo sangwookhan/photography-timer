@@ -195,6 +195,47 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
+    func testStartNewReturnsFreshTimerIDForFocus() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 60)
+        let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
+
+        harness.currentDate = Date(timeIntervalSince1970: 130)
+        let newID = harness.viewModel.startNewTimer(from: runningSource)
+
+        // The returned id is the fresh running timer's id — the value the
+        // shell uses to move focus onto it — not the abandoned source.
+        let fresh = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id != runningSource.id }
+        )
+        XCTAssertEqual(newID, fresh.id)
+        XCTAssertNotEqual(newID, runningSource.id)
+    }
+
+    @MainActor
+    func testStartAgainReturnsClonedTimerIDForFocus() throws {
+        let harness = makeRuntimeHarness(now: 100)
+
+        harness.viewModel.startTimer(from: 8)
+        let sourceID = try XCTUnwrap(harness.viewModel.timers.first?.id)
+        harness.currentDate = Date(timeIntervalSince1970: 200)
+        harness.timerManager.tick(now: harness.currentDate)
+        let completedSource = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id == sourceID }
+        )
+
+        harness.currentDate = Date(timeIntervalSince1970: 250)
+        let newID = harness.viewModel.startTimerAgain(from: completedSource)
+
+        let cloned = try XCTUnwrap(
+            harness.viewModel.timers.first { $0.id != sourceID }
+        )
+        XCTAssertEqual(newID, cloned.id)
+        XCTAssertNotEqual(newID, sourceID)
+    }
+
+    @MainActor
     func testStartingNewFromPausedRowCancelsSourceAndStartsFromBeginning() throws {
         let harness = makeRuntimeHarness(now: 100)
 

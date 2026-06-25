@@ -157,13 +157,22 @@ Reciprocity 계산은 layer 분리를 깨끗하게 보존:
      - `invalidFormula` → parameter contract 위반을 표현하는 `unsupportedOutOfPolicyRange` (PTIMER-84 custom formula가 이 별도 case를 사용);
      - `formulaOutputUnusable` → 런타임 산술 실패를 표현하는 `unsupportedOutOfPolicyRange`;
      - `unsafeShorteningFormula` → `corrected = t`로 `officialThresholdNoCorrection`에 handoff (reciprocity 보정이 셔터를 결코 줄이지 않도록 보장하는 보편 safety net).
-2. **Threshold 무보정** — 독립 threshold rule을 여전히 가지는 profile (limited-guidance 모양)에 한해, `t`가 threshold 안에 있으면 `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
-3. **Limited guidance** — profile이 `t`를 cover하는 (또는 open-ended) `appliesWhenMetered`의 limited-guidance rule을 정의하면 `limitedGuidanceNoQuantifiedPrediction` 반환. 숫자 보정 노출 없음.
-4. **Unsupported 대체** — 어떤 rule도 적용되지 않으면 보정 노출 없이 `unsupportedOutOfPolicyRange` 반환.
+2. **Table-interpolation rule** — profile이 table-interpolation rule을 정의하면 `t`에서 평가. 이 rule은 제조사 reciprocity *table* (출판된 metered→corrected anchor)을 **log10–log10** 공간의 piecewise-linear interpolation으로 보정 노출로 변환 — interpolation이 모든 출판 anchor를 정확히 통과하도록. Rule 자체가 guard를 소유:
+   - `t ≤ noCorrectionThroughSeconds` → `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
+   - `t`가 출판 범위 안 → basis = `tableLogLogDerived` (보정 노출 동반).
+   - `t`가 마지막 anchor (`sourceRangeThroughSeconds`) 위 → rule이 마지막 log-log 세그먼트를 외삽해 계속 계산하고 결과는 numeric continuation을 carry하는 `unsupportedOutOfPolicyRange`로 reclassify (출판 source 범위 너머로 표현). dead-end 하지 않는다 — 값 없는 unsupported 결과는 진짜로 계산 불가능한 입력에만 예약.
+   - 잘못된 입력 / malformed anchor → 보정 노출 없는 `unsupportedOutOfPolicyRange`.
+
+   Fomapan 100 Classic이 대표 table-model profile (official FOMA 행 1s→2s, 10s→80s, 100s→1600s). 그 app-derived power-law 공식은 official default가 아니라 비-default, 명확히 라벨된 alternate model로 유지.
+3. **Threshold 무보정** — 독립 threshold rule을 여전히 가지는 profile (limited-guidance 모양)에 한해, `t`가 threshold 안에 있으면 `corrected = t` + basis = `officialThresholdNoCorrection` 반환.
+4. **Limited guidance** — profile이 `t`를 cover하는 (또는 open-ended) `appliesWhenMetered`의 limited-guidance rule을 정의하면 `limitedGuidanceNoQuantifiedPrediction` 반환. 숫자 보정 노출 없음.
+5. **Unsupported 대체** — 어떤 rule도 적용되지 않으면 보정 노출 없이 `unsupportedOutOfPolicyRange` 반환.
 
 `sourceRangeThroughSeconds`는 **source / fitting confidence boundary**이지 calculation hard stop이 아니다 — 모든 공식은 그 너머에서도 숫자 값을 산출하고 (위 1단계 안전 검사 적용), 결과는 억제되는 대신 beyond-source 표현으로 reclassify 된다.
 
 1단계의 `unsafeShorteningFormula` handoff가 보편 **correction invariant**다: 보정 노출이 측광 값보다 짧으면 identity로 치환. Reciprocity 보정은 adjusted shutter를 절대 줄일 수 없으며, safety net이 공식 곡선이 자신의 no-correction 경계를 넘는 edge case에서도 그 보장을 유지한다.
+
+User-defined custom profile ([DomainSchema Spec](DomainSchema.md) §13.4)은 같은 평가 순서, 같은 공유 `ReciprocityFormula` 값, 그리고 위 같은 routing table을 통해 흐른다 — source 범위 안에서 `formulaDerived`, `sourceRangeThroughSeconds` 너머 numeric continuation을 carry하는 `unsupportedOutOfPolicyRange`, `noCorrectionThroughSeconds` 이하에서 `officialThresholdNoCorrection`, 그리고 identity로 short-circuit 된 `unsafeShorteningFormula`. 계산 정책은 평가 시점에 user-defined profile을 preset 공식 profile과 구별하지 않는다; 차이는 `sourceAuthorityImpact`에 carry 되어 presentation이 math를 바꾸지 않고도 user-defined 데이터를 제조사-published 데이터와 시각적으로 구별하도록 한다.
 
 ### 3.3 결과 형태 + metadata
 
@@ -197,12 +206,13 @@ Reference panel은 profile에 attach 된 source 데이터를 surface. 표현 규
 
 ### 3.5 Confidence presentation
 
-Presentation layer는 각 결과를 다음 네 신뢰도 카테고리 중 하나로 매핑:
+Presentation layer는 각 결과를 다음 다섯 신뢰도 카테고리 중 하나로 매핑:
 
 - **No correction** — basis = `officialThresholdNoCorrection`. 보정 노출 = 측광 노출. User-facing label: `No correction`.
-- **Formula-derived** — basis = `formulaDerived`. 결과는 활성 계산 곡선에 anchor. User-facing label: `Formula-derived`.
+- **Formula-derived** — basis = `formulaDerived`. 결과는 활성 계산 곡선에 anchor. User-facing label: preset profile은 `Formula-derived`; 활성 profile이 user-defined ([DomainSchema Spec](DomainSchema.md) §13.4)이면 `Custom formula` — 정상 custom-profile 결과가 converted formula profile에 예약된 경고 문구가 아니라 method/authority 진술로 읽히도록.
+- **Table-derived** — basis = `tableLogLogDerived`. 결과는 제조사 reciprocity table을 log-log 공간에서 interpolation (Fomapan 100의 official model). User-facing label: `Table-derived`; Details model 요약은 계산 방법을 `Log-log table interpolation`으로 읽으며 — 단순 "lookup"이 아니다.
 - **Limited guidance** — basis = `limitedGuidanceNoQuantifiedPrediction`. User-facing label: `No quantified prediction`. UI는 숫자 대신 차분한 설명 텍스트 표시; 근거 없는 값을 만들지 않는다.
-- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label은 supported range 외부의 formula prediction 가용 여부에 따라: 출판된 source range 외부의 converted formula profile (sourceEvidence 포함 formula rule)이면 `Beyond source range`, 그 외 numeric continuation이면 `Outside guidance`, 값 자체가 없으면 `No corrected value`.
+- **Unsupported** — basis = `unsupportedOutOfPolicyRange`. User-facing label은 활성 profile과 supported range 외부의 numeric continuation 가용 여부에 따라: converted preset formula profile (sourceEvidence 포함 formula rule), 출판 anchor 너머의 official log-log table model, 그리고 `sourceRangeThroughSeconds` 너머의 user-defined custom formula profile이면 `Beyond source range`; 그 어느 것도 아닌 numeric continuation이면 `Outside guidance`; 값 자체가 전혀 없으면 `No corrected value`.
 
 카테고리와 badge 문구는 launch preset reciprocity presentation에서 `Exact`, `Estimated`, `Interpolated`, `Extrapolated`, `Advisory`를 primary status / badge 텍스트로 surface 하지 않는다 — 이 용어들은 legacy table 모델을 인코드 했으며 현 vocabulary에 포함되지 않는다.
 

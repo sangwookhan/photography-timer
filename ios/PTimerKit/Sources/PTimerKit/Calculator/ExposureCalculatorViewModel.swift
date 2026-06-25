@@ -1338,14 +1338,18 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// terminal canceled record, not removed) so the abandoned exposure
     /// stays in history and no ghost timer keeps running. No-op when
     /// `source` is not active.
-    public func startNewTimer(from source: RunningTimerItem) {
+    /// Returns the new timer's id so the caller can move focus to it.
+    @discardableResult
+    public func startNewTimer(from source: RunningTimerItem) -> UUID? {
         timerWorkspaceModel.startTimer(replacingActive: source)
     }
 
     /// Starts a fresh timer cloned from a terminal (completed or
     /// canceled) record, leaving the source record intact. No-op when
-    /// `source` is not a terminal record.
-    public func startTimerAgain(from source: RunningTimerItem) {
+    /// `source` is not a terminal record. Returns the new timer's id so
+    /// the caller can move focus to it.
+    @discardableResult
+    public func startTimerAgain(from source: RunningTimerItem) -> UUID? {
         timerWorkspaceModel.startTimer(cloning: source)
     }
 

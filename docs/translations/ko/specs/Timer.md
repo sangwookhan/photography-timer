@@ -12,11 +12,12 @@
 
 ### 1.1 상태
 
-Timer는 어느 시점에도 다음 세 상태 중 정확히 하나에 있다:
+Timer는 어느 시점에도 다음 네 상태 중 정확히 하나에 있다:
 
 - **running** — 능동적으로 카운트다운. 남은시간이 벽시계와 함께 감소.
 - **paused** — frozen. 남은시간이 변하지 않음.
-- **completed** — 종단(terminal). 남은시간 = 0. 빠져나갈 수 없음.
+- **completed** — 종단(terminal); timer가 자연스럽게 끝에 도달. 남은시간 = 0. 빠져나갈 수 없음.
+- **canceled** — 종단(terminal); 사용자가 끝나기 전에 timer를 멈춤. 남은시간 = 0. 빠져나갈 수 없음. completed와 구별되어 포기된 컷이 *Done*이 아니라 *Canceled*로 surface 되도록.
 
 Timer의 표현은 현재 상태에서 의미 있는 필드만 포함한다 — running은 expected 종료 시간, paused는 frozen 남은시간 + paused-at instant, completed는 기록된 완료 timestamp. 상태들이 record를 공유하는 nullable sibling은 없음. 따라서 *invalid* 조합 (예: paused-at instant를 가진 running timer)은 표현 자체가 불가능.
 

@@ -324,13 +324,21 @@ struct ExposureCalculatorScreen: View {
                         guard let source = viewModel.timers.first(where: { $0.id == id }) else {
                             return
                         }
-                        viewModel.startNewTimer(from: source)
+                        // Move focus to the freshly started timer so it
+                        // scrolls into view (the Active section header stays
+                        // visible per PTIMER-126) and highlights, instead of
+                        // the list staying on the previously focused row.
+                        if let newID = viewModel.startNewTimer(from: source) {
+                            bottomSheetStateStore.focusTimer(newID)
+                        }
                     },
                     onStartTimerAgain: { id in
                         guard let source = viewModel.timers.first(where: { $0.id == id }) else {
                             return
                         }
-                        viewModel.startTimerAgain(from: source)
+                        if let newID = viewModel.startTimerAgain(from: source) {
+                            bottomSheetStateStore.focusTimer(newID)
+                        }
                     },
                     onClearCompletedTimers: viewModel.clearCompletedTimers,
                     onClose: bottomSheetStateStore.collapse

@@ -245,3 +245,89 @@
     settling on a page makes that camera the active slot (capture-on-switch),
     and an external slot change animates the pager back into alignment.
     `:app:assembleDebug` + tests green.
+
+34. **User:** Timer list timers have a stable unique id on iOS; it was not
+    ported. Implement it like the iOS structure.
+    **Claude:** Ported iOS `RunningTimerItem.order` — a 1-based, monotonic
+    (`max+1`) creation number on `WorkspaceTimer`, assigned in
+    `TimerWorkspace.start` (so Start Again keeps climbing), persisted in
+    `PersistentWorkspaceTimer`, carried through `TimerCardState`, and rendered as
+    a bare monospaced number beside the slot badge in the full card (omitted on
+    the compact mini card, like iOS). Folded into the timer workspace / list /
+    planner commits. Verified on emulator; relaunch keeps order.
+
+35. **User (device bug):** Reset is tappable from the timer list; starting a
+    timer opens the list half-way (should be mini); tapping empty space in the
+    half state does not close it.
+    **Claude:** `BottomSheetScaffold` has no scrim, so the shooting surface stayed
+    live behind the expanded list and outside taps did nothing; the peek height
+    growing from 0 could settle the sheet to Expanded. Added a full-screen scrim
+    while expanded (blocks + dims the surface, collapses on outside tap), forced
+    the partial (mini) anchor when timers appear, and collapse-on-empty. Folded
+    into the peeking-sheet commit; verified on emulator.
+
+36. **User (device bug):** From the full list, Start New starts a timer but it is
+    added at the top and stays hidden; the list scrolls back to the entered timer.
+    **Claude:** Focus now follows a newly started active timer (keyed on the id
+    list) so it scrolls into view + highlights. Verified (Start Again → new top
+    timer focused). **User:** apply the same policy to iOS. **Claude:** ported —
+    `startNewTimer`/`startTimerAgain` return the new id and the shell calls
+    `focusTimer(newID)` (section-header scroll per PTIMER-126). 1305 iOS package
+    tests + app build green.
+
+37. **User:** Make the Reciprocity Details fully match the iOS screen (provided
+    iOS captures). **Claude:** Replaced the (wrong) flat guidance list with the
+    iOS **Source reference** table (metered exposure → +stops, color filter as an
+    indented sub-line) + **Guidance boundary** rows + legend glossary; metered
+    labels use compact seconds (`64s`, via `formatShutter`) like iOS; **status
+    detail** sentence ported verbatim from `ReciprocityDetailsVocabularyPresenter`
+    (manufacturer stop-signal lead); **App-derived guarded formula** calc label;
+    round-duration **graph axis ticks**; **source-evidence markers** + the
+    not-recommended boundary on the curve; full **legend chips**; and the
+    **Sources** citation block. Each verified on emulator against the iOS Velvia
+    50 screen; folded into the reciprocity presenter / graph / screen commits.
+
+38. **User:** iOS classifies films into categories and treats each film as data
+    only — is Android the same? **Claude:** Yes — both load the same 37-film JSON
+    catalog into `FilmIdentity` data; no per-film code (generic policy/evaluator);
+    grouped by `manufacturer`; reciprocity model categories are data-driven enums.
+    Adding a film = one JSON entry, no code.
+
+39. **User (device bug):** Back from Reciprocity Details exits the app; every
+    screen's Back (and swipe-back) should return to main.
+    **Claude:** The full-screen overlays (Reciprocity Details `Surface`, expanded
+    Timers sheet) had no back handling. Added `BackHandler` for both (covers the
+    swipe gesture too); modal sheets / dialogs already dismiss on Back. Verified
+    every screen → main on emulator; folded into the shell commit. **User:** back
+    verified on all screens — pass.
+
+40. **User:** What is left for the MVP? Handle A, D, B in order, then merge; C
+    later. **Claude+User:** A (notification action buttons) → **dropped** (the
+    ongoing notification is a single aggregate; per-timer actions belong with the
+    Live Activity / C); instead **tapping the notification opens the expanded
+    timer list** (singleTop + SHOW_TIMERS extra). Also added the **iOS app icon**
+    as a placeholder launcher icon. Two standalone commits.
+
+41. **User (D):** Check all EN/KO docs; the spec should effectively have no
+    difference. **Claude:** The branch changed no spec docs (MVP spec-clean); the
+    EN↔KO divergence was pre-existing on main. **User:** sync now in this PR.
+    **Claude:** synced all five KO translations to the English originals (EN
+    untouched) — UI.md (4 missing film-selector subsections + drift), Requirements
+    (custom-profile FRs), Calculator (table-interpolation step + Table-derived),
+    DomainSchema (custom-profile section, selectorLabel, table log-log), Timer
+    (canceled state). Heading/list counts now match EN exactly. Also refreshed the
+    backlog status (units 11/12 done, action-buttons decision, device-fix log).
+
+42. **User (B):** kill-state alarm works — with the app fully killed the sound +
+    notification fire (quiet sound → separate ticket). **Claude:** verified the
+    background ongoing notification + notification-tap-to-list on emulator; B
+    confirmed (completion delivery while killed signed off on the user's device).
+
+43. **User (device):** the placeholder icon renders wrong (a small square on a
+    white circle); the splash is fine — leave it for later cleanup.
+    **Claude:** the cause was a legacy square PNG with the adaptive icon removed,
+    so launchers framed it on a white circle. Replaced with a proper **adaptive
+    icon** (iOS art foreground at the 108dp densities over a solid dark
+    background; legacy PNGs kept as the pre-API-26 fallback) so it masks
+    edge-to-edge. Amended the icon commit; verified the masked iOS icon in the app
+    drawer. Splash left untouched.

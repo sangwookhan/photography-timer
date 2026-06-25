@@ -28,6 +28,10 @@ class AndroidTimerAlertCoordinator(private val context: Context) {
         scheduled.clear()
         scheduled.addAll(desired.keys)
 
+        // Publish the stage sequence so the completion alarm can advance the
+        // ongoing notification at the exact end instant (see OngoingAlertRegistry).
+        OngoingAlertRegistry.stages = plan.stages
+
         // Ongoing foreground notification mirrors "any timer running".
         val ongoing = plan.ongoing
         if (ongoing != null) TimerForegroundService.start(context, ongoing) else TimerForegroundService.stop(context)

@@ -51,4 +51,29 @@ class TimerAlertPlannerTest {
         assertTrue(plan.ongoing!!.text.contains("@3000"))
         assertTrue(plan.ongoing!!.text.contains("2 timers"))
     }
+
+    @Test
+    fun stagesAdvanceThroughEachRepresentativeAsTimersComplete() {
+        val plan = TimerAlertPlanner.plan(
+            listOf(
+                card(TimerStatus.running, 9000, "Camera 1"),
+                card(TimerStatus.running, 3000, "Camera 2"),
+                card(TimerStatus.paused, 1000, "Camera 3"),
+            ),
+        ) { millis -> "@$millis" }
+
+        // One stage per running timer, ordered by end. The first stage equals
+        // the initial ongoing; later stages drop the completed timers.
+        assertEquals(listOf(3000L, 9000L), plan.stages.map { it.endMillis })
+        assertEquals(plan.ongoing, plan.stages.first().content)
+        // While Camera 2 (3000) is representative: 2 timers, ends @3000.
+        assertEquals("Camera 2", plan.stages[0].content.title)
+        assertTrue(plan.stages[0].content.text.contains("2 timers"))
+        // After it completes, Camera 1 (9000) is the lone representative.
+        assertEquals("Camera 1", plan.stages[1].content.title)
+        assertEquals(9000L, plan.stages[1].content.endAtEpochMillis)
+        assertTrue(plan.stages[1].content.text.contains("Expected completion"))
+        assertTrue(plan.stages[1].content.text.contains("@9000"))
+        assertTrue(!plan.stages[1].content.text.contains("timers"))
+    }
 }

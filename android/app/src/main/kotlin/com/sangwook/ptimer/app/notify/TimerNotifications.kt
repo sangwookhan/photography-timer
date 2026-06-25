@@ -23,6 +23,9 @@ object TimerNotifications {
     const val COMPLETION_CHANNEL_ID = "timer_completion"
     const val ONGOING_NOTIFICATION_ID = 1
 
+    /** Intent extra: open the app straight into the (expanded) timer list. */
+    const val EXTRA_SHOW_TIMERS = "com.sangwook.ptimer.SHOW_TIMERS"
+
     /** Creates both channels; idempotent (safe to call on every launch). */
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -77,6 +80,7 @@ object TimerNotifications {
     private fun appContentIntent(context: Context): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(EXTRA_SHOW_TIMERS, true)
         return PendingIntent.getActivity(
             context,
             0,

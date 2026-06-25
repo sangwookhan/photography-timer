@@ -66,7 +66,7 @@ import java.time.Instant
  */
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ShootingApp() {
+fun ShootingApp(openTimersSignal: Int = 0) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
 
@@ -140,13 +140,26 @@ fun ShootingApp() {
     // The mini card a user tapped to open the full list, so it can be focused.
     var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
 
+    // Opened from a timer notification: expand straight to the full list once
+    // timers are available (restore may land just after the tap). One-shot so a
+    // later timer change does not re-expand on its own.
+    var pendingOpenTimers by remember { mutableStateOf(false) }
+    LaunchedEffect(openTimersSignal) { if (openTimersSignal > 0) pendingOpenTimers = true }
+    LaunchedEffect(pendingOpenTimers, hasTimers) {
+        if (pendingOpenTimers && hasTimers) {
+            scaffoldState.bottomSheetState.expand()
+            pendingOpenTimers = false
+        }
+    }
+
     // Keep the sheet at its partial (mini) anchor whenever the timer set appears
     // or empties. On the first timer this shows only the compact peek instead of
     // settling to the full list (the peek height grows from 0). On clearing the
     // last timer it collapses the sheet to the now-zero peek instead of leaving
     // an empty expanded list open. Tapping a mini card is the only expand path.
+    // Skipped while a notification open is pending, so the two don't fight.
     LaunchedEffect(hasTimers) {
-        scaffoldState.bottomSheetState.partialExpand()
+        if (!pendingOpenTimers) scaffoldState.bottomSheetState.partialExpand()
     }
 
     // Focus follows a newly started active timer so Start New (and a calculator

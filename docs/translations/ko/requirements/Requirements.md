@@ -7,7 +7,13 @@
 **영향 방향**: 요구사항 → 행동 계약 → 코드, **단방향**. 요구사항 문서는 제품 의도에 대해 normative 하다. 하류 문서들은 각 요구사항이 어떻게 명세되고, 구조화되고, 검증되는지를 구체화한다. 하류 문서에 대한 참조는 탐색(navigational) 목적이며 요구사항이 그 문서들에 의존하게 만들지 않는다. 요구사항이 *"시스템은 X를 한다"* 라고 말할 때, *무엇을* 하고 *왜* 하는지는 여기에서 결정되며, *어떻게* 하는지는 하류에서 결정된다.
 **문구 규칙**: 모든 요구사항은 *사용자에게 보이는 필요점* 또는 *무결성 불변식(integrity invariant)*을 기술한다. 구현 specifics(픽셀 사이즈, 갱신 주기, 영속화 키, lint 규칙 ID, baseline 파일명, property wrapper 선택 등)는 하류 문서에 속하며 본 문서에 등장하지 않는다.
 
-**문서 경계**: 본 문서는 앱이 *무엇을* 해야 하는지 정의한다. 시스템이 *어떻게* 구조화되는지(layering, ownership, 모듈 boundary)는 `docs/architecture/Architecture.md`. 각 요구사항을 어떤 *행동 계약*이 realize 하는지는 `docs/specs/`. 변경이 *어떻게* 검증되는지는 `docs/verification/Strategy.md`.
+**문서 경계**: 본 문서는 앱이 *무엇을* 해야 하는지 정의한다. 다음은 정의하지 않는다:
+
+- 시스템이 *어떻게* 구조화되는지 — `docs/architecture/Architecture.md` 참조;
+- 각 요구사항을 어떤 *행동 계약*이 realize 하는지 — `docs/specs/` 참조;
+- 변경이 *어떻게* 검증되는지 — `docs/verification/Strategy.md` 참조.
+
+요구사항이 non-functional 의무 (예: 결정성, 영속 안정성)를 진술할 때, 그 의무는 여기에 위치하고; 그것을 달성하는 메커니즘은 해당 하류 문서에 위치한다.
 
 ---
 
@@ -188,6 +194,12 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 - **FR-2.6** Reciprocity 평가는 결정적 — 같은 profile과 측광값은 항상 같은 결과 form, 보정값, status 표시를 산출한다. (NFR-D.1)
 - **FR-2.7** 사용자는 calculator와 화면을 다투는 inline 드롭다운이 아닌, 별도의 dismissible 표면을 통해 필름 선택에 도달. (시나리오 2)
 - **FR-2.8** Reciprocity 커버리지는 *정량 공식*이 있는 필름으로 한정되지 않는다. threshold-only / limited-guidance 출판 가이드는 일차 지원 범위로 다루며 (보조 대체이 아님), 도메인은 향후 비공식 / 사용자 정의 entry를 위한 capacity를 예약한다. (시나리오 2 경계; FR-2.2 보완)
+- **FR-2.9** 사용자는 네 공식 항 (anchor에서의 보정 노출, anchor에서의 측광 노출, 곡선 지수, 고정 offset)과 두 range/policy 경계 (no-correction 상한 + source/confidence 상한)를 노출하는 formula-first editor로 **custom reciprocity 공식 profile**을 작성 가능. Custom profile은 preset 공식 profile과 동일한 공유 guarded 공식 평가 경로를 사용. (Persona 1.2)
+- **FR-2.10** 사용자는 custom reciprocity profile을 **저장, 재사용, 선택, 편집, 삭제** 가능. 저장된 custom profile은 앱 재실행을 견디고 preset 카탈로그와 같은 film picker에서 선택 가능하며, 제조사-published entry로 오인될 수 없도록 자기 그룹에 제시. (Persona 1.2; 시나리오 2)
+- **FR-2.11** Calculator에서 선택된 custom profile은 preset profile과 같은 조건으로 Corrected Exposure를 구동하며, Corrected Exposure 행의 **Start Timer** affordance는 custom-profile 결과가 quantified이거나 source range 너머 numeric 공식 continuation을 가질 때마다 사용 가능. (Persona 1.2; 시나리오 2, 3; FR-2.5 확장)
+- **FR-2.12** Editor는 무효 공식 입력 — 예를 들어 비양수 anchor 노출, 누락된 지수, 또는 잘못된 순서의 range 경계 — 를 위반된 제약의 inline 설명을 surface 하고 무효 state가 사용 가능한 보정을 만든다고 시사할 preview 출력을 억제함으로써 **거부 또는 안전하게 제시**. 시스템은 공식 state가 공유 파라미터 계약을 위반하는 custom profile을 절대 영속하지 않는다. (Persona 1.2)
+- **FR-2.13** Custom profile의 **사진가 제공 source metadata** (source kind, 제조사 / stock 라벨, reference URL)는 verbatim 보존되며 **절대 제조사 권위로 제시되지 않는다**. Film 행 authority 부제, picker 행 배지, Details 표면, 그리고 custom profile에서 시작된 모든 timer는 결과가 user-defined profile에서 왔음을 분명히 한다. (Persona 1.2; FR-2.3 보완)
+- **FR-2.14** Custom-profile 계산에서 시작된 각 timer는 사진가가 — source custom profile이 나중에 편집되거나 삭제된 후에도 — timer의 duration이 user-defined profile에서 왔음을 인식할 수 있을 만큼의 custom-profile identity를 metadata에 보존. (시나리오 3, 5; FR-4.6 확장)
 
 ### 3.3 Timer 라이프사이클
 
@@ -301,7 +313,9 @@ ND 필터를 사용해 장노출을 촬영하는 사진가. 삼각대 위에서 
 - Timer 큐잉 / 체이닝 (A 끝나면 B 시작). 다중 timer는 *병렬로* 독립 실행되는 timer들이지 sequence가 아님.
 - 스튜디오 strobe / flash duration 모드.
 - Video 모드 / cinematography.
-- Cross-device 동기화. 각 폰이 자신의 카탈로그와 영속 상태를 보유.
+- Cross-device 동기화. 각 폰이 자신의 카탈로그와 영속 상태를 보유. 사용자가 작성한 custom reciprocity profile의 remote sharing도 out of scope; FR-2.9는 local 작성만 다룬다.
+- Table-derived custom reciprocity 입력. 현 custom-profile workflow (FR-2.9 ~ FR-2.14)는 항별로 작성한 공식을 받는다; multi-row reference table과 point fitting을 custom 계산 model로 쓰는 것은 향후 기능으로 유보.
+- picker의 select / create / edit / delete affordance를 넘어선 광범위한 film-inventory 관리. Bulk import/export, 태깅, custom-profile editor 외부의 per-stock 노트는 본 release의 일부가 아니다.
 - TCA / Redux 스타일 글로벌 store.
 
 ---

@@ -77,8 +77,8 @@ Layer: **C** = `:core` (pure Kotlin), **A** = `:app`. Oracle tickets listed are
 | 8 | Camera slots + rename (per-slot calc/film/target/model, capture-on-switch, immutable identity) | A | 120, 123 | T2 `camera-slot/*` |
 | 9 | Custom film library + formula + table + fitted preview + Create-Formula-from-table (**inspection-only invariant**) | C+A | 84, 85, 165, 178, 179, 180. Ref: 160 | T1 `custom-film-edit/*` |
 | 10 | Target Shutter (per-slot target + stop-difference comparison; no fabrication when non-quantified) | A | 25 | T2 `target-shutter/*` |
-| 11 | Reciprocity Details (source/model/calc transparency, model picker, custom rows, fitted comparison, reference/error columns) | A | 95, 100, 119, 130, 143, 159, 161 (graph visual fidelity deferred) | T1 `reciprocity-detail/*` |
-| 12 | Notifications (completion + ongoing running-timer foreground service; action buttons only if low-risk) | A | 66, 67, 68, 69 (iOS lock-screen/ActivityKit → Android notification + foreground-service functional analogue) | — |
+| 11 | Reciprocity Details (source/model/calc transparency, model picker, custom rows, fitted comparison, reference/error columns) — **DONE, full iOS parity**: source-reference table (metered→correction, color filter sub-line), guidance-boundary rows, status detail sentence (verbatim, manufacturer stop-signal lead), App-derived calc label, round-duration graph axis, source-evidence markers + not-recommended-boundary, full legend chips, Sources citation, legend glossary | A | 95, 100, 119, 130, 143, 159, 161 | T1 `reciprocity-detail/*` |
+| 12 | Notifications (completion + ongoing running-timer foreground service) — **DONE**. Notification action buttons **dropped** (the ongoing notification is a single aggregate, so per-timer Pause/Cancel belongs with the per-timer lock-screen Live Activity, not here); instead **tapping the notification opens the expanded timer list** | A | 66, 67, 68, 69 (iOS lock-screen/ActivityKit → Android notification + foreground-service functional analogue) | — |
 
 Notes:
 - **#9 may sub-split:** 9a formula authoring / 9b table + fitted preview / 9c
@@ -115,8 +115,11 @@ localization, 184 About, 189). Re-evaluate only if owner explicitly pulls one in
   confirmed on device; selection uses dimmed edges + a clear center with
   hairline bounds (not a fill band). Fling damping is slightly lighter than
   iOS — tunable later via the snap fling decay, not a blocker.
-- **Notification action buttons** (open) — include if low-risk at unit 12, else
-  defer the buttons (not the notification feature).
+- **Notification action buttons** — DECIDED: **dropped**. The ongoing
+  notification is a single aggregate ("N timers running"), so per-timer
+  Pause/Cancel is ambiguous there; per-timer actions belong with the per-timer
+  lock-screen Live Activity (deferred to a separate PR). Instead, **tapping the
+  notification opens the app straight into the expanded timer list**.
 
 Unit 2.5 is a **validation gate**: the SnapWheel API is locked only after the
 live-during-fling behavior is confirmed on a device; units 6/7/10 build on the
@@ -142,3 +145,19 @@ interrupt the current feature flow. Not blockers.
   short / just-finished timer stays briefly visible instead of vanishing the
   instant it leaves the active set (the registered bug). Cards switched from a
   wide 180-dp landscape strip to iOS-style tall portrait cards (96×116).
+- **[DONE] Timer sheet behavior.** The expanded list now has a scrim that blocks
+  the shooting surface (Reset/wheels unreachable behind it) and collapses on an
+  outside tap; starting a timer lands on the mini peek (not half-open); clearing
+  the last timer collapses the sheet.
+- **[DONE] Per-timer order number (iOS RunningTimerItem.order).** Stable 1-based
+  creation number shown beside the slot badge in the full card; persisted.
+- **[DONE] Start New / Start Again focus.** A freshly started timer becomes the
+  focused/scrolled row so it is visible (was hidden above the previously focused
+  card). Also ported to iOS.
+- **[DONE] Back navigation.** System Back / swipe-back returns to the main screen
+  from every surface (Reciprocity Details, expanded Timers, modal sheets/dialogs)
+  instead of exiting the app.
+- **[DONE] Notification tap → timer list.** Tapping the ongoing/completion
+  notification opens the app straight into the expanded timer list.
+- **[DONE] App icon (placeholder).** Ships the iOS app icon as the launcher icon
+  until a dedicated Android adaptive-icon ticket.

@@ -175,7 +175,7 @@ fun ShootingApp(openTimersSignal: Int = 0) {
         if (!pendingOpenTimers) scaffoldState.bottomSheetState.partialExpand()
     }
 
-    // Focus follows a newly started active timer so Start New (and a calculator
+    // Focus follows a newly started active timer so Clone (and a calculator
     // start) scrolls the fresh timer into view in the expanded list, instead of
     // the list snapping back to the previously focused card and hiding the new
     // one above it. Only genuinely new ids move the focus, so tapping an

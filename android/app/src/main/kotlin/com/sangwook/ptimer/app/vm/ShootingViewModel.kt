@@ -23,7 +23,8 @@ sealed interface ShootingIntent {
     data class Resume(val id: UUID) : ShootingIntent
     data class Cancel(val id: UUID) : ShootingIntent
     data class Remove(val id: UUID) : ShootingIntent
-    data class StartAgain(val id: UUID) : ShootingIntent
+    data class Clone(val id: UUID) : ShootingIntent
+    data object ClearCompleted : ShootingIntent
 }
 
 /** Read-only display card for one timer. */
@@ -85,7 +86,8 @@ class ShootingViewModel(
             is ShootingIntent.Resume -> workspace.value.resume(intent.id, n)
             is ShootingIntent.Cancel -> workspace.value.cancel(intent.id, n)
             is ShootingIntent.Remove -> workspace.value.remove(intent.id)
-            is ShootingIntent.StartAgain -> workspace.value.startAgain(intent.id, idProvider(), n)
+            is ShootingIntent.Clone -> workspace.value.clone(intent.id, idProvider(), n)
+            is ShootingIntent.ClearCompleted -> workspace.value.clearCompleted()
         }.reconciled(n)
         now.value = n
         publish()

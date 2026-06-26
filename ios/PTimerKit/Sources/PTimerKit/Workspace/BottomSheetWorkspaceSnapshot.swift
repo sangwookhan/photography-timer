@@ -485,11 +485,11 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     private static func largeActions(for status: TimerStatus) -> [BottomSheetLargeAction] {
         switch status {
         case .running:
-            return [.pause, .startNew]
+            return [.pause, .clone, .cancel]
         case .paused:
-            return [.resume, .startNew, .cancel, .remove]
+            return [.resume, .clone, .cancel, .remove]
         case .completed, .canceled:
-            return [.startAgain, .remove]
+            return [.clone, .remove]
         }
     }
 

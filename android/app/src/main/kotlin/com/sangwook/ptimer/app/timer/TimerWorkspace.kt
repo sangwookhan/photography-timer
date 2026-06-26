@@ -30,7 +30,7 @@ data class TimerWorkspace(val timers: List<WorkspaceTimer> = emptyList()) {
     fun start(id: UUID, duration: Double, identity: TimerIdentity, now: Instant): TimerWorkspace {
         val state = TimerState.Running(id, duration, startDate = now, endDate = now.plusSecondsDouble(duration))
         // Stable creation-order number (iOS RunningTimerItem.order): one past the
-        // highest order in play, so new timers (incl. Start Again) keep climbing
+        // highest order in play, so new timers (incl. Clone) keep climbing
         // and the value survives deletion/sorting/restore.
         val order = (timers.maxOfOrNull { it.order } ?: 0) + 1
         return copy(timers = timers + WorkspaceTimer(state, identity, order))
@@ -43,13 +43,21 @@ data class TimerWorkspace(val timers: List<WorkspaceTimer> = emptyList()) {
     fun remove(id: UUID): TimerWorkspace = copy(timers = timers.filterNot { it.id == id })
 
     /**
-     * Clones a terminal (or any) timer into a fresh running timer with the same
-     * duration + identity, starting now. Used by Start Again on a finished card.
+     * Clone (iOS clone): starts a new running timer with the same duration +
+     * identity as the source, from ANY state. The source is left untouched —
+     * cancellation is never implicit; the user cancels a timer explicitly.
      */
-    fun startAgain(id: UUID, newID: UUID, now: Instant): TimerWorkspace {
+    fun clone(id: UUID, newID: UUID, now: Instant): TimerWorkspace {
         val source = timers.firstOrNull { it.id == id } ?: return this
         return start(newID, source.state.duration, source.identity, now)
     }
+
+    /**
+     * Clear (iOS clearCompletedTimers): removes completed records only;
+     * canceled history is preserved.
+     */
+    fun clearCompleted(): TimerWorkspace =
+        copy(timers = timers.filterNot { it.state.status == TimerStatus.completed })
 
     /** Advances running timers to completed when their end has passed. */
     fun reconciled(now: Instant): TimerWorkspace =

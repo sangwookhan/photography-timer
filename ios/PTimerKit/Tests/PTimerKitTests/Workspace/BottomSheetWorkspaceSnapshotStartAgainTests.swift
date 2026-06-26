@@ -5,7 +5,7 @@ import XCTest
 import PTimerCore
 @testable import PTimerKit
 
-/// PTIMER-36: tests for the Start Again surface (completed-row clone)
+/// PTIMER-36: tests for the Clone surface (clone from any row)
 /// extracted from BottomSheetWorkspaceSnapshotFactoryTests so the
 /// factory test class stays within strict file/type-length budgets.
 final class BottomSheetStartAgainTests: XCTestCase {
@@ -24,14 +24,14 @@ final class BottomSheetStartAgainTests: XCTestCase {
             case .running:
                 XCTAssertEqual(
                     activeItem.actions,
-                    [.pause, .startNew],
-                    "Running rows offer Pause then Start New"
+                    [.pause, .clone, .cancel],
+                    "Running rows offer Pause, Clone, Cancel"
                 )
             case .paused:
                 XCTAssertEqual(
                     activeItem.actions,
-                    [.resume, .startNew, .cancel, .remove],
-                    "Paused rows offer Resume, Start New, Cancel, Remove"
+                    [.resume, .clone, .cancel, .remove],
+                    "Paused rows offer Resume, Clone, Cancel, Remove"
                 )
             case .completed, .canceled:
                 XCTFail("Terminal records do not belong in the Active section")
@@ -39,7 +39,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
         }
 
         // Both completed and canceled records land in the history
-        // section and share the Start Again + Remove action set.
+        // section and share the Clone + Remove action set.
         XCTAssertTrue(
             completedSection.items.contains { $0.status == .canceled },
             "Canceled records belong in the history section, not Active"
@@ -47,8 +47,8 @@ final class BottomSheetStartAgainTests: XCTestCase {
         for terminalItem in completedSection.items {
             XCTAssertEqual(
                 terminalItem.actions,
-                [.startAgain, .remove],
-                "Terminal rows present Start Again before Remove"
+                [.clone, .remove],
+                "Terminal rows present Clone before Remove"
             )
             switch terminalItem.status {
             case .completed:
@@ -122,7 +122,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testStartingNewTimerFromCompletedAddsCloneAndLeavesSourceUnchanged() throws {
+    func testCloningFromCompletedAddsCloneAndLeavesSourceUnchanged() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 8)
@@ -140,7 +140,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
         // distinct from the source's start date (the clone's running
         // payload must not share start/completion timestamps).
         harness.currentDate = Date(timeIntervalSince1970: 250)
-        harness.viewModel.startTimerAgain(from: completedSource)
+        harness.viewModel.cloneTimer(from: completedSource)
 
         XCTAssertEqual(harness.viewModel.timers.count, 2)
 
@@ -162,7 +162,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testStartingNewFromRunningRowCancelsSourceAndStartsOneFreshTimer() throws {
+    func testCloningFromRunningRowPreservesSourceAndStartsOneFreshTimer() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 60)
@@ -170,21 +170,21 @@ final class BottomSheetStartAgainTests: XCTestCase {
         XCTAssertEqual(runningSource.status, .running)
 
         // Advance the clock so the fresh timer's start date is distinct
-        // from the abandoned source's.
+        // from the source's.
         harness.currentDate = Date(timeIntervalSince1970: 130)
-        harness.viewModel.startNewTimer(from: runningSource)
+        harness.viewModel.cloneTimer(from: runningSource)
 
-        // Source is kept as a canceled record; exactly one running timer
-        // exists (no ghost/duplicate), started from full duration.
+        // Clone never cancels: the source keeps running and the clone joins
+        // it from full duration — two running timers.
         XCTAssertEqual(harness.viewModel.timers.count, 2)
         XCTAssertEqual(
             harness.viewModel.timers.filter { $0.status == .running }.count,
-            1
+            2
         )
-        let canceledSource = try XCTUnwrap(
+        let sourceAfter = try XCTUnwrap(
             harness.viewModel.timers.first { $0.id == runningSource.id }
         )
-        XCTAssertEqual(canceledSource.status, .canceled)
+        XCTAssertEqual(sourceAfter.status, .running)
 
         let fresh = try XCTUnwrap(
             harness.viewModel.timers.first { $0.id != runningSource.id }
@@ -195,17 +195,17 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testStartNewReturnsFreshTimerIDForFocus() throws {
+    func testCloneReturnsFreshTimerIDForFocus() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 60)
         let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
 
         harness.currentDate = Date(timeIntervalSince1970: 130)
-        let newID = harness.viewModel.startNewTimer(from: runningSource)
+        let newID = harness.viewModel.cloneTimer(from: runningSource)
 
-        // The returned id is the fresh running timer's id — the value the
-        // shell uses to move focus onto it — not the abandoned source.
+        // The returned id is the fresh clone's id — the value the shell
+        // uses to move focus onto it — not the source.
         let fresh = try XCTUnwrap(
             harness.viewModel.timers.first { $0.id != runningSource.id }
         )
@@ -214,7 +214,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testStartAgainReturnsClonedTimerIDForFocus() throws {
+    func testCloneFromTerminalReturnsClonedTimerIDForFocus() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 8)
@@ -226,7 +226,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
         )
 
         harness.currentDate = Date(timeIntervalSince1970: 250)
-        let newID = harness.viewModel.startTimerAgain(from: completedSource)
+        let newID = harness.viewModel.cloneTimer(from: completedSource)
 
         let cloned = try XCTUnwrap(
             harness.viewModel.timers.first { $0.id != sourceID }
@@ -236,25 +236,26 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testStartingNewFromPausedRowCancelsSourceAndStartsFromBeginning() throws {
+    func testCloningFromPausedRowPreservesSourceAndStartsFromBeginning() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 60)
         let runningSource = try XCTUnwrap(harness.viewModel.timers.first)
 
-        // Pause partway through, then Start New.
+        // Pause partway through, then Clone.
         harness.currentDate = Date(timeIntervalSince1970: 130)
         harness.viewModel.pauseTimer(id: runningSource.id)
         let pausedSource = try XCTUnwrap(harness.viewModel.timers.first)
         XCTAssertEqual(pausedSource.status, .paused)
 
         harness.currentDate = Date(timeIntervalSince1970: 150)
-        harness.viewModel.startNewTimer(from: pausedSource)
+        harness.viewModel.cloneTimer(from: pausedSource)
 
         XCTAssertEqual(harness.viewModel.timers.count, 2)
+        // Source stays paused; clone never cancels.
         XCTAssertEqual(
             harness.viewModel.timers.first { $0.id == pausedSource.id }?.status,
-            .canceled
+            .paused
         )
 
         let fresh = try XCTUnwrap(
@@ -268,7 +269,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
     }
 
     @MainActor
-    func testCancelOnPausedProducesCanceledRecordThatCanStartAgain() throws {
+    func testCancelOnPausedProducesCanceledRecordThatCanClone() throws {
         let harness = makeRuntimeHarness(now: 100)
 
         harness.viewModel.startTimer(from: 60)
@@ -282,10 +283,10 @@ final class BottomSheetStartAgainTests: XCTestCase {
         XCTAssertEqual(canceled.status, .canceled)
         XCTAssertEqual(harness.viewModel.timers.count, 1)
 
-        // Start Again on the canceled record clones a fresh running
-        // timer and leaves the canceled record intact.
+        // Clone on the canceled record starts a fresh running timer and
+        // leaves the canceled record intact.
         harness.currentDate = Date(timeIntervalSince1970: 160)
-        harness.viewModel.startTimerAgain(from: canceled)
+        harness.viewModel.cloneTimer(from: canceled)
 
         XCTAssertEqual(harness.viewModel.timers.count, 2)
         XCTAssertEqual(

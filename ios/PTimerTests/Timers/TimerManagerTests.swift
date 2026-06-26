@@ -418,12 +418,11 @@ final class TimerManagerTests: XCTestCase {
     }
 }
 
-/// PTIMER-188: Start New / Cancel / Start Again driven through the
-/// **real** `TimerManager` (not a test double), closest proof to the
-/// on-device UI route. Start New must add a *separate* new running
-/// timer and leave the source as its own terminal Canceled record —
-/// never an in-place restart/reset, never an id reuse.
-final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
+/// PTIMER-188: Clone / Cancel driven through the **real** `TimerManager`
+/// (not a test double), closest proof to the on-device UI route. Clone
+/// must add a *separate* new running timer and leave the source
+/// unchanged (no cancel, no in-place restart, no id reuse).
+final class TimerWorkspaceCloneIntegrationTests: XCTestCase {
     @MainActor
     private func makeModel(dateProvider: @escaping () -> Date) -> (TimerWorkspaceModel, TimerManager) {
         let manager = TimerManager(tickInterval: 60, dateProvider: dateProvider)
@@ -436,7 +435,7 @@ final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testStartNewFromRunningAddsSeparateTimerAndCancelsSourceInPlace() throws {
+    func testCloneFromRunningAddsSeparateTimerAndKeepsSource() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var now = startDate
         let (model, _) = makeModel(dateProvider: { now })
@@ -456,19 +455,18 @@ final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
         let countBefore = model.timers.count
 
         now = startDate.addingTimeInterval(40)
-        let newID = try XCTUnwrap(model.startTimer(replacingActive: sourceA))
+        let newID = try XCTUnwrap(model.startTimer(cloning: sourceA))
 
         // separate-timer guarantees
-        XCTAssertNotEqual(newID, sourceID, "Start New must not reuse the source id")
-        XCTAssertEqual(model.timers.count, countBefore + 1, "Start New adds one timer")
-        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 1,
-                       "Exactly one running timer; no ghost duplicate")
+        XCTAssertNotEqual(newID, sourceID, "Clone must not reuse the source id")
+        XCTAssertEqual(model.timers.count, countBefore + 1, "Clone adds one timer")
+        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 2,
+                       "Clone keeps the source running; two running timers")
 
-        // source A: canceled in place, identity + start date intact
+        // source A: still running in place (clone never cancels), identity intact
         let aAfter = try XCTUnwrap(model.timers.first { $0.id == sourceID })
-        XCTAssertEqual(aAfter.status, .canceled)
-        XCTAssertEqual(aAfter.startDate, startDate, "Source A start date unchanged (not reset)")
-        XCTAssertEqual(aAfter.endDate, now, "Source A cancellation timestamp is action time")
+        XCTAssertEqual(aAfter.status, .running)
+        XCTAssertEqual(aAfter.startDate, startDate, "Source A start date unchanged")
         XCTAssertEqual(aAfter.duration, 64, accuracy: 0.0001)
         XCTAssertEqual(aAfter.filmDisplayName, "Tri-X 400")
 
@@ -487,7 +485,7 @@ final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testStartNewFromPausedAddsSeparateRunningTimerAndCancelsSource() throws {
+    func testCloneFromPausedAddsSeparateRunningTimerAndKeepsSourcePaused() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var now = startDate
         let (model, _) = makeModel(dateProvider: { now })
@@ -500,12 +498,12 @@ final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
         XCTAssertEqual(pausedA.status, .paused)
 
         now = startDate.addingTimeInterval(35)
-        let newID = try XCTUnwrap(model.startTimer(replacingActive: pausedA))
+        let newID = try XCTUnwrap(model.startTimer(cloning: pausedA))
 
         XCTAssertNotEqual(newID, sourceID)
         XCTAssertEqual(model.timers.count, 2)
-        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 1)
-        XCTAssertEqual(model.timers.first { $0.id == sourceID }?.status, .canceled)
+        // Source stays paused; clone never cancels.
+        XCTAssertEqual(model.timers.first { $0.id == sourceID }?.status, .paused)
 
         let timerB = try XCTUnwrap(model.timers.first { $0.id == newID })
         XCTAssertEqual(timerB.status, .running)
@@ -534,25 +532,7 @@ final class TimerWorkspaceStartNewIntegrationTests: XCTestCase {
     }
 
     @MainActor
-    func testStartNewRejectsTerminalRecords() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var now = startDate
-        let (model, manager) = makeModel(dateProvider: { now })
-
-        let sourceID = try XCTUnwrap(model.startTimer(duration: 5, name: "src", basisSummary: "manual"))
-        now = startDate.addingTimeInterval(60)
-        manager.tick(now: now)
-        let completed = try XCTUnwrap(model.timers.first { $0.id == sourceID })
-        XCTAssertEqual(completed.status, .completed)
-
-        let rejected = model.startTimer(replacingActive: completed)
-        XCTAssertNil(rejected)
-        XCTAssertEqual(model.timers.count, 1)
-        XCTAssertEqual(model.timers.first?.status, .completed)
-    }
-
-    @MainActor
-    func testStartAgainOnCanceledAddsSeparateTimerAndKeepsSource() throws {
+    func testCloneOnCanceledAddsSeparateTimerAndKeepsSource() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var now = startDate
         let (model, _) = makeModel(dateProvider: { now })

@@ -4,17 +4,21 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import java.util.UUID
 
 /**
- * Reconciles a [TimerAlertPlan] with the OS: schedules one exact AlarmManager
- * alarm per running timer (→ [TimerCompletionReceiver] posts the alert + sound
- * at the end instant, even backgrounded) and starts/updates/stops the ongoing
- * [TimerForegroundService]. Stateful only in the set of currently scheduled
- * timer ids so removed timers' alarms get cancelled. Verify on a device.
+ * Reconciles a [TimerAlertPlan] with the OS: schedules one completion
+ * AlarmManager alarm per running timer (exact when the permission allows it,
+ * inexact allow-while-idle fallback otherwise) → [TimerCompletionReceiver]
+ * posts the alert + sound at the end instant, even backgrounded — and
+ * starts/updates/stops the ongoing [TimerForegroundService]. Stateful only in
+ * the set of currently scheduled timer ids so removed timers' alarms get
+ * cancelled. Verify on a device.
  */
-class AndroidTimerAlertCoordinator(private val context: Context) {
+class AndroidTimerAlertCoordinator(
+    private val context: Context,
+    private val availability: ExactAlarmAvailability = AndroidExactAlarmAvailability(context),
+) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val scheduled = mutableSetOf<UUID>()
 
@@ -39,13 +43,19 @@ class AndroidTimerAlertCoordinator(private val context: Context) {
 
     private fun scheduleAlarm(alarm: CompletionAlarm) {
         val pending = pendingIntent(alarm.timerId, alarm.title, create = true) ?: return
-        // Exact when allowed (Android 12+ gates it behind a permission); fall
-        // back to an inexact allow-while-idle alarm rather than risk a crash.
-        val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
-        if (canExact) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending)
-        } else {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending)
+        val exact = ExactAlarmPolicy.scheduling(availability) == AlarmScheduling.EXACT
+        // Exact when the permission allows it; otherwise an inexact
+        // allow-while-idle fallback. Wrapped so a permission revoked between the
+        // check and the call (TOCTOU) degrades to inexact instead of crashing.
+        val scheduled = runCatching {
+            if (exact) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending)
+            } else {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending)
+            }
+        }
+        if (scheduled.isFailure) {
+            runCatching { alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerAtEpochMillis, pending) }
         }
     }
 

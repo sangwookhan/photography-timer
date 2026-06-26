@@ -4,11 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -19,17 +27,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.sangwook.ptimer.app.notify.AndroidExactAlarmAvailability
 import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
@@ -97,7 +109,11 @@ fun ShootingApp(openTimersSignal: Int = 0) {
 
     // Notifications: ensure channels, request POST_NOTIFICATIONS (API 33+), and
     // reconcile the AlarmManager alarms + ongoing foreground service with state.
-    val alertCoordinator = remember { AndroidTimerAlertCoordinator(context) }
+    val exactAlarmAvailability = remember { AndroidExactAlarmAvailability(context) }
+    val alertCoordinator = remember { AndroidTimerAlertCoordinator(context, exactAlarmAvailability) }
+    // Cached exact-alarm permission state; refreshed on resume (e.g. after the
+    // user returns from the Alarms & reminders settings).
+    var exactAlarmAllowed by remember { mutableStateOf(exactAlarmAvailability.isAllowed()) }
     val clockFormatter = remember {
         DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
     }
@@ -141,9 +157,27 @@ fun ShootingApp(openTimersSignal: Int = 0) {
         }
     }
 
+    // Refresh exact-alarm permission on resume (e.g. returning from settings).
+    // If it changed, reschedule the active timers' alarms under the new state so
+    // a just-granted permission upgrades them to exact.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val nowAllowed = exactAlarmAvailability.isAllowed()
+        if (nowAllowed != exactAlarmAllowed) {
+            exactAlarmAllowed = nowAllowed
+            val plan = TimerAlertPlanner.plan(viewModel.uiState.value.active) {
+                clockFormatter.format(java.time.Instant.ofEpochMilli(it))
+            }
+            alertCoordinator.sync(plan)
+        }
+    }
+
     var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()
+    // Warn when exact alarms are gated + denied and a timer is actually active,
+    // so completion-alert reliability is limited (fallback is inexact).
+    val showExactAlarmWarning = exactAlarmAvailability.isPermissionGated &&
+        !exactAlarmAllowed && timerState.active.isNotEmpty()
 
     // Peek shows the compact MiniTimerBar; the full list appears only once the
     // sheet is expanded. Peek height = the bar plus the drag-handle region so
@@ -231,8 +265,19 @@ fun ShootingApp(openTimersSignal: Int = 0) {
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize()) {
-        Box(Modifier.padding(innerPadding)) {
+        // Apply + consume the status-bar inset here so the warning banner sits
+        // below the status bar; consuming it stops ShootingScreen's own Scaffold
+        // from insetting the top a second time.
+        Column(
+            Modifier
+                .padding(innerPadding)
+                .windowInsetsPadding(WindowInsets.statusBars),
+        ) {
+            if (showExactAlarmWarning) {
+                ExactAlarmWarningBanner(onOpenSettings = exactAlarmAvailability::openSettings)
+            }
             ShootingScreen(
+                    modifier = Modifier.weight(1f),
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
                     onNdIndex = controller::setNdIndex,
@@ -352,6 +397,34 @@ fun ShootingApp(openTimersSignal: Int = 0) {
                     },
                 )
             }
+        }
+    }
+}
+
+/**
+ * Non-intrusive banner shown when exact alarms are denied while a timer is
+ * active: completion alerts fall back to inexact (less reliable), with a path to
+ * the system Alarms & reminders settings.
+ */
+@Composable
+private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Exact timer alerts are off.", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Allow Alarms & reminders for more reliable completion alerts.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            TextButton(onClick = onOpenSettings) { Text("Open settings") }
         }
     }
 }

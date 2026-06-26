@@ -4,8 +4,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- User-grantable exact alarms for timer completion. USE_EXACT_ALARM is
+         intentionally NOT declared: it is restricted to alarm-clock/calendar
+         apps and is a public-release risk; the app requests SCHEDULE_EXACT_ALARM
+         via settings and falls back to inexact alarms when it is denied. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application

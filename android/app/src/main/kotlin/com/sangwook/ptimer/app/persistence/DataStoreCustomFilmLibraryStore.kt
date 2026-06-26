@@ -21,19 +21,27 @@ private val LIBRARY_KEY = stringPreferencesKey("custom_film_library_json")
  */
 class DataStoreCustomFilmLibraryStore(private val context: Context) : CustomFilmLibraryStoring {
 
-    override fun loadSnapshot(): PersistentCustomFilmLibrarySnapshot? = runBlocking {
-        val prefs = context.customFilmLibraryDataStore.data.firstOrNull()
-        val json = prefs?.get(LIBRARY_KEY) ?: return@runBlocking null
-        CustomFilmLibraryCodec.decode(json)
-    }
+    // IO wrapped so a DataStore read/write failure degrades safely (read ->
+    // null = empty library, write/clear -> no-op) instead of crashing.
+    override fun loadSnapshot(): PersistentCustomFilmLibrarySnapshot? = runCatching {
+        runBlocking {
+            val prefs = context.customFilmLibraryDataStore.data.firstOrNull()
+            val json = prefs?.get(LIBRARY_KEY) ?: return@runBlocking null
+            CustomFilmLibraryCodec.decode(json)
+        }
+    }.getOrNull()
 
     override fun saveSnapshot(snapshot: PersistentCustomFilmLibrarySnapshot) {
-        runBlocking {
-            context.customFilmLibraryDataStore.edit { it[LIBRARY_KEY] = CustomFilmLibraryCodec.encode(snapshot) }
+        runCatching {
+            runBlocking {
+                context.customFilmLibraryDataStore.edit { it[LIBRARY_KEY] = CustomFilmLibraryCodec.encode(snapshot) }
+            }
         }
     }
 
     override fun clearSnapshot() {
-        runBlocking { context.customFilmLibraryDataStore.edit { it.remove(LIBRARY_KEY) } }
+        runCatching {
+            runBlocking { context.customFilmLibraryDataStore.edit { it.remove(LIBRARY_KEY) } }
+        }
     }
 }

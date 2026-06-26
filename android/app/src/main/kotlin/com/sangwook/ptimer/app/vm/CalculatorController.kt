@@ -257,8 +257,15 @@ class CalculatorController(
     private fun loadSnapshot(snapshot: SlotCalculatorSnapshot) {
         shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices)
         ndIndex = snapshot.ndIndex.coerceIn(ndLabels.indices)
-        selectedFilmId = snapshot.selectedFilmId
-        selectedProfileId = snapshot.selectedProfileId
+        // Normalize a stale film/profile selection so a deleted custom film (or
+        // a profile id no longer valid for the film) is not re-persisted as a
+        // broken selection. An unknown film clears both; an invalid profile for
+        // a known film clears the profile (it falls back to the film's primary).
+        val film = snapshot.selectedFilmId?.let { id -> films.firstOrNull { it.id == id } }
+        selectedFilmId = film?.id
+        selectedProfileId = film?.let { f ->
+            snapshot.selectedProfileId?.takeIf { pid -> modelProfiles(f).any { it.id == pid } }
+        }
         targetSeconds = snapshot.targetSeconds?.takeIf { it.isFinite() && it > 0 }
     }
 

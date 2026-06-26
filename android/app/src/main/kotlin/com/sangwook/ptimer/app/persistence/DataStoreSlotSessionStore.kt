@@ -22,19 +22,27 @@ private val SESSION_KEY = stringPreferencesKey("slot_session_json")
  */
 class DataStoreSlotSessionStore(private val context: Context) : SlotSessionStoring {
 
-    override fun loadSession(): PersistentSlotSession? = runBlocking {
-        val prefs = context.slotSessionDataStore.data.firstOrNull()
-        val json = prefs?.get(SESSION_KEY) ?: return@runBlocking null
-        SlotSessionCodec.decode(json)
-    }
+    // IO wrapped so a DataStore read/write failure degrades safely (read ->
+    // null = fresh session, write/clear -> no-op) instead of crashing.
+    override fun loadSession(): PersistentSlotSession? = runCatching {
+        runBlocking {
+            val prefs = context.slotSessionDataStore.data.firstOrNull()
+            val json = prefs?.get(SESSION_KEY) ?: return@runBlocking null
+            SlotSessionCodec.decode(json)
+        }
+    }.getOrNull()
 
     override fun saveSession(session: PersistentSlotSession) {
-        runBlocking {
-            context.slotSessionDataStore.edit { it[SESSION_KEY] = SlotSessionCodec.encode(session) }
+        runCatching {
+            runBlocking {
+                context.slotSessionDataStore.edit { it[SESSION_KEY] = SlotSessionCodec.encode(session) }
+            }
         }
     }
 
     override fun clearSession() {
-        runBlocking { context.slotSessionDataStore.edit { it.remove(SESSION_KEY) } }
+        runCatching {
+            runBlocking { context.slotSessionDataStore.edit { it.remove(SESSION_KEY) } }
+        }
     }
 }

@@ -23,6 +23,13 @@ class ShootingViewModelTest {
         override fun clearSnapshot() { saved = null }
     }
 
+    /** A store whose reads and writes always fail, to test restore resilience. */
+    private class ThrowingStore : WorkspacePersistenceStoring {
+        override fun loadSnapshot(): PersistentWorkspaceSnapshot? = throw RuntimeException("read failed")
+        override fun saveSnapshot(snapshot: PersistentWorkspaceSnapshot) = throw RuntimeException("write failed")
+        override fun clearSnapshot() = throw RuntimeException("clear failed")
+    }
+
     private fun vm(store: WorkspacePersistenceStoring, clock: () -> Instant): ShootingViewModel {
         var counter = 0
         return ShootingViewModel(
@@ -219,6 +226,20 @@ class ShootingViewModelTest {
         val id = sut.uiState.value.history.first().id
         sut.onEvent(ShootingIntent.Remove(id))
         assertEquals(0, sut.uiState.value.history.size)
+    }
+
+    @Test
+    fun restoreWithFailingStoreFallsBackToEmptyAndStaysUsable() {
+        val sut = vm(ThrowingStore()) { t0 }
+
+        sut.restore() // read failure must not crash
+
+        assertEquals(0, sut.uiState.value.active.size)
+        assertEquals(0, sut.uiState.value.history.size)
+        // Still usable: starting a timer works despite the failing write.
+        sut.onEvent(ShootingIntent.StartTimer(100.0, identity))
+        assertEquals(1, sut.uiState.value.active.size)
+        assertEquals(TimerStatus.running, sut.uiState.value.active.first().status)
     }
 
     @Test

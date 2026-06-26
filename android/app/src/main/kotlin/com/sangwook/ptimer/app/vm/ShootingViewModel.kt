@@ -70,7 +70,8 @@ class ShootingViewModel(
 
     /** Restores the persisted workspace, reconciling against the current time. */
     fun restore() {
-        val snapshot = store.loadSnapshot() ?: return
+        // A failing store read must not crash startup; degrade to empty.
+        val snapshot = runCatching { store.loadSnapshot() }.getOrNull() ?: return
         val n = clock()
         workspace.value = TimerWorkspace(snapshot.restore(n)).reconciled(n)
         now.value = n
@@ -109,7 +110,8 @@ class ShootingViewModel(
     }
 
     private fun persist() {
-        store.saveSnapshot(PersistentWorkspaceSnapshot.from(workspace.value.timers))
+        // A failing store write must not crash timer interaction.
+        runCatching { store.saveSnapshot(PersistentWorkspaceSnapshot.from(workspace.value.timers)) }
     }
 
     private fun render(ws: TimerWorkspace, n: Instant): ShootingUiState =

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.ui.ShootingApp
@@ -21,6 +22,9 @@ class MainActivity : ComponentActivity() {
     // shell opens the (expanded) timer list. A counter, not a flag, so a repeat
     // tap while the activity is already running still triggers via onNewIntent.
     private val openTimersSignal = mutableIntStateOf(0)
+    // The timer id carried by a tapped completion notification, so the shell can
+    // focus that finished timer in the list. Read alongside each show-timers tap.
+    private val focusTimerId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +37,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    ShootingApp(openTimersSignal = openTimersSignal.intValue)
+                    ShootingApp(
+                        openTimersSignal = openTimersSignal.intValue,
+                        notificationFocusTimerId = focusTimerId.value,
+                    )
                 }
             }
         }
@@ -47,6 +54,7 @@ class MainActivity : ComponentActivity() {
 
     private fun consumeShowTimers(intent: Intent?) {
         if (intent?.getBooleanExtra(TimerNotifications.EXTRA_SHOW_TIMERS, false) == true) {
+            focusTimerId.value = intent.getStringExtra(TimerNotifications.EXTRA_FOCUS_TIMER_ID)
             openTimersSignal.intValue++
         }
     }

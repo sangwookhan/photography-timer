@@ -78,7 +78,7 @@ import java.time.Instant
  */
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ShootingApp(openTimersSignal: Int = 0) {
+fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = null) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
 
@@ -219,7 +219,16 @@ fun ShootingApp(openTimersSignal: Int = 0) {
     // timers are available (restore may land just after the tap). One-shot so a
     // later timer change does not re-expand on its own.
     var pendingOpenTimers by remember { mutableStateOf(false) }
-    LaunchedEffect(openTimersSignal) { if (openTimersSignal > 0) pendingOpenTimers = true }
+    LaunchedEffect(openTimersSignal) {
+        if (openTimersSignal > 0) {
+            pendingOpenTimers = true
+            // Focus the timer the tapped completion notification was for (it is a
+            // finished timer, so the list scrolls to it in History).
+            notificationFocusTimerId
+                ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                ?.let { focusTimerId = it }
+        }
+    }
     LaunchedEffect(pendingOpenTimers, hasTimers) {
         if (pendingOpenTimers && hasTimers) {
             scaffoldState.bottomSheetState.expand()
@@ -244,9 +253,17 @@ fun ShootingApp(openTimersSignal: Int = 0) {
     // existing mini card to inspect it is preserved. Keyed on the id list (not
     // the per-second state) so it does not re-run on every tick.
     var knownActiveIds by remember { mutableStateOf<Set<java.util.UUID>>(emptySet()) }
+    // Skip the first scan so launch (e.g. opened from a completion notification)
+    // does not steal focus to the newest active timer, overriding the notified one.
+    var firstActiveScan by remember { mutableStateOf(true) }
     val activeIds = timerState.active.map { it.id }
     LaunchedEffect(activeIds) {
         val current = activeIds.toSet()
+        if (firstActiveScan) {
+            knownActiveIds = current
+            firstActiveScan = false
+            return@LaunchedEffect
+        }
         val added = current - knownActiveIds
         // active is ordered oldest-first, so the last added id is the newest.
         if (added.isNotEmpty()) {

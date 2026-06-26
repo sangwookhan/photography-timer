@@ -139,14 +139,21 @@ fun FullTimerList(
     val listState = rememberLazyListState()
     // Pending Clone/Cancel/Remove confirmation; null when no dialog is shown.
     var confirm by remember { mutableStateOf<ConfirmRequest?>(null) }
-    // When the user taps a mini card, bring its full card into view (the row at
-    // index 0 is the header) and highlight it. For the first active card, anchor
-    // on the header so the close X stays visible.
-    LaunchedEffect(focusId, activeReversed.size) {
+    // Bring the focused card into view and highlight it: a mini-card tap focuses
+    // an active timer; a tapped completion notification focuses a finished timer
+    // in History. (Row at index 0 is the header; for the first active card, anchor
+    // on the header so the close X stays visible.)
+    LaunchedEffect(focusId, activeReversed.size, state.history.size) {
         if (focusId == null) return@LaunchedEffect
-        val pos = activeReversed.indexOfFirst { it.id == focusId }
-        if (pos < 0) return@LaunchedEffect
-        listState.animateScrollToItem(if (pos == 0) 0 else pos + 1)
+        val activePos = activeReversed.indexOfFirst { it.id == focusId }
+        if (activePos >= 0) {
+            listState.animateScrollToItem(if (activePos == 0) 0 else activePos + 1)
+            return@LaunchedEffect
+        }
+        val historyPos = state.history.indexOfFirst { it.id == focusId }
+        if (historyPos < 0) return@LaunchedEffect
+        // header(1) + active cards + History header(1) + the card's position.
+        listState.animateScrollToItem(1 + activeReversed.size + 1 + historyPos)
     }
     LazyColumn(
         state = listState,
@@ -194,7 +201,7 @@ fun FullTimerList(
                 }
             }
             items(state.history, key = { it.id }) { card ->
-                TimerCard(card, state.now, onEvent, onConfirm = { confirm = it })
+                TimerCard(card, state.now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
             }
         }
     }

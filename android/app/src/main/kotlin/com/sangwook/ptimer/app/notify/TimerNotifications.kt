@@ -26,6 +26,9 @@ object TimerNotifications {
     /** Intent extra: open the app straight into the (expanded) timer list. */
     const val EXTRA_SHOW_TIMERS = "com.sangwook.ptimer.SHOW_TIMERS"
 
+    /** Intent extra: focus this timer id in the list (the completion that was tapped). */
+    const val EXTRA_FOCUS_TIMER_ID = "com.sangwook.ptimer.FOCUS_TIMER_ID"
+
     /** Creates both channels; idempotent (safe to call on every launch). */
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -93,7 +96,8 @@ object TimerNotifications {
             .setContentText(body.ifBlank { null })
             .setAutoCancel(true)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setContentIntent(appContentIntent(context))
+            // Carry the timer id so tapping focuses this finished timer in the list.
+            .setContentIntent(appContentIntent(context, focusTimerId = timerId))
             .build()
         // POST_NOTIFICATIONS is requested at the UI layer; guard the post so a
         // denied permission cannot crash the receiver.
@@ -103,13 +107,18 @@ object TimerNotifications {
         }
     }
 
-    private fun appContentIntent(context: Context): PendingIntent {
+    private fun appContentIntent(context: Context, focusTimerId: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
             .putExtra(EXTRA_SHOW_TIMERS, true)
+        if (focusTimerId != null) intent.putExtra(EXTRA_FOCUS_TIMER_ID, focusTimerId)
+        // A distinct request code per focus target so each completion notification
+        // keeps its own intent; a shared code with FLAG_UPDATE_CURRENT would
+        // collapse them all onto the last-posted timer.
+        val requestCode = focusTimerId?.hashCode() ?: 0
         return PendingIntent.getActivity(
             context,
-            0,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )

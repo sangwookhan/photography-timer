@@ -1689,7 +1689,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        // Absolute event timestamps (completed / canceled / paused / ends)
+        // render in the device's local time zone, not UTC, so each event reads
+        // in the local time where it occurred.
+        formatter.timeZone = .autoupdatingCurrent
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()

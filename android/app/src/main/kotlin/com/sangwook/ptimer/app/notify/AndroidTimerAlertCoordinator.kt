@@ -42,7 +42,7 @@ class AndroidTimerAlertCoordinator(
     }
 
     private fun scheduleAlarm(alarm: CompletionAlarm) {
-        val pending = pendingIntent(alarm.timerId, alarm.title, create = true) ?: return
+        val pending = pendingIntent(alarm.timerId, alarm.title, alarm.subtitle, create = true) ?: return
         val exact = ExactAlarmPolicy.scheduling(availability) == AlarmScheduling.EXACT
         // Exact when the permission allows it; otherwise an inexact
         // allow-while-idle fallback. Wrapped so a permission revoked between the
@@ -60,13 +60,14 @@ class AndroidTimerAlertCoordinator(
     }
 
     private fun cancelAlarm(timerId: UUID) {
-        pendingIntent(timerId, title = "", create = false)?.let { alarmManager.cancel(it) }
+        pendingIntent(timerId, title = "", subtitle = "", create = false)?.let { alarmManager.cancel(it) }
     }
 
-    private fun pendingIntent(timerId: UUID, title: String, create: Boolean): PendingIntent? {
+    private fun pendingIntent(timerId: UUID, title: String, subtitle: String, create: Boolean): PendingIntent? {
         val intent = Intent(context, TimerCompletionReceiver::class.java)
             .putExtra(TimerCompletionReceiver.EXTRA_TIMER_ID, timerId.toString())
             .putExtra(TimerCompletionReceiver.EXTRA_TITLE, title)
+            .putExtra(TimerCompletionReceiver.EXTRA_SUBTITLE, subtitle)
         val flags = (if (create) PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_NO_CREATE) or
             PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getBroadcast(context, timerId.hashCode(), intent, flags)

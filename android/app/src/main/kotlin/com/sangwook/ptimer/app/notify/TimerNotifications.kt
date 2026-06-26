@@ -70,12 +70,19 @@ object TimerNotifications {
             .setContentIntent(appContentIntent(context))
             .build()
 
-    /** Posts the completion alert for a finished timer (default sound channel). */
-    fun notifyCompletion(context: Context, timerId: String, title: String) {
+    /**
+     * Posts the completion alert for a finished timer (default sound channel).
+     * Identifies the timer so multi-camera completions are distinguishable: a
+     * "Timer complete" sub-label, the camera/film [title] ("Camera 2 · No
+     * film"), and the shooting source line [body] ("Adjusted shutter · 8
+     * stops"). Falls back to "Timer complete" when the identity is missing.
+     */
+    fun notifyCompletion(context: Context, timerId: String, title: String, body: String) {
         val notification = NotificationCompat.Builder(context, COMPLETION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Timer complete")
-            .setContentText(title)
+            .setSubText("Timer complete")
+            .setContentTitle(title.ifBlank { "Timer complete" })
+            .setContentText(body.ifBlank { null })
             .setAutoCancel(true)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setContentIntent(appContentIntent(context))

@@ -7,7 +7,10 @@ import android.content.Intent
 /**
  * Fired by AlarmManager at a timer's end instant. Posts the completion alert
  * (high-importance channel, default sound) so the photographer hears the timer
- * finish even when the app is backgrounded. Verify on a device.
+ * finish even when the app is backgrounded, and advances the ongoing
+ * notification to the next representative (or clears it) right then — so the
+ * live count-down swaps at the exact end instead of waiting for the background-
+ * throttled in-app tick, and never shows a negative value. Verify on a device.
  */
 class TimerCompletionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -15,6 +18,17 @@ class TimerCompletionReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         TimerNotifications.ensureChannels(context)
         TimerNotifications.notifyCompletion(context, timerId, title)
+
+        // Swap the ongoing to the soonest timer still in the future (the new
+        // representative), or stop the service when none remain. Exact alarms
+        // grant a temporary allowance to (re)start the foreground service.
+        val now = System.currentTimeMillis()
+        val next = OngoingAlertRegistry.stages.firstOrNull { it.endMillis > now }
+        if (next == null) {
+            TimerForegroundService.stop(context)
+        } else {
+            TimerForegroundService.start(context, next.content)
+        }
     }
 
     companion object {

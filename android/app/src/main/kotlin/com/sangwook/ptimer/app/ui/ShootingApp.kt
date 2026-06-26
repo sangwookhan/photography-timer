@@ -118,14 +118,27 @@ fun ShootingApp(openTimersSignal: Int = 0) {
         if (viewModel.hasRunningTimers) coordinator.start() else coordinator.stop()
     }
 
-    // Re-sync alarms/service only when the running set (ids + end instants)
-    // changes — not on every per-second tick.
-    val runningSignature = timerState.active
-        .filter { it.status == TimerStatus.running }
-        .joinToString(",") { "${it.id}@${it.endDate.toEpochMilli()}" }
-    LaunchedEffect(runningSignature) {
-        val plan = TimerAlertPlanner.plan(timerState.active) { clockFormatter.format(java.time.Instant.ofEpochMilli(it)) }
-        alertCoordinator.sync(plan)
+    // Re-sync alarms + the ongoing notification whenever the running set (ids +
+    // end instants) changes — not every tick. Collected straight from the
+    // ViewModel flow rather than the lifecycle-aware UI state, so the ongoing
+    // notification keeps switching to the next timer (and the count-down keeps
+    // tracking it) while the app is backgrounded — where
+    // collectAsStateWithLifecycle pauses and would otherwise freeze it on a
+    // completed timer with a negative count-down.
+    LaunchedEffect(Unit) {
+        var lastSignature: String? = null
+        viewModel.uiState.collect { state ->
+            val signature = state.active
+                .filter { it.status == TimerStatus.running }
+                .joinToString(",") { "${it.id}@${it.endDate.toEpochMilli()}" }
+            if (signature != lastSignature) {
+                lastSignature = signature
+                val plan = TimerAlertPlanner.plan(state.active) {
+                    clockFormatter.format(java.time.Instant.ofEpochMilli(it))
+                }
+                alertCoordinator.sync(plan)
+            }
+        }
     }
 
     var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }

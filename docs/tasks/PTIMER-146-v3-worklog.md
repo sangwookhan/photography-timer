@@ -331,3 +331,37 @@
     background; legacy PNGs kept as the pre-API-26 fallback) so it masks
     edge-to-edge. Amended the icon commit; verified the masked iOS icon in the app
     drawer. Splash left untouched.
+
+44. **User:** Time for the Live Activity (unit 12 / "C"). Scope: **enrich the
+    alert — live count-down + iOS wording.** **Claude:** Branched
+    `feature/PTIMER-146-android-live-activity` off the merged main and enriched
+    the ongoing foreground-service notification to the iOS Live Activity analogue:
+    representative (soonest) timer's name as title, "Expected completion {time}"
+    line, and a live count-down chronometer (`setWhen(end)` +
+    `chronometerCountDown`) — the ticking element iOS shows statically. Display
+    only; per-timer Pause/Cancel stays omitted (single aggregate notification).
+    Draft PR #20.
+
+45. **User (device capture):** does the notification timer actually run / switch?
+    **Claude:** Found the ongoing notification did not re-select the
+    representative while backgrounded — the sync was keyed on
+    `collectAsStateWithLifecycle`, which pauses collection when backgrounded, so
+    after the soonest timer finished the notification stuck on it. Switched the
+    alarm + ongoing sync to a direct (non-lifecycle) `ViewModel` flow collector so
+    it keeps re-selecting while backgrounded. Verified on emulator: at the
+    representative's completion the ongoing switched to the next timer and held a
+    positive count (3→2 timers, end advanced).
+
+46. **User (device capture):** the count-down momentarily shows -00:01 before it
+    swaps. Why let it go negative — clamp at 0. **Claude:** The count-down is the
+    OS chronometer (autonomous, can't be clamped mid-tick); it ticks one second
+    past zero before the (background-throttled) in-app tick swaps it. Chosen fix
+    (owner): **refresh from the end alarm.** The planner precomputes ordered
+    ongoing "stages" (one per running timer), the coordinator publishes them, and
+    the completion receiver re-posts the soonest still-future stage (or stops the
+    service) at the exact alarm instant — filtering stages by current time so it
+    advances even if its snapshot is stale. New `TimerAlertPlannerTest`
+    stage-advancement case. **Lesson:** much of this turn was lost building the
+    *main repo's* skeleton `android/` instead of the *worktree's* MVP `android/` —
+    always build/install from the worktree path. **User:** verified on device, no
+    -1 visible — pass.

@@ -157,6 +157,34 @@ fun ShootingApp(openTimersSignal: Int = 0) {
         }
     }
 
+    // Ring the completion alert the moment a timer finishes while the app is
+    // alive (foreground or backgrounded-but-running), not only via the
+    // AlarmManager alarm. On the inexact-alarm fallback the running-set sync
+    // cancels a just-completed timer's alarm before it fires, so a short
+    // backgrounded timer would otherwise complete silently. De-duped with the
+    // alarm in TimerNotifications.notifyCompletion. The alarm remains the
+    // delivery path when the app is killed.
+    LaunchedEffect(Unit) {
+        var seenRunning = setOf<java.util.UUID>()
+        var notified = setOf<java.util.UUID>()
+        viewModel.uiState.collect { state ->
+            state.history
+                .filter { it.status == TimerStatus.completed && it.id in seenRunning && it.id !in notified }
+                .forEach { card ->
+                    TimerNotifications.ensureChannels(context)
+                    TimerNotifications.notifyCompletion(
+                        context,
+                        card.id.toString(),
+                        card.identity.title,
+                        card.identity.subtitle,
+                    )
+                    notified = notified + card.id
+                }
+            seenRunning = seenRunning +
+                state.active.filter { it.status == TimerStatus.running }.map { it.id }
+        }
+    }
+
     // Refresh exact-alarm permission on resume (e.g. returning from settings).
     // If it changed, reschedule the active timers' alarms under the new state so
     // a just-granted permission upgrades them to exact.

@@ -77,7 +77,15 @@ object TimerNotifications {
      * film"), and the shooting source line [body] ("Adjusted shutter · 8
      * stops"). Falls back to "Timer complete" when the identity is missing.
      */
+    // Completion can be driven from two paths in the same process: the
+    // AlarmManager receiver and the in-app completion detector (for timers that
+    // finish while the app is alive, whose alarm the running-set sync may cancel
+    // before it fires). Whichever calls first posts; the other is de-duped here,
+    // so a short backgrounded timer always rings exactly once.
+    private val notifiedTimerIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
     fun notifyCompletion(context: Context, timerId: String, title: String, body: String) {
+        if (!notifiedTimerIds.add(timerId)) return
         val notification = NotificationCompat.Builder(context, COMPLETION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setSubText("Timer complete")

@@ -52,6 +52,7 @@ import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.timer.TimerStatus
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -101,6 +102,9 @@ fun MiniTimerBar(
     }
     val shown = dock.take(MiniDockLimit)
     val overflow = dock.size - shown.size
+    // Terminal mini cards show relative completion time; refresh it from a
+    // UI-local clock so it advances while the dock stays visible.
+    val now = rememberPresentationNow(fallback = state.now, enabled = state.history.isNotEmpty())
     // Auto-scroll to the newest (leftmost) when the lead timer changes.
     val rowState = rememberLazyListState()
     LaunchedEffect(dock.firstOrNull()?.id) { rowState.animateScrollToItem(0) }
@@ -115,7 +119,7 @@ fun MiniTimerBar(
     ) {
         items(shown, key = { it.id }) { card ->
             // Tapping a mini card expands the sheet and focuses this timer.
-            MiniTimerCard(card, state.now) { onOpen(card.id) }
+            MiniTimerCard(card, now) { onOpen(card.id) }
         }
         if (overflow > 0) {
             item { MiniOverflowTile(overflow) { onOpen(null) } }
@@ -137,6 +141,9 @@ fun FullTimerList(
 ) {
     val activeReversed = state.active.asReversed()
     val listState = rememberLazyListState()
+    // History rows show relative completion/cancellation time; refresh it from
+    // a UI-local clock so it advances while the list stays open.
+    val now = rememberPresentationNow(fallback = state.now, enabled = state.history.isNotEmpty())
     // Pending Clone/Cancel/Remove confirmation; null when no dialog is shown.
     var confirm by remember { mutableStateOf<ConfirmRequest?>(null) }
     // Bring the focused card into view and highlight it: a mini-card tap focuses
@@ -183,7 +190,7 @@ fun FullTimerList(
         // Active timers as full cards, newest first to match the peek order.
         if (state.active.isNotEmpty()) {
             items(activeReversed, key = { it.id }) { card ->
-                TimerCard(card, state.now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
+                TimerCard(card, now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
             }
         }
         if (state.history.isNotEmpty()) {
@@ -201,7 +208,7 @@ fun FullTimerList(
                 }
             }
             items(state.history, key = { it.id }) { card ->
-                TimerCard(card, state.now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
+                TimerCard(card, now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
             }
         }
     }
@@ -525,7 +532,33 @@ private fun CompactOutlinedAction(text: String, onClick: () -> Unit) {
     ) { Text(text, style = MaterialTheme.typography.labelLarge) }
 }
 
-private fun relativeTime(instant: Instant, now: Instant): String {
+/**
+ * A presentation clock that advances about once per second while this
+ * composable is in composition, so visible History relative-time labels
+ * ("just now" -> "1 min ago" -> "1 hr ago" ...) refresh even when no timer
+ * is running and the coordinator has stopped ticking [state.now].
+ *
+ * Seeded from [fallback] (the coordinator's last published now) so it never
+ * reads behind the model. Presentation-only: it does not call
+ * [ShootingViewModel.tick], keep the coordinator running, or persist — and
+ * it stops as soon as the hosting UI leaves composition. Ticking is gated on
+ * [enabled] so an active-only workspace (already driven by the coordinator)
+ * does not recompose every second for nothing.
+ */
+@Composable
+private fun rememberPresentationNow(fallback: Instant, enabled: Boolean): Instant {
+    var tick by remember { mutableStateOf(fallback) }
+    LaunchedEffect(enabled) {
+        if (!enabled) return@LaunchedEffect
+        while (true) {
+            tick = Instant.now()
+            delay(1000)
+        }
+    }
+    return maxOf(tick, fallback)
+}
+
+internal fun relativeTime(instant: Instant, now: Instant): String {
     val seconds = java.time.Duration.between(instant, now).seconds
     return when {
         seconds < 5 -> "just now"
@@ -541,7 +574,7 @@ private fun relativeTime(instant: Instant, now: Instant): String {
  * wording (just now / N min ago / N hr ago / N day(s) ago) so the
  * Completed/Canceled copy does not diverge across platforms.
  */
-private fun relativeTimeLong(instant: Instant, now: Instant): String {
+internal fun relativeTimeLong(instant: Instant, now: Instant): String {
     val seconds = java.time.Duration.between(instant, now).seconds
     return when {
         seconds < 60 -> "just now"

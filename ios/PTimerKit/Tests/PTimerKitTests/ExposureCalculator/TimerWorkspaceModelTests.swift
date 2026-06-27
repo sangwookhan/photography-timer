@@ -337,7 +337,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCloningRejectsNonCompletedTimer() {
+    func testCloningFromRunningKeepsSourceAndStartsClone() {
         let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
             dateProvider: { Date(timeIntervalSince1970: 100) }
@@ -356,8 +356,13 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
         XCTAssertEqual(runningSource.status, .running)
         let newID = model.startTimer(cloning: runningSource)
-        XCTAssertNil(newID)
-        XCTAssertEqual(model.timers.count, 1, "Workspace must not gain a clone for a non-completed source")
+        XCTAssertNotNil(newID, "Clone works from any state, including running")
+        XCTAssertEqual(model.timers.count, 2, "Clone adds a fresh timer and keeps the source")
+        XCTAssertEqual(
+            model.timers.first(where: { $0.id == runningSource.id })?.status,
+            .running,
+            "Clone never cancels the source"
+        )
     }
 
     @MainActor
@@ -406,7 +411,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
         XCTAssertEqual(sourceAfterPause.duration, completedSource.duration, accuracy: 0.0001)
     }
 
-    // MARK: - Cancel + Start New (PTIMER-188)
+    // MARK: - Cancel + Clone (PTIMER-188)
 
     @MainActor
     func testCancelTimerKeepsPausedTimerAsCanceledRecordWithMetadata() {
@@ -448,7 +453,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     }
 
     @MainActor
-    func testStartingNewFromRunningCancelsSourceAndStartsFreshWithSameContext() {
+    func testCloningFromRunningPreservesSourceAndKeepsContext() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
         let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
@@ -471,22 +476,16 @@ final class TimerWorkspaceModelTests: XCTestCase {
         }
         XCTAssertEqual(runningSource.status, .running)
 
-        // Advance partway so Start New is a genuine abandon.
         dateBox.date = Date(timeIntervalSince1970: 140)
-        let newID = model.startTimer(replacingActive: runningSource)
+        let newID = model.startTimer(cloning: runningSource)
 
         XCTAssertNotNil(newID)
-        XCTAssertNotEqual(newID, sourceID, "Start New must get a fresh id")
-        // Source is kept as a canceled record; the new timer joins it —
-        // exactly one running timer, no ghost/duplicate.
+        XCTAssertNotEqual(newID, sourceID, "Clone must get a fresh id")
+        // Clone never cancels: the source keeps running and the clone joins it
+        // — two running timers.
         XCTAssertEqual(model.timers.count, 2)
-        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 1)
-
-        guard let canceledSource = model.timers.first(where: { $0.id == sourceID }) else {
-            XCTFail("Source should remain as a canceled record")
-            return
-        }
-        XCTAssertEqual(canceledSource.status, .canceled)
+        XCTAssertEqual(model.timers.filter { $0.status == .running }.count, 2)
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .running)
 
         guard let fresh = model.timers.first(where: { $0.id == newID }) else {
             XCTFail("Fresh timer should be in the workspace")
@@ -496,7 +495,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
         XCTAssertEqual(fresh.duration, 64, accuracy: 0.0001)
         XCTAssertEqual(fresh.remainingTime, 64, accuracy: 0.0001)
         XCTAssertEqual(fresh.startDate, dateBox.date)
-        // Shot configuration is preserved on the fresh timer.
+        // Shot configuration is preserved on the clone.
         XCTAssertEqual(fresh.name, "Tri-X 400 - 64s")
         XCTAssertEqual(fresh.basisSummary, "Base 1s · 6 stops · Tri-X 400")
         XCTAssertEqual(fresh.cameraSlot, cameraSlot)
@@ -506,7 +505,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     }
 
     @MainActor
-    func testStartingNewFromPausedCancelsSourceAndStartsFromFullDuration() {
+    func testCloningFromPausedPreservesSourceAndStartsFromFullDuration() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
         let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
@@ -527,16 +526,17 @@ final class TimerWorkspaceModelTests: XCTestCase {
         model.pauseTimer(id: sourceID)
         guard let pausedSource = model.timers.first(where: { $0.id == sourceID }),
               pausedSource.status == .paused else {
-            XCTFail("Source timer should be paused before Start New")
+            XCTFail("Source timer should be paused before Clone")
             return
         }
 
         dateBox.date = Date(timeIntervalSince1970: 160)
-        let newID = model.startTimer(replacingActive: pausedSource)
+        let newID = model.startTimer(cloning: pausedSource)
 
         XCTAssertNotNil(newID)
         XCTAssertEqual(model.timers.count, 2)
-        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .canceled)
+        // Source stays paused; clone never cancels.
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .paused)
 
         guard let fresh = model.timers.first(where: { $0.id == newID }) else {
             XCTFail("Fresh timer should be in the workspace")
@@ -547,42 +547,6 @@ final class TimerWorkspaceModelTests: XCTestCase {
         XCTAssertNil(fresh.pausedRemainingTime)
         XCTAssertEqual(fresh.remainingTime, 90, accuracy: 0.0001)
         XCTAssertEqual(fresh.startDate, dateBox.date)
-    }
-
-    @MainActor
-    func testStartingNewRejectsTerminalTimer() {
-        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
-        let timerManager = RuntimeBackedTimerManaging(
-            tickInterval: 60,
-            dateProvider: { dateBox.date }
-        )
-        let model = makeModel(timerManager: timerManager)
-
-        guard let sourceID = model.startTimer(
-            duration: 30,
-            name: "src",
-            basisSummary: "manual"
-        ) else {
-            XCTFail("Source timer should start")
-            return
-        }
-
-        dateBox.date = Date(timeIntervalSince1970: 200)
-        timerManager.tick()
-        guard let completedSource = model.timers.first(where: { $0.id == sourceID }),
-              completedSource.status == .completed else {
-            XCTFail("Source timer should be completed")
-            return
-        }
-
-        let newID = model.startTimer(replacingActive: completedSource)
-
-        // Start New leaves terminal rows to the clone (Start Again) path:
-        // no cancel, no new timer.
-        XCTAssertNil(newID)
-        XCTAssertEqual(model.timers.count, 1)
-        XCTAssertEqual(model.timers.first?.id, sourceID)
-        XCTAssertEqual(model.timers.first?.status, .completed)
     }
 
     @MainActor
@@ -675,6 +639,62 @@ final class TimerWorkspaceModelTests: XCTestCase {
         // this new timer should get order=7 and the next should be 8.
         XCTAssertEqual(model.timers.first?.order, 7)
         XCTAssertEqual(model.nextTimerOrder, 8)
+    }
+
+    // MARK: - Terminal relative-time refresh scheduling
+
+    /// A canceled-only history must still drive the relative-time refresh
+    /// so its visible label advances from `just now` to `1 min ago` while
+    /// the sheet stays open. Before the fix the scheduler considered only
+    /// completed rows, so a lone canceled record froze at `just now`.
+    @MainActor
+    func testCanceledRecordSchedulesRelativeTimeRefresh() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 90,
+            name: "Tri-X 400 - 90s",
+            basisSummary: "manual"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 130)
+        model.cancelTimer(id: sourceID)
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .canceled)
+
+        // 15s after cancellation the row reads "just now"; the next display
+        // boundary is the minute mark at +60s, so a refresh is scheduled.
+        let referenceDate = Date(timeIntervalSince1970: 145)
+        XCTAssertEqual(
+            model.nextTerminalTimeContextRefreshDate(relativeTo: referenceDate),
+            Date(timeIntervalSince1970: 190)
+        )
+    }
+
+    /// An active-only workspace has no terminal rows, so there is nothing
+    /// whose relative label can change — the seam returns nil.
+    @MainActor
+    func testActiveOnlyWorkspaceSchedulesNoRelativeTimeRefresh() {
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        _ = model.startTimer(duration: 90, name: "running", basisSummary: "manual")
+
+        XCTAssertNil(
+            model.nextTerminalTimeContextRefreshDate(
+                relativeTo: Date(timeIntervalSince1970: 130)
+            )
+        )
     }
 
     // MARK: - Multi-timer ordering

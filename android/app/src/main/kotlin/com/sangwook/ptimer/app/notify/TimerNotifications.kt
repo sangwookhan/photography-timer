@@ -26,6 +26,9 @@ object TimerNotifications {
     /** Intent extra: open the app straight into the (expanded) timer list. */
     const val EXTRA_SHOW_TIMERS = "com.sangwook.ptimer.SHOW_TIMERS"
 
+    /** Intent extra: focus this timer id in the list (the completion that was tapped). */
+    const val EXTRA_FOCUS_TIMER_ID = "com.sangwook.ptimer.FOCUS_TIMER_ID"
+
     /** Creates both channels; idempotent (safe to call on every launch). */
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -70,15 +73,31 @@ object TimerNotifications {
             .setContentIntent(appContentIntent(context))
             .build()
 
-    /** Posts the completion alert for a finished timer (default sound channel). */
-    fun notifyCompletion(context: Context, timerId: String, title: String) {
+    /**
+     * Posts the completion alert for a finished timer (default sound channel).
+     * Identifies the timer so multi-camera completions are distinguishable: a
+     * "Timer complete" sub-label, the camera/film [title] ("Camera 2 · No
+     * film"), and the shooting source line [body] ("Adjusted shutter · 8
+     * stops"). Falls back to "Timer complete" when the identity is missing.
+     */
+    // Completion can be driven from two paths in the same process: the
+    // AlarmManager receiver and the in-app completion detector (for timers that
+    // finish while the app is alive, whose alarm the running-set sync may cancel
+    // before it fires). Whichever calls first posts; the other is de-duped here,
+    // so a short backgrounded timer always rings exactly once.
+    private val notifiedTimerIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    fun notifyCompletion(context: Context, timerId: String, title: String, body: String) {
+        if (!notifiedTimerIds.add(timerId)) return
         val notification = NotificationCompat.Builder(context, COMPLETION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Timer complete")
-            .setContentText(title)
+            .setSubText("Timer complete")
+            .setContentTitle(title.ifBlank { "Timer complete" })
+            .setContentText(body.ifBlank { null })
             .setAutoCancel(true)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setContentIntent(appContentIntent(context))
+            // Carry the timer id so tapping focuses this finished timer in the list.
+            .setContentIntent(appContentIntent(context, focusTimerId = timerId))
             .build()
         // POST_NOTIFICATIONS is requested at the UI layer; guard the post so a
         // denied permission cannot crash the receiver.
@@ -88,13 +107,18 @@ object TimerNotifications {
         }
     }
 
-    private fun appContentIntent(context: Context): PendingIntent {
+    private fun appContentIntent(context: Context, focusTimerId: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
             .putExtra(EXTRA_SHOW_TIMERS, true)
+        if (focusTimerId != null) intent.putExtra(EXTRA_FOCUS_TIMER_ID, focusTimerId)
+        // A distinct request code per focus target so each completion notification
+        // keeps its own intent; a shared code with FLAG_UPDATE_CURRENT would
+        // collapse them all onto the last-posted timer.
+        val requestCode = focusTimerId?.hashCode() ?: 0
         return PendingIntent.getActivity(
             context,
-            0,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )

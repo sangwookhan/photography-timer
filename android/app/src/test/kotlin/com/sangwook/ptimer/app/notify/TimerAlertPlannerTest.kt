@@ -12,10 +12,15 @@ import java.util.UUID
 
 class TimerAlertPlannerTest {
 
-    private fun card(status: TimerStatus, endMillis: Long, title: String = "T") = TimerCardState(
+    private fun card(
+        status: TimerStatus,
+        endMillis: Long,
+        title: String = "T",
+        subtitle: String = "",
+    ) = TimerCardState(
         id = UUID.randomUUID(),
         order = 1,
-        identity = TimerIdentity(title = title, subtitle = "", baseLine = "", slotLabel = ""),
+        identity = TimerIdentity(title = title, subtitle = subtitle, baseLine = "", slotLabel = ""),
         status = status,
         remainingSeconds = 10.0,
         endDate = Instant.ofEpochMilli(endMillis),
@@ -75,5 +80,23 @@ class TimerAlertPlannerTest {
         assertTrue(plan.stages[1].content.text.contains("Expected completion"))
         assertTrue(plan.stages[1].content.text.contains("@9000"))
         assertTrue(!plan.stages[1].content.text.contains("timers"))
+    }
+
+    @Test
+    fun completionAlarmsCarryCameraIdentityAndSourceLine() {
+        val plan = TimerAlertPlanner.plan(
+            listOf(
+                card(TimerStatus.running, 9000, title = "Camera 1 · No film", subtitle = "Adjusted shutter · 8 stops"),
+                card(TimerStatus.running, 3000, title = "Camera 2 · Velvia 50", subtitle = "Target shutter"),
+            ),
+        ) { millis -> "@$millis" }
+
+        // Each completion alarm carries the camera/film title + the shooting
+        // source line, so the completion notification distinguishes which timer
+        // and source finished (adjusted vs target are not interchangeable).
+        val byTitle = plan.alarms.associateBy { it.title }
+        assertEquals(2, byTitle.size)
+        assertEquals("Adjusted shutter · 8 stops", byTitle["Camera 1 · No film"]!!.subtitle)
+        assertEquals("Target shutter", byTitle["Camera 2 · Velvia 50"]!!.subtitle)
     }
 }

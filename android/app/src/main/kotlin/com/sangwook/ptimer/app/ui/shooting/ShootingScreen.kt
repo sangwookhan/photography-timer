@@ -132,6 +132,16 @@ fun ShootingScreen(
                 // keeps aligned with the on-screen page (capture-on-switch).
                 // No vertical scroll: the whole calculator must fit at a glance.
                 val pageState = state.slotStates.getOrNull(page) ?: state
+                // The shared wheel callbacks write to the ACTIVE slot. The pager
+                // keeps adjacent pages composed, and SnapWheel auto-emits its
+                // centered value on (re)layout — so during a swipe an incoming
+                // page's wheel would write its value into the still-active
+                // outgoing slot, resetting it. Gate the writes so only the page
+                // that IS the active slot edits it; off-active pages are
+                // display-only.
+                val writesActiveSlot = page == activeIndex
+                val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
+                val onNdForPage: (Int) -> Unit = if (writesActiveSlot) onNdIndex else { _ -> }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -219,14 +229,14 @@ fun ShootingScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text("Base Shutter", style = MaterialTheme.typography.labelMedium)
-                                SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterIndex, visibleCount = 3, itemHeight = 34.dp)
+                                SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
                             Column(
                                 modifier = Modifier.weight(1f),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text("ND Filter", style = MaterialTheme.typography.labelMedium)
-                                SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdIndex, visibleCount = 3, itemHeight = 34.dp)
+                                SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
                         }
                     }

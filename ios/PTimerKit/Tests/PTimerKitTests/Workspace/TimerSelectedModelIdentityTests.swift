@@ -288,7 +288,7 @@ final class TimerSelectedModelIdentityTests: XCTestCase {
         XCTAssertEqual(
             clone.selectedModelLabel,
             "App formula",
-            "Start Again must not silently switch the model identity."
+            "Clone must not silently switch the model identity."
         )
     }
 

@@ -315,28 +315,20 @@ struct ExposureCalculatorScreen: View {
                     onResumeTimer: viewModel.resumeTimer,
                     onCancelTimer: viewModel.cancelTimer,
                     onRemoveTimer: viewModel.removeTimer,
-                    onStartNewTimer: { id in
+                    onCloneTimer: { id in
                         // Look the source timer up on the facade rather
                         // than threading the row's full RunningTimerItem
                         // through the snapshot — the snapshot carries
                         // presentation values, not the metadata-bearing
-                        // runtime item the replace path needs.
+                        // runtime item the clone path needs.
                         guard let source = viewModel.timers.first(where: { $0.id == id }) else {
                             return
                         }
-                        // Move focus to the freshly started timer so it
+                        // Move focus to the freshly started clone so it
                         // scrolls into view (the Active section header stays
                         // visible per PTIMER-126) and highlights, instead of
                         // the list staying on the previously focused row.
-                        if let newID = viewModel.startNewTimer(from: source) {
-                            bottomSheetStateStore.focusTimer(newID)
-                        }
-                    },
-                    onStartTimerAgain: { id in
-                        guard let source = viewModel.timers.first(where: { $0.id == id }) else {
-                            return
-                        }
-                        if let newID = viewModel.startTimerAgain(from: source) {
+                        if let newID = viewModel.cloneTimer(from: source) {
                             bottomSheetStateStore.focusTimer(newID)
                         }
                     },

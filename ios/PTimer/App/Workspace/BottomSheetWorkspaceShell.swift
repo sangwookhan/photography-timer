@@ -527,11 +527,15 @@ struct BottomSheetLargeWorkspaceView: View {
     let onResumeTimer: (UUID) -> Void
     let onCancelTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
-    let onStartNewTimer: (UUID) -> Void
-    let onStartTimerAgain: (UUID) -> Void
+    let onCloneTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onCollapse: () -> Void
     @State private var hasAppliedInitialFocus = false
+    /// Pending Clone/Cancel/Remove action awaiting confirmation; nil when
+    /// no confirmation dialog is shown.
+    @State private var pendingConfirm: PendingTimerConfirm?
+    /// Whether the "Clear completed timers?" confirmation is shown.
+    @State private var showClearConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -591,6 +595,33 @@ struct BottomSheetLargeWorkspaceView: View {
                 }
             }
         }
+        .confirmationDialog(
+            pendingConfirm.map { confirmTitle(for: $0.action) } ?? "",
+            isPresented: Binding(
+                get: { pendingConfirm != nil },
+                set: { presented in if !presented { pendingConfirm = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingConfirm
+        ) { pending in
+            Button(confirmButtonTitle(for: pending.action), role: confirmRole(for: pending.action)) {
+                execute(pending)
+                pendingConfirm = nil
+            }
+        } message: { pending in
+            Text(confirmMessage(for: pending.action))
+        }
+        .confirmationDialog(
+            "Clear completed timers?",
+            isPresented: $showClearConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Clear", role: .destructive) {
+                onClearCompletedTimers()
+            }
+        } message: {
+            Text("Completed timer records will be removed. Canceled timers will be kept.")
+        }
     }
 
     @ViewBuilder
@@ -604,7 +635,7 @@ struct BottomSheetLargeWorkspaceView: View {
 
             if section.isCompletedSection {
                 Button("Clear") {
-                    onClearCompletedTimers()
+                    showClearConfirm = true
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
@@ -669,16 +700,81 @@ struct BottomSheetLargeWorkspaceView: View {
             onPauseTimer(id)
         case .resume:
             onResumeTimer(id)
-        case .cancel:
-            onCancelTimer(id)
-        case .remove:
-            onRemoveTimer(id)
-        case .startNew:
-            onStartNewTimer(id)
-        case .startAgain:
-            onStartTimerAgain(id)
+        case .clone, .cancel, .remove:
+            // Clone, Cancel, and Remove confirm before running (parity with
+            // Android). Pause/Resume stay immediate.
+            pendingConfirm = PendingTimerConfirm(action: action, timerID: id)
         }
     }
+
+    private func execute(_ pending: PendingTimerConfirm) {
+        switch pending.action {
+        case .clone:
+            onCloneTimer(pending.timerID)
+        case .cancel:
+            onCancelTimer(pending.timerID)
+        case .remove:
+            onRemoveTimer(pending.timerID)
+        case .pause, .resume:
+            break
+        }
+    }
+
+    private func confirmTitle(for action: BottomSheetLargeAction) -> String {
+        switch action {
+        case .clone:
+            return "Clone timer?"
+        case .cancel:
+            return "Cancel timer?"
+        case .remove:
+            return "Remove timer?"
+        case .pause, .resume:
+            return ""
+        }
+    }
+
+    private func confirmButtonTitle(for action: BottomSheetLargeAction) -> String {
+        switch action {
+        case .clone:
+            return "Clone"
+        case .cancel:
+            return "Cancel Timer"
+        case .remove:
+            return "Remove"
+        case .pause, .resume:
+            return ""
+        }
+    }
+
+    private func confirmRole(for action: BottomSheetLargeAction) -> ButtonRole? {
+        switch action {
+        case .cancel, .remove:
+            return .destructive
+        case .clone, .pause, .resume:
+            return nil
+        }
+    }
+
+    private func confirmMessage(for action: BottomSheetLargeAction) -> String {
+        switch action {
+        case .clone:
+            return "Start a new timer with the same settings. This timer will stay unchanged."
+        case .cancel:
+            return "This timer will be marked as canceled and moved to history."
+        case .remove:
+            return "This timer record will be removed."
+        case .pause, .resume:
+            return ""
+        }
+    }
+}
+
+/// A pending Clone/Cancel/Remove action awaiting confirmation in the
+/// workspace shell.
+private struct PendingTimerConfirm: Identifiable {
+    let action: BottomSheetLargeAction
+    let timerID: UUID
+    var id: UUID { timerID }
 }
 
 private struct LargeWorkspaceTimerRowView: View {
@@ -821,7 +917,7 @@ private struct LargeWorkspaceTimerRowView: View {
         switch action {
         case .pause:
             return .orange
-        case .resume, .startNew, .startAgain:
+        case .resume, .clone:
             return .blue
         case .cancel, .remove:
             return .secondary
@@ -997,8 +1093,7 @@ struct FullScreenTimersWindow: View {
     let onResumeTimer: (UUID) -> Void
     let onCancelTimer: (UUID) -> Void
     let onRemoveTimer: (UUID) -> Void
-    let onStartNewTimer: (UUID) -> Void
-    let onStartTimerAgain: (UUID) -> Void
+    let onCloneTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onClose: () -> Void
 
@@ -1011,8 +1106,7 @@ struct FullScreenTimersWindow: View {
                 onResumeTimer: onResumeTimer,
                 onCancelTimer: onCancelTimer,
                 onRemoveTimer: onRemoveTimer,
-                onStartNewTimer: onStartNewTimer,
-                onStartTimerAgain: onStartTimerAgain,
+                onCloneTimer: onCloneTimer,
                 onClearCompletedTimers: onClearCompletedTimers,
                 onCollapse: onClose
             )

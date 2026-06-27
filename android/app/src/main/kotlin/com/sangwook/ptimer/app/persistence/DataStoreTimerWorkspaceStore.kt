@@ -22,19 +22,27 @@ private val SNAPSHOT_KEY = stringPreferencesKey("workspace_snapshot_json")
  */
 class DataStoreTimerWorkspaceStore(private val context: Context) : WorkspacePersistenceStoring {
 
-    override fun loadSnapshot(): PersistentWorkspaceSnapshot? = runBlocking {
-        val prefs = context.timerWorkspaceDataStore.data.firstOrNull()
-        val json = prefs?.get(SNAPSHOT_KEY) ?: return@runBlocking null
-        WorkspaceSnapshotCodec.decode(json)
-    }
+    // Each IO call is wrapped so a DataStore read/write failure degrades safely
+    // (read -> null, write/clear -> no-op) instead of crashing the caller.
+    override fun loadSnapshot(): PersistentWorkspaceSnapshot? = runCatching {
+        runBlocking {
+            val prefs = context.timerWorkspaceDataStore.data.firstOrNull()
+            val json = prefs?.get(SNAPSHOT_KEY) ?: return@runBlocking null
+            WorkspaceSnapshotCodec.decode(json)
+        }
+    }.getOrNull()
 
     override fun saveSnapshot(snapshot: PersistentWorkspaceSnapshot) {
-        runBlocking {
-            context.timerWorkspaceDataStore.edit { it[SNAPSHOT_KEY] = WorkspaceSnapshotCodec.encode(snapshot) }
+        runCatching {
+            runBlocking {
+                context.timerWorkspaceDataStore.edit { it[SNAPSHOT_KEY] = WorkspaceSnapshotCodec.encode(snapshot) }
+            }
         }
     }
 
     override fun clearSnapshot() {
-        runBlocking { context.timerWorkspaceDataStore.edit { it.remove(SNAPSHOT_KEY) } }
+        runCatching {
+            runBlocking { context.timerWorkspaceDataStore.edit { it.remove(SNAPSHOT_KEY) } }
+        }
     }
 }

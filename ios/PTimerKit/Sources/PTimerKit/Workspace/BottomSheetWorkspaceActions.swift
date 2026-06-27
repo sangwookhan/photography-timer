@@ -29,18 +29,14 @@ public enum BottomSheetLargeAction: String, Equatable {
     case resume
     /// Cancels a running or paused timer, keeping it as a terminal
     /// canceled record in the history area (distinct from `remove`,
-    /// which deletes the record outright). Surfaced on paused rows.
+    /// which deletes the record outright).
     case cancel
     case remove
-    /// Cancels the current running or paused timer and starts a fresh
-    /// timer from the same setup and full duration. Surfaced on active
-    /// rows so the photographer can abandon an in-progress exposure and
-    /// begin a new one without recomputing it from the calculator.
-    case startNew
-    /// Starts a fresh timer cloned from a terminal record's duration
-    /// and identity snapshot, leaving the source record intact.
-    /// Surfaced on completed and canceled rows.
-    case startAgain
+    /// Starts a fresh timer from the selected timer's setup and full
+    /// duration, leaving the source timer untouched — a timer is canceled
+    /// only by an explicit Cancel, never implicitly by Clone. Surfaced on
+    /// every timer state.
+    case clone
 
     public var title: String {
         switch self {
@@ -52,10 +48,8 @@ public enum BottomSheetLargeAction: String, Equatable {
             return "Cancel"
         case .remove:
             return "Remove"
-        case .startNew:
-            return "Start New"
-        case .startAgain:
-            return "Start Again"
+        case .clone:
+            return "Clone"
         }
     }
 }

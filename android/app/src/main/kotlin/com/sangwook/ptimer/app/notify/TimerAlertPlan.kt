@@ -4,11 +4,17 @@ import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.timer.TimerStatus
 import java.util.UUID
 
-/** One exact completion alarm to fire at a running timer's end instant. */
+/**
+ * One completion alarm to fire at a running timer's end instant. [title] is the
+ * camera/film identity ("Camera 2 · No film") and [subtitle] the shooting source
+ * line ("Adjusted shutter · 8 stops"), so the completion notification can
+ * identify which timer and source finished.
+ */
 data class CompletionAlarm(
     val timerId: UUID,
     val triggerAtEpochMillis: Long,
     val title: String,
+    val subtitle: String,
 )
 
 /**
@@ -30,8 +36,9 @@ data class OngoingStage(val endMillis: Long, val content: OngoingContent)
 
 /**
  * Desired notification side-effects derived purely from the workspace state:
- * one exact completion alarm per running timer (AlarmManager fires the
- * sound/alert at the end instant even if the app is backgrounded), plus the
+ * one completion alarm per running timer, exact when permitted and inexact
+ * as fallback (AlarmManager fires the sound/alert at the end instant even
+ * if the app is backgrounded), plus the
  * ongoing foreground-service content while any timer is running (a persistent,
  * tappable way back into the app). `ongoing == null` means stop the service.
  * [stages] is the ordered sequence the ongoing should pass through as timers
@@ -56,6 +63,7 @@ object TimerAlertPlanner {
                 timerId = it.id,
                 triggerAtEpochMillis = it.endDate.toEpochMilli(),
                 title = it.identity.title,
+                subtitle = it.identity.subtitle,
             )
         }
         // One stage per timer, ordered by end. Stage i is the ongoing content

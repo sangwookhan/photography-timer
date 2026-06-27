@@ -82,6 +82,18 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
     }
 
+    /// The absolute timestamp renders in the device-local time zone
+    /// (PTIMER-146), so expected strings are derived locally rather than
+    /// hard-coded to UTC.
+    private func localAbsoluteTime(_ secondsSince1970: TimeInterval) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: Date(timeIntervalSince1970: secondsSince1970))
+    }
+
     @MainActor
     func testCompletedLargeItemShowsAbsoluteAndRelativeCompletionTime() throws {
         let harness = makeRuntimeHarness(now: 100)
@@ -99,7 +111,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
 
         XCTAssertEqual(
             completedItem.timingText,
-            "Completed 1970-01-01 00:01:50 · just now"
+            "Completed \(localAbsoluteTime(110)) · just now"
         )
     }
 
@@ -153,8 +165,8 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(
             completedItems.map(\.timingText),
             [
-                "Completed 1970-01-01 02:45:40 · 1 min ago",
-                "Completed 1970-01-01 02:43:40 · 3 min ago",
+                "Completed \(localAbsoluteTime(9_940)) · 1 min ago",
+                "Completed \(localAbsoluteTime(9_820)) · 3 min ago",
             ]
         )
     }

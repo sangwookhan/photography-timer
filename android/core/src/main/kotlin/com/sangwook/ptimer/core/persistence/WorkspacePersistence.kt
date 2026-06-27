@@ -3,10 +3,15 @@ package com.sangwook.ptimer.core.persistence
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.WorkspaceTimer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
+import java.util.UUID
 
 // Persistence for the timer workspace: each timer's runtime snapshot plus its
 // captured display identity, consolidated into one snapshot (round2 §4).
@@ -63,10 +68,29 @@ object WorkspaceSnapshotCodec {
 
     fun encode(snapshot: PersistentWorkspaceSnapshot): String = json.encodeToString(snapshot)
 
-    fun decode(text: String): PersistentWorkspaceSnapshot? = try {
-        val snapshot = json.decodeFromString<PersistentWorkspaceSnapshot>(text)
-        if (snapshot.schemaVersion == PersistentWorkspaceSnapshot.CURRENT_SCHEMA_VERSION) snapshot else null
-    } catch (_: Exception) {
-        null
+    /**
+     * Decodes the workspace snapshot, hardened against partial corruption:
+     * a malformed payload or unrecognized schema version fails safe to null;
+     * a single undecodable timer entry is dropped rather than discarding the
+     * whole collection; and duplicate timer ids are de-duplicated (first valid
+     * wins). The typed [PersistentWorkspaceTimer] schema is unchanged.
+     */
+    fun decode(text: String): PersistentWorkspaceSnapshot? {
+        return try {
+            val root = json.parseToJsonElement(text).jsonObject
+            val version = root["schemaVersion"]?.jsonPrimitive?.intOrNull
+                ?: PersistentWorkspaceSnapshot.CURRENT_SCHEMA_VERSION
+            if (version != PersistentWorkspaceSnapshot.CURRENT_SCHEMA_VERSION) return null
+            val timersArray = root["timers"] as? JsonArray ?: JsonArray(emptyList())
+            val seen = HashSet<UUID>()
+            val timers = timersArray.mapNotNull { element ->
+                runCatching { json.decodeFromJsonElement<PersistentWorkspaceTimer>(element) }
+                    .getOrNull()
+                    ?.takeIf { seen.add(it.snapshot.id) }
+            }
+            PersistentWorkspaceSnapshot(timers = timers, schemaVersion = version)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

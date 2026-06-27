@@ -381,8 +381,7 @@ final class BottomSheetWorkspaceShellTests: XCTestCase {
                 onResumeTimer: { _ in },
                 onCancelTimer: { _ in },
                 onRemoveTimer: { _ in },
-                onStartNewTimer: { _ in },
-                onStartTimerAgain: { _ in },
+                onCloneTimer: { _ in },
                 onClearCompletedTimers: {},
                 onClose: {}
             )

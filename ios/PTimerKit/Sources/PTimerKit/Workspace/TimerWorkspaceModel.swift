@@ -15,7 +15,8 @@ import PTimerCore
 ///   (`pause` / `resume` / `remove` / `clearCompletedTimers` /
 ///   `start(id:duration:name:basisSummary:)`)
 /// - the `completedRelativeTimeFormatter` used to drive the
-///   "Completed N minutes ago" refresh schedule.
+///   terminal "N minutes ago" refresh schedule for completed and
+///   canceled history rows.
 ///
 /// This model carries timer state only. Cross-cutting "start timer
 /// from calculation result" wiring belongs to `WorkspaceCoordinator`
@@ -115,46 +116,21 @@ public final class TimerWorkspaceModel: ObservableObject {
     /// source record is read only — its runtime state, ordering, and
     /// persisted metadata are untouched.
     ///
-    /// Returns the new timer's id on success; `nil` when `source` is
-    /// not a terminal record or `any TimerManaging` rejected the
-    /// duration. The terminal-status guard lets the UI route the
-    /// `Start Again` action through this path while staying inert for
-    /// running or paused rows.
+    /// Starts a fresh timer cloned from `source`'s duration and identity
+    /// snapshot, from ANY state (running, paused, completed, or canceled).
+    /// The source timer is left untouched — a timer is canceled only by an
+    /// explicit Cancel, never implicitly by Clone. Returns the new timer's
+    /// id on success; `nil` when `any TimerManaging` rejected the duration.
     @discardableResult
     public func startTimer(
         cloning source: RunningTimerItem,
         id: UUID = UUID()
     ) -> UUID? {
-        guard source.status == .completed || source.status == .canceled else {
-            return nil
-        }
-
-        return startTimer(cloningMetadataFrom: source, id: id)
+        startTimer(cloningMetadataFrom: source, id: id)
     }
 
-    /// Replaces an active (running or paused) source timer with a fresh
-    /// one started from full duration. The source is canceled (kept as
-    /// a terminal canceled record, not removed) so the abandoned
-    /// exposure stays in history and no duplicate or ghost timer keeps
-    /// running; the new timer then starts with the source's duration
-    /// and identity snapshot. Returns the new timer's id on success;
-    /// `nil` when `source` is not running or paused.
-    @discardableResult
-    public func startTimer(
-        replacingActive source: RunningTimerItem,
-        id: UUID = UUID()
-    ) -> UUID? {
-        guard source.status == .running || source.status == .paused else {
-            return nil
-        }
-
-        cancelTimer(id: source.id)
-        return startTimer(cloningMetadataFrom: source, id: id)
-    }
-
-    /// Shared body for the Start New / Start Again paths: starts a new
-    /// timer that reuses `source`'s duration and identity-bearing
-    /// metadata.
+    /// Shared body for the Clone path: starts a new timer that reuses
+    /// `source`'s duration and identity-bearing metadata.
     @discardableResult
     private func startTimer(
         cloningMetadataFrom source: RunningTimerItem,
@@ -360,21 +336,17 @@ public final class TimerWorkspaceModel: ObservableObject {
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
 
-        scheduleCompletedTimeContextRefreshIfNeeded()
+        scheduleTerminalTimeContextRefreshIfNeeded()
     }
 
-    private func scheduleCompletedTimeContextRefreshIfNeeded() {
-        completedTimeContextRefreshTimer?.invalidate()
-        completedTimeContextRefreshTimer = nil
-
-        guard !timers.contains(where: { $0.status == .running }) else {
-            return
-        }
-
-        let referenceDate = timerManager.currentDate
-        let nextRefreshDate = timers
-            .filter { $0.status == .completed }
-            .compactMap(\.completedAt)
+    /// Earliest next display boundary across the terminal (completed +
+    /// canceled) history rows, or `nil` when no visible relative label
+    /// will change. Drives the one-shot refresh so visible history copy
+    /// advances from `just now` to `1 min ago` while the sheet stays
+    /// open — covering canceled rows as well as completed ones.
+    func nextTerminalTimeContextRefreshDate(relativeTo referenceDate: Date) -> Date? {
+        timers
+            .compactMap(\.terminalAt)
             .compactMap {
                 completedRelativeTimeFormatter.nextRefreshDate(
                     from: $0,
@@ -382,8 +354,23 @@ public final class TimerWorkspaceModel: ObservableObject {
                 )
             }
             .min()
+    }
 
-        guard let nextRefreshDate else {
+    private func scheduleTerminalTimeContextRefreshIfNeeded() {
+        completedTimeContextRefreshTimer?.invalidate()
+        completedTimeContextRefreshTimer = nil
+
+        // While a timer is running the RunLoop tick path already
+        // republishes with a fresh reference date every tick, so the
+        // dedicated one-shot is only needed once all timers are terminal.
+        guard !timers.contains(where: { $0.status == .running }) else {
+            return
+        }
+
+        let referenceDate = timerManager.currentDate
+        guard let nextRefreshDate = nextTerminalTimeContextRefreshDate(
+            relativeTo: referenceDate
+        ) else {
             return
         }
 

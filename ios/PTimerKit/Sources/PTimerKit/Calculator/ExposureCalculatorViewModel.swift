@@ -1333,23 +1333,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// Replaces a running or paused timer with a fresh one from the
-    /// same setup and full duration. The source is canceled (kept as a
-    /// terminal canceled record, not removed) so the abandoned exposure
-    /// stays in history and no ghost timer keeps running. No-op when
-    /// `source` is not active.
-    /// Returns the new timer's id so the caller can move focus to it.
+    /// Starts a fresh timer cloned from `source`'s setup and full
+    /// duration, from any state, leaving the source timer untouched. A
+    /// timer is canceled only by an explicit Cancel, never implicitly by
+    /// Clone. Returns the new timer's id so the caller can move focus to it.
     @discardableResult
-    public func startNewTimer(from source: RunningTimerItem) -> UUID? {
-        timerWorkspaceModel.startTimer(replacingActive: source)
-    }
-
-    /// Starts a fresh timer cloned from a terminal (completed or
-    /// canceled) record, leaving the source record intact. No-op when
-    /// `source` is not a terminal record. Returns the new timer's id so
-    /// the caller can move focus to it.
-    @discardableResult
-    public func startTimerAgain(from source: RunningTimerItem) -> UUID? {
+    public func cloneTimer(from source: RunningTimerItem) -> UUID? {
         timerWorkspaceModel.startTimer(cloning: source)
     }
 
@@ -1700,7 +1689,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        // Absolute event timestamps (completed / canceled / paused / ends)
+        // render in the device's local time zone, not UTC, so each event reads
+        // in the local time where it occurred.
+        formatter.timeZone = .autoupdatingCurrent
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()

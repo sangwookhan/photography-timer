@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,11 +73,18 @@ fun SnapWheel(
         }
     }
 
+    // The collector is keyed on (listState, labels) and outlives callback
+    // changes, so read the latest callback through rememberUpdatedState rather
+    // than capturing it once. Otherwise a wheel whose callback identity changes
+    // after first composition — e.g. the per-slot write gate flipping from no-op
+    // to active when the camera pager settles on that page — would keep invoking
+    // the stale callback and silently drop the user's spins.
+    val currentOnSelectedIndexChange by rememberUpdatedState(onSelectedIndexChange)
     LaunchedEffect(listState, labels) {
         snapshotFlow { centeredIndex }
             .filterNotNull()
             .distinctUntilChanged()
-            .collect(onSelectedIndexChange)
+            .collect { currentOnSelectedIndexChange(it) }
     }
 
     // Re-center when the selection is set from outside the wheel (Quick/Fine

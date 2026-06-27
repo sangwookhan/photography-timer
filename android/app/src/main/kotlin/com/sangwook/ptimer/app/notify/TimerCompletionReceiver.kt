@@ -16,8 +16,9 @@ class TimerCompletionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val timerId = intent.getStringExtra(EXTRA_TIMER_ID) ?: return
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        val subtitle = intent.getStringExtra(EXTRA_SUBTITLE).orEmpty()
         TimerNotifications.ensureChannels(context)
-        TimerNotifications.notifyCompletion(context, timerId, title)
+        TimerNotifications.notifyCompletion(context, timerId, title, subtitle)
 
         // Swap the ongoing to the soonest timer still in the future (the new
         // representative), or stop the service when none remain. Exact alarms
@@ -34,5 +35,6 @@ class TimerCompletionReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_TIMER_ID = "timer_id"
         const val EXTRA_TITLE = "title"
+        const val EXTRA_SUBTITLE = "subtitle"
     }
 }

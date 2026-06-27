@@ -23,6 +23,13 @@ class ShootingViewModelTest {
         override fun clearSnapshot() { saved = null }
     }
 
+    /** A store whose reads and writes always fail, to test restore resilience. */
+    private class ThrowingStore : WorkspacePersistenceStoring {
+        override fun loadSnapshot(): PersistentWorkspaceSnapshot? = throw RuntimeException("read failed")
+        override fun saveSnapshot(snapshot: PersistentWorkspaceSnapshot) = throw RuntimeException("write failed")
+        override fun clearSnapshot() = throw RuntimeException("clear failed")
+    }
+
     private fun vm(store: WorkspacePersistenceStoring, clock: () -> Instant): ShootingViewModel {
         var counter = 0
         return ShootingViewModel(
@@ -86,18 +93,127 @@ class ShootingViewModelTest {
     }
 
     @Test
-    fun startAgainClonesFinishedTimer() {
+    fun cloneFromRunningKeepsSourceRunning() {
+        val store = FakeStore()
+        val sut = vm(store) { t0 }
+        sut.onEvent(ShootingIntent.StartTimer(100.0, identity))
+        val sourceId = sut.uiState.value.active.first().id
+
+        sut.onEvent(ShootingIntent.Clone(sourceId))
+
+        val state = sut.uiState.value
+        // Source stays running; a fresh running clone is added (clone never cancels).
+        assertEquals(2, state.active.size)
+        assertTrue(state.active.all { it.status == TimerStatus.running })
+        assertTrue(state.active.any { it.id == sourceId })
+        assertEquals(0, state.history.size)
+    }
+
+    @Test
+    fun cloneFromPausedKeepsSourcePaused() {
+        val store = FakeStore()
+        var nowSeconds = 0L
+        val sut = vm(store) { t0.plusSeconds(nowSeconds) }
+        sut.onEvent(ShootingIntent.StartTimer(100.0, identity))
+        val sourceId = sut.uiState.value.active.first().id
+        nowSeconds = 30L
+        sut.onEvent(ShootingIntent.Pause(sourceId))
+
+        sut.onEvent(ShootingIntent.Clone(sourceId))
+
+        val state = sut.uiState.value
+        assertEquals(2, state.active.size)
+        assertEquals(TimerStatus.paused, state.active.first { it.id == sourceId }.status)
+        assertEquals(1, state.active.count { it.status == TimerStatus.running })
+        assertEquals(0, state.history.size)
+    }
+
+    @Test
+    fun cloneFromCompletedKeepsSourceAndStartsRunningClone() {
         val store = FakeStore()
         var now = t0
         val sut = vm(store) { now }
         sut.onEvent(ShootingIntent.StartTimer(10.0, identity))
         now = t0.plusSeconds(11)
         sut.tick(now)
-        val finishedId = sut.uiState.value.history.first().id
-        sut.onEvent(ShootingIntent.StartAgain(finishedId))
-        assertEquals(1, sut.uiState.value.active.size)
-        assertEquals(TimerStatus.running, sut.uiState.value.active.first().status)
-        assertEquals(10.0, sut.uiState.value.active.first().remainingSeconds, 1e-6)
+        val completedId = sut.uiState.value.history.first().id
+
+        sut.onEvent(ShootingIntent.Clone(completedId))
+
+        val state = sut.uiState.value
+        assertEquals(1, state.active.size)
+        assertEquals(TimerStatus.running, state.active.first().status)
+        assertEquals(10.0, state.active.first().remainingSeconds, 1e-6)
+        // Completed source preserved in history.
+        assertEquals(1, state.history.size)
+        assertEquals(completedId, state.history.first().id)
+        assertEquals(TimerStatus.completed, state.history.first().status)
+    }
+
+    @Test
+    fun cloneFromCanceledKeepsSourceCanceled() {
+        val store = FakeStore()
+        var nowSeconds = 0L
+        val sut = vm(store) { t0.plusSeconds(nowSeconds) }
+        sut.onEvent(ShootingIntent.StartTimer(50.0, identity))
+        val id = sut.uiState.value.active.first().id
+        nowSeconds = 10L
+        sut.onEvent(ShootingIntent.Cancel(id))
+
+        sut.onEvent(ShootingIntent.Clone(id))
+
+        val state = sut.uiState.value
+        assertEquals(1, state.active.size)
+        assertEquals(TimerStatus.running, state.active.first().status)
+        assertEquals(50.0, state.active.first().remainingSeconds, 1e-6)
+        // Canceled source preserved in history.
+        assertEquals(1, state.history.size)
+        assertEquals(id, state.history.first().id)
+        assertEquals(TimerStatus.canceled, state.history.first().status)
+    }
+
+    @Test
+    fun clonePreservesShootingIdentity() {
+        val store = FakeStore()
+        val sut = vm(store) { t0 }
+        val rich = TimerIdentity(
+            title = "Camera 2 · Kodak Portra 400",
+            subtitle = "Corrected Exposure",
+            baseLine = "1/30 -> 2s",
+            slotLabel = "C2",
+        )
+        sut.onEvent(ShootingIntent.StartTimer(45.0, rich))
+        val sourceId = sut.uiState.value.active.first().id
+
+        sut.onEvent(ShootingIntent.Clone(sourceId))
+
+        val clone = sut.uiState.value.active.first { it.id != sourceId }
+        assertEquals(rich, clone.identity)
+    }
+
+    @Test
+    fun clearCompletedRemovesCompletedAndKeepsCanceled() {
+        val store = FakeStore()
+        var now = t0
+        val sut = vm(store) { now }
+        // First timer auto-completes.
+        sut.onEvent(ShootingIntent.StartTimer(10.0, identity))
+        now = t0.plusSeconds(11)
+        sut.tick(now)
+        assertEquals(TimerStatus.completed, sut.uiState.value.history.first().status)
+        // Second timer the user cancels.
+        sut.onEvent(ShootingIntent.StartTimer(100.0, identity))
+        val canceledId = sut.uiState.value.active.first().id
+        sut.onEvent(ShootingIntent.Cancel(canceledId))
+        assertEquals(2, sut.uiState.value.history.size)
+
+        sut.onEvent(ShootingIntent.ClearCompleted)
+
+        // Completed removed; canceled preserved; not all history wiped.
+        val history = sut.uiState.value.history
+        assertEquals(1, history.size)
+        assertEquals(canceledId, history.first().id)
+        assertEquals(TimerStatus.canceled, history.first().status)
     }
 
     @Test
@@ -110,6 +226,20 @@ class ShootingViewModelTest {
         val id = sut.uiState.value.history.first().id
         sut.onEvent(ShootingIntent.Remove(id))
         assertEquals(0, sut.uiState.value.history.size)
+    }
+
+    @Test
+    fun restoreWithFailingStoreFallsBackToEmptyAndStaysUsable() {
+        val sut = vm(ThrowingStore()) { t0 }
+
+        sut.restore() // read failure must not crash
+
+        assertEquals(0, sut.uiState.value.active.size)
+        assertEquals(0, sut.uiState.value.history.size)
+        // Still usable: starting a timer works despite the failing write.
+        sut.onEvent(ShootingIntent.StartTimer(100.0, identity))
+        assertEquals(1, sut.uiState.value.active.size)
+        assertEquals(TimerStatus.running, sut.uiState.value.active.first().status)
     }
 
     @Test

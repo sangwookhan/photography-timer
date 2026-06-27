@@ -247,6 +247,24 @@ class CalculatorControllerTest {
     }
 
     @Test
+    fun restoreNormalizesStaleFilmSelectionWhenFilmNoLongerExists() {
+        val origin = controller()
+        origin.selectFilm("ilford-pan-f-plus-50")
+        val exported = origin.exportSession()
+
+        // Rebuild with the selected film removed from the catalog (e.g. a
+        // deleted custom film). The stale selection is normalized to a safe
+        // state, not re-persisted as a broken reference.
+        val reduced = films.filterNot { it.id == "ilford-pan-f-plus-50" }
+        val restored = CalculatorController(films = reduced, initialSession = exported)
+
+        assertEquals("No film", restored.state.value.selectedFilmName)
+        val activeSnapshot = restored.exportSession().snapshots[CameraSlotId.camera1]
+        assertNull(activeSnapshot?.selectedFilmId)
+        assertNull(activeSnapshot?.selectedProfileId)
+    }
+
+    @Test
     fun customFilmDraftRoundTripsFormulaFieldsForEditing() {
         val custom = com.sangwook.ptimer.core.customfilm.CustomFilmBuilder.buildFormulaFilm(
             input = com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput(

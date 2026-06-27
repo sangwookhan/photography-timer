@@ -23,7 +23,8 @@ sealed interface ShootingIntent {
     data class Resume(val id: UUID) : ShootingIntent
     data class Cancel(val id: UUID) : ShootingIntent
     data class Remove(val id: UUID) : ShootingIntent
-    data class StartAgain(val id: UUID) : ShootingIntent
+    data class Clone(val id: UUID) : ShootingIntent
+    data object ClearCompleted : ShootingIntent
 }
 
 /** Read-only display card for one timer. */
@@ -69,7 +70,8 @@ class ShootingViewModel(
 
     /** Restores the persisted workspace, reconciling against the current time. */
     fun restore() {
-        val snapshot = store.loadSnapshot() ?: return
+        // A failing store read must not crash startup; degrade to empty.
+        val snapshot = runCatching { store.loadSnapshot() }.getOrNull() ?: return
         val n = clock()
         workspace.value = TimerWorkspace(snapshot.restore(n)).reconciled(n)
         now.value = n
@@ -85,7 +87,8 @@ class ShootingViewModel(
             is ShootingIntent.Resume -> workspace.value.resume(intent.id, n)
             is ShootingIntent.Cancel -> workspace.value.cancel(intent.id, n)
             is ShootingIntent.Remove -> workspace.value.remove(intent.id)
-            is ShootingIntent.StartAgain -> workspace.value.startAgain(intent.id, idProvider(), n)
+            is ShootingIntent.Clone -> workspace.value.clone(intent.id, idProvider(), n)
+            is ShootingIntent.ClearCompleted -> workspace.value.clearCompleted()
         }.reconciled(n)
         now.value = n
         publish()
@@ -107,7 +110,8 @@ class ShootingViewModel(
     }
 
     private fun persist() {
-        store.saveSnapshot(PersistentWorkspaceSnapshot.from(workspace.value.timers))
+        // A failing store write must not crash timer interaction.
+        runCatching { store.saveSnapshot(PersistentWorkspaceSnapshot.from(workspace.value.timers)) }
     }
 
     private fun render(ws: TimerWorkspace, n: Instant): ShootingUiState =

@@ -40,4 +40,25 @@ class WorkspacePersistenceTest {
         assertNull(WorkspaceSnapshotCodec.decode("nope"))
         assertNull(WorkspaceSnapshotCodec.decode("""{"schemaVersion":42,"timers":[]}"""))
     }
+
+    @Test
+    fun corruptTimerEntryIsSkippedAndValidEntriesSurvive() {
+        // A valid single-timer snapshot, with one undecodable element injected
+        // ahead of it; the bad element is dropped, the valid one survives.
+        val valid = WorkspaceSnapshotCodec.encode(PersistentWorkspaceSnapshot.from(listOf(wt(1, 100.0, "Good"))))
+        val withBad = valid.replaceFirst("\"timers\":[", "\"timers\":[{\"snapshot\":{\"id\":\"not-a-uuid\"}},")
+        val decoded = WorkspaceSnapshotCodec.decode(withBad)
+        assertEquals(1, decoded!!.timers.size)
+        assertEquals("Good", decoded.timers.first().identity.title)
+    }
+
+    @Test
+    fun duplicateTimerIdsAreDeduplicated() {
+        // Two entries sharing the same id collapse to one (first valid wins).
+        val one = WorkspaceSnapshotCodec.encode(PersistentWorkspaceSnapshot.from(listOf(wt(1, 100.0, "First"))))
+        val element = one.substringAfter("\"timers\":[").substringBeforeLast("],\"schemaVersion\"")
+        val dupJson = "{\"timers\":[$element,$element],\"schemaVersion\":1}"
+        val decoded = WorkspaceSnapshotCodec.decode(dupJson)
+        assertEquals(1, decoded!!.timers.size)
+    }
 }

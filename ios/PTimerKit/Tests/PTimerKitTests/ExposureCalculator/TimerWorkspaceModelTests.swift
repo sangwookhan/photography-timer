@@ -641,6 +641,62 @@ final class TimerWorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.nextTimerOrder, 8)
     }
 
+    // MARK: - Terminal relative-time refresh scheduling
+
+    /// A canceled-only history must still drive the relative-time refresh
+    /// so its visible label advances from `just now` to `1 min ago` while
+    /// the sheet stays open. Before the fix the scheduler considered only
+    /// completed rows, so a lone canceled record froze at `just now`.
+    @MainActor
+    func testCanceledRecordSchedulesRelativeTimeRefresh() {
+        let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { dateBox.date }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        guard let sourceID = model.startTimer(
+            duration: 90,
+            name: "Tri-X 400 - 90s",
+            basisSummary: "manual"
+        ) else {
+            XCTFail("Source timer should start")
+            return
+        }
+
+        dateBox.date = Date(timeIntervalSince1970: 130)
+        model.cancelTimer(id: sourceID)
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .canceled)
+
+        // 15s after cancellation the row reads "just now"; the next display
+        // boundary is the minute mark at +60s, so a refresh is scheduled.
+        let referenceDate = Date(timeIntervalSince1970: 145)
+        XCTAssertEqual(
+            model.nextTerminalTimeContextRefreshDate(relativeTo: referenceDate),
+            Date(timeIntervalSince1970: 190)
+        )
+    }
+
+    /// An active-only workspace has no terminal rows, so there is nothing
+    /// whose relative label can change — the seam returns nil.
+    @MainActor
+    func testActiveOnlyWorkspaceSchedulesNoRelativeTimeRefresh() {
+        let timerManager = RuntimeBackedTimerManaging(
+            tickInterval: 60,
+            dateProvider: { Date(timeIntervalSince1970: 100) }
+        )
+        let model = makeModel(timerManager: timerManager)
+
+        _ = model.startTimer(duration: 90, name: "running", basisSummary: "manual")
+
+        XCTAssertNil(
+            model.nextTerminalTimeContextRefreshDate(
+                relativeTo: Date(timeIntervalSince1970: 130)
+            )
+        )
+    }
+
     // MARK: - Multi-timer ordering
 
     @MainActor

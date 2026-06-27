@@ -15,7 +15,8 @@ import PTimerCore
 ///   (`pause` / `resume` / `remove` / `clearCompletedTimers` /
 ///   `start(id:duration:name:basisSummary:)`)
 /// - the `completedRelativeTimeFormatter` used to drive the
-///   "Completed N minutes ago" refresh schedule.
+///   terminal "N minutes ago" refresh schedule for completed and
+///   canceled history rows.
 ///
 /// This model carries timer state only. Cross-cutting "start timer
 /// from calculation result" wiring belongs to `WorkspaceCoordinator`
@@ -335,21 +336,17 @@ public final class TimerWorkspaceModel: ObservableObject {
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
 
-        scheduleCompletedTimeContextRefreshIfNeeded()
+        scheduleTerminalTimeContextRefreshIfNeeded()
     }
 
-    private func scheduleCompletedTimeContextRefreshIfNeeded() {
-        completedTimeContextRefreshTimer?.invalidate()
-        completedTimeContextRefreshTimer = nil
-
-        guard !timers.contains(where: { $0.status == .running }) else {
-            return
-        }
-
-        let referenceDate = timerManager.currentDate
-        let nextRefreshDate = timers
-            .filter { $0.status == .completed }
-            .compactMap(\.completedAt)
+    /// Earliest next display boundary across the terminal (completed +
+    /// canceled) history rows, or `nil` when no visible relative label
+    /// will change. Drives the one-shot refresh so visible history copy
+    /// advances from `just now` to `1 min ago` while the sheet stays
+    /// open — covering canceled rows as well as completed ones.
+    func nextTerminalTimeContextRefreshDate(relativeTo referenceDate: Date) -> Date? {
+        timers
+            .compactMap(\.terminalAt)
             .compactMap {
                 completedRelativeTimeFormatter.nextRefreshDate(
                     from: $0,
@@ -357,8 +354,23 @@ public final class TimerWorkspaceModel: ObservableObject {
                 )
             }
             .min()
+    }
 
-        guard let nextRefreshDate else {
+    private func scheduleTerminalTimeContextRefreshIfNeeded() {
+        completedTimeContextRefreshTimer?.invalidate()
+        completedTimeContextRefreshTimer = nil
+
+        // While a timer is running the RunLoop tick path already
+        // republishes with a fresh reference date every tick, so the
+        // dedicated one-shot is only needed once all timers are terminal.
+        guard !timers.contains(where: { $0.status == .running }) else {
+            return
+        }
+
+        let referenceDate = timerManager.currentDate
+        guard let nextRefreshDate = nextTerminalTimeContextRefreshDate(
+            relativeTo: referenceDate
+        ) else {
             return
         }
 

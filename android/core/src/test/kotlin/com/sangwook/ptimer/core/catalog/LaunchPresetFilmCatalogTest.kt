@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 package com.sangwook.ptimer.core.catalog
 
 import com.sangwook.ptimer.core.reciprocity.ReciprocityCalculationPolicyEvaluator
@@ -75,7 +78,7 @@ class LaunchPresetFilmCatalogTest {
 
     @Test
     fun emptyCatalogIsRejected() {
-        val e = runCatching { LaunchPresetFilmCatalogLoader().loadCatalog("[]") }.exceptionOrNull()
+        val e = runCatching { LaunchPresetFilmCatalogLoader().loadCatalog("{\"films\":[]}") }.exceptionOrNull()
         assertTrue(e is CatalogLoadException && e.error is CatalogLoadError.EmptyCatalog)
     }
 
@@ -83,6 +86,17 @@ class LaunchPresetFilmCatalogTest {
     fun malformedCatalogIsRejected() {
         val e = runCatching { LaunchPresetFilmCatalogLoader().loadCatalog("not json") }.exceptionOrNull()
         assertTrue(e is CatalogLoadException && e.error is CatalogLoadError.MalformedResource)
+    }
+
+    @Test
+    fun bundledCatalogResourcePreservesCopyrightMetadata() {
+        val stream = LaunchPresetFilmCatalogLoader::class.java.classLoader
+            .getResourceAsStream(LaunchPresetFilmCatalog.RESOURCE_NAME)!!
+        val document = Json.parseToJsonElement(stream.bufferedReader().use { it.readText() }).jsonObject
+        val metadata = document["_meta"]!!.jsonObject
+
+        assertEquals("Copyright © 2026 Sangwook Han", metadata["copyright"]!!.jsonPrimitive.content)
+        assertEquals("Apache-2.0", metadata["license"]!!.jsonPrimitive.content)
     }
 
     private fun loadFixture(): JsonObject {

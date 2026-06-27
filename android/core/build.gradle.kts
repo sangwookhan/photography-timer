@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.serialization")

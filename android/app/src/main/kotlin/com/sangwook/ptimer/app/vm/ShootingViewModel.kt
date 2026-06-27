@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.app.timer.TimerWorkspace

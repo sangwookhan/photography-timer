@@ -1,4 +1,9 @@
-[
+{
+  "_meta": {
+    "copyright": "Copyright © 2026 Sangwook Han",
+    "license": "Apache-2.0"
+  },
+  "films": [
   {
     "aliases": [
       "Pan F+"
@@ -3809,4 +3814,5 @@
       }
     ]
   }
-]
+  ]
+}

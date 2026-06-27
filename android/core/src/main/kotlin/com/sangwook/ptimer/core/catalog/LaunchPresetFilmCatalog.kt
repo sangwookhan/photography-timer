@@ -49,6 +49,9 @@ object LaunchPresetFilmCatalog {
     val films: List<FilmIdentity> by lazy { LaunchPresetFilmCatalogLoader().loadBundledCatalog() }
 }
 
+@kotlinx.serialization.Serializable
+private data class CatalogDocument(val films: List<FilmIdentity>)
+
 class LaunchPresetFilmCatalogLoader {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -62,7 +65,7 @@ class LaunchPresetFilmCatalogLoader {
 
     fun loadCatalog(jsonText: String): List<FilmIdentity> {
         val films: List<FilmIdentity> = try {
-            json.decodeFromString(jsonText)
+            json.decodeFromString<CatalogDocument>(jsonText).films
         } catch (e: Exception) {
             throw CatalogLoadException(CatalogLoadError.MalformedResource(e.message ?: "decode failed"))
         }

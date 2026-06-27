@@ -1,3 +1,6 @@
+// Copyright © 2026 Sangwook Han
+// SPDX-License-Identifier: Apache-2.0
+
 package com.sangwook.ptimer.core.persistence
 
 import kotlinx.serialization.KSerializer

@@ -553,19 +553,20 @@ private struct NDStopSelectionRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             HStack(spacing: 6) {
-                Text("ND")
-                    .font(.subheadline.weight(.semibold))
+                // Title carries the column's weight; the selector labels
+                // are intentionally smaller and compact so the control
+                // does not dominate the header (PTIMER-187). The native
+                // segmented control clips "Stops" in this half-width
+                // column, so a compact custom toggle is used to match the
+                // Android placement and keep all three labels readable.
+                Text("ND Filter")
+                    .font(.footnote.weight(.semibold))
                     .fixedSize()
 
-                Picker("ND notation", selection: notationSelection) {
-                    Text("Stops").tag(NDNotationMode.stops)
-                    Text("OD").tag(NDNotationMode.opticalDensity)
-                    Text("ND").tag(NDNotationMode.filterFactor)
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .controlSize(.small)
-                .accessibilityIdentifier("nd-notation-mode-control")
+                Spacer(minLength: 4)
+
+                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
+                    .accessibilityIdentifier("nd-notation-mode-control")
             }
             .frame(height: pickerHeaderHeight)
 
@@ -609,10 +610,66 @@ private struct NDStopSelectionRow: View {
     }
 }
 
-/// Shared height for the two picker-column headers so the segmented
-/// notation control on the ND header does not push the ND wheel below
-/// the shutter wheel (PTIMER-187).
+/// Shared height for the two picker-column headers so the notation
+/// control on the ND header does not push the ND wheel below the
+/// shutter wheel (PTIMER-187).
 private let pickerHeaderHeight: CGFloat = 30
+
+/// Compact 3-state ND notation toggle (Stops / OD / ND) for the ND
+/// Filter header. Reads as one cohesive segmented control — a subtle
+/// rounded track with a raised, filled selected segment — so the two
+/// platforms share the same horizontal `ND Filter [Stops | OD | ND]`
+/// placement while fitting the half-width column where a native
+/// segmented control clips "Stops" (PTIMER-187). Labels stay one step
+/// smaller than the title so the control stays subordinate.
+private struct NDNotationToggle: View {
+    let mode: NDNotationMode
+    let onSelect: (NDNotationMode) -> Void
+
+    private static let options: [(mode: NDNotationMode, label: String)] = [
+        (.stops, "Stops"),
+        (.opticalDensity, "OD"),
+        (.filterFactor, "ND"),
+    ]
+
+    private static let segmentShape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(Self.options, id: \.mode) { option in
+                segment(option)
+            }
+        }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(.tertiarySystemFill))
+        )
+    }
+
+    @ViewBuilder
+    private func segment(_ option: (mode: NDNotationMode, label: String)) -> some View {
+        let isSelected = option.mode == mode
+        Text(option.label)
+            .font(.caption2.weight(isSelected ? .semibold : .regular))
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background {
+                if isSelected {
+                    Self.segmentShape
+                        .fill(Color(.secondarySystemGroupedBackground))
+                        .shadow(color: .black.opacity(0.12), radius: 1, y: 0.5)
+                }
+            }
+            .contentShape(Self.segmentShape)
+            .onTapGesture { onSelect(option.mode) }
+            .accessibilityLabel(option.label)
+            .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+    }
+}
 
 private struct ShutterSelectionRow: View {
     @Binding var baseShutter: Double
@@ -630,7 +687,7 @@ private struct ShutterSelectionRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             Text("Base Shutter")
-                .font(.subheadline.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .frame(height: pickerHeaderHeight, alignment: .leading)
 
             Picker("Base Shutter", selection: $baseShutter) {

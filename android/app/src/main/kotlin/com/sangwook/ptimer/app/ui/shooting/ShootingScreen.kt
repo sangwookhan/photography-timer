@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -233,22 +234,35 @@ fun ShootingScreen(
                                 modifier = Modifier.weight(1f),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Text("Base Shutter", style = MaterialTheme.typography.labelMedium)
-                                // Match the ND column's notation-toggle height so
-                                // the two wheels stay vertically aligned.
-                                Spacer(Modifier.height(NotationToggleHeight))
+                                // Header height matches the ND column's title+toggle
+                                // row so the two wheels stay vertically aligned.
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    Text("Base Shutter", style = MaterialTheme.typography.labelLarge)
+                                }
                                 SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
                             Column(
                                 modifier = Modifier.weight(1f),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Text("ND Filter", style = MaterialTheme.typography.labelMedium)
-                                NotationToggle(
-                                    mode = pageState.ndNotationMode,
-                                    enabled = writesActiveSlot,
-                                    onSelect = onSelectNotation,
-                                )
+                                // One horizontal header row: a stronger "ND Filter"
+                                // title with the compact notation toggle, matching
+                                // the iOS placement (PTIMER-187).
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text("ND Filter", style = MaterialTheme.typography.labelLarge)
+                                    Spacer(Modifier.weight(1f))
+                                    NotationToggle(
+                                        mode = pageState.ndNotationMode,
+                                        enabled = writesActiveSlot,
+                                        onSelect = onSelectNotation,
+                                    )
+                                }
                                 SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
                         }
@@ -334,10 +348,15 @@ fun ShootingScreen(
 /** Header-row height reserved for the ND notation toggle (PTIMER-187). */
 private val NotationToggleHeight = 30.dp
 
+/** Height of the notation toggle's rounded track. */
+private val NotationTrackHeight = 26.dp
+
 /**
  * Compact 3-state ND notation toggle (Stops / OD / ND) for the ND Filter
- * header. Current mode is always highlighted; a tap selects a mode. Sized to
- * sit on the header row without adding vertical space below the picker.
+ * header. Reads as one cohesive segmented control: a single low-emphasis
+ * rounded track with the current mode rendered as a filled segment. Current
+ * mode is always highlighted; a tap selects a mode. Sized to sit on the
+ * header row without adding vertical space below the picker (PTIMER-187).
  */
 @Composable
 private fun NotationToggle(
@@ -351,24 +370,44 @@ private fun NotationToggle(
         NDNotationMode.FILTER_FACTOR to "ND",
     )
     Row(
-        modifier = Modifier.height(NotationToggleHeight),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .height(NotationTrackHeight)
+            .clip(CircleShape)
+            // Track is a distinct, outlined surface (lighter than the
+            // card's surfaceVariant) so the control reads as a segmented
+            // control and the option labels never blend into the card.
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         options.forEach { (optionMode, label) ->
             val selected = optionMode == mode
-            Surface(
-                color = if (selected) MaterialTheme.colorScheme.secondaryContainer
-                else MaterialTheme.colorScheme.surface,
-                contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.clickable(enabled = enabled) { onSelect(optionMode) },
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .then(
+                        if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
+                        else Modifier
+                    )
+                    .clickable(enabled = enabled) { onSelect(optionMode) }
+                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center,
             ) {
+                // Compact selector labels, a step smaller than the "ND Filter"
+                // title so the control stays subordinate. Both selected and
+                // unselected labels use full-contrast on-container/on-surface
+                // colors so every option stays clearly legible; the selected
+                // one adds weight + container fill for a calm highlight.
                 Text(
                     label,
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    maxLines = 1,
+                    softWrap = false,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurface,
                 )
             }
         }

@@ -286,6 +286,8 @@ final class BottomSheetWorkspaceOrderingTests: XCTestCase {
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
             },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { timer in
                 switch timer.status {
                 case .running:

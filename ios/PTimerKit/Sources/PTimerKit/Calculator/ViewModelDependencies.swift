@@ -14,6 +14,7 @@ public struct ViewModelDependencies {
     public let contextPersistenceStore: ExposureCalculatorContextStoring
     public let cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring
     public let metadataPersistenceStore: TimerMetadataPersistenceStoring
+    public let displaySettingStore: DisplaySettingStoring
     public let lockScreenTargetExposer: any LockScreenTimerTargetExposing
     public let customFilmLibrary: CustomFilmLibrary
 
@@ -24,6 +25,7 @@ public struct ViewModelDependencies {
         contextPersistenceStore: ExposureCalculatorContextStoring,
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring,
         metadataPersistenceStore: TimerMetadataPersistenceStoring,
+        displaySettingStore: DisplaySettingStoring = NoOpDisplaySettingStore(),
         lockScreenTargetExposer: any LockScreenTimerTargetExposing,
         customFilmLibrary: CustomFilmLibrary
     ) {
@@ -33,6 +35,7 @@ public struct ViewModelDependencies {
         self.contextPersistenceStore = contextPersistenceStore
         self.cameraSlotSessionPersistenceStore = cameraSlotSessionPersistenceStore
         self.metadataPersistenceStore = metadataPersistenceStore
+        self.displaySettingStore = displaySettingStore
         self.lockScreenTargetExposer = lockScreenTargetExposer
         self.customFilmLibrary = customFilmLibrary
     }

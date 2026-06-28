@@ -59,7 +59,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(timer.duration, 1, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "0 stops - 1s")
+        XCTAssertEqual(timer.name, "Timer - 1s")
         XCTAssertEqual(
             timer.basisSummary,
             "Base 1s · 0 stops · Adjusted 1s · Tri-X 400"
@@ -115,7 +115,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(timer.duration, 15, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "0 stops - 15s")
+        XCTAssertEqual(timer.name, "Timer - 15s")
         XCTAssertEqual(timer.basisSummary, "Base 15s · 0 stops · Adjusted 15s · Portra 400")
     }
 
@@ -178,7 +178,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(timer.duration, 64, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "3 stops - 64s")
+        XCTAssertEqual(timer.name, "Timer - 64s")
         XCTAssertEqual(timer.basisSummary, "Base 8s · 3 stops · Adjusted 64s · Velvia 50")
     }
 
@@ -200,7 +200,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
 
         let timer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
-        XCTAssertEqual(timer.name, "6 stops - 2s")
+        XCTAssertEqual(timer.name, "Timer - 2s")
         XCTAssertEqual(timer.basisSummary, "Base 1/30s · 6 stops")
     }
 
@@ -224,7 +224,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         viewModel.startTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.name, "10 stops - 30s")
+        XCTAssertEqual(timer.name, "Timer - 30s")
         XCTAssertEqual(timer.basisSummary, "Base 1/30s · 10 stops")
         XCTAssertEqual(timer.duration, 30, accuracy: 0.0001)
     }
@@ -247,7 +247,7 @@ final class CalculatorTimerIntegrationTests: XCTestCase {
         viewModel.startTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.name, "6 stops - 4s")
+        XCTAssertEqual(timer.name, "Timer - 4s")
         XCTAssertEqual(timer.basisSummary, "Base 1/15s · 6 stops")
         XCTAssertEqual(timer.duration, 4, accuracy: 0.0001)
     }

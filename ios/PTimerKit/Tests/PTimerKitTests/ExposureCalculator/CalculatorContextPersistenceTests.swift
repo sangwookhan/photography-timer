@@ -302,7 +302,7 @@ final class CalculatorContextPersistenceTests: XCTestCase {
             metadataPersistenceStore: metadataStore
         )
         // Pin the legacy full-stop scale so the timer names ("6 stops -
-        // 2s", "3 stops - 8s") match the snap-to-full-stop output.
+        // 2s", "Timer - 8s") match the snap-to-full-stop output.
         initialViewModel.scaleMode = .fullStop
         initialViewModel.baseShutter = 1.0 / 30.0
         initialViewModel.ndStop = 6
@@ -312,8 +312,8 @@ final class CalculatorContextPersistenceTests: XCTestCase {
         initialViewModel.ndStop = 3
         initialViewModel.startTimer()
 
-        let runningTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "3 stops - 8s" }))
-        let pausedTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "6 stops - 2s" }))
+        let runningTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "Timer - 8s" }))
+        let pausedTimer = try XCTUnwrap(initialViewModel.timers.first(where: { $0.name == "Timer - 2s" }))
 
         currentDate = startDate.addingTimeInterval(1)
         initialViewModel.pauseTimer(id: pausedTimer.id)
@@ -329,7 +329,7 @@ final class CalculatorContextPersistenceTests: XCTestCase {
             metadataPersistenceStore: metadataStore
         )
         XCTAssertEqual(relaunchedViewModel.timers.map(\.id), [runningTimer.id, pausedTimer.id])
-        XCTAssertEqual(relaunchedViewModel.timers.map(\.name), ["3 stops - 8s", "6 stops - 2s"])
+        XCTAssertEqual(relaunchedViewModel.timers.map(\.name), ["Timer - 8s", "Timer - 2s"])
         XCTAssertEqual(
             relaunchedViewModel.timers.map(\.basisSummary),
             ["Base 1s · 3 stops", "Base 1/30s · 6 stops"]

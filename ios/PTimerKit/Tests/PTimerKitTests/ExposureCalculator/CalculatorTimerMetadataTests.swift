@@ -33,7 +33,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         viewModel.startTimer()
 
         XCTAssertEqual(nonEmptyEmissions.count, 1)
-        XCTAssertEqual(nonEmptyEmissions.first?.first?.name, "6 stops - 2s")
+        XCTAssertEqual(nonEmptyEmissions.first?.first?.name, "Timer - 2s")
         XCTAssertEqual(nonEmptyEmissions.first?.first?.basisSummary, "Base 1/30s · 6 stops")
     }
 
@@ -59,7 +59,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         XCTAssertEqual(viewModel.runningTimerCount, 1)
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timer.name, "6 stops - 2s")
+        XCTAssertEqual(timer.name, "Timer - 2s")
         XCTAssertEqual(timer.status, .running)
         XCTAssertEqual(timer.remainingTime, 2, accuracy: 0.0001)
         XCTAssertEqual(timer.duration, 2, accuracy: 0.0001)
@@ -143,7 +143,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         viewModel.startTimer()
 
         XCTAssertEqual(viewModel.timers.count, 2)
-        XCTAssertEqual(viewModel.timers.map(\.name), ["3 stops - 8s", "6 stops - 2s"])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 8s", "Timer - 2s"])
         XCTAssertEqual(
             viewModel.timers.map(\.basisSummary),
             ["Base 1s · 3 stops", "Base 1/30s · 6 stops"]
@@ -155,9 +155,9 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         let completedTimer = try XCTUnwrap(viewModel.timers.first { $0.status == .completed })
         let activeTimer = try XCTUnwrap(viewModel.timers.first { $0.status == .running })
 
-        XCTAssertEqual(completedTimer.name, "6 stops - 2s")
+        XCTAssertEqual(completedTimer.name, "Timer - 2s")
         XCTAssertEqual(completedTimer.basisSummary, "Base 1/30s · 6 stops")
-        XCTAssertEqual(activeTimer.name, "3 stops - 8s")
+        XCTAssertEqual(activeTimer.name, "Timer - 8s")
         XCTAssertEqual(activeTimer.basisSummary, "Base 1s · 3 stops")
 
         viewModel.clearCompletedTimers()
@@ -165,7 +165,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         XCTAssertEqual(viewModel.timers.count, 1)
         let survivingTimer = try XCTUnwrap(viewModel.timers.first)
         XCTAssertEqual(survivingTimer.status, .running)
-        XCTAssertEqual(survivingTimer.name, "3 stops - 8s")
+        XCTAssertEqual(survivingTimer.name, "Timer - 8s")
         XCTAssertEqual(survivingTimer.basisSummary, "Base 1s · 3 stops")
 
         viewModel.baseShutter = 1.0 / 15.0
@@ -173,7 +173,7 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         viewModel.startTimer()
 
         XCTAssertEqual(viewModel.timers.count, 2)
-        XCTAssertEqual(viewModel.timers.map(\.name), ["4 stops - 1s", "3 stops - 8s"])
+        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 1s", "Timer - 8s"])
         XCTAssertEqual(
             viewModel.timers.map(\.basisSummary),
             ["Base 1/15s · 4 stops", "Base 1s · 3 stops"]
@@ -198,14 +198,14 @@ final class CalculatorTimerMetadataTests: XCTestCase {
         viewModel.startTimer()
 
         let initialTimer = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(initialTimer.name, "6 stops - 2s")
+        XCTAssertEqual(initialTimer.name, "Timer - 2s")
         XCTAssertEqual(initialTimer.basisSummary, "Base 1/30s · 6 stops")
 
         viewModel.baseShutter = 1
         viewModel.ndStop = 3
 
         let timerAfterInputChange = try XCTUnwrap(viewModel.timers.first)
-        XCTAssertEqual(timerAfterInputChange.name, "6 stops - 2s")
+        XCTAssertEqual(timerAfterInputChange.name, "Timer - 2s")
         XCTAssertEqual(timerAfterInputChange.basisSummary, "Base 1/30s · 6 stops")
     }
 }

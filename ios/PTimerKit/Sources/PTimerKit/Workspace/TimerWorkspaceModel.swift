@@ -82,7 +82,10 @@ public final class TimerWorkspaceModel: ObservableObject {
         exposureSource: ExposureTimerSource? = nil,
         isOutsideManufacturerGuidance: Bool = false,
         customProfileSummary: String? = nil,
-        selectedModelLabel: String? = nil
+        selectedModelLabel: String? = nil,
+        ndStops: Double? = nil,
+        baseShutterSeconds: TimeInterval? = nil,
+        adjustedShutterSeconds: TimeInterval? = nil
     ) -> UUID? {
         let order = nextTimerOrder
         timerMetadata[id] = TimerMetadataEntry(
@@ -95,7 +98,10 @@ public final class TimerWorkspaceModel: ObservableObject {
             exposureSource: exposureSource,
             isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
             customProfileSummary: customProfileSummary,
-            selectedModelLabel: selectedModelLabel
+            selectedModelLabel: selectedModelLabel,
+            ndStops: ndStops,
+            baseShutterSeconds: baseShutterSeconds,
+            adjustedShutterSeconds: adjustedShutterSeconds
         )
 
         guard timerManager.start(id: id, duration: duration) != nil else {
@@ -147,7 +153,10 @@ public final class TimerWorkspaceModel: ObservableObject {
             exposureSource: source.exposureSource,
             isOutsideManufacturerGuidance: source.isOutsideManufacturerGuidance,
             customProfileSummary: source.customProfileSummary,
-            selectedModelLabel: source.selectedModelLabel
+            selectedModelLabel: source.selectedModelLabel,
+            ndStops: source.ndStops,
+            baseShutterSeconds: source.baseShutterSeconds,
+            adjustedShutterSeconds: source.adjustedShutterSeconds
         )
     }
 
@@ -254,7 +263,10 @@ public final class TimerWorkspaceModel: ObservableObject {
                         exposureSource: exposureSource,
                         isOutsideManufacturerGuidance: entry.isOutsideManufacturerGuidance ?? false,
                         customProfileSummary: entry.customProfileSummary,
-                        selectedModelLabel: entry.selectedModelLabel
+                        selectedModelLabel: entry.selectedModelLabel,
+                        ndStops: entry.ndStops,
+                        baseShutterSeconds: entry.baseShutterSeconds,
+                        adjustedShutterSeconds: entry.adjustedShutterSeconds
                     )
                 )
             }
@@ -285,7 +297,10 @@ public final class TimerWorkspaceModel: ObservableObject {
                             ? true
                             : nil,
                         customProfileSummary: metadata.customProfileSummary,
-                        selectedModelLabel: metadata.selectedModelLabel
+                        selectedModelLabel: metadata.selectedModelLabel,
+                        ndStops: metadata.ndStops,
+                        baseShutterSeconds: metadata.baseShutterSeconds,
+                        adjustedShutterSeconds: metadata.adjustedShutterSeconds
                     )
                 }
                 .sorted { lhs, rhs in
@@ -331,6 +346,9 @@ public final class TimerWorkspaceModel: ObservableObject {
                     isOutsideManufacturerGuidance: metadata?.isOutsideManufacturerGuidance ?? false,
                     customProfileSummary: metadata?.customProfileSummary,
                     selectedModelLabel: metadata?.selectedModelLabel,
+                    ndStops: metadata?.ndStops,
+                    baseShutterSeconds: metadata?.baseShutterSeconds,
+                    adjustedShutterSeconds: metadata?.adjustedShutterSeconds,
                     canceledRemainingTime: state.remainingAtCancel
                 )
             }
@@ -406,6 +424,9 @@ private struct TimerMetadataEntry {
     let isOutsideManufacturerGuidance: Bool
     let customProfileSummary: String?
     let selectedModelLabel: String?
+    let ndStops: Double?
+    let baseShutterSeconds: TimeInterval?
+    let adjustedShutterSeconds: TimeInterval?
 
     init(
         order: Int,
@@ -417,7 +438,10 @@ private struct TimerMetadataEntry {
         exposureSource: ExposureTimerSource? = nil,
         isOutsideManufacturerGuidance: Bool = false,
         customProfileSummary: String? = nil,
-        selectedModelLabel: String? = nil
+        selectedModelLabel: String? = nil,
+        ndStops: Double? = nil,
+        baseShutterSeconds: TimeInterval? = nil,
+        adjustedShutterSeconds: TimeInterval? = nil
     ) {
         self.order = order
         self.name = name
@@ -429,5 +453,8 @@ private struct TimerMetadataEntry {
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
         self.selectedModelLabel = selectedModelLabel
+        self.ndStops = ndStops
+        self.baseShutterSeconds = baseShutterSeconds
+        self.adjustedShutterSeconds = adjustedShutterSeconds
     }
 }

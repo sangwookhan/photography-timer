@@ -244,6 +244,10 @@ extension XCTestCase {
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
             },
+            formatShutter: { seconds in
+                seconds < 1 ? "1/\(Int((1 / seconds).rounded()))s" : "\(Int(seconds.rounded()))s"
+            },
+            ndNotationMode: .stops,
             timeContext: { timer in
                 switch timer.status {
                 case .running:

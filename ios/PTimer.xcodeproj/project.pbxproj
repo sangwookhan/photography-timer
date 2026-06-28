@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */; };
+		EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */; };
 		EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */; };
 		EE0000000000000000000008 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
 		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
@@ -101,6 +102,7 @@
 
 /* Begin PBXFileReference section */
 		EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCalculatorContextStore.swift; sourceTree = "<group>"; };
+		EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsDisplaySettingStore.swift; sourceTree = "<group>"; };
 		EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
@@ -375,6 +377,7 @@
 			children = (
 				A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */,
 				EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */,
+				EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */,
 			);
 			path = FilmContext;
 			sourceTree = "<group>";
@@ -596,6 +599,7 @@
 			files = (
 				A00000000000000000000001 /* PTimerApp.swift in Sources */,
 				EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */,
+				EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */,
 				EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */,
 				A00000000000000000000002 /* ContentView.swift in Sources */,
 				A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */,

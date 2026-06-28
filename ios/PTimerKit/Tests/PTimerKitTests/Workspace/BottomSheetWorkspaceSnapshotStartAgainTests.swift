@@ -87,9 +87,10 @@ final class BottomSheetStartAgainTests: XCTestCase {
         let history = try XCTUnwrap(snapshot.sections.first { $0.title == "History" })
         let item = try XCTUnwrap(history.items.first { $0.id == canceled.id })
 
-        // Remaining-at-cancel is combined into the large status text,
-        // no new line.
-        XCTAssertEqual(item.remainingText, "Canceled · 51s left")
+        // Primary state value is the terminal state only; the
+        // remaining-at-cancel moves to the meta line (PTIMER-198).
+        XCTAssertEqual(item.remainingText, "Canceled")
+        XCTAssertEqual(item.timingText, "Canceled recently · 51s left")
         XCTAssertEqual(item.statusLabel, "Canceled")
         // Stable numeric id = the timer's creation order, bare number.
         XCTAssertEqual(item.sequenceNumberText, "7")
@@ -313,13 +314,13 @@ final class BottomSheetStartAgainTests: XCTestCase {
         let compactItem = try XCTUnwrap(harness.snapshotStore.snapshot.compactItems.first)
         let largeItem = try XCTUnwrap(harness.snapshotStore.snapshot.sections.first?.items.first)
 
-        XCTAssertEqual(timer.name, "6 stops - 4s")
+        XCTAssertEqual(timer.name, "Timer - 4s")
         XCTAssertEqual(timer.basisSummary, "Base 1/15s · 6 stops")
         XCTAssertEqual(timer.duration, 4, accuracy: 0.0001)
         XCTAssertEqual(compactItem.id, timer.id)
         XCTAssertEqual(largeItem.id, timer.id)
         XCTAssertEqual(largeItem.contextText, timer.basisSummary)
-        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(4))
+        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(4) + " left")
         XCTAssertFalse(harness.stateStore.isExpanded)
         XCTAssertEqual(harness.stateStore.detent, .compact)
     }
@@ -413,6 +414,8 @@ final class BottomSheetStartAgainTests: XCTestCase {
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
             },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { timer in
                 switch timer.status {
                 case .running:
@@ -457,12 +460,14 @@ final class BottomSheetStartAgainTests: XCTestCase {
         viewModel.scaleMode = .fullStop
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
+            formatShutter: viewModel.formatShutter,
             timeContext: viewModel.timerTimeContext,
             compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
         let snapshotStore = BottomSheetWorkspaceSnapshotStore(
             initialTimers: viewModel.timers,
             timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
+            ndNotationModePublisher: viewModel.$ndNotationMode.eraseToAnyPublisher(),
             adapter: adapter
         )
         let stateStore = BottomSheetWorkspaceStateStore()

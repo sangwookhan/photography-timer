@@ -3,6 +3,7 @@
 
 import Combine
 import Foundation
+import PTimerCore
 
 @MainActor
 public final class BottomSheetWorkspaceSnapshotStore: ObservableObject {
@@ -12,13 +13,21 @@ public final class BottomSheetWorkspaceSnapshotStore: ObservableObject {
 
     public init(
         initialTimers: [RunningTimerItem] = [],
+        initialNDNotationMode: NDNotationMode = .stops,
         timersPublisher: AnyPublisher<[RunningTimerItem], Never>,
+        ndNotationModePublisher: AnyPublisher<NDNotationMode, Never>,
         adapter: BottomSheetWorkspacePresentationAdapter
     ) {
-        self.snapshot = adapter.makeSnapshot(from: initialTimers)
+        self.snapshot = adapter.makeSnapshot(
+            from: initialTimers,
+            ndNotationMode: initialNDNotationMode
+        )
 
-        timersPublisher
-            .map { adapter.makeSnapshot(from: $0) }
+        // Rebuild on a change to EITHER the timers or the ND notation
+        // mode so an active/completed timer's basis re-renders in the
+        // new notation immediately (PTIMER-187).
+        Publishers.CombineLatest(timersPublisher, ndNotationModePublisher)
+            .map { timers, mode in adapter.makeSnapshot(from: timers, ndNotationMode: mode) }
             .removeDuplicates()
             .sink { [weak self] snapshot in
                 self?.snapshot = snapshot

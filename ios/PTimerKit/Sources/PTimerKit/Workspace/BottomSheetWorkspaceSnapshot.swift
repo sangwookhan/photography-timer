@@ -152,6 +152,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     public static func make(
         from timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
+        formatShutter: (TimeInterval) -> String,
+        ndNotationMode: NDNotationMode,
         timeContext: (RunningTimerItem) -> String?,
         compactCompletedSupplementaryText: (RunningTimerItem) -> String?
     ) -> BottomSheetWorkspaceSnapshot {
@@ -190,6 +192,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         let sections = makeSections(
             from: orderedTimers,
             formatRemaining: formatRemaining,
+            formatShutter: formatShutter,
+            ndNotationMode: ndNotationMode,
             timeContext: timeContext
         )
 
@@ -212,6 +216,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     private static func makeSections(
         from timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
+        formatShutter: (TimeInterval) -> String,
+        ndNotationMode: NDNotationMode,
         timeContext: (RunningTimerItem) -> String?
     ) -> [TimerWorkspaceSection] {
         let activeTimers = timers.filter { $0.status == .running || $0.status == .paused }
@@ -222,12 +228,16 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                 title: TimerWorkspaceSection.activeTitle,
                 timers: activeTimers,
                 formatRemaining: formatRemaining,
+                formatShutter: formatShutter,
+                ndNotationMode: ndNotationMode,
                 timeContext: timeContext
             ),
             makeSection(
                 title: TimerWorkspaceSection.historyTitle,
                 timers: completedTimers,
                 formatRemaining: formatRemaining,
+                formatShutter: formatShutter,
+                ndNotationMode: ndNotationMode,
                 timeContext: timeContext
             ),
         ].compactMap { $0 }
@@ -237,6 +247,8 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         title: String,
         timers: [RunningTimerItem],
         formatRemaining: (TimeInterval) -> String,
+        formatShutter: (TimeInterval) -> String,
+        ndNotationMode: NDNotationMode,
         timeContext: (RunningTimerItem) -> String?
     ) -> TimerWorkspaceSection? {
         guard !timers.isEmpty else {
@@ -247,24 +259,25 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
             title: title,
             items: timers.map { timer in
                 let totalDurationText = largeTotalDurationText(for: timer, formatRemaining: formatRemaining)
-                let contextText = largeContextText(for: timer)
+                let contextText = largeContextText(
+                    for: timer,
+                    ndNotationMode: ndNotationMode,
+                    formatShutter: formatShutter
+                )
                 let identityCue = identityCue(for: timer)
-                let identityTitle = largeIdentityTitle(for: timer, fallback: largeTitleText(
+                let fallbackTitle = largeTitleText(
                     for: timer,
                     totalDurationText: totalDurationText,
                     contextText: contextText
-                ))
+                )
+                let identityTitle = largeIdentityTitle(for: timer, fallback: fallbackTitle)
 
                 return BottomSheetLargeItem(
                     id: timer.id,
                     title: identityTitle,
                     identitySubtitle: largeIdentitySubtitle(
                         for: timer,
-                        fallback: largeTitleText(
-                            for: timer,
-                            totalDurationText: totalDurationText,
-                            contextText: contextText
-                        )
+                        formatRemaining: formatRemaining
                     ),
                     voiceOverLabel: largeVoiceOverLabel(
                         for: timer,
@@ -274,8 +287,12 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                     status: timer.status,
                     identityCue: identityCue,
                     remainingText: largeRemainingText(for: timer, formatRemaining: formatRemaining),
-                    totalDurationText: totalDurationText,
-                    timingText: timeContext(timer),
+                    // The final exposure value now lives on the second
+                    // line (`<source> <value>`); the right column shows
+                    // timer state only, so no duration is repeated here
+                    // (no slash-separated pair). PTIMER-187.
+                    totalDurationText: nil,
+                    timingText: largeTimingText(for: timer, timeContext: timeContext),
                     contextText: contextText,
                     progress: progress(for: timer),
                     actions: largeActions(for: timer.status),
@@ -347,27 +364,33 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         }
     }
 
-    /// Identity-first subtitle composed from exposure source and the
-    /// legacy timer name. Renders as `"Adjusted Shutter · 16 stops - 832255.3s"`,
-    /// keeping calculation/source detail visible without burying the
-    /// camera/film identity above it. `nil` when nothing meaningful
-    /// is available to compose.
+    /// Second line: the exposure source paired with the final exposure
+    /// value (the timer's total duration), e.g. `"Corrected Exposure
+    /// 01:40.617"`. The film name and profile qualifier are not
+    /// repeated here — they live in the title — and the duration
+    /// appears only on this line, never again in the right column
+    /// (PTIMER-187). `nil` for timers without a captured source.
     private static func largeIdentitySubtitle(
         for timer: RunningTimerItem,
-        fallback: String?
+        formatRemaining: (TimeInterval) -> String
     ) -> String? {
         guard let source = timer.identitySnapshot?.exposureSource else {
             return nil
         }
 
         let sourceLabel = TimerCardIdentityPresenter.sourceLabel(for: source)
-        let trimmedName = (fallback ?? timer.name)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedName.isEmpty {
+        guard timer.duration > 0 else {
             return sourceLabel
         }
 
-        return "\(sourceLabel) · \(trimmedName)"
+        return String(format: Copy.exposureLine, sourceLabel, formatRemaining(timer.duration))
+    }
+
+    /// Localization-ready templates for composed card copy. Positional
+    /// placeholders so source/value order can move when localized.
+    private enum Copy {
+        static let exposureLine = "%1$@ %2$@"
+        static let remainingSuffix = "%1$@ left"
     }
 
     /// VoiceOver label combining slot, film, source, and status.
@@ -545,17 +568,40 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     ) -> String {
         switch timer.status {
         case .running, .paused:
-            return formatRemaining(timer.remainingTime)
+            // Right column shows timer state only; the total/final
+            // value lives on the second line, so the remaining time
+            // carries a `left` qualifier and never forms a duration
+            // pair (PTIMER-187).
+            return String(format: Copy.remainingSuffix, formatRemaining(timer.remainingTime))
         case .completed:
             return "Done"
         case .canceled:
-            // Combine status with the remaining-at-cancel so the row
-            // explains when the timer was stopped, without a new line.
-            guard let remaining = timer.canceledRemainingTime, remaining > 0 else {
-                return "Canceled"
-            }
-            return "Canceled · \(compactDurationText(remaining)) left"
+            // Terminal state only as the primary value; the
+            // remaining-at-cancel moves to the meta line so the big
+            // value is not a combined "Canceled · N left" string
+            // (PTIMER-198).
+            return "Canceled"
         }
+    }
+
+    /// Meta/timing line. For canceled timers the remaining-at-cancel
+    /// ("N left") is appended here rather than fused into the primary
+    /// state value (PTIMER-198).
+    private static func largeTimingText(
+        for timer: RunningTimerItem,
+        timeContext: (RunningTimerItem) -> String?
+    ) -> String? {
+        let base = timeContext(timer)
+        guard timer.status == .canceled,
+              let remaining = timer.canceledRemainingTime,
+              remaining > 0 else {
+            return base
+        }
+        let remainingMeta = "\(compactDurationText(remaining)) left"
+        guard let base, !base.isEmpty else {
+            return remainingMeta
+        }
+        return "\(base) · \(remainingMeta)"
     }
 
     private static func largeTotalDurationText(
@@ -569,9 +615,20 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         return formatRemaining(timer.duration)
     }
 
-    private static func largeContextText(for timer: RunningTimerItem) -> String? {
-        let summary = timer.basisSummary.trimmingCharacters(in: .whitespacesAndNewlines)
-        return summary.isEmpty ? nil : summary
+    /// Basis line rendered from structured exposure inputs in the
+    /// current ND notation mode — inputs only, never the final value
+    /// (PTIMER-187). `nil` when the timer has no structured ND/base
+    /// values (legacy/manual), which omits the line.
+    private static func largeContextText(
+        for timer: RunningTimerItem,
+        ndNotationMode: NDNotationMode,
+        formatShutter: (TimeInterval) -> String
+    ) -> String? {
+        TimerBasisPresenter.basisText(
+            for: timer,
+            notationMode: ndNotationMode,
+            formatShutter: formatShutter
+        )
     }
 
     private static func largeTitleText(

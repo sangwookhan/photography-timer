@@ -60,6 +60,16 @@ public struct RunningTimerItem: Identifiable, Equatable {
     /// selections; `nil` (default model / older snapshot) renders
     /// exactly as before.
     public let selectedModelLabel: String?
+    /// Canonical ND strength in stops captured at start (PTIMER-187).
+    /// Source of truth for the timer card's basis ND token, rendered
+    /// in the current notation mode. `nil` when no ND value applies.
+    public let ndStops: Double?
+    /// Base shutter (seconds) captured at start (PTIMER-187).
+    public let baseShutterSeconds: TimeInterval?
+    /// Reciprocity-adjusted shutter (seconds) captured at start
+    /// (PTIMER-187); the basis `Adj` segment for corrected/target
+    /// timers.
+    public let adjustedShutterSeconds: TimeInterval?
     /// Remaining time recorded when the timer was canceled. Non-nil
     /// only for canceled records; lets the history surface show how
     /// much was left at the stop (e.g. "Canceled · 51s left").
@@ -84,6 +94,9 @@ public struct RunningTimerItem: Identifiable, Equatable {
         isOutsideManufacturerGuidance: Bool = false,
         customProfileSummary: String? = nil,
         selectedModelLabel: String? = nil,
+        ndStops: Double? = nil,
+        baseShutterSeconds: TimeInterval? = nil,
+        adjustedShutterSeconds: TimeInterval? = nil,
         canceledRemainingTime: TimeInterval? = nil
     ) {
         self.id = id
@@ -104,6 +117,9 @@ public struct RunningTimerItem: Identifiable, Equatable {
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
         self.selectedModelLabel = selectedModelLabel
+        self.ndStops = ndStops
+        self.baseShutterSeconds = baseShutterSeconds
+        self.adjustedShutterSeconds = adjustedShutterSeconds
         self.canceledRemainingTime = canceledRemainingTime
     }
 

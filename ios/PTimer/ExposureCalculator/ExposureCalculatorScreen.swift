@@ -135,6 +135,7 @@ struct ExposureCalculatorScreen: View {
         let viewModel = coordinator.viewModel
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
+            formatShutter: viewModel.formatShutter,
             timeContext: viewModel.timerTimeContext,
             compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
@@ -146,7 +147,9 @@ struct ExposureCalculatorScreen: View {
         _bottomSheetSnapshotStore = StateObject(
             wrappedValue: BottomSheetWorkspaceSnapshotStore(
                 initialTimers: viewModel.timers,
+                initialNDNotationMode: viewModel.ndNotationMode,
                 timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
+                ndNotationModePublisher: viewModel.$ndNotationMode.eraseToAnyPublisher(),
                 adapter: adapter
             )
         )
@@ -670,7 +673,8 @@ private struct CameraSlotCalculatorPage: View {
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
                 ndStepValues: viewModel.pickerNDSteps(forPage: pageState),
                 formatShutter: viewModel.formatShutterStepLabel,
-                formatNDStop: viewModel.formatNDStop,
+                ndNotationMode: viewModel.ndNotationMode,
+                onSelectNotationMode: { viewModel.ndNotationMode = $0 },
                 onContinuousBaseShutterChange: { value in
                     guard pageState.isActive else { return }
                     Task { @MainActor in

@@ -71,9 +71,9 @@ public enum TimerCardIdentityPresenter {
     public static func sourceLabel(for source: ExposureTimerSource) -> String {
         switch source {
         case .digitalResult: return "Calculated"
-        case .filmAdjustedShutter: return "Adjusted Shutter"
+        case .filmAdjustedShutter: return "Adjusted Exposure"
         case .filmCorrectedExposure: return "Corrected Exposure"
-        case .targetShutter: return "Target Shutter"
+        case .targetShutter: return "Target Exposure"
         }
     }
 }

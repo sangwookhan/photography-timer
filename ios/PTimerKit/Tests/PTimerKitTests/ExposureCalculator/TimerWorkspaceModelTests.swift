@@ -22,7 +22,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
         let id = model.startTimer(
             duration: 30,
-            name: "0 stops - 30s",
+            name: "Timer - 30s",
             basisSummary: "Base 30s · 0 stops"
         )
 
@@ -31,7 +31,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
         let item = model.timers[0]
         XCTAssertEqual(item.status, .running)
         XCTAssertEqual(item.duration, 30, accuracy: 0.0001)
-        XCTAssertEqual(item.name, "0 stops - 30s")
+        XCTAssertEqual(item.name, "Timer - 30s")
         XCTAssertEqual(item.basisSummary, "Base 30s · 0 stops")
     }
 
@@ -173,7 +173,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
         guard let sourceID = model.startTimer(
             duration: 30,
-            name: "0 stops - 30s",
+            name: "Timer - 30s",
             basisSummary: "Base 30s · 0 stops"
         ) else {
             XCTFail("Source timer should start")

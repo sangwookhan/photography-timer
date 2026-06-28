@@ -611,14 +611,14 @@ struct BottomSheetLargeWorkspaceView: View {
         } message: { pending in
             Text(confirmMessage(for: pending.action))
         }
-        .confirmationDialog(
+        .alert(
             "Clear completed timers?",
-            isPresented: $showClearConfirm,
-            titleVisibility: .visible
+            isPresented: $showClearConfirm
         ) {
             Button("Clear", role: .destructive) {
                 onClearCompletedTimers()
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Completed timer records will be removed. Canceled timers will be kept.")
         }
@@ -817,11 +817,15 @@ private struct LargeWorkspaceTimerRowView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
-                Text(item.remainingText)
-                    .font(.title3.weight(.bold))
-                    .monospacedDigit()
+                // Primary timer-state value. The number is the
+                // protagonist; the "left" qualifier (running/paused) is
+                // smaller and lighter, and terminal "Done"/"Canceled" is
+                // toned down so it never reads heavier than a running
+                // countdown. Lower scale floor keeps long values like
+                // "16:09:49.829 left" on one line (PTIMER-198).
+                primaryStateValue
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
@@ -829,17 +833,25 @@ private struct LargeWorkspaceTimerRowView: View {
                 HStack(alignment: .lastTextBaseline, spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
                         if let timingText = item.timingText {
+                            // Up to two lines so the canceled meta
+                            // (canceled time · relative · remaining-left)
+                            // wraps cleanly instead of truncating on one
+                            // crowded line (PTIMER-198).
                             Text(timingText)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                                .lineLimit(2)
                                 .truncationMode(.tail)
                         }
 
                         if let contextText = item.contextText {
+                            // Basis line: a touch more contrast than
+                            // before (.secondary, still smaller than the
+                            // timing line) so Base/ND/Adj reads at a
+                            // glance without competing with the primary.
                             Text(contextText)
                                 .font(.caption)
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -903,6 +915,34 @@ private struct LargeWorkspaceTimerRowView: View {
         .accessibilityLabel(item.voiceOverLabel)
         .accessibilityValue(item.remainingText)
         .accessibilityIdentifier(rowAccessibilityIdentifier)
+    }
+
+    /// Composed primary timer-state value (PTIMER-198). Running/paused:
+    /// the remaining number is dominant and the trailing " left" is a
+    /// smaller, lighter qualifier. Completed/canceled: the terminal word
+    /// is rendered lighter than a running countdown so it stays clear
+    /// without dominating a stack of history cards.
+    private var primaryStateValue: Text {
+        switch item.status {
+        case .running, .paused:
+            let suffix = " left"
+            if item.remainingText.hasSuffix(suffix) {
+                let value = String(item.remainingText.dropLast(suffix.count))
+                return Text(value)
+                    .font(.title3.weight(.semibold))
+                    .monospacedDigit()
+                    + Text(suffix)
+                    .font(.footnote.weight(.regular))
+                    .foregroundColor(.secondary)
+            }
+            return Text(item.remainingText)
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+        case .completed, .canceled:
+            return Text(item.remainingText)
+                .font(.title3.weight(.regular))
+                .foregroundColor(.secondary)
+        }
     }
 
     private var rowAccessibilityIdentifier: String {

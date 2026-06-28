@@ -137,10 +137,10 @@ final class BottomSheetCompactPresentationTests: XCTestCase {
             .first { $0.id == UUID(uuidString: "22222222-2222-2222-2222-222222222222")! }
 
         XCTAssertEqual(runningItem?.identityCue.markerText, "T1")
-        XCTAssertEqual(runningItem?.remainingText, "00:25")
-        XCTAssertEqual(runningItem?.totalDurationText, "02:00")
+        XCTAssertEqual(runningItem?.remainingText, "00:25 left")
+        XCTAssertNil(runningItem?.totalDurationText)
         XCTAssertEqual(runningItem?.timingText, "Ends soon")
-        XCTAssertEqual(runningItem?.contextText, "Base 1/30s · 6 stops")
+        XCTAssertNil(runningItem?.contextText)
     }
 
     func testLargeItemsHideTopLineWhenNameOnlyRepeatsDurationOrContext() {
@@ -150,8 +150,8 @@ final class BottomSheetCompactPresentationTests: XCTestCase {
             .first
 
         XCTAssertNil(item?.title)
-        XCTAssertEqual(item?.totalDurationText, "02:00")
-        XCTAssertEqual(item?.contextText, "Base 1/30s · 6 stops")
+        XCTAssertNil(item?.totalDurationText)
+        XCTAssertNil(item?.contextText)
     }
 
     func testCompletedLargeItemUsesSimplerPresentation() {
@@ -160,9 +160,9 @@ final class BottomSheetCompactPresentationTests: XCTestCase {
 
         XCTAssertEqual(completedItem?.identityCue.markerText, "T3")
         XCTAssertEqual(completedItem?.remainingText, "Done")
-        XCTAssertEqual(completedItem?.totalDurationText, "00:45")
+        XCTAssertNil(completedItem?.totalDurationText)
         XCTAssertEqual(completedItem?.timingText, "Completed recently")
-        XCTAssertEqual(completedItem?.contextText, "Base 1/15s · 8 stops")
+        XCTAssertNil(completedItem?.contextText)
     }
 
     func testCompletedLargeItemDoesNotUseZeroSecondsAsPrimaryText() {

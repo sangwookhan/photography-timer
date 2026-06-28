@@ -23,7 +23,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(largeItem.id, timer.id)
         XCTAssertEqual(compactItem.identityCue, largeItem.identityCue)
         XCTAssertEqual(compactItem.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(timer.remainingTime))
-        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(timer.remainingTime))
+        XCTAssertEqual(largeItem.remainingText, harness.viewModel.formatTimerClock(timer.remainingTime) + " left")
         XCTAssertEqual(largeItem.contextText, timer.basisSummary)
         XCTAssertFalse(harness.stateStore.isExpanded)
     }
@@ -46,8 +46,8 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(initialLarge.identityCue, updatedLarge.identityCue)
         XCTAssertEqual(initialCompact.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(10))
         XCTAssertEqual(updatedCompact.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(6))
-        XCTAssertEqual(initialLarge.remainingText, harness.viewModel.formatTimerClock(10))
-        XCTAssertEqual(updatedLarge.remainingText, harness.viewModel.formatTimerClock(6))
+        XCTAssertEqual(initialLarge.remainingText, harness.viewModel.formatTimerClock(10) + " left")
+        XCTAssertEqual(updatedLarge.remainingText, harness.viewModel.formatTimerClock(6) + " left")
         XCTAssertLessThan(initialLarge.progress, updatedLarge.progress)
     }
 
@@ -76,7 +76,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(compactItems.map(\.status), [.running, .completed])
         XCTAssertEqual(compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(6))
         XCTAssertEqual(activeSection.items.count, 1)
-        XCTAssertEqual(activeSection.items.first?.remainingText, harness.viewModel.formatTimerClock(6))
+        XCTAssertEqual(activeSection.items.first?.remainingText, harness.viewModel.formatTimerClock(6) + " left")
         XCTAssertEqual(completedSection.items.count, 1)
         XCTAssertEqual(completedSection.items.first?.status, .completed)
         XCTAssertEqual(harness.snapshotStore.snapshot.completedCount, 1)
@@ -156,6 +156,8 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         let snapshot = BottomSheetWorkspaceSnapshot.make(
             from: [olderCompleted, newerCompleted],
             formatRemaining: viewModel.formatTimerClock,
+            formatShutter: viewModel.formatShutter,
+            ndNotationMode: .stops,
             timeContext: viewModel.timerTimeContext,
             compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
@@ -185,7 +187,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         let pausedCompactCue = harness.snapshotStore.snapshot.compactItems.first?.identityCue
         let pausedLargeCue = harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7))
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7) + " left")
 
         harness.currentDate = Date(timeIntervalSince1970: 105)
         harness.viewModel.resumeTimer(id: id)
@@ -194,7 +196,7 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.identityCue, pausedCompactCue)
         XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.identityCue, pausedLargeCue)
         XCTAssertEqual(harness.snapshotStore.snapshot.compactItems.first?.primaryRemainingText, BottomSheetWorkspaceSnapshot.compactDurationText(7))
-        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7))
+        XCTAssertEqual(harness.snapshotStore.snapshot.sections.first?.items.first?.remainingText, harness.viewModel.formatTimerClock(7) + " left")
 
         harness.currentDate = Date(timeIntervalSince1970: 120)
         harness.timerManager.tick(now: harness.currentDate)
@@ -436,6 +438,8 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
             },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { timer in
                 switch timer.status {
                 case .running:
@@ -480,12 +484,14 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
         viewModel.scaleMode = .fullStop
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
+            formatShutter: viewModel.formatShutter,
             timeContext: viewModel.timerTimeContext,
             compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
         let snapshotStore = BottomSheetWorkspaceSnapshotStore(
             initialTimers: viewModel.timers,
             timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
+            ndNotationModePublisher: viewModel.$ndNotationMode.eraseToAnyPublisher(),
             adapter: adapter
         )
         let stateStore = BottomSheetWorkspaceStateStore()

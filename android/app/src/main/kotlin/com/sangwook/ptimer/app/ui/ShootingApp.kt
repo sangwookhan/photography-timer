@@ -49,6 +49,7 @@ import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
+import com.sangwook.ptimer.app.persistence.DataStoreDisplaySettingsStore
 import com.sangwook.ptimer.app.persistence.DataStoreSlotSessionStore
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
 import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
@@ -91,6 +92,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     val coordinator = remember { AndroidTimerCoordinator(scope, viewModel, clock = { Instant.now() }) }
     val slotStore = remember { DataStoreSlotSessionStore(context) }
     val library = remember { CustomFilmLibrary(store = DataStoreCustomFilmLibraryStore(context)) }
+    val displaySettingsStore = remember { DataStoreDisplaySettingsStore(context) }
     val controller = remember {
         CalculatorController(
             films = LaunchPresetFilmCatalog.films + library.customFilms,
@@ -132,6 +134,14 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
 
     val timerState by viewModel.uiState.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
+
+    // Persisted ND notation display mode (PTIMER-187): seed from the store, then
+    // observe it. Keep the controller (picker labels) in sync with the observed
+    // value so a change persists and reflects across the picker and timer cards.
+    val initialNotationMode = remember { displaySettingsStore.loadNdNotationMode() }
+    val notationModeFlow = remember { displaySettingsStore.ndNotationModeFlow() }
+    val ndNotationMode by notationModeFlow.collectAsStateWithLifecycle(initialValue = initialNotationMode)
+    LaunchedEffect(ndNotationMode) { controller.setNotationMode(ndNotationMode) }
 
     LaunchedEffect(timerState.active.size, viewModel.hasRunningTimers) {
         if (viewModel.hasRunningTimers) coordinator.start() else coordinator.stop()
@@ -298,6 +308,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     onEvent = viewModel::onEvent,
                     onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
                     focusId = focusTimerId,
+                    ndNotationMode = ndNotationMode,
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
@@ -329,6 +340,10 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
                     onNdIndex = controller::setNdIndex,
+                    onSelectNotation = { mode ->
+                        controller.setNotationMode(mode)
+                        scope.launch { displaySettingsStore.setNdNotationMode(mode) }
+                    },
                     onSelectFilm = controller::selectFilm,
                     onSelectProfile = controller::selectProfile,
                     onSelectSlot = controller::selectSlot,

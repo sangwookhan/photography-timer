@@ -611,14 +611,14 @@ struct BottomSheetLargeWorkspaceView: View {
         } message: { pending in
             Text(confirmMessage(for: pending.action))
         }
-        .confirmationDialog(
+        .alert(
             "Clear completed timers?",
-            isPresented: $showClearConfirm,
-            titleVisibility: .visible
+            isPresented: $showClearConfirm
         ) {
             Button("Clear", role: .destructive) {
                 onClearCompletedTimers()
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Completed timer records will be removed. Canceled timers will be kept.")
         }

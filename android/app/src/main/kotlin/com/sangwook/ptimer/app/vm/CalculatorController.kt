@@ -341,6 +341,7 @@ class CalculatorController(
             baseShutterSeconds = base,
             adjustedShutterSeconds = result.adjustedShutterSeconds,
             basisIncludesAdjusted = includesAdjusted,
+            filmName = filmName,
         )
     }
 

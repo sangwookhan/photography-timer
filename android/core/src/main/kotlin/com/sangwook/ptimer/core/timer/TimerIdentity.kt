@@ -29,6 +29,11 @@ data class TimerIdentity(
     // intermediate distinct from the final duration and shown as the `Adj`
     // basis segment.
     val basisIncludesAdjusted: Boolean = false,
+    // Compact film cue captured at start (PTIMER-198), e.g. "Fomapan 100"
+    // or "No film" for the digital workflow, so the bottom mini timer can
+    // show the same film identity the iOS mini does. Defaulted/nullable so
+    // snapshots written before this field decode unchanged.
+    val filmName: String? = null,
 )
 
 /**

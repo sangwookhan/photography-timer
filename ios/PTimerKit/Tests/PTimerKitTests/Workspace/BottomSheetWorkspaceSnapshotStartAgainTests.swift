@@ -87,9 +87,10 @@ final class BottomSheetStartAgainTests: XCTestCase {
         let history = try XCTUnwrap(snapshot.sections.first { $0.title == "History" })
         let item = try XCTUnwrap(history.items.first { $0.id == canceled.id })
 
-        // Remaining-at-cancel is combined into the large status text,
-        // no new line.
-        XCTAssertEqual(item.remainingText, "Canceled · 51s left")
+        // Primary state value is the terminal state only; the
+        // remaining-at-cancel moves to the meta line (PTIMER-198).
+        XCTAssertEqual(item.remainingText, "Canceled")
+        XCTAssertEqual(item.timingText, "Canceled recently · 51s left")
         XCTAssertEqual(item.statusLabel, "Canceled")
         // Stable numeric id = the timer's creation order, bare number.
         XCTAssertEqual(item.sequenceNumberText, "7")

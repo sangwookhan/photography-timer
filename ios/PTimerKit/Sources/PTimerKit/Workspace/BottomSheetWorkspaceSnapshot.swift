@@ -292,7 +292,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                     // timer state only, so no duration is repeated here
                     // (no slash-separated pair). PTIMER-187.
                     totalDurationText: nil,
-                    timingText: timeContext(timer),
+                    timingText: largeTimingText(for: timer, timeContext: timeContext),
                     contextText: contextText,
                     progress: progress(for: timer),
                     actions: largeActions(for: timer.status),
@@ -576,13 +576,32 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         case .completed:
             return "Done"
         case .canceled:
-            // Combine status with the remaining-at-cancel so the row
-            // explains when the timer was stopped, without a new line.
-            guard let remaining = timer.canceledRemainingTime, remaining > 0 else {
-                return "Canceled"
-            }
-            return "Canceled · \(compactDurationText(remaining)) left"
+            // Terminal state only as the primary value; the
+            // remaining-at-cancel moves to the meta line so the big
+            // value is not a combined "Canceled · N left" string
+            // (PTIMER-198).
+            return "Canceled"
         }
+    }
+
+    /// Meta/timing line. For canceled timers the remaining-at-cancel
+    /// ("N left") is appended here rather than fused into the primary
+    /// state value (PTIMER-198).
+    private static func largeTimingText(
+        for timer: RunningTimerItem,
+        timeContext: (RunningTimerItem) -> String?
+    ) -> String? {
+        let base = timeContext(timer)
+        guard timer.status == .canceled,
+              let remaining = timer.canceledRemainingTime,
+              remaining > 0 else {
+            return base
+        }
+        let remainingMeta = "\(compactDurationText(remaining)) left"
+        guard let base, !base.isEmpty else {
+            return remainingMeta
+        }
+        return "\(base) · \(remainingMeta)"
     }
 
     private static func largeTotalDurationText(

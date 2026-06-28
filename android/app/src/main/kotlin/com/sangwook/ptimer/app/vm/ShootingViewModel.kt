@@ -39,6 +39,8 @@ data class TimerCardState(
     val remainingSeconds: Double,
     val endDate: Instant,
     val remainingAtCancelSeconds: Double?,
+    /** Total timer duration; drives the mini-timer progress cue (PTIMER-198). */
+    val durationSeconds: Double = 0.0,
 )
 
 /** Immutable state the timer workspace UI renders. */
@@ -132,5 +134,6 @@ class ShootingViewModel(
         remainingSeconds = wt.state.remainingTime(n),
         endDate = wt.state.endDate,
         remainingAtCancelSeconds = wt.state.remainingAtCancel,
+        durationSeconds = wt.state.duration,
     )
 }

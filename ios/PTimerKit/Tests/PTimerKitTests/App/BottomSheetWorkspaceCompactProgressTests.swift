@@ -137,6 +137,8 @@ final class BottomSheetWorkspaceCompactProgressTests: XCTestCase {
         let item59 = BottomSheetWorkspaceSnapshot.make(
             from: [timer59],
             formatRemaining: { _ in "" },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { _ in nil },
             compactCompletedSupplementaryText: { _ in nil }
         ).compactItems[0]
@@ -150,6 +152,8 @@ final class BottomSheetWorkspaceCompactProgressTests: XCTestCase {
         let item60 = BottomSheetWorkspaceSnapshot.make(
             from: [timer60],
             formatRemaining: { _ in "" },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { _ in nil },
             compactCompletedSupplementaryText: { _ in nil }
         ).compactItems[0]
@@ -163,6 +167,8 @@ final class BottomSheetWorkspaceCompactProgressTests: XCTestCase {
         let item3599 = BottomSheetWorkspaceSnapshot.make(
             from: [timer3599],
             formatRemaining: { _ in "" },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { _ in nil },
             compactCompletedSupplementaryText: { _ in nil }
         ).compactItems[0]
@@ -176,6 +182,8 @@ final class BottomSheetWorkspaceCompactProgressTests: XCTestCase {
         let item3600 = BottomSheetWorkspaceSnapshot.make(
             from: [timer3600],
             formatRemaining: { _ in "" },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { _ in nil },
             compactCompletedSupplementaryText: { _ in nil }
         ).compactItems[0]

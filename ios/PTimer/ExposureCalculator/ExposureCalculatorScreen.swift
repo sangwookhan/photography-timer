@@ -135,6 +135,7 @@ struct ExposureCalculatorScreen: View {
         let viewModel = coordinator.viewModel
         let adapter = BottomSheetWorkspacePresentationAdapter(
             formatRemaining: viewModel.formatTimerClock,
+            formatShutter: viewModel.formatShutter,
             timeContext: viewModel.timerTimeContext,
             compactCompletedSupplementaryText: viewModel.compactCompletedSupplementaryText
         )
@@ -146,7 +147,9 @@ struct ExposureCalculatorScreen: View {
         _bottomSheetSnapshotStore = StateObject(
             wrappedValue: BottomSheetWorkspaceSnapshotStore(
                 initialTimers: viewModel.timers,
+                initialNDNotationMode: viewModel.ndNotationMode,
                 timersPublisher: viewModel.$timers.eraseToAnyPublisher(),
+                ndNotationModePublisher: viewModel.$ndNotationMode.eraseToAnyPublisher(),
                 adapter: adapter
             )
         )

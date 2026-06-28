@@ -82,7 +82,14 @@ public struct TimerStartComposer {
         public let exposureSource: ExposureTimerSource?
         public let isOutsideManufacturerGuidance: Bool
         public let customProfileSummary: String?
-        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?) {
+        /// Structured ND/exposure-basis values captured at start
+        /// (PTIMER-187). The timer card renders its basis line from
+        /// these in the current ND notation mode rather than from a
+        /// precomposed string.
+        public let ndStops: Double?
+        public let baseShutterSeconds: TimeInterval?
+        public let adjustedShutterSeconds: TimeInterval?
+        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?, ndStops: Double? = nil, baseShutterSeconds: TimeInterval? = nil, adjustedShutterSeconds: TimeInterval? = nil) {
             self.name = name
             self.basisSummary = basisSummary
             self.cameraSlot = cameraSlot
@@ -92,6 +99,9 @@ public struct TimerStartComposer {
             self.exposureSource = exposureSource
             self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
             self.customProfileSummary = customProfileSummary
+            self.ndStops = ndStops
+            self.baseShutterSeconds = baseShutterSeconds
+            self.adjustedShutterSeconds = adjustedShutterSeconds
         }
     }
 
@@ -171,6 +181,16 @@ public struct TimerStartComposer {
             isOutsideManufacturerGuidance = false
         }
 
+        // Structured basis values (PTIMER-187). The reciprocity-adjusted
+        // shutter is captured only when a film-mode result exists — the
+        // basis line shows it as `Adj` for corrected/target timers, where
+        // it is an intermediate distinct from the final timer duration.
+        let ndStops = input.result?.ndStep.stops
+        let baseShutterSeconds = input.result?.baseShutterSeconds
+        let adjustedShutterSeconds: TimeInterval? = input.filmModeResult != nil
+            ? input.result?.resultShutterSeconds
+            : nil
+
         return Payload(
             name: name,
             basisSummary: basisSummary,
@@ -180,7 +200,10 @@ public struct TimerStartComposer {
             selectedModelLabel: selectedModelLabel,
             exposureSource: input.source.timerExposureSource,
             isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
-            customProfileSummary: customProfileSummary
+            customProfileSummary: customProfileSummary,
+            ndStops: ndStops,
+            baseShutterSeconds: baseShutterSeconds,
+            adjustedShutterSeconds: adjustedShutterSeconds
         )
     }
 
@@ -273,34 +296,32 @@ public struct TimerStartComposer {
 
     // MARK: - Name
 
+    /// The card title is the camera/film identity and the basis line
+    /// owns the ND value, so the name carries no ND token (PTIMER-187).
+    /// It stays a duration-tagged fallback used only by surfaces
+    /// without an identity snapshot (e.g. VoiceOver / the legacy dock).
     private func makeName(_ input: Input) -> String {
-        guard let result = input.result else {
-            return "Timer - \(formatShutter(input.targetDuration))"
+        let targetLabel = formatShutter(input.targetDuration)
+        guard input.result != nil else {
+            return "Timer - \(targetLabel)"
         }
 
-        let targetLabel = formatShutter(input.targetDuration)
         switch input.source {
         case .filmCorrectedExposure:
             guard input.filmModeResult?.hasQuantifiedCorrectedExposure == true,
                   let film = input.selectedPresetFilm else {
-                return "\(ndStopLabel(for: result.ndStep)) - \(targetLabel)"
+                return "Timer - \(targetLabel)"
             }
             return "\(film.canonicalStockName) - \(targetLabel)"
         case .targetShutter:
-            // Target Shutter timers stamp a `Target` prefix so the
-            // dock title distinguishes the photographer-supplied
-            // duration from the calculated paths. When a film is
-            // selected the film name precedes the `Target` segment,
-            // matching the corrected-exposure shape.
+            // When a film is selected the film name precedes the
+            // `Target` segment, matching the corrected-exposure shape.
             if let film = input.selectedPresetFilm {
                 return "\(film.canonicalStockName) · Target - \(targetLabel)"
             }
             return "Target - \(targetLabel)"
         case .digitalResult, .filmAdjustedShutter, .manual:
-            // Manual timers reuse the ND-prefixed shape; without a
-            // deliberate calculator-origin tag we still render the
-            // matched calc result when one is available.
-            return "\(ndStopLabel(for: result.ndStep)) - \(targetLabel)"
+            return "Timer - \(targetLabel)"
         }
     }
 

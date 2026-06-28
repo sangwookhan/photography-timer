@@ -18,6 +18,17 @@ data class TimerIdentity(
     val subtitle: String = "",
     val baseLine: String = "",
     val slotLabel: String = "",
+    // Structured ND/exposure basis captured at start (PTIMER-187), so the timer
+    // card renders the basis line in the current ND notation mode instead of
+    // parsing a precomposed string. All defaulted/nullable so snapshots written
+    // before these fields decode unchanged (nil-safe; no migration).
+    val ndStops: Double? = null,
+    val baseShutterSeconds: Double? = null,
+    val adjustedShutterSeconds: Double? = null,
+    // True for corrected/target timers, where the adjusted shutter is an
+    // intermediate distinct from the final duration and shown as the `Adj`
+    // basis segment.
+    val basisIncludesAdjusted: Boolean = false,
 )
 
 /**

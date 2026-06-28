@@ -214,7 +214,7 @@ extension XCTestCase {
         return RunningTimerItem(
             id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
             order: 6,
-            name: "6 stops - 02:00",
+            name: "Timer - 02:00",
             basisSummary: "Base 1/30s · 6 stops",
             duration: 120,
             startDate: now,
@@ -243,6 +243,8 @@ extension XCTestCase {
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
             },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { timer in
                 switch timer.status {
                 case .running:

@@ -169,14 +169,15 @@ class CalculatorController(
     /** Starts a timer from the active slot's target duration (no-op when unset). */
     fun startFromTarget() {
         val target = targetSeconds ?: return
-        onStart(target, targetIdentity())
+        val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
+        onStart(target, identity(result, "Target Exposure", target, includesAdjusted = true))
     }
 
     /** Starts a timer from the ND-adjusted shutter (the digital / pre-reciprocity value). */
     fun startFromAdjusted() {
         val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
         val d = result.adjustedShutterSeconds
-        if (d.isFinite() && d > 0) onStart(d, identity(result, "Adjusted shutter"))
+        if (d.isFinite() && d > 0) onStart(d, identity(result, "Adjusted Exposure", d, includesAdjusted = false))
     }
 
     /** Starts a timer from the reciprocity-corrected exposure, including an
@@ -184,7 +185,7 @@ class CalculatorController(
     fun startFromCorrected() {
         val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
         val d = (result.correctedSeconds ?: result.reciprocity?.calculatedCorrectedSeconds) ?: return
-        if (d.isFinite() && d > 0) onStart(d, identity(result, "Corrected exposure"))
+        if (d.isFinite() && d > 0) onStart(d, identity(result, "Corrected Exposure", d, includesAdjusted = true))
     }
 
     /** Resets the active slot to defaults: no film, base 1/30, ND 0, no target, default name. */
@@ -268,7 +269,12 @@ class CalculatorController(
     fun start() {
         val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
         val duration = result.startDurationSeconds ?: return
-        onStart(duration, identity(result))
+        // Digital/no-film start uses the same shape as Adjusted (the digital
+        // result is the ND-adjusted shutter); film starts go through the
+        // dedicated adjusted/corrected entry points above.
+        val source = if (selectedFilm() == null) "Calculated" else "Corrected Exposure"
+        val includesAdjusted = selectedFilm() != null
+        onStart(duration, identity(result, source, duration, includesAdjusted))
     }
 
     private fun captureSnapshot() =
@@ -306,28 +312,35 @@ class CalculatorController(
         return options.firstOrNull { it.id == profileId } ?: film.profiles.first()
     }
 
-    private fun identity(result: ShootingResult, source: String = "Calculated"): TimerIdentity {
+    /**
+     * Captured timer identity (PTIMER-187): the title carries the camera + film
+     * identity, the second line carries the exposure source + final value, and
+     * the structured ND/base/adjusted fields let the timer card render its basis
+     * in the current notation mode. No ND token / duration in the title, and no
+     * film name / duration repeated on the second line.
+     *
+     * [includesAdjusted] is true for corrected/target timers, where the adjusted
+     * shutter is an intermediate distinct from the final duration.
+     */
+    private fun identity(
+        result: ShootingResult,
+        source: String,
+        finalSeconds: Double,
+        includesAdjusted: Boolean,
+    ): TimerIdentity {
         val film = selectedFilm()
         val filmName = film?.canonicalStockName ?: "No film"
         val slot = session.activeIdentity
-        val stops = ndIndex
+        val ladder = ExposureScale.oneThirdStop.shutterSteps
+        val base = ladder[shutterIndex.coerceIn(ladder.indices)].seconds
         return TimerIdentity(
             title = "${slot.displayName} · $filmName",
-            subtitle = result.confidenceLabel?.let { "$source · $it" } ?: "$source · $stops stops",
-            baseLine = "Base ${shutterLabels[shutterIndex]} · $stops stops",
+            subtitle = "$source ${exposure.formatExtendedClock(finalSeconds)}",
             slotLabel = slot.id.shortLabel,
-        )
-    }
-
-    private fun targetIdentity(): TimerIdentity {
-        val film = selectedFilm()
-        val filmName = film?.canonicalStockName ?: "No film"
-        val slot = session.activeIdentity
-        return TimerIdentity(
-            title = "${slot.displayName} · $filmName",
-            subtitle = "Target shutter",
-            baseLine = "Target ${exposure.formatExtendedClock(targetSeconds ?: 0.0)}",
-            slotLabel = slot.id.shortLabel,
+            ndStops = ndIndex.toDouble(),
+            baseShutterSeconds = base,
+            adjustedShutterSeconds = result.adjustedShutterSeconds,
+            basisIncludesAdjusted = includesAdjusted,
         )
     }
 

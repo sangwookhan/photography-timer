@@ -125,8 +125,9 @@ class CalculatorControllerTest {
         c.startFromAdjusted()
         c.startFromCorrected()
         assertEquals(2, starts.size)
-        assertEquals("Adjusted shutter", starts[0].second.subtitle.substringBefore(" ·"))
-        assertEquals("Corrected exposure", starts[1].second.subtitle.substringBefore(" ·"))
+        // Second line is "<source> <final value>" (PTIMER-187).
+        assertTrue(starts[0].second.subtitle.startsWith("Adjusted Exposure "))
+        assertTrue(starts[1].second.subtitle.startsWith("Corrected Exposure "))
         // The two timers have different durations (correction lengthened it).
         assertTrue(starts[0].first < starts[1].first)
     }
@@ -186,7 +187,7 @@ class CalculatorControllerTest {
         c.selectSlot(CameraSlotId.camera1)
         c.startFromTarget()
         assertEquals(30.0, duration!!, 0.0)
-        assertEquals("Target shutter", identity!!.subtitle)
+        assertTrue(identity!!.subtitle.startsWith("Target Exposure "))
     }
 
     @Test

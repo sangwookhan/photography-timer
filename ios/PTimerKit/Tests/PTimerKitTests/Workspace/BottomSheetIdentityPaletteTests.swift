@@ -123,7 +123,7 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
             XCTAssertEqual(item.identityCue.markerText, "C2")
             XCTAssertEqual(item.identityCue.fullCameraLabel, "Camera 2")
             XCTAssertEqual(item.identityCue.filmDescriptor, "CHS 100 II")
-            XCTAssertEqual(item.identityCue.sourceLabel, "Adjusted Shutter")
+            XCTAssertEqual(item.identityCue.sourceLabel, "Adjusted Exposure")
             XCTAssertEqual(item.identityFilmText, "CHS 100 II")
         }
 
@@ -134,14 +134,14 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
                 filmDisplayName: "CHS 100 II",
                 exposureSource: .filmAdjustedShutter,
                 order: 7,
-                name: "16 stops - 832255.3s"
+                name: "Timer - 832255.3s"
             )
 
             let snapshot = makeSnapshot(from: [timer])
             let row = try XCTUnwrap(snapshot.sections.first?.items.first)
 
             XCTAssertEqual(row.title, "Camera 2 · CHS 100 II")
-            XCTAssertEqual(row.identitySubtitle, "Adjusted Shutter · 16 stops - 832255.3s")
+            XCTAssertEqual(row.identitySubtitle, "Adjusted Exposure 01:00")
         }
 
         // Large VoiceOver label
@@ -158,7 +158,7 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
 
             XCTAssertEqual(
                 row.voiceOverLabel,
-                "Camera 2, CHS 100 II, Adjusted Shutter timer, running"
+                "Camera 2, CHS 100 II, Adjusted Exposure timer, running"
             )
         }
     }
@@ -364,6 +364,8 @@ final class BottomSheetIdentityPaletteTests: XCTestCase {
                 let secs = remaining % 60
                 return String(format: "%02d:%02d", minutes, secs)
             },
+            formatShutter: { "\(Int($0))s" },
+            ndNotationMode: .stops,
             timeContext: { timer in
                 switch timer.status {
                 case .running:

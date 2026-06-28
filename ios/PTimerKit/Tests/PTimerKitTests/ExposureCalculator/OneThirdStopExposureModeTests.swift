@@ -297,9 +297,15 @@ final class OneThirdStopExposureModeTests: XCTestCase {
                 "basisSummary should retain reserved ND label \(testCase.label), got: \(timer.basisSummary)"
             )
             if testCase.checkName {
-                XCTAssertTrue(
-                    timer.name.contains(testCase.label),
-                    "timer name should retain reserved ND label \(testCase.label), got: \(timer.name)"
+                // The timer name no longer carries an ND token (PTIMER-187);
+                // the reserved fractional ND now survives as structured
+                // metadata, which the basis line renders.
+                let ndStops = try XCTUnwrap(timer.ndStops)
+                XCTAssertEqual(
+                    ndStops,
+                    testCase.ndStep.stops,
+                    accuracy: 0.0001,
+                    "structured ndStops should retain reserved fraction \(testCase.label)"
                 )
             }
         }

@@ -54,6 +54,9 @@ import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
+import com.sangwook.ptimer.core.exposure.ExposureScale
+import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.core.timer.TimerBasisPresenter
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -140,6 +143,7 @@ fun FullTimerList(
     onEvent: (ShootingIntent) -> Unit,
     onCollapse: () -> Unit,
     focusId: UUID?,
+    ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT,
     modifier: Modifier = Modifier,
 ) {
     val activeReversed = state.active.asReversed()
@@ -193,7 +197,7 @@ fun FullTimerList(
         // Active timers as full cards, newest first to match the peek order.
         if (state.active.isNotEmpty()) {
             items(activeReversed, key = { it.id }) { card ->
-                TimerCard(card, now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
+                TimerCard(card, now, ndNotationMode, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
             }
         }
         if (state.history.isNotEmpty()) {
@@ -211,7 +215,7 @@ fun FullTimerList(
                 }
             }
             items(state.history, key = { it.id }) { card ->
-                TimerCard(card, now, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
+                TimerCard(card, now, ndNotationMode, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
             }
         }
     }
@@ -331,10 +335,19 @@ private fun MiniOverflowTile(count: Int, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Formats a basis shutter value for the timer card: the camera-dial label
+ * (`1/30`) for on-ladder base shutters, falling back to the coarse clock for
+ * off-ladder values like the reciprocity-adjusted shutter (`8s`).
+ */
+private fun basisShutterLabel(seconds: Double): String =
+    ExposureScale.oneThirdStopShutterCameraLabel(seconds) ?: calc.formatCoarse(seconds)
+
 @Composable
 private fun TimerCard(
     card: TimerCardState,
     now: Instant,
+    ndNotationMode: NDNotationMode,
     onEvent: (ShootingIntent) -> Unit,
     onConfirm: (ConfirmRequest) -> Unit,
     highlighted: Boolean = false,
@@ -362,14 +375,19 @@ private fun TimerCard(
 
             Spacer(Modifier.size(8.dp))
 
-            // Primary line: countdown for active timers, terminal label for history.
+            // Primary line: remaining-time countdown for active timers (with a
+            // `left` qualifier so it reads as remaining time, not the final
+            // exposure value on the second line), terminal label for history.
+            // Right-aligned to match the iOS timer card (PTIMER-187).
             val primary = when (card.status) {
-                TimerStatus.running, TimerStatus.paused -> calc.formatExtendedClock(card.remainingSeconds)
+                TimerStatus.running, TimerStatus.paused -> "${calc.formatExtendedClock(card.remainingSeconds)} left"
                 TimerStatus.completed -> "Done"
                 TimerStatus.canceled -> "Canceled · ${calc.formatExtendedClock(card.remainingAtCancelSeconds ?: 0.0)} left"
             }
             Text(
                 primary,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
                 style = MaterialTheme.typography.headlineMedium,
                 fontFamily = FontFamily.Monospace,
             )
@@ -387,13 +405,24 @@ private fun TimerCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (card.identity.baseLine.isNotEmpty()) {
+            // Basis line rendered from structured ND/base inputs in the current
+            // notation mode (PTIMER-187); falls back to any precomposed baseLine
+            // from a pre-update timer that has no structured fields.
+            val basisText = TimerBasisPresenter.basisText(
+                ndStops = card.identity.ndStops,
+                baseShutterSeconds = card.identity.baseShutterSeconds,
+                adjustedShutterSeconds = card.identity.adjustedShutterSeconds,
+                includesAdjusted = card.identity.basisIncludesAdjusted,
+                mode = ndNotationMode,
+                formatShutter = ::basisShutterLabel,
+            ) ?: card.identity.baseLine.takeIf { it.isNotEmpty() }
+            if (basisText != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        card.identity.baseLine,
+                        basisText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

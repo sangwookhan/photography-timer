@@ -1411,7 +1411,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             exposureSource: payload.exposureSource,
             isOutsideManufacturerGuidance: payload.isOutsideManufacturerGuidance,
             customProfileSummary: payload.customProfileSummary,
-            selectedModelLabel: payload.selectedModelLabel
+            selectedModelLabel: payload.selectedModelLabel,
+            ndStops: payload.ndStops,
+            baseShutterSeconds: payload.baseShutterSeconds,
+            adjustedShutterSeconds: payload.adjustedShutterSeconds
         )
     }
 

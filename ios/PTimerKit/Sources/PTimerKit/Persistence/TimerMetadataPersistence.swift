@@ -60,6 +60,21 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     /// `"Ohzart"`. Optional and additive so older snapshots decode
     /// unchanged; `nil` reads as "the film's default model".
     public let selectedModelLabel: String?
+    /// Canonical ND strength in stops captured at start (PTIMER-187).
+    /// Stored structured (not as part of `basisSummary`) so the timer
+    /// card renders the basis line in the current ND notation mode
+    /// instead of parsing a precomposed string. `nil` for older
+    /// snapshots / timers without a calculated ND value.
+    public let ndStops: Double?
+    /// Base shutter (seconds) captured at start (PTIMER-187), the
+    /// first segment of the basis line.
+    public let baseShutterSeconds: Double?
+    /// Reciprocity-adjusted shutter (seconds) captured at start
+    /// (PTIMER-187). Non-nil only when reciprocity was applied; the
+    /// basis line shows it as the `Adj` segment for corrected/target
+    /// timers (where it is an intermediate distinct from the final
+    /// timer duration).
+    public let adjustedShutterSeconds: Double?
 
     public init(
         id: UUID,
@@ -73,7 +88,10 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         exposureSourceRaw: String? = nil,
         isOutsideManufacturerGuidance: Bool? = nil,
         customProfileSummary: String? = nil,
-        selectedModelLabel: String? = nil
+        selectedModelLabel: String? = nil,
+        ndStops: Double? = nil,
+        baseShutterSeconds: Double? = nil,
+        adjustedShutterSeconds: Double? = nil
     ) {
         self.id = id
         self.order = order
@@ -87,6 +105,9 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         self.isOutsideManufacturerGuidance = isOutsideManufacturerGuidance
         self.customProfileSummary = customProfileSummary
         self.selectedModelLabel = selectedModelLabel
+        self.ndStops = ndStops
+        self.baseShutterSeconds = baseShutterSeconds
+        self.adjustedShutterSeconds = adjustedShutterSeconds
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -102,6 +123,9 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         case isOutsideManufacturerGuidance
         case customProfileSummary
         case selectedModelLabel
+        case ndStops
+        case baseShutterSeconds
+        case adjustedShutterSeconds
     }
 
     public init(from decoder: Decoder) throws {
@@ -127,6 +151,15 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
             String.self,
             forKey: .selectedModelLabel
         )
+        self.ndStops = try container.decodeIfPresent(Double.self, forKey: .ndStops)
+        self.baseShutterSeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .baseShutterSeconds
+        )
+        self.adjustedShutterSeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .adjustedShutterSeconds
+        )
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -146,6 +179,9 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         )
         try container.encodeIfPresent(customProfileSummary, forKey: .customProfileSummary)
         try container.encodeIfPresent(selectedModelLabel, forKey: .selectedModelLabel)
+        try container.encodeIfPresent(ndStops, forKey: .ndStops)
+        try container.encodeIfPresent(baseShutterSeconds, forKey: .baseShutterSeconds)
+        try container.encodeIfPresent(adjustedShutterSeconds, forKey: .adjustedShutterSeconds)
     }
 }
 

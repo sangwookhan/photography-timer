@@ -27,6 +27,7 @@ let package = Package(
             name: "PTimerCore",
             resources: [
                 .process("Catalog/LaunchPresetFilmCatalog.json"),
+                .process("Catalog/LaunchPresetFilmCatalog.v2.json"),
             ]
         ),
         .target(

@@ -1,0 +1,33 @@
+# PTIMER-186: gate the v2 launch catalog. Runs the independent verifier, which
+# asserts (1) the three bundled v2 copies are byte-identical and (2) the v2
+# catalog decodes to the same domain as v1 across all films. Pure-Python, no
+# Xcode/Gradle build required. CI platform is otherwise undecided (see AGENTS.md);
+# this single check is scoped to the catalog data.
+name: catalog-v2-verify
+
+on:
+  pull_request:
+    paths:
+      - 'shared/catalog/LaunchPresetFilmCatalog.v2.json'
+      - 'ios/PTimerKit/Sources/PTimerCore/Catalog/LaunchPresetFilmCatalog*.json'
+      - 'android/core/src/main/resources/LaunchPresetFilmCatalog.v2.json'
+      - 'tools/catalog-v2/**'
+      - '.github/workflows/catalog-v2-verify.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'shared/catalog/LaunchPresetFilmCatalog.v2.json'
+      - 'ios/PTimerKit/Sources/PTimerCore/Catalog/LaunchPresetFilmCatalog*.json'
+      - 'android/core/src/main/resources/LaunchPresetFilmCatalog.v2.json'
+      - 'tools/catalog-v2/**'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Verify v2 catalog (byte-identity + v1 equivalence)
+        run: python3 tools/catalog-v2/verify.py

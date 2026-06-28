@@ -57,6 +57,7 @@ import com.sangwook.ptimer.core.customfilm.CustomFilmReferencePointRow
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
+import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
@@ -76,6 +77,7 @@ fun ShootingScreen(
     state: CalculatorUiState,
     onShutterIndex: (Int) -> Unit,
     onNdIndex: (Int) -> Unit,
+    onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
     onSelectSlot: (CameraSlotId) -> Unit,
@@ -232,6 +234,9 @@ fun ShootingScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text("Base Shutter", style = MaterialTheme.typography.labelMedium)
+                                // Match the ND column's notation-toggle height so
+                                // the two wheels stay vertically aligned.
+                                Spacer(Modifier.height(NotationToggleHeight))
                                 SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
                             Column(
@@ -239,6 +244,11 @@ fun ShootingScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text("ND Filter", style = MaterialTheme.typography.labelMedium)
+                                NotationToggle(
+                                    mode = pageState.ndNotationMode,
+                                    enabled = writesActiveSlot,
+                                    onSelect = onSelectNotation,
+                                )
                                 SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
                         }
@@ -320,6 +330,50 @@ fun ShootingScreen(
     }
 }
 
+
+/** Header-row height reserved for the ND notation toggle (PTIMER-187). */
+private val NotationToggleHeight = 30.dp
+
+/**
+ * Compact 3-state ND notation toggle (Stops / OD / ND) for the ND Filter
+ * header. Current mode is always highlighted; a tap selects a mode. Sized to
+ * sit on the header row without adding vertical space below the picker.
+ */
+@Composable
+private fun NotationToggle(
+    mode: NDNotationMode,
+    enabled: Boolean,
+    onSelect: (NDNotationMode) -> Unit,
+) {
+    val options = listOf(
+        NDNotationMode.STOPS to "Stops",
+        NDNotationMode.OPTICAL_DENSITY to "OD",
+        NDNotationMode.FILTER_FACTOR to "ND",
+    )
+    Row(
+        modifier = Modifier.height(NotationToggleHeight),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        options.forEach { (optionMode, label) ->
+            val selected = optionMode == mode
+            Surface(
+                color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.surface,
+                contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.clickable(enabled = enabled) { onSelect(optionMode) },
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                )
+            }
+        }
+    }
+}
 
 /** Small circular start button used next to each computed exposure value. */
 @Composable

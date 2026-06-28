@@ -9,6 +9,8 @@ import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
+import com.sangwook.ptimer.core.exposure.NDNotationFormatter
+import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModels
 import com.sangwook.ptimer.core.reciprocity.ReciprocityAuthority
 import com.sangwook.ptimer.core.reciprocity.calculatedCorrectedSeconds
@@ -55,6 +57,8 @@ data class CalculatorUiState(
     val modelOptions: List<ModelOption>,
     val selectedProfileId: String?,
     val hasFilm: Boolean,
+    /** Current ND notation display mode; drives the wheel labels + the toggle (PTIMER-187). */
+    val ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT,
     val adjustedText: String,
     /** Whole-seconds comparison (e.g. "34953s") for clock-band values; null otherwise. */
     val adjustedSecondsText: String?,
@@ -96,12 +100,18 @@ class CalculatorController(
     private var films: List<FilmIdentity> = films
 
     private val shutterLabels = ExposureScale.oneThirdStopShutterCameraLabels
-    private val ndLabels = (0..ExposureScale.MAXIMUM_WHOLE_ND_STOPS).map { it.toString() }
+    private val ndStopRange = 0..ExposureScale.MAXIMUM_WHOLE_ND_STOPS
     private val defaultShutterIndex = shutterLabels.indexOf("1/30").coerceAtLeast(0)
 
     // Live state for the active slot.
     private var shutterIndex = defaultShutterIndex
     private var ndIndex = 0
+    // App-global ND notation display mode (PTIMER-187); display-only, never feeds calc.
+    private var ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT
+
+    /** ND wheel labels for the current notation mode (same length/order as the stop ladder). */
+    private fun ndLabels(): List<String> =
+        ndStopRange.map { NDNotationFormatter.display(it.toDouble(), ndNotationMode).value }
     private var selectedFilmId: String? = null
     private var selectedProfileId: String? = null
     private var targetSeconds: Double? = null
@@ -129,7 +139,14 @@ class CalculatorController(
     )
 
     fun setShutterIndex(index: Int) { shutterIndex = index.coerceIn(shutterLabels.indices); publish() }
-    fun setNdIndex(index: Int) { ndIndex = index.coerceIn(ndLabels.indices); publish() }
+    fun setNdIndex(index: Int) { ndIndex = index.coerceIn(ndStopRange.first, ndStopRange.last); publish() }
+
+    /** Sets the ND notation display mode; re-publishes so wheel labels update. */
+    fun setNotationMode(mode: NDNotationMode) {
+        if (mode == ndNotationMode) return
+        ndNotationMode = mode
+        publish()
+    }
 
     fun selectFilm(id: String?) {
         selectedFilmId = id
@@ -259,7 +276,7 @@ class CalculatorController(
 
     private fun loadSnapshot(snapshot: SlotCalculatorSnapshot) {
         shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices)
-        ndIndex = snapshot.ndIndex.coerceIn(ndLabels.indices)
+        ndIndex = snapshot.ndIndex.coerceIn(ndStopRange.first, ndStopRange.last)
         // Normalize a stale film/profile selection so a deleted custom film (or
         // a profile id no longer valid for the film) is not re-persisted as a
         // broken selection. An unknown film clears both; an invalid profile for
@@ -370,7 +387,7 @@ class CalculatorController(
             activeSlotName = session.identity(slotId).displayName,
             shutterLabels = shutterLabels,
             shutterIndex = snapshot.shutterIndex,
-            ndLabels = ndLabels,
+            ndLabels = ndLabels(),
             ndIndex = snapshot.ndIndex,
             filmOptions = listOf(FilmOption(null, "No film")) +
                 films.map { f ->
@@ -392,6 +409,7 @@ class CalculatorController(
             modelOptions = modelOptions,
             selectedProfileId = snapshot.selectedProfileId,
             hasFilm = film != null,
+            ndNotationMode = ndNotationMode,
             adjustedText = exposure.formatCoarse(result.adjustedShutterSeconds),
             adjustedSecondsText = secondsComparison(result.adjustedShutterSeconds),
             adjustedStartEnabled = result.adjustedShutterSeconds.isFinite() && result.adjustedShutterSeconds > 0,

@@ -74,6 +74,16 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             applyScaleModeChange()
         }
     }
+    /// How ND strength is *displayed* across the picker, result/basis
+    /// summaries, and timer cards. Display-only — never feeds the calc
+    /// engine; the canonical ND value stays `ndStep.stops`. Persisted
+    /// to its own app-global settings store (PTIMER-187).
+    @Published public var ndNotationMode: NDNotationMode = .stops {
+        didSet {
+            guard oldValue != ndNotationMode else { return }
+            persistDisplaySettings()
+        }
+    }
     @Published public private(set) var timers: [RunningTimerItem] = []
     /// Active camera-slot id mirrored from `cameraSlotSessionModel`.
     /// The slot picker UI binds to this so a slot switch driven by
@@ -128,6 +138,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Source of truth for photographer-authored custom
     /// films. Internal so the +CustomFilm extension can write.
     public let customFilmLibrary: CustomFilmLibrary
+    /// App-global display-settings store (ND notation mode). Display
+    /// preferences only; never participates in calculation.
+    private let displaySettingStore: DisplaySettingStoring
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
     /// Suppresses `persistCalculatorContext` calls during a camera-slot
@@ -212,6 +225,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             currentCustomFilms: { resolvedCustomLibrary.customFilms }
         )
         self.customFilmLibrary = resolvedCustomLibrary
+        self.displaySettingStore = dependencies.displaySettingStore
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
@@ -234,6 +248,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$cameraSlotCustomDisplayNames)
         resolvedCustomLibrary.$customFilms
             .assign(to: &$customFilms)
+        restoreDisplaySettings()
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -245,6 +260,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         contextPersistenceStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore(),
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring = NoOpCameraSlotSessionPersistenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
+        displaySettingStore: DisplaySettingStoring = NoOpDisplaySettingStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
         cameraSlotSessionModel: CameraSlotSessionModel? = nil,
         targetShutterModel: TargetShutterModel? = nil,
@@ -279,6 +295,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             currentCustomFilms: { resolvedCustomLibrary.customFilms }
         )
         self.customFilmLibrary = resolvedCustomLibrary
+        self.displaySettingStore = displaySettingStore
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
@@ -295,6 +312,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$cameraSlotCustomDisplayNames)
         resolvedCustomLibrary.$customFilms
             .assign(to: &$customFilms)
+        restoreDisplaySettings()
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
     }
@@ -1657,6 +1675,26 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// inactive-slot scrub survives a relaunch.
     public func persistInactiveSlotCleanup() {
         persistCalculatorContext()
+    }
+
+    /// Loads the persisted ND notation mode on launch. Display-only;
+    /// independent of the calculator-context restore so a missing or
+    /// corrupt settings blob leaves the shipping `.stops` default in
+    /// place without affecting calc state.
+    private func restoreDisplaySettings() {
+        guard let settings = displaySettingStore.loadSettings() else {
+            return
+        }
+        let restored = settings.restoredNDNotationMode
+        if ndNotationMode != restored {
+            ndNotationMode = restored
+        }
+    }
+
+    private func persistDisplaySettings() {
+        displaySettingStore.saveSettings(
+            PersistentDisplaySettings(ndNotationMode: ndNotationMode)
+        )
     }
 
     private func persistCalculatorContext() {

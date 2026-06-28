@@ -670,7 +670,8 @@ private struct CameraSlotCalculatorPage: View {
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
                 ndStepValues: viewModel.pickerNDSteps(forPage: pageState),
                 formatShutter: viewModel.formatShutterStepLabel,
-                formatNDStop: viewModel.formatNDStop,
+                ndNotationMode: viewModel.ndNotationMode,
+                onSelectNotationMode: { viewModel.ndNotationMode = $0 },
                 onContinuousBaseShutterChange: { value in
                     guard pageState.isActive else { return }
                     Task { @MainActor in

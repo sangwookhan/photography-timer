@@ -3,6 +3,7 @@
 
 import SwiftUI
 import PTimerCore
+import PTimerKit
 
 /// Density-driven layout knobs shared by the camera workspace, the
 /// target shutter row, and the result section. Owns paddings,
@@ -487,7 +488,8 @@ struct VariableSectionView: View {
     let shutterSpeeds: [Double]
     let ndStepValues: [NDStep]
     let formatShutter: (TimeInterval) -> String
-    let formatNDStop: (NDStep) -> String
+    let ndNotationMode: NDNotationMode
+    let onSelectNotationMode: (NDNotationMode) -> Void
     let onContinuousBaseShutterChange: (Double) -> Void
     let onContinuousNDStepChange: (NDStep) -> Void
     let onBaseShutterInteractionEnd: () -> Void
@@ -510,7 +512,8 @@ struct VariableSectionView: View {
                 NDStopSelectionRow(
                     ndStep: $ndStep,
                     ndStepValues: ndStepValues,
-                    formatNDStop: formatNDStop,
+                    ndNotationMode: ndNotationMode,
+                    onSelectNotationMode: onSelectNotationMode,
                     onContinuousSelectionChange: onContinuousNDStepChange,
                     onInteractionEnd: onNDStopInteractionEnd,
                     pickerHeight: style.pickerHeight,
@@ -525,7 +528,8 @@ struct VariableSectionView: View {
 private struct NDStopSelectionRow: View {
     @Binding var ndStep: NDStep
     let ndStepValues: [NDStep]
-    let formatNDStop: (NDStep) -> String
+    let ndNotationMode: NDNotationMode
+    let onSelectNotationMode: (NDNotationMode) -> Void
     let onContinuousSelectionChange: (NDStep) -> Void
     let onInteractionEnd: () -> Void
     let pickerHeight: CGFloat
@@ -535,15 +539,40 @@ private struct NDStopSelectionRow: View {
         style.pickerColumnLayout(for: .ndStop)
     }
 
+    /// Mode-dependent unit shown in the selection band (`stops` / `OD`
+    /// / `ND`). Constant per mode, so the selected step is just a
+    /// convenient input.
+    private var unitText: String {
+        NDNotationFormatter.display(for: ndStep, mode: ndNotationMode).unit
+    }
+
+    private var notationSelection: Binding<NDNotationMode> {
+        Binding(get: { ndNotationMode }, set: { onSelectNotationMode($0) })
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
-            Text("ND Filter")
-                .font(.subheadline.weight(.semibold))
+            HStack(spacing: 6) {
+                Text("ND")
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize()
+
+                Picker("ND notation", selection: notationSelection) {
+                    Text("Stops").tag(NDNotationMode.stops)
+                    Text("OD").tag(NDNotationMode.opticalDensity)
+                    Text("ND").tag(NDNotationMode.filterFactor)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .controlSize(.small)
+                .accessibilityIdentifier("nd-notation-mode-control")
+            }
+            .frame(height: pickerHeaderHeight)
 
             Picker("ND Filter", selection: $ndStep) {
                 ForEach(ndStepValues, id: \.self) { step in
                     NDStopPickerValue(
-                        valueText: formatNDStop(step),
+                        valueText: NDNotationFormatter.display(for: step, mode: ndNotationMode).value,
                         style: style,
                         layout: layout
                     )
@@ -570,7 +599,7 @@ private struct NDStopSelectionRow: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 PickerUnitSelectionBand(
-                    unitText: "stops",
+                    unitText: unitText,
                     style: style,
                     layout: layout
                 )
@@ -579,6 +608,11 @@ private struct NDStopSelectionRow: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
+
+/// Shared height for the two picker-column headers so the segmented
+/// notation control on the ND header does not push the ND wheel below
+/// the shutter wheel (PTIMER-187).
+private let pickerHeaderHeight: CGFloat = 30
 
 private struct ShutterSelectionRow: View {
     @Binding var baseShutter: Double
@@ -597,6 +631,7 @@ private struct ShutterSelectionRow: View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
             Text("Base Shutter")
                 .font(.subheadline.weight(.semibold))
+                .frame(height: pickerHeaderHeight, alignment: .leading)
 
             Picker("Base Shutter", selection: $baseShutter) {
                 ForEach(shutterSpeeds, id: \.self) { speed in

@@ -16,6 +16,15 @@ struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
         AudioServicesPlaySystemSound(Self.completionSoundID)
     }
 
+    /// Foreground pre1 feedback (PTIMER-73): haptic-first and silent. A medium
+    /// impact stands in for "completion approaching" without competing with the
+    /// stronger success haptic + sound reserved for actual completion.
+    func playPreAlertFeedback() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        generator.impactOccurred()
+    }
+
     private static let completionSoundID: SystemSoundID = 1005
 }
 
@@ -40,6 +49,17 @@ final class ForegroundTimerCompletionAlertService: TimerCompletionAlerting {
         }
 
         feedbackPlayer.playCompletionFeedback()
+    }
+
+    func handlePreAlert(_ event: TimerPreAlertEvent) {
+        // Pre-alerts are foreground perception only; the runtime already
+        // restricts emission to pre1. Mirror completion's active-state guard so
+        // a backgrounded process never buzzes silently.
+        guard applicationStateProvider() == .active else {
+            return
+        }
+
+        feedbackPlayer.playPreAlertFeedback()
     }
 }
 

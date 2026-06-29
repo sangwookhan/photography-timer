@@ -28,6 +28,11 @@ public final class TimerRuntime: ObservableObject {
     private let completionNotificationScheduler: TimerCompletionNotificationScheduling
     private let persistenceStore: TimerPersistenceStoring
     private var hasRestoredPersistedTimers = false
+    /// Instant of the last foreground-tick reconciliation, used to detect
+    /// pre-alert crossings within `(lastForegroundTickDate, now]`. `nil` until
+    /// the first foreground tick so a freshly restored runtime never replays
+    /// pre-alerts that already passed.
+    private var lastForegroundTickDate: Date?
 
     public init(
         dateProvider: @escaping () -> Date = Date.init,
@@ -190,6 +195,42 @@ public final class TimerRuntime: ObservableObject {
         )
     }
 
+    /// Emits a pre-alert event for every pre1 crossing in
+    /// `(lastForegroundTickDate, now]`. Only timers that were running before
+    /// this tick are considered, and only the pre1 stage is emitted; pre2 is a
+    /// not-foreground-only escalation handled by the background scheduler. With
+    /// `lastTick == nil` (the first foreground tick) no window exists yet, so
+    /// nothing is emitted and the baseline is simply established by the caller.
+    private func emitForegroundPreAlerts(
+        from previousTimers: [TimerState],
+        since lastTick: Date?,
+        now currentDate: Date
+    ) {
+        guard let lastTick else {
+            return
+        }
+
+        for state in previousTimers where state.status == .running {
+            guard let endDate = state.endDate else {
+                continue
+            }
+
+            let preAlerts = TimerAlertSchedule
+                .alerts(duration: state.duration, endDate: endDate)
+                .filter { $0.stage == .pre1 }
+
+            for alert in preAlerts where alert.fireDate > lastTick && alert.fireDate <= currentDate {
+                completionAlertService.handlePreAlert(
+                    TimerPreAlertEvent(
+                        timerID: state.id,
+                        stage: alert.stage,
+                        secondsBeforeCompletion: alert.secondsBeforeCompletion
+                    )
+                )
+            }
+        }
+    }
+
     private func applyRunningStateReconciliation(
         now currentDate: Date,
         shouldEmitCompletionAlerts: Bool
@@ -197,6 +238,7 @@ public final class TimerRuntime: ObservableObject {
         // Only running timers can advance to completed here. Paused timers are
         // frozen/resumable and keep their preserved remaining time regardless of
         // wall-clock passage, and completed timers remain completed.
+        let previousTimers = timers
         let transitionResult = timers.map { state in
             let updated = state.updatingStatus(at: currentDate)
             return (updated, completionEvent(from: state, to: updated))
@@ -205,10 +247,25 @@ public final class TimerRuntime: ObservableObject {
         timers = transitionResult.map(\.0)
 
         if shouldEmitCompletionAlerts {
+            // Foreground pre-alerts (PTIMER-73) fire before completion alerts so
+            // a crossing and a completion in the same tick keep their natural
+            // order. pre2 is intentionally never emitted here: it is a
+            // not-foreground-only escalation delivered solely as a background
+            // notification.
+            emitForegroundPreAlerts(
+                from: previousTimers,
+                since: lastForegroundTickDate,
+                now: currentDate
+            )
             transitionResult
                 .compactMap(\.1)
                 .forEach(completionAlertService.handleTimerCompletion)
         }
+
+        // Advance the foreground-tick window regardless of branch so a
+        // background reactivation (`shouldEmitCompletionAlerts == false`) moves
+        // the window forward without replaying already-passed pre-alerts.
+        lastForegroundTickDate = currentDate
 
         transitionResult
             .filter { $0.1 != nil }

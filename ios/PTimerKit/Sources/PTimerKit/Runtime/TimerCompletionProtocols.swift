@@ -12,6 +12,16 @@ import PTimerCore
 public protocol TimerCompletionAlerting {
     @MainActor
     func handleTimerCompletion(_ event: TimerCompletionEvent)
+
+    /// Handle a foreground pre-alert crossing (PTIMER-73). A default no-op is
+    /// provided so completion-only conformers keep compiling unchanged.
+    @MainActor
+    func handlePreAlert(_ event: TimerPreAlertEvent)
+}
+
+public extension TimerCompletionAlerting {
+    @MainActor
+    func handlePreAlert(_ event: TimerPreAlertEvent) {}
 }
 
 public struct NoOpTimerCompletionAlertService: TimerCompletionAlerting {
@@ -22,6 +32,16 @@ public struct NoOpTimerCompletionAlertService: TimerCompletionAlerting {
 public protocol TimerCompletionFeedbackPlaying {
     @MainActor
     func playCompletionFeedback()
+
+    /// Play the lighter, haptic-first pre-alert feedback (PTIMER-73). A default
+    /// no-op is provided so completion-only conformers keep compiling unchanged.
+    @MainActor
+    func playPreAlertFeedback()
+}
+
+public extension TimerCompletionFeedbackPlaying {
+    @MainActor
+    func playPreAlertFeedback() {}
 }
 
 public protocol TimerCompletionNotificationScheduling {

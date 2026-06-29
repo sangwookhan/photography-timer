@@ -53,6 +53,7 @@
 		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
 		A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */; };
 		A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */; };
+		A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */; };
 		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
@@ -146,6 +147,7 @@
 		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerCompletionAlertTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerNotificationSchedulingTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
@@ -356,6 +358,7 @@
 				A00000000000000000000901 /* TimerManagerTestSupport.swift */,
 				A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */,
 				A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */,
+				A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */,
 				A00000000000000000000907 /* TimerManagerReconcileTests.swift */,
 				A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */,
 				A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */,
@@ -637,6 +640,7 @@
 				A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */,
 				A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */,
 				A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */,
+				A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */,
 				A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */,
 				A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */,
 				A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */,

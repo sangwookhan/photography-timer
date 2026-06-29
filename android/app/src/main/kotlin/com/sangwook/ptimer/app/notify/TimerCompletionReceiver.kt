@@ -12,14 +12,15 @@ import androidx.lifecycle.ProcessLifecycleOwner
 /**
  * Fired by AlarmManager at a timer's staged-alert instant (PTIMER-73).
  *
- * - [AlertStage.MAIN] posts the completion alert (high-importance channel,
- *   default sound) so the photographer hears the timer finish even when
- *   backgrounded, and advances the ongoing notification to the next
- *   representative (or clears it) right then — so the live count-down swaps at
- *   the exact end instead of waiting for the background-throttled in-app tick.
- * - [AlertStage.PRE1] / [AlertStage.PRE2] post a haptic-first "Ns remaining"
- *   pre-alert and vibrate. pre2 is suppressed while the app is in the
- *   foreground (see [StagedAlertPolicy.shouldDeliver]); pre-alerts never touch
+ * - [AlertStage.MAIN] posts the (silent) completion notification and plays the
+ *   audible alarm directly on the alarm stream via [AndroidTimerAlarmPlayer] —
+ *   loud in vibrate mode and past Do-Not-Disturb — so the photographer hears the
+ *   timer finish even when backgrounded. It also advances the ongoing
+ *   notification to the next representative (or clears it) right then.
+ * - [AlertStage.PRE1] posts a haptic-first "Ns remaining" pre-alert on the
+ *   silent channel and vibrates. [AlertStage.PRE2] is the stronger escalation:
+ *   it plays the audible alarm and is suppressed while the app is in the
+ *   foreground (see [StagedAlertPolicy.shouldDeliver]). pre-alerts never touch
  *   the ongoing service. Verify on a device.
  */
 class TimerCompletionReceiver : BroadcastReceiver() {
@@ -33,16 +34,27 @@ class TimerCompletionReceiver : BroadcastReceiver() {
 
         TimerNotifications.ensureChannels(context)
 
+        val foreground = isAppForeground()
+
         if (stage != AlertStage.MAIN) {
-            if (!StagedAlertPolicy.shouldDeliver(stage, isAppForeground = isAppForeground())) {
+            if (!StagedAlertPolicy.shouldDeliver(stage, isAppForeground = foreground)) {
                 return
             }
             val secondsRemaining = intent.getIntExtra(EXTRA_SECONDS_REMAINING, 0)
             TimerNotifications.notifyPreAlert(context, timerId, stage, secondsRemaining, title)
-            TimerVibration.vibrate(context, stage)
+            if (StagedAlertPolicy.shouldPlayAlarm(stage, isAppForeground = foreground)) {
+                // pre2 (not foreground): the stronger escalation is the audible
+                // alarm itself.
+                AndroidTimerAlarmPlayer.playAlarm(context)
+            } else if (stage == AlertStage.PRE1) {
+                // pre1 is haptic-first and silent.
+                TimerVibration.vibrate(context, stage)
+            }
             return
         }
 
+        // notifyCompletion plays the audible alarm itself (de-duped), covering
+        // both this receiver and the in-app foreground completion path.
         TimerNotifications.notifyCompletion(context, timerId, title, subtitle)
 
         // Swap the ongoing to the soonest timer still in the future (the new

@@ -51,6 +51,35 @@ class StagedAlertPolicyTest {
     }
 
     @Test
+    fun completionAndPre2UseTheVisibleAlertChannelButPre1DoesNot() {
+        // Completion and the stronger pre2 escalation post on the visible alert
+        // channel; pre1 stays on the silent pre-alert channel.
+        assertTrue(StagedAlertPolicy.usesAlertChannel(AlertStage.MAIN))
+        assertTrue(StagedAlertPolicy.usesAlertChannel(AlertStage.PRE2))
+        assertFalse(StagedAlertPolicy.usesAlertChannel(AlertStage.PRE1))
+    }
+
+    @Test
+    fun completionAlwaysPlaysTheDirectAlarm() {
+        for (foreground in listOf(true, false)) {
+            assertTrue(StagedAlertPolicy.shouldPlayAlarm(AlertStage.MAIN, foreground))
+        }
+    }
+
+    @Test
+    fun pre2PlaysTheDirectAlarmOnlyWhenNotForeground() {
+        assertFalse(StagedAlertPolicy.shouldPlayAlarm(AlertStage.PRE2, isAppForeground = true))
+        assertTrue(StagedAlertPolicy.shouldPlayAlarm(AlertStage.PRE2, isAppForeground = false))
+    }
+
+    @Test
+    fun pre1NeverPlaysTheDirectAlarm() {
+        for (foreground in listOf(true, false)) {
+            assertFalse(StagedAlertPolicy.shouldPlayAlarm(AlertStage.PRE1, foreground))
+        }
+    }
+
+    @Test
     fun requestCodesAreDistinctPerStageForSameTimer() {
         val id = UUID.randomUUID()
         val codes = AlertStage.entries.map { AndroidTimerAlertCoordinator.requestCode(id, it) }

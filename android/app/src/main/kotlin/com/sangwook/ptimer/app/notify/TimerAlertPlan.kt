@@ -60,6 +60,23 @@ object StagedAlertPolicy {
      */
     fun shouldDeliver(stage: AlertStage, isAppForeground: Boolean): Boolean =
         !(stage == AlertStage.PRE2 && isAppForeground)
+
+    /**
+     * Whether a stage posts on the visible (heads-up) alert channel: the main
+     * completion alert and the stronger pre2 escalation. pre1 stays on the
+     * silent pre-alert channel.
+     */
+    fun usesAlertChannel(stage: AlertStage): Boolean =
+        stage == AlertStage.MAIN || stage == AlertStage.PRE2
+
+    /**
+     * Whether a stage should play the direct, alarm-stream alarm sound (loud in
+     * vibrate mode, bypasses Do-Not-Disturb): the main completion always, and
+     * pre2 only when the app is not in the foreground. pre1 is silent
+     * (haptic-first), and a foreground pre2 is suppressed entirely.
+     */
+    fun shouldPlayAlarm(stage: AlertStage, isAppForeground: Boolean): Boolean =
+        usesAlertChannel(stage) && shouldDeliver(stage, isAppForeground)
 }
 
 /**

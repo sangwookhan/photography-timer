@@ -3,17 +3,26 @@
 
 import Combine
 import Foundation
-import AudioToolbox
 import UIKit
 import PTimerCore
 import PTimerKit
 
+@MainActor
 struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
+    private let alarmPlayer: TimerAlarmAudioPlaying
+
+    init(alarmPlayer: TimerAlarmAudioPlaying = AVAudioTimerAlarmPlayer()) {
+        self.alarmPlayer = alarmPlayer
+    }
+
     func playCompletionFeedback() {
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
         generator.notificationOccurred(.success)
-        AudioServicesPlaySystemSound(Self.completionSoundID)
+        // App-owned playback (AVAudioSession .playback) so completion is audible
+        // even in silent mode (PTIMER-73), unlike the ring-switch-obeying system
+        // sound it replaces.
+        alarmPlayer.playCompletionAlarm()
     }
 
     /// Foreground pre1 feedback (PTIMER-73): haptic-first and silent. A medium
@@ -24,8 +33,6 @@ struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
         generator.prepare()
         generator.impactOccurred()
     }
-
-    private static let completionSoundID: SystemSoundID = 1005
 }
 
 @MainActor

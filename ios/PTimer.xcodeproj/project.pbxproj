@@ -22,6 +22,7 @@
 		A00000000000000000000007 /* TimerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TimerManagerTests.swift */; };
 		A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */; };
 		A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */; };
+		A000000000000000000009A0 /* TimerAlarmAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */; };
 		A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
 		A0000000000000000000000F /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
 		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
@@ -115,6 +116,7 @@
 		A00000000000000000000018 /* PTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCompletionNotificationScheduler.swift; sourceTree = "<group>"; };
+		A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerAlarmAudioPlayer.swift; sourceTree = "<group>"; };
 		A00000000000000000000090 /* PTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenTimerLiveActivity.swift; sourceTree = "<group>"; };
 		A00000000000000000000092 /* PTimerWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerWidgetsBundle.swift; sourceTree = "<group>"; };
@@ -313,6 +315,7 @@
 			children = (
 				A00000000000000000000015 /* TimerManager.swift */,
 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
+				A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */,
 				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
 				A00000000000000000000145 /* UserDefaultsTimerMetadataStore.swift */,
 			);
@@ -610,6 +613,7 @@
 				A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */,
 				A00000000000000000000005 /* TimerManager.swift in Sources */,
 				A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */,
+				A000000000000000000009A0 /* TimerAlarmAudioPlayer.swift in Sources */,
 				A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */,
 				A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */,
 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,

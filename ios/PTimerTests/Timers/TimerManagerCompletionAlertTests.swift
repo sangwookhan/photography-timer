@@ -143,4 +143,50 @@ final class TimerManagerCompletionAlertTests: XCTestCase {
 
         XCTAssertEqual(feedbackSpy.playCount, 1)
     }
+
+    // PTIMER-73 (silent-mode audible): the completion feedback drives the
+    // app-owned audible alarm player so completion is heard even in silent mode.
+
+    @MainActor
+    func testCompletionFeedbackPlaysAppOwnedAudibleAlarm() {
+        let alarmSpy = AlarmAudioPlayerSpy()
+        let player = SystemTimerCompletionFeedbackPlayer(alarmPlayer: alarmSpy)
+
+        player.playCompletionFeedback()
+
+        XCTAssertEqual(alarmSpy.playCount, 1)
+    }
+
+    @MainActor
+    func testPreAlertFeedbackDoesNotPlayTheAudibleAlarm() {
+        // pre1 is haptic-first; it must not trigger the audible completion alarm.
+        let alarmSpy = AlarmAudioPlayerSpy()
+        let player = SystemTimerCompletionFeedbackPlayer(alarmPlayer: alarmSpy)
+
+        player.playPreAlertFeedback()
+
+        XCTAssertEqual(alarmSpy.playCount, 0)
+    }
+
+    @MainActor
+    func testForegroundCompletionDrivesAudibleAlarmOnlyWhileActiveAndNotOnCancel() {
+        let alarmSpy = AlarmAudioPlayerSpy()
+        let feedbackPlayer = SystemTimerCompletionFeedbackPlayer(alarmPlayer: alarmSpy)
+        let service = ForegroundTimerCompletionAlertService(
+            feedbackPlayer: feedbackPlayer,
+            applicationStateProvider: { .active }
+        )
+        let event = TimerCompletionEvent(timerID: UUID(), completionDate: Date(timeIntervalSince1970: 100))
+
+        // A pre-alert (the only foreground event a pre-completion timer raises,
+        // e.g. before a cancel/remove) must not sound the alarm...
+        service.handlePreAlert(
+            TimerPreAlertEvent(timerID: event.timerID, stage: .pre1, secondsBeforeCompletion: 5)
+        )
+        XCTAssertEqual(alarmSpy.playCount, 0)
+
+        // ...only an actual completion does.
+        service.handleTimerCompletion(event)
+        XCTAssertEqual(alarmSpy.playCount, 1)
+    }
 }

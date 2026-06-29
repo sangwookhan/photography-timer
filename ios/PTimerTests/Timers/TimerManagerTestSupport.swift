@@ -24,6 +24,20 @@ final class CompletionFeedbackSpy: TimerCompletionFeedbackPlaying {
     }
 }
 
+@MainActor
+final class AlarmAudioPlayerSpy: TimerAlarmAudioPlaying {
+    private(set) var playCount = 0
+    private(set) var stopCount = 0
+
+    func playCompletionAlarm() {
+        playCount += 1
+    }
+
+    func stop() {
+        stopCount += 1
+    }
+}
+
 struct ScheduledTimerNotification: Equatable {
     let timerID: UUID
     let endDate: Date

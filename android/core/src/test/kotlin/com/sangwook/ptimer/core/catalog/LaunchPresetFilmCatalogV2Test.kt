@@ -86,6 +86,60 @@ class LaunchPresetFilmCatalogV2Test {
     }
 
     @Test
+    fun rejectsFormulaCalculationWithTableOnlyAnchorsKey() {
+        assertThrowsMalformedResource(catalogJson(profileJSON = formulaProfileJson(calculationFields = """
+        ,
+            "anchors": [
+              { "meteredSeconds": 1, "correctedSeconds": 2 }
+            ]
+        """)))
+    }
+
+    @Test
+    fun rejectsFormulaCalculationWithLimitedGuidanceOnlyNoCorrectionRangeKey() {
+        assertThrowsMalformedResource(catalogJson(profileJSON = formulaProfileJson(calculationFields = """
+        ,
+            "noCorrectionRange": [0, 1]
+        """)))
+    }
+
+    @Test
+    fun rejectsTableCalculationWithFormulaOnlyFamilyKey() {
+        assertThrowsMalformedResource(catalogJson(profileJSON = tableProfileJson(calculationFields = """
+        ,
+            "family": "modifiedSchwarzschild"
+        """)))
+    }
+
+    @Test
+    fun rejectsTableCalculationWithLimitedGuidanceOnlyGuidanceKey() {
+        assertThrowsMalformedResource(catalogJson(profileJSON = tableProfileJson(calculationFields = """
+        ,
+            "guidance": [
+              { "fromSeconds": 1, "message": "No quantified guidance." }
+            ]
+        """)))
+    }
+
+    @Test
+    fun rejectsLimitedGuidanceCalculationWithTableOnlyAnchorsKey() {
+        assertThrowsMalformedResource(catalogJson(profileJSON = limitedGuidanceProfileJson(calculationFields = """
+        ,
+            "anchors": [
+              { "meteredSeconds": 1, "correctedSeconds": 2 }
+            ]
+        """)))
+    }
+
+    @Test
+    fun rejectsLimitedGuidanceCalculationWithFormulaOnlyExponentKey() {
+        assertThrowsMalformedResource(catalogJson(profileJSON = limitedGuidanceProfileJson(calculationFields = """
+        ,
+            "exponent": 1.2
+        """)))
+    }
+
+    @Test
     fun rejectsTableProfileWithReferencePointsCarrier() {
         assertThrowsInvalidRuleShape(catalogJson(profileJSON = tableProfileJson(carriers = """
         ,
@@ -507,7 +561,10 @@ class LaunchPresetFilmCatalogV2Test {
             confidence = confidence,
         )
 
-    private fun formulaProfileJson(carriers: String = ""): String =
+    private fun formulaProfileJson(
+        calculationFields: String = "",
+        carriers: String = "",
+    ): String =
         """
         {
           "id": "test-profile",
@@ -520,11 +577,14 @@ class LaunchPresetFilmCatalogV2Test {
             "family": "modifiedSchwarzschild",
             "exponent": 1.2,
             "noCorrectionThroughSeconds": 1
-          }$carriers
+          $calculationFields}$carriers
         }
         """.trimIndent()
 
-    private fun tableProfileJson(carriers: String = ""): String =
+    private fun tableProfileJson(
+        calculationFields: String = "",
+        carriers: String = "",
+    ): String =
         """
         {
           "id": "test-profile",
@@ -541,14 +601,17 @@ class LaunchPresetFilmCatalogV2Test {
               { "meteredSeconds": 1, "correctedSeconds": 2 },
               { "meteredSeconds": 10, "correctedSeconds": 20 }
             ]
-          },
+          $calculationFields},
           "evidence": [
             { "anchor": 0 }
           ]$carriers
         }
         """.trimIndent()
 
-    private fun limitedGuidanceProfileJson(carriers: String = ""): String =
+    private fun limitedGuidanceProfileJson(
+        calculationFields: String = "",
+        carriers: String = "",
+    ): String =
         """
         {
           "id": "test-profile",
@@ -562,7 +625,7 @@ class LaunchPresetFilmCatalogV2Test {
             "guidance": [
               { "fromSeconds": 1, "message": "No quantified guidance." }
             ]
-          }$carriers
+          $calculationFields}$carriers
         }
         """.trimIndent()
 

@@ -57,6 +57,54 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         assertThrowsMalformedResource(explicitNullReferencePointData())
     }
 
+    func testRejectsFormulaCalculationWithTableOnlyAnchorsKey() {
+        assertThrowsMalformedResource(catalogData(profileJSON: formulaProfileJSON(calculationFields: """
+        ,
+            "anchors": [
+              { "meteredSeconds": 1, "correctedSeconds": 2 }
+            ]
+        """)))
+    }
+
+    func testRejectsFormulaCalculationWithLimitedGuidanceOnlyNoCorrectionRangeKey() {
+        assertThrowsMalformedResource(catalogData(profileJSON: formulaProfileJSON(calculationFields: """
+        ,
+            "noCorrectionRange": [0, 1]
+        """)))
+    }
+
+    func testRejectsTableCalculationWithFormulaOnlyFamilyKey() {
+        assertThrowsMalformedResource(catalogData(profileJSON: tableProfileJSON(calculationFields: """
+        ,
+            "family": "modifiedSchwarzschild"
+        """)))
+    }
+
+    func testRejectsTableCalculationWithLimitedGuidanceOnlyGuidanceKey() {
+        assertThrowsMalformedResource(catalogData(profileJSON: tableProfileJSON(calculationFields: """
+        ,
+            "guidance": [
+              { "fromSeconds": 1, "message": "No quantified guidance." }
+            ]
+        """)))
+    }
+
+    func testRejectsLimitedGuidanceCalculationWithTableOnlyAnchorsKey() {
+        assertThrowsMalformedResource(catalogData(profileJSON: limitedGuidanceProfileJSON(calculationFields: """
+        ,
+            "anchors": [
+              { "meteredSeconds": 1, "correctedSeconds": 2 }
+            ]
+        """)))
+    }
+
+    func testRejectsLimitedGuidanceCalculationWithFormulaOnlyExponentKey() {
+        assertThrowsMalformedResource(catalogData(profileJSON: limitedGuidanceProfileJSON(calculationFields: """
+        ,
+            "exponent": 1.2
+        """)))
+    }
+
     func testRejectsTableProfileWithReferencePointsCarrier() {
         assertThrowsInvalidRuleShape(catalogData(profileJSON: tableProfileJSON(carriers: """
         ,
@@ -475,7 +523,10 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         )
     }
 
-    private func formulaProfileJSON(carriers: String = "") -> String {
+    private func formulaProfileJSON(
+        calculationFields: String = "",
+        carriers: String = ""
+    ) -> String {
         """
         {
           "id": "test-profile",
@@ -488,12 +539,15 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
             "family": "modifiedSchwarzschild",
             "exponent": 1.2,
             "noCorrectionThroughSeconds": 1
-          }\(carriers)
+          \(calculationFields)}\(carriers)
         }
         """
     }
 
-    private func tableProfileJSON(carriers: String = "") -> String {
+    private func tableProfileJSON(
+        calculationFields: String = "",
+        carriers: String = ""
+    ) -> String {
         """
         {
           "id": "test-profile",
@@ -510,7 +564,7 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
               { "meteredSeconds": 1, "correctedSeconds": 2 },
               { "meteredSeconds": 10, "correctedSeconds": 20 }
             ]
-          },
+          \(calculationFields)},
           "evidence": [
             { "anchor": 0 }
           ]\(carriers)
@@ -518,7 +572,10 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         """
     }
 
-    private func limitedGuidanceProfileJSON(carriers: String = "") -> String {
+    private func limitedGuidanceProfileJSON(
+        calculationFields: String = "",
+        carriers: String = ""
+    ) -> String {
         """
         {
           "id": "test-profile",
@@ -532,7 +589,7 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
             "guidance": [
               { "fromSeconds": 1, "message": "No quantified guidance." }
             ]
-          }\(carriers)
+          \(calculationFields)}\(carriers)
         }
         """
     }

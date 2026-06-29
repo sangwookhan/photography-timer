@@ -888,6 +888,13 @@ private struct CatalogV2TableCalculation: Decodable {
         self.sourceRangeThroughSeconds = try container.decode(Double.self, forKey: .sourceRangeThroughSeconds)
         self.anchors = try container.decode([CatalogV2TableAnchor].self, forKey: .anchors)
         self.notes = try container.decodeOptionalRejectingNull([String].self, forKey: .notes)
+        try decoder.rejectUnexpectedCalculationKeys(allowed: [
+            "interpolation",
+            "noCorrectionThroughSeconds",
+            "sourceRangeThroughSeconds",
+            "anchors",
+            "notes",
+        ])
     }
 }
 
@@ -930,6 +937,16 @@ private struct CatalogV2FormulaCalculation: Decodable {
             forKey: .sourceRangeThroughSeconds
         )
         self.notes = try container.decodeOptionalRejectingNull([String].self, forKey: .notes)
+        try decoder.rejectUnexpectedCalculationKeys(allowed: [
+            "family",
+            "coefficient",
+            "referenceMeteredSeconds",
+            "exponent",
+            "offsetSeconds",
+            "noCorrectionThroughSeconds",
+            "sourceRangeThroughSeconds",
+            "notes",
+        ])
     }
 }
 
@@ -951,6 +968,11 @@ private struct CatalogV2LimitedGuidanceCalculation: Decodable {
         self.noCorrectionRange = try container.decode([Double].self, forKey: .noCorrectionRange)
         self.guidance = try container.decode([CatalogV2GuidanceRow].self, forKey: .guidance)
         self.notes = try container.decodeOptionalRejectingNull([String].self, forKey: .notes)
+        try decoder.rejectUnexpectedCalculationKeys(allowed: [
+            "noCorrectionRange",
+            "guidance",
+            "notes",
+        ])
     }
 }
 
@@ -1206,6 +1228,35 @@ private enum CatalogV2FormulaFamily: String, Decodable {
 private enum CatalogV2WarningSeverity: String, Decodable {
     case caution
     case notRecommended
+}
+
+private struct CatalogV2AnyKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = "\(intValue)"
+        self.intValue = intValue
+    }
+}
+
+private extension Decoder {
+    func rejectUnexpectedCalculationKeys(allowed: Set<String>) throws {
+        let container = try self.container(keyedBy: CatalogV2AnyKey.self)
+        guard let unexpectedKey = container.allKeys.first(where: { !allowed.contains($0.stringValue) }) else {
+            return
+        }
+
+        throw DecodingError.dataCorrupted(DecodingError.Context(
+            codingPath: codingPath + [unexpectedKey],
+            debugDescription: "Calculation key '\(unexpectedKey.stringValue)' is not allowed for this profile model."
+        ))
+    }
 }
 
 private extension KeyedDecodingContainer {

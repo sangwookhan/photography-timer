@@ -143,10 +143,45 @@ class LaunchPresetFilmCatalogV2Loader {
             films = document.films.map { film ->
                 film.copy(
                     profiles = film.profiles.map { profile ->
+                        validateCalculationKeys(profile.model, profile.calculation)
                         profile.withCalculation(decodeCalculation(profile.model, profile.calculation))
                     },
                 )
             },
+        )
+    }
+
+    private fun validateCalculationKeys(model: CatalogV2ProfileModel, calculation: JsonObject) {
+        val allowedKeys = when (model) {
+            CatalogV2ProfileModel.table -> setOf(
+                "interpolation",
+                "noCorrectionThroughSeconds",
+                "sourceRangeThroughSeconds",
+                "anchors",
+                "notes",
+            )
+            CatalogV2ProfileModel.formula -> setOf(
+                "family",
+                "coefficient",
+                "referenceMeteredSeconds",
+                "exponent",
+                "offsetSeconds",
+                "noCorrectionThroughSeconds",
+                "sourceRangeThroughSeconds",
+                "notes",
+            )
+            CatalogV2ProfileModel.limitedGuidance -> setOf(
+                "noCorrectionRange",
+                "guidance",
+                "notes",
+            )
+        }
+
+        val unexpectedKey = calculation.keys.firstOrNull { it !in allowedKeys } ?: return
+        throw CatalogV2LoadException(
+            CatalogV2LoadError.MalformedResource(
+                "Calculation key '$unexpectedKey' is not allowed for this profile model.",
+            ),
         )
     }
 

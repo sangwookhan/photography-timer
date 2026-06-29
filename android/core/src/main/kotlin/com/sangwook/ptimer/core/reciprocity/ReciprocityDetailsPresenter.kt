@@ -40,6 +40,8 @@ data class ReciprocityDetailsDisplayState(
     val referenceUrlText: String? = null,
     /** Normalized curve-graph geometry; null for profiles with no quantified curve. */
     val graph: ReciprocityGraph?,
+    /** Limited-guidance "Reference" rows (threshold band + qualitative guidance). */
+    val referenceRows: List<ReciprocityReferenceRow> = emptyList(),
     /** Published "Source reference" rows (metered exposure → correction); empty when the profile has no source evidence. */
     val sourceReferenceRows: List<ReciprocityReferenceRow> = emptyList(),
     /** "Guidance boundary" rows (a metered exposure the source flags as not recommended). */
@@ -138,6 +140,7 @@ object ReciprocityDetailsPresenter {
             notesText = notesText,
             referenceUrlText = referenceUrlText,
             graph = ReciprocityGraphPresenter.make(profile, adjustedShutterSeconds),
+            referenceRows = reference.reference,
             sourceReferenceRows = reference.sourceReference,
             guidanceBoundaryRows = reference.guidanceBoundary,
             legendLines = legendLines,

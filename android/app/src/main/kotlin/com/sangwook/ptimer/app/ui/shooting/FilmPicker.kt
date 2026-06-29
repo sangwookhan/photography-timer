@@ -131,9 +131,9 @@ internal fun FilmPickerSheet(
 private fun FilmManufacturerHeader(name: String) {
     Text(
         name.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
     )
 }
@@ -213,6 +213,5 @@ private fun CurveGlyph() {
         drawPath(path, color, style = Stroke(width = 1.5.dp.toPx()))
     }
 }
-
 
 

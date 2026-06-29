@@ -180,6 +180,10 @@ fun ReciprocityDetailsScreen(
             // with the color filter / development note on an indented sub-line)
             // and the guidance-boundary rows — matching iOS Film Details. Sit
             // below the graph, above the legend.
+            if (state.referenceRows.isNotEmpty()) {
+                HorizontalDivider()
+                ReferenceTable("Reference", state.referenceRows, warningTone = false)
+            }
             if (state.sourceReferenceRows.isNotEmpty()) {
                 HorizontalDivider()
                 ReferenceTable("Source reference", state.sourceReferenceRows, warningTone = false)
@@ -280,4 +284,3 @@ private fun toneColor(tone: ReciprocityStatusTone): Color = when (tone) {
     ReciprocityStatusTone.warning -> StatusWarning
     ReciprocityStatusTone.neutral -> MaterialTheme.colorScheme.onSurface
 }
-

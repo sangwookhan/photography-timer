@@ -403,21 +403,7 @@ class CalculatorController(
             shutterIndex = snapshot.shutterIndex,
             ndLabels = ndLabels(),
             ndIndex = snapshot.ndIndex,
-            filmOptions = listOf(FilmOption(null, "No film")) +
-                films.map { f ->
-                    val primary = f.profiles.firstOrNull()
-                    FilmOption(
-                        id = f.id,
-                        name = f.canonicalStockName,
-                        manufacturer = f.manufacturer,
-                        iso = f.iso,
-                        isUnofficial = primary?.source?.authority == ReciprocityAuthority.unofficial,
-                        hasReciprocityCurve = primary?.rules?.any {
-                            it.formula != null || it.tableInterpolation != null
-                        } == true,
-                        isCustom = f.kind == FilmIdentityKind.custom,
-                    )
-                },
+            filmOptions = filmOptions(),
             selectedFilmId = snapshot.selectedFilmId,
             selectedFilmName = film?.canonicalStockName ?: "No film",
             modelOptions = modelOptions,
@@ -441,5 +427,29 @@ class CalculatorController(
             hint = result.hint,
             targetDisplay = TargetShutterPresenter.makeDisplayState(snapshot.targetSeconds, comparisonSource(result)),
         )
+    }
+
+    private fun filmOptions(): List<FilmOption> {
+        val options = films.map { f ->
+            val primary = f.profiles.firstOrNull()
+            FilmOption(
+                id = f.id,
+                name = f.canonicalStockName,
+                manufacturer = f.manufacturer,
+                iso = f.iso,
+                isUnofficial = primary?.source?.authority == ReciprocityAuthority.unofficial,
+                hasReciprocityCurve = primary?.rules?.any {
+                    it.formula != null || it.tableInterpolation != null
+                } == true,
+                isCustom = f.kind == FilmIdentityKind.custom,
+            )
+        }
+        val presetComparator = compareBy<FilmOption, String>(java.lang.String.CASE_INSENSITIVE_ORDER) {
+            it.manufacturer.orEmpty()
+        }.thenBy(java.lang.String.CASE_INSENSITIVE_ORDER) { it.name }
+
+        return listOf(FilmOption(null, "No film")) +
+            options.filter { it.isCustom } +
+            options.filterNot { it.isCustom }.sortedWith(presetComparator)
     }
 }

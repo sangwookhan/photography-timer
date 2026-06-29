@@ -31,6 +31,24 @@ class CalculatorControllerTest {
     }
 
     @Test
+    fun presetFilmOptionsAreGroupedAndSortedLikeIos() {
+        val presetOptions = controller().state.value.filmOptions
+            .filter { it.id != null && !it.isCustom }
+
+        val manufacturerOrder = presetOptions
+            .map { it.manufacturer.orEmpty() }
+            .distinct()
+        assertEquals(manufacturerOrder.sortedWith(java.lang.String.CASE_INSENSITIVE_ORDER), manufacturerOrder)
+
+        manufacturerOrder.forEach { manufacturer ->
+            val names = presetOptions
+                .filter { it.manufacturer.orEmpty() == manufacturer }
+                .map { it.name }
+            assertEquals(names.sortedWith(java.lang.String.CASE_INSENSITIVE_ORDER), names)
+        }
+    }
+
+    @Test
     fun startDelegatesDurationAndIdentity() {
         var duration: Double? = null
         var identity: TimerIdentity? = null

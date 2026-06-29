@@ -98,7 +98,7 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
 
     func testEveryCatalogStockHasAGraphKindExpectation() throws {
         let expectedNames = Set(expectations.map(\.stock))
-        let catalogNames = Set(LaunchPresetFilmCatalog.films.map(\.canonicalStockName))
+        let catalogNames = Set(LaunchPresetFilmCatalogV2.films.map(\.canonicalStockName))
         let missing = catalogNames.subtracting(expectedNames)
         let stale = expectedNames.subtracting(catalogNames)
         XCTAssertTrue(
@@ -218,7 +218,7 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
         line: UInt = #line
     ) throws -> FilmModeDetailsDisplayState {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == stock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == stock },
             "\(stock) must remain in the launch catalog.",
             file: file,
             line: line

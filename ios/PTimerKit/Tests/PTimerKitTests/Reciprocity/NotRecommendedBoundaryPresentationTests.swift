@@ -240,7 +240,7 @@ final class NotRecommendedBoundaryPresentationTests: XCTestCase {
                 )
             }
         )
-        let film = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
+        let film = try XCTUnwrap(LaunchPresetFilmCatalogV2.films.first)
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
         return FilmModeReciprocityBindingState(
             film: film,
@@ -257,7 +257,7 @@ final class NotRecommendedBoundaryPresentationTests: XCTestCase {
         line: UInt = #line
     ) throws -> FilmModeReciprocityBindingState {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == stock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == stock },
             file: file,
             line: line
         )
@@ -277,7 +277,7 @@ final class NotRecommendedBoundaryPresentationTests: XCTestCase {
         line: UInt = #line
     ) throws -> ReciprocityProfile {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == stock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == stock },
             "\(stock) must remain in the launch catalog.",
             file: file,
             line: line

@@ -3,7 +3,7 @@
 
 package com.sangwook.ptimer.app.vm
 
-import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import org.junit.Assert.assertEquals
@@ -15,7 +15,7 @@ import org.junit.Test
 
 class CalculatorControllerTest {
 
-    private val films = LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    private val films = LaunchPresetFilmCatalogV2.films
 
     private fun controller(onStart: (Double, TimerIdentity) -> Unit = { _, _ -> }) =
         CalculatorController(films = films, onStart = onStart)

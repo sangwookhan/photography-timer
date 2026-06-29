@@ -45,7 +45,7 @@ final class CustomFilmCreateFormulaTests: XCTestCase {
         let formulaFilm = CustomFilmTestSupport.makeCustomFilm(id: "custom.formula")
         XCTAssertNil(CustomFilmEditorFormState.creatingFormula(fromTable: formulaFilm))
 
-        let preset = try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == "kodak-tri-x-400" })
+        let preset = try XCTUnwrap(LaunchPresetFilmCatalogV2.films.first { $0.id == "kodak-tri-x-400" })
         XCTAssertNil(CustomFilmEditorFormState.creatingFormula(fromTable: preset))
     }
 

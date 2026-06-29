@@ -1,28 +1,50 @@
 // Copyright © 2026 Sangwook Han
 // SPDX-License-Identifier: Apache-2.0
 
+import Foundation
 import XCTest
 import PTimerCore
 
 final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
     private let meteredInputs = [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 1_000]
 
-    func testV2CatalogAdaptsEquivalentLaunchFilms() throws {
-        let v1Films = try LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    func testBundledV2CatalogDeclaresExpectedLaunchInvariants() throws {
+        let document = try bundledV2Document()
         let v2Films = try LaunchPresetFilmCatalogV2Loader().loadBundledCatalog()
 
-        XCTAssertEqual(v1Films.count, 37)
+        XCTAssertEqual(document.schema, "ptimer.catalog.v2")
+        XCTAssertEqual(document.schemaVersion, 2)
+        XCTAssertEqual(document.films.count, 37)
         XCTAssertEqual(v2Films.count, 37)
-        XCTAssertEqual(v1Films.count, v2Films.count)
 
-        for (v1Film, v2Film) in zip(v1Films, v2Films) {
+        let filmIDs = document.films.map(\.id)
+        let profileIDs = document.films.flatMap { film in film.profiles.map(\.id) }
+        XCTAssertEqual(filmIDs.count, Set(filmIDs).count)
+        XCTAssertEqual(profileIDs.count, Set(profileIDs).count)
+        XCTAssertEqual(document.sources.count, Set(document.sources.keys).count)
+
+        for film in document.films {
             XCTAssertEqual(
-                v1Film,
-                v2Film,
-                "v2-adapted catalog differs from v1 for film \(v1Film.id): \(firstDifferingField(v1Film, v2Film))"
+                film.profiles.filter { $0.role == "primary" }.count,
+                1,
+                "\(film.id) must declare exactly one primary profile."
             )
-            try assertGoldenResultsMatch(v1Film: v1Film, v2Film: v2Film)
+
+            for profile in film.profiles {
+                XCTAssertNotNil(document.sources[profile.sourceId], "\(profile.id) sourceId must resolve.")
+                assertCalculationMatchesModel(profile, filmID: film.id)
+                assertEvidenceGrammarDecodes(profile, filmID: film.id)
+            }
         }
+
+        for film in v2Films {
+            XCTAssertEqual(film.profiles.count, 1, "\(film.id) must adapt exactly one primary profile.")
+            XCTAssertFalse(film.profiles[0].id.isEmpty)
+        }
+    }
+
+    func testBundledV2CatalogPrimaryProfileExposureGolden() throws {
+        XCTAssertEqual(goldenExposureRows(), expectedGoldenExposureRows)
     }
 
     func testBundledPromotedRolleiRetro400SPrimaryLoads() throws {
@@ -200,129 +222,472 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         XCTAssertEqual(withLinks, withoutLinks)
     }
 
-    private func assertGoldenResultsMatch(
-        v1Film: FilmIdentity,
-        v2Film: FilmIdentity
-    ) throws {
-        let v1Profile = try XCTUnwrap(v1Film.profiles.first)
-        let v2Profile = try XCTUnwrap(v2Film.profiles.first)
+    private func goldenExposureRows() -> String {
         let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-        for input in meteredInputs {
-            let v1Result = evaluator.evaluate(profile: v1Profile, meteredExposureSeconds: input)
-            let v2Result = evaluator.evaluate(profile: v2Profile, meteredExposureSeconds: input)
+        return LaunchPresetFilmCatalogV2.films.flatMap { film in
+            let profile = film.profiles[0]
+            return meteredInputs.map { input in
+                let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: input)
+                if let corrected = result.correctedExposureSeconds {
+                    XCTAssertTrue(corrected.isFinite, "\(film.id) @ \(input)s corrected exposure must be finite.")
+                }
+                return [
+                    film.id,
+                    format(input),
+                    resultKind(result),
+                    result.metadata.basis.rawValue,
+                    result.metadata.rangeStatus.rawValue,
+                    result.metadata.warningLevel.rawValue,
+                    result.hasCalculatedExposureTime ? "true" : "false",
+                    result.correctedExposureSeconds.map(format) ?? "nil",
+                ].joined(separator: "|")
+            }
+        }.joined(separator: "\n")
+    }
 
-            XCTAssertEqual(
-                classification(of: v1Result),
-                classification(of: v2Result),
-                "classification differs for \(v1Film.id) at \(input)s"
-            )
-            XCTAssertEqual(
-                v1Result.correctedExposureSeconds,
-                v2Result.correctedExposureSeconds,
-                "corrected exposure differs for \(v1Film.id) at \(input)s"
-            )
+    private func assertCalculationMatchesModel(
+        _ profile: V2ProfileDocument,
+        filmID: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let calculationKeys = Set(profile.calculation.keys)
+        switch profile.model {
+        case "table":
+            XCTAssertNotNil(profile.calculation["anchors"], "\(filmID)/\(profile.id)", file: file, line: line)
+            XCTAssertNil(profile.calculation["family"], "\(filmID)/\(profile.id)", file: file, line: line)
+        case "formula":
+            XCTAssertNotNil(profile.calculation["family"], "\(filmID)/\(profile.id)", file: file, line: line)
+            XCTAssertNil(profile.calculation["anchors"], "\(filmID)/\(profile.id)", file: file, line: line)
+        case "limitedGuidance":
+            XCTAssertNotNil(profile.calculation["guidance"], "\(filmID)/\(profile.id)", file: file, line: line)
+            XCTAssertNil(profile.calculation["anchors"], "\(filmID)/\(profile.id)", file: file, line: line)
+            XCTAssertNil(profile.calculation["family"], "\(filmID)/\(profile.id)", file: file, line: line)
+        default:
+            XCTFail("\(filmID)/\(profile.id) unsupported model \(profile.model)", file: file, line: line)
+        }
+        XCTAssertFalse(calculationKeys.isEmpty, "\(filmID)/\(profile.id)", file: file, line: line)
+    }
+
+    private func assertEvidenceGrammarDecodes(
+        _ profile: V2ProfileDocument,
+        filmID: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        for evidence in profile.evidence ?? [] {
+            XCTAssertNotNil(evidence["anchor"], "\(filmID)/\(profile.id)", file: file, line: line)
+        }
+        for point in profile.referencePoints ?? [] {
+            XCTAssertNotNil(point["meteredSeconds"], "\(filmID)/\(profile.id)", file: file, line: line)
+        }
+        for range in profile.referenceRanges ?? [] {
+            XCTAssertNotNil(range["fromSeconds"], "\(filmID)/\(profile.id)", file: file, line: line)
+            XCTAssertNotNil(range["throughSeconds"], "\(filmID)/\(profile.id)", file: file, line: line)
         }
     }
 
-    private func classification(of result: ReciprocityResult) -> ResultClassification {
-        let kind: ResultKind
+    private func resultKind(_ result: ReciprocityResult) -> String {
         switch result {
         case .quantified:
-            kind = .quantified
+            return "quantified"
         case .limitedGuidance:
-            kind = .limitedGuidance
+            return "limitedGuidance"
         case .unsupported:
-            kind = .unsupported
-        }
-
-        return ResultClassification(
-            kind: kind,
-            basis: result.metadata.basis,
-            rangeStatus: result.metadata.rangeStatus,
-            warningLevel: result.metadata.warningLevel,
-            hasCalculatedExposureTime: result.hasCalculatedExposureTime
-        )
-    }
-
-    private func firstDifferingField(_ expected: FilmIdentity, _ actual: FilmIdentity) -> String {
-        if expected.id != actual.id { return "id" }
-        if expected.kind != actual.kind { return "kind" }
-        if expected.canonicalStockName != actual.canonicalStockName { return "canonicalStockName" }
-        if expected.manufacturer != actual.manufacturer { return "manufacturer" }
-        if expected.brandLabel != actual.brandLabel { return "brandLabel" }
-        if expected.aliases != actual.aliases { return "aliases" }
-        if expected.iso != actual.iso { return "iso" }
-        if expected.productionStatus != actual.productionStatus { return "productionStatus" }
-        if expected.profiles.count != actual.profiles.count { return "profiles.count" }
-        for index in expected.profiles.indices where expected.profiles[index] != actual.profiles[index] {
-            return "profiles[\(index)].\(firstDifferingProfileField(expected.profiles[index], actual.profiles[index]))"
-        }
-        if expected.userMetadata != actual.userMetadata { return "userMetadata" }
-        return "unknown"
-    }
-
-    private func firstDifferingProfileField(
-        _ expected: ReciprocityProfile,
-        _ actual: ReciprocityProfile
-    ) -> String {
-        if expected.id != actual.id { return "id" }
-        if expected.name != actual.name { return "name" }
-        if expected.source != actual.source { return "source" }
-        if expected.rules.count != actual.rules.count { return "rules.count" }
-        for index in expected.rules.indices where expected.rules[index] != actual.rules[index] {
-            return "rules[\(index)].\(firstDifferingRuleField(expected.rules[index], actual.rules[index]))"
-        }
-        if expected.notes != actual.notes { return "notes" }
-        if expected.userMetadata != actual.userMetadata { return "userMetadata" }
-        if expected.sourceEvidence != actual.sourceEvidence { return "sourceEvidence" }
-        if expected.modelBasis != actual.modelBasis { return "modelBasis" }
-        if expected.selectorLabel != actual.selectorLabel { return "selectorLabel" }
-        return "unknown"
-    }
-
-    private func firstDifferingRuleField(_ expected: ReciprocityRule, _ actual: ReciprocityRule) -> String {
-        switch (expected, actual) {
-        case let (.tableInterpolation(expectedTable), .tableInterpolation(actualTable)):
-            if expectedTable.anchors != actualTable.anchors { return "anchors" }
-            if expectedTable.additionalAdjustments != actualTable.additionalAdjustments {
-                return "additionalAdjustments"
-            }
-            if expectedTable.notes != actualTable.notes { return "notes" }
-            if expectedTable.noCorrectionThroughSeconds != actualTable.noCorrectionThroughSeconds {
-                return "noCorrectionThroughSeconds"
-            }
-            if expectedTable.sourceRangeThroughSeconds != actualTable.sourceRangeThroughSeconds {
-                return "sourceRangeThroughSeconds"
-            }
-            return "unknown"
-
-        case let (.formula(expectedFormula), .formula(actualFormula)):
-            if expectedFormula.formula != actualFormula.formula { return "formula" }
-            if expectedFormula.additionalAdjustments != actualFormula.additionalAdjustments {
-                return "additionalAdjustments"
-            }
-            if expectedFormula.notes != actualFormula.notes { return "notes" }
-            return "unknown"
-
-        case let (.threshold(expectedThreshold), .threshold(actualThreshold)):
-            if expectedThreshold.noCorrectionRange != actualThreshold.noCorrectionRange { return "noCorrectionRange" }
-            if expectedThreshold.adjustments != actualThreshold.adjustments { return "adjustments" }
-            if expectedThreshold.notes != actualThreshold.notes { return "notes" }
-            return "unknown"
-
-        case let (.limitedGuidance(expectedGuidance), .limitedGuidance(actualGuidance)):
-            if expectedGuidance.appliesWhenMetered != actualGuidance.appliesWhenMetered {
-                return "appliesWhenMetered"
-            }
-            if expectedGuidance.adjustments != actualGuidance.adjustments { return "adjustments" }
-            if expectedGuidance.notes != actualGuidance.notes { return "notes" }
-            return "unknown"
-
-        default:
-            return "kind"
+            return "unsupported"
         }
     }
+
+    private func format(_ value: Double) -> String {
+        String(format: "%.9f", locale: Locale(identifier: "en_US_POSIX"), value)
+    }
+
+    private func bundledV2Document() throws -> V2CatalogDocument {
+        for bundle in LaunchPresetFilmCatalogV2.defaultResourceBundles() {
+            guard let url = bundle.url(
+                forResource: LaunchPresetFilmCatalogV2.resourceName,
+                withExtension: LaunchPresetFilmCatalogV2.resourceExtension
+            ) else {
+                continue
+            }
+            return try JSONDecoder().decode(V2CatalogDocument.self, from: Data(contentsOf: url))
+        }
+        throw XCTSkip("Bundled v2 catalog resource not found.")
+    }
+
+    private let expectedGoldenExposureRows = """
+ilford-pan-f-plus-50|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-pan-f-plus-50|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-pan-f-plus-50|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.514026749
+ilford-pan-f-plus-50|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.504134215
+ilford-pan-f-plus-50|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|21.379620895
+ilford-pan-f-plus-50|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|92.166112315
+ilford-pan-f-plus-50|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|231.708071715
+ilford-pan-f-plus-50|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|582.520290261
+ilford-pan-f-plus-50|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1970.476540663
+ilford-pan-f-plus-50|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|9772.372209558
+ilford-fp4-plus-125|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-fp4-plus-125|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-fp4-plus-125|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.394957409
+ilford-fp4-plus-125|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.598051020
+ilford-fp4-plus-125|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|18.197008586
+ilford-fp4-plus-125|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|72.639489096
+ilford-fp4-plus-125|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|173.968482613
+ilford-fp4-plus-125|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|416.647106408
+ilford-fp4-plus-125|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1321.821406765
+ilford-fp4-plus-125|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|6025.595860744
+ilford-delta-100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-delta-100|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-delta-100|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.394957409
+ilford-delta-100|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.598051020
+ilford-delta-100|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|18.197008586
+ilford-delta-100|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|72.639489096
+ilford-delta-100|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|173.968482613
+ilford-delta-100|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|416.647106408
+ilford-delta-100|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1321.821406765
+ilford-delta-100|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|6025.595860744
+ilford-delta-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-delta-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-delta-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.657371628
+ilford-delta-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|9.672699729
+ilford-delta-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|25.703957828
+ilford-delta-400|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|120.987629901
+ilford-delta-400|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|321.509095060
+ilford-delta-400|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|854.369147418
+ilford-delta-400|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|3109.860936635
+ilford-delta-400|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|16982.436524617
+ilford-delta-3200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-delta-3200|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-delta-3200|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.514026749
+ilford-delta-3200|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.504134215
+ilford-delta-3200|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|21.379620895
+ilford-delta-3200|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|92.166112315
+ilford-delta-3200|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|231.708071715
+ilford-delta-3200|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|582.520290261
+ilford-delta-3200|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1970.476540663
+ilford-delta-3200|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|9772.372209558
+ilford-hp5-plus-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-hp5-plus-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-hp5-plus-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.479415400
+ilford-hp5-plus-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.234755438
+ilford-hp5-plus-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.417379447
+ilford-hp5-plus-400|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|86.105093701
+ilford-hp5-plus-400|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|213.490295331
+ilford-hp5-plus-400|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|529.331125968
+ilford-hp5-plus-400|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1758.040370392
+ilford-hp5-plus-400|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|8511.380382024
+ilford-xp2-super-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-xp2-super-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-xp2-super-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.479415400
+ilford-xp2-super-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.234755438
+ilford-xp2-super-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.417379447
+ilford-xp2-super-400|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|86.105093701
+ilford-xp2-super-400|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|213.490295331
+ilford-xp2-super-400|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|529.331125968
+ilford-xp2-super-400|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1758.040370392
+ilford-xp2-super-400|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|8511.380382024
+ilford-sfx-200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-sfx-200|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-sfx-200|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.694467154
+ilford-sfx-200|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|9.989117144
+ilford-sfx-200|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|26.915348039
+ilford-sfx-200|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|129.504063079
+ilford-sfx-200|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|348.944444242
+ilford-sfx-200|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|940.219343487
+ilford-sfx-200|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|3485.646930278
+ilford-sfx-200|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|19498.445997580
+ilford-ortho-plus-80|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-ortho-plus-80|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-ortho-plus-80|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.378414230
+ilford-ortho-plus-80|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.476743906
+ilford-ortho-plus-80|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|17.782794100
+ilford-ortho-plus-80|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|70.210419580
+ilford-ortho-plus-80|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|166.989461023
+ilford-ortho-plus-80|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|397.170110358
+ilford-ortho-plus-80|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1248.537435086
+ilford-ortho-plus-80|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|5623.413251903
+ilford-kentmere-pan-100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-kentmere-pan-100|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-kentmere-pan-100|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.394957409
+ilford-kentmere-pan-100|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.598051020
+ilford-kentmere-pan-100|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|18.197008586
+ilford-kentmere-pan-100|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|72.639489096
+ilford-kentmere-pan-100|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|173.968482613
+ilford-kentmere-pan-100|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|416.647106408
+ilford-kentmere-pan-100|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1321.821406765
+ilford-kentmere-pan-100|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|6025.595860744
+ilford-kentmere-pan-200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-kentmere-pan-200|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-kentmere-pan-200|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.394957409
+ilford-kentmere-pan-200|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.598051020
+ilford-kentmere-pan-200|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|18.197008586
+ilford-kentmere-pan-200|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|72.639489096
+ilford-kentmere-pan-200|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|173.968482613
+ilford-kentmere-pan-200|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|416.647106408
+ilford-kentmere-pan-200|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1321.821406765
+ilford-kentmere-pan-200|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|6025.595860744
+ilford-kentmere-pan-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+ilford-kentmere-pan-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-kentmere-pan-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.462288827
+ilford-kentmere-pan-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.103282983
+ilford-kentmere-pan-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|19.952623150
+ilford-kentmere-pan-400|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|83.225733440
+ilford-kentmere-pan-400|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|204.925793543
+ilford-kentmere-pan-400|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|504.586491741
+ilford-kentmere-pan-400|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1660.571695688
+ilford-kentmere-pan-400|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|7943.282347243
+kodak-tri-x-400|0.500000000|quantified|tableLogLogDerived|withinStatedRange|none|true|0.811672705
+kodak-tri-x-400|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.000000000
+kodak-tri-x-400|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|5.000000000
+kodak-tri-x-400|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|20.000000000
+kodak-tri-x-400|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|50.000000000
+kodak-tri-x-400|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|200.000000000
+kodak-tri-x-400|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|562.458016282
+kodak-tri-x-400|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1558.058239525
+kodak-tri-x-400|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|5787.735123545
+kodak-tri-x-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|32461.559779763
+kodak-tmax-100|0.500000000|quantified|tableLogLogDerived|withinStatedRange|none|true|0.587634092
+kodak-tmax-100|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|1.259921050
+kodak-tmax-100|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.655679895
+kodak-tmax-100|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|7.116375654
+kodak-tmax-100|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|15.000000000
+kodak-tmax-100|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|51.620646640
+kodak-tmax-100|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|112.580647864
+kodak-tmax-100|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|245.529707560
+kodak-tmax-100|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|688.275288533
+kodak-tmax-100|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2666.666666667
+kodak-tmax-400|0.500000000|quantified|tableLogLogDerived|withinStatedRange|none|true|0.587634092
+kodak-tmax-400|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|1.259921050
+kodak-tmax-400|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.655679895
+kodak-tmax-400|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|7.116375654
+kodak-tmax-400|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|15.000000000
+kodak-tmax-400|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|62.638352000
+kodak-tmax-400|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|154.343866968
+kodak-tmax-400|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|380.310600617
+kodak-tmax-400|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1252.767039995
+kodak-tmax-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|6000.000000000
+kodak-ektar-100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+kodak-ektar-100|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+kodak-ektar-100|2.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|5.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|10.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|30.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|60.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|120.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|300.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektar-100|1000.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-160|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+kodak-portra-160|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+kodak-portra-160|2.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|2.000000000
+kodak-portra-160|5.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|5.000000000
+kodak-portra-160|10.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|10.000000000
+kodak-portra-160|30.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-160|60.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-160|120.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-160|300.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-160|1000.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+kodak-portra-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+kodak-portra-400|2.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|2.000000000
+kodak-portra-400|5.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|5.000000000
+kodak-portra-400|10.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|10.000000000
+kodak-portra-400|30.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-400|60.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-400|120.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-400|300.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-portra-400|1000.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+kodak-gold-200|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+kodak-gold-200|2.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|5.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|10.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|30.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|60.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|120.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|300.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-gold-200|1000.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+kodak-ultra-max-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+kodak-ultra-max-400|2.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|5.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|10.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|30.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|60.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|120.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|300.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ultra-max-400|1000.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektachrome-e100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+kodak-ektachrome-e100|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+kodak-ektachrome-e100|2.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|2.000000000
+kodak-ektachrome-e100|5.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|5.000000000
+kodak-ektachrome-e100|10.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|10.000000000
+kodak-ektachrome-e100|30.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektachrome-e100|60.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektachrome-e100|120.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektachrome-e100|300.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+kodak-ektachrome-e100|1000.000000000|limitedGuidance|limitedGuidanceNoQuantifiedPrediction|beyondLastRepresentativePoint|note|false|nil
+fujifilm-acros-ii|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+fujifilm-acros-ii|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+fujifilm-acros-ii|2.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|2.000000000
+fujifilm-acros-ii|5.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|5.000000000
+fujifilm-acros-ii|10.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|10.000000000
+fujifilm-acros-ii|30.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|30.000000000
+fujifilm-acros-ii|60.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|60.000000000
+fujifilm-acros-ii|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|169.705627485
+fujifilm-acros-ii|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|424.264068712
+fujifilm-acros-ii|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|1414.213562373
+fujifilm-velvia-50|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+fujifilm-velvia-50|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+fujifilm-velvia-50|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.269068244
+fujifilm-velvia-50|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|6.702741061
+fujifilm-velvia-50|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|15.208976891
+fujifilm-velvia-50|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|55.732052199
+fujifilm-velvia-50|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|126.459829832
+fujifilm-velvia-50|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|286.945984045
+fujifilm-velvia-50|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|847.627493960
+fujifilm-velvia-50|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|3518.033737737
+fujifilm-velvia-100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+fujifilm-velvia-100|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+fujifilm-velvia-100|2.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|2.000000000
+fujifilm-velvia-100|5.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|5.000000000
+fujifilm-velvia-100|10.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|10.000000000
+fujifilm-velvia-100|30.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|30.000000000
+fujifilm-velvia-100|60.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|60.000000000
+fujifilm-velvia-100|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|144.366339862
+fujifilm-velvia-100|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|460.825555073
+fujifilm-velvia-100|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2117.712799571
+fujifilm-provia-100f|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+fujifilm-provia-100f|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+fujifilm-provia-100f|2.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|2.000000000
+fujifilm-provia-100f|5.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|5.000000000
+fujifilm-provia-100f|10.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|10.000000000
+fujifilm-provia-100f|30.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|30.000000000
+fujifilm-provia-100f|60.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|60.000000000
+fujifilm-provia-100f|120.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|120.000000000
+fujifilm-provia-100f|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|410.299174426
+fujifilm-provia-100f|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2129.068405072
+foma-fomapan-100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+foma-fomapan-100|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.000000000
+foma-fomapan-100|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|6.071529478
+foma-fomapan-100|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|26.352503201
+foma-fomapan-100|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|80.000000000
+foma-fomapan-100|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|334.071210665
+foma-fomapan-100|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|823.167290497
+foma-fomapan-100|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2028.323203293
+foma-fomapan-100|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|6681.424213305
+foma-fomapan-100|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|32000.000000000
+foma-fomapan-200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+foma-fomapan-200|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|3.000000000
+foma-fomapan-200|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|8.351780267
+foma-fomapan-200|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|32.328436738
+foma-fomapan-200|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|90.000000000
+foma-fomapan-200|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|375.830111998
+foma-fomapan-200|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|926.063201809
+foma-fomapan-200|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2281.863603705
+foma-fomapan-200|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|7516.602239968
+foma-fomapan-200|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|36000.000000000
+foma-fomapan-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+foma-fomapan-400|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|1.500000000
+foma-fomapan-400|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|4.553647108
+foma-fomapan-400|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|19.764377400
+foma-fomapan-400|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|60.000000000
+foma-fomapan-400|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|206.482586560
+foma-fomapan-400|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|450.322591458
+foma-fomapan-400|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|982.118830240
+foma-fomapan-400|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2753.101154131
+foma-fomapan-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|10666.666666667
+rollei-rpx-25|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+rollei-rpx-25|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+rollei-rpx-25|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|3.000000000
+rollei-rpx-25|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|8.834700167
+rollei-rpx-25|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|20.000000000
+rollei-rpx-25|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|88.132843532
+rollei-rpx-25|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|232.254629149
+rollei-rpx-25|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|612.055739938
+rollei-rpx-25|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2203.400663778
+rollei-rpx-25|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|11859.183658636
+rollei-rpx-100|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+rollei-rpx-100|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+rollei-rpx-100|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|3.000000000
+rollei-rpx-100|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|8.000000000
+rollei-rpx-100|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|25.000000000
+rollei-rpx-100|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|150.000000000
+rollei-rpx-100|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|490.575026156
+rollei-rpx-100|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1604.425708585
+rollei-rpx-100|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|7684.268836963
+rollei-rpx-100|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|60182.423085650
+rollei-rpx-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+rollei-rpx-400|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.000000000
+rollei-rpx-400|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|4.000000000
+rollei-rpx-400|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|10.000000000
+rollei-rpx-400|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|30.000000000
+rollei-rpx-400|30.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|135.656694722
+rollei-rpx-400|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|334.595251327
+rollei-rpx-400|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|825.274288452
+rollei-rpx-400|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2722.061634826
+rollei-rpx-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|13059.450146631
+rollei-ortho-25-plus|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+rollei-ortho-25-plus|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+rollei-ortho-25-plus|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.381597540
+rollei-ortho-25-plus|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|7.500000000
+rollei-ortho-25-plus|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|20.000000000
+rollei-ortho-25-plus|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|75.000000000
+rollei-ortho-25-plus|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|208.914360488
+rollei-ortho-25-plus|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|736.135403314
+rollei-ortho-25-plus|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|3890.795233613
+rollei-ortho-25-plus|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|34684.877318004
+rollei-retro-80s|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+rollei-retro-80s|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+rollei-retro-80s|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.784380900
+rollei-retro-80s|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|11.376385322
+rollei-retro-80s|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|32.992594529
+rollei-retro-80s|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|178.370253307
+rollei-retro-80s|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|517.290622337
+rollei-retro-80s|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1500.191780837
+rollei-retro-80s|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|6129.463017809
+rollei-retro-80s|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|38959.777656282
+rollei-retro-400s|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|caution|true|0.500000000
+rollei-retro-400s|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|caution|true|1.000000000
+rollei-retro-400s|2.000000000|quantified|formulaDerived|withinStatedRange|caution|true|3.073750363
+rollei-retro-400s|5.000000000|quantified|formulaDerived|withinStatedRange|caution|true|13.562239424
+rollei-retro-400s|10.000000000|quantified|formulaDerived|withinStatedRange|caution|true|41.686938347
+rollei-retro-400s|30.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|247.136238710
+rollei-retro-400s|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|759.635103341
+rollei-retro-400s|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2334.928674321
+rollei-retro-400s|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|10302.353146431
+rollei-retro-400s|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|72443.596007499
+rollei-superpan-200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+rollei-superpan-200|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+rollei-superpan-200|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.784380900
+rollei-superpan-200|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|11.376385322
+rollei-superpan-200|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|32.992594529
+rollei-superpan-200|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|178.370253307
+rollei-superpan-200|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|517.290622337
+rollei-superpan-200|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1500.191780837
+rollei-superpan-200|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|6129.463017809
+rollei-superpan-200|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|38959.777656282
+adox-chs-100-ii|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+adox-chs-100-ii|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+adox-chs-100-ii|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|3.000000000
+adox-chs-100-ii|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|10.744793067
+adox-chs-100-ii|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|26.671520426
+adox-chs-100-ii|30.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|110.040663939
+adox-chs-100-ii|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|269.087727114
+adox-chs-100-ii|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|658.013158876
+adox-chs-100-ii|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2145.818795077
+adox-chs-100-ii|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|10142.089981300
+adox-cms-20-ii|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+adox-cms-20-ii|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+adox-cms-20-ii|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|3.139456970
+adox-cms-20-ii|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|9.009288284
+adox-cms-20-ii|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.000000632
+adox-cms-20-ii|30.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|70.788900970
+adox-cms-20-ii|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|157.146493653
+adox-cms-20-ii|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|348.854412613
+adox-cms-20-ii|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1001.106243169
+adox-cms-20-ii|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|4000.000166329
+"""
 
     private func invalidCalculationKindData() -> Data {
         Data(
@@ -649,16 +1014,50 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
     }
 }
 
-private struct ResultClassification: Equatable {
-    let kind: ResultKind
-    let basis: ReciprocityCalculationBasis
-    let rangeStatus: ReciprocityCalculationRangeStatus
-    let warningLevel: ReciprocityCalculationWarningLevel
-    let hasCalculatedExposureTime: Bool
+private struct V2CatalogDocument: Decodable {
+    let schema: String
+    let schemaVersion: Int
+    let sources: [String: V2SourceDocument]
+    let films: [V2FilmDocument]
 }
 
-private enum ResultKind: Equatable {
-    case quantified
-    case limitedGuidance
-    case unsupported
+private struct V2SourceDocument: Decodable {}
+
+private struct V2FilmDocument: Decodable {
+    let id: String
+    let profiles: [V2ProfileDocument]
+}
+
+private struct V2ProfileDocument: Decodable {
+    let id: String
+    let role: String
+    let sourceId: String
+    let model: String
+    let calculation: [String: JSONValue]
+    let evidence: [[String: JSONValue]]?
+    let referencePoints: [[String: JSONValue]]?
+    let referenceRanges: [[String: JSONValue]]?
+}
+
+private enum JSONValue: Decodable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case array([JSONValue])
+    case object([String: JSONValue])
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode([JSONValue].self) {
+            self = .array(value)
+        } else {
+            self = .object(try container.decode([String: JSONValue].self))
+        }
+    }
 }

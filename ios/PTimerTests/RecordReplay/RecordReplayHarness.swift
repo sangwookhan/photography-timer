@@ -33,7 +33,7 @@ final class RecordReplayHarness {
 
     init(
         referenceDate: Date = Date(timeIntervalSince1970: 1_700_000_000),
-        presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films
+        presetFilms: [FilmIdentity] = LaunchPresetFilmCatalogV2.films
     ) {
         self.referenceDate = referenceDate
         self.virtualNow = referenceDate

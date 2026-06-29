@@ -3,7 +3,7 @@
 
 package com.sangwook.ptimer.core.reciprocity
 
-import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.customfilm.CustomFilmBuilder
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import org.junit.Assert.assertEquals
@@ -15,7 +15,7 @@ import org.junit.Test
 
 class ReciprocityDetailsPresenterTest {
 
-    private val films = LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    private val films = LaunchPresetFilmCatalogV2.films
     private val policy = ReciprocityCalculationPolicyEvaluator()
 
     private fun film(id: String) = films.first { it.id == id }

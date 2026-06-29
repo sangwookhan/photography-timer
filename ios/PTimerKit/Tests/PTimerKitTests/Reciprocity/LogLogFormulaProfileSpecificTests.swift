@@ -449,7 +449,7 @@ final class LogLogFormulaProfileSpecificTests: XCTestCase {
 
     private func filmUnderTest() throws -> FilmIdentity {
         try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CMS 20 II" },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "CMS 20 II" },
             "CMS 20 II must remain in the launch catalog."
         )
     }

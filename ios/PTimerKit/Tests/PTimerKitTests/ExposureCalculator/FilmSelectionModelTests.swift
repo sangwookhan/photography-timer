@@ -90,7 +90,7 @@ final class FilmSelectionModelTests: XCTestCase {
 
     @MainActor
     func testRestoreContextResolvesValidFilmAndReturnsCalcInputs() throws {
-        let presetFilms = LaunchPresetFilmCatalog.films
+        let presetFilms = LaunchPresetFilmCatalogV2.films
         let film = try XCTUnwrap(presetFilms.first { $0.canonicalStockName == "Tri-X 400" })
         let store = SpyContextPersistenceStore(
             initialSnapshot: PersistentCalculatorContextSnapshot(
@@ -140,7 +140,7 @@ final class FilmSelectionModelTests: XCTestCase {
 
     @MainActor
     func testFilmRowAuthorityLabelMapsAuthorityValuesToTextOrNil() throws {
-        let presetFilms = LaunchPresetFilmCatalog.films
+        let presetFilms = LaunchPresetFilmCatalogV2.films
         let officialProfile = try XCTUnwrap(
             presetFilms
                 .first { $0.canonicalStockName == "Tri-X 400" }?
@@ -205,7 +205,7 @@ private final class SpyContextPersistenceStore: ExposureCalculatorContextStoring
 
 @MainActor
 private func makeModel(
-    presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
+    presetFilms: [FilmIdentity] = LaunchPresetFilmCatalogV2.films,
     contextPersistenceStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore(),
     baseShutterSeconds: Double = 1.0 / 30.0,
     ndStop: Int = 0

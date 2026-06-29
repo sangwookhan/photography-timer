@@ -3,7 +3,7 @@
 
 package com.sangwook.ptimer.core.reciprocity
 
-import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -20,7 +20,7 @@ import org.junit.Test
  */
 class TableProfileBeyondSourceParityTest {
 
-    private val films = LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    private val films = LaunchPresetFilmCatalogV2.films
     private val evaluator = ReciprocityCalculationPolicyEvaluator()
 
     @Test

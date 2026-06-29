@@ -21,7 +21,7 @@ import PTimerCore
 /// - The compiler-enforced absence of `.table` is verified by the
 ///   exhaustive switch (the domain no longer carries a `.table`
 ///   case).
-/// - The profile is not registered in `LaunchPresetFilmCatalog.films`
+/// - The profile is not registered in `LaunchPresetFilmCatalogV2.films`
 ///   under either id or canonical stock name reuse.
 final class UnofficialPracticalProfilesShapeTests: XCTestCase {
 
@@ -109,7 +109,7 @@ final class UnofficialPracticalProfilesShapeTests: XCTestCase {
     @MainActor
     func testUnofficialPracticalProfileIsNotPartOfLaunchCatalog() {
         let profile = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical
-        let launchProfileIDs = LaunchPresetFilmCatalog.films.flatMap { film in
+        let launchProfileIDs = LaunchPresetFilmCatalogV2.films.flatMap { film in
             film.profiles.map(\.id)
         }
         XCTAssertFalse(

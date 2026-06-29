@@ -13,7 +13,7 @@ extension XCTestCase {
 
     func subjectFilm() throws -> FilmIdentity {
         try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Provia 100F" },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "Provia 100F" },
             "Provia 100F must remain in the launch catalog."
         )
     }

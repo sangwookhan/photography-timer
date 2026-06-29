@@ -198,7 +198,7 @@ final class AppDerivedFormulaEvaluationTests: XCTestCase {
             "RPX 100", "RPX 400", "CHS 100 II",
         ]
         let alreadyShipped = ["Tri-X 400", "Fomapan 100 Classic"]
-        let migratedStocks = LaunchPresetFilmCatalog.films
+        let migratedStocks = LaunchPresetFilmCatalogV2.films
             .filter {
                 ptimer168MigratedStocks.contains($0.canonicalStockName)
                     && $0.profiles.first?.usesTableInterpolation == true
@@ -356,7 +356,7 @@ final class AppDerivedFormulaEvaluationTests: XCTestCase {
         line: UInt = #line
     ) throws -> [TableAnchor] {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == stock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == stock },
             "\(stock) must remain in the launch catalog.",
             file: file,
             line: line

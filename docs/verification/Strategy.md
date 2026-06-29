@@ -175,7 +175,7 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 | UI | §3.1 | 2-detent (medium 없음) | detent enum 카운트 |
 | UI | §3.2 | 92pt up / 64pt down | drag threshold 상수 |
 | UI | §3.5 | 3-layer progress | 코드 layer 카운트 |
-| DomainSchema | §12 | 11개 catalog 검증 규칙 (positive ISO + shape allow-list 포함) | LaunchPresetFilmCatalogLoader.validateLaunchCatalog + validateProfileShape |
+| DomainSchema | §12 | 11개 catalog 검증 규칙 (positive ISO + shape allow-list 포함) | LaunchPresetFilmCatalogV2Loader.validateLaunchCatalog |
 | DomainSchema | §13 | 2-shape launch allow-list + §13.3 unofficial 분리 | LaunchPresetFilmCatalogShapeTests + UnofficialPracticalProfilesShapeTests |
 
 **도구**: 일부 grep, 일부 AST. **첫 audit은 매뉴얼**, 이후 자동화 가능 항목 점진 추가.

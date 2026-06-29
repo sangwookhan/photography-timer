@@ -4,11 +4,12 @@
     "license": "Apache-2.0",
     "generatedFrom": [
       "docs/specs/DomainSchema.md",
-      "ios/PTimerTests/ExposureCalculator/LaunchPresetFilmCatalogTests.swift",
-      "ios/PTimer/Resources/LaunchPresetFilmCatalog.json"
+      "shared/catalog/LaunchPresetFilmCatalog.v2.json",
+      "tools/catalog-v2/verify.py",
+      "ios/PTimerKit/Tests/PTimerCoreTests/Catalog/LaunchPresetFilmCatalogV2Tests.swift"
     ],
-    "version": "5.0.0",
-    "description": "Cross-platform catalog validation fixture. Only `catalogExpectations` (expected film count, order, and ids) is retained and is asserted by the iOS and Android catalog tests. The former perFilmExpectations / rejectionCases / launchCatalogValidationRules blocks were removed (PTIMER-186) because no test read them; per-film and rejection coverage now lives in the platform catalog v2 equivalence/validation test suites."
+    "version": "6.0.0",
+    "description": "Cross-platform catalog validation fixture. Only `catalogExpectations` (expected film count, order, and ids) is retained; it is cross-checked by tools/catalog-v2/verify.py and asserted by the iOS and Android v2 catalog tests. Per-film and rejection coverage lives in the platform catalog v2 validation and invariant test suites (the legacy v1 path and its perFilmExpectations / rejectionCases / launchCatalogValidationRules blocks were removed in PTIMER-186)."
   },
   "catalogExpectations": {
     "description": "Expected properties of the bundled launch catalog (PTIMER-103 launch-ready scope).",

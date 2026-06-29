@@ -10,6 +10,7 @@ Exit 0 on PASS, 1 on any mismatch.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -40,6 +41,7 @@ FORMULA_KEYS = {
     "notes",
 }
 LIMITED_GUIDANCE_KEYS = {"noCorrectionRange", "guidance", "notes"}
+SUPPORTED_FORMULA_FAMILIES = {"modifiedSchwarzschild"}
 EVIDENCE_KEYS = {
     "anchor",
     "stopDelta",
@@ -58,18 +60,27 @@ WARNING_KEYS = {"severity", "message"}
 COLOR_FILTER_KEYS = {"filterName", "note"}
 SOURCE_LINK_KEYS = {"landingPageUrl", "downloadUrl", "archiveUrl", "accessedDate"}
 
+# Carriers a profile may NOT have, by model (mirrors the platform loaders).
+FORBIDDEN_CARRIERS = {
+    "table": ("referencePoints", "referenceRanges"),
+    "formula": ("evidence",),
+    "limitedGuidance": ("evidence", "referencePoints", "referenceRanges"),
+}
+
 
 errors: list[str] = []
 
 
 def main() -> int:
+    if "--self-test" in sys.argv[1:]:
+        return self_test()
+
+    errors.clear()
     assert_copies_identical()
     catalog = load_json(V2_COPIES[0])
     expectations = load_json(EXPECTATIONS_PATH)["catalogExpectations"]
 
-    validate_schema(catalog)
-    validate_sources(catalog)
-    validate_films(catalog)
+    validate_content(catalog)
     validate_expectations(catalog, expectations)
 
     if errors:
@@ -80,6 +91,30 @@ def main() -> int:
 
     print(f"PASS: {len(catalog['films'])} v2 films verified.")
     return 0
+
+
+def validate_content(catalog: dict) -> None:
+    """Structural validation shared by the real run and the self-test:
+    explicit-null rejection, schema, sources, and films (including
+    model/carrier mismatch). Excludes copy-identity and the
+    catalogExpectations cross-check, which only apply to the real run."""
+    reject_nulls(catalog, "catalog")
+    validate_schema(catalog)
+    validate_sources(catalog)
+    validate_films(catalog)
+
+
+def reject_nulls(value: object, path: str) -> None:
+    """Explicit JSON null is never valid anywhere in the catalog; optional
+    fields must be omitted, not set to null."""
+    if value is None:
+        errors.append(f"explicit null at {path}")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            reject_nulls(item, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            reject_nulls(item, f"{path}[{index}]")
 
 
 def assert_copies_identical() -> None:
@@ -200,6 +235,10 @@ def validate_profile(
     else:
         errors.append(f"{film_id}/{profile_id}: unsupported model {model!r}")
 
+    for carrier in FORBIDDEN_CARRIERS.get(model, ()):
+        if carrier in profile:
+            errors.append(f"{film_id}/{profile_id}: {model} profile must not carry {carrier}")
+
     validate_evidence_rows(film_id, profile_id, "evidence", profile.get("evidence"), EVIDENCE_KEYS)
     validate_evidence_rows(
         film_id,
@@ -216,78 +255,172 @@ def validate_profile(
         REFERENCE_RANGE_KEYS,
     )
 
+    if model == "table" and isinstance(calculation.get("anchors"), list):
+        validate_evidence_anchor_indices(
+            film_id, profile_id, profile.get("evidence"), len(calculation["anchors"])
+        )
+    validate_reference_points(film_id, profile_id, profile.get("referencePoints"))
+    validate_reference_ranges(film_id, profile_id, profile.get("referenceRanges"))
+
 
 def validate_table_calculation(film_id: str, profile_id: str, calculation: dict) -> None:
-    assert_allowed_keys(f"{film_id}/{profile_id}.calculation", calculation, TABLE_KEYS)
+    p = f"{film_id}/{profile_id}"
+    assert_allowed_keys(f"{p}.calculation", calculation, TABLE_KEYS)
     anchors = calculation.get("anchors")
     if not isinstance(anchors, list) or not anchors:
-        errors.append(f"{film_id}/{profile_id}: table anchors must be a non-empty array")
+        errors.append(f"{p}: table anchors must be a non-empty array")
         return
 
     previous_metered: float | None = None
     seen_metered: set[float] = set()
+    anchors_ok = True
     for index, anchor in enumerate(anchors):
         if not isinstance(anchor, dict):
-            errors.append(f"{film_id}/{profile_id}: anchors[{index}] must be an object")
+            errors.append(f"{p}: anchors[{index}] must be an object")
+            anchors_ok = False
             continue
         metered = anchor.get("meteredSeconds")
         corrected = anchor.get("correctedSeconds")
-        if not is_number(metered) or not is_number(corrected):
-            errors.append(f"{film_id}/{profile_id}: anchors[{index}] must carry numeric seconds")
+        if not is_number(metered) or metered <= 0 or not is_number(corrected):
+            errors.append(f"{p}: anchors[{index}] need finite meteredSeconds > 0 and finite correctedSeconds")
+            anchors_ok = False
             continue
         if previous_metered is not None and metered <= previous_metered:
-            errors.append(f"{film_id}/{profile_id}: anchors must be strictly ascending")
+            errors.append(f"{p}: anchors must be strictly ascending by meteredSeconds")
         previous_metered = metered
         if metered in seen_metered:
-            errors.append(f"{film_id}/{profile_id}: duplicate anchor meteredSeconds {metered}")
+            errors.append(f"{p}: duplicate anchor meteredSeconds {metered}")
         seen_metered.add(metered)
         if corrected < metered:
-            errors.append(f"{film_id}/{profile_id}: anchor correctedSeconds {corrected} < meteredSeconds {metered}")
+            errors.append(f"{p}: anchor correctedSeconds {corrected} < meteredSeconds {metered}")
+
+    first_metered = anchors[0].get("meteredSeconds") if anchors_ok else None
+    last_metered = anchors[-1].get("meteredSeconds") if anchors_ok else None
+    no_corr = calculation.get("noCorrectionThroughSeconds")
+    if no_corr is not None:
+        if not is_number(no_corr) or no_corr < 0:
+            errors.append(f"{p}: table noCorrectionThroughSeconds must be finite and >= 0")
+        elif is_number(first_metered) and no_corr >= first_metered:
+            errors.append(f"{p}: noCorrectionThroughSeconds must be < the first anchor meteredSeconds")
+    source_range = calculation.get("sourceRangeThroughSeconds")
+    if source_range is not None:
+        if not is_number(source_range):
+            errors.append(f"{p}: table sourceRangeThroughSeconds must be finite")
+        else:
+            if is_number(no_corr) and source_range <= no_corr:
+                errors.append(f"{p}: sourceRangeThroughSeconds must be > noCorrectionThroughSeconds")
+            if is_number(last_metered) and source_range < last_metered:
+                errors.append(f"{p}: sourceRangeThroughSeconds must be >= the last anchor meteredSeconds")
 
 
 def validate_formula_calculation(film_id: str, profile_id: str, calculation: dict) -> None:
-    assert_allowed_keys(f"{film_id}/{profile_id}.calculation", calculation, FORMULA_KEYS)
-    exponent = calculation.get("exponent")
+    p = f"{film_id}/{profile_id}"
+    assert_allowed_keys(f"{p}.calculation", calculation, FORMULA_KEYS)
+    if calculation.get("family") not in SUPPORTED_FORMULA_FAMILIES:
+        errors.append(f"{p}: unsupported formula family {calculation.get('family')!r}")
+    if not is_number(calculation.get("exponent")) or calculation["exponent"] <= 0:
+        errors.append(f"{p}: formula exponent must be finite and > 0")
     coefficient = calculation.get("coefficient", 1)
-    if not is_number(exponent) or exponent <= 0:
-        errors.append(f"{film_id}/{profile_id}: formula exponent must be > 0")
     if not is_number(coefficient) or coefficient <= 0:
-        errors.append(f"{film_id}/{profile_id}: formula coefficient must be > 0")
+        errors.append(f"{p}: formula coefficient must be finite and > 0")
+    reference = calculation.get("referenceMeteredSeconds", 1)
+    if not is_number(reference) or reference <= 0:
+        errors.append(f"{p}: formula referenceMeteredSeconds must be finite and > 0")
+    if "offsetSeconds" in calculation and not is_number(calculation["offsetSeconds"]):
+        errors.append(f"{p}: formula offsetSeconds must be a finite number")
+    no_corr = calculation.get("noCorrectionThroughSeconds")
+    if no_corr is not None and (not is_number(no_corr) or no_corr < 0):
+        errors.append(f"{p}: formula noCorrectionThroughSeconds must be finite and >= 0")
+    source_range = calculation.get("sourceRangeThroughSeconds")
+    if source_range is not None:
+        if not is_number(source_range):
+            errors.append(f"{p}: formula sourceRangeThroughSeconds must be finite")
+        elif is_number(no_corr) and source_range <= no_corr:
+            errors.append(f"{p}: sourceRangeThroughSeconds must be > noCorrectionThroughSeconds")
 
 
 def validate_limited_guidance_calculation(film_id: str, profile_id: str, calculation: dict) -> None:
-    assert_allowed_keys(f"{film_id}/{profile_id}.calculation", calculation, LIMITED_GUIDANCE_KEYS)
+    p = f"{film_id}/{profile_id}"
+    assert_allowed_keys(f"{p}.calculation", calculation, LIMITED_GUIDANCE_KEYS)
     no_correction_range = calculation.get("noCorrectionRange")
-    if no_correction_range is not None:
-        if (
-            not isinstance(no_correction_range, list)
-            or len(no_correction_range) != 2
-            or not all(is_number(value) for value in no_correction_range)
-        ):
-            errors.append(f"{film_id}/{profile_id}: noCorrectionRange must be [min, max]")
-        elif no_correction_range[0] >= no_correction_range[1]:
-            errors.append(f"{film_id}/{profile_id}: noCorrectionRange min must be < max")
+    range_max: float | None = None
+    if no_correction_range is None:
+        errors.append(f"{p}: limitedGuidance requires noCorrectionRange")
+    elif (
+        not isinstance(no_correction_range, list)
+        or len(no_correction_range) != 2
+        or not all(is_number(value) for value in no_correction_range)
+    ):
+        errors.append(f"{p}: noCorrectionRange must be exactly two finite numbers")
+    elif no_correction_range[0] >= no_correction_range[1]:
+        errors.append(f"{p}: noCorrectionRange min must be < max")
+    else:
+        range_max = no_correction_range[1]
 
     guidance = calculation.get("guidance", [])
     if not isinstance(guidance, list):
-        errors.append(f"{film_id}/{profile_id}: guidance must be an array")
+        errors.append(f"{p}: guidance must be an array")
         return
 
     previous_from: float | None = None
     for index, row in enumerate(guidance):
         if not isinstance(row, dict):
-            errors.append(f"{film_id}/{profile_id}: guidance[{index}] must be an object")
+            errors.append(f"{p}: guidance[{index}] must be an object")
             continue
         from_seconds = row.get("fromSeconds")
         if not is_number(from_seconds):
-            errors.append(f"{film_id}/{profile_id}: guidance[{index}].fromSeconds must be numeric")
+            errors.append(f"{p}: guidance[{index}].fromSeconds must be a finite number")
             continue
+        if range_max is not None and from_seconds < range_max:
+            errors.append(f"{p}: guidance[{index}].fromSeconds must be >= noCorrectionRange max")
         if previous_from is not None and from_seconds < previous_from:
-            errors.append(f"{film_id}/{profile_id}: guidance rows must be sorted by fromSeconds")
+            errors.append(f"{p}: guidance rows must be sorted by fromSeconds")
         previous_from = from_seconds
         color_filter = row.get("colorFilter")
         if color_filter is not None:
-            validate_color_filter(f"{film_id}/{profile_id}: guidance[{index}].colorFilter", color_filter)
+            validate_color_filter(f"{p}: guidance[{index}].colorFilter", color_filter)
+
+
+def validate_evidence_anchor_indices(film_id: str, profile_id: str, rows: object, anchor_count: int) -> None:
+    if not isinstance(rows, list):
+        return
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        anchor = row.get("anchor")
+        if not isinstance(anchor, int) or isinstance(anchor, bool) or not 0 <= anchor < anchor_count:
+            errors.append(f"{film_id}/{profile_id}: evidence[{index}].anchor must be an index in 0..{anchor_count - 1}")
+
+
+def validate_reference_points(film_id: str, profile_id: str, rows: object) -> None:
+    if not isinstance(rows, list):
+        return
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        label = f"{film_id}/{profile_id}: referencePoints[{index}]"
+        metered = row.get("meteredSeconds")
+        if not is_number(metered) or metered <= 0:
+            errors.append(f"{label}.meteredSeconds must be finite and > 0")
+        if "correctedSeconds" in row:
+            corrected = row["correctedSeconds"]
+            if not is_number(corrected) or (is_number(metered) and corrected < metered):
+                errors.append(f"{label}.correctedSeconds must be finite and >= meteredSeconds")
+
+
+def validate_reference_ranges(film_id: str, profile_id: str, rows: object) -> None:
+    if not isinstance(rows, list):
+        return
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        label = f"{film_id}/{profile_id}: referenceRanges[{index}]"
+        from_seconds = row.get("fromSeconds")
+        through_seconds = row.get("throughSeconds")
+        if not is_number(from_seconds) or not is_number(through_seconds):
+            errors.append(f"{label} must carry finite fromSeconds and throughSeconds")
+        elif from_seconds >= through_seconds:
+            errors.append(f"{label}.fromSeconds must be < throughSeconds")
 
 
 def validate_evidence_rows(
@@ -351,11 +484,122 @@ def assert_allowed_keys(label: str, value: object, allowed: set[str]) -> None:
 
 
 def is_number(value: object) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """A finite JSON number (not bool, not NaN/Infinity)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def relative(path: Path) -> str:
     return str(path.relative_to(ROOT))
+
+
+def self_test() -> int:
+    """Prove the verifier rejects each invalid schema class, by mutating the
+    real catalog (otherwise valid) one fault at a time. Network-free."""
+    import copy as _copy
+
+    base = load_json(V2_COPIES[0])
+
+    def find_model(model: str) -> str:
+        for film in base["films"]:
+            for profile in film["profiles"]:
+                if profile.get("model") == model:
+                    return film["id"]
+        raise AssertionError(f"no {model} profile in bundled catalog")
+
+    table_fid = find_model("table")
+    formula_fid = find_model("formula")
+    lg_fid = find_model("limitedGuidance")
+    first_source = next(iter(base["sources"]))
+
+    def prof(cat: dict, fid: str) -> dict:
+        for film in cat["films"]:
+            if film["id"] == fid:
+                return film["profiles"][0]
+        raise AssertionError(f"film {fid} missing")
+
+    def set_field(cat: dict, fid: str, field: str, value: object) -> None:
+        prof(cat, fid)[field] = value
+
+    def set_calc(cat: dict, fid: str, field: str, value: object) -> None:
+        prof(cat, fid)["calculation"][field] = value
+
+    points = [{"meteredSeconds": 1, "correctedSeconds": 2}]
+    ranges = [{"fromSeconds": 1, "throughSeconds": 2}]
+
+    def table_nocorr_too_high(c: dict) -> None:
+        calc = prof(c, table_fid)["calculation"]
+        calc["noCorrectionThroughSeconds"] = calc["anchors"][0]["meteredSeconds"]
+
+    def table_source_range_too_low(c: dict) -> None:
+        calc = prof(c, table_fid)["calculation"]
+        calc["sourceRangeThroughSeconds"] = calc["anchors"][-1]["meteredSeconds"] - 1
+
+    def formula_source_le_nocorr(c: dict) -> None:
+        calc = prof(c, formula_fid)["calculation"]
+        calc["noCorrectionThroughSeconds"] = 1
+        calc["sourceRangeThroughSeconds"] = 1
+
+    def lg_guidance_below_max(c: dict) -> None:
+        calc = prof(c, lg_fid)["calculation"]
+        calc["guidance"] = [{"fromSeconds": calc["noCorrectionRange"][1] - 1, "message": "x"}]
+
+    def lg_guidance_unsorted(c: dict) -> None:
+        calc = prof(c, lg_fid)["calculation"]
+        top = calc["noCorrectionRange"][1]
+        calc["guidance"] = [
+            {"fromSeconds": top + 10, "message": "a"},
+            {"fromSeconds": top + 1, "message": "b"},
+        ]
+
+    cases: list[tuple[str, callable]] = [
+        # carrier / null classes
+        ("source links:null", lambda c: c["sources"][first_source].update(links=None)),
+        ("source link downloadUrl:null", lambda c: c["sources"][first_source].update(links={"downloadUrl": None})),
+        ("formula + evidence", lambda c: set_field(c, formula_fid, "evidence", [{"anchor": 0}])),
+        ("table + referencePoints", lambda c: set_field(c, table_fid, "referencePoints", points)),
+        ("table + referenceRanges", lambda c: set_field(c, table_fid, "referenceRanges", ranges)),
+        ("limitedGuidance + evidence", lambda c: set_field(c, lg_fid, "evidence", [{"anchor": 0}])),
+        ("limitedGuidance + referencePoints", lambda c: set_field(c, lg_fid, "referencePoints", points)),
+        ("limitedGuidance + referenceRanges", lambda c: set_field(c, lg_fid, "referenceRanges", ranges)),
+        # table numeric/range classes
+        ("table noCorrection >= first anchor", table_nocorr_too_high),
+        ("table sourceRange < last anchor", table_source_range_too_low),
+        ("table evidence anchor out of range", lambda c: set_field(c, table_fid, "evidence", [{"anchor": 999}])),
+        # formula numeric/range classes
+        ("formula referenceMeteredSeconds <= 0", lambda c: set_calc(c, formula_fid, "referenceMeteredSeconds", 0)),
+        ("formula offsetSeconds invalid type", lambda c: set_calc(c, formula_fid, "offsetSeconds", "x")),
+        ("formula sourceRange <= noCorrection", formula_source_le_nocorr),
+        ("formula referencePoints missing meteredSeconds",
+         lambda c: set_field(c, formula_fid, "referencePoints", [{"correctedSeconds": 2}])),
+        ("formula referencePoints corrected < metered",
+         lambda c: set_field(c, formula_fid, "referencePoints", [{"meteredSeconds": 10, "correctedSeconds": 5}])),
+        ("formula referenceRanges from >= through",
+         lambda c: set_field(c, formula_fid, "referenceRanges", [{"fromSeconds": 2, "throughSeconds": 1}])),
+        # limitedGuidance numeric/range classes
+        ("limitedGuidance noCorrectionRange min >= max", lambda c: set_calc(c, lg_fid, "noCorrectionRange", [2, 1])),
+        ("limitedGuidance guidance.fromSeconds < range max", lg_guidance_below_max),
+        ("limitedGuidance guidance unsorted", lg_guidance_unsorted),
+    ]
+
+    ok = True
+    errors.clear()
+    validate_content(_copy.deepcopy(base))
+    if errors:
+        print(f"  baseline catalog unexpectedly failed: {errors[:3]}")
+        ok = False
+    for name, mutate in cases:
+        catalog = _copy.deepcopy(base)
+        mutate(catalog)
+        errors.clear()
+        validate_content(catalog)
+        if errors:
+            print(f"  rejected (good): {name}")
+        else:
+            print(f"  ACCEPTED (BAD): {name}")
+            ok = False
+
+    print("SELF-TEST PASS" if ok else "SELF-TEST FAIL")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

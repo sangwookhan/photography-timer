@@ -48,8 +48,8 @@ swift test --package-path ios/PTimerKit --filter DisplayStateSnapshotTests
 ## 어떤 값을 lock할 가치가 있나
 
 - **도메인 / 정책 결과** — `ReciprocityResult`, `ReciprocityConfidencePresentation` (B3 변경의 게이트)
-- **Catalog snapshot** — `LaunchPresetFilmCatalog.films` (A12 같은 데이터 정정 시 의도된 diff 확인)
+- **Catalog snapshot** — `LaunchPresetFilmCatalogV2.films` (A12 같은 데이터 정정 시 의도된 diff 확인)
 - **Display state 집합체** — `BottomSheetWorkspaceSnapshot`, `FilmModeExposureResultState`, `FilmModeDetailsDisplayState` (B1 모델 분리 시 게이트)
 - **TimerState 직렬화** — B4 sum type 도입 후 backward-compat 검증
 
-각 카테고리에 최소 1 baseline. 대표 input은 `ReciprocityPolicyScenarioFactory` 와 `LaunchPresetFilmCatalog`에서.
+각 카테고리에 최소 1 baseline. 대표 input은 `ReciprocityPolicyScenarioFactory` 와 `LaunchPresetFilmCatalogV2`에서.

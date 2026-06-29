@@ -6,3 +6,6 @@ local.properties
 captures/
 .cxx/
 .kotlin/
+# Eclipse-style output folder created by IDE/language-server Gradle imports
+# (a mirror copy of src/, never a build product we track).
+bin/

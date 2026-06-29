@@ -149,22 +149,44 @@ When the app returns to the foreground, the runtime shall reconcile any running 
 
 ---
 
-## 4. Completion notification
+## 4. Completion awareness
 
-### 4.1 Foreground feedback
+A timer surfaces **staged alerts** so its completion is hard to miss in the field. The terminal completion alert is preceded, for longer timers, by one or two pre-alerts that signal completion is approaching.
+
+### 4.1 Alert stages by duration
+
+Let `T` be the expected completion instant. The staged alerts a timer produces depend on its duration:
+
+- **duration ≤ 30s** — completion alert at `T` only.
+- **30s < duration ≤ 60s** — **pre1** at `T − 5s`, then completion at `T`.
+- **duration > 60s** — **pre1** at `T − 10s`, **pre2** at `T − 5s`, then completion at `T`.
+
+The stage policy is deterministic and platform-neutral; both platforms compute the same stages from `(duration, T)`.
+
+### 4.2 Alert character
+
+- **pre1** is the gentle "completion approaching" cue. It is haptic-first: where the platform supports it, pre1 leads with vibration/haptic rather than sound. Platforms that cannot guarantee vibration-only background delivery (notably iOS local notifications) implement pre1 as best-effort and shall not promise vibration-only behavior.
+- **pre2** is the stronger "finishing soon" escalation. It is delivered **only when the app is not in the foreground**; it shall never surface as a foreground-visible alert. Its copy communicates remaining time (e.g. "5s remaining").
+- **completion** is the normal terminal alert and need not be made stronger than today's behavior.
+
+Pre-alert copy communicates remaining time ("10s remaining", "5s remaining") and shall not imply that exposure should stop before `T`.
+
+### 4.3 Foreground feedback
 
 When a timer transitions to `completed` while the application is active and in the foreground, the system shall play a short audio cue and a haptic. Each transition shall produce exactly one cue and exactly one haptic; reactivation-triggered completion shall not produce a cue.
 
-### 4.2 Background and lock-screen delivery
+In the foreground the system may additionally play a haptic-first **pre1** cue as the timer crosses its pre1 instant. **pre2** is never played in the foreground (per §4.2). Foreground pre-alert cues fire only via perceivable foreground ticking, never via reactivation reconciliation, and each crossing fires at most once.
 
-For timers running while the app is in the background or the device is locked, the system shall schedule a local notification at each running timer's expected completion time. The schedule is keyed deterministically by timer identity so:
+### 4.4 Background and lock-screen delivery
 
-- creating a timer schedules its notification,
-- pausing or removing a timer cancels its notification,
-- resuming a timer reschedules at the new completion time,
-- a timer transitioning to `completed` cancels any still-pending request.
+For timers running while the app is in the background or the device is locked, the system shall schedule a local notification for each applicable stage (pre1, pre2, completion) at that stage's instant. The schedule is keyed deterministically by timer identity and stage so:
 
-Duplicate scheduling for the same timer identity shall not occur.
+- creating a timer schedules every applicable stage,
+- pausing or removing a timer cancels all of its stages,
+- resuming a timer reschedules all stages at the new completion-relative instants,
+- a timer transitioning to `completed`, or being canceled, cancels any still-pending stages.
+
+Duplicate scheduling for the same timer identity and stage shall not occur.
 
 ---
 

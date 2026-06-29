@@ -8,17 +8,59 @@ import com.sangwook.ptimer.core.timer.TimerStatus
 import java.util.UUID
 
 /**
- * One completion alarm to fire at a running timer's end instant. [title] is the
- * camera/film identity ("Camera 2 · No film") and [subtitle] the shooting source
- * line ("Adjusted shutter · 8 stops"), so the completion notification can
- * identify which timer and source finished.
+ * The staged alert a scheduled alarm represents (PTIMER-73). [PRE1] and [PRE2]
+ * are pre-alerts that fire before completion; [MAIN] is the completion alert at
+ * the timer's end instant.
+ */
+enum class AlertStage { PRE1, PRE2, MAIN }
+
+/**
+ * One scheduled alert for a running timer. [triggerAtEpochMillis] is the
+ * instant it fires (the end instant for [AlertStage.MAIN], earlier for
+ * pre-alerts). [secondsBeforeCompletion] is how many seconds remain to
+ * completion at that instant (0 for [AlertStage.MAIN]), driving pre-alert copy
+ * such as "10s remaining". [title] is the camera/film identity ("Camera 2 · No
+ * film") and [subtitle] the shooting source line ("Adjusted shutter · 8
+ * stops"), so the notification can identify which timer and source it concerns.
  */
 data class CompletionAlarm(
     val timerId: UUID,
     val triggerAtEpochMillis: Long,
     val title: String,
     val subtitle: String,
+    val stage: AlertStage = AlertStage.MAIN,
+    val secondsBeforeCompletion: Int = 0,
 )
+
+/** One pre-alert stage and its lead time, before any specific timer is bound. */
+data class PreAlertSpec(val stage: AlertStage, val secondsBeforeCompletion: Int)
+
+/**
+ * Pure, platform-neutral staged-alert policy shared by the planner and the
+ * receiver (PTIMER-73). Mirrors the iOS `TimerAlertSchedule` buckets:
+ * - `duration <= 30s` — completion only.
+ * - `30s < duration <= 60s` — pre1 at T−5s.
+ * - `duration > 60s` — pre1 at T−10s, pre2 at T−5s.
+ */
+object StagedAlertPolicy {
+    const val PRE_ALERT_MIN_DURATION_SECONDS = 30.0
+    const val SECOND_PRE_ALERT_MIN_DURATION_SECONDS = 60.0
+
+    fun preAlerts(durationSeconds: Double): List<PreAlertSpec> = when {
+        durationSeconds > SECOND_PRE_ALERT_MIN_DURATION_SECONDS ->
+            listOf(PreAlertSpec(AlertStage.PRE1, 10), PreAlertSpec(AlertStage.PRE2, 5))
+        durationSeconds > PRE_ALERT_MIN_DURATION_SECONDS ->
+            listOf(PreAlertSpec(AlertStage.PRE1, 5))
+        else -> emptyList()
+    }
+
+    /**
+     * pre2 is the not-foreground-only escalation: it must never surface while
+     * the app is in the foreground. Every other stage delivers regardless.
+     */
+    fun shouldDeliver(stage: AlertStage, isAppForeground: Boolean): Boolean =
+        !(stage == AlertStage.PRE2 && isAppForeground)
+}
 
 /**
  * Content for the ongoing foreground-service notification — the Android
@@ -61,22 +103,40 @@ data class TimerAlertPlan(
 object TimerAlertPlanner {
     fun plan(active: List<TimerCardState>, formatClock: (Long) -> String): TimerAlertPlan {
         val running = active.filter { it.status == TimerStatus.running }
-        val alarms = running.map {
+        val mainAlarms = running.map {
             CompletionAlarm(
                 timerId = it.id,
                 triggerAtEpochMillis = it.endDate.toEpochMilli(),
                 title = it.identity.title,
                 subtitle = it.identity.subtitle,
+                stage = AlertStage.MAIN,
+                secondsBeforeCompletion = 0,
             )
+        }
+        // Pre-alerts (PTIMER-73) fire before the end instant per the duration
+        // bucket. They are scheduled but do not participate in the ongoing /
+        // stage sequence, which tracks completions only.
+        val preAlarms = running.flatMap { card ->
+            val endMillis = card.endDate.toEpochMilli()
+            StagedAlertPolicy.preAlerts(card.durationSeconds).map { spec ->
+                CompletionAlarm(
+                    timerId = card.id,
+                    triggerAtEpochMillis = endMillis - spec.secondsBeforeCompletion * 1_000L,
+                    title = card.identity.title,
+                    subtitle = card.identity.subtitle,
+                    stage = spec.stage,
+                    secondsBeforeCompletion = spec.secondsBeforeCompletion,
+                )
+            }
         }
         // One stage per timer, ordered by end. Stage i is the ongoing content
         // while timer i is representative — every earlier-ending timer has gone,
         // so the still-running set is the suffix from i onward.
-        val sorted = alarms.sortedBy { it.triggerAtEpochMillis }
+        val sorted = mainAlarms.sortedBy { it.triggerAtEpochMillis }
         val stages = sorted.indices.map { i ->
             OngoingStage(sorted[i].triggerAtEpochMillis, ongoingFor(sorted.subList(i, sorted.size), formatClock)!!)
         }
-        return TimerAlertPlan(alarms, ongoingFor(alarms, formatClock), stages)
+        return TimerAlertPlan(mainAlarms + preAlarms, ongoingFor(mainAlarms, formatClock), stages)
     }
 
     /** The ongoing content for a given set of still-running timers, or null when empty. */

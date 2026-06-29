@@ -24,6 +24,7 @@ import com.sangwook.ptimer.R
 object TimerNotifications {
     const val ONGOING_CHANNEL_ID = "timer_ongoing"
     const val COMPLETION_CHANNEL_ID = "timer_completion"
+    const val PRE_ALERT_CHANNEL_ID = "timer_pre_alert"
     const val ONGOING_NOTIFICATION_ID = 1
 
     /** Intent extra: open the app straight into the (expanded) timer list. */
@@ -51,6 +52,20 @@ object TimerNotifications {
                 "Timer complete",
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply { description = "Alerts when a timer finishes" },
+        )
+        // Pre-alerts are haptic-first: a silent channel (we drive vibration
+        // ourselves in TimerVibration) so "10s/5s remaining" never competes
+        // with the completion sound.
+        manager.createNotificationChannel(
+            NotificationChannel(
+                PRE_ALERT_CHANNEL_ID,
+                "Timer pre-alerts",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = "Vibrates as a timer is about to finish"
+                setSound(null, null)
+                enableVibration(false)
+            },
         )
     }
 
@@ -109,6 +124,39 @@ object TimerNotifications {
         } catch (_: SecurityException) {
         }
     }
+
+    /**
+     * Posts a haptic-first pre-alert ("10s/5s remaining") on the silent
+     * pre-alert channel (PTIMER-73). A distinct notification id per timer + stage
+     * keeps pre1, pre2, and completion separate. The notification auto-dismisses
+     * shortly after the timer would complete so a stale "Ns remaining" never
+     * lingers. The copy communicates remaining time only; it never implies that
+     * exposure should stop before completion.
+     */
+    fun notifyPreAlert(
+        context: Context,
+        timerId: String,
+        stage: AlertStage,
+        secondsRemaining: Int,
+        title: String,
+    ) {
+        val notification = NotificationCompat.Builder(context, PRE_ALERT_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSubText(title.ifBlank { "Timer" })
+            .setContentTitle("${secondsRemaining}s remaining")
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .setTimeoutAfter(secondsRemaining * 1_000L + 2_000L)
+            .setContentIntent(appContentIntent(context, focusTimerId = timerId))
+            .build()
+        try {
+            NotificationManagerCompat.from(context).notify(preAlertNotificationId(timerId, stage), notification)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    private fun preAlertNotificationId(timerId: String, stage: AlertStage): Int =
+        31 * timerId.hashCode() + stage.ordinal + 1
 
     private fun appContentIntent(context: Context, focusTimerId: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)

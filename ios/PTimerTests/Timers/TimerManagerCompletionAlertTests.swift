@@ -189,4 +189,49 @@ final class TimerManagerCompletionAlertTests: XCTestCase {
         service.handleTimerCompletion(event)
         XCTAssertEqual(alarmSpy.playCount, 1)
     }
+
+    // PTIMER-73 (background-audio keep-alive): a completion that fires while the
+    // app is backgrounded (kept alive by the audio session) plays the audible
+    // alarm only — no haptic — while a foreground completion plays full feedback.
+
+    @MainActor
+    func testBackgroundCompletionPlaysAlarmOnlyAndForegroundPlaysFullFeedback() {
+        let event = TimerCompletionEvent(timerID: UUID(), completionDate: Date(timeIntervalSince1970: 100))
+
+        let foregroundSpy = CompletionFeedbackSpy()
+        ForegroundTimerCompletionAlertService(
+            feedbackPlayer: foregroundSpy,
+            applicationStateProvider: { .active }
+        ).handleTimerCompletion(event)
+        XCTAssertEqual(foregroundSpy.playCount, 1)
+        XCTAssertEqual(foregroundSpy.alarmOnlyPlayCount, 0)
+
+        let backgroundSpy = CompletionFeedbackSpy()
+        ForegroundTimerCompletionAlertService(
+            feedbackPlayer: backgroundSpy,
+            applicationStateProvider: { .background }
+        ).handleTimerCompletion(event)
+        XCTAssertEqual(backgroundSpy.playCount, 0)
+        XCTAssertEqual(backgroundSpy.alarmOnlyPlayCount, 1)
+    }
+
+    @MainActor
+    func testKeepAliveStartsWhileTimerRunsAndStopsWhenNoneRemain() throws {
+        let startDate = Date(timeIntervalSince1970: 100)
+        var currentDate = startDate
+        let keepAlive = BackgroundAudioKeepAliveSpy()
+        let manager = TimerManager(
+            tickInterval: 60,
+            dateProvider: { currentDate },
+            backgroundAudioKeepAlive: keepAlive
+        )
+
+        let id = try XCTUnwrap(manager.start(duration: 5))
+        XCTAssertGreaterThanOrEqual(keepAlive.startCount, 1)
+
+        // Drive the timer to completion: keep-alive is released when nothing runs.
+        currentDate = startDate.addingTimeInterval(5)
+        manager.tick(now: currentDate)
+        XCTAssertGreaterThanOrEqual(keepAlive.stopCount, 1)
+    }
 }

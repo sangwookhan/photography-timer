@@ -175,9 +175,9 @@ Pre-alert copy communicates remaining time ("10s remaining", "5s remaining") and
 
 For field shooting the photographer may not be looking at the phone, so the completion alert — and the stronger pre2 escalation — shall be **audible even when the device is in silent / vibrate mode**, on the strongest path each platform permits:
 
-- The default notification-sound path is insufficient because silent / vibrate mode suppresses it. The system shall instead use an alert path that survives silent / vibrate mode where the platform allows it (e.g. an alarm-stream sound, or app-owned playback through a playback-oriented audio session).
+- The default notification-sound path is insufficient because silent / vibrate mode suppresses it. The system shall instead use an alert path that survives silent / vibrate mode where the platform allows it (e.g. an alarm-stream sound, or app-owned playback through a playback-oriented audio session that overrides the silent switch).
 - **pre1** remains haptic-first and is not made audible by this requirement.
-- Platform limits shall be stated rather than overpromised. In particular, a platform that cannot guarantee an audible alert for a *background/locked* timer in silent mode without a privileged entitlement (notably iOS without Critical Alerts) shall deliver the best supported path and document the gap; it shall not claim parity with the system Clock timer.
+- A *background/locked* timer in silent mode is the hard case. Where the platform keeps the app alive while a timer runs (e.g. an `audio` background mode driving a continuously-playing audio session), the completion alarm may be played by the app at the end instant and so be audible in silent mode; this costs battery while a timer runs and is defeated if the user force-quits the app. Where even this is unavailable without a privileged, separately-granted entitlement (e.g. iOS Critical Alerts, which is out of scope), the system shall deliver the best supported path and document the gap. No claim of parity with the system Clock timer is made.
 
 ### 4.3 Foreground feedback
 

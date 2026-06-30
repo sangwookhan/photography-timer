@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import java.util.UUID
 
 /**
  * Fired by AlarmManager at a timer's staged-alert instant (PTIMER-73).
@@ -45,7 +46,9 @@ class TimerCompletionReceiver : BroadcastReceiver() {
             if (StagedAlertPolicy.shouldPlayAlarm(stage, isAppForeground = foreground)) {
                 // pre2 (not foreground): the stronger escalation is the audible
                 // alarm itself.
-                AndroidTimerAlarmPlayer.playAlarm(context)
+                runCatching { UUID.fromString(timerId) }.getOrNull()?.let {
+                    AndroidTimerAlarmPlayer.playAlarm(context, it)
+                }
             } else if (stage == AlertStage.PRE1) {
                 // pre1 is haptic-first and silent.
                 TimerVibration.vibrate(context, stage)

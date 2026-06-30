@@ -3,6 +3,8 @@
 
 package com.sangwook.ptimer.app.vm
 
+import com.sangwook.ptimer.app.notify.AndroidTimerAlarmPlayer
+import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
 import com.sangwook.ptimer.app.timer.TimerWorkspace
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -63,12 +65,25 @@ class ShootingViewModel(
     private val store: WorkspacePersistenceStoring,
     private val clock: () -> Instant = { Instant.now() },
     private val idProvider: () -> UUID = { UUID.randomUUID() },
+    private val alarmPlayer: TimerAlarmPlayer = AndroidTimerAlarmPlayer,
 ) {
     private val workspace = MutableStateFlow(TimerWorkspace())
     private val now = MutableStateFlow(clock())
 
     private val _uiState = MutableStateFlow(render(workspace.value, now.value))
     val uiState: StateFlow<ShootingUiState> = _uiState.asStateFlow()
+
+    /**
+     * The timer whose alarm is currently sounding (or null). The UI shows a
+     * stop-alarm state on the matching mini timer / row and stops the alarm on
+     * tap via [stopAlarm] (PTIMER-73).
+     */
+    val soundingAlarmTimerId: StateFlow<UUID?> get() = alarmPlayer.soundingTimerId
+
+    /** Stops the sounding alarm. Sound only — the completed timer is untouched. */
+    fun stopAlarm() {
+        alarmPlayer.stop()
+    }
 
     /** True while at least one timer is running (the coordinator ticks then). */
     val hasRunningTimers: Boolean get() = workspace.value.hasRunning

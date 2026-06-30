@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.sangwook.ptimer.MainActivity
 import com.sangwook.ptimer.R
+import java.util.UUID
 
 /**
  * Notification channels + builders for the timer surfaces. Three channels:
@@ -137,7 +138,9 @@ object TimerNotifications {
         // AlarmManager receiver (backgrounded) or the in-app detector
         // (foreground, where the receiver's alarm is cancelled by the
         // running-set sync). Exactly once per timer either way.
-        AndroidTimerAlarmPlayer.playAlarm(context)
+        runCatching { UUID.fromString(timerId) }.getOrNull()?.let {
+            AndroidTimerAlarmPlayer.playAlarm(context, it)
+        }
         val notification = NotificationCompat.Builder(context, ALERT_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setCategory(NotificationCompat.CATEGORY_ALARM)

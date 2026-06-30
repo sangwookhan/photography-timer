@@ -133,6 +133,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     }
 
     val timerState by viewModel.uiState.collectAsStateWithLifecycle()
+    val soundingAlarmId by viewModel.soundingAlarmTimerId.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
 
     // Persisted ND notation display mode (PTIMER-187): seed from the store, then
@@ -310,6 +311,8 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     focusId = focusTimerId,
                     ndNotationMode = ndNotationMode,
                     modifier = Modifier.fillMaxWidth(),
+                    soundingAlarmId = soundingAlarmId,
+                    onStopAlarm = { viewModel.stopAlarm() },
                 )
             } else {
                 MiniTimerBar(
@@ -319,6 +322,8 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                         scope.launch { scaffoldState.bottomSheetState.expand() }
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    soundingAlarmId = soundingAlarmId,
+                    onStopAlarm = { viewModel.stopAlarm() },
                 )
             }
         },

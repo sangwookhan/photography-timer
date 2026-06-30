@@ -462,9 +462,13 @@ struct ExposureCalculatorScreen: View {
             Text(SilentModeAdvisoryController.advisoryText)
                 .font(.footnote)
                 .multilineTextAlignment(.center)
+                // Fixed warning amber on dark text, the same in light and dark
+                // mode, so the advisory stands out against the bottom UI rather
+                // than blending in (PTIMER-73).
+                .foregroundStyle(Color(red: 0.16, green: 0.10, blue: 0.02))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(.thinMaterial, in: Capsule())
+                .background(Color(red: 1.0, green: 0.84, blue: 0.36), in: Capsule())
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)
                 .shadow(radius: 6, y: 2)

@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Film Data Attribution · Photography Timer"
+---
+
 # Film Data Attribution
 
 Photography Timer's film data is centered on official data sheets and manufacturer publications, with publicly available references used as supplemental sources where applicable.

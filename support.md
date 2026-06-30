@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Support · Photography Timer"
+---
+
 # Support
 
 For support, bug reports, and feature requests, use GitHub Issues or the repository support contact.

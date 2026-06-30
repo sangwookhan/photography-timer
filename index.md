@@ -1,3 +1,8 @@
+---
+layout: default
+title: Photography Timer
+---
+
 # Photography Timer
 
 Exposure calculator and countdown timer for film and digital photography.
@@ -12,7 +17,7 @@ Features:
 - Film and digital photography workflows
 
 Links:
-- [Privacy Policy](privacy.md)
-- [Support](support.md)
-- [Film Data Attribution](attribution.md)
+- [Privacy Policy](privacy.html)
+- [Support](support.html)
+- [Film Data Attribution](attribution.html)
 - Source code and license: [github.com/sangwookhan/photography-timer](https://github.com/sangwookhan/photography-timer)

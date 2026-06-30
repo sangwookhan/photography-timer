@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Privacy Policy · Photography Timer"
+---
+
 # Privacy Policy
 
 Photography Timer does not require an account.

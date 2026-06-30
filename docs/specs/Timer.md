@@ -161,7 +161,7 @@ Let `T` be the expected completion instant. The staged alerts a timer produces d
 - **30s < duration ≤ 60s** — **pre1** at `T − 5s`, then completion at `T`.
 - **duration > 60s** — **pre1** at `T − 10s`, **pre2** at `T − 5s`, then completion at `T`.
 
-The stage policy is deterministic and platform-neutral; both platforms compute the same stages from `(duration, T)`.
+These lead times are the **foreground / in-tick** schedule: which durations get pre-alerts (the bucket boundaries) is deterministic and platform-neutral, and the foreground tick path fires pre-alerts at these instants because the tick has no delivery latency. A platform's **background notification** channel may use *earlier* lead times for the same buckets to absorb notification delivery lag (see §4.4); the buckets are identical, only the lead times differ.
 
 ### 4.2 Alert character
 
@@ -217,6 +217,15 @@ For timers running while the app is in the background or the device is locked, t
 - a timer transitioning to `completed`, or being canceled, cancels any still-pending stages.
 
 Duplicate scheduling for the same timer identity and stage shall not occur.
+
+**iOS notification timing and copy.** Local notifications can be delivered seconds late, so a `T − 5s` alert can arrive *after* the timer has already completed. iOS therefore fires its background pre-alerts **earlier** than the foreground schedule of §4.1 — same buckets, earlier lead times:
+
+- **30s < duration ≤ 60s** — one audible pre-alert at `T − 15s`, then completion.
+- **duration > 60s** — a gentle (silent) heads-up at `T − 30s`, an audible pre-alert at `T − 15s`, then completion.
+
+Each pre-alert's body shall state both the remaining time **at its scheduled instant** (not a claim that it arrived on time) and the **expected end time** in the user's local short time style (e.g. "15s remaining · ends 10:30 PM"), so the real target is unambiguous even when delivery is late. The completion notification copy is unchanged.
+
+Android keeps its accepted behavior: the alarm-stream notification path drives an audible alert in vibrate / silent mode, so its existing pre-alert timing is retained.
 
 ---
 

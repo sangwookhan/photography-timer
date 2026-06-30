@@ -8,20 +8,25 @@ import PTimerCore
 
 /// PTIMER-73: the background notification scheduler maps a running timer's
 /// staged-alert schedule onto one local notification per stage, with distinct
-/// identifiers, stage-specific copy, and a haptic-first (silent) pre1. Cancel
-/// removes every stage for the timer. Past pre-alerts are skipped (a resume
-/// near the end never fires a stale "Ns remaining") and a cancel that races a
-/// still-in-flight async add leaves no stale pending requests.
+/// identifiers and copy that carries the expected end time. iOS notification
+/// pre-alerts fire earlier than the foreground schedule (T-30 / T-15) because
+/// notifications can be delivered late: pre1 is the silent T-30 heads-up (long
+/// timers only) and pre2 is the audible T-15 warning. Cancel removes every
+/// stage for the timer. Past pre-alerts are skipped (a resume near the end
+/// never fires a stale pre-alert) and a cancel that races a still-in-flight
+/// async add leaves no stale pending requests.
 final class StagedNotificationSchedulerTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_000)
     private let calendar = Calendar.current
 
     @MainActor
-    func testLongTimerSchedulesPre1Pre2AndCompletion() async throws {
+    func testLongTimerSchedulesEarlyAndLatePreAlertsAndCompletion() async throws {
         let center = FakeUserNotificationCenter()
         let scheduler = makeScheduler(center: center)
         let id = UUID()
-        let timer = runningTimer(id: id, start: now, duration: 75) // pre1@65, pre2@70, end@75
+        // pre1 at T-30, pre2 at T-15, completion at T.
+        let timer = runningTimer(id: id, start: now, duration: 75)
+        let endTime = try XCTUnwrap(timer.endDate).formatted(date: .omitted, time: .shortened)
 
         center.expectAdds(3)
         scheduler.scheduleCompletionNotification(for: timer)
@@ -32,11 +37,13 @@ final class StagedNotificationSchedulerTests: XCTestCase {
         )
 
         let pre1 = try XCTUnwrap(byIdentifier["timer-pre1-\(id.uuidString.lowercased())"])
-        XCTAssertEqual(pre1.content.body, "10s remaining")
-        XCTAssertNil(pre1.content.sound, "pre1 is haptic-first and must carry no sound")
+        XCTAssertEqual(pre1.content.title, "Timer finishing soon")
+        XCTAssertEqual(pre1.content.body, "30s remaining · ends \(endTime)")
+        XCTAssertNil(pre1.content.sound, "the early T-30 heads-up is silent; pre2 is the audible warning")
 
         let pre2 = try XCTUnwrap(byIdentifier["timer-pre2-\(id.uuidString.lowercased())"])
-        XCTAssertEqual(pre2.content.body, "5s remaining")
+        XCTAssertEqual(pre2.content.title, "Timer finishing soon")
+        XCTAssertEqual(pre2.content.body, "15s remaining · ends \(endTime)")
         XCTAssertEqual(pre2.content.sound, .default)
 
         let completion = try XCTUnwrap(byIdentifier["timer-completion-\(id.uuidString.lowercased())"])
@@ -45,11 +52,13 @@ final class StagedNotificationSchedulerTests: XCTestCase {
     }
 
     @MainActor
-    func testMediumTimerSchedulesPre1AndCompletionOnly() async throws {
+    func testMediumTimerSchedulesLatePreAlertAndCompletionOnly() async throws {
         let center = FakeUserNotificationCenter()
         let scheduler = makeScheduler(center: center)
         let id = UUID()
+        // 30s < 45s <= 60s: one audible pre-alert at T-15 (pre2), then completion.
         let timer = runningTimer(id: id, start: now, duration: 45)
+        let endTime = try XCTUnwrap(timer.endDate).formatted(date: .omitted, time: .shortened)
 
         center.expectAdds(2)
         scheduler.scheduleCompletionNotification(for: timer)
@@ -57,9 +66,16 @@ final class StagedNotificationSchedulerTests: XCTestCase {
 
         let identifiers = Set(center.addedRequests.map(\.identifier))
         XCTAssertEqual(identifiers, [
-            "timer-pre1-\(id.uuidString.lowercased())",
+            "timer-pre2-\(id.uuidString.lowercased())",
             "timer-completion-\(id.uuidString.lowercased())",
         ])
+
+        let byIdentifier = Dictionary(
+            uniqueKeysWithValues: center.addedRequests.map { ($0.identifier, $0) }
+        )
+        let pre2 = try XCTUnwrap(byIdentifier["timer-pre2-\(id.uuidString.lowercased())"])
+        XCTAssertEqual(pre2.content.body, "15s remaining · ends \(endTime)")
+        XCTAssertEqual(pre2.content.sound, .default)
     }
 
     @MainActor
@@ -83,8 +99,8 @@ final class StagedNotificationSchedulerTests: XCTestCase {
         let center = FakeUserNotificationCenter()
         let scheduler = makeScheduler(center: center)
         let id = UUID()
-        // A >60s timer resumed with only 3s left: end is now+3, so pre1 (end-10)
-        // and pre2 (end-5) are both in the past.
+        // A >60s timer resumed with only 3s left: end is now+3, so pre1 (end-30)
+        // and pre2 (end-15) are both in the past.
         let timer = resumedTimer(id: id, duration: 75, remaining: 3)
 
         center.expectAdds(1)
@@ -101,9 +117,9 @@ final class StagedNotificationSchedulerTests: XCTestCase {
         let center = FakeUserNotificationCenter()
         let scheduler = makeScheduler(center: center)
         let id = UUID()
-        // A >60s timer resumed with 7s left: pre1 (end-10 = now-3) is past, but
-        // pre2 (end-5 = now+2) is still ahead, so pre2 + completion schedule.
-        let timer = resumedTimer(id: id, duration: 75, remaining: 7)
+        // A >60s timer resumed with 20s left: pre1 (end-30 = now-10) is past, but
+        // pre2 (end-15 = now+5) is still ahead, so pre2 + completion schedule.
+        let timer = resumedTimer(id: id, duration: 75, remaining: 20)
 
         center.expectAdds(2)
         scheduler.scheduleCompletionNotification(for: timer)

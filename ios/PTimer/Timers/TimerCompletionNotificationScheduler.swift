@@ -44,8 +44,18 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
 
     /// Pre-alerts within this many seconds of now are treated as effectively
     /// due and skipped, so resuming a long timer near its end never fires a
-    /// stale "Ns remaining". The completion alert is never skipped.
+    /// stale pre-alert. The completion alert is never skipped.
     private static let preAlertSchedulingLeeway: TimeInterval = 0.5
+
+    /// iOS background pre-alert lead times. These are intentionally *earlier*
+    /// than the foreground schedule (`TimerAlertSchedule`, T−5 / T−10): local
+    /// notifications can be delivered seconds late, so a T−5 alert can arrive
+    /// after the timer has already completed. Firing at T−30 / T−15 gives real
+    /// margin, and each pre-alert also carries the expected end time as the
+    /// source of truth for late delivery (PTIMER-73). The duration buckets
+    /// match `TimerAlertSchedule`; only the lead times differ.
+    private static let earlyPreAlertLeadSeconds = 30
+    private static let latePreAlertLeadSeconds = 15
 
     init(
         notificationCenter: UserNotificationCentering = UNUserNotificationCenter.current(),
@@ -87,9 +97,9 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
         // whose pre1/pre2 instants have passed. Completion is always kept.
         let now = dateProvider()
         let timerID = timer.id
-        let requests = TimerAlertSchedule.alerts(duration: timer.duration, endDate: endDate)
+        let requests = Self.notificationAlerts(duration: timer.duration, endDate: endDate)
             .filter { Self.shouldSchedule($0, at: now) }
-            .map { notificationRequest(for: timerID, alert: $0) }
+            .map { notificationRequest(for: timerID, alert: $0, endDate: endDate) }
 
         // Serialize per timer: wait for the prior scheduling task to fully
         // settle before touching this timer's pending requests. Because add
@@ -151,6 +161,44 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
         )
     }
 
+    /// The iOS background notification schedule (PTIMER-73). Same duration
+    /// buckets as `TimerAlertSchedule`, but earlier lead times tuned for
+    /// notification delivery lag (see `earlyPreAlertLeadSeconds`):
+    /// - `duration <= 30s` — completion only.
+    /// - `30s < duration <= 60s` — one audible pre-alert at T−15, then completion.
+    /// - `duration > 60s` — a gentle (silent) heads-up at T−30, an audible
+    ///   pre-alert at T−15, then completion.
+    ///
+    /// `pre1` is the silent T−30 heads-up (long timers only); `pre2` is the
+    /// audible T−15 warning (present whenever any pre-alert is scheduled).
+    private static func notificationAlerts(duration: TimeInterval, endDate: Date) -> [TimerStagedAlert] {
+        var alerts: [TimerStagedAlert] = []
+
+        if duration > TimerAlertSchedule.secondPreAlertMinimumDuration {
+            alerts.append(
+                TimerStagedAlert(
+                    stage: .pre1,
+                    fireDate: endDate.addingTimeInterval(-TimeInterval(earlyPreAlertLeadSeconds)),
+                    secondsBeforeCompletion: earlyPreAlertLeadSeconds
+                )
+            )
+        }
+        if duration > TimerAlertSchedule.preAlertMinimumDuration {
+            alerts.append(
+                TimerStagedAlert(
+                    stage: .pre2,
+                    fireDate: endDate.addingTimeInterval(-TimeInterval(latePreAlertLeadSeconds)),
+                    secondsBeforeCompletion: latePreAlertLeadSeconds
+                )
+            )
+        }
+
+        alerts.append(
+            TimerStagedAlert(stage: .completion, fireDate: endDate, secondsBeforeCompletion: 0)
+        )
+        return alerts
+    }
+
     private static func shouldSchedule(_ alert: TimerStagedAlert, at now: Date) -> Bool {
         switch alert.stage {
         case .completion:
@@ -162,25 +210,27 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
 
     private func notificationRequest(
         for timerID: UUID,
-        alert: TimerStagedAlert
+        alert: TimerStagedAlert,
+        endDate: Date
     ) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.userInfo = ["timerID": timerID.uuidString]
 
         switch alert.stage {
         case .pre1:
-            // pre1 is haptic-first: no sound, so a delivered banner relies on
-            // the device's notification vibration. iOS does not guarantee a
-            // vibration-only local notification, so this is best-effort.
-            content.title = "Timer"
-            content.body = "\(alert.secondsBeforeCompletion)s remaining"
+            // Gentle (silent) early heads-up at T−30 for long timers. Like the
+            // audible pre2 it carries the expected end time, because the
+            // notification can be delivered late; the "Ns remaining" describes
+            // the scheduled point, not the delivery instant (PTIMER-73).
+            content.title = "Timer finishing soon"
+            content.body = Self.preAlertBody(secondsBefore: alert.secondsBeforeCompletion, endDate: endDate)
             content.sound = nil
         case .pre2:
-            // pre2 is the stronger "finishing soon" escalation. It is auto-
-            // suppressed in the foreground (no notification-center delegate),
-            // so it surfaces only when the app is not foreground.
+            // The primary audible pre-alert (T−15). Auto-suppressed in the
+            // foreground (no notification-center delegate), so it surfaces only
+            // when the app is not foreground.
             content.title = "Timer finishing soon"
-            content.body = "\(alert.secondsBeforeCompletion)s remaining"
+            content.body = Self.preAlertBody(secondsBefore: alert.secondsBeforeCompletion, endDate: endDate)
             content.sound = .default
         case .completion:
             content.title = "Timer Complete"
@@ -200,6 +250,13 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
             content: content,
             trigger: trigger
         )
+    }
+
+    /// Pre-alert body: the scheduled remaining time plus the expected end time
+    /// in the user's local short time style, so the target is unambiguous even
+    /// if the notification is delivered late (PTIMER-73).
+    private static func preAlertBody(secondsBefore: Int, endDate: Date) -> String {
+        "\(secondsBefore)s remaining · ends \(endDate.formatted(date: .omitted, time: .shortened))"
     }
 
     static func notificationIdentifier(for timerID: UUID) -> String {

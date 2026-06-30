@@ -35,9 +35,8 @@ For the current 0.7 release scope:
 
 ## Support
 
-Support contact details will be published with the public release.
-
-For internal development and repository maintenance, use the GitHub repository.
+If you find a bug or have a feature request, please open an issue on GitHub:
+[https://github.com/sangwookhan/photography-timer/issues/new](https://github.com/sangwookhan/photography-timer/issues/new)
 
 ## Source Code and License
 

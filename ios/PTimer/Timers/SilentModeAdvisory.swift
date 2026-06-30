@@ -86,7 +86,7 @@ final class SilentModeAdvisoryController: ObservableObject {
     static let shared = SilentModeAdvisoryController()
 
     /// Short, non-diagnostic copy. English-only, matching the rest of the app.
-    static let advisoryText = "Silent mode may be on. Check volume before long exposures."
+    static let advisoryText = "Silent mode may be on. Turn it off and check volume before long exposures."
 
     @Published private(set) var isAdvisoryVisible = false
 

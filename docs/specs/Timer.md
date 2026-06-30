@@ -195,7 +195,7 @@ This round covers in-app stop only; a notification-level stop action is out of s
 
 Because background/locked silent audibility is not guaranteed on every platform (§4.2.1), the app may surface a passive advisory hinting the device might be muted, so the photographer can check volume before a long exposure. It is strictly non-intrusive:
 
-- **Best-effort only.** It never claims reliable silent-switch detection. Copy stays soft (e.g. "Silent mode may be on. Check volume before long exposures.") and never asserts that the device *is* muted.
+- **Best-effort only.** It never claims reliable silent-switch detection. Copy stays soft (e.g. "Silent mode may be on. Turn it off and check volume before long exposures.") and never asserts that the device *is* muted.
 - **Never gates the timer.** It shall never block, delay, or gate starting a timer, never show a modal or require confirmation, and run only while the app is visible/foreground.
 - **Shown sparingly.** It appears as a small non-blocking advisory, at most once per app session, and is suppressed when a completion alarm is sounding or when the app was opened from a timer notification.
 

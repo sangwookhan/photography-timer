@@ -15,21 +15,21 @@ struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
         self.alarmPlayer = alarmPlayer
     }
 
-    func playCompletionFeedback() {
+    func playCompletionFeedback(for timerID: UUID) {
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
         generator.notificationOccurred(.success)
         // App-owned playback (AVAudioSession .playback) so completion is audible
         // even in silent mode (PTIMER-73), unlike the ring-switch-obeying system
         // sound it replaces.
-        alarmPlayer.playCompletionAlarm()
+        alarmPlayer.playCompletionAlarm(for: timerID)
     }
 
-    func playCompletionAlarm() {
+    func playCompletionAlarm(for timerID: UUID) {
         // Background completion (app kept alive by the background-audio session):
         // play the audible alarm but skip the haptic, which is not perceived when
         // the device is in a pocket / on a tripod.
-        alarmPlayer.playCompletionAlarm()
+        alarmPlayer.playCompletionAlarm(for: timerID)
     }
 
     /// Foreground pre1 feedback (PTIMER-73): haptic-first and silent. A medium
@@ -65,9 +65,9 @@ final class ForegroundTimerCompletionAlertService: TimerCompletionAlerting {
         // alarm only — overriding the silent switch so a pocketed/locked phone
         // is still heard (PTIMER-73).
         if applicationStateProvider() == .active {
-            feedbackPlayer.playCompletionFeedback()
+            feedbackPlayer.playCompletionFeedback(for: event.timerID)
         } else {
-            feedbackPlayer.playCompletionAlarm()
+            feedbackPlayer.playCompletionAlarm(for: event.timerID)
         }
     }
 

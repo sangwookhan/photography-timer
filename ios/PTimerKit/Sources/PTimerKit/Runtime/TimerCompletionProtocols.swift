@@ -30,8 +30,11 @@ public struct NoOpTimerCompletionAlertService: TimerCompletionAlerting {
 }
 
 public protocol TimerCompletionFeedbackPlaying {
+    /// Play the full completion feedback (haptic + audible alarm) for the timer
+    /// that completed. The id lets the audible alarm publish which timer is
+    /// sounding so the UI can offer a stop-alarm affordance (PTIMER-73).
     @MainActor
-    func playCompletionFeedback()
+    func playCompletionFeedback(for timerID: UUID)
 
     /// Play the lighter, haptic-first pre-alert feedback (PTIMER-73). A default
     /// no-op is provided so completion-only conformers keep compiling unchanged.
@@ -44,7 +47,7 @@ public protocol TimerCompletionFeedbackPlaying {
     /// (PTIMER-73). Defaults to the full completion feedback so existing
     /// conformers keep their behavior.
     @MainActor
-    func playCompletionAlarm()
+    func playCompletionAlarm(for timerID: UUID)
 }
 
 public extension TimerCompletionFeedbackPlaying {
@@ -52,7 +55,7 @@ public extension TimerCompletionFeedbackPlaying {
     func playPreAlertFeedback() {}
 
     @MainActor
-    func playCompletionAlarm() { playCompletionFeedback() }
+    func playCompletionAlarm(for timerID: UUID) { playCompletionFeedback(for: timerID) }
 }
 
 public protocol TimerCompletionNotificationScheduling {

@@ -12,7 +12,7 @@ import Foundation
 /// silent mode, the way field shooting needs.
 @MainActor
 protocol TimerAlarmAudioPlaying: AnyObject {
-    func playCompletionAlarm()
+    func playCompletionAlarm(for timerID: UUID)
     func stop()
 }
 
@@ -32,9 +32,21 @@ protocol TimerBackgroundAudioKeeping: AnyObject {
 }
 
 @MainActor
-final class AVAudioTimerAlarmPlayer: NSObject, TimerAlarmAudioPlaying, TimerBackgroundAudioKeeping, AVAudioPlayerDelegate {
+final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudioPlaying, TimerBackgroundAudioKeeping, AVAudioPlayerDelegate {
+    /// Process-wide instance, so the completion path and the UI (which observes
+    /// `soundingTimerID` to show a stop-alarm affordance) share one player.
+    static let shared = AVAudioTimerAlarmPlayer()
+
+    /// The timer whose completion alarm is currently sounding (or nil). The UI
+    /// shows a stop-alarm state on the matching mini timer / row (PTIMER-73).
+    @Published private(set) var soundingTimerID: UUID?
+
     private var alarmPlayer: AVAudioPlayer?
     private var keepAlivePlayer: AVAudioPlayer?
+
+    /// How long the completion alarm sounds before it auto-stops; the user can
+    /// stop it sooner by tapping the timer.
+    private static let alarmWindow: TimeInterval = 8
 
     // Touches no main-actor state, so it is safe (and convenient for default
     // arguments) to construct from a nonisolated context.
@@ -44,25 +56,31 @@ final class AVAudioTimerAlarmPlayer: NSObject, TimerAlarmAudioPlaying, TimerBack
 
     // MARK: TimerAlarmAudioPlaying
 
-    func playCompletionAlarm() {
-        guard activateSession() else {
+    func playCompletionAlarm(for timerID: UUID) {
+        guard activateSession(), let player = try? AVAudioPlayer(data: Self.alarmToneData) else {
             // Best-effort fallback. AudioServices obeys the silent switch, so it
             // is inaudible in silent mode — but better than nothing if the audio
             // session cannot be configured.
             AudioServicesPlaySystemSound(1005)
             return
         }
-        let player = try? AVAudioPlayer(data: Self.alarmToneData)
-        player?.delegate = self
-        player?.volume = 1.0
-        player?.prepareToPlay()
-        player?.play()
+        player.delegate = self
+        player.volume = 1.0
+        player.prepareToPlay()
+        // Loop the short tone for a bounded window so it is a real, stoppable
+        // alarm rather than a single beep that is gone before it can be silenced.
+        if player.duration > 0 {
+            player.numberOfLoops = max(0, Int((Self.alarmWindow / player.duration).rounded()) - 1)
+        }
+        player.play()
         alarmPlayer = player
+        soundingTimerID = timerID
     }
 
     func stop() {
         alarmPlayer?.stop()
         alarmPlayer = nil
+        soundingTimerID = nil
         deactivateSessionIfIdle()
     }
 

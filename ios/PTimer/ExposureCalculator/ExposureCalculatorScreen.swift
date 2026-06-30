@@ -15,6 +15,9 @@ struct ExposureCalculatorScreen: View {
     @StateObject private var viewModel: ExposureCalculatorViewModel
     @StateObject private var bottomSheetStateStore: BottomSheetWorkspaceStateStore
     @StateObject private var bottomSheetSnapshotStore: BottomSheetWorkspaceSnapshotStore
+    /// Shared audible-alarm player; observed so the timer strip / window show a
+    /// stop-alarm state while a completion alarm is sounding (PTIMER-73).
+    @ObservedObject private var alarmPlayer = AVAudioTimerAlarmPlayer.shared
 
     /// Film selector visibility lives at the screen level so the
     /// overlay can render above both the camera workspace and the
@@ -231,7 +234,9 @@ struct ExposureCalculatorScreen: View {
                                 in: snapshot,
                                 store: bottomSheetStateStore
                             )
-                        }
+                        },
+                        soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+                        onStopAlarm: { alarmPlayer.stop() }
                     )
                     .padding(
                         .bottom,
@@ -336,7 +341,9 @@ struct ExposureCalculatorScreen: View {
                         }
                     },
                     onClearCompletedTimers: viewModel.clearCompletedTimers,
-                    onClose: bottomSheetStateStore.collapse
+                    onClose: bottomSheetStateStore.collapse,
+                    soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+                    onStopAlarm: { alarmPlayer.stop() }
                 )
             }
             // Presented via `isPresented` (not `item`) so switching the

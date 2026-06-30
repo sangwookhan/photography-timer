@@ -148,13 +148,15 @@ final class TimerManagerCompletionAlertTests: XCTestCase {
     // app-owned audible alarm player so completion is heard even in silent mode.
 
     @MainActor
-    func testCompletionFeedbackPlaysAppOwnedAudibleAlarm() {
+    func testCompletionFeedbackPlaysAppOwnedAudibleAlarmForThatTimer() {
         let alarmSpy = AlarmAudioPlayerSpy()
         let player = SystemTimerCompletionFeedbackPlayer(alarmPlayer: alarmSpy)
+        let id = UUID()
 
-        player.playCompletionFeedback()
+        player.playCompletionFeedback(for: id)
 
         XCTAssertEqual(alarmSpy.playCount, 1)
+        XCTAssertEqual(alarmSpy.lastTimerID, id, "the sounding alarm must be tagged with the completed timer")
     }
 
     @MainActor

@@ -40,22 +40,11 @@ public protocol TimerCompletionFeedbackPlaying {
     /// no-op is provided so completion-only conformers keep compiling unchanged.
     @MainActor
     func playPreAlertFeedback()
-
-    /// Play the audible completion alarm *without* the haptic — used when a
-    /// timer completes while the app is in the background (kept alive by the
-    /// background-audio session), where a haptic would not be perceived
-    /// (PTIMER-73). Defaults to the full completion feedback so existing
-    /// conformers keep their behavior.
-    @MainActor
-    func playCompletionAlarm(for timerID: UUID)
 }
 
 public extension TimerCompletionFeedbackPlaying {
     @MainActor
     func playPreAlertFeedback() {}
-
-    @MainActor
-    func playCompletionAlarm(for timerID: UUID) { playCompletionFeedback(for: timerID) }
 }
 
 public protocol TimerCompletionNotificationScheduling {

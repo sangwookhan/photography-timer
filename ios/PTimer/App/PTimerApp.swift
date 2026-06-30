@@ -5,6 +5,7 @@ import ActivityKit
 import PTimerKit
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct PTimerApp: App {
@@ -17,7 +18,20 @@ struct PTimerApp: App {
     }
 }
 
-final class PTimerAppDelegate: NSObject, UIApplicationDelegate {
+final class PTimerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        // Observe notification taps so the silent-mode advisory can be
+        // suppressed when the app is opened from a timer notification
+        // (PTIMER-73). Intentionally no `willPresent` implementation: foreground
+        // notifications stay suppressed, preserving pre2's not-foreground-only
+        // delivery.
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
     func application(
         _ application: UIApplication,
         supportedInterfaceOrientationsFor window: UIWindow?
@@ -27,6 +41,20 @@ final class PTimerAppDelegate: NSObject, UIApplicationDelegate {
         // portrait enforced here until the calculator flow has a stronger
         // screen-level UIKit boundary or a dedicated landscape design.
         .portrait
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        // The app's only notifications are timer alerts, so any tap means this
+        // foreground entry came from a timer notification: suppress the passive
+        // silent-mode advisory for it (PTIMER-73).
+        Task { @MainActor in
+            SilentModeAdvisoryController.shared.noteOpenedFromNotification()
+        }
+        completionHandler()
     }
 }
 

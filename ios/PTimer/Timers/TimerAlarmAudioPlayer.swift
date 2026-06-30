@@ -7,32 +7,19 @@ import Foundation
 
 /// App-owned audible timer-alarm playback (PTIMER-73).
 ///
-/// A completion plays through an `AVAudioSession` with the `.playback` category,
-/// which overrides the hardware silent switch — so the alarm is audible even in
-/// silent mode, the way field shooting needs.
+/// A foreground completion plays through an `AVAudioSession` with the
+/// `.playback` category, which overrides the hardware silent switch — so the
+/// alarm is audible even in silent mode while the app is active, the way field
+/// shooting needs. Background/locked completions are handled by local
+/// notifications, not by this player.
 @MainActor
 protocol TimerAlarmAudioPlaying: AnyObject {
     func playCompletionAlarm(for timerID: UUID)
     func stop()
 }
 
-/// Keeps the app alive in the background while a timer is running, so the
-/// RunLoop tick keeps firing and the completion alarm can sound at the exact end
-/// instant even when the app is backgrounded / the device is locked (PTIMER-73).
-///
-/// This is the only way a normal third-party iOS app can make a loud sound in
-/// silent mode at a scheduled time without the Apple-gated Critical Alerts
-/// entitlement: it requires the `audio` background mode and a continuously
-/// "playing" (near-silent) audio session. It costs battery while a timer runs
-/// and is defeated if the user force-quits the app.
 @MainActor
-protocol TimerBackgroundAudioKeeping: AnyObject {
-    func startKeepAlive()
-    func stopKeepAlive()
-}
-
-@MainActor
-final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudioPlaying, TimerBackgroundAudioKeeping, AVAudioPlayerDelegate {
+final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudioPlaying, AVAudioPlayerDelegate {
     /// Process-wide instance, so the completion path and the UI (which observes
     /// `soundingTimerID` to show a stop-alarm affordance) share one player.
     static let shared = AVAudioTimerAlarmPlayer()
@@ -42,7 +29,6 @@ final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudio
     @Published private(set) var soundingTimerID: UUID?
 
     private var alarmPlayer: AVAudioPlayer?
-    private var keepAlivePlayer: AVAudioPlayer?
 
     /// How long the completion alarm sounds before it auto-stops; the user can
     /// stop it sooner by tapping the timer.
@@ -92,32 +78,11 @@ final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudio
         }
     }
 
-    // MARK: TimerBackgroundAudioKeeping
-
-    func startKeepAlive() {
-        guard keepAlivePlayer == nil, activateSession() else {
-            return
-        }
-        // A continuously looping, near-silent buffer keeps the app from being
-        // suspended while a timer runs, so the tick fires in the background.
-        let player = try? AVAudioPlayer(data: Self.keepAliveData)
-        player?.numberOfLoops = -1
-        player?.volume = 0.01
-        player?.prepareToPlay()
-        player?.play()
-        keepAlivePlayer = player
-    }
-
-    func stopKeepAlive() {
-        keepAlivePlayer?.stop()
-        keepAlivePlayer = nil
-        deactivateSessionIfIdle()
-    }
-
     // MARK: Session
 
-    /// `.mixWithOthers` lets music keep playing while the near-silent keep-alive
-    /// loop runs; `.playback` still overrides the silent switch for the alarm.
+    /// `.playback` overrides the silent switch so the foreground alarm is heard
+    /// in silent mode; `.mixWithOthers` lets any of the user's audio keep
+    /// playing alongside the brief alarm rather than being stopped.
     private func activateSession() -> Bool {
         let session = AVAudioSession.sharedInstance()
         do {
@@ -130,7 +95,7 @@ final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudio
     }
 
     private func deactivateSessionIfIdle() {
-        guard alarmPlayer == nil, keepAlivePlayer == nil else {
+        guard alarmPlayer == nil else {
             return
         }
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -141,13 +106,11 @@ final class AVAudioTimerAlarmPlayer: NSObject, ObservableObject, TimerAlarmAudio
     /// A short three-beep alarm tone, generated once as in-memory 16-bit PCM
     /// WAV so the app needs no bundled audio asset.
     private static let alarmToneData: Data = WAVToneGenerator.alarmTone()
-    /// A half-second near-silent loop used only to keep the audio session alive.
-    private static let keepAliveData: Data = WAVToneGenerator.nearSilentLoop()
 }
 
 /// Minimal in-memory WAV (16-bit PCM mono) generator so the app ships no audio
 /// asset and exposes no user-facing sound choice.
-private enum WAVToneGenerator {
+enum WAVToneGenerator {
     private static let sampleRate = 44_100.0
 
     static func alarmTone() -> Data {
@@ -174,21 +137,13 @@ private enum WAVToneGenerator {
         return wav(from: samples)
     }
 
-    static func nearSilentLoop() -> Data {
-        // Very low amplitude (inaudible) rather than pure zeros: a non-zero
-        // signal is the more reliable way to keep the session from being
-        // treated as "not playing" and suspended.
-        let duration = 0.5
-        let frequency = 40.0
+    /// A fully silent clip of the given duration. Used by the silent-mode
+    /// advisory probe (PTIMER-73): when the device is muted the system plays it
+    /// back near-instantly, so the elapsed playback time is the best-effort
+    /// muted-likely signal. It is silent, so it is never audible itself.
+    static func silence(duration: TimeInterval) -> Data {
         let count = Int(sampleRate * duration)
-        var samples: [Int16] = []
-        samples.reserveCapacity(count)
-        for sample in 0..<count {
-            let time = Double(sample) / sampleRate
-            let value = sin(2 * Double.pi * frequency * time) * 0.0005
-            samples.append(Int16(value * Double(Int16.max)))
-        }
-        return wav(from: samples)
+        return wav(from: [Int16](repeating: 0, count: count))
     }
 
     private static func wav(from samples: [Int16]) -> Data {

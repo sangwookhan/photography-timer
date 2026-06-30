@@ -8,10 +8,9 @@ import PTimerCore
 @MainActor
 enum ViewModelDependencyFactory {
     static func production() -> ViewModelDependencies {
-        // The shared audio coordinator: the completion feedback (loud alarm),
-        // the timer manager (background-audio keep-alive), and the UI
-        // (observing soundingTimerID to offer stop-alarm) all use one instance
-        // and one AVAudioSession (PTIMER-73).
+        // The shared audio coordinator: the completion feedback (foreground
+        // alarm) and the UI (observing soundingTimerID to offer stop-alarm) use
+        // one instance and one AVAudioSession (PTIMER-73).
         let timerAudio = AVAudioTimerAlarmPlayer.shared
         return ViewModelDependencies(
             calculator: ExposureCalculator(),
@@ -20,8 +19,7 @@ enum ViewModelDependencyFactory {
                     feedbackPlayer: SystemTimerCompletionFeedbackPlayer(alarmPlayer: timerAudio)
                 ),
                 completionNotificationScheduler: UserNotificationTimerCompletionScheduler(),
-                persistenceStore: UserDefaultsTimerPersistenceStore(),
-                backgroundAudioKeepAlive: timerAudio
+                persistenceStore: UserDefaultsTimerPersistenceStore()
             ),
             presetFilms: LaunchPresetFilmCatalogV2.films,
             contextPersistenceStore: UserDefaultsCalculatorContextStore(),

@@ -177,7 +177,9 @@ For field shooting the photographer may not be looking at the phone, so the comp
 
 - The default notification-sound path is insufficient because silent / vibrate mode suppresses it. The system shall instead use an alert path that survives silent / vibrate mode where the platform allows it (e.g. an alarm-stream sound, or app-owned playback through a playback-oriented audio session that overrides the silent switch).
 - **pre1** remains haptic-first and is not made audible by this requirement.
-- A *background/locked* timer in silent mode is the hard case. Where the platform keeps the app alive while a timer runs (e.g. an `audio` background mode driving a continuously-playing audio session), the completion alarm may be played by the app at the end instant and so be audible in silent mode; this costs battery while a timer runs and is defeated if the user force-quits the app. Where even this is unavailable without a privileged, separately-granted entitlement (e.g. iOS Critical Alerts, which is out of scope), the system shall deliver the best supported path and document the gap. No claim of parity with the system Clock timer is made.
+- **Foreground** completions (and pre2 where it applies) use the audible path above: on Android the alarm-stream sound, on iOS app-owned `.playback` audio that overrides the silent switch while the app is active.
+- **Background / locked** delivery is by local notifications only (§4.4). On Android the notification path drives the alarm-stream sound, so a backgrounded/locked completion is still audible in silent / vibrate mode. On iOS the app does **not** keep itself alive to play a sound at the end instant — a background-audio keep-alive approach was tried and removed as unreliable (it failed to sound while the screen was off) — so a backgrounded/locked iOS completion in silent mode is limited to what the local notification itself provides. No Critical Alerts entitlement is used (out of scope), and no parity with the system Clock timer is claimed.
+- **No late alarm.** A timer that finishes while the app is backgrounded/locked shall **not** play its audible alarm belatedly when the app later returns to the foreground. On return the completion is reconciled silently — state and history update — and only a genuinely *live* foreground completion plays the alarm.
 
 ### 4.2.2 Stopping the alarm
 
@@ -188,6 +190,16 @@ The app-played completion alarm (the alarm-stream / playback-session sound of §
 - **Sound only.** Stopping the alarm silences audio only. It does not change timer state: a `completed` timer stays completed and is not dismissed or removed, and a still-running timer keeps running. Stopping clears the "which timer is sounding" signal so the affordance reverts to its normal behavior.
 
 This round covers in-app stop only; a notification-level stop action is out of scope here.
+
+### 4.2.3 Silent-mode advisory (passive, best-effort)
+
+Because background/locked silent audibility is not guaranteed on every platform (§4.2.1), the app may surface a passive advisory hinting the device might be muted, so the photographer can check volume before a long exposure. It is strictly non-intrusive:
+
+- **Best-effort only.** It never claims reliable silent-switch detection. Copy stays soft (e.g. "Silent mode may be on. Check volume before long exposures.") and never asserts that the device *is* muted.
+- **Never gates the timer.** It shall never block, delay, or gate starting a timer, never show a modal or require confirmation, and run only while the app is visible/foreground.
+- **Shown sparingly.** It appears as a small non-blocking advisory, at most once per app session, and is suppressed when a completion alarm is sounding or when the app was opened from a timer notification.
+
+Where a platform implements the probe by playback timing, it uses a path isolated from the completion-alarm audio so it cannot interfere with that alarm.
 
 ### 4.3 Foreground feedback
 

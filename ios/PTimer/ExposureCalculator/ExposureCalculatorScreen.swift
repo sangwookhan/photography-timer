@@ -18,6 +18,9 @@ struct ExposureCalculatorScreen: View {
     /// Shared audible-alarm player; observed so the timer strip / window show a
     /// stop-alarm state while a completion alarm is sounding (PTIMER-73).
     @ObservedObject private var alarmPlayer = AVAudioTimerAlarmPlayer.shared
+    /// Shared passive silent-mode advisory; observed so the small non-blocking
+    /// banner can appear when a foreground entry is muted-likely (PTIMER-73).
+    @ObservedObject private var silentModeAdvisory = SilentModeAdvisoryController.shared
 
     /// Film selector visibility lives at the screen level so the
     /// overlay can render above both the camera workspace and the
@@ -439,6 +442,38 @@ struct ExposureCalculatorScreen: View {
             // Relaunch restore is initialization-driven in TimerManager
             // and is not re-triggered from lifecycle observers.
             viewModel.reconcileTimersAfterAppBecomesActive()
+
+            // Passive silent-mode advisory (PTIMER-73): off the Start path,
+            // suppressed while a completion alarm is sounding.
+            silentModeAdvisory.handleAppBecameActive(
+                isAlarmSounding: alarmPlayer.soundingTimerID != nil
+            )
+        }
+        .overlay(alignment: .bottom) {
+            silentModeAdvisoryBanner
+        }
+    }
+
+    /// Small, non-blocking advisory banner (PTIMER-73). It overlays only the
+    /// bottom strip, so the rest of the screen stays interactive; it never
+    /// gates Start. Tapping it, or a short timeout, dismisses it.
+    @ViewBuilder private var silentModeAdvisoryBanner: some View {
+        if silentModeAdvisory.isAdvisoryVisible {
+            Text(SilentModeAdvisoryController.advisoryText)
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.thinMaterial, in: Capsule())
+                .padding(.horizontal, 24)
+                .padding(.bottom, 28)
+                .shadow(radius: 6, y: 2)
+                .onTapGesture { silentModeAdvisory.dismissAdvisory() }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task {
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    silentModeAdvisory.dismissAdvisory()
+                }
         }
     }
 

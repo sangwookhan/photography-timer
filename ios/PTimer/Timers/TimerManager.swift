@@ -19,16 +19,9 @@ struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
         generator.notificationOccurred(.success)
-        // App-owned playback (AVAudioSession .playback) so completion is audible
-        // even in silent mode (PTIMER-73), unlike the ring-switch-obeying system
-        // sound it replaces.
-        alarmPlayer.playCompletionAlarm(for: timerID)
-    }
-
-    func playCompletionAlarm(for timerID: UUID) {
-        // Background completion (app kept alive by the background-audio session):
-        // play the audible alarm but skip the haptic, which is not perceived when
-        // the device is in a pocket / on a tripod.
+        // App-owned playback (AVAudioSession .playback) so a foreground
+        // completion is audible even in silent mode (PTIMER-73), unlike the
+        // ring-switch-obeying system sound it replaces.
         alarmPlayer.playCompletionAlarm(for: timerID)
     }
 
@@ -46,29 +39,41 @@ struct SystemTimerCompletionFeedbackPlayer: TimerCompletionFeedbackPlaying {
 final class ForegroundTimerCompletionAlertService: TimerCompletionAlerting {
     private let feedbackPlayer: TimerCompletionFeedbackPlaying
     private let applicationStateProvider: @MainActor () -> UIApplication.State
+    private let dateProvider: () -> Date
+
+    /// A completion older than this when it reaches us is treated as a stale,
+    /// caught-up event (a timer that finished while the app was backgrounded)
+    /// rather than a live one, so its alarm is suppressed (PTIMER-73).
+    private static let liveCompletionGracePeriod: TimeInterval = 2
 
     init(
         feedbackPlayer: TimerCompletionFeedbackPlaying,
         applicationStateProvider: @escaping @MainActor () -> UIApplication.State = {
             UIApplication.shared.applicationState
-        }
+        },
+        dateProvider: @escaping () -> Date = Date.init
     ) {
         self.feedbackPlayer = feedbackPlayer
         self.applicationStateProvider = applicationStateProvider
+        self.dateProvider = dateProvider
     }
 
     func handleTimerCompletion(_ event: TimerCompletionEvent) {
-        // This event only fires from a live foreground OR background tick (the
-        // app is kept alive by the background-audio session while a timer runs);
-        // reactivation reconciliation never emits it. In the foreground play the
-        // full feedback (haptic + sound); in the background play the audible
-        // alarm only — overriding the silent switch so a pocketed/locked phone
-        // is still heard (PTIMER-73).
-        if applicationStateProvider() == .active {
-            feedbackPlayer.playCompletionFeedback(for: event.timerID)
-        } else {
-            feedbackPlayer.playCompletionAlarm(for: event.timerID)
+        // Only a live foreground completion rings (PTIMER-73). Background/locked
+        // completions are delivered by local notifications, not here. The risk
+        // this guards against: after a timer finishes while backgrounded, the
+        // suspended RunLoop tick fires a catch-up `tick()` on app return, which
+        // emits this completion late while the app is now active. Without the
+        // freshness check that would play a stale alarm minutes after the fact —
+        // the worst-case behavior reported on device. App-return reconciliation
+        // still updates the timer's completed state silently.
+        guard applicationStateProvider() == .active else {
+            return
         }
+        guard dateProvider().timeIntervalSince(event.completionDate) <= Self.liveCompletionGracePeriod else {
+            return
+        }
+        feedbackPlayer.playCompletionFeedback(for: event.timerID)
     }
 
     func handlePreAlert(_ event: TimerPreAlertEvent) {
@@ -96,7 +101,6 @@ final class TimerManager: ObservableObject, TimerManaging {
     private let tickInterval: TimeInterval
     private let dateProvider: () -> Date
     private let runtime: TimerRuntime
-    private let backgroundAudioKeepAlive: TimerBackgroundAudioKeeping?
     private var timer: Timer?
     private var cancellable: AnyCancellable?
 
@@ -105,12 +109,10 @@ final class TimerManager: ObservableObject, TimerManaging {
         dateProvider: @escaping () -> Date = Date.init,
         completionAlertService: TimerCompletionAlerting = NoOpTimerCompletionAlertService(),
         completionNotificationScheduler: TimerCompletionNotificationScheduling = NoOpTimerCompletionScheduler(),
-        persistenceStore: TimerPersistenceStoring = NoOpTimerPersistenceStore(),
-        backgroundAudioKeepAlive: TimerBackgroundAudioKeeping? = nil
+        persistenceStore: TimerPersistenceStoring = NoOpTimerPersistenceStore()
     ) {
         self.tickInterval = tickInterval
         self.dateProvider = dateProvider
-        self.backgroundAudioKeepAlive = backgroundAudioKeepAlive
         self.runtime = TimerRuntime(
             dateProvider: dateProvider,
             completionAlertService: completionAlertService,
@@ -186,13 +188,8 @@ final class TimerManager: ObservableObject, TimerManaging {
         let currentDate = now ?? dateProvider()
         if runtime.hasRunningTimers(at: currentDate) {
             ensureTimerLoop()
-            // Keep the app alive in the background while a timer runs so the tick
-            // keeps firing and the completion alarm can sound at the end instant
-            // (PTIMER-73). No-op when no keep-alive is injected (e.g. tests).
-            backgroundAudioKeepAlive?.startKeepAlive()
         } else {
             stopLoop()
-            backgroundAudioKeepAlive?.stopKeepAlive()
         }
     }
 

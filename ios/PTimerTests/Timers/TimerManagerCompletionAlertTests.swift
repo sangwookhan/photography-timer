@@ -124,24 +124,44 @@ final class TimerManagerCompletionAlertTests: XCTestCase {
 
     @MainActor
     func testForegroundAlertServiceOnlyPlaysFeedbackWhileAppIsActive() {
+        let completionDate = Date(timeIntervalSince1970: 100)
         let feedbackSpy = CompletionFeedbackSpy()
         let activeService = ForegroundTimerCompletionAlertService(
             feedbackPlayer: feedbackSpy,
-            applicationStateProvider: { .active }
+            applicationStateProvider: { .active },
+            dateProvider: { completionDate }
         )
         let inactiveService = ForegroundTimerCompletionAlertService(
             feedbackPlayer: feedbackSpy,
-            applicationStateProvider: { .background }
+            applicationStateProvider: { .background },
+            dateProvider: { completionDate }
         )
-        let event = TimerCompletionEvent(
-            timerID: UUID(),
-            completionDate: Date(timeIntervalSince1970: 100)
-        )
+        let event = TimerCompletionEvent(timerID: UUID(), completionDate: completionDate)
 
         activeService.handleTimerCompletion(event)
         inactiveService.handleTimerCompletion(event)
 
         XCTAssertEqual(feedbackSpy.playCount, 1)
+    }
+
+    @MainActor
+    func testLateCompletionAfterBackgroundDoesNotPlayAlarmEvenWhenActive() {
+        // A timer that finished while backgrounded surfaces here via a catch-up
+        // tick on app return — the app is now active but the completion is
+        // stale. It must not play a late alarm (PTIMER-73).
+        let completionDate = Date(timeIntervalSince1970: 100)
+        let feedbackSpy = CompletionFeedbackSpy()
+        let service = ForegroundTimerCompletionAlertService(
+            feedbackPlayer: feedbackSpy,
+            applicationStateProvider: { .active },
+            dateProvider: { completionDate.addingTimeInterval(120) }
+        )
+
+        service.handleTimerCompletion(
+            TimerCompletionEvent(timerID: UUID(), completionDate: completionDate)
+        )
+
+        XCTAssertEqual(feedbackSpy.playCount, 0)
     }
 
     // PTIMER-73 (silent-mode audible): the completion feedback drives the
@@ -172,13 +192,15 @@ final class TimerManagerCompletionAlertTests: XCTestCase {
 
     @MainActor
     func testForegroundCompletionDrivesAudibleAlarmOnlyWhileActiveAndNotOnCancel() {
+        let completionDate = Date(timeIntervalSince1970: 100)
         let alarmSpy = AlarmAudioPlayerSpy()
         let feedbackPlayer = SystemTimerCompletionFeedbackPlayer(alarmPlayer: alarmSpy)
         let service = ForegroundTimerCompletionAlertService(
             feedbackPlayer: feedbackPlayer,
-            applicationStateProvider: { .active }
+            applicationStateProvider: { .active },
+            dateProvider: { completionDate }
         )
-        let event = TimerCompletionEvent(timerID: UUID(), completionDate: Date(timeIntervalSince1970: 100))
+        let event = TimerCompletionEvent(timerID: UUID(), completionDate: completionDate)
 
         // A pre-alert (the only foreground event a pre-completion timer raises,
         // e.g. before a cancel/remove) must not sound the alarm...
@@ -192,48 +214,30 @@ final class TimerManagerCompletionAlertTests: XCTestCase {
         XCTAssertEqual(alarmSpy.playCount, 1)
     }
 
-    // PTIMER-73 (background-audio keep-alive): a completion that fires while the
-    // app is backgrounded (kept alive by the audio session) plays the audible
-    // alarm only — no haptic — while a foreground completion plays full feedback.
+    // PTIMER-73: the background-audio keep-alive was removed. A completion that
+    // surfaces while the app is not active plays nothing here (local
+    // notifications cover background/locked); only a live foreground completion
+    // plays the full feedback.
 
     @MainActor
-    func testBackgroundCompletionPlaysAlarmOnlyAndForegroundPlaysFullFeedback() {
-        let event = TimerCompletionEvent(timerID: UUID(), completionDate: Date(timeIntervalSince1970: 100))
+    func testBackgroundCompletionPlaysNothingAndForegroundPlaysFullFeedback() {
+        let completionDate = Date(timeIntervalSince1970: 100)
+        let event = TimerCompletionEvent(timerID: UUID(), completionDate: completionDate)
 
         let foregroundSpy = CompletionFeedbackSpy()
         ForegroundTimerCompletionAlertService(
             feedbackPlayer: foregroundSpy,
-            applicationStateProvider: { .active }
+            applicationStateProvider: { .active },
+            dateProvider: { completionDate }
         ).handleTimerCompletion(event)
         XCTAssertEqual(foregroundSpy.playCount, 1)
-        XCTAssertEqual(foregroundSpy.alarmOnlyPlayCount, 0)
 
         let backgroundSpy = CompletionFeedbackSpy()
         ForegroundTimerCompletionAlertService(
             feedbackPlayer: backgroundSpy,
-            applicationStateProvider: { .background }
+            applicationStateProvider: { .background },
+            dateProvider: { completionDate }
         ).handleTimerCompletion(event)
         XCTAssertEqual(backgroundSpy.playCount, 0)
-        XCTAssertEqual(backgroundSpy.alarmOnlyPlayCount, 1)
-    }
-
-    @MainActor
-    func testKeepAliveStartsWhileTimerRunsAndStopsWhenNoneRemain() throws {
-        let startDate = Date(timeIntervalSince1970: 100)
-        var currentDate = startDate
-        let keepAlive = BackgroundAudioKeepAliveSpy()
-        let manager = TimerManager(
-            tickInterval: 60,
-            dateProvider: { currentDate },
-            backgroundAudioKeepAlive: keepAlive
-        )
-
-        let id = try XCTUnwrap(manager.start(duration: 5))
-        XCTAssertGreaterThanOrEqual(keepAlive.startCount, 1)
-
-        // Drive the timer to completion: keep-alive is released when nothing runs.
-        currentDate = startDate.addingTimeInterval(5)
-        manager.tick(now: currentDate)
-        XCTAssertGreaterThanOrEqual(keepAlive.stopCount, 1)
     }
 }

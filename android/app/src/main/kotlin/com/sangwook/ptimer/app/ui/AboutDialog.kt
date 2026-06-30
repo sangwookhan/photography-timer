@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -45,14 +46,16 @@ fun PTimerAboutDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             Surface(
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .fillMaxWidth()
-                    .heightIn(max = 640.dp),
+                    .heightIn(max = 640.dp)
+                    .clickable(onClick = {}),
                 shape = RoundedCornerShape(8.dp),
                 tonalElevation = 6.dp,
                 color = MaterialTheme.colorScheme.surface,

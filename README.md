@@ -1,123 +1,69 @@
-# PTimer
+# Photography Timer
 
-Native iPhone app for film photography exposure calculation (ND filter +
-reciprocity correction) and countdown timers, with a lock-screen Live
-Activity widget.
+Photography Timer is an exposure calculator and countdown timer for film
+and digital photography. The current app helps calculate adjusted shutter
+times, film reciprocity-corrected exposures, target shutter differences,
+and shooting timers. PTIMER is the project and repository code name.
 
-## Stack
+## Current Status
 
-- Swift / SwiftUI
-- Xcode project (`ios/PTimer.xcodeproj`)
-- Test target: `ios/PTimerTests`
-- Widget target: `ios/PTimerWidgets`
-- Test plan: `ios/PTimer.xctestplan`
+- iPhone is the first release target.
+- Android has an MVP native implementation in progress.
+- Current app/development version: 0.6.0.
+- Planned public release target: Photography Timer 0.7.
+- Homepage: https://sangwookhan.github.io/photography-timer/
+- Privacy Policy: https://sangwookhan.github.io/photography-timer/privacy.html
+- Support: https://sangwookhan.github.io/photography-timer/support.html
+- Film Data Attribution: https://sangwookhan.github.io/photography-timer/attribution.html
 
-iOS sources live under `ios/`. A native Android skeleton lives under
-`android/`. Shared cross-platform test fixtures live at
-`shared/test-fixtures/`.
-
-## Architecture summary
-
-PTimer follows a layered architecture with strict one-way dependencies:
-
-```
-SwiftUI Views  →  ViewModel (@MainActor ObservableObject)  →  Domain / Policy + Timer Runtime  →  Persistence
-```
-
-The full layer stack — file-level responsibilities, dependency
-direction, source-of-truth ownership, and architectural fitness rules
-— is documented in [`docs/architecture/Architecture.md`](docs/architecture/Architecture.md).
-
-Behavior contracts live as language-neutral specs under `docs/specs/`.
-They are the source of truth for refactoring; code that contradicts a
-spec is a bug or a spec drift to be reconciled.
-
-## Documentation map
+## Repository Layout
 
 | Path | Purpose |
 |---|---|
-| `docs/requirements/Requirements.md` | User-scenario requirements and product intent. |
-| `docs/specs/{Calculator,Timer,UI,DomainSchema}.md` | Behavior contracts. Permanent. |
-| `docs/architecture/Architecture.md` | Current code structure: layer stack, file-level responsibilities, dependency direction, source-of-truth ownership, fitness rules. |
-| `docs/verification/Strategy.md` | Five-layer verification strategy (test, semantic equivalence, architectural fitness, UI regression, drift audit). |
-| `docs/verification/{BackgroundNotificationDelivery,RelaunchRestore}.md` | Manual verification procedures. |
-| `docs/conventions/ErrorModel.md` | Error-handling conventions by layer. |
-| `docs/translations/ko/` | Korean mirror of requirements and specs. English docs are canonical. |
-| `docs/tasks/TASK_TEMPLATE.md` | Per-ticket spec template. |
+| `ios/PTimer.xcodeproj` | iOS app, widget, and app-hosted test project. |
+| `ios/PTimerKit` | Swift package for reusable core, app logic, presenters, view models, and SwiftUI components. |
+| `android/` | Native Android MVP project using Kotlin, Jetpack Compose, and Gradle. |
+| `shared/test-fixtures/` | Cross-platform fixtures used by tests. |
+| `docs/` | Requirements, specs, architecture, verification, and task documents. |
 
-## Governance
+## iOS Quick Start
 
-| Aspect | Reference |
-|---|---|
-| Workflow / source-of-truth order | `AGENTS.md` |
-| Build / architecture / protected areas | `CLAUDE.md` |
-| Review checklist | `code_review.md` |
-
-## Getting started
-
-1. Open `ios/PTimer.xcodeproj` in Xcode.
-2. Select an iPhone Simulator.
-3. Build and run the `PTimer` scheme.
-
-### Running tests
+Open `ios/PTimer.xcodeproj` in Xcode, select the `PTimer` scheme, and
+run on an iPhone simulator or device.
 
 ```bash
+swift test --package-path ios/PTimerKit
+
 cd ios && xcodebuild -project PTimer.xcodeproj -scheme PTimer \
   -testPlan PTimer \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-If `iPhone 17` is unavailable, choose any available iPhone simulator
-listed by `cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj
--scheme PTimer`.
-
-### Linting (local)
+If `iPhone 17` is unavailable, list destinations with:
 
 ```bash
-brew install swiftlint            # one-time
-cd ios && swiftlint lint          # run from repository root
+cd ios && xcodebuild -showdestinations -project PTimer.xcodeproj -scheme PTimer
 ```
 
-Configuration lives in `ios/.swiftlint.yml`. Phase 0 baseline is
-intentionally relaxed; size and complexity thresholds are added in a
-later phase.
+## Android Quick Start
+
+Android requires JDK 17 or newer and an Android SDK configured through
+`ANDROID_HOME` or `android/local.properties`.
+
+```bash
+cd android && ./gradlew assembleDebug
+cd android && ./gradlew test
+cd android && ./gradlew lint
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and licensing
+expectations.
 
 ## License
 
-Copyright © 2026 Sangwook Han. Licensed under the
-[Apache License, Version 2.0](LICENSE).
+Copyright © 2026 Sangwook Han.
 
-## Android skeleton
-
-A minimal native Android project lives under `android/`. It builds
-independently and currently launches to a placeholder Compose screen
-only; no PTimer features are ported.
-
-### Prerequisites
-
-- JDK 17 or newer. Android Studio's bundled JBR is sufficient. For
-  CLI builds, point `JAVA_HOME` at a JDK 17+ install. The Gradle
-  wrapper handles Gradle itself.
-- Android SDK. Set `ANDROID_HOME` or create
-  `android/local.properties` with `sdk.dir=<path>`.
-
-### Build and test
-
-```bash
-cd android && ./gradlew assembleDebug          # build debug APK
-cd android && ./gradlew test                   # unit tests
-cd android && ./gradlew lint                   # Android Lint
-cd android && ./gradlew installDebug           # install on device/emulator
-```
-
-`connectedAndroidTest` requires a running device or emulator and is
-not part of the skeleton's required DoD.
-
-### Android Studio: opening the project
-
-Prefer opening the **repository root** in Android Studio when
-reviewing Git history across both platforms. If you open `android/`
-directly and Git history is not visible, add the parent repository
-directory as a Git root from *Preferences/Settings → Version
-Control → Directory mappings*. Do not initialize a new Git
-repository inside `android/`, and do not commit `android/.idea/`.
+Photography Timer is licensed under the [Apache License, Version 2.0](LICENSE).
+Film data attribution notes are recorded in [NOTICE](NOTICE).

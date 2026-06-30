@@ -23,9 +23,9 @@ import java.util.UUID
  * completion and the stronger pre2 escalation.
  *
  * The alert channel is deliberately silent: its audio is produced directly by
- * [AndroidTimerAlarmPlayer] on the alarm stream (`USAGE_ALARM`), which is loud
- * in vibrate mode and bypasses Do-Not-Disturb — a notification-channel sound
- * cannot be relied on for that (PTIMER-73).
+ * [AndroidTimerAlarmPlayer] on the alarm stream (`USAGE_ALARM`), which plays on
+ * the alarm volume and so stays audible in vibrate mode — a notification-channel
+ * sound cannot be relied on for that (PTIMER-73).
  */
 object TimerNotifications {
     const val ONGOING_CHANNEL_ID = "timer_ongoing"
@@ -149,8 +149,8 @@ object TimerNotifications {
             .setContentText(body.ifBlank { null })
             .setAutoCancel(true)
             // The channel is silent; the audible alarm is played directly by
-            // AndroidTimerAlarmPlayer on the alarm stream (loud in vibrate mode,
-            // bypasses Do-Not-Disturb).
+            // AndroidTimerAlarmPlayer on the alarm stream (alarm volume, so it
+            // stays audible in vibrate mode).
             // Carry the timer id so tapping focuses this finished timer in the list.
             .setContentIntent(appContentIntent(context, focusTimerId = timerId))
             .build()

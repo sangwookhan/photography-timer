@@ -179,6 +179,16 @@ For field shooting the photographer may not be looking at the phone, so the comp
 - **pre1** remains haptic-first and is not made audible by this requirement.
 - A *background/locked* timer in silent mode is the hard case. Where the platform keeps the app alive while a timer runs (e.g. an `audio` background mode driving a continuously-playing audio session), the completion alarm may be played by the app at the end instant and so be audible in silent mode; this costs battery while a timer runs and is defeated if the user force-quits the app. Where even this is unavailable without a privileged, separately-granted entitlement (e.g. iOS Critical Alerts, which is out of scope), the system shall deliver the best supported path and document the gap. No claim of parity with the system Clock timer is made.
 
+### 4.2.2 Stopping the alarm
+
+The app-played completion alarm (the alarm-stream / playback-session sound of §4.2.1, distinct from the OS-owned notification sound) is bounded and stoppable:
+
+- **Bounded auto-stop.** The alarm sounds for a short fixed window and then stops on its own, so it can never run away if the user does not reach the phone. At most one timer's alarm sounds at a time.
+- **In-app tap-to-stop.** While the alarm is sounding, the user can silence it from within the app by tapping the running-timer affordance — the compact mini-timer surface or the matching timer row. The stop affordance is present **only while that timer's alarm is sounding**; at other times those surfaces keep their normal behavior (e.g. the mini timer opens the workspace).
+- **Sound only.** Stopping the alarm silences audio only. It does not change timer state: a `completed` timer stays completed and is not dismissed or removed, and a still-running timer keeps running. Stopping clears the "which timer is sounding" signal so the affordance reverts to its normal behavior.
+
+This round covers in-app stop only; a notification-level stop action is out of scope here.
+
 ### 4.3 Foreground feedback
 
 When a timer transitions to `completed` while the application is active and in the foreground, the system shall play a short audio cue and a haptic. Each transition shall produce exactly one cue and exactly one haptic; reactivation-triggered completion shall not produce a cue.

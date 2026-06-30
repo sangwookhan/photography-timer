@@ -70,8 +70,8 @@ object StagedAlertPolicy {
         stage == AlertStage.MAIN || stage == AlertStage.PRE2
 
     /**
-     * Whether a stage should play the direct, alarm-stream alarm sound (loud in
-     * vibrate mode, bypasses Do-Not-Disturb): the main completion always, and
+     * Whether a stage should play the direct, alarm-stream alarm sound (alarm
+     * volume, so it stays audible in vibrate mode): the main completion always, and
      * pre2 only when the app is not in the foreground. pre1 is silent
      * (haptic-first), and a foreground pre2 is suppressed entirely.
      */

@@ -17,9 +17,9 @@ import java.util.UUID
 /**
  * Plays an attention-grabbing timer alarm directly on the alarm stream
  * (PTIMER-73). Going through `USAGE_ALARM` rather than a notification-channel
- * sound means the tone is loud in vibrate mode and bypasses Do-Not-Disturb —
- * the behaviour field shooting needs when the phone is in a pocket or on a
- * tripod.
+ * sound means the tone plays on the alarm volume, so it stays audible in
+ * vibrate mode — the behaviour field shooting needs when the phone is in a
+ * pocket or on a tripod.
  *
  * [soundingTimerId] publishes which timer's alarm is currently sounding (or
  * null), so the UI can show a stop-alarm affordance and stop it on tap.

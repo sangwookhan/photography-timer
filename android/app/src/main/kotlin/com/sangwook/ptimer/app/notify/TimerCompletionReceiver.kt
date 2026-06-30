@@ -15,8 +15,8 @@ import java.util.UUID
  *
  * - [AlertStage.MAIN] posts the (silent) completion notification and plays the
  *   audible alarm directly on the alarm stream via [AndroidTimerAlarmPlayer] —
- *   loud in vibrate mode and past Do-Not-Disturb — so the photographer hears the
- *   timer finish even when backgrounded. It also advances the ongoing
+ *   it plays on the alarm volume, so it stays audible in vibrate mode — so the
+ *   photographer hears the timer finish even when backgrounded. It also advances the ongoing
  *   notification to the next representative (or clears it) right then.
  * - [AlertStage.PRE1] posts a haptic-first "Ns remaining" pre-alert on the
  *   silent channel and vibrates. [AlertStage.PRE2] is the stronger escalation:

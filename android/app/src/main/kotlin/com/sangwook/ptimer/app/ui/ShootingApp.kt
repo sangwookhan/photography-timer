@@ -372,7 +372,8 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     onStartAdjusted = controller::startFromAdjusted,
                     onStartCorrected = controller::startFromCorrected,
                     onOpenDetails = { details = controller.detailsState() },
-                    onReset = controller::resetActiveSlot,
+                    onResetSettings = controller::resetActiveSlotSettings,
+                    onResetSettingsAndName = controller::resetActiveSlotSettingsAndName,
                     onCreateCustomFilm = { input, editId ->
                         // editId set → update that film in place (reuse its ids); else new.
                         val film = CustomFilmBuilder.buildFormulaFilm(

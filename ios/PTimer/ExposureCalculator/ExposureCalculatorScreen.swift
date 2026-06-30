@@ -694,6 +694,7 @@ private struct CameraSlotCalculatorPage: View {
                 },
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
+                onResetFilmModeContextAndName: pageState.isActive ? viewModel.resetFilmModeWorkingContextAndCameraName : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
                 onShowAbout: pageState.isActive ? onShowAbout : {},
                 style: style
@@ -843,12 +844,20 @@ private struct HeaderView: View {
     let onSelectModel: (String) -> Void
     let showsResetAction: Bool
     let onResetFilmModeContext: () -> Void
+    /// Settings + camera name reset (the "Reset settings and name"
+    /// choice). The plain `onResetFilmModeContext` keeps the name.
+    let onResetFilmModeContextAndName: () -> Void
     /// Tap handler that opens the rename sheet. Non-nil only on the
     /// active page — inactive pages render the title as plain text
     /// so the photographer cannot rename a slot they are not on.
     let onRequestRename: (() -> Void)?
     let onShowAbout: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
+
+    /// Gates the destructive reset behind an explicit confirmation so a
+    /// single accidental tap (Reset sits next to About) cannot wipe the
+    /// slot's shooting setup. PTIMER-208.
+    @State private var showsResetConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.headerContentSpacing) {
@@ -868,7 +877,7 @@ private struct HeaderView: View {
                 // (opacity/hit-testing gated) rather than conditionally
                 // removed so its presence is stable for assistive tech.
                 Button("Reset") {
-                    onResetFilmModeContext()
+                    showsResetConfirmation = true
                 }
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
@@ -877,6 +886,19 @@ private struct HeaderView: View {
                 .accessibilityHidden(!showsResetAction)
                 .accessibilityHint("Clears the restored Film mode setup")
                 .accessibilityIdentifier("film-mode-reset-button")
+                .confirmationDialog(
+                    "Reset shooting setup?",
+                    isPresented: $showsResetConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Reset settings", role: .destructive) {
+                        onResetFilmModeContext()
+                    }
+                    Button("Reset settings and name", role: .destructive) {
+                        onResetFilmModeContextAndName()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
 
                 Button("About PTIMER", systemImage: "info.circle", action: onShowAbout)
                     .labelStyle(.iconOnly)

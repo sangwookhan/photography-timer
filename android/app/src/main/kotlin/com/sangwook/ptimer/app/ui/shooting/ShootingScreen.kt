@@ -88,7 +88,8 @@ fun ShootingScreen(
     onStartAdjusted: () -> Unit,
     onStartCorrected: () -> Unit,
     onOpenDetails: () -> Unit,
-    onReset: () -> Unit,
+    onResetSettings: () -> Unit,
+    onResetSettingsAndName: () -> Unit,
     onCreateCustomFilm: (CustomFormulaFilmInput, editFilmId: String?) -> Boolean,
     onCreateCustomTableFilm: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onEditCustomFilm: (String) -> CustomFilmDraft?,
@@ -110,6 +111,10 @@ fun ShootingScreen(
     var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
     var showTarget by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
+    // Gates the destructive reset behind an explicit confirmation so a
+    // single accidental tap (Reset sits next to the About icon) cannot
+    // wipe the slot's shooting setup. PTIMER-208.
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
@@ -178,7 +183,13 @@ fun ShootingScreen(
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = onReset) { Text("Reset") }
+                            // Show Reset only on the active page and only when
+                            // something is resettable (matches iOS). The reset
+                            // callbacks target the active slot, so gating on the
+                            // active page also avoids resetting from a peeked page.
+                            if (writesActiveSlot && pageState.canReset) {
+                                TextButton(onClick = { showResetConfirm = true }) { Text("Reset") }
+                            }
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
                                     Icons.Outlined.Info,
@@ -350,6 +361,28 @@ fun ShootingScreen(
             initialSeconds = current,
             onConfirm = { seconds -> onSetTarget(seconds); showTarget = false },
             onDismiss = { showTarget = false },
+        )
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text("Reset shooting setup?") },
+            // Two destructive choices: keep the camera name, or clear it
+            // too. Stacked in the confirm slot (with Cancel) so the
+            // single Reset entry point still gates the wipe behind a
+            // deliberate choice.
+            confirmButton = {
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
+                        Text("Reset settings", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
+                        Text("Reset settings and name", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+                }
+            },
         )
     }
 }

@@ -175,17 +175,50 @@ class CalculatorControllerTest {
     }
 
     @Test
-    fun resetActiveSlotClearsFilmInputsAndName() {
+    fun resetActiveSlotSettingsAndNameClearsFilmInputsAndName() {
         val c = controller()
         c.selectFilm("ilford-pan-f-plus-50")
         c.setNdIndex(6)
         c.renameActiveSlot("Leica")
-        c.resetActiveSlot()
+        c.resetActiveSlotSettingsAndName()
         val s = c.state.value
         assertEquals("No film", s.selectedFilmName)
         assertEquals(0, s.ndIndex)
         assertEquals("Camera 1", s.activeSlotName)
         assertFalse(s.hasFilm)
+    }
+
+    @Test
+    fun canResetIsFalseAtDefaultsAndTrueAfterChanges() {
+        val c = controller()
+        assertFalse(c.state.value.canReset)
+        c.setNdIndex(6)
+        assertTrue(c.state.value.canReset)
+    }
+
+    @Test
+    fun canResetIsTrueWhenOnlyCustomNameSet() {
+        val c = controller()
+        c.renameActiveSlot("Leica")
+        // Settings are still at defaults, but the custom name is
+        // resettable via "Reset settings and name".
+        assertTrue(c.state.value.canReset)
+    }
+
+    @Test
+    fun resetActiveSlotSettingsKeepsCustomName() {
+        val c = controller()
+        c.selectFilm("ilford-pan-f-plus-50")
+        c.setNdIndex(6)
+        c.renameActiveSlot("Leica")
+        c.resetActiveSlotSettings()
+        val s = c.state.value
+        // Settings cleared...
+        assertEquals("No film", s.selectedFilmName)
+        assertEquals(0, s.ndIndex)
+        assertFalse(s.hasFilm)
+        // ...but the custom camera name survives.
+        assertEquals("Leica", s.activeSlotName)
     }
 
     @Test

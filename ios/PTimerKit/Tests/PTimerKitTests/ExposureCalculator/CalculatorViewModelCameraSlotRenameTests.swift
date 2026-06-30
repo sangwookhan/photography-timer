@@ -75,6 +75,52 @@ final class CalculatorViewModelCameraSlotRenameTests: XCTestCase {
         XCTAssertNil(viewModel.activeCameraSlot.customDisplayName)
     }
 
+    /// The reset affordance must stay reachable when only the camera
+    /// name is custom (settings otherwise at defaults), since the
+    /// "Reset settings and name" choice can still clear the name.
+    func testCanResetIsTrueWhenOnlyCustomNameSet() {
+        let viewModel = makeViewModel()
+        XCTAssertFalse(viewModel.canResetFilmModeWorkingContext, "Default slot has nothing to reset.")
+
+        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
+
+        XCTAssertTrue(viewModel.canResetFilmModeWorkingContext)
+    }
+
+    /// "Reset settings" clears the slot's working context but must
+    /// keep the custom camera name — the name is the slot's identity,
+    /// not part of the shooting setup.
+    func testResetSettingsKeepsCustomCameraName() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        viewModel.selectPresetFilm(film)
+        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
+
+        viewModel.resetFilmModeWorkingContext()
+
+        XCTAssertNil(viewModel.selectedPresetFilm, "Settings reset must drop the film.")
+        XCTAssertEqual(viewModel.activeCameraSlot.displayName, "Hasselblad 500CM")
+    }
+
+    /// "Reset settings and name" clears the working context *and* the
+    /// custom camera name, returning the slot to a fully blank state.
+    func testResetSettingsAndNameClearsCustomCameraName() throws {
+        let viewModel = makeViewModel()
+        let film = try XCTUnwrap(
+            viewModel.availablePresetFilms.first { $0.canonicalStockName == "Tri-X 400" }
+        )
+        viewModel.selectPresetFilm(film)
+        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
+
+        viewModel.resetFilmModeWorkingContextAndCameraName()
+
+        XCTAssertNil(viewModel.selectedPresetFilm, "Settings reset must drop the film.")
+        XCTAssertEqual(viewModel.activeCameraSlot.displayName, "Camera 1")
+        XCTAssertNil(viewModel.activeCameraSlot.customDisplayName)
+    }
+
     func testRenameWithWhitespaceOnlyClearsCustomName() {
         let viewModel = makeViewModel()
         viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)

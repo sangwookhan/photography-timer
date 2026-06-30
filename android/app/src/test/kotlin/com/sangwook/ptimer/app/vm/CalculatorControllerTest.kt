@@ -189,6 +189,23 @@ class CalculatorControllerTest {
     }
 
     @Test
+    fun canResetIsFalseAtDefaultsAndTrueAfterChanges() {
+        val c = controller()
+        assertFalse(c.state.value.canReset)
+        c.setNdIndex(6)
+        assertTrue(c.state.value.canReset)
+    }
+
+    @Test
+    fun canResetIsTrueWhenOnlyCustomNameSet() {
+        val c = controller()
+        c.renameActiveSlot("Leica")
+        // Settings are still at defaults, but the custom name is
+        // resettable via "Reset settings and name".
+        assertTrue(c.state.value.canReset)
+    }
+
+    @Test
     fun resetActiveSlotSettingsKeepsCustomName() {
         val c = controller()
         c.selectFilm("ilford-pan-f-plus-50")

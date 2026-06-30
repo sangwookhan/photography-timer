@@ -75,6 +75,18 @@ final class CalculatorViewModelCameraSlotRenameTests: XCTestCase {
         XCTAssertNil(viewModel.activeCameraSlot.customDisplayName)
     }
 
+    /// The reset affordance must stay reachable when only the camera
+    /// name is custom (settings otherwise at defaults), since the
+    /// "Reset settings and name" choice can still clear the name.
+    func testCanResetIsTrueWhenOnlyCustomNameSet() {
+        let viewModel = makeViewModel()
+        XCTAssertFalse(viewModel.canResetFilmModeWorkingContext, "Default slot has nothing to reset.")
+
+        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
+
+        XCTAssertTrue(viewModel.canResetFilmModeWorkingContext)
+    }
+
     /// "Reset settings" clears the slot's working context but must
     /// keep the custom camera name — the name is the slot's identity,
     /// not part of the shooting setup.

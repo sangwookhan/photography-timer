@@ -57,6 +57,13 @@ data class CalculatorUiState(
     val modelOptions: List<ModelOption>,
     val selectedProfileId: String?,
     val hasFilm: Boolean,
+    /**
+     * True when the slot has anything a reset would clear: non-default
+     * settings (film, ND, shutter, target) or a custom camera name.
+     * Gates the Reset affordance so it shows only when actionable
+     * (matches iOS).
+     */
+    val canReset: Boolean,
     /** Current ND notation display mode; drives the wheel labels + the toggle (PTIMER-187). */
     val ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT,
     val adjustedText: String,
@@ -412,6 +419,12 @@ class CalculatorController(
             if (options.size > 1) options.map { ModelOption(it.id, it.selectorLabel ?: it.name) } else emptyList()
         } ?: emptyList()
 
+        val canReset = snapshot.shutterIndex != defaultShutterIndex ||
+            snapshot.ndIndex != 0 ||
+            film != null ||
+            snapshot.targetSeconds != null ||
+            slotId in session.currentCustomNames()
+
         return CalculatorUiState(
             slots = session.availableSlots.map {
                 SlotTab(it, session.identity(it).displayName, it == session.activeSlotId)
@@ -427,6 +440,7 @@ class CalculatorController(
             modelOptions = modelOptions,
             selectedProfileId = snapshot.selectedProfileId,
             hasFilm = film != null,
+            canReset = canReset,
             ndNotationMode = ndNotationMode,
             adjustedText = exposure.formatCoarse(result.adjustedShutterSeconds),
             adjustedSecondsText = secondsComparison(result.adjustedShutterSeconds),

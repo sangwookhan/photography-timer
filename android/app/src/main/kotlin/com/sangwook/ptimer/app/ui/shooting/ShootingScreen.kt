@@ -183,7 +183,13 @@ fun ShootingScreen(
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { showResetConfirm = true }) { Text("Reset") }
+                            // Show Reset only on the active page and only when
+                            // something is resettable (matches iOS). The reset
+                            // callbacks target the active slot, so gating on the
+                            // active page also avoids resetting from a peeked page.
+                            if (writesActiveSlot && pageState.canReset) {
+                                TextButton(onClick = { showResetConfirm = true }) { Text("Reset") }
+                            }
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
                                     Icons.Outlined.Info,

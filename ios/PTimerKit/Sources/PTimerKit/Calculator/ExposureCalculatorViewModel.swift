@@ -391,7 +391,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public var canResetFilmModeWorkingContext: Bool {
-        selectedPresetFilm != nil
+        // A custom camera name alone is resettable too: the reset
+        // affordance offers a "settings and name" choice, so the
+        // button must stay reachable when only the name is custom.
+        activeCameraSlot.customDisplayName != nil
+            || selectedPresetFilm != nil
             || abs(baseShutter - defaultFilmModeBaseShutter) > ExposureCalculator.stabilityEpsilon
             // Compare the canonical `NDStep.stops`, not the integer
             // wrapper — otherwise a reserved-path fractional ND

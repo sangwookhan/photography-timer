@@ -88,7 +88,8 @@ fun ShootingScreen(
     onStartAdjusted: () -> Unit,
     onStartCorrected: () -> Unit,
     onOpenDetails: () -> Unit,
-    onReset: () -> Unit,
+    onResetSettings: () -> Unit,
+    onResetSettingsAndName: () -> Unit,
     onCreateCustomFilm: (CustomFormulaFilmInput, editFilmId: String?) -> Boolean,
     onCreateCustomTableFilm: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onEditCustomFilm: (String) -> CustomFilmDraft?,
@@ -361,14 +362,20 @@ fun ShootingScreen(
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
             title = { Text("Reset shooting setup?") },
-            text = { Text("This clears the camera name, selected film, ND filter, and shutter values.") },
+            // Two destructive choices: keep the camera name, or clear it
+            // too. Stacked in the confirm slot (with Cancel) so the
+            // single Reset entry point still gates the wipe behind a
+            // deliberate choice.
             confirmButton = {
-                TextButton(onClick = { onReset(); showResetConfirm = false }) {
-                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
+                        Text("Reset settings", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
+                        Text("Reset settings and name", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
             },
         )
     }

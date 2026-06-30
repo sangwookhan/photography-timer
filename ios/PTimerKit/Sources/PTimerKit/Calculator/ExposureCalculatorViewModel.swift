@@ -781,6 +781,15 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         filmSelectionModel.clearPersistedContext()
     }
 
+    /// Resets the active slot's working context *and* clears its
+    /// custom camera name, returning the slot to a fully blank state.
+    /// The settings-only reset (`resetFilmModeWorkingContext`) keeps
+    /// the name; this variant is the "Reset settings and name" choice.
+    public func resetFilmModeWorkingContextAndCameraName() {
+        resetFilmModeWorkingContext()
+        resetCameraSlotCustomName(cameraSlotSessionModel.activeSlotID)
+    }
+
     // MARK: - Camera slots
 
     /// Slots exposed to the slot picker in shipping order. The first

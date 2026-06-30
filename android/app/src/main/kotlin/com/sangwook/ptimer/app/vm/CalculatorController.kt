@@ -188,15 +188,33 @@ class CalculatorController(
         if (d.isFinite() && d > 0) onStart(d, identity(result, "Corrected Exposure", d, includesAdjusted = true))
     }
 
-    /** Resets the active slot to defaults: no film, base 1/30, ND 0, no target, default name. */
-    fun resetActiveSlot() {
+    /**
+     * Resets the active slot's shooting settings to defaults: no film,
+     * base 1/30, ND 0, no target. Keeps the custom camera name (the
+     * "Reset settings" choice).
+     */
+    fun resetActiveSlotSettings() {
+        resetActiveSlotSettingsFields()
+        publish()
+    }
+
+    /**
+     * Resets the active slot's settings *and* clears its custom camera
+     * name, returning the slot to a fully blank state (the "Reset
+     * settings and name" choice).
+     */
+    fun resetActiveSlotSettingsAndName() {
+        resetActiveSlotSettingsFields()
+        session.resetCustomName(session.activeSlotId)
+        publish()
+    }
+
+    private fun resetActiveSlotSettingsFields() {
         shutterIndex = defaultShutterIndex
         ndIndex = 0
         selectedFilmId = null
         selectedProfileId = null
         targetSeconds = null
-        session.resetCustomName(session.activeSlotId)
-        publish()
     }
 
     // --- Custom-film editing (delegated to CustomFilmEditingPresenter) ---

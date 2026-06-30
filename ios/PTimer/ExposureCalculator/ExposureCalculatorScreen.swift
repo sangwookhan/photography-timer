@@ -694,6 +694,7 @@ private struct CameraSlotCalculatorPage: View {
                 },
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
+                onResetFilmModeContextAndName: pageState.isActive ? viewModel.resetFilmModeWorkingContextAndCameraName : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
                 onShowAbout: pageState.isActive ? onShowAbout : {},
                 style: style
@@ -843,6 +844,9 @@ private struct HeaderView: View {
     let onSelectModel: (String) -> Void
     let showsResetAction: Bool
     let onResetFilmModeContext: () -> Void
+    /// Settings + camera name reset (the "Reset settings and name"
+    /// choice). The plain `onResetFilmModeContext` keeps the name.
+    let onResetFilmModeContextAndName: () -> Void
     /// Tap handler that opens the rename sheet. Non-nil only on the
     /// active page — inactive pages render the title as plain text
     /// so the photographer cannot rename a slot they are not on.
@@ -887,12 +891,13 @@ private struct HeaderView: View {
                     isPresented: $showsResetConfirmation,
                     titleVisibility: .visible
                 ) {
-                    Button("Reset", role: .destructive) {
+                    Button("Reset settings", role: .destructive) {
                         onResetFilmModeContext()
                     }
+                    Button("Reset settings and name", role: .destructive) {
+                        onResetFilmModeContextAndName()
+                    }
                     Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("This clears the selected film, ND filter, and shutter values for this camera.")
                 }
 
                 Button("About PTIMER", systemImage: "info.circle", action: onShowAbout)

@@ -110,6 +110,10 @@ fun ShootingScreen(
     var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
     var showTarget by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
+    // Gates the destructive reset behind an explicit confirmation so a
+    // single accidental tap (Reset sits next to the About icon) cannot
+    // wipe the slot's shooting setup. PTIMER-208.
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
@@ -178,7 +182,7 @@ fun ShootingScreen(
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = onReset) { Text("Reset") }
+                            TextButton(onClick = { showResetConfirm = true }) { Text("Reset") }
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
                                     Icons.Outlined.Info,
@@ -350,6 +354,22 @@ fun ShootingScreen(
             initialSeconds = current,
             onConfirm = { seconds -> onSetTarget(seconds); showTarget = false },
             onDismiss = { showTarget = false },
+        )
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text("Reset shooting setup?") },
+            text = { Text("This clears the camera name, selected film, ND filter, and shutter values.") },
+            confirmButton = {
+                TextButton(onClick = { onReset(); showResetConfirm = false }) {
+                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+            },
         )
     }
 }

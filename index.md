@@ -14,4 +14,5 @@ Features:
 Links:
 - [Privacy Policy](privacy.md)
 - [Support](support.md)
+- [Film Data Attribution](attribution.md)
 - Source code and license: [github.com/sangwookhan/photography-timer](https://github.com/sangwookhan/photography-timer)

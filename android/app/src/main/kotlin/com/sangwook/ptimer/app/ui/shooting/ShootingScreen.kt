@@ -101,6 +101,7 @@ fun ShootingScreen(
     onPreviewTableFit: (CustomTableFilmInput) -> CustomTableFittedFormula.Outcome?,
     onCreateFormulaFromTable: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
+    onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showFilmPicker by remember { mutableStateOf(false) }
@@ -176,7 +177,16 @@ fun ShootingScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        TextButton(onClick = onReset) { Text("Reset") }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = onReset) { Text("Reset") }
+                            IconButton(onClick = onOpenAbout) {
+                                Icon(
+                                    Icons.Outlined.Info,
+                                    contentDescription = "About PTIMER",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
 
                     // Film selector

@@ -45,6 +45,7 @@ struct ExposureCalculatorScreen: View {
     /// sheet cannot be presented while another is dismissing), via the
     /// sheet's `onDismiss`.
     @State private var pendingFormulaSeedFilmID: String?
+    @State private var isAboutPresented = false
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
@@ -188,6 +189,9 @@ struct ExposureCalculatorScreen: View {
                     },
                     onRequestRename: { slotID in
                         slotIDPendingRename = slotID
+                    },
+                    onShowAbout: {
+                        isAboutPresented = true
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -422,6 +426,9 @@ struct ExposureCalculatorScreen: View {
                     }
                 )
             }
+            .sheet(isPresented: $isAboutPresented) {
+                PTimerAboutView()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else {
@@ -536,6 +543,7 @@ private struct ExposureWorkspaceMainContent: View {
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
+    let onShowAbout: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -549,7 +557,8 @@ private struct ExposureWorkspaceMainContent: View {
                         onShowFilmDetails: onShowFilmDetails,
                         onRequestRename: {
                             onRequestRename(slotID)
-                        }
+                        },
+                        onShowAbout: onShowAbout
                     )
                     .tag(slotID)
                 }
@@ -618,6 +627,7 @@ private struct CameraSlotCalculatorPage: View {
     /// through only on the active page; inactive pages pass `nil`
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
+    let onShowAbout: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -639,6 +649,7 @@ private struct CameraSlotCalculatorPage: View {
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
+                onShowAbout: pageState.isActive ? onShowAbout : {},
                 style: style
             )
             // Header carries required visible content (camera title
@@ -790,6 +801,7 @@ private struct HeaderView: View {
     /// active page — inactive pages render the title as plain text
     /// so the photographer cannot rename a slot they are not on.
     let onRequestRename: (() -> Void)?
+    let onShowAbout: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -819,6 +831,13 @@ private struct HeaderView: View {
                 .accessibilityHidden(!showsResetAction)
                 .accessibilityHint("Clears the restored Film mode setup")
                 .accessibilityIdentifier("film-mode-reset-button")
+
+                Button("About PTIMER", systemImage: "info.circle", action: onShowAbout)
+                    .labelStyle(.iconOnly)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHint("Opens app version, legal, support, and film data information")
+                    .accessibilityIdentifier("about-ptimer-button")
             }
 
             FilmSelectionRow(

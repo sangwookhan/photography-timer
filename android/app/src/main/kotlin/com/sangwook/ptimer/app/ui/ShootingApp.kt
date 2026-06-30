@@ -100,6 +100,19 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
             initialSession = slotStore.loadSession(),
         )
     }
+    val aboutVersion = remember {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        packageInfo.versionName ?: "Unavailable"
+    }
+    val aboutBuild = remember {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode.toString()
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toString()
+        }
+    }
 
     LaunchedEffect(Unit) { viewModel.restore() }
 
@@ -213,6 +226,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     }
 
     var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }
+    var showAbout by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()
     // Warn when exact alarms are gated + denied and a timer is actually active,
@@ -427,6 +441,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                         }
                     },
                     onReferencePoints = { input, anchors -> controller.referencePoints(input, anchors) },
+                    onOpenAbout = { showAbout = true },
                 )
         }
             // Modal scrim while the timer list is expanded: dims and blocks the
@@ -460,6 +475,14 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     },
                 )
             }
+        }
+
+        if (showAbout) {
+            PTimerAboutDialog(
+                versionName = aboutVersion,
+                buildCode = aboutBuild,
+                onDismiss = { showAbout = false },
+            )
         }
     }
 }

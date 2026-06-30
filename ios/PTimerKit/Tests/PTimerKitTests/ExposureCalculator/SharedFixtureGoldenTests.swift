@@ -5,7 +5,7 @@ import XCTest
 import PTimerCore
 
 /// Cross-platform parity gate on the iOS side. Drives the
-/// shipped `ExposureCalculator` and `LaunchPresetFilmCatalog` against
+/// shipped `ExposureCalculator` and `LaunchPresetFilmCatalogV2` against
 /// the golden fixtures under `shared/test-fixtures/`. The same files
 /// are intended to be consumed by the future Android port; on iOS they
 /// confirm that the spec-derived expectations stay in sync with code
@@ -47,7 +47,7 @@ final class SharedFixtureGoldenTests: XCTestCase {
     func testLaunchCatalogMatchesSharedFixtureExpectations() throws {
         let fixture = try loadCatalogValidationCases()
 
-        let films = LaunchPresetFilmCatalog.films
+        let films = LaunchPresetFilmCatalogV2.films
         XCTAssertEqual(films.count, fixture.catalogExpectations.expectedFilmCount)
         XCTAssertEqual(
             films.map(\.canonicalStockName),

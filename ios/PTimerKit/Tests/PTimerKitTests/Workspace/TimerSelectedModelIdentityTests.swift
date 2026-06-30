@@ -343,7 +343,7 @@ final class TimerSelectedModelIdentityTests: XCTestCase {
         line: UInt = #line
     ) throws -> FilmIdentity {
         try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.id == filmID },
+            LaunchPresetFilmCatalogV2.films.first { $0.id == filmID },
             "\(filmID) must remain in the launch catalog.",
             file: file,
             line: line

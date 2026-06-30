@@ -141,7 +141,7 @@ final class ReciprocityModelMetadataPresenterTests: XCTestCase {
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {
-        LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName }
+        LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == canonicalStockName }
     }
 
     private func value(_ section: FilmModeDetailsSectionState, _ title: String) -> String? {

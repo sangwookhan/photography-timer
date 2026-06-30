@@ -14,7 +14,7 @@ import PTimerCore
 /// plus a synthesized profile so the rare "no quantified prediction
 /// at all" state is exercised independent of catalog data.
 final class FilmSelectorSupportPresenterTests: XCTestCase {
-    private let catalog = LaunchPresetFilmCatalog.films
+    private let catalog = LaunchPresetFilmCatalogV2.films
 
     // MARK: - No film sentinel and unclassifiable sources
 
@@ -277,7 +277,7 @@ final class FilmSelectorSupportPresenterTests: XCTestCase {
         struct Case { let provenance: String; let makeProfile: () throws -> ReciprocityProfile; let expectedLabel: String }
         let cases: [Case] = [
             Case(provenance: "official FOMA table", makeProfile: {
-                try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
+                try XCTUnwrap(LaunchPresetFilmCatalogV2.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
             }, expectedLabel: "Official guidance"),
             Case(provenance: "app-derived formula", makeProfile: { AlternateReciprocityModels.fomapan100AppDerivedFormula }, expectedLabel: "App-derived formula"),
             Case(provenance: "Ohzart community", makeProfile: {

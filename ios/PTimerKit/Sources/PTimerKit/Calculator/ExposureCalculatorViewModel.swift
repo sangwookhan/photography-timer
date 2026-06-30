@@ -256,7 +256,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     public init(
         calculator: ExposureCalculator,
         timerManager: any TimerManaging,
-        presetFilms: [FilmIdentity] = LaunchPresetFilmCatalog.films,
+        presetFilms: [FilmIdentity] = LaunchPresetFilmCatalogV2.films,
         contextPersistenceStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore(),
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring = NoOpCameraSlotSessionPersistenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),

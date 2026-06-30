@@ -113,7 +113,7 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
     /// affected film so the template parameter table can be updated
     /// in the same change.
     func testTemplateCaseListCoversEveryConvertedFormulaProfileInCatalog() {
-        let convertedFilms = LaunchPresetFilmCatalog.films.filter {
+        let convertedFilms = LaunchPresetFilmCatalogV2.films.filter {
             $0.profiles.contains(where: { $0.isConvertedFormulaProfile })
         }
 
@@ -156,7 +156,7 @@ final class ConvertedFormulaProfileTemplateTests: XCTestCase {
         ]
         for expectation in expectations {
             let profile = try XCTUnwrap(
-                LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == expectation.stock }?.profiles.first,
+                LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == expectation.stock }?.profiles.first,
                 "\(expectation.stock) must remain in the launch catalog."
             )
             XCTAssertEqual(

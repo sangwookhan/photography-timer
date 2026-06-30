@@ -19,7 +19,7 @@ enum FormulaProfileTestSupport {
         line: UInt = #line
     ) throws -> ReciprocityProfile {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == canonicalStockName },
             "\(canonicalStockName) must remain in the launch catalog.",
             file: file,
             line: line
@@ -35,7 +35,7 @@ enum FormulaProfileTestSupport {
         line: UInt = #line
     ) throws -> FilmModeDetailsDisplayState {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == canonicalStockName },
             "\(canonicalStockName) must remain in the launch catalog.",
             file: file,
             line: line

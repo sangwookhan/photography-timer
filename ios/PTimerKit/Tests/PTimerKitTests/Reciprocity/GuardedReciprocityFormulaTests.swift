@@ -378,13 +378,13 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
 
     func testShippedFormulaProfilesRenderThroughTheNewFormatter() throws {
         let panF = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Pan F Plus" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "Pan F Plus" }
         )
         let panFFormula = try XCTUnwrap(formulaRule(in: panF)?.formula)
         XCTAssertEqual(FormulaEquationFormatter.userFacingText(for: panFFormula), "Tc = Tm^1.33")
 
         let provia = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Provia 100F" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "Provia 100F" }
         )
         let proviaFormula = try XCTUnwrap(formulaRule(in: provia)?.formula)
         XCTAssertEqual(
@@ -416,7 +416,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// never the rounded inclusive "≤ 120 sec".
     func testOpenBoundaryNoCorrectionNoteUsesStrictlyBelowWording() throws {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Acros II" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "Acros II" }
         )
         let profile = try XCTUnwrap(film.profiles.first)
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 60)
@@ -439,7 +439,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// band.
     func testInclusiveNoCorrectionBoundaryNoteUsesLeqWording() throws {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "HP5 Plus" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "HP5 Plus" }
         )
         let profile = try XCTUnwrap(film.profiles.first)
         let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
@@ -461,7 +461,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// profile must declare it explicitly so the discriminator is
     /// load-bearing rather than nominal.
     func testEveryShippedFormulaProfileDeclaresModifiedSchwarzschildFamily() throws {
-        for film in LaunchPresetFilmCatalog.films {
+        for film in LaunchPresetFilmCatalogV2.films {
             for profile in film.profiles {
                 for rule in profile.rules {
                     guard case let .formula(formulaRule) = rule else { continue }
@@ -518,7 +518,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// arithmetic safety is checked separately by the direct
     /// formula-level catalog test below.
     func testEveryShippedFormulaProfilePassesSafetyAtRepresentativePoints() throws {
-        for film in LaunchPresetFilmCatalog.films {
+        for film in LaunchPresetFilmCatalogV2.films {
             for profile in film.profiles {
                 for rule in profile.rules {
                     guard case let .formula(formulaRule) = rule else { continue }
@@ -594,7 +594,7 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// PTIMER-160 ships the existing fits unchanged; refitting is
     /// out of scope and is tracked separately.
     func testEveryShippedFormulaArithmeticIsSelfSafeAtRepresentativePoints() throws {
-        for film in LaunchPresetFilmCatalog.films {
+        for film in LaunchPresetFilmCatalogV2.films {
             for profile in film.profiles {
                 for rule in profile.rules {
                     guard case let .formula(formulaRule) = rule else { continue }

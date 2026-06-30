@@ -113,7 +113,7 @@ final class SourceReferenceRowSortingTests: XCTestCase {
     @MainActor
     func testPointAnchorSortsAboveRangeRowAtSameSortValueThroughPresenter() throws {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CMS 20 II" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "CMS 20 II" }
         )
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()
@@ -173,7 +173,7 @@ final class SourceReferenceRowSortingTests: XCTestCase {
     @MainActor
     func testGuidanceBoundaryRowsStayOutOfSourceReferenceSection() throws {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "CMS 20 II" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "CMS 20 II" }
         )
         let profile = try XCTUnwrap(film.profiles.first)
         let model = ReciprocityModel()

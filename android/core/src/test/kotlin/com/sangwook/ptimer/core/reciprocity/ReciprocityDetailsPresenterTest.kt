@@ -3,10 +3,11 @@
 
 package com.sangwook.ptimer.core.reciprocity
 
-import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.customfilm.CustomFilmBuilder
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -14,7 +15,7 @@ import org.junit.Test
 
 class ReciprocityDetailsPresenterTest {
 
-    private val films = LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    private val films = LaunchPresetFilmCatalogV2.films
     private val policy = ReciprocityCalculationPolicyEvaluator()
 
     private fun film(id: String) = films.first { it.id == id }
@@ -129,8 +130,52 @@ class ReciprocityDetailsPresenterTest {
         val f = film("ilford-pan-f-plus-50")
         val profile = f.profiles.first()
         val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
+        assertTrue(state.referenceRows.isEmpty())
         assertTrue(state.sourceReferenceRows.isEmpty())
         assertTrue(state.guidanceBoundaryRows.isEmpty())
+        assertTrue(state.legendLines.isEmpty())
+    }
+
+    @Test
+    fun ektachromeLimitedGuidanceSurfacesNoCorrectionAndColorCorrectionReferenceRows() {
+        val ektachrome = film("kodak-ektachrome-e100")
+        val profile = ektachrome.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(
+            ektachrome,
+            profile,
+            policy.evaluate(profile, 120.0),
+            120.0,
+            { "${it}s" },
+        )
+
+        assertTrue(state.referenceRows.any { it.valueText == "No correction" })
+        val colorCorrectionRow = state.referenceRows.firstOrNull {
+            it.valueText == "Color correction CC10R"
+        }
+        assertNotNull(colorCorrectionRow)
+        assertEquals(
+            "At 120 sec, add CC10R filtration per the published guidance.",
+            colorCorrectionRow!!.belowNote,
+        )
+        assertTrue(state.legendLines.any { it.contains("CC10R") })
+        assertTrue(state.sourceCitationText?.contains("Kodak") == true)
+    }
+
+    @Test
+    fun limitedGuidanceWithoutColorFilterKeepsGuidanceMessageWithoutColorCorrectionRow() {
+        val ektar = film("kodak-ektar-100")
+        val profile = ektar.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(
+            ektar,
+            profile,
+            policy.evaluate(profile, 2.0),
+            2.0,
+            { "${it}s" },
+        )
+
+        assertTrue(state.referenceRows.any { it.valueText == "No correction" })
+        assertTrue(state.referenceRows.any { it.valueText == "Longer exposures: test under your conditions." })
+        assertFalse(state.referenceRows.any { it.valueText.startsWith("Color correction") })
         assertTrue(state.legendLines.isEmpty())
     }
 

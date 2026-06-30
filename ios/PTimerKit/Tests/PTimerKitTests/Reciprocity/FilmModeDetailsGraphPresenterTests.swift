@@ -261,7 +261,7 @@ final class FilmModeDetailsGraphPresenterTests: XCTestCase {
         line: UInt = #line
     ) throws -> FilmIdentity {
         try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == name },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == name },
             "\(name) must remain in the launch catalog.",
             file: file,
             line: line

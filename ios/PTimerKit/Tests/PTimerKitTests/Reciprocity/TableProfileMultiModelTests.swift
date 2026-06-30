@@ -160,7 +160,7 @@ final class TableProfileMultiModelTests: XCTestCase {
             "Official table has no graph-sampled rows."
         )
         let tmax = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.id == "kodak-tmax-100" }?.profiles.first
+            LaunchPresetFilmCatalogV2.films.first { $0.id == "kodak-tmax-100" }?.profiles.first
         )
         XCTAssertFalse(
             legendPresenter.legendDisplayState(for: tmax)?.lines.contains(graphLegendLine) == true,

@@ -29,7 +29,7 @@ Use when the caller must handle a failure that represents invalid or unprocessab
 
 - `ExposureCalculator.parseBaseShutter(_:)` throws typed `ExposureCalculatorError` cases for empty, unparseable, or non-positive input.
 - `ExposureCalculator.calculate(baseShutterSeconds:stop:)` throws for non-positive inputs and overflow.
-- `LaunchPresetFilmCatalogLoader.loadBundledCatalog(...)` throws for missing resources, malformed JSON, or catalog validation failures.
+- `LaunchPresetFilmCatalogV2Loader.loadBundledCatalog(...)` throws for missing resources, malformed JSON, or catalog validation failures.
 - `Codable` `init(from:)` implementations throw `DecodingError` for schema violations.
 
 ### `Result<T, E>`
@@ -57,4 +57,4 @@ Use for debug-only invariant checks on values that should always hold but are no
 - **`throws` for expected domain states.** Do not throw when a "no result" outcome is a normal part of the domain. The reciprocity evaluator always returns a result (including `.unsupported`) rather than throwing -- absence of a correction is a valid policy answer.
 - **`try?` in domain logic.** Silent `try?` is appropriate in persistence (where fallback to defaults is correct) but not in domain or policy code where swallowed errors hide bugs.
 - **`fatalError` in reachable code.** Prefer `preconditionFailure` over `fatalError` -- `precondition` is stripped in release-unchecked builds, making intent clearer. Neither should be reachable from user-driven paths.
-- **Untyped errors.** Domain `throws` should use a project-specific `Error` enum (e.g., `ExposureCalculatorError`, `LaunchPresetFilmCatalogLoaderError`) rather than generic `Error` or raw string messages.
+- **Untyped errors.** Domain `throws` should use a project-specific `Error` enum (e.g., `ExposureCalculatorError`, `LaunchPresetFilmCatalogV2LoaderError`) rather than generic `Error` or raw string messages.

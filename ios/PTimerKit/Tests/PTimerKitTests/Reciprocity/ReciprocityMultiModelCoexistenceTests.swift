@@ -96,7 +96,7 @@ final class ReciprocityMultiModelCoexistenceTests: XCTestCase {
     // MARK: - Helpers
 
     private func defaultProfile(for c: CoexistenceCase) throws -> ReciprocityProfile {
-        try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == c.filmID }).profiles[0]
+        try XCTUnwrap(LaunchPresetFilmCatalogV2.films.first { $0.id == c.filmID }).profiles[0]
     }
 
     private func alternateProfile(for c: CoexistenceCase) throws -> ReciprocityProfile {
@@ -116,12 +116,12 @@ final class ReciprocityMultiModelCoexistenceTests: XCTestCase {
 
     func testFilmStockShipsOneCatalogProfileWithAlternatesOffCatalog() throws {
         for c in cases {
-            let stockEntries = LaunchPresetFilmCatalog.films.filter { $0.canonicalStockName == c.film }
+            let stockEntries = LaunchPresetFilmCatalogV2.films.filter { $0.canonicalStockName == c.film }
             XCTAssertEqual(stockEntries.count, 1, "\(c.film) must remain a single top-level film stock.")
             XCTAssertEqual(stockEntries[0].profiles.count, 1, "\(c.film) must ship exactly one catalog profile.")
             for alternateID in c.alternatesOrder {
                 XCTAssertFalse(
-                    LaunchPresetFilmCatalog.films.contains { $0.id == alternateID },
+                    LaunchPresetFilmCatalogV2.films.contains { $0.id == alternateID },
                     "\(c.film): \(alternateID) must be an alternate model only, not a top-level catalog entry."
                 )
             }

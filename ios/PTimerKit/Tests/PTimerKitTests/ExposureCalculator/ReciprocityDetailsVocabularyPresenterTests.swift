@@ -89,7 +89,7 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         // is the authority caveat that vocabulary must surface in the
         // summary detail line.
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.id == "kodak-portra-400" },
+            LaunchPresetFilmCatalogV2.films.first { $0.id == "kodak-portra-400" },
             "Portra 400 must remain in the launch catalog."
         )
         let profile = try XCTUnwrap(
@@ -139,7 +139,7 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
 
     func testUnofficialTableBeyondSourceSummaryDetailDoesNotSayOfficial() throws {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }
+            LaunchPresetFilmCatalogV2.films.first { $0.id == "foma-fomapan-100" }
         )
         let tableRule = TableInterpolationReciprocityRule(
             anchors: [
@@ -270,7 +270,7 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
             let expectedTone: FilmModeReciprocityStateTone?
         }
         let officialFoma: () throws -> ReciprocityProfile = {
-            try XCTUnwrap(LaunchPresetFilmCatalog.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
+            try XCTUnwrap(LaunchPresetFilmCatalogV2.films.first { $0.id == "foma-fomapan-100" }?.profiles.first)
         }
         let ohzart: () throws -> ReciprocityProfile = {
             try XCTUnwrap(AlternateReciprocityModels.alternates(forFilmID: "foma-fomapan-100").first { $0.id == "foma-fomapan-100-ohzart-community-table" })
@@ -308,7 +308,7 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         meteredSeconds: Double
     ) throws -> FilmModeReciprocityBindingState {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == filmStock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == filmStock },
             "\(filmStock) must remain in the launch catalog."
         )
         let model = ReciprocityModel()
@@ -326,7 +326,7 @@ final class ReciprocityVocabularyPresenterTests: XCTestCase {
         meteredSeconds: Double
     ) throws -> FilmModeReciprocityBindingState {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == stock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == stock },
             "\(stock) must remain in the launch catalog."
         )
         let profile = try XCTUnwrap(film.profiles.first)

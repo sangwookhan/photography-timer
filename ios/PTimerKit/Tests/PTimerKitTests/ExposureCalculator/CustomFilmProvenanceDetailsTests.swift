@@ -121,7 +121,7 @@ final class CustomFilmProvenanceDetailsTests: XCTestCase {
         // Use a preset Provia 100F profile — official authority,
         // so the custom-profile section must not render.
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "Provia 100F" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "Provia 100F" }
         )
         let profile = try XCTUnwrap(film.profiles.first)
         XCTAssertNil(presenter.customProfileSection(film: film, profile: profile))

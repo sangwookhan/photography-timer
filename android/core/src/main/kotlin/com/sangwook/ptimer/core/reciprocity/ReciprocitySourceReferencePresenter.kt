@@ -26,18 +26,28 @@ data class ReciprocityReferenceRow(
  * band. Faithful port of iOS `FilmModeDetailsReferencePresenter`'s
  * source-evidence sections + `ReciprocitySourceEvidenceClassifier`.
  *
- * Both sections appear only when the profile publishes source evidence;
- * formula-only catalog entries (HP5, Pan F …) keep the lean layout with no
+ * Formula/table source-reference sections appear only when the profile
+ * publishes source evidence; limited-guidance profiles use their threshold
+ * and qualitative guidance rules for the separate "Reference" section.
+ * Formula-only catalog entries (HP5, Pan F …) keep the lean layout with no
  * reference table, matching iOS.
  */
 object ReciprocitySourceReferencePresenter {
     data class Result(
+        val reference: List<ReciprocityReferenceRow>,
         val sourceReference: List<ReciprocityReferenceRow>,
         val guidanceBoundary: List<ReciprocityReferenceRow>,
     )
 
     fun rows(profile: ReciprocityProfile, formatDuration: (Double) -> String): Result {
-        if (profile.sourceEvidence.isEmpty()) return Result(emptyList(), emptyList())
+        if (usesLimitedGuidance(profile)) {
+            return Result(
+                reference = limitedGuidanceReferenceRows(profile, formatDuration),
+                sourceReference = emptyList(),
+                guidanceBoundary = emptyList(),
+            )
+        }
+        if (profile.sourceEvidence.isEmpty()) return Result(emptyList(), emptyList(), emptyList())
 
         // (sortValue, row); the no-correction band sorts first at 0.
         val sourceReference = mutableListOf<Pair<Double, ReciprocityReferenceRow>>()
@@ -55,9 +65,85 @@ object ReciprocitySourceReferencePresenter {
         }
 
         return Result(
+            reference = emptyList(),
             sourceReference = sourceReference.sortedBy { it.first }.map { it.second },
             guidanceBoundary = guidanceBoundary,
         )
+    }
+
+    private fun usesLimitedGuidance(profile: ReciprocityProfile): Boolean =
+        profile.rules.any { it.kind == ReciprocityRuleKind.limitedGuidance }
+
+    private fun limitedGuidanceReferenceRows(
+        profile: ReciprocityProfile,
+        formatDuration: (Double) -> String,
+    ): List<ReciprocityReferenceRow> {
+        val rows = mutableListOf<ReciprocityReferenceRow>()
+        for (rule in profile.rules) {
+            when (rule.kind) {
+                ReciprocityRuleKind.threshold ->
+                    rule.threshold?.let { rows.add(limitedGuidanceThresholdRow(it.noCorrectionRange, formatDuration)) }
+                ReciprocityRuleKind.limitedGuidance ->
+                    rule.limitedGuidance?.let { rows.addAll(limitedGuidanceRuleRows(it, formatDuration)) }
+                ReciprocityRuleKind.formula,
+                ReciprocityRuleKind.tableInterpolation -> Unit
+            }
+        }
+        return rows
+    }
+
+    private fun limitedGuidanceThresholdRow(
+        range: ReciprocityTimeRange,
+        formatDuration: (Double) -> String,
+    ): ReciprocityReferenceRow {
+        val lower = range.minimumSeconds
+        val upper = range.maximumSeconds
+        val metered = when {
+            lower <= 0 && upper != null -> "<= ${formatDuration(upper)}"
+            upper != null -> "${formatDuration(lower)}-${formatDuration(upper)}"
+            else -> ">= ${formatDuration(lower)}"
+        }
+        return ReciprocityReferenceRow(metered, "No correction")
+    }
+
+    private fun limitedGuidanceRuleRows(
+        rule: LimitedGuidanceReciprocityRule,
+        formatDuration: (Double) -> String,
+    ): List<ReciprocityReferenceRow> {
+        val range = rule.appliesWhenMetered ?: return emptyList()
+        val meteredText = meteredText(
+            MeteredExposureSelector(kind = MeteredExposureSelectorKind.range, range = range),
+            formatDuration,
+        )
+
+        val colorRows = rule.adjustments.mapNotNull { adjustment ->
+            if (adjustment.kind != ReciprocityAdjustmentKind.colorFilter) return@mapNotNull null
+            val color = adjustment.colorFilter ?: return@mapNotNull null
+            ReciprocityReferenceRow(
+                meteredText = meteredText,
+                valueText = "Color correction ${color.filterName}",
+                belowNote = color.note?.trim()?.takeIf { it.isNotEmpty() },
+            )
+        }
+        if (colorRows.isNotEmpty()) return colorRows
+
+        val notRecommended = rule.adjustments.any {
+            it.kind == ReciprocityAdjustmentKind.warning &&
+                it.warning?.severity == ReciprocityWarningSeverity.notRecommended
+        }
+        if (notRecommended) return listOf(ReciprocityReferenceRow(meteredText, "Not recommended"))
+
+        val development = rule.adjustments.firstNotNullOfOrNull {
+            if (it.kind == ReciprocityAdjustmentKind.development) it.development?.instruction else null
+        }
+        if (development != null) {
+            return listOf(ReciprocityReferenceRow(meteredText, "Development adjustment $development"))
+        }
+
+        val note = rule.adjustments.firstNotNullOfOrNull {
+            if (it.kind == ReciprocityAdjustmentKind.note) it.note?.text else null
+        } ?: rule.notes.firstOrNull()
+        return note?.let { listOf(ReciprocityReferenceRow(meteredText, it)) }.orEmpty()
     }
 
     /** First rule's no-correction band as a "<= Xs · No correction range" row. */

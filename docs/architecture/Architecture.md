@@ -283,11 +283,11 @@ the timer, which is a calculator-domain concern.
 
 ### 1.8 Film catalog
 
-Files: `PTimerCore` `Catalog/PresetFilmCatalog.swift` +
-`Catalog/LaunchPresetFilmCatalog.json` (a package resource).
+Files: `PTimerCore` `Catalog/PresetFilmCatalogV2.swift` +
+`Catalog/LaunchPresetFilmCatalog.v2.json` (a package resource).
 
 Preset films load from the bundled JSON at launch via
-`LaunchPresetFilmCatalog`. Catalog validation (see
+`LaunchPresetFilmCatalogV2`. Catalog validation (see
 `docs/specs/DomainSchema.md` §12) runs at load time; a failing catalog
 is a load-time error rather than a soft-warn.
 

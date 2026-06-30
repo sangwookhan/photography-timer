@@ -3,7 +3,7 @@
 
 package com.sangwook.ptimer.app.vm
 
-import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import org.junit.Assert.assertEquals
@@ -15,7 +15,7 @@ import org.junit.Test
 
 class CalculatorControllerTest {
 
-    private val films = LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    private val films = LaunchPresetFilmCatalogV2.films
 
     private fun controller(onStart: (Double, TimerIdentity) -> Unit = { _, _ -> }) =
         CalculatorController(films = films, onStart = onStart)
@@ -28,6 +28,24 @@ class CalculatorControllerTest {
         assertNull(s.correctedText)
         assertTrue(s.adjustedText.isNotEmpty())
         assertTrue(s.modelOptions.isEmpty())
+    }
+
+    @Test
+    fun presetFilmOptionsAreGroupedAndSortedLikeIos() {
+        val presetOptions = controller().state.value.filmOptions
+            .filter { it.id != null && !it.isCustom }
+
+        val manufacturerOrder = presetOptions
+            .map { it.manufacturer.orEmpty() }
+            .distinct()
+        assertEquals(manufacturerOrder.sortedWith(java.lang.String.CASE_INSENSITIVE_ORDER), manufacturerOrder)
+
+        manufacturerOrder.forEach { manufacturer ->
+            val names = presetOptions
+                .filter { it.manufacturer.orEmpty() == manufacturer }
+                .map { it.name }
+            assertEquals(names.sortedWith(java.lang.String.CASE_INSENSITIVE_ORDER), names)
+        }
     }
 
     @Test

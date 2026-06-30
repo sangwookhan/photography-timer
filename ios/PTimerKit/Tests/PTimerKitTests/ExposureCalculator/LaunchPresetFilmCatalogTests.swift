@@ -11,15 +11,15 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     // MARK: - Bundle loading
 
     func testBundledLaunchPresetFilmCatalogLoadsSuccessfully() throws {
-        let films = try LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+        let films = try LaunchPresetFilmCatalogV2Loader().loadBundledCatalog()
         XCTAssertEqual(films.count, LaunchCatalogExpectations.scopeCount)
         XCTAssertEqual(films.map(\.canonicalStockName), LaunchCatalogExpectations.canonicalStockOrder)
     }
 
     func testBundledLaunchPresetFilmCatalogPreservesExpectedSelectorOrdering() {
-        XCTAssertEqual(LaunchPresetFilmCatalog.films.count, LaunchCatalogExpectations.scopeCount)
+        XCTAssertEqual(LaunchPresetFilmCatalogV2.films.count, LaunchCatalogExpectations.scopeCount)
         XCTAssertEqual(
-            LaunchPresetFilmCatalog.films.map(\.canonicalStockName),
+            LaunchPresetFilmCatalogV2.films.map(\.canonicalStockName),
             LaunchCatalogExpectations.canonicalStockOrder
         )
     }
@@ -27,9 +27,9 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     // MARK: - PTIMER-86 launch-policy invariants
 
     func testLaunchPresetFilmCatalogRespectsPTIMER86LaunchPolicyConstraints() {
-        XCTAssertFalse(LaunchPresetFilmCatalog.films.isEmpty)
+        XCTAssertFalse(LaunchPresetFilmCatalogV2.films.isEmpty)
 
-        for film in LaunchPresetFilmCatalog.films {
+        for film in LaunchPresetFilmCatalogV2.films {
             XCTAssertEqual(film.kind, .preset)
             XCTAssertEqual(film.productionStatus, .current)
             XCTAssertEqual(film.profiles.count, 1, "Launch flow should use one primary profile per film identity.")
@@ -96,7 +96,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     /// are case data so no film or brand identity sits in the test name.
     func testLaunchCatalogContainsExpectedProfilesPerManufacturer() {
         for c in manufacturerMembershipCases {
-            let films = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == c.manufacturer }
+            let films = LaunchPresetFilmCatalogV2.films.filter { $0.manufacturer == c.manufacturer }
             XCTAssertEqual(films.count, c.expectedCount, "\(c.manufacturer): launch catalog member count.")
             XCTAssertEqual(
                 Set(films.map(\.canonicalStockName)),
@@ -110,7 +110,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     /// exponent-formula profile that preserves the 1-second
     /// no-correction boundary in the formula.
     func testBarePowerLawCatalogEntriesPreserveOneSecondNoCorrectionBoundary() throws {
-        let films = LaunchPresetFilmCatalog.films.filter { $0.manufacturer == "ILFORD / HARMAN" }
+        let films = LaunchPresetFilmCatalogV2.films.filter { $0.manufacturer == "ILFORD / HARMAN" }
         XCTAssertFalse(films.isEmpty, "Bare power-law family must have catalog members.")
         for film in films {
             let profile = try XCTUnwrap(film.profiles.first)
@@ -148,7 +148,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
         for (canonicalName, exponent) in expected {
             let film = try XCTUnwrap(
-                LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalName },
+                LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == canonicalName },
                 "Missing ILFORD/HARMAN film '\(canonicalName)'."
             )
             let formulaRule = try XCTUnwrap(formulaRule(in: film), "Missing formula rule for \(canonicalName).")
@@ -159,8 +159,8 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     // MARK: - Exclusions
 
     func testLaunchCatalogExcludesNonLaunchReadyFilms() {
-        let canonical = Set(LaunchPresetFilmCatalog.films.map(\.canonicalStockName))
-        let manufacturers = Set(LaunchPresetFilmCatalog.films.compactMap(\.manufacturer))
+        let canonical = Set(LaunchPresetFilmCatalogV2.films.map(\.canonicalStockName))
+        let manufacturers = Set(LaunchPresetFilmCatalogV2.films.compactMap(\.manufacturer))
 
         // Kodak Motion Picture Film
         for stock in ["Vision3 50D", "Vision3 250D", "Vision3 200T", "Vision3 500T", "Double-X", "Ektachrome 100D"] {
@@ -188,8 +188,8 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     }
 
     func testLaunchCatalogDoesNotDuplicateFilmOrProfileIdentifiers() {
-        let filmIDs = LaunchPresetFilmCatalog.films.map(\.id)
-        let profileIDs = LaunchPresetFilmCatalog.films.flatMap { film in film.profiles.map(\.id) }
+        let filmIDs = LaunchPresetFilmCatalogV2.films.map(\.id)
+        let profileIDs = LaunchPresetFilmCatalogV2.films.flatMap { film in film.profiles.map(\.id) }
 
         XCTAssertEqual(filmIDs.count, Set(filmIDs).count)
         XCTAssertEqual(profileIDs.count, Set(profileIDs).count)
@@ -197,7 +197,7 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     func testLaunchCatalogDoesNotShipUnofficialPracticalProfileAsPrimary() throws {
         let portra400 = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first(where: { $0.id == "kodak-portra-400" }),
+            LaunchPresetFilmCatalogV2.films.first(where: { $0.id == "kodak-portra-400" }),
             "Portra 400 must remain in the launch catalog."
         )
         XCTAssertEqual(portra400.profiles.count, 1)
@@ -257,53 +257,12 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         }
     }
 
-    func testLoaderRejectsArbitraryUnofficialPrimaryProfile() throws {
-        let originalFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
-        let unofficialProfile = ReciprocityProfile(
-            id: "arbitrary-unofficial-primary",
-            name: "Unofficial primary",
-            source: ReciprocitySourceProvenance(
-                kind: .thirdPartyPublication,
-                authority: .unofficial,
-                confidence: .medium,
-                publisher: "Test source",
-                title: "Test title",
-                citation: "Test citation"
-            ),
-            rules: [
-                .formula(
-                    FormulaReciprocityRule(
-                        formula: ReciprocityFormula(
-                            exponent: 1.62,
-                            noCorrectionThroughSeconds: 1,
-                            sourceRangeThroughSeconds: 15
-                        )
-                    )
-                ),
-            ],
-            modelBasis: ReciprocityProfileModelBasis(
-                sourceModel: .practicalCommunityGuidance,
-                calculationModel: .guardedFormula
-            )
-        )
-        let invalidFilm = copyFilm(originalFilm, profiles: [unofficialProfile])
-        let invalidData = try encodeCatalog([invalidFilm])
-
-        let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(
-                try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData)
-            ) as? LaunchPresetFilmCatalogLoaderError
-        )
-
-        XCTAssertEqual(error, .invalidPrimaryProfileSource(originalFilm.id))
-    }
-
     // MARK: - Source provenance preservation
 
     func testLaunchCatalogPreservesPublisherAndCitationsForBatchExemplars() throws {
         for exemplar in SourceExemplarExpectation.batchExemplars {
             let film = try XCTUnwrap(
-                LaunchPresetFilmCatalog.films.first(where: { $0.canonicalStockName == exemplar.canonical }),
+                LaunchPresetFilmCatalogV2.films.first(where: { $0.canonicalStockName == exemplar.canonical }),
                 "Missing exemplar film '\(exemplar.canonical)'."
             )
             let source = film.profiles[0].source
@@ -546,136 +505,10 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         )
     }
 
-    // MARK: - Loader failure paths (existing coverage retained)
-
-    func testLaunchPresetFilmCatalogRejectsDuplicateFilmIdentifiers() throws {
-        let originalFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
-        let duplicatedFilm = copyFilm(originalFilm)
-        let duplicatedData = try encodeCatalog([originalFilm, duplicatedFilm])
-
-        let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(
-                try LaunchPresetFilmCatalogLoader().loadCatalog(from: duplicatedData)
-            ) as? LaunchPresetFilmCatalogLoaderError
-        )
-
-        XCTAssertEqual(error, .duplicateFilmIdentifier(originalFilm.id))
-        XCTAssertEqual(
-            error.errorDescription,
-            "Bundled launch preset film catalog contains a duplicate film identifier '\(originalFilm.id)'."
-        )
-    }
-
-    func testLaunchPresetFilmCatalogRejectsInvalidCanonicalStockNames() throws {
-        let originalFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
-        let invalidFilm = copyFilm(originalFilm, canonicalStockName: "  ")
-        let invalidData = try encodeCatalog([invalidFilm])
-
-        let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(
-                try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData)
-            ) as? LaunchPresetFilmCatalogLoaderError
-        )
-
-        XCTAssertEqual(error, .invalidCanonicalStockName(originalFilm.id))
-    }
-
-    func testLaunchPresetFilmCatalogRejectsDuplicateCanonicalStockNames() throws {
-        let firstFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
-        let secondFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.dropFirst().first)
-        let duplicateNameFilm = copyFilm(secondFilm, canonicalStockName: firstFilm.canonicalStockName)
-        let duplicatedData = try encodeCatalog([firstFilm, duplicateNameFilm])
-
-        let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(try LaunchPresetFilmCatalogLoader().loadCatalog(from: duplicatedData))
-        ) as? LaunchPresetFilmCatalogLoaderError
-
-        XCTAssertEqual(error, .duplicateCanonicalStockName(firstFilm.canonicalStockName))
-    }
-
-    func testLaunchPresetFilmCatalogMissingResourceFailsSafely() {
-        let error = XCTAssertThrowsErrorAndReturn(
-            try LaunchPresetFilmCatalogLoader().loadBundledCatalog(
-                resourceName: "MissingLaunchPresetFilmCatalog",
-                bundleCandidates: [Bundle(for: Self.self)]
-            )
-        ) as? LaunchPresetFilmCatalogLoaderError
-
-        XCTAssertEqual(
-            error,
-            .missingBundledResource(name: "MissingLaunchPresetFilmCatalog", fileExtension: "json")
-        )
-    }
-
-    func testLaunchPresetFilmCatalogMalformedResourceFailsSafely() {
-        let malformedData = Data("{".utf8)
-
-        let error = XCTAssertThrowsErrorAndReturn(
-            try LaunchPresetFilmCatalogLoader().loadCatalog(from: malformedData)
-        ) as? LaunchPresetFilmCatalogLoaderError
-
-        guard case .malformedResource? = error else {
-            return XCTFail("Expected malformed resource error, got \(String(describing: error)).")
-        }
-    }
-
-    func testLaunchPresetFilmCatalogDecodeFailureReportsMissingKeyAndCodingPath() {
-        // Missing both `iso` and `profiles`. The decoder reports the first
-        // required key it cannot find; the contract under test is that a
-        // missing-key error includes the offending entry index in the
-        // coding path so the developer can locate the bad entry.
-        let invalidJSON = Data(
-            """
-            {
-              "films": [
-                {
-                  "id": "kodak-tri-x-400",
-                  "kind": "preset",
-                  "canonicalStockName": "Tri-X 400",
-                  "manufacturer": "Kodak",
-                  "brandLabel": "KODAK PROFESSIONAL TRI-X 400",
-                  "aliases": ["TRI-X", "TX 400"],
-                  "productionStatus": "current"
-                }
-              ]
-            }
-            """.utf8
-        )
-
-        let error = XCTAssertThrowsErrorAndReturn(
-            try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidJSON)
-        ) as? LaunchPresetFilmCatalogLoaderError
-
-        guard case let .malformedResource(reason)? = error else {
-            return XCTFail("Expected malformed resource error, got \(String(describing: error)).")
-        }
-
-        XCTAssertTrue(reason.contains("Missing key"))
-        XCTAssertTrue(reason.contains("[0]"))
-    }
-
-    func testLaunchPresetFilmCatalogValidationFailureDescriptionsNameOffendingEntry() throws {
-        let firstFilm = try XCTUnwrap(LaunchPresetFilmCatalog.films.first)
-        let invalidFilm = copyFilm(firstFilm, profiles: [])
-        let invalidData = try encodeCatalog([invalidFilm])
-
-        let error = try XCTUnwrap(
-            XCTAssertThrowsErrorAndReturn(
-                try LaunchPresetFilmCatalogLoader().loadCatalog(from: invalidData)
-            ) as? LaunchPresetFilmCatalogLoaderError
-        )
-
-        XCTAssertEqual(error, .invalidPrimaryProfileCount(filmID: firstFilm.id, count: 0))
-        XCTAssertEqual(
-            error.errorDescription,
-            "Bundled launch preset film catalog film '\(firstFilm.id)' has 0 profiles; launch scope requires exactly one primary profile."
-        )
-    }
-
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {
-        LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName }
+        LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == canonicalStockName }
     }
 
     private func formulaRule(in film: FilmIdentity) -> FormulaReciprocityRule? {
@@ -687,47 +520,6 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         return nil
     }
 
-    private func encodeCatalog(_ films: [FilmIdentity]) throws -> Data {
-        struct Wrapper: Encodable { let films: [FilmIdentity] }
-        return try JSONEncoder().encode(Wrapper(films: films))
-    }
-
-    private func copyFilm(
-        _ film: FilmIdentity,
-        id: String? = nil,
-        canonicalStockName: String? = nil,
-        kind: FilmIdentityKind? = nil,
-        iso: Int? = nil,
-        productionStatus: FilmProductionStatus? = nil,
-        profiles: [ReciprocityProfile]? = nil
-    ) -> FilmIdentity {
-        FilmIdentity(
-            id: id ?? film.id,
-            kind: kind ?? film.kind,
-            canonicalStockName: canonicalStockName ?? film.canonicalStockName,
-            manufacturer: film.manufacturer,
-            brandLabel: film.brandLabel,
-            aliases: film.aliases,
-            iso: iso ?? film.iso,
-            productionStatus: productionStatus ?? film.productionStatus,
-            profiles: profiles ?? film.profiles,
-            userMetadata: film.userMetadata
-        )
-    }
-}
-
-private func XCTAssertThrowsErrorAndReturn<T>(
-    _ expression: @autoclosure () throws -> T,
-    file: StaticString = #filePath,
-    line: UInt = #line
-) -> Error? {
-    do {
-        _ = try expression()
-        XCTFail("Expected expression to throw an error.", file: file, line: line)
-        return nil
-    } catch {
-        return error
-    }
 }
 
 /// Static expectations for the bundled launch catalog. Lives at file

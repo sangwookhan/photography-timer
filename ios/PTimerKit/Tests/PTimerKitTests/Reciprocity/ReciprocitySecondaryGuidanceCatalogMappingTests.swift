@@ -5,7 +5,7 @@ import XCTest
 import PTimerCore
 
 /// PTIMER-88 follow-up regression: drives the secondary-guidance formatter
-/// directly off `LaunchPresetFilmCatalog.films` so the wire from real
+/// directly off `LaunchPresetFilmCatalogV2.films` so the wire from real
 /// preset data through `[ReciprocityAdjustment]` into
 /// `ReciprocitySecondaryGuidancePresentation` rows stays intact for the
 /// representative slide / negative / black-and-white films.
@@ -84,7 +84,7 @@ final class SecondaryGuidanceCatalogMappingTests: XCTestCase {
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {
-        LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == canonicalStockName }
+        LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == canonicalStockName }
     }
 
     private func formattedSecondaryGuidance(

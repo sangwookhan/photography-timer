@@ -60,7 +60,7 @@ final class DisplayStateSnapshotTests: XCTestCase {
     /// reciprocity-data correction shows up as a snapshot diff.
     func testLaunchPresetFilmCatalogSnapshot() {
         DisplayStateSnapshot.assert(
-            LaunchPresetFilmCatalog.films,
+            LaunchPresetFilmCatalogV2.films,
             named: "launch-preset-films"
         )
     }

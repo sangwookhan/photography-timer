@@ -18,7 +18,7 @@ enum ViewModelDependencyFactory {
                 completionNotificationScheduler: UserNotificationTimerCompletionScheduler(),
                 persistenceStore: UserDefaultsTimerPersistenceStore()
             ),
-            presetFilms: LaunchPresetFilmCatalog.films,
+            presetFilms: LaunchPresetFilmCatalogV2.films,
             contextPersistenceStore: UserDefaultsCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: UserDefaultsCameraSlotSessionStore(),
             metadataPersistenceStore: UserDefaultsTimerMetadataStore(),
@@ -34,7 +34,7 @@ enum ViewModelDependencyFactory {
         ViewModelDependencies(
             calculator: ExposureCalculator(),
             timerManager: TimerManager(),
-            presetFilms: LaunchPresetFilmCatalog.films,
+            presetFilms: LaunchPresetFilmCatalogV2.films,
             contextPersistenceStore: NoOpCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: NoOpCameraSlotSessionPersistenceStore(),
             metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),

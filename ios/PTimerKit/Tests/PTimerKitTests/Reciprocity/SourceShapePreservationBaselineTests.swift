@@ -297,7 +297,7 @@ final class SourceShapePreservationBaselineTests: XCTestCase {
         line: UInt = #line
     ) throws -> ReciprocityProfile {
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == stock },
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == stock },
             "\(stock) must remain in the launch catalog.",
             file: file,
             line: line

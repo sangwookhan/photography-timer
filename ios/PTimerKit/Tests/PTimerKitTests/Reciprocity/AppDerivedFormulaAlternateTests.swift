@@ -103,7 +103,7 @@ final class AppDerivedFormulaAlternateTests: XCTestCase {
     func testDefaultProfileRemainsTableInterpolation() throws {
         for entry in accepted {
             let film = try XCTUnwrap(
-                LaunchPresetFilmCatalog.films.first { $0.id == entry.filmID }
+                LaunchPresetFilmCatalogV2.films.first { $0.id == entry.filmID }
             )
             let defaultProfile = try XCTUnwrap(film.profiles.first)
             XCTAssertTrue(

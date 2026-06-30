@@ -84,7 +84,7 @@ final class CustomFilmDetailsCalculationBasisTests: XCTestCase {
         // Details surface must not gain a duplicate Calculation
         // Basis section for it.
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalog.films.first { $0.canonicalStockName == "HP5 Plus" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "HP5 Plus" }
         )
         let input = makeInput(for: film, meteredSeconds: 30)
         let details = try XCTUnwrap(

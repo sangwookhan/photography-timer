@@ -3,7 +3,7 @@
 
 package com.sangwook.ptimer.app.calc
 
-import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogLoader
+import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,7 +15,7 @@ import org.junit.Test
 class ShootingCalculatorTest {
 
     private val calc = ShootingCalculator()
-    private val films = LaunchPresetFilmCatalogLoader().loadBundledCatalog()
+    private val films = LaunchPresetFilmCatalogV2.films
     private val oneSecIndex = ExposureScale.oneThirdStopShutterCameraLabels.indexOf("1s")
 
     @Test

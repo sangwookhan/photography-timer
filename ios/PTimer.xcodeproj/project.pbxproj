@@ -7,14 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */; };
-		EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */; };
-		EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */; };
-		EE0000000000000000000008 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
-		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
-		EE0000000000000000000005 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
-		EE0000000000000000000006 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
-		EE0000000000000000000007 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
@@ -46,12 +38,12 @@
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
 		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
 		A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000401 /* SharedFixtureLocator.swift */; };
-		EE0000000000000000000C92 /* CustomFilmTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000C93 /* CustomFilmTestSupport.swift */; };
 		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
 		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
 		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
 		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
 		A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */; };
+		A0000000000000000000B0B0 /* SilentModeAdvisoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000B0B1 /* SilentModeAdvisoryTests.swift */; };
 		A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */; };
 		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
@@ -60,13 +52,25 @@
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
+		A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */; };
 		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
 		A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */; };
 		A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */; };
+		A000000000000000000009A0 /* TimerAlarmAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */; };
+		A0000000000000000000B0A0 /* SilentModeAdvisory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000B0A1 /* SilentModeAdvisory.swift */; };
 		A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */; };
-		A0000000000000000000FF01 /* CustomFilmEditorFittedFormulaSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */; };
 		A00000000000000000000B92 /* CustomFilmEditorFieldSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */; };
 		A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */; };
+		A0000000000000000000FF01 /* CustomFilmEditorFittedFormulaSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */; };
+		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
+		EE0000000000000000000005 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
+		EE0000000000000000000006 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
+		EE0000000000000000000007 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
+		EE0000000000000000000008 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
+		EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */; };
+		EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */; };
+		EE0000000000000000000C92 /* CustomFilmTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000C93 /* CustomFilmTestSupport.swift */; };
+		EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -101,12 +105,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCalculatorContextStore.swift; sourceTree = "<group>"; };
-		EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsDisplaySettingStore.swift; sourceTree = "<group>"; };
-		EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
-		A0000000000000000000EF01 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A00000000000000000000013 /* ExposureCalculatorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorScreen.swift; sourceTree = "<group>"; };
 		A00000000000000000000015 /* TimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManager.swift; sourceTree = "<group>"; };
@@ -139,12 +139,12 @@
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
 		A00000000000000000000401 /* SharedFixtureLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureLocator.swift; sourceTree = "<group>"; };
-		EE0000000000000000000C93 /* CustomFilmTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
 		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
 		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
 		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerCompletionAlertTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000B0B1 /* SilentModeAdvisoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SilentModeAdvisoryTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerNotificationSchedulingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
@@ -153,13 +153,21 @@
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCustomFilmLibraryStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibraryTests.swift; sourceTree = "<group>"; };
+		A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerAlarmAudioPlayer.swift; sourceTree = "<group>"; };
+		A0000000000000000000B0A1 /* SilentModeAdvisory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SilentModeAdvisory.swift; sourceTree = "<group>"; };
 		A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckView.swift; sourceTree = "<group>"; };
-		A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFittedFormulaSection.swift; sourceTree = "<group>"; };
 		A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFieldSheets.swift; sourceTree = "<group>"; };
 		A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorPolishTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000EF01 /* Config/Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
+		A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFittedFormulaSection.swift; sourceTree = "<group>"; };
+		EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCalculatorContextStore.swift; sourceTree = "<group>"; };
+		EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStore.swift; sourceTree = "<group>"; };
+		EE0000000000000000000C93 /* CustomFilmTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmTestSupport.swift; sourceTree = "<group>"; };
+		EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsDisplaySettingStore.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -197,7 +205,7 @@
 			isa = PBXGroup;
 			children = (
 				F2683D862F7A020F009BCD7F /* PTimer.xctestplan */,
-				A0000000000000000000EF01 /* Signing.xcconfig */,
+				A0000000000000000000EF01 /* Config/Signing.xcconfig */,
 				A00000000000000000000031 /* PTimer */,
 				A00000000000000000000094 /* PTimerWidgets */,
 				A00000000000000000000033 /* PTimerTests */,
@@ -311,6 +319,8 @@
 			children = (
 				A00000000000000000000015 /* TimerManager.swift */,
 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
+				A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */,
+				A0000000000000000000B0A1 /* SilentModeAdvisory.swift */,
 				A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */,
 				A00000000000000000000145 /* UserDefaultsTimerMetadataStore.swift */,
 			);
@@ -355,7 +365,9 @@
 				A00000000000000000000017 /* TimerManagerTests.swift */,
 				A00000000000000000000901 /* TimerManagerTestSupport.swift */,
 				A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */,
+				A0000000000000000000B0B1 /* SilentModeAdvisoryTests.swift */,
 				A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */,
+				A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */,
 				A00000000000000000000907 /* TimerManagerReconcileTests.swift */,
 				A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */,
 				A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */,
@@ -547,26 +559,6 @@
 		};
 /* End PBXProject section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = PTimerKit;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		EE0000000000000000000002 /* PTimerCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
-			productName = PTimerCore;
-		};
-		EE0000000000000000000004 /* PTimerKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
-			productName = PTimerKit;
-		};
-/* End XCSwiftPackageProductDependency section */
-
 /* Begin PBXResourcesBuildPhase section */
 		A00000000000000000000022 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
@@ -607,6 +599,8 @@
 				A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */,
 				A00000000000000000000005 /* TimerManager.swift in Sources */,
 				A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */,
+				A000000000000000000009A0 /* TimerAlarmAudioPlayer.swift in Sources */,
+				A0000000000000000000B0A0 /* SilentModeAdvisory.swift in Sources */,
 				A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */,
 				A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */,
 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,
@@ -636,7 +630,9 @@
 				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 				A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */,
 				A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */,
+				A0000000000000000000B0B0 /* SilentModeAdvisoryTests.swift in Sources */,
 				A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */,
+				A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */,
 				A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */,
 				A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */,
 				A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */,
@@ -689,6 +685,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5X5P5DEG3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = PTimer;
@@ -719,6 +716,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5X5P5DEG3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = PTimer;
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -744,7 +742,7 @@
 		};
 		A00000000000000000000072 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A0000000000000000000EF01 /* Signing.xcconfig */;
+			baseConfigurationReference = A0000000000000000000EF01 /* Config/Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -804,7 +802,7 @@
 		};
 		A00000000000000000000073 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A0000000000000000000EF01 /* Signing.xcconfig */;
+			baseConfigurationReference = A0000000000000000000EF01 /* Config/Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -903,6 +901,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5X5P5DEG3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PTimerWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -929,6 +928,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5X5P5DEG3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PTimerWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -989,6 +989,26 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PTimerKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EE0000000000000000000002 /* PTimerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
+			productName = PTimerCore;
+		};
+		EE0000000000000000000004 /* PTimerKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EE0000000000000000000001 /* XCLocalSwiftPackageReference "PTimerKit" */;
+			productName = PTimerKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A00000000000000000000060 /* Project object */;
 }

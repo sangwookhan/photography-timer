@@ -3,12 +3,18 @@
 
 package com.sangwook.ptimer.app.vm
 
+import android.content.Context
+import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
 import com.sangwook.ptimer.core.persistence.PersistentWorkspaceSnapshot
 import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -26,6 +32,20 @@ class ShootingViewModelTest {
         override fun clearSnapshot() { saved = null }
     }
 
+    /** In-memory alarm player so the VM's alarm wiring is testable off-device. */
+    private class FakeAlarmPlayer : TimerAlarmPlayer {
+        private val _soundingTimerId = MutableStateFlow<UUID?>(null)
+        override val soundingTimerId: StateFlow<UUID?> = _soundingTimerId.asStateFlow()
+        var stopCount = 0
+            private set
+
+        override fun playAlarm(context: Context, timerId: UUID) { _soundingTimerId.value = timerId }
+        override fun stop() { stopCount++; _soundingTimerId.value = null }
+
+        /** Set the sounding timer without needing a Context (no real playback). */
+        fun simulateSounding(timerId: UUID) { _soundingTimerId.value = timerId }
+    }
+
     /** A store whose reads and writes always fail, to test restore resilience. */
     private class ThrowingStore : WorkspacePersistenceStoring {
         override fun loadSnapshot(): PersistentWorkspaceSnapshot? = throw RuntimeException("read failed")
@@ -33,12 +53,17 @@ class ShootingViewModelTest {
         override fun clearSnapshot() = throw RuntimeException("clear failed")
     }
 
-    private fun vm(store: WorkspacePersistenceStoring, clock: () -> Instant): ShootingViewModel {
+    private fun vm(
+        store: WorkspacePersistenceStoring,
+        alarmPlayer: TimerAlarmPlayer = FakeAlarmPlayer(),
+        clock: () -> Instant,
+    ): ShootingViewModel {
         var counter = 0
         return ShootingViewModel(
             store = store,
             clock = clock,
             idProvider = { UUID.fromString("00000000-0000-0000-0000-%012d".format(++counter)) },
+            alarmPlayer = alarmPlayer,
         )
     }
 
@@ -257,5 +282,51 @@ class ShootingViewModelTest {
         sut.restore()
         assertEquals(1, sut.uiState.value.active.size)
         assertEquals(60.0, sut.uiState.value.active.first().remainingSeconds, 1e-6)
+    }
+
+    // PTIMER-73 in-app stop-alarm wiring.
+
+    @Test
+    fun soundingAlarmTimerIdReflectsThePlayerAndIsNullWhenSilent() {
+        val alarm = FakeAlarmPlayer()
+        val sut = vm(FakeStore(), alarmPlayer = alarm) { t0 }
+        assertNull(sut.soundingAlarmTimerId.value)
+
+        val id = UUID.randomUUID()
+        alarm.simulateSounding(id)
+        assertEquals(id, sut.soundingAlarmTimerId.value)
+    }
+
+    @Test
+    fun stopAlarmStopsThePlayerAndClearsSoundingState() {
+        val alarm = FakeAlarmPlayer()
+        val sut = vm(FakeStore(), alarmPlayer = alarm) { t0 }
+        alarm.simulateSounding(UUID.randomUUID())
+
+        sut.stopAlarm()
+
+        assertEquals(1, alarm.stopCount)
+        assertNull(sut.soundingAlarmTimerId.value)
+    }
+
+    @Test
+    fun stopAlarmDoesNotRemoveTheCompletedTimerOrChangeHistory() {
+        val store = FakeStore()
+        val alarm = FakeAlarmPlayer()
+        var t = t0
+        val sut = vm(store, alarmPlayer = alarm) { t }
+        sut.onEvent(ShootingIntent.StartTimer(5.0, identity))
+        val id = sut.uiState.value.active.first().id
+        // Drive to completion so the timer is in history.
+        t = t0.plusSeconds(6)
+        sut.tick(t)
+        alarm.simulateSounding(id)
+        val historyBefore = sut.uiState.value.history
+
+        sut.stopAlarm()
+
+        // Sound stopped, but the completed timer/history is untouched.
+        assertEquals(historyBefore, sut.uiState.value.history)
+        assertTrue(sut.uiState.value.history.any { it.id == id })
     }
 }

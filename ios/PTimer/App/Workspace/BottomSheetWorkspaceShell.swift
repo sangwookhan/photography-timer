@@ -34,6 +34,8 @@ struct CompactTimerCardStripView: View {
     let snapshot: BottomSheetWorkspaceSnapshot
     let onItemTap: (UUID) -> Void
     let onOverflowTap: () -> Void
+    var soundingAlarmTimerID: UUID?
+    var onStopAlarm: () -> Void = {}
 
     var body: some View {
         Group {
@@ -51,11 +53,17 @@ struct CompactTimerCardStripView: View {
                             .accessibilityHidden(true)
 
                         ForEach(snapshot.compactItems) { item in
+                            let alarmSounding = item.id == soundingAlarmTimerID
                             CompactTimerMiniCardView(
                                 item: item,
                                 onTap: {
-                                    onItemTap(item.id)
-                                }
+                                    if alarmSounding {
+                                        onStopAlarm()
+                                    } else {
+                                        onItemTap(item.id)
+                                    }
+                                },
+                                isAlarmSounding: alarmSounding
                             )
                         }
 
@@ -85,6 +93,7 @@ private struct CompactTimerMiniCardView: View {
 
     let item: BottomSheetCompactItem
     let onTap: () -> Void
+    var isAlarmSounding: Bool = false
 
     private var compactPrimaryTextFont: Font {
         item.status == .completed ? .headline.weight(.bold) : .title3.weight(.bold)
@@ -266,10 +275,16 @@ private struct CompactTimerMiniCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(statusColor(for: item.status).opacity(0.16), lineWidth: 1)
+                .stroke(
+                    isAlarmSounding ? Color.red : statusColor(for: item.status).opacity(0.16),
+                    lineWidth: isAlarmSounding ? 2 : 1
+                )
         )
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityIdentifier("bottom-sheet-compact-mini-card-\(item.id.uuidString)")
+        // While this timer's alarm is sounding, a tap stops it (the strip routes
+        // the tap); otherwise it opens/focuses the timer as before.
+        .accessibilityHint(isAlarmSounding ? "Alarm sounding. Tap to stop." : "")
         .onTapGesture(perform: onTap)
         .onAppear {
             updateRunningPulse()
@@ -530,6 +545,8 @@ struct BottomSheetLargeWorkspaceView: View {
     let onCloneTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onCollapse: () -> Void
+    var soundingAlarmTimerID: UUID?
+    var onStopAlarm: () -> Void = {}
     @State private var hasAppliedInitialFocus = false
     /// Pending Clone/Cancel/Remove action awaiting confirmation; nil when
     /// no confirmation dialog is shown.
@@ -575,7 +592,9 @@ struct BottomSheetLargeWorkspaceView: View {
                                             isFocused: item.id == openFocus.activeTimerID,
                                             onAction: { action in
                                                 handle(action: action, for: item.id)
-                                            }
+                                            },
+                                            isAlarmSounding: item.id == soundingAlarmTimerID,
+                                            onStopAlarm: onStopAlarm
                                         )
                                         .id(item.id)
                                     }
@@ -781,9 +800,17 @@ private struct LargeWorkspaceTimerRowView: View {
     let item: BottomSheetLargeItem
     let isFocused: Bool
     let onAction: (BottomSheetLargeAction) -> Void
+    var isAlarmSounding: Bool = false
+    var onStopAlarm: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if isAlarmSounding {
+                Text("Alarm sounding — tap to stop")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.red)
+                    .accessibilityIdentifier("bottom-sheet-large-row-alarm-\(item.id.uuidString)")
+            }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if let title = item.title {
@@ -899,18 +926,24 @@ private struct LargeWorkspaceTimerRowView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
         .background(
-            isFocused
-                ? statusColor(for: item.status).opacity(0.04)
-                : Color(.secondarySystemBackground)
+            isAlarmSounding
+                ? Color.red.opacity(0.10)
+                : (isFocused
+                    ? statusColor(for: item.status).opacity(0.04)
+                    : Color(.secondarySystemBackground))
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(
-                    statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
-                    lineWidth: isFocused ? 1.5 : 1
+                    isAlarmSounding ? Color.red : statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
+                    lineWidth: isAlarmSounding ? 2 : (isFocused ? 1.5 : 1)
                 )
         )
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // While this timer's alarm is sounding, a tap on the row stops it; when
+        // it is not, the row keeps its existing behaviour (the action buttons).
+        .onTapGesture { if isAlarmSounding { onStopAlarm() } }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.voiceOverLabel)
         .accessibilityValue(item.remainingText)
@@ -1136,6 +1169,8 @@ struct FullScreenTimersWindow: View {
     let onCloneTimer: (UUID) -> Void
     let onClearCompletedTimers: () -> Void
     let onClose: () -> Void
+    var soundingAlarmTimerID: UUID?
+    var onStopAlarm: () -> Void = {}
 
     var body: some View {
         NavigationStack {
@@ -1148,7 +1183,9 @@ struct FullScreenTimersWindow: View {
                 onRemoveTimer: onRemoveTimer,
                 onCloneTimer: onCloneTimer,
                 onClearCompletedTimers: onClearCompletedTimers,
-                onCollapse: onClose
+                onCollapse: onClose,
+                soundingAlarmTimerID: soundingAlarmTimerID,
+                onStopAlarm: onStopAlarm
             )
             .padding(.horizontal, 18)
             .padding(.top, 4)

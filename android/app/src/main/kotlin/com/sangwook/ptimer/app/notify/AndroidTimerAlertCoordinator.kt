@@ -26,14 +26,14 @@ class AndroidTimerAlertCoordinator(
     private val scheduled = mutableSetOf<UUID>()
 
     fun sync(plan: TimerAlertPlan) {
-        val desired = plan.alarms.associateBy { it.timerId }
+        val desiredIds = plan.alarms.map { it.timerId }.toSet()
 
-        // Cancel alarms for timers no longer running.
-        (scheduled - desired.keys).forEach { cancelAlarm(it) }
-        // Schedule / refresh the desired alarms.
-        desired.values.forEach { scheduleAlarm(it) }
+        // Cancel every stage for timers no longer running.
+        (scheduled - desiredIds).forEach { cancelTimerAlarms(it) }
+        // Schedule / refresh the desired alarms (one per stage).
+        plan.alarms.forEach { scheduleAlarm(it) }
         scheduled.clear()
-        scheduled.addAll(desired.keys)
+        scheduled.addAll(desiredIds)
 
         // Publish the stage sequence so the completion alarm can advance the
         // ongoing notification at the exact end instant (see OngoingAlertRegistry).
@@ -45,7 +45,13 @@ class AndroidTimerAlertCoordinator(
     }
 
     private fun scheduleAlarm(alarm: CompletionAlarm) {
-        val pending = pendingIntent(alarm.timerId, alarm.title, alarm.subtitle, create = true) ?: return
+        // A pre-alert whose instant has already passed (e.g. resuming a long
+        // timer with little time left) is dropped so it cannot fire immediately
+        // as a stale "Ns remaining". The completion alarm is always scheduled.
+        if (alarm.stage != AlertStage.MAIN && alarm.triggerAtEpochMillis <= System.currentTimeMillis()) {
+            return
+        }
+        val pending = pendingIntent(alarm, create = true) ?: return
         val exact = ExactAlarmPolicy.scheduling(availability) == AlarmScheduling.EXACT
         // Exact when the permission allows it; otherwise an inexact
         // allow-while-idle fallback. Wrapped so a permission revoked between the
@@ -62,17 +68,48 @@ class AndroidTimerAlertCoordinator(
         }
     }
 
-    private fun cancelAlarm(timerId: UUID) {
-        pendingIntent(timerId, title = "", subtitle = "", create = false)?.let { alarmManager.cancel(it) }
+    private fun cancelTimerAlarms(timerId: UUID) {
+        AlertStage.entries.forEach { stage ->
+            pendingIntent(timerId, stage, create = false)?.let { alarmManager.cancel(it) }
+        }
     }
 
-    private fun pendingIntent(timerId: UUID, title: String, subtitle: String, create: Boolean): PendingIntent? {
+    private fun pendingIntent(alarm: CompletionAlarm, create: Boolean): PendingIntent? =
+        pendingIntent(
+            timerId = alarm.timerId,
+            stage = alarm.stage,
+            create = create,
+            title = alarm.title,
+            subtitle = alarm.subtitle,
+            secondsBeforeCompletion = alarm.secondsBeforeCompletion,
+        )
+
+    private fun pendingIntent(
+        timerId: UUID,
+        stage: AlertStage,
+        create: Boolean,
+        title: String = "",
+        subtitle: String = "",
+        secondsBeforeCompletion: Int = 0,
+    ): PendingIntent? {
         val intent = Intent(context, TimerCompletionReceiver::class.java)
             .putExtra(TimerCompletionReceiver.EXTRA_TIMER_ID, timerId.toString())
             .putExtra(TimerCompletionReceiver.EXTRA_TITLE, title)
             .putExtra(TimerCompletionReceiver.EXTRA_SUBTITLE, subtitle)
+            .putExtra(TimerCompletionReceiver.EXTRA_STAGE, stage.name)
+            .putExtra(TimerCompletionReceiver.EXTRA_SECONDS_REMAINING, secondsBeforeCompletion)
         val flags = (if (create) PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_NO_CREATE) or
             PendingIntent.FLAG_IMMUTABLE
-        return PendingIntent.getBroadcast(context, timerId.hashCode(), intent, flags)
+        return PendingIntent.getBroadcast(context, requestCode(timerId, stage), intent, flags)
+    }
+
+    companion object {
+        /**
+         * Distinct request code per (timer, stage) so each stage has its own
+         * PendingIntent and one timer's pre1/pre2/completion never collide or
+         * overwrite each other.
+         */
+        fun requestCode(timerId: UUID, stage: AlertStage): Int =
+            31 * timerId.hashCode() + stage.ordinal
     }
 }

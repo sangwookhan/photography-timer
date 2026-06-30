@@ -20,6 +20,7 @@ class TimerAlertPlannerTest {
         endMillis: Long,
         title: String = "T",
         subtitle: String = "",
+        durationSeconds: Double = 0.0,
     ) = TimerCardState(
         id = UUID.randomUUID(),
         order = 1,
@@ -28,7 +29,61 @@ class TimerAlertPlannerTest {
         remainingSeconds = 10.0,
         endDate = Instant.ofEpochMilli(endMillis),
         remainingAtCancelSeconds = null,
+        durationSeconds = durationSeconds,
     )
+
+    @Test
+    fun shortTimerSchedulesCompletionOnly() {
+        val plan = TimerAlertPlanner.plan(
+            listOf(card(TimerStatus.running, endMillis = 25_000, durationSeconds = 25.0)),
+        ) { "clock" }
+        assertEquals(listOf(AlertStage.MAIN), plan.alarms.map { it.stage })
+    }
+
+    @Test
+    fun mediumTimerSchedulesPre1FiveSecondsBeforeCompletion() {
+        val plan = TimerAlertPlanner.plan(
+            listOf(card(TimerStatus.running, endMillis = 45_000, durationSeconds = 45.0)),
+        ) { "clock" }
+
+        val byStage = plan.alarms.associateBy { it.stage }
+        assertEquals(setOf(AlertStage.PRE1, AlertStage.MAIN), byStage.keys)
+        assertEquals(40_000L, byStage[AlertStage.PRE1]!!.triggerAtEpochMillis)
+        assertEquals(5, byStage[AlertStage.PRE1]!!.secondsBeforeCompletion)
+        assertEquals(45_000L, byStage[AlertStage.MAIN]!!.triggerAtEpochMillis)
+    }
+
+    @Test
+    fun longTimerSchedulesPre1AtTenAndPre2AtFiveBeforeCompletion() {
+        val plan = TimerAlertPlanner.plan(
+            listOf(card(TimerStatus.running, endMillis = 75_000, durationSeconds = 75.0)),
+        ) { "clock" }
+
+        val byStage = plan.alarms.associateBy { it.stage }
+        assertEquals(setOf(AlertStage.PRE1, AlertStage.PRE2, AlertStage.MAIN), byStage.keys)
+        assertEquals(65_000L, byStage[AlertStage.PRE1]!!.triggerAtEpochMillis)
+        assertEquals(10, byStage[AlertStage.PRE1]!!.secondsBeforeCompletion)
+        assertEquals(70_000L, byStage[AlertStage.PRE2]!!.triggerAtEpochMillis)
+        assertEquals(5, byStage[AlertStage.PRE2]!!.secondsBeforeCompletion)
+        assertEquals(75_000L, byStage[AlertStage.MAIN]!!.triggerAtEpochMillis)
+    }
+
+    @Test
+    fun preAlertsDoNotAffectOngoingOrStageSequence() {
+        val plan = TimerAlertPlanner.plan(
+            listOf(
+                card(TimerStatus.running, endMillis = 90_000, title = "Camera 1", durationSeconds = 90.0),
+                card(TimerStatus.running, endMillis = 50_000, title = "Camera 2", durationSeconds = 50.0),
+            ),
+        ) { millis -> "@$millis" }
+
+        // Ongoing + stages still track completions only (the soonest end), even
+        // though pre-alerts now pad plan.alarms.
+        assertEquals("Camera 2", plan.ongoing!!.title)
+        assertEquals(listOf(50_000L, 90_000L), plan.stages.map { it.endMillis })
+        // Camera 1 (>60s) contributes pre1+pre2+main; Camera 2 (30-60s) pre1+main.
+        assertEquals(5, plan.alarms.size)
+    }
 
     @Test
     fun noRunningTimersProducesNoAlarmsAndNoOngoing() {

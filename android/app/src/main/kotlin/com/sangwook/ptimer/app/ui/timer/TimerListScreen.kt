@@ -98,6 +98,8 @@ fun MiniTimerBar(
     state: ShootingUiState,
     onOpen: (UUID?) -> Unit,
     modifier: Modifier = Modifier,
+    soundingAlarmId: UUID? = null,
+    onStopAlarm: () -> Unit = {},
 ) {
     val dock = state.active.asReversed() + state.history
     if (dock.isEmpty()) {
@@ -134,8 +136,12 @@ fun MiniTimerBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items(shown, key = { it.id }) { card ->
-            // Tapping a mini card expands the sheet and focuses this timer.
-            MiniTimerCard(card, now) { onOpen(card.id) }
+            // While this timer's alarm is sounding, a tap stops it; otherwise a
+            // tap expands the sheet and focuses this timer.
+            val alarmSounding = card.id == soundingAlarmId
+            MiniTimerCard(card, now, isAlarmSounding = alarmSounding) {
+                if (alarmSounding) onStopAlarm() else onOpen(card.id)
+            }
         }
         if (overflow > 0) {
             item { MiniOverflowTile(overflow) { onOpen(null) } }
@@ -155,6 +161,8 @@ fun FullTimerList(
     focusId: UUID?,
     ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT,
     modifier: Modifier = Modifier,
+    soundingAlarmId: UUID? = null,
+    onStopAlarm: () -> Unit = {},
 ) {
     val activeReversed = state.active.asReversed()
     val listState = rememberLazyListState()
@@ -207,7 +215,12 @@ fun FullTimerList(
         // Active timers as full cards, newest first to match the peek order.
         if (state.active.isNotEmpty()) {
             items(activeReversed, key = { it.id }) { card ->
-                TimerCard(card, now, ndNotationMode, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
+                TimerCard(
+                    card, now, ndNotationMode, onEvent, onConfirm = { confirm = it },
+                    highlighted = card.id == focusId,
+                    isAlarmSounding = card.id == soundingAlarmId,
+                    onStopAlarm = onStopAlarm,
+                )
             }
         }
         if (state.history.isNotEmpty()) {
@@ -225,7 +238,12 @@ fun FullTimerList(
                 }
             }
             items(state.history, key = { it.id }) { card ->
-                TimerCard(card, now, ndNotationMode, onEvent, onConfirm = { confirm = it }, highlighted = card.id == focusId)
+                TimerCard(
+                    card, now, ndNotationMode, onEvent, onConfirm = { confirm = it },
+                    highlighted = card.id == focusId,
+                    isAlarmSounding = card.id == soundingAlarmId,
+                    onStopAlarm = onStopAlarm,
+                )
             }
         }
     }
@@ -296,7 +314,12 @@ private val miniPauseIcon: ImageVector by lazy {
  * the sheet to [FullTimerList], where Pause/Resume/Cancel live.
  */
 @Composable
-private fun MiniTimerCard(card: TimerCardState, now: Instant, onClick: () -> Unit) {
+private fun MiniTimerCard(
+    card: TimerCardState,
+    now: Instant,
+    isAlarmSounding: Boolean = false,
+    onClick: () -> Unit,
+) {
     val terminal = card.status == TimerStatus.completed || card.status == TimerStatus.canceled
     val active = card.status == TimerStatus.running || card.status == TimerStatus.paused
     // Tall portrait card mirroring the iOS compact dock, top→bottom:
@@ -305,7 +328,15 @@ private fun MiniTimerCard(card: TimerCardState, now: Instant, onClick: () -> Uni
     Card(
         modifier = Modifier.width(96.dp).height(116.dp).clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        // Alarm-sounding cue: tapping (handled by the caller) stops the alarm.
+        colors = CardDefaults.cardColors(
+            containerColor = if (isAlarmSounding) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        ),
+        border = if (isAlarmSounding) BorderStroke(2.dp, MaterialTheme.colorScheme.error) else null,
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 9.dp),
@@ -510,12 +541,34 @@ private fun TimerCard(
     onEvent: (ShootingIntent) -> Unit,
     onConfirm: (ConfirmRequest) -> Unit,
     highlighted: Boolean = false,
+    isAlarmSounding: Boolean = false,
+    onStopAlarm: () -> Unit = {},
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        border = if (highlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        // While this timer's alarm is sounding the whole card is a stop control;
+        // when it is not, the row keeps its existing (display-only) behaviour.
+        modifier = if (isAlarmSounding) Modifier.clickable { onStopAlarm() } else Modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isAlarmSounding) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        ),
+        border = when {
+            isAlarmSounding -> BorderStroke(2.dp, MaterialTheme.colorScheme.error)
+            highlighted -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            else -> null
+        },
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            if (isAlarmSounding) {
+                Text(
+                    "Alarm sounding — tap to stop",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

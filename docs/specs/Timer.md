@@ -149,22 +149,83 @@ When the app returns to the foreground, the runtime shall reconcile any running 
 
 ---
 
-## 4. Completion notification
+## 4. Completion awareness
 
-### 4.1 Foreground feedback
+A timer surfaces **staged alerts** so its completion is hard to miss in the field. The terminal completion alert is preceded, for longer timers, by one or two pre-alerts that signal completion is approaching.
+
+### 4.1 Alert stages by duration
+
+Let `T` be the expected completion instant. The staged alerts a timer produces depend on its duration:
+
+- **duration ≤ 30s** — completion alert at `T` only.
+- **30s < duration ≤ 60s** — **pre1** at `T − 5s`, then completion at `T`.
+- **duration > 60s** — **pre1** at `T − 10s`, **pre2** at `T − 5s`, then completion at `T`.
+
+These lead times are the **foreground / in-tick** schedule: which durations get pre-alerts (the bucket boundaries) is deterministic and platform-neutral, and the foreground tick path fires pre-alerts at these instants because the tick has no delivery latency. A platform's **background notification** channel may use *earlier* lead times for the same buckets to absorb notification delivery lag (see §4.4); the buckets are identical, only the lead times differ.
+
+### 4.2 Alert character
+
+- **pre1** is the gentle "completion approaching" cue. It is haptic-first: where the platform supports it, pre1 leads with vibration/haptic rather than sound. Platforms that cannot guarantee vibration-only background delivery (notably iOS local notifications) implement pre1 as best-effort and shall not promise vibration-only behavior.
+- **pre2** is the stronger "finishing soon" escalation. It is delivered **only when the app is not in the foreground**; it shall never surface as a foreground-visible alert. Its copy communicates remaining time (e.g. "5s remaining").
+- **completion** is the normal terminal alert and need not be made stronger than today's behavior.
+
+Pre-alert copy communicates remaining time ("10s remaining", "5s remaining") and shall not imply that exposure should stop before `T`.
+
+### 4.2.1 Audibility in silent / vibrate mode
+
+For field shooting the photographer may not be looking at the phone, so the completion alert — and the stronger pre2 escalation — shall be **audible even when the device is in silent / vibrate mode**, on the strongest path each platform permits:
+
+- The default notification-sound path is insufficient because silent / vibrate mode suppresses it. The system shall instead use an alert path that survives silent / vibrate mode where the platform allows it (e.g. an alarm-stream sound, or app-owned playback through a playback-oriented audio session that overrides the silent switch).
+- **pre1** remains haptic-first and is not made audible by this requirement.
+- **Foreground** completions (and pre2 where it applies) use the audible path above: on Android the alarm-stream sound, on iOS app-owned `.playback` audio that overrides the silent switch while the app is active.
+- **Background / locked** delivery is by local notifications only (§4.4). On Android the notification path drives the alarm-stream sound, so a backgrounded/locked completion is still audible in silent / vibrate mode. On iOS the app does **not** keep itself alive to play a sound at the end instant — a background-audio keep-alive approach was tried and removed as unreliable (it failed to sound while the screen was off) — so a backgrounded/locked iOS completion in silent mode is limited to what the local notification itself provides. No Critical Alerts entitlement is used (out of scope), and no parity with the system Clock timer is claimed.
+- **No late alarm.** A timer that finishes while the app is backgrounded/locked shall **not** play its audible alarm belatedly when the app later returns to the foreground. On return the completion is reconciled silently — state and history update — and only a genuinely *live* foreground completion plays the alarm.
+
+### 4.2.2 Stopping the alarm
+
+The app-played completion alarm (the alarm-stream / playback-session sound of §4.2.1, distinct from the OS-owned notification sound) is bounded and stoppable:
+
+- **Bounded auto-stop.** The alarm sounds for a short fixed window and then stops on its own, so it can never run away if the user does not reach the phone. At most one timer's alarm sounds at a time.
+- **In-app tap-to-stop.** While the alarm is sounding, the user can silence it from within the app by tapping the running-timer affordance — the compact mini-timer surface or the matching timer row. The stop affordance is present **only while that timer's alarm is sounding**; at other times those surfaces keep their normal behavior (e.g. the mini timer opens the workspace).
+- **Sound only.** Stopping the alarm silences audio only. It does not change timer state: a `completed` timer stays completed and is not dismissed or removed, and a still-running timer keeps running. Stopping clears the "which timer is sounding" signal so the affordance reverts to its normal behavior.
+
+This round covers in-app stop only; a notification-level stop action is out of scope here.
+
+### 4.2.3 Silent-mode advisory (passive, best-effort)
+
+Because background/locked silent audibility is not guaranteed on every platform (§4.2.1), the app may surface a passive advisory hinting the device might be muted, so the photographer can check volume before a long exposure. It is strictly non-intrusive:
+
+- **Best-effort only.** It never claims reliable silent-switch detection. Copy stays soft (e.g. "Silent mode may be on. Turn it off and check volume before long exposures.") and never asserts that the device *is* muted.
+- **Never gates the timer.** It shall never block, delay, or gate starting a timer, never show a modal or require confirmation, and run only while the app is visible/foreground.
+- **Shown sparingly.** It appears as a small non-blocking advisory, at most once per app session, and is suppressed when a completion alarm is sounding or when the app was opened from a timer notification.
+
+Where a platform implements the probe by playback timing, it uses a path isolated from the completion-alarm audio so it cannot interfere with that alarm.
+
+### 4.3 Foreground feedback
 
 When a timer transitions to `completed` while the application is active and in the foreground, the system shall play a short audio cue and a haptic. Each transition shall produce exactly one cue and exactly one haptic; reactivation-triggered completion shall not produce a cue.
 
-### 4.2 Background and lock-screen delivery
+In the foreground the system may additionally play a haptic-first **pre1** cue as the timer crosses its pre1 instant. **pre2** is never played in the foreground (per §4.2). Foreground pre-alert cues fire only via perceivable foreground ticking, never via reactivation reconciliation, and each crossing fires at most once.
 
-For timers running while the app is in the background or the device is locked, the system shall schedule a local notification at each running timer's expected completion time. The schedule is keyed deterministically by timer identity so:
+### 4.4 Background and lock-screen delivery
 
-- creating a timer schedules its notification,
-- pausing or removing a timer cancels its notification,
-- resuming a timer reschedules at the new completion time,
-- a timer transitioning to `completed` cancels any still-pending request.
+For timers running while the app is in the background or the device is locked, the system shall schedule a local notification for each applicable stage (pre1, pre2, completion) at that stage's instant. The schedule is keyed deterministically by timer identity and stage so:
 
-Duplicate scheduling for the same timer identity shall not occur.
+- creating a timer schedules every applicable stage,
+- pausing or removing a timer cancels all of its stages,
+- resuming a timer reschedules all stages at the new completion-relative instants,
+- a timer transitioning to `completed`, or being canceled, cancels any still-pending stages.
+
+Duplicate scheduling for the same timer identity and stage shall not occur.
+
+**iOS notification timing and copy.** Local notifications can be delivered seconds late, so a `T − 5s` alert can arrive *after* the timer has already completed. iOS therefore fires its background pre-alerts **earlier** than the foreground schedule of §4.1 — same buckets, earlier lead times:
+
+- **30s < duration ≤ 60s** — one audible pre-alert at `T − 15s`, then completion.
+- **duration > 60s** — a gentle (silent) heads-up at `T − 30s`, an audible pre-alert at `T − 15s`, then completion.
+
+Each pre-alert's body shall state both the remaining time **at its scheduled instant** (not a claim that it arrived on time) and the **expected end time** in the user's local short time style (e.g. "15s remaining · ends 10:30 PM"), so the real target is unambiguous even when delivery is late. The completion notification copy is unchanged.
+
+Android keeps its accepted behavior: the alarm-stream notification path drives an audible alert in vibrate / silent mode, so its existing pre-alert timing is retained.
 
 ---
 

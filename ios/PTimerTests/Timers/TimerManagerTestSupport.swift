@@ -18,9 +18,27 @@ final class CompletionAlertSpy: TimerCompletionAlerting {
 @MainActor
 final class CompletionFeedbackSpy: TimerCompletionFeedbackPlaying {
     private(set) var playCount = 0
+    private(set) var lastTimerID: UUID?
 
-    func playCompletionFeedback() {
+    func playCompletionFeedback(for timerID: UUID) {
         playCount += 1
+        lastTimerID = timerID
+    }
+}
+
+@MainActor
+final class AlarmAudioPlayerSpy: TimerAlarmAudioPlaying {
+    private(set) var playCount = 0
+    private(set) var stopCount = 0
+    private(set) var lastTimerID: UUID?
+
+    func playCompletionAlarm(for timerID: UUID) {
+        playCount += 1
+        lastTimerID = timerID
+    }
+
+    func stop() {
+        stopCount += 1
     }
 }
 

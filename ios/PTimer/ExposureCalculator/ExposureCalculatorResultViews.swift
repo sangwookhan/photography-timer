@@ -106,7 +106,7 @@ private struct DigitalModeResultView: View {
         // as Film mode — leading label, dominant right-aligned duration,
         // subdued whole-seconds (60 s–1 d only), trailing timer.
         ResultValueRow(
-            title: "Adjusted\nShutter",
+            title: String(localized: "Adjusted\nShutter"),
             value: .duration(
                 primary: display.primary,
                 seconds: display.secondary,
@@ -117,8 +117,8 @@ private struct DigitalModeResultView: View {
             canStartTimer: canStartTimer,
             onStartTimer: onStartTimer,
             timerAccessibilityIdentifier: "digital-result-start-timer-button",
-            timerAccessibilityLabel: "Start timer from calculated result",
-            timerAccessibilityHint: "Starts a timer using the calculated result",
+            timerAccessibilityLabel: String(localized: "Start timer from calculated result"),
+            timerAccessibilityHint: String(localized: "Starts a timer using the calculated result"),
             layout: ResultRowLayout(style)
         )
     }
@@ -137,7 +137,7 @@ private struct FilmModeResultHierarchyView: View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
             let adjustedDisplay = resultDurationDisplay(resultState.adjustedShutterSeconds)
             ResultValueRow(
-                title: "Adjusted\nShutter",
+                title: String(localized: "Adjusted\nShutter"),
                 value: .duration(
                     primary: adjustedDisplay.primary,
                     seconds: adjustedDisplay.secondary,
@@ -295,7 +295,7 @@ private struct FilmModeCorrectedExposureRow: View {
         // the long explanation lives in Reciprocity Details, so the
         // main card never grows to fit a wrapped sentence.
         ResultValueRow(
-            title: "Corrected\nExposure",
+            title: String(localized: "Corrected\nExposure"),
             value: rowValue,
             valueAccessibilityIdentifier: "film-mode-corrected-exposure-primary",
             secondaryAccessibilityIdentifier: "film-mode-corrected-exposure-secondary",

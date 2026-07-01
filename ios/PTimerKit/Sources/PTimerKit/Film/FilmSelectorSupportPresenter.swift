@@ -70,9 +70,9 @@ public enum FilmSelectorSupportDisplayState: Equatable {
     public var unofficialBadgeText: String? {
         switch self {
         case .unofficialPractical:
-            return "Unofficial"
+            return String(localized: "Unofficial")
         case .userDefinedFormulaPrediction:
-            return "Custom"
+            return String(localized: "Custom")
         case .none,
              .officialQuantifiedPrediction,
              .officialLimitedGuidance,
@@ -90,15 +90,15 @@ public enum FilmSelectorSupportDisplayState: Equatable {
         case .none:
             return nil
         case .officialQuantifiedPrediction:
-            return "Official quantified prediction available"
+            return String(localized: "Official quantified prediction available")
         case .officialLimitedGuidance:
-            return "Official limited guidance only"
+            return String(localized: "Official limited guidance only")
         case .noQuantifiedPrediction:
-            return "No quantified prediction available"
+            return String(localized: "No quantified prediction available")
         case .unofficialPractical:
-            return "Unofficial practical estimate"
+            return String(localized: "Unofficial practical estimate")
         case .userDefinedFormulaPrediction:
-            return "Custom user-defined profile"
+            return String(localized: "Custom user-defined profile")
         }
     }
 }

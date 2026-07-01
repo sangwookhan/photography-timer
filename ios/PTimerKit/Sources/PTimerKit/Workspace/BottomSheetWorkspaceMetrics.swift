@@ -4,7 +4,7 @@
 import SwiftUI
 
 public enum BottomSheetWorkspaceCopy {
-    public static let title = "Timers"
+    public static let title = String(localized: "Timers")
 }
 
 /// Geometry of the compact timer mini cards. Despite the

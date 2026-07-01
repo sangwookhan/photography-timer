@@ -204,7 +204,7 @@ public struct TargetShutterInputSheet: View {
             // switch path the page-dot pager uses, so the entering
             // Fine wheels reseed from the current draft.
             TargetShutterModeTeaser(
-                label: "Fine\nTune",
+                label: String(localized: "Fine"),
                 direction: .right,
                 onTap: {
                     state.setActiveMode(.fine)
@@ -274,7 +274,7 @@ public struct TargetShutterInputSheet: View {
             // Quick re-anchors the Quick wheel to the nearest preset
             // for the current draft.
             TargetShutterModeTeaser(
-                label: "Quick",
+                label: String(localized: "Quick"),
                 direction: .left,
                 onTap: {
                     state.setActiveMode(.quick)
@@ -292,7 +292,7 @@ public struct TargetShutterInputSheet: View {
     private var fineActivePanel: some View {
         VStack(spacing: 6) {
             HStack {
-                Text("Fine Tune")
+                Text("Fine")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()

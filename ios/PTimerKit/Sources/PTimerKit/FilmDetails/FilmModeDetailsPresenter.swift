@@ -107,7 +107,7 @@ public struct FilmModeDetailsPresenter {
         // evidence nor source-provenance rows are available — e.g.
         // unofficial formula profiles with no published source.
         return FilmModeDetailsDisplayState(
-            title: "Reciprocity Details",
+            title: String(localized: "Reciprocity Details"),
             subtitle: filmIdentitySubtitle(for: bindingState),
             summary: detailsSummaryState(for: input),
             currentResult: currentResultState(for: input, graph: graphState),
@@ -179,7 +179,7 @@ public struct FilmModeDetailsPresenter {
             for: input.bindingState.profile,
             formatDuration: input.formatDuration
         ) {
-            if let sourcesIndex = sections.firstIndex(where: { $0.title == "Sources" }) {
+            if let sourcesIndex = sections.firstIndex(where: { $0.title == String(localized: "Sources") }) {
                 sections.insert(comparisonSection, at: sourcesIndex)
             } else {
                 sections.append(comparisonSection)
@@ -264,14 +264,14 @@ public struct FilmModeDetailsPresenter {
             return FilmModeDetailsCurrentResultState(
                 layout: .comparison,
                 adjustedShutter: FilmModeDetailsCurrentResultValueState(
-                    title: "Adjusted Shutter",
-                    valueText: "Unavailable",
+                    title: String(localized: "Adjusted Shutter"),
+                    valueText: String(localized: "Unavailable"),
                     detailText: nil,
                     emphasizesValue: false
                 ),
                 correctedExposure: FilmModeDetailsCurrentResultValueState(
-                    title: "Corrected Exposure",
-                    valueText: "Unavailable",
+                    title: String(localized: "Corrected Exposure"),
+                    valueText: String(localized: "Unavailable"),
                     detailText: nil,
                     emphasizesValue: false
                 ),
@@ -289,7 +289,7 @@ public struct FilmModeDetailsPresenter {
         return FilmModeDetailsCurrentResultState(
             layout: .comparison,
             adjustedShutter: FilmModeDetailsCurrentResultValueState(
-                title: "Adjusted Shutter",
+                title: String(localized: "Adjusted Shutter"),
                 valueText: input.formatDurationCoarse(
                     filmModeExposureResultState.adjustedShutterSeconds
                 ),
@@ -301,7 +301,7 @@ public struct FilmModeDetailsPresenter {
                 emphasizesValue: false
             ),
             correctedExposure: FilmModeDetailsCurrentResultValueState(
-                title: "Corrected Exposure",
+                title: String(localized: "Corrected Exposure"),
                 valueText: filmModeExposureResultState.correctedExposure.correctedExposureSeconds
                     .map { input.formatDurationCoarse($0) }
                     ?? filmModeExposureResultState.correctedExposure.primaryText,

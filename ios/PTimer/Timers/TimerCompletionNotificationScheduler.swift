@@ -222,19 +222,19 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
             // audible pre2 it carries the expected end time, because the
             // notification can be delivered late; the "Ns remaining" describes
             // the scheduled point, not the delivery instant (PTIMER-73).
-            content.title = "Timer finishing soon"
+            content.title = String(localized: "Timer finishing soon")
             content.body = Self.preAlertBody(secondsBefore: alert.secondsBeforeCompletion, endDate: endDate)
             content.sound = nil
         case .pre2:
             // The primary audible pre-alert (T−15). Auto-suppressed in the
             // foreground (no notification-center delegate), so it surfaces only
             // when the app is not foreground.
-            content.title = "Timer finishing soon"
+            content.title = String(localized: "Timer finishing soon")
             content.body = Self.preAlertBody(secondsBefore: alert.secondsBeforeCompletion, endDate: endDate)
             content.sound = .default
         case .completion:
-            content.title = "Timer Complete"
-            content.body = "Your timer has finished."
+            content.title = String(localized: "Timer complete")
+            content.body = String(localized: "Your timer has finished.")
             content.sound = .default
         }
 
@@ -256,7 +256,7 @@ final class UserNotificationTimerCompletionScheduler: TimerCompletionNotificatio
     /// in the user's local short time style, so the target is unambiguous even
     /// if the notification is delivered late (PTIMER-73).
     private static func preAlertBody(secondsBefore: Int, endDate: Date) -> String {
-        "\(secondsBefore)s remaining · ends \(endDate.formatted(date: .omitted, time: .shortened))"
+        String(localized: "\(secondsBefore)s remaining · ends \(endDate.formatted(date: .omitted, time: .shortened))")
     }
 
     static func notificationIdentifier(for timerID: UUID) -> String {

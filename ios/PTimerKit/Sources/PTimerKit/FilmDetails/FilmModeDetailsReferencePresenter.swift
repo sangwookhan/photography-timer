@@ -45,7 +45,7 @@ public struct FilmModeDetailsReferencePresenter {
         var sections: [FilmModeDetailsSectionState] = []
         sections.append(contentsOf: evidenceSections)
         if !sourceRows.isEmpty {
-            sections.append(FilmModeDetailsSectionState(title: "Sources", rows: sourceRows))
+            sections.append(FilmModeDetailsSectionState(title: String(localized: "Sources"), rows: sourceRows))
         }
         return sections
     }
@@ -58,10 +58,10 @@ public struct FilmModeDetailsReferencePresenter {
 
         return [
             !referenceRows.isEmpty
-                ? FilmModeDetailsSectionState(title: "Reference", rows: referenceRows)
+                ? FilmModeDetailsSectionState(title: String(localized: "Reference"), rows: referenceRows)
                 : nil,
             !sourceRows.isEmpty
-                ? FilmModeDetailsSectionState(title: "Sources", rows: sourceRows)
+                ? FilmModeDetailsSectionState(title: String(localized: "Sources"), rows: sourceRows)
                 : nil,
         ]
         .compactMap { $0 }
@@ -423,8 +423,8 @@ public struct FilmModeDetailsReferencePresenter {
 
         // PTIMER-158: official source links attached to the profile. The
         // full URL is shown as the tappable value; empty fields are hidden.
-        rows.append(contentsOf: sourceLinkRow(title: "Source page", urlString: profile.sourcePageUrl))
-        rows.append(contentsOf: sourceLinkRow(title: "Download link", urlString: profile.downloadUrl))
+        rows.append(contentsOf: sourceLinkRow(title: String(localized: "Source page"), urlString: profile.sourcePageUrl))
+        rows.append(contentsOf: sourceLinkRow(title: String(localized: "Download link"), urlString: profile.downloadUrl))
 
         if let sourceNote = normalizedDetailText(profile.sourceNote) {
             rows.append(FilmModeDetailsRowState(title: "", value: sourceNote))

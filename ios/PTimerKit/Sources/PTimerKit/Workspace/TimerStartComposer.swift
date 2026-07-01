@@ -253,8 +253,8 @@ public struct TimerStartComposer {
         for rule in profile.rules {
             if case .tableInterpolation(let tableRule) = rule {
                 let count = tableRule.anchors.count
-                let noun = count == 1 ? "anchor" : "anchors"
-                return "Custom table · \(count) \(noun)"
+                let noun = count == 1 ? String(localized: "anchor") : String(localized: "anchors")
+                return String(localized: "Custom table · \(count) \(noun)")
             }
         }
         return nil
@@ -303,25 +303,25 @@ public struct TimerStartComposer {
     private func makeName(_ input: Input) -> String {
         let targetLabel = formatShutter(input.targetDuration)
         guard input.result != nil else {
-            return "Timer - \(targetLabel)"
+            return String(localized: "Timer - \(targetLabel)")
         }
 
         switch input.source {
         case .filmCorrectedExposure:
             guard input.filmModeResult?.hasQuantifiedCorrectedExposure == true,
                   let film = input.selectedPresetFilm else {
-                return "Timer - \(targetLabel)"
+                return String(localized: "Timer - \(targetLabel)")
             }
             return "\(film.canonicalStockName) - \(targetLabel)"
         case .targetShutter:
             // When a film is selected the film name precedes the
             // `Target` segment, matching the corrected-exposure shape.
             if let film = input.selectedPresetFilm {
-                return "\(film.canonicalStockName) · Target - \(targetLabel)"
+                return String(localized: "\(film.canonicalStockName) · Target - \(targetLabel)")
             }
-            return "Target - \(targetLabel)"
+            return String(localized: "Target - \(targetLabel)")
         case .digitalResult, .filmAdjustedShutter, .manual:
-            return "Timer - \(targetLabel)"
+            return String(localized: "Timer - \(targetLabel)")
         }
     }
 
@@ -329,11 +329,11 @@ public struct TimerStartComposer {
 
     private func makeBasisSummary(_ input: Input) -> String {
         guard let result = input.result else {
-            return "Manual timer"
+            return String(localized: "Manual timer")
         }
 
         let adjustedShutter = formatShutter(result.resultShutterSeconds)
-        let baseSummary = "Base \(formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.ndStep))"
+        let baseSummary = String(localized: "Base \(formatShutter(result.baseShutterSeconds)) · \(ndStopLabel(for: result.ndStep))")
 
         // Target Shutter timers append a `Target <duration>` segment
         // so the dock subtitle reads e.g. `Base 1/30s · 6 stops ·
@@ -343,7 +343,7 @@ public struct TimerStartComposer {
         var targetSegment: String?
         if input.source == .targetShutter,
            let target = input.targetShutterSeconds {
-            targetSegment = "Target \(formatShutter(target))"
+            targetSegment = String(localized: "Target \(formatShutter(target))")
         }
 
         guard let filmModeResult = input.filmModeResult else {
@@ -355,7 +355,7 @@ public struct TimerStartComposer {
 
         var segments = [
             baseSummary,
-            "Adjusted \(adjustedShutter)",
+            String(localized: "Adjusted \(adjustedShutter)"),
         ]
 
         if let film = input.selectedPresetFilm {
@@ -364,7 +364,7 @@ public struct TimerStartComposer {
 
         if input.source == .filmCorrectedExposure,
            let correctedExposureSeconds = filmModeResult.correctedExposure.correctedExposureSeconds {
-            segments.append("Corrected \(formatShutter(correctedExposureSeconds))")
+            segments.append(String(localized: "Corrected \(formatShutter(correctedExposureSeconds))"))
         }
 
         if let targetSegment {
@@ -383,7 +383,7 @@ public struct TimerStartComposer {
     /// the fractional component on timer names and basis summaries.
     private func ndStopLabel(for ndStep: NDStep) -> String {
         if let wholeStops = ndStep.wholeStops {
-            return wholeStops == 1 ? "1 stop" : "\(wholeStops) stops"
+            return wholeStops == 1 ? String(localized: "1 stop") : String(localized: "\(wholeStops) stops")
         }
 
         let totalThirds = Int((ndStep.stops * 3).rounded())
@@ -401,7 +401,7 @@ public struct TimerStartComposer {
         // Singular only for an exact "1 stop" boundary (impossible
         // here because `wholeStops == nil` implies a fractional
         // component).
-        return "\(valueText) stops"
+        return String(localized: "\(valueText) stops")
     }
     public init(formatShutter: @escaping (TimeInterval) -> String) {
         self.formatShutter = formatShutter

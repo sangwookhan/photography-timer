@@ -49,11 +49,11 @@ public enum CustomFilmEditorPreviewPresenter {
 
         public var displayLabel: String {
             switch self {
-            case .noCorrection: return "No correction"
-            case .formulaApplied: return "Formula applied"
-            case .tableApplied: return "Table-derived"
-            case .beyondSourceRange: return "Beyond source range"
-            case .invalidFormulaResult: return "Invalid formula result"
+            case .noCorrection: return String(localized: "No correction")
+            case .formulaApplied: return String(localized: "Formula applied")
+            case .tableApplied: return String(localized: "Table-derived")
+            case .beyondSourceRange: return String(localized: "Beyond source range")
+            case .invalidFormulaResult: return String(localized: "Invalid formula result")
             }
         }
     }
@@ -128,19 +128,19 @@ public enum CustomFilmEditorPreviewPresenter {
         public var displayMessage: String {
             switch self {
             case .emptyExponent:
-                return "p is required."
+                return String(localized: "p is required.")
             case .invalidExponent:
-                return "p must be > 0."
+                return String(localized: "p must be > 0.")
             case .invalidBaseTm:
-                return "Tm₀ must be > 0."
+                return String(localized: "Tm₀ must be > 0.")
             case .invalidBaseTc:
-                return "Tc₀ must be > 0."
+                return String(localized: "Tc₀ must be > 0.")
             case .invalidOffset:
-                return "b must be a finite duration."
+                return String(localized: "b must be a finite duration.")
             case .invalidNoCorrectionThrough:
-                return "No correction must be ≥ 0."
+                return String(localized: "No correction must be ≥ 0.")
             case .invalidSourceRange:
-                return "Source data must be > No correction."
+                return String(localized: "Source data must be > No correction.")
             }
         }
     }

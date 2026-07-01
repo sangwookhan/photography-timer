@@ -71,13 +71,13 @@ public enum TargetShutterPresenter {
         case .adjustedShutter(let seconds):
             return makeAvailable(
                 target: target,
-                comparisonLabel: "Adjusted Shutter",
+                comparisonLabel: String(localized: "Adjusted Shutter"),
                 comparisonSeconds: seconds
             )
         case .correctedExposure(let seconds):
             return makeAvailable(
                 target: target,
-                comparisonLabel: "Corrected Exposure",
+                comparisonLabel: String(localized: "Corrected Exposure"),
                 comparisonSeconds: seconds
             )
         }
@@ -96,7 +96,7 @@ public enum TargetShutterPresenter {
             return TargetShutterStopDifference(
                 stops: 0,
                 kind: .match,
-                formattedText: "0 stops"
+                formattedText: String(localized: "0 stops")
             )
         }
 
@@ -111,7 +111,7 @@ public enum TargetShutterPresenter {
             return TargetShutterStopDifference(
                 stops: stops,
                 kind: .match,
-                formattedText: "0 stops"
+                formattedText: String(localized: "0 stops")
             )
         }
 
@@ -168,7 +168,7 @@ public enum TargetShutterPresenter {
         let sign = stops > 0 ? "+" : "\u{2212}"
         let magnitude = abs(stops)
         let snapped = snappedToThirdStop(magnitude)
-        let unit = snapped.isPlural ? "stops" : "stop"
+        let unit = snapped.isPlural ? String(localized: "stops") : String(localized: "stop")
         return "\(sign)\(snapped.text) \(unit)"
     }
 

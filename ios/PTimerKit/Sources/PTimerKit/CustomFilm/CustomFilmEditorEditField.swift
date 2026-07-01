@@ -24,15 +24,15 @@ public enum CustomFilmEditorEditField: String, Identifiable, Hashable {
     /// their short headings.
     public var sheetTitle: String {
         switch self {
-        case .manufacturer: return "Manufacturer"
-        case .label: return "Label"
+        case .manufacturer: return String(localized: "Manufacturer")
+        case .label: return String(localized: "Label")
         case .iso: return "ISO"
         case .exponent: return "p"
         case .referenceTm: return "Tm₀"
         case .correctedAtReference: return "Tc₀"
         case .offset: return "b"
-        case .noCorrectionThrough: return "No correction"
-        case .sourceRangeThrough: return "Source data"
+        case .noCorrectionThrough: return String(localized: "No correction")
+        case .sourceRangeThrough: return String(localized: "Source data")
         }
     }
 }

@@ -18,7 +18,7 @@ import PTimerCore
 public struct ReciprocityModelMetadataPresenter {
     public init() {}
 
-    public static let sectionTitle = "Reciprocity model"
+    public static let sectionTitle = String(localized: "Reciprocity model")
 
     /// Compact 2-row summary (PTIMER-159): Source + Calculation. The
     /// film name is the sheet header and the authority is the subtitle,
@@ -32,8 +32,8 @@ public struct ReciprocityModelMetadataPresenter {
         return FilmModeDetailsSectionState(
             title: Self.sectionTitle,
             rows: [
-                row("Source", sourceBasisLabel(for: basis.sourceModel)),
-                row("Calculation", calculationMethodLabel(for: basis)),
+                row(String(localized: "Source"), sourceBasisLabel(for: basis.sourceModel)),
+                row(String(localized: "Calculation"), calculationMethodLabel(for: basis)),
             ]
         )
     }
@@ -44,14 +44,14 @@ public struct ReciprocityModelMetadataPresenter {
 
     private func sourceBasisLabel(for sourceModel: ReciprocitySourceModel) -> String {
         switch sourceModel {
-        case .manufacturerFormula: return "Manufacturer formula"
-        case .manufacturerTable: return "Manufacturer table"
-        case .manufacturerGraphTable: return "Manufacturer graph/table"
-        case .manufacturerRangeGuidance: return "Manufacturer range guidance"
-        case .manufacturerLimitedGuidance: return "Manufacturer limited guidance"
-        case .practicalCommunityGuidance: return "Practical / community guidance"
-        case .userDefined: return "Custom (user-defined)"
-        case .unknown: return "Not specified"
+        case .manufacturerFormula: return String(localized: "Manufacturer formula")
+        case .manufacturerTable: return String(localized: "Manufacturer table")
+        case .manufacturerGraphTable: return String(localized: "Manufacturer graph/table")
+        case .manufacturerRangeGuidance: return String(localized: "Manufacturer range guidance")
+        case .manufacturerLimitedGuidance: return String(localized: "Manufacturer limited guidance")
+        case .practicalCommunityGuidance: return String(localized: "Practical / community guidance")
+        case .userDefined: return String(localized: "Custom (user-defined)")
+        case .unknown: return String(localized: "Not specified")
         }
     }
 
@@ -65,18 +65,18 @@ public struct ReciprocityModelMetadataPresenter {
         case .guardedFormula:
             switch basis.sourceModel {
             case .manufacturerTable, .manufacturerGraphTable:
-                return "App-derived guarded formula"
+                return String(localized: "App-derived guarded formula")
             case .manufacturerFormula, .manufacturerRangeGuidance,
                  .manufacturerLimitedGuidance, .practicalCommunityGuidance,
                  .userDefined, .unknown:
-                return "Guarded formula"
+                return String(localized: "Guarded formula")
             }
         case .tableLogLogInterpolation:
-            return "Log-log table interpolation"
+            return String(localized: "Log-log table interpolation")
         case .limitedGuidance:
-            return "Limited guidance — no quantified prediction"
+            return String(localized: "Limited guidance — no quantified prediction")
         case .unsupported:
-            return "Unsupported above no-correction threshold"
+            return String(localized: "Unsupported above no-correction threshold")
         case .tableLookup:
             // Rejected at catalog load (PTIMER-163); kept for an
             // exhaustive switch so a future lookup strategy surfaces here.

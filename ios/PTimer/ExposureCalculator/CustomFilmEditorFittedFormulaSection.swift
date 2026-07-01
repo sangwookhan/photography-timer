@@ -100,7 +100,7 @@ struct CustomTableFittedFormulaPreviewContent: View {
         }
     }
 
-    private func keyValueRow(_ key: String, _ value: String) -> some View {
+    private func keyValueRow(_ key: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(key)
                 .font(.caption)
@@ -178,9 +178,7 @@ struct CustomTableFittedFormulaPreviewContent: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else if fit.quality != .good {
-                Text("This formula misses the table by up to "
-                    + "\(signedStop(fit.worstAbsoluteStopError, signed: false)). "
-                    + "The table stays your reliable calculation.")
+                Text(String(localized: "This formula misses the table by up to \(signedStop(fit.worstAbsoluteStopError, signed: false)). The table stays your reliable calculation."))
                     .font(.caption2)
                     .foregroundStyle(qualityColor(fit.quality))
                     .fixedSize(horizontal: false, vertical: true)

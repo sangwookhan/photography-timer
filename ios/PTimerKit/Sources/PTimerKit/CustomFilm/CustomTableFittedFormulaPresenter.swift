@@ -26,19 +26,18 @@ public enum CustomTableFittedFormulaPresenter {
 
     // MARK: - Stable copy
 
-    public static let appDerivedLabel = "App-derived formula"
-    public static let formulaFamilyLabel = "Power-law fit"
+    public static let appDerivedLabel = String(localized: "App-derived formula")
+    public static let formulaFamilyLabel = String(localized: "Power-law fit")
 
     /// Two-anchor power-law fits pass through both points exactly, so a
     /// zero residual says nothing about curve quality between them.
     public static let twoAnchorNote =
-        "Fit passes through the two source anchors. "
-        + "Add more anchors to judge curve quality between points."
+        String(localized: "Fit passes through the two source anchors. Add more anchors to judge curve quality between points.")
 
     /// Disclaimer mirroring the Details "App-derived comparison"
     /// wording so the editor and the runtime sheet read the same.
     public static let notManufacturerNote =
-        "App-derived from your table anchors. Not manufacturer-published guidance."
+        String(localized: "App-derived from your table anchors. Not manufacturer-published guidance.")
 
     /// Short, actionable hint shown in the table row area when the
     /// fitted preview is unavailable solely because the fit would
@@ -46,17 +45,17 @@ public enum CustomTableFittedFormulaPresenter {
     /// the two fixes the photographer can actually make; it never
     /// implies the table itself is invalid.
     public static let unusableShorteningRowMessage =
-        "Fitted formula unavailable. Raise no correction or add a lower-range anchor."
+        String(localized: "Fitted formula unavailable. Raise no correction or add a lower-range anchor.")
 
     /// Heading the preview card shows in place of a fit-quality label
     /// when no formula can be produced.
-    public static let unavailableTitle = "Unavailable fit"
+    public static let unavailableTitle = String(localized: "Unavailable fit")
 
     /// Reassurance that the unavailable formula does not affect the
     /// active calculation. Shared by the structured guidance and the
     /// flattened `displayMessage`.
     public static let tableRemainsReliableNote =
-        "The table remains your reliable calculation."
+        String(localized: "The table remains your reliable calculation.")
 
     // MARK: - Fit quality (PTIMER-170 thresholds)
 
@@ -74,9 +73,9 @@ public enum CustomTableFittedFormulaPresenter {
 
         public var displayLabel: String {
             switch self {
-            case .good: return "Good fit"
-            case .borderline: return "Borderline fit"
-            case .poor: return "Poor fit"
+            case .good: return String(localized: "Good fit")
+            case .borderline: return String(localized: "Borderline fit")
+            case .poor: return String(localized: "Poor fit")
             }
         }
     }
@@ -200,35 +199,34 @@ public enum CustomTableFittedFormulaPresenter {
             switch self {
             case .unusableShorteningFit:
                 return Guidance(
-                    cause: "The fitted formula would shorten exposure with the "
-                        + "current table boundaries.",
+                    cause: String(localized: "The fitted formula would shorten exposure with the current table boundaries."),
                     recoveryActions: [
-                        "Raise no correction",
-                        "Add an anchor near the lower range",
+                        String(localized: "Raise no correction"),
+                        String(localized: "Add an anchor near the lower range"),
                     ],
                     tableRemainsReliable: true
                 )
             case .fit(.insufficientAnchors):
                 return Guidance(
-                    cause: "Add at least two anchors to fit a formula.",
+                    cause: String(localized: "Add at least two anchors to fit a formula."),
                     recoveryActions: [],
                     tableRemainsReliable: true
                 )
             case .fit(.nonPositiveAnchors):
                 return Guidance(
-                    cause: "Anchor times must be positive to fit a formula.",
+                    cause: String(localized: "Anchor times must be positive to fit a formula."),
                     recoveryActions: [],
                     tableRemainsReliable: true
                 )
             case .fit(.degenerateAnchors):
                 return Guidance(
-                    cause: "Anchors must span more than one metered time.",
+                    cause: String(localized: "Anchors must span more than one metered time."),
                     recoveryActions: [],
                     tableRemainsReliable: true
                 )
             case .fit(.nonFiniteResult), .invalidParameters:
                 return Guidance(
-                    cause: "These anchors do not produce a usable formula.",
+                    cause: String(localized: "These anchors do not produce a usable formula."),
                     recoveryActions: [],
                     tableRemainsReliable: true
                 )

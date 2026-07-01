@@ -171,7 +171,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             timerManager: dependencies.timerManager,
             metadataPersistenceStore: dependencies.metadataPersistenceStore,
             defaultName: { duration in
-                "Timer - \(calculatorModel.calculator.formatShutter(duration))"
+                String(localized: "Timer - \(calculatorModel.calculator.formatShutter(duration))")
             }
         )
         let cameraSlotSessionModel = CameraSlotSessionModel()
@@ -275,7 +275,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             timerManager: timerManager,
             metadataPersistenceStore: metadataPersistenceStore,
             defaultName: { duration in
-                "Timer - \(calculator.formatShutter(duration))"
+                String(localized: "Timer - \(calculator.formatShutter(duration))")
             }
         )
         self.filmSelectionModel = FilmSelectionModel(
@@ -739,13 +739,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     ) -> String {
         switch model {
         case .tableLogLogInterpolation:
-            return "Log-log interpolation"
+            return String(localized: "Log-log interpolation")
         case .guardedFormula:
-            return "Guarded formula"
+            return String(localized: "Guarded formula")
         case .limitedGuidance:
-            return "Limited guidance"
+            return String(localized: "Limited guidance")
         case .unsupported:
-            return "Unsupported"
+            return String(localized: "Unsupported")
         case .tableLookup:
             return "Table lookup"
         }
@@ -1505,22 +1505,22 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         switch timer.status {
         case .running:
             let completionText = timer.endDate.map(formatDateTime) ?? "--"
-            return "Ends \(completionText)"
+            return String(localized: "Ends \(completionText)")
         case .completed:
             return completedTimeContext(for: timer.completedAt, relativeTo: timer.referenceDate)
         case .canceled:
             // Same timestamp + relative-age style as completed, just a
             // different verb, so canceled rows read e.g.
             // "Canceled 2026-06-16 23:59:31 · just now".
-            return terminalTimeContext(verb: "Canceled", for: timer.endDate, relativeTo: timer.referenceDate)
+            return terminalTimeContext(verb: String(localized: "Canceled"), for: timer.endDate, relativeTo: timer.referenceDate)
         case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
-            return "Paused \(pausedText)"
+            return String(localized: "Paused \(pausedText)")
         }
     }
 
     public func completedTimeContext(for completionDate: Date?, relativeTo referenceDate: Date) -> String {
-        terminalTimeContext(verb: "Completed", for: completionDate, relativeTo: referenceDate)
+        terminalTimeContext(verb: String(localized: "Completed"), for: completionDate, relativeTo: referenceDate)
     }
 
     /// Shared "<verb> <absolute timestamp> · <relative age>" formatter

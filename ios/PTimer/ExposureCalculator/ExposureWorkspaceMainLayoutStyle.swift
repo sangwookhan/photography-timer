@@ -219,18 +219,19 @@ enum ExposureWorkspaceMainLayoutStyle {
     }
 
     /// Fixed width of the leading label column in the shared result row
-    /// (PTIMER-172). Sized to hold the intentional two-line labels
-    /// ("Adjusted / Shutter", "Corrected / Exposure") so the label never
-    /// competes with the value area for width and the primary duration
-    /// gets a stable, dominant column.
+    /// (PTIMER-172). Sized to hold the intentional two-line English labels
+    /// ("Adjusted / Shutter", "Corrected / Exposure") and, per PTIMER-183,
+    /// the single-line localized labels (e.g. "ND 적용 셔터") without
+    /// wrapping, so the label never competes with the value area for width
+    /// and the primary duration gets a stable, dominant column.
     var resultLabelColumnWidth: CGFloat {
         switch self {
         case .regular:
-            return 86
+            return 96
         case .compact:
-            return 80
+            return 90
         case .dense:
-            return 76
+            return 84
         }
     }
 
@@ -627,7 +628,7 @@ private struct NDNotationToggle: View {
     let onSelect: (NDNotationMode) -> Void
 
     private static let options: [(mode: NDNotationMode, label: String)] = [
-        (.stops, "Stops"),
+        (.stops, String(localized: "Stops")),
         (.opticalDensity, "OD"),
         (.filterFactor, "ND"),
     ]

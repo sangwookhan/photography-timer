@@ -25,9 +25,9 @@ public enum CustomFilmFormulaInputMode: String, CaseIterable, Equatable {
 
     public var displayLabel: String {
         switch self {
-        case .basic: return "Basic"
-        case .scaled: return "Scaled"
-        case .advanced: return "Advanced"
+        case .basic: return String(localized: "Basic")
+        case .scaled: return String(localized: "Scaled")
+        case .advanced: return String(localized: "Advanced")
         }
     }
 }
@@ -990,10 +990,10 @@ extension CustomFilmEditorFormState {
         let errors = envelope.errors
         switch field {
         case .label:
-            return errors.contains(.missingFilmLabel) ? "Required" : nil
+            return errors.contains(.missingFilmLabel) ? String(localized: "Required") : nil
         case .iso:
             return errors.contains(.invalidISO)
-                ? "Enter \(Self.minISO)–\(Self.maxISO)"
+                ? String(localized: "Enter \(String(Self.minISO))–\(String(Self.maxISO))")
                 : nil
         case .exponent:
             // Compact constraint wording so the row reads as a
@@ -1001,23 +1001,23 @@ extension CustomFilmEditorFormState {
             // symbol matches the row label and the structure
             // line, so the photographer never has to translate.
             if errors.contains(.missingFormulaExponent) {
-                return "p is required"
+                return String(localized: "p is required")
             }
             if errors.contains(.invalidFormulaExponent) {
-                return "p must be > 0"
+                return String(localized: "p must be > 0")
             }
             return nil
         case .referenceTm:
             return errors.contains(.invalidBaseTm)
-                ? "Tm₀ must be > 0"
+                ? String(localized: "Tm₀ must be > 0")
                 : nil
         case .correctedAtReference:
             return errors.contains(.invalidBaseTc)
-                ? "Tc₀ must be > 0"
+                ? String(localized: "Tc₀ must be > 0")
                 : nil
         case .offset:
             return errors.contains(.invalidFormulaOffset)
-                ? "b must be a finite duration"
+                ? String(localized: "b must be a finite duration")
                 : nil
         case .noCorrectionThrough:
             guard errors.contains(.invalidNoCorrectionThrough) else { return nil }
@@ -1026,11 +1026,11 @@ extension CustomFilmEditorFormState {
             // than the formula path: positive only, and strictly
             // below the first anchor.
             return calculationInputKind == .table
-                ? "Must be > 0 and below the first anchor"
-                : "Must be ≥ 0"
+                ? String(localized: "Must be > 0 and below the first anchor")
+                : String(localized: "Must be ≥ 0")
         case .sourceRangeThrough:
             return errors.contains(.invalidValidThrough)
-                ? "Must be > No correction"
+                ? String(localized: "Must be > No correction")
                 : nil
         }
     }
@@ -1059,7 +1059,7 @@ extension CustomFilmEditorFormState {
         // unparseable / shortening / out-of-order rows, so the only
         // structural message left is "not enough anchors yet".
         if envelope.errors.contains(.insufficientTableAnchors) {
-            return "Enter at least 2 anchor rows (Tm → Tc)"
+            return String(localized: "Enter at least 2 anchor rows (Tm → Tc)")
         }
         return nil
     }

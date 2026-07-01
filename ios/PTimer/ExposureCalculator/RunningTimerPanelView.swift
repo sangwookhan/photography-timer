@@ -70,7 +70,7 @@ struct RunningTimerPanelView: View {
     }
 
     private var panelTitle: String {
-        "Running Timers: \(runningTimerCount)"
+        String(localized: "Running Timers: \(runningTimerCount)")
     }
 }
 
@@ -197,16 +197,16 @@ private struct TimerSummaryCard: View {
         switch timer.status {
         case .running:
             let completionText = timer.endDate.map(formatDateTime) ?? "--"
-            return "Ends \(completionText)"
+            return String(localized: "Ends \(completionText)")
         case .completed:
             let completionText = timer.completedAt.map(formatDateTime) ?? "--"
-            return "Completed \(completionText)"
+            return String(localized: "Completed \(completionText)")
         case .canceled:
             let canceledText = timer.endDate.map(formatDateTime) ?? "--"
-            return "Canceled \(canceledText)"
+            return String(localized: "Canceled \(canceledText)")
         case .paused:
             let pausedText = timer.pausedAt.map(formatDateTime) ?? "--"
-            return "Paused \(pausedText)"
+            return String(localized: "Paused \(pausedText)")
         }
     }
 
@@ -249,13 +249,13 @@ private struct TimerSummaryCard: View {
     private var statusText: String {
         switch timer.status {
         case .running:
-            return "Running"
+            return String(localized: "Running")
         case .paused:
-            return "Paused"
+            return String(localized: "Paused")
         case .completed:
-            return "Completed"
+            return String(localized: "Completed")
         case .canceled:
-            return "Canceled"
+            return String(localized: "Canceled")
         }
     }
 

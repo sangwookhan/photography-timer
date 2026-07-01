@@ -156,9 +156,9 @@ public enum NDNotationFormatter {
     /// into one place so the only localization step later is providing
     /// translated templates — no code path assumes English word order.
     private enum Template {
-        static let stopsUnit = "stops"
-        static let stopsSingularInline = "%@ stop"
-        static let stopsPluralInline = "%@ stops"
+        static let stopsUnit = String(localized: "stops")
+        static let stopsSingularInline = String(localized: "%@ stop")
+        static let stopsPluralInline = String(localized: "%@ stops")
         static let opticalDensityUnit = "OD"
         static let opticalDensityInline = "OD %@"
         static let filterFactorUnit = "ND"

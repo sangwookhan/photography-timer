@@ -15,8 +15,8 @@ public enum CustomFilmCalculationInputKind: String, Equatable, Hashable {
 
     public var displayLabel: String {
         switch self {
-        case .formula: return "Formula"
-        case .table: return "Table"
+        case .formula: return String(localized: "Formula")
+        case .table: return String(localized: "Table")
         }
     }
 }
@@ -300,19 +300,19 @@ extension CustomFilmEditorFormState {
             .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let correctedBlank = row.correctedText
             .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if meteredBlank { return "Tm is required" }
-        if correctedBlank { return "Tc is required" }
+        if meteredBlank { return String(localized: "Tm is required") }
+        if correctedBlank { return String(localized: "Tc is required") }
         guard let metered = Self.parsedPositiveSeconds(row.meteredText) else {
-            return "Tm must be > 0"
+            return String(localized: "Tm must be > 0")
         }
         guard let corrected = Self.parsedPositiveSeconds(row.correctedText) else {
-            return "Tc must be > 0"
+            return String(localized: "Tc must be > 0")
         }
-        if corrected < metered { return "Tc must be ≥ Tm" }
+        if corrected < metered { return String(localized: "Tc must be ≥ Tm") }
         // Out-of-order complete rows are auto-sorted on save/preview,
         // so only a DUPLICATE Tm among complete rows is a real error.
         if hasDuplicateMeteredTime(metered, excludingRowAt: index) {
-            return "Rows must be sorted by Tm."
+            return String(localized: "Rows must be sorted by Tm.")
         }
         return nil
     }

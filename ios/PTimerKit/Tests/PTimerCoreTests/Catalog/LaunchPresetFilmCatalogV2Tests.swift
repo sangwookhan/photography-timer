@@ -47,6 +47,65 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         XCTAssertEqual(goldenExposureRows(), expectedGoldenExposureRows)
     }
 
+    func testProvidesUserVisibleOfficialSourceTreatsBlankUrlsAsMissing() {
+        // PTIMER-158: the per-profile visibility predicate must match Android —
+        // nil, empty, and whitespace-only source-page URLs all count as missing,
+        // and an unofficial profile never qualifies regardless of its URL.
+        func profile(_ authority: ReciprocityAuthority, _ url: String?) -> ReciprocityProfile {
+            ReciprocityProfile(
+                id: "t", name: "t",
+                source: ReciprocitySourceProvenance(
+                    kind: .manufacturerPublished, authority: authority, confidence: .high,
+                    publisher: "p", title: nil, citation: nil, sourceVersion: nil
+                ),
+                rules: [],
+                sourcePageUrl: url
+            )
+        }
+        XCTAssertFalse(profile(.official, nil).providesUserVisibleOfficialSource)
+        XCTAssertFalse(profile(.official, "").providesUserVisibleOfficialSource)
+        XCTAssertFalse(profile(.official, "   \n\t ").providesUserVisibleOfficialSource)
+        XCTAssertTrue(profile(.official, "https://example.com/x").providesUserVisibleOfficialSource)
+        XCTAssertFalse(
+            profile(.unofficial, "https://example.com/x").providesUserVisibleOfficialSource,
+            "An unofficial profile never counts, even with a URL."
+        )
+        XCTAssertFalse(
+            profile(.userDefined, "https://example.com/x").providesUserVisibleOfficialSource,
+            "Only official authority qualifies; other authorities never count."
+        )
+    }
+
+    func testUserSelectableFilmsRequireOfficialSourceLinks() throws {
+        // PTIMER-158 (0.7): the user-facing list ships official sources only —
+        // a film is selectable only with an official profile that also carries
+        // a verified source-page link. That hides the community/practical
+        // Retro 400S and the official-but-unlinked Rollei RPX 25 / ORTHO 25
+        // plus. The full catalog keeps all three for later restoration.
+        let hidden = ["rollei-retro-400s", "rollei-rpx-25", "rollei-ortho-25-plus"]
+        let selectable = LaunchPresetFilmCatalogV2.userSelectableFilms
+        for id in hidden {
+            XCTAssertTrue(
+                LaunchPresetFilmCatalogV2.films.contains { $0.id == id },
+                "The full catalog must keep \(id) so the data is available for restoration."
+            )
+            XCTAssertFalse(
+                selectable.contains { $0.id == id },
+                "\(id) lacks a verified official source link and must be hidden from selection."
+            )
+        }
+        XCTAssertTrue(selectable.contains { $0.id == "kodak-portra-400" })
+        XCTAssertTrue(selectable.contains { $0.id == "ilford-pan-f-plus-50" })
+        XCTAssertTrue(selectable.contains { $0.id == "adox-chs-100-ii" }, "A source-page-only official film stays visible.")
+        XCTAssertEqual(selectable.count, LaunchPresetFilmCatalogV2.films.count - hidden.count)
+        for film in selectable {
+            XCTAssertTrue(
+                film.profiles.contains { $0.source.authority != .unofficial && ($0.sourcePageUrl?.isEmpty == false) },
+                "\(film.id) must expose an official profile with a source-page link to be user-selectable."
+            )
+        }
+    }
+
     func testBundledPromotedRolleiRetro400SPrimaryLoads() throws {
         let films = try LaunchPresetFilmCatalogV2Loader().loadBundledCatalog()
         let film = try XCTUnwrap(films.first { $0.id == "rollei-retro-400s" })

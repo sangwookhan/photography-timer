@@ -375,6 +375,47 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         )
     }
 
+    func testPersistedHiddenCommunityProfileNormalizesToOfficialPrimary() throws {
+        // PTIMER-158: a persisted community/practical (unofficial) override is
+        // hidden for this release, so on restore it must normalize back to the
+        // film's official primary profile rather than reappearing as the
+        // active model.
+        let film = try XCTUnwrap(
+            makeViewModel().availablePresetFilms.first { $0.canonicalStockName == "Portra 400" }
+        )
+        let sessionStore = InMemorySessionStore()
+        sessionStore.saveSnapshot(
+            PersistentCameraSlotSessionSnapshot(
+                schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
+                activeSlotIDRaw: "camera1",
+                slots: [
+                    PersistentCameraSlotCalculatorSnapshot(
+                        slotIDRaw: "camera1",
+                        selectedPresetFilmID: film.id,
+                        selectedProfileID: "kodak-portra-400-unofficial-practical",
+                        baseShutterSeconds: 10,
+                        ndStop: 0,
+                        ndStopThirds: nil,
+                        exposureScaleMode: nil
+                    ),
+                ]
+            )
+        )
+
+        let restored = makeViewModel(sessionStore: sessionStore)
+        let page = restored.cameraSlotPageState(for: .camera1)
+        XCTAssertEqual(page.selectedFilm?.id, film.id, "Portra 400 must survive restore.")
+        XCTAssertNil(
+            page.selectedProfileOverride,
+            "The hidden community override must be dropped, not retained."
+        )
+        XCTAssertEqual(
+            page.selectedFilm?.profiles.first?.id,
+            "kodak-portra-400-official-threshold",
+            "The active profile must fall back to the film's official primary."
+        )
+    }
+
     func testSchemaVersionMismatchIsIgnoredOnLoad() {
         let sessionStore = InMemorySessionStore()
         // Persist a snapshot with a future schema version. The store

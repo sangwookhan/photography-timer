@@ -179,13 +179,18 @@ public struct CameraSlotSessionPersistenceController {
             }
             // Preset profiles live on the FilmIdentity; use them as
             // the catalog. Unknown profile id ⇒ drop the override.
+            // PTIMER-158: a persisted community/practical (unofficial)
+            // override is now hidden, so normalize it back to the film's
+            // primary official profile by dropping it here.
             if let preset = film.profiles.first(where: { $0.id == profileID }) {
-                return preset
+                return preset.source.authority == .unofficial ? nil : preset
             }
             // Alternate models (unofficial practical, app-derived
             // formula) live outside `film.profiles`; reach into the
-            // registry to reconstruct a persisted override by id.
-            if let alternate = AlternateReciprocityModels.profile(withID: profileID) {
+            // registry to reconstruct a persisted override by id — but
+            // only for still-visible (non-unofficial) models.
+            if let alternate = AlternateReciprocityModels.profile(withID: profileID),
+               alternate.source.authority != .unofficial {
                 return alternate
             }
             return nil

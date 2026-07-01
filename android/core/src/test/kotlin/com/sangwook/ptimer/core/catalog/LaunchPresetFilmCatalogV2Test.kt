@@ -7,8 +7,10 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityAuthority
 import com.sangwook.ptimer.core.reciprocity.ReciprocityCalculationModel
 import com.sangwook.ptimer.core.reciprocity.ReciprocityCalculationPolicyEvaluator
 import com.sangwook.ptimer.core.reciprocity.ReciprocityConfidence
+import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
 import com.sangwook.ptimer.core.reciprocity.ReciprocityProfileModelBasis
 import com.sangwook.ptimer.core.reciprocity.ReciprocityResult
+import com.sangwook.ptimer.core.reciprocity.ReciprocitySourceProvenance
 import com.sangwook.ptimer.core.reciprocity.ReciprocitySourceKind
 import com.sangwook.ptimer.core.reciprocity.ReciprocitySourceModel
 import com.sangwook.ptimer.core.reciprocity.calculatedCorrectedSeconds
@@ -24,6 +26,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -103,6 +106,58 @@ class LaunchPresetFilmCatalogV2Test {
             profile.modelBasis,
         )
         assertEquals(3, profile.sourceEvidence.size)
+    }
+
+    private fun sourceLinkProfile(authority: ReciprocityAuthority, url: String?) = ReciprocityProfile(
+        id = "t",
+        name = "t",
+        source = ReciprocitySourceProvenance(
+            kind = ReciprocitySourceKind.manufacturerPublished,
+            authority = authority,
+            confidence = ReciprocityConfidence.high,
+            publisher = "p",
+        ),
+        rules = emptyList(),
+        sourcePageUrl = url,
+    )
+
+    @Test
+    fun providesUserVisibleOfficialSourceTreatsBlankUrlsAsMissing() {
+        // PTIMER-158: the per-profile visibility predicate must match iOS — nil,
+        // empty, and whitespace-only source-page URLs all count as missing, and
+        // an unofficial profile never qualifies regardless of its URL.
+        assertFalse(sourceLinkProfile(ReciprocityAuthority.official, null).providesUserVisibleOfficialSource)
+        assertFalse(sourceLinkProfile(ReciprocityAuthority.official, "").providesUserVisibleOfficialSource)
+        assertFalse(sourceLinkProfile(ReciprocityAuthority.official, "   \n\t ").providesUserVisibleOfficialSource)
+        assertTrue(sourceLinkProfile(ReciprocityAuthority.official, "https://example.com/x").providesUserVisibleOfficialSource)
+        assertFalse(sourceLinkProfile(ReciprocityAuthority.unofficial, "https://example.com/x").providesUserVisibleOfficialSource)
+        // Only official authority qualifies; other authorities never count.
+        assertFalse(sourceLinkProfile(ReciprocityAuthority.userDefined, "https://example.com/x").providesUserVisibleOfficialSource)
+    }
+
+    @Test
+    fun userSelectableFilmsRequireOfficialSourceLinks() {
+        // PTIMER-158 (0.7): the user-facing list ships official sources only —
+        // a film is selectable only with an official profile that also carries
+        // a verified source-page link. That hides community/practical Retro
+        // 400S and the official-but-unlinked Rollei RPX 25 / ORTHO 25 plus. The
+        // full catalog keeps all three for later restoration.
+        val hidden = listOf("rollei-retro-400s", "rollei-rpx-25", "rollei-ortho-25-plus")
+        val selectable = LaunchPresetFilmCatalogV2.userSelectableFilms
+        hidden.forEach { id ->
+            assertTrue(LaunchPresetFilmCatalogV2.films.any { it.id == id })
+            assertFalse(selectable.any { it.id == id })
+        }
+        assertTrue(selectable.any { it.id == "kodak-portra-400" })
+        assertTrue(selectable.any { it.id == "ilford-pan-f-plus-50" })
+        assertTrue(selectable.any { it.id == "adox-chs-100-ii" })
+        assertEquals(LaunchPresetFilmCatalogV2.films.size - hidden.size, selectable.size)
+        selectable.forEach { film ->
+            assertTrue(
+                "${film.id} must expose an official profile with a source-page link to be user-selectable.",
+                film.profiles.any { it.source.authority != ReciprocityAuthority.unofficial && !it.sourcePageUrl.isNullOrBlank() },
+            )
+        }
     }
 
     @Test

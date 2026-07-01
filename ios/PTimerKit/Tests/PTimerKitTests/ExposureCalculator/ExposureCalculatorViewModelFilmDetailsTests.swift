@@ -159,12 +159,21 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
             "Graph table must explain the graph-sampled rows' provenance. Got: \(legend.lines)"
         )
         XCTAssertEqual(details.summary.summaryText, "Log-log interpolation of the official table")
-        // Sources are now an unlabeled list (one row per item); the
-        // legacy Reference / Citation sub-labels are gone.
-        XCTAssertEqual(sourcesSection.rows.map(\.title), ["", ""])
+        // Identity + citation rows stay unlabeled; the legacy Reference /
+        // Citation sub-labels are gone. PTIMER-158 appends the labeled
+        // "Source page" / "Download link" rows.
+        XCTAssertEqual(sourcesSection.rows.map(\.title), ["", "", "Source page", "Download link"])
         XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Basis"))
         XCTAssertFalse(details.sections.flatMap(\.rows).map(\.title).contains("Entry"))
-        XCTAssertEqual(sourcesSection.rows.last?.destinationURL, nil)
+        // The citation row ("Publication F-4017") is not a URL, so it stays
+        // non-tappable; the appended Download link row carries the official
+        // direct-evidence URL as a tappable link.
+        let citationRow = try XCTUnwrap(sourcesSection.rows.first(where: { $0.value.contains("Publication F-4017") }))
+        XCTAssertEqual(citationRow.destinationURL, nil)
+        XCTAssertEqual(
+            sourcesSection.rows.last?.destinationURL?.absoluteString,
+            "https://business.kodakmoments.com/sites/default/files/files/products/triXf4017.pdf"
+        )
         XCTAssertEqual(details.graph?.currentPoint?.style, .formulaDerived)
         XCTAssertEqual(details.graph?.caption, "Adjusted shutter vs corrected exposure on the active calculation curve")
         XCTAssertEqual(details.graph?.title, "Reciprocity Graph")

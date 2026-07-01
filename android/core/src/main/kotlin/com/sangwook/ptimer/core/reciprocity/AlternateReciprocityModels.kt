@@ -120,7 +120,11 @@ object AlternateReciprocityModels {
 
     /** Picker display order: primary then alternates, except Tri-X 400. */
     fun modelPickerOrder(primary: ReciprocityProfile, forFilmID: String): List<ReciprocityProfile> {
-        val alternates = alternates(forFilmID)
+        // PTIMER-158: community/practical (unofficial) alternates are hidden
+        // from the user-visible model picker for the current release.
+        // App-derived formulas keep `official` authority and stay visible.
+        // The definitions remain in this file for later restoration.
+        val alternates = alternates(forFilmID).filter { it.source.authority != ReciprocityAuthority.unofficial }
         val officialTable = alternates.firstOrNull { it.id == triX400OfficialTable.id }
         if (forFilmID != "kodak-tri-x-400" || officialTable == null) {
             return listOf(primary) + alternates

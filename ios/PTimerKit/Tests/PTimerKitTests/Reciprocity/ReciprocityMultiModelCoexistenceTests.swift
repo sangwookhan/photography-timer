@@ -172,7 +172,11 @@ final class ReciprocityMultiModelCoexistenceTests: XCTestCase {
 
     // MARK: - View-model variant selection wording
 
-    func testSelectingAlternateReadsAsItsProvenanceNotOfficialNorAppDerived() throws {
+    func testCommunityAlternateIsHiddenFromPickerAndNormalizesToOfficialPrimary() throws {
+        // PTIMER-158: community alternates stay registered as data (see the
+        // provenance/interpolation tests above), but for this release they are
+        // hidden from the model picker and cannot be activated — selecting one
+        // normalizes back to the film's official primary profile.
         for c in cases {
             let viewModel = makeFilmModeViewModel()
             let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == c.film })
@@ -181,28 +185,16 @@ final class ReciprocityMultiModelCoexistenceTests: XCTestCase {
             viewModel.selectPresetFilm(film)
             viewModel.selectProfileVariant(profileID: c.alternateProfileID)
 
-            XCTAssertEqual(viewModel.filmReciprocityBindingState?.profile.id, c.alternateProfileID, "\(c.film): alternate is the active profile")
-            XCTAssertEqual(viewModel.filmDetailsModelSelection?.activeOptionID, c.alternateProfileID, "\(c.film): alternate is the active option")
+            let officialPrimaryID = try defaultProfile(for: c).id
+            XCTAssertEqual(
+                viewModel.filmReciprocityBindingState?.profile.id, officialPrimaryID,
+                "\(c.film): the hidden community alternate is not activated; the official primary stays active."
+            )
 
-            let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-            XCTAssertEqual(details.summary.badgeText, "Table-derived", "\(c.film): honest table-derived badge")
-            XCTAssertEqual(details.summary.summaryText, c.alternateSummaryText, "\(c.film): alternate summary wording")
-
-            let metadata = try XCTUnwrap(details.sections.first { $0.title == "Reciprocity model" })
-            XCTAssertEqual(metadata.rows.first { $0.title == "Source" }?.value, c.alternateMetadataSource, "\(c.film): alternate source metadata")
-            XCTAssertEqual(metadata.rows.first { $0.title == "Calculation" }?.value, c.alternateMetadataCalculation, "\(c.film): alternate calculation metadata")
-
-            let titles = details.sections.map(\.title)
-            XCTAssertTrue(titles.contains("Source reference"), "\(c.film): alternate keeps a Source reference: \(titles)")
-            XCTAssertFalse(titles.contains("App-derived comparison"), "\(c.film): a table model has nothing to compare: \(titles)")
-
-            let allText = collectFilmModeDetailsText(details).joined(separator: "\n").lowercased()
-            for forbidden in c.forbiddenInAlternateSheet {
-                XCTAssertFalse(allText.contains(forbidden.lowercased()), "\(c.film): alternate sheet must not contain '\(forbidden)'.")
-            }
-            XCTAssertTrue(
-                collectFilmModeDetailsText(details).joined(separator: "\n").contains(c.requiredAlternateCaveat),
-                "\(c.film): the community caveat '\(c.requiredAlternateCaveat)' must be visible."
+            let optionIDs = viewModel.filmDetailsModelSelection?.options.map(\.id) ?? []
+            XCTAssertFalse(
+                optionIDs.contains(c.alternateProfileID),
+                "\(c.film): the community alternate must be hidden from the model picker."
             )
         }
     }

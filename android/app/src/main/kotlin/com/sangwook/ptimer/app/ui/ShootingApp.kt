@@ -95,7 +95,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     val displaySettingsStore = remember { DataStoreDisplaySettingsStore(context) }
     val controller = remember {
         CalculatorController(
-            films = LaunchPresetFilmCatalogV2.films + library.customFilms,
+            films = LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms,
             onStart = { duration, identity -> viewModel.onEvent(ShootingIntent.StartTimer(duration, identity)) },
             initialSession = slotStore.loadSession(),
         )
@@ -386,7 +386,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                             false
                         } else {
                             library.add(film)
-                            controller.setFilms(LaunchPresetFilmCatalogV2.films + library.customFilms)
+                            controller.setFilms(LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms)
                             controller.selectFilm(film.id)
                             true
                         }
@@ -402,7 +402,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                             false
                         } else {
                             library.add(film)
-                            controller.setFilms(LaunchPresetFilmCatalogV2.films + library.customFilms)
+                            controller.setFilms(LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms)
                             controller.selectFilm(film.id)
                             true
                         }
@@ -410,7 +410,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     onEditCustomFilm = { id -> controller.customFilmDraft(id) },
                     onDeleteCustomFilm = { id ->
                         library.remove(id)
-                        controller.setFilms(LaunchPresetFilmCatalogV2.films + library.customFilms)
+                        controller.setFilms(LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms)
                         if (calcState.selectedFilmId == id) controller.selectFilm(null)
                     },
                     onPreviewCustomFilm = { input -> controller.previewFormulaGraph(input) },
@@ -441,7 +441,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                         } else {
                             library.add(table)
                             library.add(formula)
-                            controller.setFilms(LaunchPresetFilmCatalogV2.films + library.customFilms)
+                            controller.setFilms(LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms)
                             controller.selectFilm(formula.id)
                             true
                         }

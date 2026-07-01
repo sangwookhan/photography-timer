@@ -52,6 +52,12 @@ data class ReciprocityDetailsDisplayState(
     val sourceCitationText: String? = null,
     /** Source reference link/citation line (often a URL); rendered as a link under the citation. */
     val sourceCitationLink: String? = null,
+    /** PTIMER-158 official source page URL (manufacturer landing/source page); null → row hidden. */
+    val sourcePageUrl: String? = null,
+    /** PTIMER-158 direct evidence download URL (PDF / technical sheet); null → row hidden. */
+    val downloadUrl: String? = null,
+    /** PTIMER-158 note shown when the linked official sheet carries no reciprocity correction data; null → hidden. */
+    val sourceNote: String? = null,
 )
 
 /**
@@ -120,6 +126,10 @@ object ReciprocityDetailsPresenter {
             src.sourceVersion?.takeIf { it.isNotBlank() }?.let { "Version $it" },
         ).joinToString(" · ").takeIf { it.isNotEmpty() }
         val sourceCitationLink = src.citation?.trim()?.takeIf { it.isNotEmpty() }
+        // PTIMER-158: official source links carried on the profile (display-only).
+        val sourcePageUrl = profile.sourcePageUrl?.trim()?.takeIf { it.isNotEmpty() }
+        val downloadUrl = profile.downloadUrl?.trim()?.takeIf { it.isNotEmpty() }
+        val sourceNote = profile.sourceNote?.trim()?.takeIf { it.isNotEmpty() }
 
         return ReciprocityDetailsDisplayState(
             title = "Reciprocity Details",
@@ -146,6 +156,9 @@ object ReciprocityDetailsPresenter {
             legendLines = legendLines,
             sourceCitationText = sourceCitationText,
             sourceCitationLink = sourceCitationLink,
+            sourcePageUrl = sourcePageUrl,
+            downloadUrl = downloadUrl,
+            sourceNote = sourceNote,
         )
     }
 

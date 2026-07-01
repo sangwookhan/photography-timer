@@ -16,8 +16,32 @@ public enum LaunchPresetFilmCatalogV2 {
         }
     }()
 
+    /// Films offered in the user-facing picker for the current release.
+    /// PTIMER-158 ships official sources only: a film is user-selectable
+    /// only when it has an official (non-`unofficial`) profile that also
+    /// carries a verified source-page link. This hides community/practical
+    /// stocks (e.g. Rollei Retro 400S) and official stocks that lack
+    /// verified source links (Rollei RPX 25, Rollei ORTHO 25 plus). The
+    /// full `films` catalog is left intact so the data stays available for
+    /// later restoration.
+    public static let userSelectableFilms: [FilmIdentity] = films.filter { film in
+        film.profiles.contains { $0.providesUserVisibleOfficialSource }
+    }
+
     public static func defaultResourceBundles() -> [Bundle] {
         [.module]
+    }
+}
+
+public extension ReciprocityProfile {
+    /// PTIMER-158: `true` when this is an official profile that also carries
+    /// a non-blank source-page link — the per-profile criterion behind
+    /// `LaunchPresetFilmCatalogV2.userSelectableFilms`. A whitespace-only URL
+    /// counts as blank so iOS and Android apply the same rule.
+    var providesUserVisibleOfficialSource: Bool {
+        guard source.authority == .official else { return false }
+        let trimmed = sourcePageUrl?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !trimmed.isEmpty
     }
 }
 
@@ -434,7 +458,10 @@ public struct LaunchPresetFilmCatalogV2Loader {
             userMetadata: nil,
             sourceEvidence: adaptSourceEvidence(from: profile),
             modelBasis: adaptModelBasis(from: profile),
-            selectorLabel: profile.selectorLabel
+            selectorLabel: profile.selectorLabel,
+            sourcePageUrl: profile.sourcePageUrl,
+            downloadUrl: profile.downloadUrl,
+            sourceNote: profile.sourceNote
         )
     }
 
@@ -808,6 +835,9 @@ private struct CatalogV2Profile: Decodable {
     let referencePoints: [CatalogV2ReferencePoint]?
     let referenceRanges: [CatalogV2ReferenceRange]?
     let notes: [String]?
+    let sourcePageUrl: String?
+    let downloadUrl: String?
+    let sourceNote: String?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -823,6 +853,9 @@ private struct CatalogV2Profile: Decodable {
         case referencePoints
         case referenceRanges
         case notes
+        case sourcePageUrl
+        case downloadUrl
+        case sourceNote
     }
 
     init(from decoder: Decoder) throws {
@@ -855,6 +888,9 @@ private struct CatalogV2Profile: Decodable {
             forKey: .referenceRanges
         )
         self.notes = try container.decodeOptionalRejectingNull([String].self, forKey: .notes)
+        self.sourcePageUrl = try container.decodeOptionalRejectingNull(String.self, forKey: .sourcePageUrl)
+        self.downloadUrl = try container.decodeOptionalRejectingNull(String.self, forKey: .downloadUrl)
+        self.sourceNote = try container.decodeOptionalRejectingNull(String.self, forKey: .sourceNote)
     }
 }
 

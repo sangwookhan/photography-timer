@@ -312,7 +312,10 @@ final class ConvertedFormulaDetailsPresentationTests: XCTestCase {
     func testSourcesAreAnUnlabeledListWithoutReferenceCitationLabels() throws {
         let displayState = try makeFormulaDetailsDisplayState(meteredExposureSeconds: 240)
         let sources = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Sources" }))
-        XCTAssertEqual(sources.rows.map(\.title), ["", ""])
+        // Identity + citation stay unlabeled; PTIMER-158 adds the labeled
+        // "Source page" / "Download link" rows. The legacy Reference /
+        // Citation sub-labels remain absent.
+        XCTAssertEqual(sources.rows.map(\.title), ["", "", "Source page", "Download link"])
         XCTAssertFalse(sources.rows.contains { $0.title == "Reference" })
         XCTAssertFalse(sources.rows.contains { $0.title == "Citation" })
 
@@ -325,5 +328,9 @@ final class ConvertedFormulaDetailsPresentationTests: XCTestCase {
             texts.contains(where: { $0.contains("Provia 100F support page") }),
             "Sources list must include the citation text."
         )
+        // The Download link row exposes the full URL as a tappable link.
+        let downloadRow = try XCTUnwrap(sources.rows.first(where: { $0.title == "Download link" }))
+        XCTAssertEqual(downloadRow.value, downloadRow.destinationURL?.absoluteString)
+        XCTAssertTrue(downloadRow.value.hasPrefix("https://"))
     }
 }

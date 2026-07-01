@@ -80,6 +80,32 @@ class CalculatorControllerTest {
     }
 
     @Test
+    fun communityPracticalModelsAreHiddenFromPicker() {
+        // PTIMER-158: unofficial community/practical models are hidden from the
+        // model picker for this release; official app-derived models stay.
+        val c = controller()
+        c.selectFilm("foma-fomapan-100")
+        val fomaOptions = c.state.value.modelOptions
+        assertFalse(fomaOptions.any { it.id == "foma-fomapan-100-ohzart-community-table" })
+        assertTrue(fomaOptions.any { it.id == "foma-fomapan-100-app-formula" })
+
+        c.selectFilm("kodak-portra-400")
+        assertFalse(c.state.value.modelOptions.any { it.id == "kodak-portra-400-unofficial-practical" })
+    }
+
+    @Test
+    fun selectingHiddenCommunityModelNormalizesToOfficialPrimary() {
+        // Activating a now-hidden community model falls back to the film's
+        // official primary profile instead of switching to the community model.
+        val c = controller()
+        c.selectFilm("kodak-portra-400")
+        c.selectProfile("kodak-portra-400-unofficial-practical")
+        // The hidden id is dropped (null override → the film's primary official
+        // profile is active), never retained as the selected practical model.
+        assertNull(c.state.value.selectedProfileId)
+    }
+
+    @Test
     fun ndIndexChangesAdjustedShutter() {
         val c = controller()
         val before = c.state.value.adjustedText

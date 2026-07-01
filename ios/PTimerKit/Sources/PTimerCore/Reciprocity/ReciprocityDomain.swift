@@ -195,6 +195,18 @@ public struct ReciprocityProfile: Codable, Equatable {
     /// catalog and custom profile decodes unchanged (Fomapan/Portra keep
     /// their derived labels).
     public let selectorLabel: String?
+    /// Optional official source links shown in Reciprocity Details >
+    /// Sources (PTIMER-158). `sourcePageUrl` is the manufacturer
+    /// source/landing page; `downloadUrl` is the direct evidence
+    /// (PDF / technical sheet) URL. Both are display-only and are not
+    /// read by the calculation policy. Optional so every existing preset
+    /// and PTIMER-84 custom profile decodes unchanged.
+    public let sourcePageUrl: String?
+    public let downloadUrl: String?
+    /// Optional note shown under the Sources links when the linked
+    /// official sheet does not itself carry reciprocity correction data
+    /// (PTIMER-158). Display-only.
+    public let sourceNote: String?
 
     public init(
         id: String,
@@ -205,7 +217,10 @@ public struct ReciprocityProfile: Codable, Equatable {
         userMetadata: UserEditableMetadata? = nil,
         sourceEvidence: [ReciprocitySourceEvidenceRow] = [],
         modelBasis: ReciprocityProfileModelBasis? = nil,
-        selectorLabel: String? = nil
+        selectorLabel: String? = nil,
+        sourcePageUrl: String? = nil,
+        downloadUrl: String? = nil,
+        sourceNote: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -216,6 +231,9 @@ public struct ReciprocityProfile: Codable, Equatable {
         self.sourceEvidence = sourceEvidence
         self.modelBasis = modelBasis
         self.selectorLabel = selectorLabel
+        self.sourcePageUrl = sourcePageUrl
+        self.downloadUrl = downloadUrl
+        self.sourceNote = sourceNote
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -228,6 +246,9 @@ public struct ReciprocityProfile: Codable, Equatable {
         case sourceEvidence
         case modelBasis
         case selectorLabel
+        case sourcePageUrl
+        case downloadUrl
+        case sourceNote
     }
 
     public init(from decoder: Decoder) throws {
@@ -247,6 +268,9 @@ public struct ReciprocityProfile: Codable, Equatable {
             forKey: .modelBasis
         )
         self.selectorLabel = try container.decodeIfPresent(String.self, forKey: .selectorLabel)
+        self.sourcePageUrl = try container.decodeIfPresent(String.self, forKey: .sourcePageUrl)
+        self.downloadUrl = try container.decodeIfPresent(String.self, forKey: .downloadUrl)
+        self.sourceNote = try container.decodeIfPresent(String.self, forKey: .sourceNote)
     }
 }
 

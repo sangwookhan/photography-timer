@@ -421,7 +421,23 @@ public struct FilmModeDetailsReferencePresenter {
             )
         }
 
+        // PTIMER-158: official source links attached to the profile. The
+        // full URL is shown as the tappable value; empty fields are hidden.
+        rows.append(contentsOf: sourceLinkRow(title: "Source page", urlString: profile.sourcePageUrl))
+        rows.append(contentsOf: sourceLinkRow(title: "Download link", urlString: profile.downloadUrl))
+
+        if let sourceNote = normalizedDetailText(profile.sourceNote) {
+            rows.append(FilmModeDetailsRowState(title: "", value: sourceNote))
+        }
+
         return rows
+    }
+
+    /// A labeled Sources link row (PTIMER-158) whose full URL is the
+    /// tappable value; empty when the profile carries no such URL.
+    private func sourceLinkRow(title: String, urlString: String?) -> [FilmModeDetailsRowState] {
+        guard let url = normalizedDetailText(urlString) else { return [] }
+        return [FilmModeDetailsRowState(title: title, value: url, destinationURL: parseUsableURL(url))]
     }
 
     // MARK: - Column formatting

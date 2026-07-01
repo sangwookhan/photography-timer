@@ -644,7 +644,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         guard let film = selectedPresetFilm else { return }
         if let alternate = AlternateReciprocityModels
             .alternates(forFilmID: film.id)
-            .first(where: { $0.id == profileID }) {
+            .first(where: { $0.id == profileID }),
+            // PTIMER-158: community/practical (unofficial) models are hidden
+            // for this release and cannot be activated; they normalize to the
+            // film's primary official profile like any unknown id.
+            alternate.source.authority != .unofficial {
             filmSelectionModel.selectProfileOverride(alternate)
         } else {
             // Any other id resolves to the film's primary (catalog)

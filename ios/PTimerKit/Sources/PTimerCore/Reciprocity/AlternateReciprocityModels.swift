@@ -63,7 +63,12 @@ public enum AlternateReciprocityModels {
         primary: ReciprocityProfile,
         forFilmID filmID: String
     ) -> [ReciprocityProfile] {
-        let alternates = alternates(forFilmID: filmID)
+        // PTIMER-158: community/practical (unofficial) alternates are
+        // hidden from the user-visible model picker for the current
+        // release. App-derived formulas keep `official` authority and
+        // stay visible. The definitions remain in this file for later
+        // restoration; only the picker list is filtered.
+        let alternates = alternates(forFilmID: filmID).filter { $0.source.authority != .unofficial }
         guard filmID == "kodak-tri-x-400",
               let officialTable = alternates.first(where: { $0.id == triX400OfficialTable.id })
         else {

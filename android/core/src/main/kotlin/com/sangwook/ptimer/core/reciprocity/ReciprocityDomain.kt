@@ -83,6 +83,15 @@ data class ReciprocityProfile(
     val sourceEvidence: List<ReciprocitySourceEvidenceRow> = emptyList(),
     val modelBasis: ReciprocityProfileModelBasis? = null,
     val selectorLabel: String? = null,
+    // PTIMER-158: optional official source links shown in Reciprocity
+    // Details > Sources. `sourcePageUrl` is the manufacturer source/landing
+    // page; `downloadUrl` is the direct evidence (PDF / technical sheet)
+    // URL. `sourceNote` is shown when the linked official sheet does not
+    // itself carry reciprocity correction data. Display-only; not read by
+    // the calculation policy. Optional so existing profiles decode unchanged.
+    val sourcePageUrl: String? = null,
+    val downloadUrl: String? = null,
+    val sourceNote: String? = null,
 )
 
 @Serializable

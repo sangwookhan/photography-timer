@@ -162,7 +162,14 @@ class CalculatorController(
         publish()
     }
 
-    fun selectProfile(id: String) { selectedProfileId = id; publish() }
+    fun selectProfile(id: String) {
+        // PTIMER-158: only models present in the (community-filtered) picker can
+        // be activated; a hidden community/practical or otherwise unknown id
+        // normalizes to the film's primary official profile.
+        val film = selectedFilm()
+        selectedProfileId = id.takeIf { pid -> film != null && modelProfiles(film).any { it.id == pid } }
+        publish()
+    }
 
     /** Replaces the available film list (preset + custom library) and republishes. */
     fun setFilms(list: List<FilmIdentity>) { films = list; publish() }

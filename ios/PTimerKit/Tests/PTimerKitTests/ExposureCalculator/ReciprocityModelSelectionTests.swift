@@ -13,29 +13,19 @@ import PTimerCore
 final class ReciprocityModelSelectionTests: XCTestCase {
 
     @MainActor
-    func testDualProfileFilmExposesBothProfilesAsModelSelection() throws {
+    func testCommunityPracticalModelHiddenLeavesPortra400WithNoPicker() throws {
+        // PTIMER-158: Portra 400's only alternate is the unofficial practical
+        // model, hidden for this release. With just the official profile left,
+        // the film exposes no model picker. The film itself stays selectable.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
         viewModel.baseShutter = 10
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
 
-        let selection = try XCTUnwrap(
+        XCTAssertNil(
             viewModel.filmDetailsModelSelection,
-            "Portra 400 has an official + unofficial profile and must expose a model selection."
-        )
-        XCTAssertEqual(selection.options.count, 2)
-        // Full names are preserved for clarity surfaces…
-        XCTAssertEqual(
-            selection.options.map(\.name),
-            [film.profiles[0].name, UnofficialPracticalProfiles.kodakPortra400UnofficialPractical.name]
-        )
-        // …while the segmented selectors use short labels that fit.
-        XCTAssertEqual(selection.options.map(\.selectorLabel), ["Official", "Unofficial"])
-        XCTAssertEqual(
-            selection.activeOptionID,
-            film.profiles[0].id,
-            "With no override the official primary profile is active."
+            "The unofficial practical model is hidden, leaving a single official model (no picker)."
         )
     }
 
@@ -56,7 +46,10 @@ final class ReciprocityModelSelectionTests: XCTestCase {
     }
 
     @MainActor
-    func testSelectProfileVariantFlipsActiveProfileAndMetadata() throws {
+    func testSelectingHiddenCommunityVariantNormalizesToOfficialPrimary() throws {
+        // PTIMER-158: activating the now-hidden unofficial practical model
+        // normalizes back to the film's official primary profile instead of
+        // switching to the community model.
         let viewModel = makeFilmModeViewModel()
         let film = try XCTUnwrap(viewModel.availablePresetFilms.first { $0.canonicalStockName == "Portra 400" })
         viewModel.baseShutter = 10
@@ -66,15 +59,10 @@ final class ReciprocityModelSelectionTests: XCTestCase {
         let unofficialID = UnofficialPracticalProfiles.kodakPortra400UnofficialPractical.id
         viewModel.selectProfileVariant(profileID: unofficialID)
 
-        XCTAssertEqual(viewModel.filmReciprocityBindingState?.profile.id, unofficialID)
-        XCTAssertEqual(viewModel.filmDetailsModelSelection?.activeOptionID, unofficialID)
-
-        let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
-        let metadata = try XCTUnwrap(details.sections.first { $0.title == "Reciprocity model" })
         XCTAssertEqual(
-            metadata.rows.first { $0.title == "Source" }?.value,
-            "Practical / community guidance",
-            "Switching to the unofficial model must update the Details metadata source."
+            viewModel.filmReciprocityBindingState?.profile.id,
+            film.profiles[0].id,
+            "The hidden community model is not activated; the official primary stays active."
         )
     }
 
@@ -203,11 +191,13 @@ final class ReciprocityModelSelectionTests: XCTestCase {
         viewModel.ndStop = 0
         viewModel.selectPresetFilm(film)
 
+        // PTIMER-158: the Ohzart community table is hidden for this release,
+        // leaving the official table and the app-derived formula (both official).
         let selection = try XCTUnwrap(viewModel.filmDetailsModelSelection)
-        XCTAssertEqual(selection.options.map(\.selectorLabel), ["Official table", "Ohzart", "App formula"])
+        XCTAssertEqual(selection.options.map(\.selectorLabel), ["Official table", "App formula"])
         XCTAssertEqual(
             selection.options.map(\.name),
-            ["Official FOMA table", "Ohzart community table", "App-derived formula"]
+            ["Official FOMA table", "App-derived formula"]
         )
     }
 

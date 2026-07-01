@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.PTimer" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Cold-start window shown before Compose content loads (PTIMER-202).
+         Shows the launcher icon over the icon's own background color so the
+         system splash reads as intentional branding rather than dead space;
+         the Compose splash illustration follows. -->
+    <style name="Theme.PTimer.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.PTimer</item>
+    </style>
 </resources>

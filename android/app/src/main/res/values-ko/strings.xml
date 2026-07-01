@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common actions -->
+    <string name="action_reset">초기화</string>
+    <string name="action_cancel">취소</string>
+    <string name="action_save">저장</string>
+    <string name="action_create">만들기</string>
+    <string name="action_done">완료</string>
+    <string name="action_edit">편집</string>
+    <string name="action_delete">삭제</string>
+    <string name="action_clear">지우기</string>
+    <string name="action_confirm">확인</string>
+    <string name="action_close">닫기</string>
+    <string name="common_optional">선택 사항</string>
+    <string name="common_required">필수</string>
+    <string name="common_off">사용 안 함</string>
+
+    <!-- Shooting flow -->
+    <string name="shooting_film">필름</string>
+    <string name="shooting_base_shutter">기본 셔터</string>
+    <string name="shooting_nd_filter">ND 필터</string>
+    <string name="shooting_reciprocity">상반칙 보정</string>
+    <string name="shooting_reciprocity_details_cd">상반칙 보정 상세</string>
+    <string name="shooting_adjusted_shutter">ND 적용 셔터</string>
+    <string name="shooting_corrected_exposure">보정 노출</string>
+    <string name="shooting_no_corrected_value">보정 값 없음</string>
+    <string name="notation_stops">스톱</string>
+    <string name="reset_shooting_title">촬영 설정을 초기화할까요?</string>
+    <string name="reset_settings">설정 초기화</string>
+    <string name="reset_settings_and_name">설정과 이름 초기화</string>
+    <string name="rename_camera_title">카메라 이름 변경</string>
+    <string name="camera_name">카메라 이름</string>
+
+    <!-- Target shutter -->
+    <string name="target_shutter_label">목표 셔터</string>
+    <string name="target_use">목표 셔터 사용</string>
+
+    <!-- Timer workspace / history -->
+    <string name="timers_header">타이머</string>
+    <string name="history_header">기록</string>
+    <string name="no_timers">아직 타이머가 없습니다</string>
+    <string name="view_all">전체 보기</string>
+    <string name="no_film">필름 없음</string>
+    <string name="alarm_sounding">알람 울림 — 탭하여 정지</string>
+    <string name="timer_remaining_qualifier">남음</string>
+
+    <!-- Timer status -->
+    <string name="status_running">진행 중</string>
+    <string name="status_paused">일시정지</string>
+    <string name="status_done">완료</string>
+    <string name="status_canceled">취소됨</string>
+
+    <!-- Timer secondary lines -->
+    <string name="timer_ends">%1$s 종료</string>
+    <string name="timer_completed">%1$s 완료 · %2$s</string>
+    <string name="timer_canceled">%1$s 취소됨 · %2$s</string>
+    <string name="timer_canceled_left">%1$s 취소됨 · %2$s · %3$s 남음</string>
+
+    <!-- Timer basis line -->
+    <string name="timer_basis_base_nd">기본 %1$s · %2$s</string>
+    <string name="timer_basis_base_nd_adj">기본 %1$s · %2$s · 조정 %3$s</string>
+
+    <!-- Relative time (compact) -->
+    <string name="rel_just_now">방금</string>
+    <string name="rel_seconds_ago">%1$d초 전</string>
+    <string name="rel_minutes_ago">%1$d분 전</string>
+    <string name="rel_hours_ago">%1$d시간 전</string>
+    <string name="rel_days_ago">%1$d일 전</string>
+    <!-- Relative time (long) -->
+    <string name="rel_min_ago">%1$d분 전</string>
+    <string name="rel_hr_ago">%1$d시간 전</string>
+    <plurals name="rel_days_ago_long">
+        <item quantity="other">%1$d일 전</item>
+    </plurals>
+
+    <!-- Timer actions -->
+    <string name="action_pause">일시정지</string>
+    <string name="action_resume">재개</string>
+    <string name="action_remove">제거</string>
+    <string name="action_repeat_shot">다시 촬영</string>
+
+    <!-- Repeat-shot (internal clone) confirmation -->
+    <string name="repeat_shot_title">같은 설정으로 다시 촬영할까요?</string>
+    <string name="repeat_shot_message">같은 설정으로 새 타이머를 시작합니다. 이 기록은 그대로 유지됩니다.</string>
+    <!-- Cancel-timer confirmation -->
+    <string name="cancel_timer_title">타이머 취소</string>
+    <string name="cancel_timer_message">이 타이머를 취소하고 기록으로 옮깁니다.</string>
+    <string name="cancel_timer_confirm">타이머 취소</string>
+    <!-- Remove-timer confirmation -->
+    <string name="remove_timer_title">타이머 제거</string>
+    <string name="remove_timer_message">이 타이머 기록을 제거합니다.</string>
+    <!-- Clear completed confirmation -->
+    <string name="clear_completed_title">완료된 타이머를 지울까요?</string>
+    <string name="clear_completed_message">완료된 타이머 기록을 제거합니다. 취소된 타이머는 유지됩니다.</string>
+
+    <!-- Reciprocity details -->
+    <string name="recip_status">상태</string>
+    <string name="recip_model">상반칙 보정 모델</string>
+    <string name="recip_source">출처</string>
+    <string name="recip_calculation">계산</string>
+    <string name="recip_details">상세</string>
+    <string name="recip_notes">메모</string>
+    <string name="recip_reference_url">참조 URL</string>
+    <string name="recip_equation">수식</string>
+    <string name="recip_graph">상반칙 보정 그래프</string>
+    <string name="recip_legend">범례</string>
+    <string name="recip_sources">출처</string>
+    <string name="recip_source_page">출처 페이지</string>
+    <string name="recip_download_link">다운로드 링크</string>
+
+
+
+
+
+    <!-- Custom film editor -->
+    <string name="cf_new">새 커스텀 필름</string>
+    <string name="cf_edit">커스텀 필름 편집</string>
+    <string name="cf_formula">공식</string>
+    <string name="cf_table">표</string>
+    <string name="cf_manufacturer">제조사</string>
+    <string name="cf_label">이름</string>
+    <string name="cf_no_correction">보정 없음</string>
+    <string name="cf_source_data">출처 데이터</string>
+    <string name="cf_no_correction_default_formula">1초 (자동)</string>
+    <string name="cf_no_correction_hint_formula">측정 시간이 이 값 이하이면 보정이 필요 없습니다.</string>
+    <string name="cf_source_hint_formula">공식이 뒷받침하는 가장 긴 측정 시간입니다. 이 값을 넘으면 결과는 계산되지만 \"출처 범위 초과\"로 표시됩니다. 공개된 한계가 없으면 무제한을 사용하세요.</string>
+    <string name="cf_tc0_label">Tc₀ — 보정 기준점 (s)</string>
+    <string name="cf_tm0_label">Tm₀ — 측정 기준점 (s)</string>
+    <string name="cf_p_label">p — 곡선 강도</string>
+    <string name="cf_b_label">b — 고정 추가값 (s)</string>
+    <string name="cf_table_header">표 (Tm → Tc)</string>
+    <string name="cf_table_instructions">측정 시간에서 보정 시간(초). 최소 두 행을 채우세요. 측정 시간과 보정 값 모두 아래로 갈수록 커져야 합니다.</string>
+    <string name="cf_add_row">행 추가</string>
+    <string name="cf_remove_row">행 제거</string>
+    <string name="cf_no_correction_hint_table">이 값 이하의 측정 시간은 보정되지 않습니다. 비워 두면 첫 앵커 바로 아래로 자동 설정됩니다.</string>
+    <string name="cf_source_range">%1$s초까지 · 마지막 앵커</string>
+    <string name="cf_source_last_anchor">마지막 앵커</string>
+    <string name="cf_details">상세</string>
+    <string name="cf_notes">메모</string>
+    <string name="cf_reference_url">참조 URL</string>
+    <string name="cf_create_custom_formula">커스텀 공식 만들기</string>
+
+    <!-- Film picker -->
+    <string name="films_title">필름</string>
+    <string name="create_custom_film">커스텀 필름 만들기</string>
+    <string name="my_films">내 필름</string>
+
+    <!-- About -->
+    <string name="about_title">정보</string>
+    <string name="about_version">버전</string>
+    <string name="about_build">빌드</string>
+    <string name="about_legal">법적 고지</string>
+    <string name="about_film_data">필름 데이터</string>
+    <string name="about_website">Photography Timer 웹사이트</string>
+    <string name="about_tagline">필름 및 디지털 사진을 위한 노출 계산기와 카운트다운 타이머.</string>
+    <string name="about_license">Apache License, Version 2.0 라이선스로 배포됩니다. 전체 라이선스 전문은 이 저장소의 LICENSE 파일에서 확인할 수 있습니다.</string>
+    <string name="about_film_data_provenance">필름 데이터는 공식 데이터시트와 제조사 발행물을 중심으로 하며, 해당되는 경우 공개된 참고 자료를 보조 출처로 사용합니다.</string>
+    <string name="about_film_data_policy">Photography Timer는 정규화된 사실 값과 출처 참조만 저장하며, 제3자 데이터시트 PDF나 복제된 원문을 재배포하지 않습니다.</string>
+
+    <!-- Notification channels -->
+    <string name="notif_channel_running_name">실행 중인 타이머</string>
+    <string name="notif_channel_running_desc">타이머가 카운트다운되는 동안 표시됩니다</string>
+    <string name="notif_channel_alarm_name">타이머 알람</string>
+    <string name="notif_channel_alarm_desc">완료된 타이머를 표시하며, 알람 볼륨으로 소리가 재생됩니다</string>
+    <string name="notif_channel_prealert_name">타이머 사전 알림</string>
+    <string name="notif_channel_prealert_desc">타이머 종료 직전에 진동합니다</string>
+    <!-- Notification content -->
+    <string name="notif_complete_title">타이머 완료</string>
+    <string name="notif_timer_fallback">타이머</string>
+    <string name="notif_prealert_remaining">%1$d초 남음</string>
+
+    <!-- Exact-alarm warning banner -->
+    <string name="alarm_warning_title">정확한 타이머 알림이 꺼져 있습니다.</string>
+    <string name="alarm_warning_body">더 안정적인 완료 알림을 위해 알람 및 리마인더를 허용하세요.</string>
+    <string name="alarm_warning_open_settings">설정 열기</string>
+    <!-- Custom film leftovers -->
+    <string name="cf_validation_table">이름과 측정→보정 행을 두 개 이상 추가하세요.</string>
+    <string name="cf_validation_table_order">각 행의 측정 시간과 보정 값은 아래로 갈수록 커져야 하며, 보정 값은 측정 시간보다 짧을 수 없습니다.</string>
+    <string name="cf_validation_formula_name">필름 이름을 추가하세요 (다른 필드는 기본값을 사용합니다).</string>
+    <string name="cf_validation_formula_shorten">이 공식은 해당 범위에서 노출을 단축시킵니다. Tc₀ 또는 p를 높이거나 b를 낮추세요.</string>
+    <string name="cf_no_correction_auto_fmt">%1$s초 (자동)</string>
+    <string name="cf_auto">자동</string>
+    <string name="cf_show_formula_help">공식 도움말 표시</string>
+    <string name="cf_hide_formula_help">공식 도움말 숨기기</string>
+    <string name="cf_help_tc0">Tc₀ — 측정 기준점의 보정 노출.</string>
+    <string name="cf_help_tm0">Tm₀ — 기준점으로 사용하는 측정 노출.</string>
+    <string name="cf_help_p">p — 곡선 강도. 값이 클수록 장노출 보정이 강해집니다.</string>
+    <string name="cf_help_b">b — 곡선 이후 더해지는 고정 시간.</string>
+    <string name="cf_help_no_correction">무보정 — 이 값 이하의 Tm은 변경되지 않습니다.</string>
+    <string name="cf_help_source_data">출처 데이터 — 이 값을 넘는 결과는 출처 범위 초과로 표시됩니다.</string>
+    <string name="cf_app_derived_formula">앱 산출 공식</string>
+    <string name="cf_two_anchor_note">피팅이 두 앵커를 정확히 통과합니다 — 곡선 품질을 판단하려면 앵커를 더 추가하세요.</string>
+    <string name="cf_not_manufacturer">표 앵커에서 앱이 산출한 값입니다. 제조사가 공개한 가이드가 아닙니다.</string>
+    <string name="cf_table_saved_note">표를 저장한 뒤 이 피팅으로 별도의 커스텀 공식 필름을 만듭니다.</string>
+    <string name="cf_preview">미리보기</string>
+    <string name="cf_preview_fill">위 필드를 채우면 상반칙 보정 곡선을 미리 볼 수 있습니다.</string>
+    <string name="cf_calculation_basis">계산 기준</string>
+    <string name="cf_reference_points">참조 지점 · 출처 표</string>
+    <string name="filmpicker_add_cd">커스텀 필름 추가</string>
+    <string name="common_selected_cd">선택됨</string>
+    <string name="filmpicker_actions_cd">커스텀 필름 작업</string>
+</resources>

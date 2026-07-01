@@ -34,7 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sangwook.ptimer.R
 import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -510,13 +512,13 @@ private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Exact timer alerts are off.", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.alarm_warning_title), style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "Allow Alarms & reminders for more reliable completion alerts.",
+                    stringResource(R.string.alarm_warning_body),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            TextButton(onClick = onOpenSettings) { Text("Open settings") }
+            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.alarm_warning_open_settings)) }
         }
     }
 }

@@ -28,7 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.sangwook.ptimer.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -71,33 +73,33 @@ fun PTimerAboutDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("About", style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.about_title), style = MaterialTheme.typography.titleLarge)
                         TextButton(onClick = onDismiss) {
-                            Text("Done")
+                            Text(stringResource(R.string.action_done))
                         }
                     }
 
                     AboutIntroCard()
 
-                    AboutSection("Version") {
-                        AboutValueRow("Version", versionName)
+                    AboutSection(stringResource(R.string.about_version)) {
+                        AboutValueRow(stringResource(R.string.about_version), versionName)
                         HorizontalDivider()
-                        AboutValueRow("Build", buildCode)
+                        AboutValueRow(stringResource(R.string.about_build), buildCode)
                     }
 
-                    AboutSection("Legal") {
-                        Text("Copyright © 2026 Sangwook Han")
+                    AboutSection(stringResource(R.string.about_legal)) {
+                        Text(stringResource(R.string.about_copyright))
                         HorizontalDivider()
-                        Text("Licensed under the Apache License, Version 2.0. The full license text is available in this repository's LICENSE file.")
+                        Text(stringResource(R.string.about_license))
                     }
 
-                    AboutSection("Film Data") {
-                        Text("Film data is centered on official data sheets and manufacturer publications, with publicly available references used as supplemental sources where applicable.")
+                    AboutSection(stringResource(R.string.about_film_data)) {
+                        Text(stringResource(R.string.about_film_data_provenance))
                         HorizontalDivider()
-                        Text("Photography Timer stores normalized factual values and source references; it does not redistribute third-party datasheet PDFs or copied source documents.")
+                        Text(stringResource(R.string.about_film_data_policy))
                     }
 
-                    AboutLinkCard("Photography Timer Website", "https://sangwookhan.github.io/photography-timer/")
+                    AboutLinkCard(stringResource(R.string.about_website), "https://sangwookhan.github.io/photography-timer/")
                 }
             }
         }
@@ -116,12 +118,12 @@ private fun AboutIntroCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                "Photography Timer",
+                stringResource(R.string.product_name),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                "Exposure calculator and countdown timer for film and digital photography.",
+                stringResource(R.string.about_tagline),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

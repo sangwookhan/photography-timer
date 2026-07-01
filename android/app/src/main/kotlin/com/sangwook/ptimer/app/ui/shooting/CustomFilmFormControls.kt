@@ -3,6 +3,8 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
@@ -114,7 +116,7 @@ internal fun FullScreenFormDialog(
                         title = { Text(title) },
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
-                                Icon(Icons.Filled.Close, contentDescription = "Close")
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
                             }
                         },
                         actions = {
@@ -262,7 +264,7 @@ internal fun SourceTypeRow(value: CustomProfileSourceType, onSelect: (CustomProf
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Source", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.recip_source), style = MaterialTheme.typography.bodyLarge)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(value.displayLabel, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -373,12 +375,12 @@ internal fun Paren(text: String) {
 @Composable
 internal fun FormulaHelpPanel() {
     val lines = listOf(
-        "Tc₀ — corrected exposure at the metered anchor.",
-        "Tm₀ — metered exposure used as the anchor.",
-        "p — curve strength; higher gives stronger correction at long exposures.",
-        "b — fixed time added after the curve.",
-        "No correction — Tm at or below this value stays unchanged.",
-        "Source data — results past this value read as beyond source range.",
+        stringResource(R.string.cf_help_tc0),
+        stringResource(R.string.cf_help_tm0),
+        stringResource(R.string.cf_help_p),
+        stringResource(R.string.cf_help_b),
+        stringResource(R.string.cf_help_no_correction),
+        stringResource(R.string.cf_help_source_data),
     )
     Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         lines.forEach {

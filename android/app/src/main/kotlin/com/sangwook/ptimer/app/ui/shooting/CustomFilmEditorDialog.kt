@@ -3,6 +3,9 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import com.sangwook.ptimer.R
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -186,9 +189,10 @@ internal fun CustomFilmEditorDialog(
         )
     }
 
+    val context = LocalContext.current
     FullScreenFormDialog(
-        title = if (isEditing) "Edit custom film" else "New custom film",
-        confirmLabel = if (isEditing) "Save" else "Create",
+        title = if (isEditing) stringResource(R.string.cf_edit) else stringResource(R.string.cf_new),
+        confirmLabel = if (isEditing) stringResource(R.string.action_save) else stringResource(R.string.action_create),
         // Value-equal key over every field, so a validation error clears the
         // moment any input changes (no stale message after a fix), but survives
         // recomposition when nothing changed.
@@ -198,37 +202,39 @@ internal fun CustomFilmEditorDialog(
             if (isTable) {
                 val input = parsedTable()
                 when {
-                    input == null -> "Add a label and at least two metered→corrected rows."
-                    !onCreateTable(input, editId) -> "Each row's metered time and its correction must increase down the list, and a correction can't be shorter than its metered time."
+                    input == null -> context.getString(R.string.cf_validation_table)
+                    !onCreateTable(input, editId) -> context.getString(R.string.cf_validation_table_order)
                     else -> null
                 }
             } else {
                 val input = parsedFormula()
                 when {
-                    input == null -> "Add a film name (other fields fall back to defaults)."
-                    !onCreateFormula(input, editId) -> "This formula would shorten exposure in its range. Raise Tc₀ or p, or lower b."
+                    input == null -> context.getString(R.string.cf_validation_formula_name)
+                    !onCreateFormula(input, editId) -> context.getString(R.string.cf_validation_formula_shorten)
                     else -> null
                 }
             }
         },
         onDismiss = onDismiss,
     ) {
+        val optionalHint = stringResource(R.string.common_optional)
+        val requiredHint = stringResource(R.string.common_required)
         CustomFilmTitle(manufacturer, label, iso)
-        SectionLabel("Film")
+        SectionLabel(stringResource(R.string.shooting_film))
         // iOS identity order: Manufacturer, Label, ISO — each a compact
         // tap-to-edit row that expands an inline value editor below it.
         FormCard {
-            EditorRow("Manufacturer", manufacturer.ifBlank { "Optional" }, editing == EditField.Manufacturer) { toggle(EditField.Manufacturer) }
+            EditorRow(stringResource(R.string.cf_manufacturer), manufacturer.ifBlank { optionalHint }, editing == EditField.Manufacturer) { toggle(EditField.Manufacturer) }
             if (editing == EditField.Manufacturer) {
                 ValueEditPanel(manufacturer, { manufacturer = it }, step = null, presets = MANUFACTURER_PRESETS, onClose = { editing = null })
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            EditorRow("Label", label.ifBlank { "Required" }, editing == EditField.Label) { toggle(EditField.Label) }
+            EditorRow(stringResource(R.string.cf_label), label.ifBlank { requiredHint }, editing == EditField.Label) { toggle(EditField.Label) }
             if (editing == EditField.Label) {
                 ValueEditPanel(label, { label = it }, step = null, presets = emptyList(), onClose = { editing = null })
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            EditorRow("ISO", iso.ifBlank { "Required" }, editing == EditField.Iso) { toggle(EditField.Iso) }
+            EditorRow("ISO", iso.ifBlank { requiredHint }, editing == EditField.Iso) { toggle(EditField.Iso) }
             if (editing == EditField.Iso) {
                 ValueEditPanel(iso, { iso = it }, step = null, presets = ISO_PRESETS, onClose = { editing = null })
             }
@@ -244,12 +250,12 @@ internal fun CustomFilmEditorDialog(
                     selected = !isTable,
                     onClick = { isTable = false; editing = null },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) { Text("Formula") }
+                ) { Text(stringResource(R.string.cf_formula)) }
                 SegmentedButton(
                     selected = isTable,
                     onClick = { isTable = true; editing = null },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) { Text("Table") }
+                ) { Text(stringResource(R.string.cf_table)) }
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -258,11 +264,10 @@ internal fun CustomFilmEditorDialog(
             // iOS table card: editable Tm → Tc anchor rows with add/delete, an
             // editable no-correction boundary, and a read-only derived source
             // range (the last anchor). Plain numeric fields, like iOS.
-            SectionLabel("Table (Tm → Tc)")
+            SectionLabel(stringResource(R.string.cf_table_header))
             FormCard {
                 Text(
-                    "Metered to corrected seconds. Fill at least two rows; both the " +
-                        "metered time and its correction must increase down the list.",
+                    stringResource(R.string.cf_table_instructions),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -283,7 +288,7 @@ internal fun CustomFilmEditorDialog(
                         ) {
                             Icon(
                                 Icons.Filled.Delete,
-                                contentDescription = "Remove row",
+                                contentDescription = stringResource(R.string.cf_remove_row),
                                 tint = if (metered.size > 2) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                             )
@@ -293,16 +298,16 @@ internal fun CustomFilmEditorDialog(
                 TextButton(onClick = { metered.add(""); corrected.add("") }) {
                     Icon(Icons.Filled.Add, contentDescription = null)
                     Spacer(Modifier.width(4.dp))
-                    Text("Add row")
+                    Text(stringResource(R.string.cf_add_row))
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
                 val firstMetered = metered.mapNotNull { it.trim().toDoubleOrNull() }.minOrNull()
-                val noCorrPlaceholder = firstMetered?.let { "${trimNum(it / 10.0)}s (auto)" } ?: "auto"
-                EditorRow("No correction", if (noCorrection.isBlank()) noCorrPlaceholder else durationRowLabel(noCorrection), editing == EditField.NoCorrection) { toggle(EditField.NoCorrection) }
+                val noCorrPlaceholder = firstMetered?.let { stringResource(R.string.cf_no_correction_auto_fmt, trimNum(it / 10.0)) } ?: stringResource(R.string.cf_auto)
+                EditorRow(stringResource(R.string.cf_no_correction), if (noCorrection.isBlank()) noCorrPlaceholder else durationRowLabel(noCorrection), editing == EditField.NoCorrection) { toggle(EditField.NoCorrection) }
                 if (editing == EditField.NoCorrection) {
                     ValueEditPanel(
                         noCorrection, { noCorrection = it }, step = 0.1, presets = NO_CORRECTION_PRESETS, onClose = { editing = null },
-                        hint = "Metered times at or below this stay uncorrected. Leave blank to auto-set it just below the first anchor.",
+                        hint = stringResource(R.string.cf_no_correction_hint_table),
                     )
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -311,9 +316,9 @@ internal fun CustomFilmEditorDialog(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Source data", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.cf_source_data), style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        if (lastMetered != null) "Through ${trimNum(lastMetered)}s · last anchor" else "Last anchor",
+                        if (lastMetered != null) stringResource(R.string.cf_source_range, trimNum(lastMetered)) else stringResource(R.string.cf_source_last_anchor),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -332,7 +337,7 @@ internal fun CustomFilmEditorDialog(
                 )
             }
         } else {
-            SectionLabel("Formula")
+            SectionLabel(stringResource(R.string.cf_formula))
             FormCard {
                 // Symbolic line names each value (so you always know which chip is
                 // p, which is b…); the (i) toggle expands the concept definitions.
@@ -344,7 +349,7 @@ internal fun CustomFilmEditorDialog(
                     IconButton(onClick = { showHelp = !showHelp }) {
                         Icon(
                             Icons.Outlined.Info,
-                            contentDescription = if (showHelp) "Hide formula help" else "Show formula help",
+                            contentDescription = if (showHelp) stringResource(R.string.cf_hide_formula_help) else stringResource(R.string.cf_show_formula_help),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -380,34 +385,34 @@ internal fun CustomFilmEditorDialog(
                     FormulaChip("${offset}s", editing == EditField.B) { toggle(EditField.B) }
                 }
                 when (editing) {
-                    EditField.Tc0 -> FormulaValuePanel("Tc₀ — corrected point (s)") {
+                    EditField.Tc0 -> FormulaValuePanel(stringResource(R.string.cf_tc0_label)) {
                         ValueEditPanel(tc0, { tc0 = it }, step = 1.0, presets = TC_PRESETS, onClose = { editing = null })
                     }
-                    EditField.Tm0 -> FormulaValuePanel("Tm₀ — metered point (s)") {
+                    EditField.Tm0 -> FormulaValuePanel(stringResource(R.string.cf_tm0_label)) {
                         ValueEditPanel(tm0, { tm0 = it }, step = 1.0, presets = TM_PRESETS, onClose = { editing = null })
                     }
-                    EditField.P -> FormulaValuePanel("p — curve strength") {
+                    EditField.P -> FormulaValuePanel(stringResource(R.string.cf_p_label)) {
                         ValueEditPanel(exponent, { exponent = it }, step = 0.01, presets = P_PRESETS, onClose = { editing = null })
                     }
-                    EditField.B -> FormulaValuePanel("b — fixed add-on (s)") {
+                    EditField.B -> FormulaValuePanel(stringResource(R.string.cf_b_label)) {
                         ValueEditPanel(offset, { offset = it }, step = 0.5, presets = B_PRESETS, onClose = { editing = null })
                     }
                     else -> {}
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                EditorRow("No correction", if (noCorrection.isBlank()) "1s (auto)" else durationRowLabel(noCorrection), editing == EditField.NoCorrection) { toggle(EditField.NoCorrection) }
+                EditorRow(stringResource(R.string.cf_no_correction), if (noCorrection.isBlank()) stringResource(R.string.cf_no_correction_default_formula) else durationRowLabel(noCorrection), editing == EditField.NoCorrection) { toggle(EditField.NoCorrection) }
                 if (editing == EditField.NoCorrection) {
                     ValueEditPanel(
                         noCorrection, { noCorrection = it }, step = 0.1, presets = NO_CORRECTION_PRESETS, onClose = { editing = null },
-                        hint = "Exposures at or below this metered time need no correction.",
+                        hint = stringResource(R.string.cf_no_correction_hint_formula),
                     )
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                EditorRow("Source data", durationRowLabel(sourceThrough.ifBlank { "Unlimited" }), editing == EditField.SourceData) { toggle(EditField.SourceData) }
+                EditorRow(stringResource(R.string.cf_source_data), durationRowLabel(sourceThrough.ifBlank { "Unlimited" }), editing == EditField.SourceData) { toggle(EditField.SourceData) }
                 if (editing == EditField.SourceData) {
                     ValueEditPanel(
                         sourceThrough, { sourceThrough = it }, step = null, presets = SOURCE_PRESETS, onClose = { editing = null },
-                        hint = "The longest metered time the formula is backed by. Past it the result still computes but reads as \"beyond source range\". Use Unlimited if there's no published limit.",
+                        hint = stringResource(R.string.cf_source_hint_formula),
                     )
                 }
             }
@@ -428,12 +433,12 @@ internal fun CustomFilmEditorDialog(
         // Details (provenance) — lower-priority metadata below the preview, as on
         // iOS. Descriptive only; never affects the calculation.
         Spacer(Modifier.height(16.dp))
-        SectionLabel("Details")
+        SectionLabel(stringResource(R.string.cf_details))
         FormCard {
             SourceTypeRow(sourceType) { sourceType = it }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Text(
-                "NOTES",
+                stringResource(R.string.cf_notes),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -441,7 +446,7 @@ internal fun CustomFilmEditorDialog(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                placeholder = { Text("Optional") },
+                placeholder = { Text(stringResource(R.string.common_optional)) },
                 minLines = 1,
                 maxLines = 4,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -450,8 +455,8 @@ internal fun CustomFilmEditorDialog(
             OutlinedTextField(
                 value = referenceUrl,
                 onValueChange = { referenceUrl = it },
-                label = { Text("Reference URL") },
-                placeholder = { Text("Optional") },
+                label = { Text(stringResource(R.string.cf_reference_url)) },
+                placeholder = { Text(stringResource(R.string.common_optional)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),

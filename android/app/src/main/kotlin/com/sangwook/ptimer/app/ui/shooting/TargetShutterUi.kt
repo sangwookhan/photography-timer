@@ -52,6 +52,8 @@ import com.sangwook.ptimer.core.target.TargetShutterStopDifferenceKind
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.ui.theme.StatusSuccess
 import com.sangwook.ptimer.ui.theme.StatusWarning
+import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.R
 
 // Target Shutter UI (main-screen row + Quick/Fine input sheet) extracted
 // from ShootingScreen. Same package; ShootingScreen calls TargetShutterRow
@@ -75,14 +77,14 @@ internal fun TargetShutterRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Target Shutter",
+                stringResource(R.string.target_shutter_label),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             when (display) {
                 is TargetShutterDisplayState.Unavailable -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Off", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.common_off), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
@@ -180,13 +182,13 @@ internal fun TargetShutterSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Use Target Shutter", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.target_use), style = MaterialTheme.typography.titleMedium)
                 Switch(checked = useTarget, onCheckedChange = { useTarget = it })
             }
 
             Spacer(Modifier.height(12.dp))
             Text(
-                if (useTarget) formatHms(total) else "Off",
+                if (useTarget) formatHms(total) else stringResource(R.string.common_off),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth(),
@@ -248,11 +250,11 @@ internal fun TargetShutterSheet(
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.action_cancel)) }
                 Button(
                     onClick = { onConfirm(if (useTarget && total > 0) total.toDouble() else null) },
                     modifier = Modifier.weight(1f),
-                ) { Text("Confirm") }
+                ) { Text(stringResource(R.string.action_confirm)) }
             }
             Spacer(Modifier.height(8.dp))
         }

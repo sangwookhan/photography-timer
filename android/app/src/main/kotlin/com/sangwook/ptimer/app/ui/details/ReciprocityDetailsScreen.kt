@@ -16,6 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.sangwook.ptimer.ui.component.GraphLegend
+import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.R
 import com.sangwook.ptimer.ui.component.ReciprocityGraphView
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,7 +67,7 @@ fun ReciprocityDetailsScreen(
                 title = { Text(state.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
                     }
                 },
             )
@@ -91,7 +93,7 @@ fun ReciprocityDetailsScreen(
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Status", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.recip_status), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             state.statusText,
                             style = MaterialTheme.typography.titleSmall,
@@ -118,7 +120,7 @@ fun ReciprocityDetailsScreen(
 
             // Reciprocity model: optional model toggle + Source + Calculation.
             Column(Modifier.fillMaxWidth()) {
-                Text("Reciprocity model", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.recip_model), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (state.modelOptions.size > 1) {
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -132,9 +134,9 @@ fun ReciprocityDetailsScreen(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                ModelRow("Source", state.sourceText)
+                ModelRow(stringResource(R.string.recip_source), state.sourceText)
                 Spacer(Modifier.height(6.dp))
-                ModelRow("Calculation", state.calculationText)
+                ModelRow(stringResource(R.string.recip_calculation), state.calculationText)
             }
 
             // Custom-profile provenance (notes / reference URL), shown only when
@@ -142,16 +144,16 @@ fun ReciprocityDetailsScreen(
             if (state.notesText != null || state.referenceUrlText != null) {
                 HorizontalDivider()
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Details", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.recip_details), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     state.notesText?.let { notes ->
                         Column {
-                            Text("Notes", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.recip_notes), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(notes, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     state.referenceUrlText?.let { url ->
                         Column {
-                            Text("Reference URL", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.recip_reference_url), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(url, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -161,7 +163,7 @@ fun ReciprocityDetailsScreen(
             state.equationText?.let { equation ->
                 HorizontalDivider()
                 Column(Modifier.fillMaxWidth()) {
-                    Text("Equation", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.recip_equation), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     Text(equation, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace)
                 }
@@ -170,7 +172,7 @@ fun ReciprocityDetailsScreen(
             state.graph?.let { graph ->
                 HorizontalDivider()
                 Column(Modifier.fillMaxWidth()) {
-                    Text("Reciprocity graph", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.recip_graph), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
                     ReciprocityGraphView(graph, Modifier.fillMaxWidth().height(240.dp))
                     Spacer(Modifier.height(8.dp))
@@ -200,7 +202,7 @@ fun ReciprocityDetailsScreen(
             if (state.legendLines.isNotEmpty()) {
                 HorizontalDivider()
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Legend", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.recip_legend), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     state.legendLines.forEach { line ->
                         Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -217,13 +219,13 @@ fun ReciprocityDetailsScreen(
                 HorizontalDivider()
                 val uriHandler = LocalUriHandler.current
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Sources", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.recip_sources), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     state.sourceCitationText?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                     state.sourceCitationLink?.let {
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                     }
                     state.sourcePageUrl?.let { url ->
-                        Text("Source page", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.recip_source_page), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             url,
                             style = MaterialTheme.typography.bodyMedium,
@@ -232,7 +234,7 @@ fun ReciprocityDetailsScreen(
                         )
                     }
                     state.downloadUrl?.let { url ->
-                        Text("Download link", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.recip_download_link), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             url,
                             style = MaterialTheme.typography.bodyMedium,

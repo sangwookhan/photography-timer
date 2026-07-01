@@ -41,8 +41,13 @@ private struct ResultRowLabel: View {
         Text(title)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
+            // PTIMER-183: English labels keep their intentional two-line
+            // layout (an explicit newline in the source string). Localized
+            // labels drop that newline in translation and prefer one line,
+            // tightening slightly to fit the fixed label column.
             .lineLimit(2)
             .minimumScaleFactor(0.8)
+            .allowsTightening(true)
             .fixedSize(horizontal: false, vertical: true)
             .frame(width: labelColumnWidth, alignment: .leading)
     }

@@ -742,11 +742,11 @@ struct BottomSheetLargeWorkspaceView: View {
     private func confirmTitle(for action: BottomSheetLargeAction) -> String {
         switch action {
         case .clone:
-            return "Clone timer?"
+            return String(localized: "Repeat shot?")
         case .cancel:
-            return "Cancel timer?"
+            return String(localized: "Cancel timer?")
         case .remove:
-            return "Remove timer?"
+            return String(localized: "Remove timer?")
         case .pause, .resume:
             return ""
         }
@@ -755,11 +755,11 @@ struct BottomSheetLargeWorkspaceView: View {
     private func confirmButtonTitle(for action: BottomSheetLargeAction) -> String {
         switch action {
         case .clone:
-            return "Clone"
+            return String(localized: "Repeat Shot")
         case .cancel:
-            return "Cancel Timer"
+            return String(localized: "Cancel Timer")
         case .remove:
-            return "Remove"
+            return String(localized: "Remove")
         case .pause, .resume:
             return ""
         }
@@ -777,11 +777,11 @@ struct BottomSheetLargeWorkspaceView: View {
     private func confirmMessage(for action: BottomSheetLargeAction) -> String {
         switch action {
         case .clone:
-            return "Start a new timer with the same settings. This timer will stay unchanged."
+            return String(localized: "A new timer will start with the same settings. This record will stay unchanged.")
         case .cancel:
-            return "This timer will be marked as canceled and moved to history."
+            return String(localized: "This timer will be marked as canceled and moved to history.")
         case .remove:
-            return "This timer record will be removed."
+            return String(localized: "This timer record will be removed.")
         case .pause, .resume:
             return ""
         }

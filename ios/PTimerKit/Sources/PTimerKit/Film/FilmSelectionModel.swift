@@ -275,9 +275,9 @@ public final class FilmSelectionModel: ObservableObject {
     /// overload above.
     public nonisolated static func filmRowAuthorityLabel(forAuthority authority: ReciprocityAuthority?) -> String? {
         switch authority {
-        case .official: return "Official guidance"
-        case .unofficial: return "Unofficial practical"
-        case .userDefined: return "Custom"
+        case .official: return String(localized: "Official guidance")
+        case .unofficial: return String(localized: "Unofficial practical")
+        case .userDefined: return String(localized: "Custom")
         case .unknown, nil: return nil
         }
     }

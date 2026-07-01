@@ -34,7 +34,7 @@ final class CustomFilmEditorPolishTests: XCTestCase {
             Case(name: "sub-second leading zero", input: "0.5", placeholder: "0s", allowsUnlimited: false, expectedText: "0.50s", expectedPlaceholder: nil),
             Case(name: "empty -> placeholder", input: "", placeholder: "1s", allowsUnlimited: false, expectedText: "1s", expectedPlaceholder: true),
             Case(name: "unparseable echoes raw text", input: "abc", placeholder: "1s", allowsUnlimited: false, expectedText: "abc", expectedPlaceholder: false),
-            Case(name: "unlimited token when allowed", input: "Unlimited", placeholder: "Unlimited", allowsUnlimited: true, expectedText: "Unlimited", expectedPlaceholder: false),
+            Case(name: "unlimited token when allowed", input: "Unlimited", placeholder: "Unlimited", allowsUnlimited: true, expectedText: String(localized: "Unlimited"), expectedPlaceholder: false),
             Case(name: "anchor row echoes unlimited (not allowed)", input: "Unlimited", placeholder: "1s", allowsUnlimited: false, expectedText: "Unlimited", expectedPlaceholder: nil),
         ]
         for c in cases {

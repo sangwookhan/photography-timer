@@ -98,11 +98,11 @@ public struct TimerWorkspaceSection: Identifiable, Equatable {
     /// identify the completed section without re-typing the literal
     /// (and so a future copy change does not silently desynchronize
     /// the writer and the reader).
-    public static let activeTitle = "Active"
+    public static let activeTitle = String(localized: "Active")
     /// Title for the terminal-records section. Holds both completed and
     /// canceled timers, so it reads "History" rather than naming only
     /// completion.
-    public static let historyTitle = "History"
+    public static let historyTitle = String(localized: "History")
 
     public let title: String
     public let items: [BottomSheetLargeItem]
@@ -390,7 +390,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     /// placeholders so source/value order can move when localized.
     private enum Copy {
         static let exposureLine = "%1$@ %2$@"
-        static let remainingSuffix = "%1$@ left"
+        static let remainingSuffix = String(localized: "%1$@ left")
     }
 
     /// VoiceOver label combining slot, film, source, and status.
@@ -525,9 +525,9 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         case .running, .paused:
             return compactDurationText(timer.remainingTime)
         case .completed:
-            return "Done"
+            return String(localized: "Done")
         case .canceled:
-            return "Canceled"
+            return String(localized: "Canceled")
         }
     }
 
@@ -574,13 +574,13 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
             // pair (PTIMER-187).
             return String(format: Copy.remainingSuffix, formatRemaining(timer.remainingTime))
         case .completed:
-            return "Done"
+            return String(localized: "Done")
         case .canceled:
             // Terminal state only as the primary value; the
             // remaining-at-cancel moves to the meta line so the big
             // value is not a combined "Canceled · N left" string
             // (PTIMER-198).
-            return "Canceled"
+            return String(localized: "Canceled")
         }
     }
 
@@ -668,13 +668,13 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
     private static func visibleStatusLabel(for status: TimerStatus) -> String {
         switch status {
         case .running:
-            return "Running"
+            return String(localized: "Running")
         case .paused:
-            return "Paused"
+            return String(localized: "Paused")
         case .completed:
-            return "Done"
+            return String(localized: "Done")
         case .canceled:
-            return "Canceled"
+            return String(localized: "Canceled")
         }
     }
 

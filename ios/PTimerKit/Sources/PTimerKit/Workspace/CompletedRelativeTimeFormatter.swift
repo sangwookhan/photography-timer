@@ -24,16 +24,25 @@ public struct CompletedRelativeTimeFormatter {
 
         switch elapsedSeconds {
         case ..<60:
-            return "just now"
+            return String(localized: "just now")
         case ..<3_600:
             let minutes = elapsedSeconds / 60
-            return pluralizedAgo(value: minutes, regularUnit: "min", compactUnit: "m", style: style)
+            return style == .compact
+                ? String(localized: "\(minutes)m ago")
+                : String(localized: "\(minutes) min ago")
         case ..<86_400:
             let hours = elapsedSeconds / 3_600
-            return pluralizedAgo(value: hours, regularUnit: "hr", compactUnit: "h", style: style)
+            return style == .compact
+                ? String(localized: "\(hours)h ago")
+                : String(localized: "\(hours) hr ago")
         default:
             let days = elapsedSeconds / 86_400
-            return pluralizedAgo(value: days, regularUnit: "day", compactUnit: "d", style: style)
+            if style == .compact {
+                return String(localized: "\(days)d ago")
+            }
+            return days == 1
+                ? String(localized: "\(days) day ago")
+                : String(localized: "\(days) days ago")
         }
     }
 
@@ -56,24 +65,4 @@ public struct CompletedRelativeTimeFormatter {
         return refreshDate > referenceDate ? refreshDate : nil
     }
 
-    private func pluralizedAgo(
-        value: Int,
-        regularUnit: String,
-        compactUnit: String,
-        style: Style
-    ) -> String {
-        switch style {
-        case .regular:
-            let unit: String
-            switch regularUnit {
-            case "day":
-                unit = value == 1 ? "day" : "days"
-            default:
-                unit = regularUnit
-            }
-            return "\(value) \(unit) ago"
-        case .compact:
-            return "\(value)\(compactUnit) ago"
-        }
-    }
 }

@@ -31,10 +31,10 @@ public enum CameraSlotID: String, CaseIterable, Codable, Equatable, Hashable, Id
     /// camera inventory.
     public var defaultDisplayName: String {
         switch self {
-        case .camera1: return "Camera 1"
-        case .camera2: return "Camera 2"
-        case .camera3: return "Camera 3"
-        case .camera4: return "Camera 4"
+        case .camera1: return String(localized: "Camera 1")
+        case .camera2: return String(localized: "Camera 2")
+        case .camera3: return String(localized: "Camera 3")
+        case .camera4: return String(localized: "Camera 4")
         }
     }
 }

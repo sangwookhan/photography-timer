@@ -25,7 +25,7 @@ import PTimerCore
 public struct ReciprocityModelComparisonPresenter {
     public init() {}
 
-    public static let sectionTitle = "App-derived comparison"
+    public static let sectionTitle = String(localized: "App-derived comparison")
 
     public func comparisonSection(
         for profile: ReciprocityProfile,

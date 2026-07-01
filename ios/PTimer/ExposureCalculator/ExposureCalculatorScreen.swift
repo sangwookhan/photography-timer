@@ -900,7 +900,7 @@ private struct HeaderView: View {
                     Button("Cancel", role: .cancel) {}
                 }
 
-                Button("About PTIMER", systemImage: "info.circle", action: onShowAbout)
+                Button("About", systemImage: "info.circle", action: onShowAbout)
                     .labelStyle(.iconOnly)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)

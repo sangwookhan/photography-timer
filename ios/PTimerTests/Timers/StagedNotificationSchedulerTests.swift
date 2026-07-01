@@ -37,17 +37,17 @@ final class StagedNotificationSchedulerTests: XCTestCase {
         )
 
         let pre1 = try XCTUnwrap(byIdentifier["timer-pre1-\(id.uuidString.lowercased())"])
-        XCTAssertEqual(pre1.content.title, "Timer finishing soon")
-        XCTAssertEqual(pre1.content.body, "30s remaining · ends \(endTime)")
+        XCTAssertEqual(pre1.content.title, String(localized: "Timer finishing soon"))
+        XCTAssertEqual(pre1.content.body, String(localized: "\(30)s remaining · ends \(endTime)"))
         XCTAssertNil(pre1.content.sound, "the early T-30 heads-up is silent; pre2 is the audible warning")
 
         let pre2 = try XCTUnwrap(byIdentifier["timer-pre2-\(id.uuidString.lowercased())"])
-        XCTAssertEqual(pre2.content.title, "Timer finishing soon")
-        XCTAssertEqual(pre2.content.body, "15s remaining · ends \(endTime)")
+        XCTAssertEqual(pre2.content.title, String(localized: "Timer finishing soon"))
+        XCTAssertEqual(pre2.content.body, String(localized: "\(15)s remaining · ends \(endTime)"))
         XCTAssertEqual(pre2.content.sound, .default)
 
         let completion = try XCTUnwrap(byIdentifier["timer-completion-\(id.uuidString.lowercased())"])
-        XCTAssertEqual(completion.content.title, "Timer Complete")
+        XCTAssertEqual(completion.content.title, String(localized: "Timer complete"))
         XCTAssertEqual(completion.content.sound, .default)
     }
 
@@ -74,7 +74,7 @@ final class StagedNotificationSchedulerTests: XCTestCase {
             uniqueKeysWithValues: center.addedRequests.map { ($0.identifier, $0) }
         )
         let pre2 = try XCTUnwrap(byIdentifier["timer-pre2-\(id.uuidString.lowercased())"])
-        XCTAssertEqual(pre2.content.body, "15s remaining · ends \(endTime)")
+        XCTAssertEqual(pre2.content.body, String(localized: "\(15)s remaining · ends \(endTime)"))
         XCTAssertEqual(pre2.content.sound, .default)
     }
 

@@ -73,7 +73,7 @@ struct FilmModeDetailsSheet: View {
                     // selector (the main screen is the primary selector),
                     // and one-line Source / Calculation rows. Sits above
                     // the graph and source/comparison sections.
-                    if let modelSection = details.sections.first(where: { $0.title == "Reciprocity model" }) {
+                    if let modelSection = details.sections.first(where: { $0.title == String(localized: "Reciprocity model") }) {
                         FilmModeDetailsModelSection(
                             modelSelection: details.modelSelection,
                             summaryRows: modelSection.rows,
@@ -100,7 +100,7 @@ struct FilmModeDetailsSheet: View {
                     // app-derived deltas never sit inside Source
                     // reference. Present only where comparison data
                     // exists (today Fomapan 100).
-                    ForEach(details.sections.filter { $0.title == "App-derived comparison" }) { section in
+                    ForEach(details.sections.filter { $0.title == String(localized: "App-derived comparison") }) { section in
                         FilmModeDetailsSectionCard(
                             title: sectionDisplayTitle(for: section.title),
                             section: section,
@@ -112,7 +112,7 @@ struct FilmModeDetailsSheet: View {
                         FilmModeDetailsLegend(legend: legend)
                     }
 
-                    ForEach(details.sections.filter { $0.title == "Sources" }) { section in
+                    ForEach(details.sections.filter { $0.title == String(localized: "Sources") }) { section in
                         FilmModeDetailsSectionCard(
                             title: sectionDisplayTitle(for: section.title),
                             section: section,
@@ -186,14 +186,11 @@ struct FilmModeDetailsSheet: View {
         }
     }
 
-
     private func sectionDisplayTitle(for title: String) -> String {
-        switch title {
-        case "Reference":
-            return "Reference data"
-        default:
-            return title
+        if title == String(localized: "Reference") {
+            return String(localized: "Reference data")
         }
+        return title
     }
 
     /// Sections that describe manufacturer source evidence or
@@ -274,7 +271,7 @@ private struct FilmModeDetailsStickySummary: View {
     private var primaryLine: String {
         if currentResult.layout == .comparison,
            currentResult.correctedExposure.emphasizesValue {
-            return "\(currentResult.correctedExposure.valueText) corrected"
+            return String(localized: "\(currentResult.correctedExposure.valueText) corrected")
         }
 
         return summary.summaryText
@@ -550,7 +547,7 @@ private struct FilmModeDetailsCurrentResultBlock: View {
     private func secondaryValueColor(
         for value: FilmModeDetailsCurrentResultValueState
     ) -> Color {
-        guard value.title == "Corrected Exposure" else {
+        guard value.title == String(localized: "Corrected Exposure") else {
             return .primary
         }
 

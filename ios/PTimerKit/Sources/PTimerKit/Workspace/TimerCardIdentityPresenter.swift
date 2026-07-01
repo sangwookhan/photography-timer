@@ -50,7 +50,7 @@ public enum TimerCardIdentityPresenter {
     /// editing the runtime snapshot type.
     public static func filmDescriptor(for snapshot: ExposureTimerIdentitySnapshot) -> String {
         guard let filmName = snapshot.filmDisplayName, !filmName.isEmpty else {
-            return "No film"
+            return String(localized: "No film")
         }
         let trimmedModelLabel = snapshot.selectedModelLabel?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -70,10 +70,10 @@ public enum TimerCardIdentityPresenter {
     /// so the same wording appears wherever the source is rendered.
     public static func sourceLabel(for source: ExposureTimerSource) -> String {
         switch source {
-        case .digitalResult: return "Calculated"
-        case .filmAdjustedShutter: return "Adjusted Exposure"
-        case .filmCorrectedExposure: return "Corrected Exposure"
-        case .targetShutter: return "Target Exposure"
+        case .digitalResult: return String(localized: "Calculated")
+        case .filmAdjustedShutter: return String(localized: "Adjusted Exposure")
+        case .filmCorrectedExposure: return String(localized: "Corrected Exposure")
+        case .targetShutter: return String(localized: "Target Exposure")
         }
     }
 }

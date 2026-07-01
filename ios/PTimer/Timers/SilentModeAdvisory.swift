@@ -85,8 +85,8 @@ final class SystemSoundMuteProbe: MuteLikelihoodProbing {
 final class SilentModeAdvisoryController: ObservableObject {
     static let shared = SilentModeAdvisoryController()
 
-    /// Short, non-diagnostic copy. English-only, matching the rest of the app.
-    static let advisoryText = "Silent mode may be on. Turn it off and check volume before long exposures."
+    /// Short, non-diagnostic copy.
+    static let advisoryText = String(localized: "Silent mode may be on. Turn it off and check volume before long exposures.")
 
     @Published private(set) var isAdvisoryVisible = false
 

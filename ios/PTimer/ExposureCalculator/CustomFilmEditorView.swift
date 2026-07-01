@@ -489,7 +489,7 @@ struct CustomFilmEditorView: View {
                         .foregroundStyle(.secondary)
                     Text(CustomFilmEditorPreviewPresenter
                         .tableDiagnosisMessage(form: formState)
-                        ?? "Enter at least two valid Tm/Tc anchor rows.")
+                        ?? String(localized: "Enter at least two valid Tm/Tc anchor rows."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -615,7 +615,7 @@ struct CustomFilmEditorView: View {
         if let reason {
             switch reason {
             case .emptyExponent:
-                return "Enter p to preview the formula."
+                return String(localized: "Enter p to preview the formula.")
             default:
                 return reason.displayMessage
             }
@@ -628,7 +628,7 @@ struct CustomFilmEditorView: View {
         // which the branches above name. This catch-all keeps
         // the panel honest if a future guard reports failure
         // without a matching diagnostic.
-        return "Fix the highlighted formula fields or reset the formula."
+        return String(localized: "Fix the highlighted formula fields or reset the formula.")
     }
 
     // MARK: - App-derived fitted formula (PTIMER-179)
@@ -742,7 +742,7 @@ struct CustomFilmEditorView: View {
             label: formState.filmLabel,
             iso: iso
         )
-        return composed.isEmpty ? "New custom film" : composed
+        return composed.isEmpty ? String(localized: "New custom film") : composed
     }
 
     private var canSave: Bool {
@@ -819,7 +819,7 @@ struct CustomFilmEditorRowDisplayValue: Equatable {
 func rowDisplayValue(_ raw: String, placeholder: String) -> CustomFilmEditorRowDisplayValue {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
-        return CustomFilmEditorRowDisplayValue(text: placeholder, isPlaceholder: true)
+        return CustomFilmEditorRowDisplayValue(text: NSLocalizedString(placeholder, comment: ""), isPlaceholder: true)
     }
     return CustomFilmEditorRowDisplayValue(text: trimmed, isPlaceholder: false)
 }
@@ -851,7 +851,7 @@ func rowDurationDisplayValue(
 ) -> CustomFilmEditorRowDisplayValue {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
-        return CustomFilmEditorRowDisplayValue(text: placeholder, isPlaceholder: true)
+        return CustomFilmEditorRowDisplayValue(text: NSLocalizedString(placeholder, comment: ""), isPlaceholder: true)
     }
     switch CustomFilmDurationParser.parse(trimmed) {
     case .seconds(let value) where value.isFinite:
@@ -866,7 +866,7 @@ func rowDurationDisplayValue(
             isPlaceholder: isNeutral
         )
     case .unlimited where allowsUnlimited:
-        return CustomFilmEditorRowDisplayValue(text: "Unlimited", isPlaceholder: false)
+        return CustomFilmEditorRowDisplayValue(text: String(localized: "Unlimited"), isPlaceholder: false)
     case .empty, .seconds, .unlimited, .none:
         return CustomFilmEditorRowDisplayValue(text: trimmed, isPlaceholder: false)
     }
@@ -893,7 +893,7 @@ struct CustomFilmEditorCompactRow: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(label)
+                    Text(LocalizedStringKey(label))
                         .foregroundStyle(.primary)
                     Spacer(minLength: 8)
                     Text(value.text)
@@ -1103,7 +1103,7 @@ struct CustomFilmEditorRangeRow: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(label)
+                    Text(LocalizedStringKey(label))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 8)
@@ -1533,10 +1533,10 @@ private struct CustomFilmEditorTableCard: View {
 
     private var sourceRangeText: String {
         guard let derived = formState.derivedTableSourceRangeSeconds else {
-            return "Last anchor"
+            return String(localized: "Last anchor")
         }
         let formatted = CustomFilmEditorFormState.formatAnchorSeconds(derived)
-        return "Through \(formatted) · last anchor"
+        return String(localized: "Through \(formatted) · last anchor")
     }
 }
 

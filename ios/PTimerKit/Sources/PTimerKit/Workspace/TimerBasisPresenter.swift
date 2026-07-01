@@ -78,7 +78,7 @@ public enum TimerBasisPresenter {
     }
 
     private enum Template {
-        static let baseND = "Base %1$@ · %2$@"
-        static let baseNDAdjusted = "Base %1$@ · %2$@ · Adj %3$@"
+        static let baseND = String(localized: "Base %1$@ · %2$@")
+        static let baseNDAdjusted = String(localized: "Base %1$@ · %2$@ · Adj %3$@")
     }
 }

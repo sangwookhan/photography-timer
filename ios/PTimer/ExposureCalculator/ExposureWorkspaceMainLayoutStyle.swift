@@ -627,7 +627,7 @@ private struct NDNotationToggle: View {
     let onSelect: (NDNotationMode) -> Void
 
     private static let options: [(mode: NDNotationMode, label: String)] = [
-        (.stops, "Stops"),
+        (.stops, String(localized: "Stops")),
         (.opticalDensity, "OD"),
         (.filterFactor, "ND"),
     ]

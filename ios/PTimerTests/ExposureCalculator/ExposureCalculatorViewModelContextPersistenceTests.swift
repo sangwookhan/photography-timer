@@ -52,7 +52,7 @@ final class ContextPersistenceUserDefaultsTests: XCTestCase {
         )
         XCTAssertEqual(viewModel.timers.map(\.id), [timerID])
         XCTAssertEqual(viewModel.timers.map(\.status), [.running])
-        XCTAssertEqual(viewModel.timers.map(\.name), ["Timer - 10s"])
-        XCTAssertEqual(viewModel.timers.map(\.basisSummary), ["Manual timer"])
+        XCTAssertEqual(viewModel.timers.map(\.name), [String(localized: "Timer - \("10s")")])
+        XCTAssertEqual(viewModel.timers.map(\.basisSummary), [String(localized: "Manual timer")])
     }
 }

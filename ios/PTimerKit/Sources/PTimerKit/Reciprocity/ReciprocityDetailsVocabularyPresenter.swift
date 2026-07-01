@@ -55,7 +55,7 @@ public struct ReciprocityDetailsVocabularyPresenter {
         return ReciprocitySourceEvidenceClassifier.reachedStopSignalMessages(
             in: bindingState.profile,
             meteredExposureSeconds: bindingState.policyResult.meteredExposureSeconds
-        ).first.map { "Manufacturer guidance: \($0)" }
+        ).first.map { String(localized: "Manufacturer guidance: \($0)") }
     }
 
     /// Both Main (reciprocity badge chip) and Detail (Current Result
@@ -65,7 +65,7 @@ public struct ReciprocityDetailsVocabularyPresenter {
     public func badgeText(for bindingState: FilmModeReciprocityBindingState) -> String {
         switch bindingState.presentation.category {
         case .noCorrection:
-            return "No correction"
+            return String(localized: "No correction")
         case .formulaDerived:
             // Photographer-authored profiles read as "Custom formula"
             // / "Custom table" (method/authority wording) so the badge
@@ -74,17 +74,17 @@ public struct ReciprocityDetailsVocabularyPresenter {
             // calculation kinds (PTIMER-178).
             if bindingState.profile.source.authority == .userDefined {
                 return bindingState.policyResult.metadata.basis == .tableLogLogDerived
-                    ? "Custom table"
-                    : "Custom formula"
+                    ? String(localized: "Custom table")
+                    : String(localized: "Custom formula")
             }
             // The official log-log table model is table-derived, not a
             // closed-form formula (PTIMER-159).
             if bindingState.policyResult.metadata.basis == .tableLogLogDerived {
-                return "Table-derived"
+                return String(localized: "Table-derived")
             }
-            return "Formula-derived"
+            return String(localized: "Formula-derived")
         case .limitedGuidance:
-            return "No quantified prediction"
+            return String(localized: "No quantified prediction")
         case .unsupported:
             // Source-range-backed profiles (converted formula + source
             // evidence, or the log-log table model) surface as "Beyond
@@ -92,11 +92,11 @@ public struct ReciprocityDetailsVocabularyPresenter {
             // Detail status line.
             if bindingState.profile.presentsBeyondSourceRange
                 || bindingState.profile.source.authority == .userDefined {
-                return "Beyond source range"
+                return String(localized: "Beyond source range")
             }
             return bindingState.policyResult.correctedExposureSeconds != nil
-                ? "Outside guidance"
-                : "No corrected value"
+                ? String(localized: "Outside guidance")
+                : String(localized: "No corrected value")
         }
     }
 
@@ -154,29 +154,29 @@ public struct ReciprocityDetailsVocabularyPresenter {
         switch metadata.basis {
         case .officialThresholdNoCorrection:
             if case .success(let result) = calculationResult {
-                return "No correction at \(formatDurationCoarse(result.resultShutterSeconds))"
+                return String(localized: "No correction at \(formatDurationCoarse(result.resultShutterSeconds))")
             }
-            return "No correction in the supported range"
+            return String(localized: "No correction in the supported range")
         case .formulaDerived:
-            return "Formula-based correction on the active curve"
+            return String(localized: "Formula-based correction on the active curve")
         case .tableLogLogDerived:
             // The table can be official (FOMA) or an unofficial
             // community source (Ohzart); the wording must not call a
             // community table "official".
             switch bindingState.profile.source.authority {
             case .official:
-                return "Log-log interpolation of the official table"
+                return String(localized: "Log-log interpolation of the official table")
             case .unofficial:
-                return "Log-log interpolation of the community table"
+                return String(localized: "Log-log interpolation of the community table")
             case .userDefined, .unknown:
-                return "Log-log interpolation of the source table"
+                return String(localized: "Log-log interpolation of the source table")
             }
         case .limitedGuidanceNoQuantifiedPrediction:
-            return "Beyond published no-correction range"
+            return String(localized: "Beyond published no-correction range")
         case .unsupportedOutOfPolicyRange:
             return bindingState.profile.presentsBeyondSourceRange
-                ? "Beyond source range"
-                : "Outside supported reciprocity range"
+                ? String(localized: "Beyond source range")
+                : String(localized: "Outside supported reciprocity range")
         }
     }
 
@@ -215,12 +215,12 @@ public struct ReciprocityDetailsVocabularyPresenter {
                 if bindingState.profile.usesTableInterpolation {
                     genericDetail = tableBeyondSourceRangeDetailText(for: bindingState.profile)
                 } else if bindingState.profile.isConvertedFormulaProfile {
-                    genericDetail = "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference."
+                    genericDetail = String(localized: "Current input is beyond the manufacturer source range. The corrected value is a formula prediction past the published reference.")
                 } else {
-                    genericDetail = "Current input is outside manufacturer guidance. The corrected value is a formula prediction outside the supported range."
+                    genericDetail = String(localized: "Current input is outside manufacturer guidance. The corrected value is a formula prediction outside the supported range.")
                 }
             } else {
-                genericDetail = "Current input is outside the supported range and no quantified corrected point is available."
+                genericDetail = String(localized: "Current input is outside the supported range and no quantified corrected point is available.")
             }
             // PTIMER-169: lead with the manufacturer's own stop signal
             // when the metered exposure has reached a not-recommended
@@ -231,7 +231,7 @@ public struct ReciprocityDetailsVocabularyPresenter {
             }
             return genericDetail
         case .limitedGuidance:
-            return "No official quantified prediction is available beyond this range."
+            return String(localized: "No official quantified prediction is available beyond this range.")
         case .noCorrection, .formulaDerived:
             return nil
         }
@@ -240,11 +240,11 @@ public struct ReciprocityDetailsVocabularyPresenter {
     private func tableBeyondSourceRangeDetailText(for profile: ReciprocityProfile) -> String {
         switch profile.source.authority {
         case .official:
-            return "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors."
+            return String(localized: "Current input is beyond the published source table. The corrected value is extrapolated past the official anchors.")
         case .unofficial:
-            return "Current input is beyond this table's source range. The corrected value is extrapolated past the last community table anchor."
+            return String(localized: "Current input is beyond this table's source range. The corrected value is extrapolated past the last community table anchor.")
         case .userDefined, .unknown:
-            return "Current input is beyond this table's source range. The corrected value is extrapolated past the last table anchor."
+            return String(localized: "Current input is beyond this table's source range. The corrected value is extrapolated past the last table anchor.")
         }
     }
 
@@ -292,10 +292,10 @@ public struct ReciprocityDetailsVocabularyPresenter {
     ) -> String {
         if !profileUsesFormula(bindingState.profile) {
             if graph?.isBeyondVisibleRange == true {
-                return "Beyond visible graph range"
+                return String(localized: "Beyond visible graph range")
             }
             if graph?.isBelowVisibleRange == true {
-                return "Below visible graph range"
+                return String(localized: "Below visible graph range")
             }
         }
         return badgeText(for: bindingState)
@@ -332,7 +332,7 @@ public struct ReciprocityDetailsVocabularyPresenter {
         let trimmedExplanation = explanation.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedExplanation.isEmpty else {
-            return "See reciprocity guidance"
+            return String(localized: "See reciprocity guidance")
         }
 
         return trimmedExplanation
@@ -367,21 +367,21 @@ public struct ReciprocityDetailsVocabularyPresenter {
         if let sourceType = profile.userMetadata?.customSourceType
             ?? film.userMetadata?.customSourceType {
             rows.append(FilmModeDetailsRowState(
-                title: "Source",
+                title: String(localized: "Source"),
                 value: sourceType.displayLabel
             ))
         }
         let rangeLines = customRangeLines(profile: profile)
         if !rangeLines.isEmpty {
             rows.append(FilmModeDetailsRowState(
-                title: "Range",
+                title: String(localized: "Range"),
                 value: rangeLines.joined(separator: "\n")
             ))
         }
         let trimmedNotes = collectedCustomNotes(film: film, profile: profile)
         if !trimmedNotes.isEmpty {
             rows.append(FilmModeDetailsRowState(
-                title: "Notes",
+                title: String(localized: "Notes"),
                 value: trimmedNotes.joined(separator: "\n")
             ))
         }
@@ -390,13 +390,13 @@ public struct ReciprocityDetailsVocabularyPresenter {
            !urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let destination = URL(string: urlString.trimmingCharacters(in: .whitespacesAndNewlines))
             rows.append(FilmModeDetailsRowState(
-                title: "Reference",
+                title: String(localized: "Reference"),
                 value: urlString,
                 destinationURL: destination
             ))
         }
         guard !rows.isEmpty else { return nil }
-        return FilmModeDetailsSectionState(title: "Custom profile", rows: rows)
+        return FilmModeDetailsSectionState(title: String(localized: "Custom profile"), rows: rows)
     }
 
     private func collectedCustomNotes(
@@ -428,7 +428,7 @@ public struct ReciprocityDetailsVocabularyPresenter {
         var lines: [String] = []
         if let sourceType = profile.userMetadata?.customSourceType
             ?? film.userMetadata?.customSourceType {
-            lines.append("Source: \(sourceType.displayLabel)")
+            lines.append(String(localized: "Source: \(sourceType.displayLabel)"))
         }
         if let formulaText = TimerStartComposer.customProfileFormulaText(profile: profile) {
             lines.append("Formula: \(formulaText)")
@@ -489,19 +489,19 @@ public struct ReciprocityDetailsVocabularyPresenter {
         guard let noCorrection else { return [] }
 
         var lines: [String] = []
-        lines.append("No correction through \(Self.formatSeconds(noCorrection))")
+        lines.append(String(localized: "No correction through \(Self.formatSeconds(noCorrection))"))
         if let sourceRangeThrough = formulaRule?.formula.sourceRangeThroughSeconds {
-            lines.append("Source range through \(Self.formatSeconds(sourceRangeThrough))")
+            lines.append(String(localized: "Source range through \(Self.formatSeconds(sourceRangeThrough))"))
         } else if formulaRule != nil {
             // Formula profiles without a finite source range
             // extrapolate without bound — the Details surface
             // should still surface this fact so the user reads the
             // confidence boundary rather than its absence.
-            lines.append("Source range unlimited")
+            lines.append(String(localized: "Source range unlimited"))
         } else if let tableRule {
             // A table's source range is always finite (the last
             // anchor's metered time).
-            lines.append("Source range through \(Self.formatSeconds(tableRule.sourceRangeThroughSeconds))")
+            lines.append(String(localized: "Source range through \(Self.formatSeconds(tableRule.sourceRangeThroughSeconds))"))
         }
         return lines
     }

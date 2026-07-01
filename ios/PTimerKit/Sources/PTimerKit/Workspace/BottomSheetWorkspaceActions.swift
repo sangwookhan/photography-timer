@@ -8,9 +8,9 @@ public enum BottomSheetQuickAction: String, Equatable {
     public var title: String {
         switch self {
         case .pause:
-            return "Pause"
+            return String(localized: "Pause")
         case .resume:
-            return "Resume"
+            return String(localized: "Resume")
         }
     }
 
@@ -41,15 +41,15 @@ public enum BottomSheetLargeAction: String, Equatable {
     public var title: String {
         switch self {
         case .pause:
-            return "Pause"
+            return String(localized: "Pause")
         case .resume:
-            return "Resume"
+            return String(localized: "Resume")
         case .cancel:
-            return "Cancel"
+            return String(localized: "Cancel")
         case .remove:
-            return "Remove"
+            return String(localized: "Remove")
         case .clone:
-            return "Clone"
+            return String(localized: "Repeat Shot")
         }
     }
 }

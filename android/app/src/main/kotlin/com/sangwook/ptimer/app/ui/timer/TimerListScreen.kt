@@ -677,6 +677,8 @@ private fun TimerCard(
                 includesAdjusted = card.identity.basisIncludesAdjusted,
                 mode = ndNotationMode,
                 formatShutter = ::basisShutterLabel,
+                baseNdFormat = stringResource(R.string.timer_basis_base_nd),
+                baseNdAdjustedFormat = stringResource(R.string.timer_basis_base_nd_adj),
             ) ?: card.identity.baseLine.takeIf { it.isNotEmpty() }
             if (basisText != null) {
                 Row(

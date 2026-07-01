@@ -580,6 +580,9 @@ class LaunchPresetFilmCatalogV2Loader {
             sourceEvidence = adaptSourceEvidence(profile),
             modelBasis = adaptModelBasis(profile),
             selectorLabel = profile.selectorLabel,
+            sourcePageUrl = profile.sourcePageUrl,
+            downloadUrl = profile.downloadUrl,
+            sourceNote = profile.sourceNote,
         )
     }
 
@@ -884,6 +887,9 @@ private data class CatalogV2Profile(
     val referencePoints: List<CatalogV2ReferencePoint>? = null,
     val referenceRanges: List<CatalogV2ReferenceRange>? = null,
     val notes: List<String>? = null,
+    val sourcePageUrl: String? = null,
+    val downloadUrl: String? = null,
+    val sourceNote: String? = null,
     @kotlinx.serialization.Transient val typedCalculation: CatalogV2Calculation? = null,
 ) {
     fun withCalculation(value: CatalogV2Calculation): CatalogV2Profile = copy(typedCalculation = value)

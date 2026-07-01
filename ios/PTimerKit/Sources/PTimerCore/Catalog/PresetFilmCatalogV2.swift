@@ -434,7 +434,10 @@ public struct LaunchPresetFilmCatalogV2Loader {
             userMetadata: nil,
             sourceEvidence: adaptSourceEvidence(from: profile),
             modelBasis: adaptModelBasis(from: profile),
-            selectorLabel: profile.selectorLabel
+            selectorLabel: profile.selectorLabel,
+            sourcePageUrl: profile.sourcePageUrl,
+            downloadUrl: profile.downloadUrl,
+            sourceNote: profile.sourceNote
         )
     }
 
@@ -808,6 +811,9 @@ private struct CatalogV2Profile: Decodable {
     let referencePoints: [CatalogV2ReferencePoint]?
     let referenceRanges: [CatalogV2ReferenceRange]?
     let notes: [String]?
+    let sourcePageUrl: String?
+    let downloadUrl: String?
+    let sourceNote: String?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -823,6 +829,9 @@ private struct CatalogV2Profile: Decodable {
         case referencePoints
         case referenceRanges
         case notes
+        case sourcePageUrl
+        case downloadUrl
+        case sourceNote
     }
 
     init(from decoder: Decoder) throws {
@@ -855,6 +864,9 @@ private struct CatalogV2Profile: Decodable {
             forKey: .referenceRanges
         )
         self.notes = try container.decodeOptionalRejectingNull([String].self, forKey: .notes)
+        self.sourcePageUrl = try container.decodeOptionalRejectingNull(String.self, forKey: .sourcePageUrl)
+        self.downloadUrl = try container.decodeOptionalRejectingNull(String.self, forKey: .downloadUrl)
+        self.sourceNote = try container.decodeOptionalRejectingNull(String.self, forKey: .sourceNote)
     }
 }
 

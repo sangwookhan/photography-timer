@@ -39,6 +39,32 @@ class ReciprocityDetailsPresenterTest {
     }
 
     @Test
+    fun officialSourceLinksSurfaceOnDisplayState() {
+        // PTIMER-158: an official film with a working direct PDF exposes the
+        // full source-page and download URLs and carries no no-data note.
+        val f = film("ilford-pan-f-plus-50")
+        val profile = f.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
+        assertEquals("https://www.ilfordphoto.com/technical-data/", state.sourcePageUrl)
+        assertTrue(state.downloadUrl!!.startsWith("https://www.ilfordphoto.com/amfile/"))
+        assertNull(state.sourceNote)
+    }
+
+    @Test
+    fun officialSheetWithoutReciprocityDataShowsNote() {
+        // PTIMER-158: films whose official sheet lacks reciprocity correction
+        // data still link the sheet and show the explanatory note.
+        val f = film("kodak-portra-400")
+        val profile = f.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
+        assertNotNull(state.downloadUrl)
+        assertEquals(
+            "Official sheet found, but no reciprocity correction data was found.",
+            state.sourceNote,
+        )
+    }
+
+    @Test
     fun correctedTextReflectsQuantifiedConfidence() {
         val f = film("ilford-pan-f-plus-50")
         val profile = f.profiles.first()

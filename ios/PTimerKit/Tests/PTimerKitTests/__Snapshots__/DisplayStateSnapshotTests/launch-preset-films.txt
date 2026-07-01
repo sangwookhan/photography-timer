@@ -45,6 +45,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1905/product/700/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1905/product/700/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-fp4-plus-125"
@@ -92,6 +97,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1919/product/690/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1919/product/690/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-delta-100"
@@ -139,6 +149,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/3/product/681/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/3/product/681/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-delta-400"
@@ -186,6 +201,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1915/product/685/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1915/product/685/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-delta-3200"
@@ -233,6 +253,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/wp/wp-content/uploads/2025/07/DP3200_F25.pdf")
+            - some: "https://www.ilfordphoto.com/wp/wp-content/uploads/2025/07/DP3200_F25.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-hp5-plus-400"
@@ -284,6 +309,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1903/product/695/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1903/product/695/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-xp2-super-400"
@@ -331,6 +361,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1909/product/704/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1909/product/704/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-sfx-200"
@@ -377,6 +412,12 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1907/product/702/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1907/product/702/"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-ortho-plus-80"
@@ -423,6 +464,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1948/product/698/")
+            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1948/product/698/"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-kentmere-pan-100"
@@ -470,6 +516,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-100_04_07_22.pdf")
+            - some: "https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-100_04_07_22.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-kentmere-pan-200"
@@ -517,6 +568,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/wp/wp-content/uploads/2025/05/KENTMERE-PAN-200-260325.pdf")
+            - some: "https://www.ilfordphoto.com/wp/wp-content/uploads/2025/05/KENTMERE-PAN-200-260325.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-kentmere-pan-400"
@@ -564,6 +620,11 @@
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
+            - some: "https://www.ilfordphoto.com/technical-data/"
+          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf")
+            - some: "https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-tri-x-400"
@@ -821,6 +882,11 @@
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           ▿ selectorLabel: Optional("Graph table")
             - some: "Graph table"
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-tri-x-400-tx")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-tri-x-400-tx"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/products/triXf4017.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/products/triXf4017.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-tmax-100"
@@ -931,6 +997,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-t-max-100-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-t-max-100-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/resources/f4016_TMax_100.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/resources/f4016_TMax_100.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-tmax-400"
@@ -1039,6 +1110,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-t-max-400-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-t-max-400-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/products/f4043_tmax_400.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/products/f4043_tmax_400.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-ektar-100"
@@ -1095,6 +1171,12 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-ektar-100-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-ektar-100-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/resources/e4046_ektar_100.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/resources/e4046_ektar_100.pdf"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-portra-160"
@@ -1151,6 +1233,12 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-portra-160-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-portra-160-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/resources/techPub-porta160film.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/resources/techPub-porta160film.pdf"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-portra-400"
@@ -1207,6 +1295,12 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-portra-400-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-portra-400-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/products/portra400-techpub-e4050.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/products/portra400-techpub-e4050.pdf"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-gold-200"
@@ -1263,6 +1357,12 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-gold-200-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-gold-200-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/resources/E7022_Gold_200.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/resources/E7022_Gold_200.pdf"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-ultra-max-400"
@@ -1319,6 +1419,12 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-ultra-max-400-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-ultra-max-400-film"
+          ▿ downloadUrl: Optional("https://apps.kodakmoments.com/wp-content/uploads/2017/07/E7023_max_400.pdf")
+            - some: "https://apps.kodakmoments.com/wp-content/uploads/2017/07/E7023_max_400.pdf"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "kodak-ektachrome-e100"
@@ -1381,6 +1487,12 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerLimitedGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.limitedGuidance
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://business.kodakmoments.com/en-us/product/kodak-professional-ektachrome-e100-film")
+            - some: "https://business.kodakmoments.com/en-us/product/kodak-professional-ektachrome-e100-film"
+          ▿ downloadUrl: Optional("https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf")
+            - some: "https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf"
+          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
+            - some: "Official sheet found, but no reciprocity correction data was found."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-acros-ii"
@@ -1446,6 +1558,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerRangeGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.fujifilm.com/us/en/business/professional-photography/film/neopan-100-acros-ii/support")
+            - some: "https://www.fujifilm.com/us/en/business/professional-photography/film/neopan-100-acros-ii/support"
+          ▿ downloadUrl: Optional("https://asset.fujifilm.com/www/us/files/2020-08/73080443d0289b1a7b116add14a9bdfc/films_neopan100acros2_135_01_0.pdf")
+            - some: "https://asset.fujifilm.com/www/us/files/2020-08/73080443d0289b1a7b116add14a9bdfc/films_neopan100acros2_135_01_0.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-velvia-50"
@@ -1567,6 +1684,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.fujifilm.com/us/en/business/professional-photography/film/velvia-50")
+            - some: "https://www.fujifilm.com/us/en/business/professional-photography/film/velvia-50"
+          ▿ downloadUrl: Optional("https://asset.fujifilm.com/www/us/files/2020-03/742f83fe2440fce58fbcc08f7370a7e6/AF3-0221E2Velvia50PIB.pdf")
+            - some: "https://asset.fujifilm.com/www/us/files/2020-03/742f83fe2440fce58fbcc08f7370a7e6/AF3-0221E2Velvia50PIB.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-velvia-100"
@@ -1647,6 +1769,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.fujifilm.com/us/en/business/professional-photography/film/velvia-100")
+            - some: "https://www.fujifilm.com/us/en/business/professional-photography/film/velvia-100"
+          ▿ downloadUrl: Optional("https://asset.fujifilm.com/www/us/files/2020-03/0a569e6e2a9921af89a81a75a526611c/AF3-202E.pdf")
+            - some: "https://asset.fujifilm.com/www/us/files/2020-03/0a569e6e2a9921af89a81a75a526611c/AF3-202E.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "fujifilm-provia-100f"
@@ -1722,6 +1849,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.fujifilm.com/us/en/business/professional-photography/film/provia-100f/support")
+            - some: "https://www.fujifilm.com/us/en/business/professional-photography/film/provia-100f/support"
+          ▿ downloadUrl: Optional("https://asset.fujifilm.com/www/us/files/2020-03/dc6e1c21c643f82b7fb393cef94d524a/Provia100FAF3-036E.pdf")
+            - some: "https://asset.fujifilm.com/www/us/files/2020-03/dc6e1c21c643f82b7fb393cef94d524a/Provia100FAF3-036E.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "foma-fomapan-100"
@@ -1829,6 +1961,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.foma.cz/en/photomaterials")
+            - some: "https://www.foma.cz/en/photomaterials"
+          ▿ downloadUrl: Optional("https://www.foma.cz/en/fomapan-100")
+            - some: "https://www.foma.cz/en/fomapan-100"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "foma-fomapan-200"
@@ -1936,6 +2073,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.foma.cz/en/photomaterials")
+            - some: "https://www.foma.cz/en/photomaterials"
+          ▿ downloadUrl: Optional("https://www.foma.cz/en/fomapan-200")
+            - some: "https://www.foma.cz/en/fomapan-200"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "foma-fomapan-400"
@@ -2043,6 +2185,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.foma.cz/en/photomaterials")
+            - some: "https://www.foma.cz/en/photomaterials"
+          ▿ downloadUrl: Optional("https://www.foma.cz/en/fomapan-400")
+            - some: "https://www.foma.cz/en/fomapan-400"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-rpx-25"
@@ -2154,6 +2301,9 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          - sourcePageUrl: nil
+          - downloadUrl: nil
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-rpx-100"
@@ -2282,6 +2432,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.rolleianalog.com/downloads/?lang=en")
+            - some: "https://www.rolleianalog.com/downloads/?lang=en"
+          ▿ downloadUrl: Optional("https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX100_Data-Sheet_EN_R210701.pdf")
+            - some: "https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX100_Data-Sheet_EN_R210701.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-rpx-400"
@@ -2410,6 +2565,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.rolleianalog.com/downloads/?lang=en")
+            - some: "https://www.rolleianalog.com/downloads/?lang=en"
+          ▿ downloadUrl: Optional("https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX400_Data-Sheet_EN_R210701.pdf")
+            - some: "https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX400_Data-Sheet_EN_R210701.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-ortho-25-plus"
@@ -2555,6 +2715,9 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          - sourcePageUrl: nil
+          - downloadUrl: nil
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-retro-80s"
@@ -2680,6 +2843,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.rolleianalog.com/downloads/?lang=en")
+            - some: "https://www.rolleianalog.com/downloads/?lang=en"
+          ▿ downloadUrl: Optional("https://www.rolleianalog.com/wp-content/uploads/2021/07/Retro80S_Data-Sheet_EN_R210701.pdf")
+            - some: "https://www.rolleianalog.com/wp-content/uploads/2021/07/Retro80S_Data-Sheet_EN_R210701.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-retro-400s"
@@ -2774,6 +2942,9 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.practicalCommunityGuidance
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          - sourcePageUrl: nil
+          - downloadUrl: nil
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "rollei-superpan-200"
@@ -2899,6 +3070,11 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.rolleianalog.com/downloads/?lang=en")
+            - some: "https://www.rolleianalog.com/downloads/?lang=en"
+          ▿ downloadUrl: Optional("https://www.rolleianalog.com/wp-content/uploads/2021/07/SUPERPAN200_Data-Sheet_EN_R210701.pdf")
+            - some: "https://www.rolleianalog.com/wp-content/uploads/2021/07/SUPERPAN200_Data-Sheet_EN_R210701.pdf"
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "adox-chs-100-ii"
@@ -3027,6 +3203,10 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.adox.de/films/chs100ii-en/")
+            - some: "https://www.adox.de/films/chs100ii-en/"
+          - downloadUrl: nil
+          - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "adox-cms-20-ii"
@@ -3134,4 +3314,9 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
           - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.adox.de/films/cms20ii-en/")
+            - some: "https://www.adox.de/films/cms20ii-en/"
+          ▿ downloadUrl: Optional("https://www.fotoimpex.com/shop/images/products/media/30945_5_PDF-Datasheet.pdf")
+            - some: "https://www.fotoimpex.com/shop/images/products/media/30945_5_PDF-Datasheet.pdf"
+          - sourceNote: nil
       - userMetadata: nil

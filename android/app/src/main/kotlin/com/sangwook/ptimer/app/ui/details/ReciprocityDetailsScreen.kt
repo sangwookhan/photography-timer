@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.sangwook.ptimer.ui.component.GraphLegend
@@ -33,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -207,13 +209,39 @@ fun ReciprocityDetailsScreen(
 
             // Sources citation (publisher · title · version) + reference line,
             // last, matching iOS "Sources". Shown for every published profile.
-            if (state.sourceCitationText != null || state.sourceCitationLink != null) {
+            // PTIMER-158 adds tappable official Source page / Download link rows
+            // (full URL text) plus an optional no-reciprocity-data note.
+            if (state.sourceCitationText != null || state.sourceCitationLink != null ||
+                state.sourcePageUrl != null || state.downloadUrl != null || state.sourceNote != null
+            ) {
                 HorizontalDivider()
+                val uriHandler = LocalUriHandler.current
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Sources", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     state.sourceCitationText?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                     state.sourceCitationLink?.let {
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                    state.sourcePageUrl?.let { url ->
+                        Text("Source page", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            url,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { uriHandler.openUri(url) },
+                        )
+                    }
+                    state.downloadUrl?.let { url ->
+                        Text("Download link", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            url,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { uriHandler.openUri(url) },
+                        )
+                    }
+                    state.sourceNote?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

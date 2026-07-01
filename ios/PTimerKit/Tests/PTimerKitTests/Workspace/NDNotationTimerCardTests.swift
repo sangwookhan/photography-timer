@@ -141,7 +141,7 @@ final class NDNotationTimerCardTests: XCTestCase {
         )
         let row = makeSnapshot([item], mode: .stops).sections.first?.items.first
 
-        XCTAssertEqual(row?.identitySubtitle, "Corrected Exposure 01:40")
+        XCTAssertEqual(row?.identitySubtitle, "Reciprocity 01:40")
         XCTAssertEqual(row?.identitySubtitle?.contains("Tri-X 400"), false)
         XCTAssertEqual(row?.identitySubtitle?.contains("stops"), false)
     }

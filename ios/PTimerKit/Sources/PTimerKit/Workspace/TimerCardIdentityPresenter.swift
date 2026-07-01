@@ -72,7 +72,10 @@ public enum TimerCardIdentityPresenter {
         switch source {
         case .digitalResult: return String(localized: "Calculated")
         case .filmAdjustedShutter: return String(localized: "Adjusted Exposure")
-        case .filmCorrectedExposure: return String(localized: "Corrected Exposure")
+        // PTIMER-183: the compact Timers/history row uses the shorter
+        // "Reciprocity" label; the main result card and Reciprocity
+        // Details keep "Corrected Exposure".
+        case .filmCorrectedExposure: return String(localized: "Reciprocity")
         case .targetShutter: return String(localized: "Target Exposure")
         }
     }

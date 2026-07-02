@@ -107,9 +107,38 @@
     <string name="recip_sources">출처</string>
     <string name="recip_source_page">출처 페이지</string>
     <string name="recip_download_link">다운로드 링크</string>
+    <string name="recip_reference">참조</string>
 
+    <!-- Reciprocity core vocabulary -->
+    <string name="recip_details_title">상반칙 보정 상세</string>
+    <string name="recip_value_formula_derived">공식 기반</string>
+    <string name="recip_value_table_derived">표 기반</string>
+    <string name="recip_value_no_correction">보정 없음</string>
+    <string name="recip_value_no_quantified_prediction">정량 예측 없음</string>
+    <string name="recip_value_outside_guidance">가이드 범위 밖</string>
+    <string name="recip_value_manufacturer_formula">제조사 공식</string>
+    <string name="recip_value_manufacturer_table">제조사 표</string>
+    <string name="recip_value_manufacturer_range_guidance">제조사 범위 가이드</string>
+    <string name="recip_value_manufacturer_limited_guidance">제조사 제한 가이드</string>
+    <string name="recip_value_limited_guidance">제한 가이드</string>
+    <string name="recip_value_guarded_formula">보정 공식</string>
+    <string name="recip_value_app_derived_guarded_formula">앱 산출 보정 공식</string>
+    <string name="recip_value_unsupported">미지원</string>
+    <string name="recip_value_user_defined">사용자 정의</string>
+    <string name="recip_value_official_guidance">공식 가이드</string>
+    <string name="recip_value_unofficial_practical">비공식 실용</string>
+    <string name="recip_detail_no_official_beyond_range">이 범위 밖에서는 공식 정량 예측을 제공하지 않습니다.</string>
 
+    <!-- Timer exposure-source display labels -->
+    <string name="timer_source_calculated">계산값</string>
+    <string name="timer_source_adjusted">ND 적용 노출</string>
+    <string name="timer_source_target">목표 노출</string>
 
+    <!-- Target shutter stop difference -->
+    <string name="target_stops_format">%1$s 스톱</string>
+    <string name="target_stop_format">%1$s 스톱</string>
+    <string name="target_mode_quick">간편</string>
+    <string name="target_mode_fine">정밀</string>
 
 
     <!-- Custom film editor -->
@@ -139,6 +168,7 @@
     <string name="cf_notes">메모</string>
     <string name="cf_reference_url">참조 URL</string>
     <string name="cf_create_custom_formula">커스텀 공식 만들기</string>
+    <string name="cf_unlimited">제한 없음</string>
 
     <!-- Film picker -->
     <string name="films_title">필름</string>

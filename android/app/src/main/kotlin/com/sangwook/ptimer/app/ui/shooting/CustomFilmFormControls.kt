@@ -5,6 +5,7 @@ package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedSourceTypeLabel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
@@ -266,13 +267,13 @@ internal fun SourceTypeRow(value: CustomProfileSourceType, onSelect: (CustomProf
         ) {
             Text(stringResource(R.string.recip_source), style = MaterialTheme.typography.bodyLarge)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(value.displayLabel, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                Text(localizedSourceTypeLabel(value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             CustomProfileSourceType.values().forEach { type ->
-                DropdownMenuItem(text = { Text(type.displayLabel) }, onClick = { onSelect(type); open = false })
+                DropdownMenuItem(text = { Text(localizedSourceTypeLabel(type)) }, onClick = { onSelect(type); open = false })
             }
         }
     }
@@ -333,7 +334,7 @@ internal fun ValueEditPanel(
             ) {
                 presets.forEach { p ->
                     // Picking a preset is a complete choice — apply it and collapse.
-                    FilterChip(selected = value == p, onClick = { onValue(p); onClose() }, label = { Text(p) })
+                    FilterChip(selected = value == p, onClick = { onValue(p); onClose() }, label = { Text(localizedDurationToken(p)) })
                 }
             }
         }
@@ -463,13 +464,29 @@ internal fun durationRowLabel(raw: String): String {
     return t.toDoubleOrNull()?.let { "${trimNum(it)}s" } ?: t
 }
 
+/**
+ * Display form of a duration token: the canonical "Unlimited" parser sentinel
+ * reads localized; every other token (numbers, unit-bearing text) is shown
+ * as-is. The stored/applied value stays canonical.
+ */
+@Composable
+internal fun localizedDurationToken(raw: String): String =
+    if (raw.trim().equals("unlimited", ignoreCase = true)) stringResource(R.string.cf_unlimited) else raw
+
+/** [durationRowLabel] with the "Unlimited" sentinel localized for display. */
+@Composable
+internal fun localizedDurationRowLabel(raw: String): String {
+    val label = durationRowLabel(raw)
+    return if (label == "Unlimited") stringResource(R.string.cf_unlimited) else label
+}
+
 /** Live editor title derived from the in-progress maker/label/ISO (iOS header). */
 @Composable
 internal fun CustomFilmTitle(manufacturer: String, label: String, iso: String) {
     val name = listOf(manufacturer.trim(), label.trim()).filter { it.isNotEmpty() }.joinToString(" ")
     val isoText = iso.trim().toIntOrNull()?.let { " · ISO $it" } ?: ""
     Text(
-        if (name.isEmpty()) "New custom film" else "$name$isoText",
+        if (name.isEmpty()) stringResource(R.string.cf_new) else "$name$isoText",
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
     )

@@ -18,6 +18,8 @@ import androidx.compose.foundation.verticalScroll
 import com.sangwook.ptimer.ui.component.GraphLegend
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedCoreText
+import com.sangwook.ptimer.app.ui.localizedDetailsSubtitle
 import com.sangwook.ptimer.ui.component.ReciprocityGraphView
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -64,7 +66,7 @@ fun ReciprocityDetailsScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(state.title) },
+                title = { Text(localizedCoreText(state.title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
@@ -82,20 +84,20 @@ fun ReciprocityDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Spacer(Modifier.height(2.dp))
-            Text(state.subtitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(localizedDetailsSubtitle(state.subtitle), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
             // Current result: Adjusted | Corrected side by side, then Status.
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        ResultValue("Adjusted Shutter", state.adjustedShutterText, Modifier.weight(1f))
-                        ResultValue("Corrected Exposure", state.correctedExposureText, Modifier.weight(1f))
+                        ResultValue(stringResource(R.string.shooting_adjusted_shutter), state.adjustedShutterText, Modifier.weight(1f))
+                        ResultValue(stringResource(R.string.shooting_corrected_exposure), localizedCoreText(state.correctedExposureText), Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.recip_status), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            state.statusText,
+                            localizedCoreText(state.statusText),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = toneColor(state.statusTone),
@@ -106,7 +108,7 @@ fun ReciprocityDetailsScreen(
                     state.statusDetailText?.let { detail ->
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            detail,
+                            localizedCoreText(detail),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (state.statusTone == ReciprocityStatusTone.warning) {
                                 StatusWarning
@@ -134,9 +136,9 @@ fun ReciprocityDetailsScreen(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                ModelRow(stringResource(R.string.recip_source), state.sourceText)
+                ModelRow(stringResource(R.string.recip_source), localizedCoreText(state.sourceText))
                 Spacer(Modifier.height(6.dp))
-                ModelRow(stringResource(R.string.recip_calculation), state.calculationText)
+                ModelRow(stringResource(R.string.recip_calculation), localizedCoreText(state.calculationText))
             }
 
             // Custom-profile provenance (notes / reference URL), shown only when
@@ -186,7 +188,7 @@ fun ReciprocityDetailsScreen(
             // below the graph, above the legend.
             if (state.referenceRows.isNotEmpty()) {
                 HorizontalDivider()
-                ReferenceTable("Reference", state.referenceRows, warningTone = false)
+                ReferenceTable(stringResource(R.string.recip_reference), state.referenceRows, warningTone = false)
             }
             if (state.sourceReferenceRows.isNotEmpty()) {
                 HorizontalDivider()
@@ -281,7 +283,7 @@ private fun ReferenceRowView(row: ReciprocityReferenceRow, warningTone: Boolean)
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.width(88.dp),
             )
-            Text(row.valueText, style = MaterialTheme.typography.bodyMedium, color = valueColor)
+            Text(localizedCoreText(row.valueText), style = MaterialTheme.typography.bodyMedium, color = valueColor)
         }
         // Color filter / development note, indented under the value column so it
         // stays tied to this metered exposure.

@@ -67,6 +67,8 @@ import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedCoreText
+import com.sangwook.ptimer.app.ui.localizedFilmName
 
 
 /**
@@ -214,7 +216,7 @@ fun ShootingScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(pageState.selectedFilmName, style = MaterialTheme.typography.titleMedium)
+                            Text(localizedFilmName(pageState.selectedFilmName), style = MaterialTheme.typography.titleMedium)
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Choose film",
@@ -502,7 +504,7 @@ private fun ResultCard(
                 ) {
                     Text(stringResource(R.string.shooting_reciprocity), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        state.confidenceLabel?.let { Pill(it) }
+                        state.confidenceLabel?.let { Pill(localizedCoreText(it)) }
                         IconButton(onClick = onOpenDetails) {
                             Icon(
                                 Icons.Outlined.Info,

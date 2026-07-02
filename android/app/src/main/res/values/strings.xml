@@ -115,9 +115,44 @@
     <string name="recip_sources">Sources</string>
     <string name="recip_source_page">Source page</string>
     <string name="recip_download_link">Download link</string>
+    <string name="recip_reference">Reference</string>
 
+    <!-- Reciprocity core vocabulary: canonical English produced by the pure-
+         Kotlin core (confidence short labels, source/calculation model labels,
+         status detail); localized at the display boundary by
+         LocalizedCoreVocabulary. Values must stay byte-identical to the core
+         literals they map. -->
+    <string name="recip_details_title">Reciprocity Details</string>
+    <string name="recip_value_formula_derived">Formula-derived</string>
+    <string name="recip_value_table_derived">Table-derived</string>
+    <string name="recip_value_no_correction">No correction</string>
+    <string name="recip_value_no_quantified_prediction">No quantified prediction</string>
+    <string name="recip_value_outside_guidance">Outside guidance</string>
+    <string name="recip_value_manufacturer_formula">Manufacturer formula</string>
+    <string name="recip_value_manufacturer_table">Manufacturer table</string>
+    <string name="recip_value_manufacturer_range_guidance">Manufacturer range guidance</string>
+    <string name="recip_value_manufacturer_limited_guidance">Manufacturer limited guidance</string>
+    <string name="recip_value_limited_guidance">Limited guidance</string>
+    <string name="recip_value_guarded_formula">Guarded formula</string>
+    <string name="recip_value_app_derived_guarded_formula">App-derived guarded formula</string>
+    <string name="recip_value_unsupported">Unsupported</string>
+    <string name="recip_value_user_defined">User-defined</string>
+    <string name="recip_value_official_guidance">Official guidance</string>
+    <string name="recip_value_unofficial_practical">Unofficial practical</string>
+    <string name="recip_detail_no_official_beyond_range">No official quantified prediction is available beyond this range.</string>
 
+    <!-- Timer exposure-source display labels (canonical tokens captured in
+         TimerIdentity.subtitle; localized at display). The corrected-exposure
+         timer row reads "Reciprocity" via shooting_reciprocity (iOS parity). -->
+    <string name="timer_source_calculated">Calculated</string>
+    <string name="timer_source_adjusted">Adjusted Exposure</string>
+    <string name="timer_source_target">Target Exposure</string>
 
+    <!-- Target shutter stop difference (%1$s = signed magnitude, e.g. "-7 1/3") -->
+    <string name="target_stops_format">%1$s stops</string>
+    <string name="target_stop_format">%1$s stop</string>
+    <string name="target_mode_quick">Quick</string>
+    <string name="target_mode_fine">Fine</string>
 
 
     <!-- Custom film editor -->
@@ -147,6 +182,7 @@
     <string name="cf_notes">Notes</string>
     <string name="cf_reference_url">Reference URL</string>
     <string name="cf_create_custom_formula">Create Custom Formula</string>
+    <string name="cf_unlimited">Unlimited</string>
 
     <!-- Film picker -->
     <string name="films_title">Films</string>

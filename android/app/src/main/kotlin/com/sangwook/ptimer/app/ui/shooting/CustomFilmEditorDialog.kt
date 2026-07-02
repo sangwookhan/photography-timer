@@ -408,7 +408,7 @@ internal fun CustomFilmEditorDialog(
                     )
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                EditorRow(stringResource(R.string.cf_source_data), durationRowLabel(sourceThrough.ifBlank { "Unlimited" }), editing == EditField.SourceData) { toggle(EditField.SourceData) }
+                EditorRow(stringResource(R.string.cf_source_data), localizedDurationRowLabel(sourceThrough.ifBlank { "Unlimited" }), editing == EditField.SourceData) { toggle(EditField.SourceData) }
                 if (editing == EditField.SourceData) {
                     ValueEditPanel(
                         sourceThrough, { sourceThrough = it }, step = null, presets = SOURCE_PRESETS, onClose = { editing = null },

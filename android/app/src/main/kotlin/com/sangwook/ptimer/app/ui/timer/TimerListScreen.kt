@@ -64,6 +64,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedFilmName
+import com.sangwook.ptimer.app.ui.localizedTimerSubtitle
+import com.sangwook.ptimer.app.ui.localizedTimerTitle
 import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
@@ -408,7 +411,8 @@ private fun MiniTimerCard(
                 )
                 Text(
                     if (terminal) relativeTimeCompactLocalized(card.endDate, now)
-                    else card.identity.filmName?.takeIf { it.isNotBlank() } ?: stringResource(R.string.no_film),
+                    else card.identity.filmName?.takeIf { it.isNotBlank() }?.let { localizedFilmName(it) }
+                        ?: stringResource(R.string.no_film),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -578,12 +582,12 @@ private fun TimerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(card.identity.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(localizedTimerTitle(card.identity.title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 StatusBadge(card.status)
             }
             if (card.identity.subtitle.isNotEmpty()) {
                 Text(
-                    card.identity.subtitle,
+                    localizedTimerSubtitle(card.identity.subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

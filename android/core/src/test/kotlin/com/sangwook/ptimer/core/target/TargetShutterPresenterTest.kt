@@ -57,4 +57,29 @@ class TargetShutterPresenterTest {
         assertEquals(TargetShutterStopDifferenceKind.match, diff.kind)
         assertTrue(diff.formattedText == "0 stops")
     }
+
+    // PTIMER-183: the display decomposition (signed magnitude + plurality)
+    // must stay consistent with the canonical formattedText so the app layer
+    // can attach a localized unit without changing the English rendering.
+
+    @Test
+    fun stopDifferenceDecompositionMatchesFormattedText() {
+        val plural = TargetShutterPresenter.formatStopDifference(-(7.0 + 1.0 / 3.0))
+        assertEquals("-7 1/3 stops", plural.formattedText)
+        assertEquals("-7 1/3", plural.signedMagnitudeText)
+        assertTrue(plural.isPluralStops)
+
+        val singular = TargetShutterPresenter.formatStopDifference(2.0 / 3.0)
+        assertEquals("+2/3 stop", singular.formattedText)
+        assertEquals("+2/3", singular.signedMagnitudeText)
+        assertTrue(!singular.isPluralStops)
+    }
+
+    @Test
+    fun matchDecompositionIsZeroWithPluralUnit() {
+        val match = TargetShutterPresenter.formatStopDifference(0.001)
+        assertEquals("0 stops", match.formattedText)
+        assertEquals("0", match.signedMagnitudeText)
+        assertTrue(match.isPluralStops)
+    }
 }

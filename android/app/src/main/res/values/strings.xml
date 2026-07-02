@@ -1,5 +1,256 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PTimer</string>
-    <string name="placeholder_message">PTimer (Android) — placeholder</string>
+    <!-- Product name: canonical, never translated. -->
+    <string name="app_name" translatable="false">PTimer</string>
+    <string name="product_name" translatable="false">Photography Timer</string>
+    <string name="placeholder_message" translatable="false">PTimer (Android) — placeholder</string>
+
+    <!-- Common actions -->
+    <string name="action_reset">Reset</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_create">Create</string>
+    <string name="action_done">Done</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_close">Close</string>
+    <string name="common_optional">Optional</string>
+    <string name="common_required">Required</string>
+    <string name="common_off">Off</string>
+
+    <!-- Shooting flow -->
+    <string name="shooting_film">Film</string>
+    <string name="shooting_base_shutter">Base Shutter</string>
+    <string name="shooting_nd_filter">ND Filter</string>
+    <string name="shooting_reciprocity">Reciprocity</string>
+    <string name="shooting_reciprocity_details_cd">Reciprocity details</string>
+    <string name="shooting_adjusted_shutter">Adjusted Shutter</string>
+    <string name="shooting_corrected_exposure">Corrected Exposure</string>
+    <string name="shooting_no_corrected_value">No corrected value</string>
+    <string name="notation_stops">Stops</string>
+    <string name="notation_od" translatable="false">OD</string>
+    <string name="notation_nd" translatable="false">ND</string>
+    <string name="reset_shooting_title">Reset shooting setup?</string>
+    <string name="reset_settings">Reset settings</string>
+    <string name="reset_settings_and_name">Reset settings and name</string>
+    <string name="rename_camera_title">Rename camera</string>
+    <string name="camera_name">Camera name</string>
+
+    <!-- Target shutter -->
+    <string name="target_shutter_label">Target Shutter</string>
+    <string name="target_use">Use Target Shutter</string>
+
+    <!-- Timer workspace / history -->
+    <string name="timers_header">Timers</string>
+    <string name="history_header">History</string>
+    <string name="no_timers">No timers yet</string>
+    <string name="view_all">View all</string>
+    <string name="no_film">No film</string>
+    <string name="alarm_sounding">Alarm sounding — tap to stop</string>
+    <string name="timer_remaining_qualifier">left</string>
+
+    <!-- Timer status -->
+    <string name="status_running">Running</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_done">Done</string>
+    <string name="status_canceled">Canceled</string>
+
+    <!-- Timer secondary lines (%1$s = time, %2$s = relative age, %3$s = remaining-at-cancel) -->
+    <string name="timer_ends">Ends %1$s</string>
+    <string name="timer_completed">Completed %1$s · %2$s</string>
+    <string name="timer_canceled">Canceled %1$s · %2$s</string>
+    <string name="timer_canceled_left">Canceled %1$s · %2$s · %3$s left</string>
+
+    <!-- Timer basis line (%1$s = base, %2$s = ND, %3$s = adjusted) -->
+    <string name="timer_basis_base_nd">Base %1$s · %2$s</string>
+    <string name="timer_basis_base_nd_adj">Base %1$s · %2$s · Adj %3$s</string>
+
+    <!-- Relative time (compact) -->
+    <string name="rel_just_now">just now</string>
+    <string name="rel_seconds_ago">%1$ds ago</string>
+    <string name="rel_minutes_ago">%1$dm ago</string>
+    <string name="rel_hours_ago">%1$dh ago</string>
+    <string name="rel_days_ago">%1$dd ago</string>
+    <!-- Relative time (long) -->
+    <string name="rel_min_ago">%1$d min ago</string>
+    <string name="rel_hr_ago">%1$d hr ago</string>
+    <plurals name="rel_days_ago_long">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+
+    <!-- Timer actions -->
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_repeat_shot">Repeat Shot</string>
+
+    <!-- Repeat-shot (internal clone) confirmation -->
+    <string name="repeat_shot_title">Repeat shot?</string>
+    <string name="repeat_shot_message">A new timer will start with the same settings. This record will stay unchanged.</string>
+    <!-- Cancel-timer confirmation -->
+    <string name="cancel_timer_title">Cancel timer</string>
+    <string name="cancel_timer_message">This timer will be marked as canceled and moved to history.</string>
+    <string name="cancel_timer_confirm">Cancel timer</string>
+    <!-- Remove-timer confirmation -->
+    <string name="remove_timer_title">Remove timer</string>
+    <string name="remove_timer_message">This timer record will be removed.</string>
+    <!-- Clear completed confirmation -->
+    <string name="clear_completed_title">Clear completed timers?</string>
+    <string name="clear_completed_message">Completed timer records will be removed. Canceled timers will be kept.</string>
+
+    <!-- Reciprocity details -->
+    <string name="recip_status">Status</string>
+    <string name="recip_model">Reciprocity model</string>
+    <string name="recip_source">Source</string>
+    <string name="recip_calculation">Calculation</string>
+    <string name="recip_details">Details</string>
+    <string name="recip_notes">Notes</string>
+    <string name="recip_reference_url">Reference URL</string>
+    <string name="recip_equation">Equation</string>
+    <string name="recip_graph">Reciprocity graph</string>
+    <string name="recip_legend">Legend</string>
+    <string name="recip_sources">Sources</string>
+    <string name="recip_source_page">Source page</string>
+    <string name="recip_download_link">Download link</string>
+    <string name="recip_reference">Reference</string>
+
+    <!-- Reciprocity core vocabulary: canonical English produced by the pure-
+         Kotlin core (confidence short labels, source/calculation model labels,
+         status detail); localized at the display boundary by
+         LocalizedCoreVocabulary. Values must stay byte-identical to the core
+         literals they map. -->
+    <string name="recip_details_title">Reciprocity Details</string>
+    <string name="recip_value_formula_derived">Formula-derived</string>
+    <string name="recip_value_table_derived">Table-derived</string>
+    <string name="recip_value_no_correction">No correction</string>
+    <string name="recip_value_no_quantified_prediction">No quantified prediction</string>
+    <string name="recip_value_outside_guidance">Outside guidance</string>
+    <string name="recip_value_manufacturer_formula">Manufacturer formula</string>
+    <string name="recip_value_manufacturer_table">Manufacturer table</string>
+    <string name="recip_value_manufacturer_range_guidance">Manufacturer range guidance</string>
+    <string name="recip_value_manufacturer_limited_guidance">Manufacturer limited guidance</string>
+    <string name="recip_value_limited_guidance">Limited guidance</string>
+    <string name="recip_value_guarded_formula">Guarded formula</string>
+    <string name="recip_value_app_derived_guarded_formula">App-derived guarded formula</string>
+    <string name="recip_value_unsupported">Unsupported</string>
+    <string name="recip_value_user_defined">User-defined</string>
+    <string name="recip_value_personal_test">Personal test</string>
+    <string name="recip_value_community_reference">Community reference</string>
+    <string name="recip_value_unknown_source">Unknown source</string>
+    <string name="cf_fit_good">Good fit</string>
+    <string name="cf_fit_borderline">Borderline fit</string>
+    <string name="cf_fit_poor">Poor fit</string>
+    <string name="cf_fit_shorten_warning">The fitted formula would shorten exposure with the current table boundaries. Raise no correction or add a lower-range anchor. The table remains your reliable calculation.</string>
+    <string name="recip_guidance_longer_exposures">Longer exposures: test under your conditions.</string>
+    <string name="recip_note_official_sheet_no_data">Official sheet found, but no reciprocity correction data was found.</string>
+    <string name="recip_value_official_guidance">Official guidance</string>
+    <string name="recip_value_unofficial_practical">Unofficial practical</string>
+    <string name="recip_detail_no_official_beyond_range">No official quantified prediction is available beyond this range.</string>
+
+    <!-- Timer exposure-source display labels (canonical tokens captured in
+         TimerIdentity.subtitle; localized at display). The corrected-exposure
+         timer row reads "Reciprocity" via shooting_reciprocity (iOS parity). -->
+    <string name="timer_source_calculated">Calculated</string>
+    <string name="timer_source_adjusted">Adjusted Exposure</string>
+    <string name="timer_source_target">Target Exposure</string>
+
+    <!-- Target shutter stop difference (%1$s = signed magnitude, e.g. "-7 1/3") -->
+    <string name="target_stops_format">%1$s stops</string>
+    <string name="target_stop_format">%1$s stop</string>
+    <string name="target_mode_quick">Quick</string>
+    <string name="target_mode_fine">Fine</string>
+
+
+    <!-- Custom film editor -->
+    <string name="cf_new">New custom film</string>
+    <string name="cf_edit">Edit custom film</string>
+    <string name="cf_formula">Formula</string>
+    <string name="cf_table">Table</string>
+    <string name="cf_manufacturer">Manufacturer</string>
+    <string name="cf_label">Label</string>
+    <string name="cf_no_correction">No correction</string>
+    <string name="cf_source_data">Source data</string>
+    <string name="cf_no_correction_default_formula">1s (auto)</string>
+    <string name="cf_no_correction_hint_formula">Exposures at or below this metered time need no correction.</string>
+    <string name="cf_source_hint_formula">The longest metered time the formula is backed by. Past it the result still computes but reads as \"beyond source range\". Use Unlimited if there\'s no published limit.</string>
+    <string name="cf_tc0_label">Tc₀ — corrected point (s)</string>
+    <string name="cf_tm0_label">Tm₀ — metered point (s)</string>
+    <string name="cf_p_label">p — curve strength</string>
+    <string name="cf_b_label">b — fixed add-on (s)</string>
+    <string name="cf_table_header">Table (Tm → Tc)</string>
+    <string name="cf_table_instructions">Metered to corrected seconds. Fill at least two rows; both the metered time and its correction must increase down the list.</string>
+    <string name="cf_add_row">Add row</string>
+    <string name="cf_remove_row">Remove row</string>
+    <string name="cf_no_correction_hint_table">Metered times at or below this stay uncorrected. Leave blank to auto-set it just below the first anchor.</string>
+    <string name="cf_source_range">Through %1$ss · last anchor</string>
+    <string name="cf_source_last_anchor">Last anchor</string>
+    <string name="cf_details">Details</string>
+    <string name="cf_notes">Notes</string>
+    <string name="cf_reference_url">Reference URL</string>
+    <string name="cf_create_custom_formula">Create Custom Formula</string>
+    <string name="cf_unlimited">Unlimited</string>
+
+    <!-- Film picker -->
+    <string name="films_title">Films</string>
+    <string name="create_custom_film">Create custom film</string>
+    <string name="my_films">My films</string>
+
+    <!-- About -->
+    <string name="about_title">About</string>
+    <string name="about_version">Version</string>
+    <string name="about_build">Build</string>
+    <string name="about_legal">Legal</string>
+    <string name="about_film_data">Film Data</string>
+    <string name="about_website">Photography Timer Website</string>
+    <string name="about_tagline">Exposure calculator and countdown timer for film and digital photography.</string>
+    <string name="about_copyright" translatable="false">Copyright © 2026 Sangwook Han</string>
+    <string name="about_license">Licensed under the Apache License, Version 2.0. The full license text is available in this repository\'s LICENSE file.</string>
+    <string name="about_film_data_provenance">Film data is centered on official data sheets and manufacturer publications, with publicly available references used as supplemental sources where applicable.</string>
+    <string name="about_film_data_policy">Photography Timer stores normalized factual values and source references; it does not redistribute third-party datasheet PDFs or copied source documents.</string>
+
+    <!-- Notification channels -->
+    <string name="notif_channel_running_name">Running timers</string>
+    <string name="notif_channel_running_desc">Shows while a timer is counting down</string>
+    <string name="notif_channel_alarm_name">Timer alarm</string>
+    <string name="notif_channel_alarm_desc">Shows a finished timer; the alarm sound plays on the alarm volume</string>
+    <string name="notif_channel_prealert_name">Timer pre-alerts</string>
+    <string name="notif_channel_prealert_desc">Vibrates as a timer is about to finish</string>
+    <!-- Notification content -->
+    <string name="notif_complete_title">Timer complete</string>
+    <string name="notif_timer_fallback">Timer</string>
+    <string name="notif_prealert_remaining">%1$ds remaining</string>
+
+    <!-- Exact-alarm warning banner -->
+    <string name="alarm_warning_title">Exact timer alerts are off.</string>
+    <string name="alarm_warning_body">Allow Alarms &amp; reminders for more reliable completion alerts.</string>
+    <string name="alarm_warning_open_settings">Open settings</string>
+    <!-- Custom film leftovers -->
+    <string name="cf_validation_table">Add a label and at least two metered→corrected rows.</string>
+    <string name="cf_validation_table_order">Each row\'s metered time and its correction must increase down the list, and a correction can\'t be shorter than its metered time.</string>
+    <string name="cf_validation_formula_name">Add a film name (other fields fall back to defaults).</string>
+    <string name="cf_validation_formula_shorten">This formula would shorten exposure in its range. Raise Tc₀ or p, or lower b.</string>
+    <string name="cf_no_correction_auto_fmt">%1$ss (auto)</string>
+    <string name="cf_auto">auto</string>
+    <string name="cf_show_formula_help">Show formula help</string>
+    <string name="cf_hide_formula_help">Hide formula help</string>
+    <string name="cf_help_tc0">Tc₀ — corrected exposure at the metered anchor.</string>
+    <string name="cf_help_tm0">Tm₀ — metered exposure used as the anchor.</string>
+    <string name="cf_help_p">p — curve strength; higher gives stronger correction at long exposures.</string>
+    <string name="cf_help_b">b — fixed time added after the curve.</string>
+    <string name="cf_help_no_correction">No correction — Tm at or below this value stays unchanged.</string>
+    <string name="cf_help_source_data">Source data — results past this value read as beyond source range.</string>
+    <string name="cf_app_derived_formula">APP-DERIVED FORMULA</string>
+    <string name="cf_two_anchor_note">Fit passes through the two anchors exactly — add more to judge curve quality.</string>
+    <string name="cf_not_manufacturer">App-derived from your table anchors. Not manufacturer-published guidance.</string>
+    <string name="cf_table_saved_note">Your table is saved, then a separate custom formula film is created from this fit.</string>
+    <string name="cf_preview">Preview</string>
+    <string name="cf_preview_fill">Fill in the fields above to preview the reciprocity curve.</string>
+    <string name="cf_calculation_basis">CALCULATION BASIS</string>
+    <string name="cf_reference_points">REFERENCE POINTS · SOURCE TABLE</string>
+    <string name="filmpicker_add_cd">Add custom film</string>
+    <string name="common_selected_cd">Selected</string>
+    <string name="filmpicker_actions_cd">Custom film actions</string>
 </resources>

@@ -29,14 +29,16 @@ object TimerBasisPresenter {
         includesAdjusted: Boolean,
         mode: NDNotationMode,
         formatShutter: (Double) -> String,
+        baseNdFormat: String = "Base %1\$s · %2\$s",
+        baseNdAdjustedFormat: String = "Base %1\$s · %2\$s · Adj %3\$s",
     ): String? {
         if (ndStops == null || baseShutterSeconds == null) return null
         val nd = NDNotationFormatter.display(ndStops, mode).inline
         val base = formatShutter(baseShutterSeconds)
         return if (includesAdjusted && adjustedShutterSeconds != null) {
-            "Base $base · $nd · Adj ${formatShutter(adjustedShutterSeconds)}"
+            String.format(baseNdAdjustedFormat, base, nd, formatShutter(adjustedShutterSeconds))
         } else {
-            "Base $base · $nd"
+            String.format(baseNdFormat, base, nd)
         }
     }
 }

@@ -20,6 +20,12 @@ data class TargetShutterStopDifference(
     val stops: Double,
     val kind: TargetShutterStopDifferenceKind,
     val formattedText: String,
+    // Display decomposition (PTIMER-183): the signed magnitude without the
+    // unit ("-7 1/3", "0") plus unit plurality, so the app layer can attach a
+    // localized stop/stops unit. [formattedText] stays the canonical English
+    // form.
+    val signedMagnitudeText: String = "",
+    val isPluralStops: Boolean = false,
 )
 
 data class TargetShutterAvailableState(
@@ -78,21 +84,37 @@ object TargetShutterPresenter {
     /** Formats a raw signed stop number into the readable comparison form. */
     fun formatStopDifference(stops: Double): TargetShutterStopDifference {
         if (!stops.isFinite()) {
-            return TargetShutterStopDifference(0.0, TargetShutterStopDifferenceKind.match, "0 stops")
+            return TargetShutterStopDifference(
+                0.0, TargetShutterStopDifferenceKind.match, "0 stops",
+                signedMagnitudeText = "0", isPluralStops = true,
+            )
         }
         // Match zone is "anything that rounds to 0 thirds" — the same band
         // the third-snap formatter uses, so a small drift cannot leak out
         // as a signed `+0 stops`.
         val snappedTotalThirds = maxOf(0, roundedThirds(abs(stops)))
         if (snappedTotalThirds == 0) {
-            return TargetShutterStopDifference(stops, TargetShutterStopDifferenceKind.match, "0 stops")
+            return TargetShutterStopDifference(
+                stops, TargetShutterStopDifferenceKind.match, "0 stops",
+                signedMagnitudeText = "0", isPluralStops = true,
+            )
         }
         val kind = if (stops > 0) {
             TargetShutterStopDifferenceKind.longerThanComparison
         } else {
             TargetShutterStopDifferenceKind.shorterThanComparison
         }
-        return TargetShutterStopDifference(stops, kind, formattedStopText(stops))
+        // ASCII sign + fractions: the Unicode minus (U+2212) and vulgar
+        // fractions render inconsistently on Android, making the negative
+        // case read as blank, so keep this plain-ASCII.
+        val sign = if (stops > 0) "+" else "-"
+        val snapped = snappedToThirdStop(abs(stops))
+        val unit = if (snapped.isPlural) "stops" else "stop"
+        val signedMagnitude = "$sign${snapped.text}"
+        return TargetShutterStopDifference(
+            stops, kind, "$signedMagnitude $unit",
+            signedMagnitudeText = signedMagnitude, isPluralStops = snapped.isPlural,
+        )
     }
 
     private fun makeAvailable(
@@ -111,16 +133,6 @@ object TargetShutterPresenter {
                 stopDifference = formatStopDifference(stops),
             ),
         )
-    }
-
-    private fun formattedStopText(stops: Double): String {
-        // ASCII sign + fractions: the Unicode minus (U+2212) and vulgar
-        // fractions render inconsistently on Android, making the negative
-        // case read as blank, so keep this plain-ASCII.
-        val sign = if (stops > 0) "+" else "-"
-        val snapped = snappedToThirdStop(abs(stops))
-        val unit = if (snapped.isPlural) "stops" else "stop"
-        return "$sign${snapped.text} $unit"
     }
 
     private data class SnappedThirdStop(val text: String, val isPlural: Boolean)

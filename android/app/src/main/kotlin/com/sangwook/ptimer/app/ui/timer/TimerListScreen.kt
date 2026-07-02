@@ -59,7 +59,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedFilmName
+import com.sangwook.ptimer.app.ui.localizedTimerSubtitle
+import com.sangwook.ptimer.app.ui.localizedTimerTitle
 import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
@@ -111,7 +118,7 @@ fun MiniTimerBar(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                "No timers yet",
+                stringResource(R.string.no_timers),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -204,9 +211,9 @@ fun FullTimerList(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onCollapse) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close")
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
                 }
-                SectionHeader("Timers")
+                SectionHeader(stringResource(R.string.timers_header))
             }
         }
         if (state.active.isEmpty() && state.history.isEmpty()) {
@@ -230,11 +237,11 @@ fun FullTimerList(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionHeader("History")
+                    SectionHeader(stringResource(R.string.history_header))
                     // Clear removes completed records only; canceled history is
                     // preserved (iOS clearCompletedTimers, label kept "Clear").
                     // Routed through the confirmation dialog like the card actions.
-                    TextButton(onClick = { confirm = clearCompletedConfirm() }) { Text("Clear") }
+                    TextButton(onClick = { confirm = clearCompletedConfirm() }) { Text(stringResource(R.string.action_clear)) }
                 }
             }
             items(state.history, key = { it.id }) { card ->
@@ -251,21 +258,21 @@ fun FullTimerList(
     confirm?.let { req ->
         AlertDialog(
             onDismissRequest = { confirm = null },
-            title = { Text(req.title) },
-            text = { Text(req.message) },
+            title = { Text(stringResource(req.titleRes)) },
+            text = { Text(stringResource(req.messageRes)) },
             confirmButton = {
                 TextButton(onClick = {
                     onEvent(req.intent)
                     confirm = null
                 }) {
                     Text(
-                        req.confirmLabel,
+                        stringResource(req.confirmRes),
                         color = if (req.destructive) MaterialTheme.colorScheme.error else Color.Unspecified,
                     )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirm = null }) { Text("Cancel") }
+                TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -284,7 +291,7 @@ private fun SectionHeader(text: String) {
 @Composable
 private fun EmptyState() {
     Box(modifier = Modifier.fillMaxWidth().padding(top = 64.dp), contentAlignment = Alignment.Center) {
-        Text("No timers yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.no_timers), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -362,10 +369,10 @@ private fun MiniTimerCard(
                         TimerStatus.canceled -> Icons.Filled.Close
                     },
                     contentDescription = when (card.status) {
-                        TimerStatus.running -> "Running"
-                        TimerStatus.paused -> "Paused"
-                        TimerStatus.completed -> "Done"
-                        TimerStatus.canceled -> "Canceled"
+                        TimerStatus.running -> stringResource(R.string.status_running)
+                        TimerStatus.paused -> stringResource(R.string.status_paused)
+                        TimerStatus.completed -> stringResource(R.string.status_done)
+                        TimerStatus.canceled -> stringResource(R.string.status_canceled)
                     },
                     tint = when (card.status) {
                         TimerStatus.running -> MaterialTheme.colorScheme.primary
@@ -391,8 +398,8 @@ private fun MiniTimerCard(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     when (card.status) {
-                        TimerStatus.completed -> "Done"
-                        TimerStatus.canceled -> "Canceled"
+                        TimerStatus.completed -> stringResource(R.string.status_done)
+                        TimerStatus.canceled -> stringResource(R.string.status_canceled)
                         else -> calc.formatExtendedClock(card.remainingSeconds)
                     },
                     style = MaterialTheme.typography.titleMedium,
@@ -403,8 +410,9 @@ private fun MiniTimerCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    if (terminal) relativeTime(card.endDate, now)
-                    else card.identity.filmName?.takeIf { it.isNotBlank() } ?: "No film",
+                    if (terminal) relativeTimeCompactLocalized(card.endDate, now)
+                    else card.identity.filmName?.takeIf { it.isNotBlank() }?.let { localizedFilmName(it) }
+                        ?: stringResource(R.string.no_film),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -517,7 +525,7 @@ private fun MiniOverflowTile(count: Int, onClick: () -> Unit) {
         ) {
             Text("+$count", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "View all",
+                stringResource(R.string.view_all),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -564,7 +572,7 @@ private fun TimerCard(
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             if (isAlarmSounding) {
                 Text(
-                    "Alarm sounding — tap to stop",
+                    stringResource(R.string.alarm_sounding),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -574,12 +582,12 @@ private fun TimerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(card.identity.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(localizedTimerTitle(card.identity.title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 StatusBadge(card.status)
             }
             if (card.identity.subtitle.isNotEmpty()) {
                 Text(
-                    card.identity.subtitle,
+                    localizedTimerSubtitle(card.identity.subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -614,7 +622,7 @@ private fun TimerCard(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "left",
+                            stringResource(R.string.timer_remaining_qualifier),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 2.dp),
@@ -624,7 +632,7 @@ private fun TimerCard(
                     // Terminal state is clear but calmer — not the heavy mono
                     // headline used for a live countdown (PTIMER-198).
                     Text(
-                        if (card.status == TimerStatus.completed) "Done" else "Canceled",
+                        if (card.status == TimerStatus.completed) stringResource(R.string.status_done) else stringResource(R.string.status_canceled),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.End,
                         style = MaterialTheme.typography.titleMedium,
@@ -635,15 +643,27 @@ private fun TimerCard(
             }
 
             val secondary = when (card.status) {
-                TimerStatus.running -> "Ends ${endFormatter.format(card.endDate)}"
-                TimerStatus.paused -> "Paused"
+                TimerStatus.running ->
+                    stringResource(R.string.timer_ends, endFormatter.format(card.endDate))
+                TimerStatus.paused -> stringResource(R.string.status_paused)
                 TimerStatus.completed ->
-                    "Completed ${endFormatter.format(card.endDate)} · ${relativeTimeLong(card.endDate, now)}"
+                    stringResource(
+                        R.string.timer_completed,
+                        endFormatter.format(card.endDate),
+                        relativeTimeLongLocalized(card.endDate, now),
+                    )
                 TimerStatus.canceled -> {
-                    val base = "Canceled ${endFormatter.format(card.endDate)} · ${relativeTimeLong(card.endDate, now)}"
-                    val left = card.remainingAtCancelSeconds?.takeIf { it > 0.0 }
-                        ?.let { " · ${calc.formatExtendedClock(it)} left" } ?: ""
-                    base + left
+                    val time = endFormatter.format(card.endDate)
+                    val rel = relativeTimeLongLocalized(card.endDate, now)
+                    val leftSeconds = card.remainingAtCancelSeconds?.takeIf { it > 0.0 }
+                    if (leftSeconds != null) {
+                        stringResource(
+                            R.string.timer_canceled_left,
+                            time, rel, calc.formatExtendedClock(leftSeconds),
+                        )
+                    } else {
+                        stringResource(R.string.timer_canceled, time, rel)
+                    }
                 }
             }
             Text(
@@ -661,6 +681,8 @@ private fun TimerCard(
                 includesAdjusted = card.identity.basisIncludesAdjusted,
                 mode = ndNotationMode,
                 formatShutter = ::basisShutterLabel,
+                baseNdFormat = stringResource(R.string.timer_basis_base_nd),
+                baseNdAdjustedFormat = stringResource(R.string.timer_basis_base_nd_adj),
             ) ?: card.identity.baseLine.takeIf { it.isNotEmpty() }
             if (basisText != null) {
                 Row(
@@ -700,10 +722,10 @@ private fun TimerCard(
 @Composable
 private fun StatusBadge(status: TimerStatus) {
     val label = when (status) {
-        TimerStatus.running -> "Running"
-        TimerStatus.paused -> "Paused"
-        TimerStatus.completed -> "Done"
-        TimerStatus.canceled -> "Canceled"
+        TimerStatus.running -> stringResource(R.string.status_running)
+        TimerStatus.paused -> stringResource(R.string.status_paused)
+        TimerStatus.completed -> stringResource(R.string.status_done)
+        TimerStatus.canceled -> stringResource(R.string.status_canceled)
     }
     // Active states use the accent color so the live status reads first;
     // terminal states stay muted so stacked history cards don't shout.
@@ -722,41 +744,43 @@ private fun StatusBadge(status: TimerStatus) {
  */
 private data class ConfirmRequest(
     val intent: ShootingIntent,
-    val title: String,
-    val message: String,
-    val confirmLabel: String,
+    @StringRes val titleRes: Int,
+    @StringRes val messageRes: Int,
+    @StringRes val confirmRes: Int,
     val destructive: Boolean,
 )
 
+// The user-facing "clone" action reads as Repeat Shot / 다시 촬영; the internal
+// ShootingIntent.Clone name is unchanged.
 private fun cloneConfirm(id: UUID) = ConfirmRequest(
     intent = ShootingIntent.Clone(id),
-    title = "Clone timer",
-    message = "Start a new timer with the same settings. This timer will stay unchanged.",
-    confirmLabel = "Clone",
+    titleRes = R.string.repeat_shot_title,
+    messageRes = R.string.repeat_shot_message,
+    confirmRes = R.string.action_repeat_shot,
     destructive = false,
 )
 
 private fun cancelConfirm(id: UUID) = ConfirmRequest(
     intent = ShootingIntent.Cancel(id),
-    title = "Cancel timer",
-    message = "This timer will be marked as canceled and moved to history.",
-    confirmLabel = "Cancel timer",
+    titleRes = R.string.cancel_timer_title,
+    messageRes = R.string.cancel_timer_message,
+    confirmRes = R.string.cancel_timer_confirm,
     destructive = true,
 )
 
 private fun removeConfirm(id: UUID) = ConfirmRequest(
     intent = ShootingIntent.Remove(id),
-    title = "Remove timer",
-    message = "This timer record will be removed.",
-    confirmLabel = "Remove",
+    titleRes = R.string.remove_timer_title,
+    messageRes = R.string.remove_timer_message,
+    confirmRes = R.string.action_remove,
     destructive = true,
 )
 
 private fun clearCompletedConfirm() = ConfirmRequest(
     intent = ShootingIntent.ClearCompleted,
-    title = "Clear completed timers?",
-    message = "Completed timer records will be removed. Canceled timers will be kept.",
-    confirmLabel = "Clear",
+    titleRes = R.string.clear_completed_title,
+    messageRes = R.string.clear_completed_message,
+    confirmRes = R.string.action_clear,
     destructive = true,
 )
 
@@ -773,19 +797,19 @@ private fun CardActions(
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         when (card.status) {
             TimerStatus.running -> {
-                CompactFilledAction("Pause") { onEvent(ShootingIntent.Pause(card.id)) }
-                CompactOutlinedAction("Clone") { onConfirm(cloneConfirm(card.id)) }
-                CompactOutlinedAction("Cancel") { onConfirm(cancelConfirm(card.id)) }
+                CompactFilledAction(stringResource(R.string.action_pause)) { onEvent(ShootingIntent.Pause(card.id)) }
+                CompactOutlinedAction(stringResource(R.string.action_repeat_shot)) { onConfirm(cloneConfirm(card.id)) }
+                CompactOutlinedAction(stringResource(R.string.action_cancel)) { onConfirm(cancelConfirm(card.id)) }
             }
             TimerStatus.paused -> {
-                CompactFilledAction("Resume") { onEvent(ShootingIntent.Resume(card.id)) }
-                CompactOutlinedAction("Clone") { onConfirm(cloneConfirm(card.id)) }
-                CompactOutlinedAction("Cancel") { onConfirm(cancelConfirm(card.id)) }
-                CompactOutlinedAction("Remove") { onConfirm(removeConfirm(card.id)) }
+                CompactFilledAction(stringResource(R.string.action_resume)) { onEvent(ShootingIntent.Resume(card.id)) }
+                CompactOutlinedAction(stringResource(R.string.action_repeat_shot)) { onConfirm(cloneConfirm(card.id)) }
+                CompactOutlinedAction(stringResource(R.string.action_cancel)) { onConfirm(cancelConfirm(card.id)) }
+                CompactOutlinedAction(stringResource(R.string.action_remove)) { onConfirm(removeConfirm(card.id)) }
             }
             TimerStatus.completed, TimerStatus.canceled -> {
-                CompactFilledAction("Clone") { onConfirm(cloneConfirm(card.id)) }
-                CompactOutlinedAction("Remove") { onConfirm(removeConfirm(card.id)) }
+                CompactFilledAction(stringResource(R.string.action_repeat_shot)) { onConfirm(cloneConfirm(card.id)) }
+                CompactOutlinedAction(stringResource(R.string.action_remove)) { onConfirm(removeConfirm(card.id)) }
             }
         }
     }
@@ -867,6 +891,36 @@ internal fun relativeTimeLong(instant: Instant, now: Instant): String {
         else -> {
             val days = seconds / 86400
             "$days ${if (days == 1L) "day" else "days"} ago"
+        }
+    }
+}
+
+// Localized presentation wrappers used by the UI (PTIMER-183). The pure-JVM
+// [relativeTime]/[relativeTimeLong] above stay English and back the unit tests;
+// these Composable variants resolve the same thresholds through string
+// resources so the visible copy localizes.
+@Composable
+private fun relativeTimeCompactLocalized(instant: Instant, now: Instant): String {
+    val seconds = java.time.Duration.between(instant, now).seconds
+    return when {
+        seconds < 5 -> stringResource(R.string.rel_just_now)
+        seconds < 60 -> stringResource(R.string.rel_seconds_ago, seconds.toInt())
+        seconds < 3600 -> stringResource(R.string.rel_minutes_ago, (seconds / 60).toInt())
+        seconds < 86400 -> stringResource(R.string.rel_hours_ago, (seconds / 3600).toInt())
+        else -> stringResource(R.string.rel_days_ago, (seconds / 86400).toInt())
+    }
+}
+
+@Composable
+private fun relativeTimeLongLocalized(instant: Instant, now: Instant): String {
+    val seconds = java.time.Duration.between(instant, now).seconds
+    return when {
+        seconds < 60 -> stringResource(R.string.rel_just_now)
+        seconds < 3600 -> stringResource(R.string.rel_min_ago, (seconds / 60).toInt())
+        seconds < 86400 -> stringResource(R.string.rel_hr_ago, (seconds / 3600).toInt())
+        else -> {
+            val days = (seconds / 86400).toInt()
+            pluralStringResource(R.plurals.rel_days_ago_long, days, days)
         }
     }
 }

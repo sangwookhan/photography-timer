@@ -3,6 +3,9 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedCoreText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +50,7 @@ internal fun FittedFormulaSection(
 ) {
     Spacer(Modifier.height(16.dp))
     Text(
-        "APP-DERIVED FORMULA",
+        stringResource(R.string.cf_app_derived_formula),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -55,7 +58,7 @@ internal fun FittedFormulaSection(
     Spacer(Modifier.height(8.dp))
     when (outcome) {
         is CustomTableFittedFormula.Outcome.Unavailable -> {
-            Text(outcome.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(localizedCoreText(outcome.message), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         is CustomTableFittedFormula.Outcome.Available -> {
             val f = outcome.formula
@@ -90,7 +93,7 @@ internal fun FittedFormulaSection(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "${f.quality.displayLabel} · worst ${fitNum(f.worstAbsoluteStopError)} st",
+                "${localizedCoreText(f.quality.displayLabel)} · worst ${fitNum(f.worstAbsoluteStopError)} st",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = when (f.quality) {
@@ -102,24 +105,24 @@ internal fun FittedFormulaSection(
             if (f.isTwoAnchorExactFit) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Fit passes through the two anchors exactly — add more to judge curve quality.",
+                    stringResource(R.string.cf_two_anchor_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "App-derived from your table anchors. Not manufacturer-published guidance.",
+                stringResource(R.string.cf_not_manufacturer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
             Button(onClick = onCreateFormula, modifier = Modifier.fillMaxWidth()) {
-                Text("Create Custom Formula")
+                Text(stringResource(R.string.cf_create_custom_formula))
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Your table is saved, then a separate custom formula film is created from this fit.",
+                stringResource(R.string.cf_table_saved_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -142,14 +145,14 @@ internal fun ReciprocityPreviewSection(
 ) {
     Spacer(Modifier.height(16.dp))
     Text(
-        "Preview",
+        stringResource(R.string.cf_preview),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(8.dp))
     if (graph == null) {
         Text(
-            "Fill in the fields above to preview the reciprocity curve.",
+            stringResource(R.string.cf_preview_fill),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -180,7 +183,7 @@ internal fun ReciprocityPreviewSection(
 @Composable
 internal fun CalculationBasisBlock(basis: String) {
     Text(
-        "CALCULATION BASIS",
+        stringResource(R.string.cf_calculation_basis),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -249,7 +252,7 @@ internal fun CheckpointTable(rows: List<CustomFilmCheckpointRow>) {
 internal fun ReferencePointsSection(rows: List<CustomFilmReferencePointRow>) {
     Spacer(Modifier.height(16.dp))
     Text(
-        "REFERENCE POINTS · SOURCE TABLE",
+        stringResource(R.string.cf_reference_points),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

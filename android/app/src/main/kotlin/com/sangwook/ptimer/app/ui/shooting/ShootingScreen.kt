@@ -65,6 +65,10 @@ import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
+import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedCoreText
+import com.sangwook.ptimer.app.ui.localizedFilmName
 
 
 /**
@@ -177,7 +181,7 @@ fun ShootingScreen(
                             )
                             Icon(
                                 Icons.Filled.Edit,
-                                contentDescription = "Rename camera",
+                                contentDescription = stringResource(R.string.rename_camera_title),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -188,7 +192,7 @@ fun ShootingScreen(
                             // callbacks target the active slot, so gating on the
                             // active page also avoids resetting from a peeked page.
                             if (writesActiveSlot && pageState.canReset) {
-                                TextButton(onClick = { showResetConfirm = true }) { Text("Reset") }
+                                TextButton(onClick = { showResetConfirm = true }) { Text(stringResource(R.string.action_reset)) }
                             }
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
@@ -201,7 +205,7 @@ fun ShootingScreen(
                     }
 
                     // Film selector
-                    Text("Film", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.shooting_film), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(4.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
@@ -212,7 +216,7 @@ fun ShootingScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(pageState.selectedFilmName, style = MaterialTheme.typography.titleMedium)
+                            Text(localizedFilmName(pageState.selectedFilmName), style = MaterialTheme.typography.titleMedium)
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Choose film",
@@ -261,7 +265,7 @@ fun ShootingScreen(
                                     modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
                                     contentAlignment = Alignment.CenterStart,
                                 ) {
-                                    Text("Base Shutter", style = MaterialTheme.typography.labelLarge)
+                                    Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
                                 }
                                 SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterForPage, visibleCount = 3, itemHeight = 34.dp)
                             }
@@ -276,7 +280,7 @@ fun ShootingScreen(
                                     modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text("ND Filter", style = MaterialTheme.typography.labelLarge)
+                                    Text(stringResource(R.string.shooting_nd_filter), style = MaterialTheme.typography.labelLarge)
                                     Spacer(Modifier.weight(1f))
                                     NotationToggle(
                                         mode = pageState.ndNotationMode,
@@ -367,7 +371,7 @@ fun ShootingScreen(
     if (showResetConfirm) {
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { Text("Reset shooting setup?") },
+            title = { Text(stringResource(R.string.reset_shooting_title)) },
             // Two destructive choices: keep the camera name, or clear it
             // too. Stacked in the confirm slot (with Cancel) so the
             // single Reset entry point still gates the wipe behind a
@@ -375,12 +379,12 @@ fun ShootingScreen(
             confirmButton = {
                 Column(horizontalAlignment = Alignment.End) {
                     TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
-                        Text("Reset settings", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
                     }
                     TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
-                        Text("Reset settings and name", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
                     }
-                    TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+                    TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                 }
             },
         )
@@ -408,7 +412,7 @@ private fun NotationToggle(
     onSelect: (NDNotationMode) -> Unit,
 ) {
     val options = listOf(
-        NDNotationMode.STOPS to "Stops",
+        NDNotationMode.STOPS to stringResource(R.string.notation_stops),
         NDNotationMode.OPTICAL_DENSITY to "OD",
         NDNotationMode.FILTER_FACTOR to "ND",
     )
@@ -481,7 +485,7 @@ private fun ResultCard(
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
             ResultRow(
-                label = "Adjusted Shutter",
+                label = stringResource(R.string.shooting_adjusted_shutter),
                 value = state.adjustedText,
                 secondary = state.adjustedSecondsText,
                 valueColor = MaterialTheme.colorScheme.onSurface,
@@ -498,13 +502,13 @@ private fun ResultCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Reciprocity", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.shooting_reciprocity), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        state.confidenceLabel?.let { Pill(it) }
+                        state.confidenceLabel?.let { Pill(localizedCoreText(it)) }
                         IconButton(onClick = onOpenDetails) {
                             Icon(
                                 Icons.Outlined.Info,
-                                contentDescription = "Reciprocity details",
+                                contentDescription = stringResource(R.string.shooting_reciprocity_details_cd),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -512,8 +516,8 @@ private fun ResultCard(
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 ResultRow(
-                    label = "Corrected Exposure",
-                    value = state.correctedText ?: "No corrected value",
+                    label = stringResource(R.string.shooting_corrected_exposure),
+                    value = state.correctedText ?: stringResource(R.string.shooting_no_corrected_value),
                     secondary = state.correctedSecondsText,
                     valueColor = if (state.correctedText == null) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                     numeric = state.correctedText != null,
@@ -591,19 +595,19 @@ private fun RenameSlotDialog(
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename camera") },
+        title = { Text(stringResource(R.string.rename_camera_title)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                label = { Text("Camera name") },
+                label = { Text(stringResource(R.string.camera_name)) },
             )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.action_save)) } },
         dismissButton = {
             // Empty name clears the custom label back to the canonical default.
-            TextButton(onClick = { onConfirm(null) }) { Text("Reset") }
+            TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.action_reset)) }
         },
     )
 }

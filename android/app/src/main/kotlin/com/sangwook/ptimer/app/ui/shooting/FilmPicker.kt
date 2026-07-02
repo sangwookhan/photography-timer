@@ -3,6 +3,8 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -78,14 +80,14 @@ internal fun FilmPickerSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Films", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.films_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Box {
                         IconButton(onClick = { showCreateMenu = true }) {
-                            Icon(Icons.Filled.Add, contentDescription = "Add custom film")
+                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.filmpicker_add_cd))
                         }
                         DropdownMenu(expanded = showCreateMenu, onDismissRequest = { showCreateMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text("Create custom film") },
+                                text = { Text(stringResource(R.string.create_custom_film)) },
                                 leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
                                 onClick = { showCreateMenu = false; onCreateNew() },
                             )
@@ -95,13 +97,13 @@ internal fun FilmPickerSheet(
             }
             item {
                 FilmPickerRow(
-                    option = FilmOption(null, "No film"),
+                    option = FilmOption(null, stringResource(R.string.no_film)),
                     selected = selectedFilmId == null,
                     onClick = { onSelect(null) },
                 )
             }
             if (customFilms.isNotEmpty()) {
-                item { FilmManufacturerHeader("My films") }
+                item { FilmManufacturerHeader(stringResource(R.string.my_films)) }
                 items(customFilms, key = { it.id!! }) { option ->
                     FilmPickerRow(
                         option = option,
@@ -153,7 +155,7 @@ private fun FilmPickerRow(
     ListItem(
         headlineContent = { Text(option.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingContent = if (selected) {
-            { Icon(Icons.Filled.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary) }
+            { Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected_cd), tint = MaterialTheme.colorScheme.primary) }
         } else {
             null
         },
@@ -172,19 +174,19 @@ private fun FilmPickerRow(
                     var menu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { menu = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "Custom film actions")
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.filmpicker_actions_cd))
                         }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             onEdit?.let { edit ->
                                 DropdownMenuItem(
-                                    text = { Text("Edit") },
+                                    text = { Text(stringResource(R.string.action_edit)) },
                                     leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                                     onClick = { menu = false; edit() },
                                 )
                             }
                             onDelete?.let { del ->
                                 DropdownMenuItem(
-                                    text = { Text("Delete") },
+                                    text = { Text(stringResource(R.string.action_delete)) },
                                     leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                                     onClick = { menu = false; del() },
                                 )

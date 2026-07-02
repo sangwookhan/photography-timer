@@ -58,10 +58,10 @@ object TimerNotifications {
         manager.createNotificationChannel(
             NotificationChannel(
                 ONGOING_CHANNEL_ID,
-                "Running timers",
+                context.getString(R.string.notif_channel_running_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Shows while a timer is counting down"
+                description = context.getString(R.string.notif_channel_running_desc)
                 setSound(null, null)
             },
         )
@@ -72,10 +72,10 @@ object TimerNotifications {
         manager.createNotificationChannel(
             NotificationChannel(
                 ALERT_CHANNEL_ID,
-                "Timer alarm",
+                context.getString(R.string.notif_channel_alarm_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "Shows a finished timer; the alarm sound plays on the alarm volume"
+                description = context.getString(R.string.notif_channel_alarm_desc)
                 setSound(null, null)
                 enableVibration(false)
             },
@@ -85,10 +85,10 @@ object TimerNotifications {
         manager.createNotificationChannel(
             NotificationChannel(
                 PRE_ALERT_CHANNEL_ID,
-                "Timer pre-alerts",
+                context.getString(R.string.notif_channel_prealert_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = "Vibrates as a timer is about to finish"
+                description = context.getString(R.string.notif_channel_prealert_desc)
                 setSound(null, null)
                 enableVibration(false)
             },
@@ -144,8 +144,8 @@ object TimerNotifications {
         val notification = NotificationCompat.Builder(context, ALERT_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setSubText("Timer complete")
-            .setContentTitle(title.ifBlank { "Timer complete" })
+            .setSubText(context.getString(R.string.notif_complete_title))
+            .setContentTitle(title.ifBlank { context.getString(R.string.notif_complete_title) })
             .setContentText(body.ifBlank { null })
             .setAutoCancel(true)
             // The channel is silent; the audible alarm is played directly by
@@ -184,8 +184,8 @@ object TimerNotifications {
         val channelId = if (StagedAlertPolicy.usesAlertChannel(stage)) ALERT_CHANNEL_ID else PRE_ALERT_CHANNEL_ID
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setSubText(title.ifBlank { "Timer" })
-            .setContentTitle("${secondsRemaining}s remaining")
+            .setSubText(title.ifBlank { context.getString(R.string.notif_timer_fallback) })
+            .setContentTitle(context.getString(R.string.notif_prealert_remaining, secondsRemaining))
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .setTimeoutAfter(secondsRemaining * 1_000L + 2_000L)

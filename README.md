@@ -12,9 +12,7 @@ and shooting timers. PTIMER is the project and repository code name.
 - Current app/development version: 0.6.0.
 - Planned public release target: Photography Timer 0.7.
 - Homepage: https://sangwookhan.github.io/photography-timer/
-- Privacy Policy: https://sangwookhan.github.io/photography-timer/privacy.html
-- Support: https://sangwookhan.github.io/photography-timer/support.html
-- Film Data Attribution: https://sangwookhan.github.io/photography-timer/attribution.html
+- Privacy, support, license, and film data attribution information are provided on the homepage.
 
 ## Repository Layout
 

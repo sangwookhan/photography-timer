@@ -28,9 +28,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sangwook.ptimer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
@@ -55,6 +62,7 @@ fun SnapWheel(
     visibleCount: Int = 5,
     itemHeight: Dp = 44.dp,
     edgeColor: Color = MaterialTheme.colorScheme.background,
+    accessibilityLabel: String? = null,
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -104,8 +112,48 @@ fun SnapWheel(
         }
     }
 
+    // PTIMER-182: name the wheel and expose its centered value plus
+    // previous/next custom actions for TalkBack. Actions route through the
+    // existing onSelectedIndexChange only (the caller's state change then
+    // re-centers the list via the LaunchedEffect above), so snapping,
+    // scrolling, and live-emission behavior are untouched. State reads stay
+    // inside the semantics block so a fling invalidates semantics without
+    // recomposing the whole wheel.
+    val previousActionLabel = stringResource(R.string.wheel_action_previous)
+    val nextActionLabel = stringResource(R.string.wheel_action_next)
+    val accessibilityModifier = if (accessibilityLabel != null) {
+        Modifier.semantics {
+            contentDescription = accessibilityLabel
+            labels.getOrNull(centeredIndex ?: selectedIndex)?.let { stateDescription = it }
+            customActions = listOf(
+                CustomAccessibilityAction(previousActionLabel) {
+                    val target = selectedIndex - 1
+                    if (target in labels.indices) {
+                        currentOnSelectedIndexChange(target)
+                        true
+                    } else {
+                        false
+                    }
+                },
+                CustomAccessibilityAction(nextActionLabel) {
+                    val target = selectedIndex + 1
+                    if (target in labels.indices) {
+                        currentOnSelectedIndexChange(target)
+                        true
+                    } else {
+                        false
+                    }
+                },
+            )
+        }
+    } else {
+        Modifier
+    }
+
     Box(
-        modifier = modifier.height(itemHeight * visibleCount),
+        modifier = modifier
+            .height(itemHeight * visibleCount)
+            .then(accessibilityModifier),
     ) {
         LazyColumn(
             state = listState,

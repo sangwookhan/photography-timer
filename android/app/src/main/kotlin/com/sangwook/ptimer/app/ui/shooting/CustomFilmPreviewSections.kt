@@ -58,7 +58,7 @@ internal fun FittedFormulaSection(
     Spacer(Modifier.height(8.dp))
     when (outcome) {
         is CustomTableFittedFormula.Outcome.Unavailable -> {
-            Text(outcome.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(localizedCoreText(outcome.message), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         is CustomTableFittedFormula.Outcome.Available -> {
             val f = outcome.formula

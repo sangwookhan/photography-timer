@@ -43,6 +43,25 @@ class LocalizedCoreVocabularyTest {
     }
 
     @Test
+    fun mapsGuidanceProse() {
+        assertEquals(
+            R.string.cf_fit_shorten_warning,
+            coreVocabularyRes(
+                "The fitted formula would shorten exposure with the current table boundaries. " +
+                    "Raise no correction or add a lower-range anchor. The table remains your reliable calculation.",
+            ),
+        )
+        assertEquals(
+            R.string.recip_guidance_longer_exposures,
+            coreVocabularyRes("Longer exposures: test under your conditions."),
+        )
+        assertEquals(
+            R.string.recip_note_official_sheet_no_data,
+            coreVocabularyRes("Official sheet found, but no reciprocity correction data was found."),
+        )
+    }
+
+    @Test
     fun unknownVocabularyPassesThrough() {
         assertNull(coreVocabularyRes("Ektar 100"))
         assertNull(coreVocabularyRes("Current input is beyond the published source table."))

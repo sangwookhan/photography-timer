@@ -143,6 +143,9 @@
     <string name="cf_fit_good">Good fit</string>
     <string name="cf_fit_borderline">Borderline fit</string>
     <string name="cf_fit_poor">Poor fit</string>
+    <string name="cf_fit_shorten_warning">The fitted formula would shorten exposure with the current table boundaries. Raise no correction or add a lower-range anchor. The table remains your reliable calculation.</string>
+    <string name="recip_guidance_longer_exposures">Longer exposures: test under your conditions.</string>
+    <string name="recip_note_official_sheet_no_data">Official sheet found, but no reciprocity correction data was found.</string>
     <string name="recip_value_official_guidance">Official guidance</string>
     <string name="recip_value_unofficial_practical">Unofficial practical</string>
     <string name="recip_detail_no_official_beyond_range">No official quantified prediction is available beyond this range.</string>

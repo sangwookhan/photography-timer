@@ -245,7 +245,7 @@ fun ReciprocityDetailsScreen(
                         )
                     }
                     state.sourceNote?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(localizedCoreText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

@@ -131,6 +131,9 @@
     <string name="cf_fit_good">좋은 피팅</string>
     <string name="cf_fit_borderline">경계 피팅</string>
     <string name="cf_fit_poor">낮은 피팅</string>
+    <string name="cf_fit_shorten_warning">현재 표 경계에서는 산출 공식이 노출 시간을 더 짧게 만듭니다. 보정 없음 범위를 늘리거나 더 낮은 범위의 앵커를 추가하세요. 이 표는 계속 신뢰할 수 있는 계산으로 유지됩니다.</string>
+    <string name="recip_guidance_longer_exposures">더 긴 노출은 사용 조건에서 테스트하세요.</string>
+    <string name="recip_note_official_sheet_no_data">공식 문서는 확인했지만 상반칙 보정 데이터는 찾지 못했습니다.</string>
     <string name="recip_value_official_guidance">공식 가이드</string>
     <string name="recip_value_unofficial_practical">비공식 실용</string>
     <string name="recip_detail_no_official_beyond_range">이 범위 밖에서는 공식 정량 예측을 제공하지 않습니다.</string>

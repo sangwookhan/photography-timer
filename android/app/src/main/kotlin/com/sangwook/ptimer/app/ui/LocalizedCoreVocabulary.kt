@@ -43,6 +43,15 @@ internal fun coreVocabularyRes(text: String): Int? = when (text) {
     "Good fit" -> R.string.cf_fit_good
     "Borderline fit" -> R.string.cf_fit_borderline
     "Poor fit" -> R.string.cf_fit_poor
+    // Fitted-formula guard warning (CustomTableFittedFormula.Outcome.Unavailable)
+    "The fitted formula would shorten exposure with the current table boundaries. " +
+        "Raise no correction or add a lower-range anchor. The table remains your reliable calculation." ->
+        R.string.cf_fit_shorten_warning
+    // Canonical user-facing guidance prose carried by the launch catalog.
+    // Source titles, URLs, and raw source values never match these exact keys.
+    "Longer exposures: test under your conditions." -> R.string.recip_guidance_longer_exposures
+    "Official sheet found, but no reciprocity correction data was found." ->
+        R.string.recip_note_official_sheet_no_data
     // Authority labels (ReciprocityDetailsPresenter subtitle)
     "Official guidance" -> R.string.recip_value_official_guidance
     "Unofficial practical" -> R.string.recip_value_unofficial_practical

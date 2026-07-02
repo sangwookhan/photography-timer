@@ -5,6 +5,8 @@ title: Photography Timer
 
 # Photography Timer
 
+<img src="https://github.com/sangwookhan/photography-timer/raw/main/ios/PTimer/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" alt="Photography Timer app icon" width="120">
+
 Exposure calculator and countdown timer for film and digital photography.
 
 Photography Timer is preparing for its 0.7 public release.

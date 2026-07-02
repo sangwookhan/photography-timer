@@ -1,6 +1,6 @@
 # Photography Timer
 
-<img src="assets/ptimer-icon.png" alt="Photography Timer app icon" width="120">
+<img src="ios/PTimer/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" alt="Photography Timer app icon" width="120">
 
 Photography Timer is an exposure calculator and shooting timer for film and digital photography.
 

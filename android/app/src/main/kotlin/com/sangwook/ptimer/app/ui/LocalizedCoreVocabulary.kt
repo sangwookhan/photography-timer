@@ -35,6 +35,14 @@ internal fun coreVocabularyRes(text: String): Int? = when (text) {
     "App-derived guarded formula" -> R.string.recip_value_app_derived_guarded_formula
     "Unsupported" -> R.string.recip_value_unsupported
     "User-defined" -> R.string.recip_value_user_defined
+    // Custom-profile source classifications (CustomProfileSourceType.displayLabel)
+    "Personal test" -> R.string.recip_value_personal_test
+    "Community reference" -> R.string.recip_value_community_reference
+    "Unknown source" -> R.string.recip_value_unknown_source
+    // Fitted-formula quality labels (CustomTableFittedFormula.FitQuality.displayLabel)
+    "Good fit" -> R.string.cf_fit_good
+    "Borderline fit" -> R.string.cf_fit_borderline
+    "Poor fit" -> R.string.cf_fit_poor
     // Authority labels (ReciprocityDetailsPresenter subtitle)
     "Official guidance" -> R.string.recip_value_official_guidance
     "Unofficial practical" -> R.string.recip_value_unofficial_practical

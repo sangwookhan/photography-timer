@@ -5,6 +5,7 @@ package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.localizedCoreText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -92,7 +93,7 @@ internal fun FittedFormulaSection(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "${f.quality.displayLabel} · worst ${fitNum(f.worstAbsoluteStopError)} st",
+                "${localizedCoreText(f.quality.displayLabel)} · worst ${fitNum(f.worstAbsoluteStopError)} st",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = when (f.quality) {

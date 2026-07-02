@@ -33,9 +33,18 @@ class LocalizedCoreVocabularyTest {
     }
 
     @Test
+    fun mapsSourceTypeAndFitQualityLabels() {
+        assertEquals(R.string.recip_value_personal_test, coreVocabularyRes("Personal test"))
+        assertEquals(R.string.recip_value_community_reference, coreVocabularyRes("Community reference"))
+        assertEquals(R.string.recip_value_unknown_source, coreVocabularyRes("Unknown source"))
+        assertEquals(R.string.cf_fit_good, coreVocabularyRes("Good fit"))
+        assertEquals(R.string.cf_fit_borderline, coreVocabularyRes("Borderline fit"))
+        assertEquals(R.string.cf_fit_poor, coreVocabularyRes("Poor fit"))
+    }
+
+    @Test
     fun unknownVocabularyPassesThrough() {
         assertNull(coreVocabularyRes("Ektar 100"))
-        assertNull(coreVocabularyRes("Personal test"))
         assertNull(coreVocabularyRes("Current input is beyond the published source table."))
     }
 

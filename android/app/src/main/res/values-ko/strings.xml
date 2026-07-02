@@ -125,6 +125,12 @@
     <string name="recip_value_app_derived_guarded_formula">앱 산출 보정 공식</string>
     <string name="recip_value_unsupported">미지원</string>
     <string name="recip_value_user_defined">사용자 정의</string>
+    <string name="recip_value_personal_test">개인 테스트</string>
+    <string name="recip_value_community_reference">커뮤니티 참조</string>
+    <string name="recip_value_unknown_source">알 수 없는 출처</string>
+    <string name="cf_fit_good">좋은 피팅</string>
+    <string name="cf_fit_borderline">경계 피팅</string>
+    <string name="cf_fit_poor">낮은 피팅</string>
     <string name="recip_value_official_guidance">공식 가이드</string>
     <string name="recip_value_unofficial_practical">비공식 실용</string>
     <string name="recip_detail_no_official_beyond_range">이 범위 밖에서는 공식 정량 예측을 제공하지 않습니다.</string>

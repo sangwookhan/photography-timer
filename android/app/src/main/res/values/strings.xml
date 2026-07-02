@@ -137,6 +137,12 @@
     <string name="recip_value_app_derived_guarded_formula">App-derived guarded formula</string>
     <string name="recip_value_unsupported">Unsupported</string>
     <string name="recip_value_user_defined">User-defined</string>
+    <string name="recip_value_personal_test">Personal test</string>
+    <string name="recip_value_community_reference">Community reference</string>
+    <string name="recip_value_unknown_source">Unknown source</string>
+    <string name="cf_fit_good">Good fit</string>
+    <string name="cf_fit_borderline">Borderline fit</string>
+    <string name="cf_fit_poor">Poor fit</string>
     <string name="recip_value_official_guidance">Official guidance</string>
     <string name="recip_value_unofficial_practical">Unofficial practical</string>
     <string name="recip_detail_no_official_beyond_range">No official quantified prediction is available beyond this range.</string>

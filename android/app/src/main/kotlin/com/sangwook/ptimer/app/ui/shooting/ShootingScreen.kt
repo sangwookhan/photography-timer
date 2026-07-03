@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -267,7 +269,14 @@ fun ShootingScreen(
                                 ) {
                                     Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
                                 }
-                                SnapWheel(pageState.shutterLabels, pageState.shutterIndex, onShutterForPage, visibleCount = 3, itemHeight = 34.dp)
+                                SnapWheel(
+                                    pageState.shutterLabels,
+                                    pageState.shutterIndex,
+                                    onShutterForPage,
+                                    visibleCount = 3,
+                                    itemHeight = 34.dp,
+                                    accessibilityLabel = stringResource(R.string.shooting_base_shutter),
+                                )
                             }
                             Column(
                                 modifier = Modifier.weight(1f),
@@ -288,7 +297,14 @@ fun ShootingScreen(
                                         onSelect = onSelectNotation,
                                     )
                                 }
-                                SnapWheel(pageState.ndLabels, pageState.ndIndex, onNdForPage, visibleCount = 3, itemHeight = 34.dp)
+                                SnapWheel(
+                                    pageState.ndLabels,
+                                    pageState.ndIndex,
+                                    onNdForPage,
+                                    visibleCount = 3,
+                                    itemHeight = 34.dp,
+                                    accessibilityLabel = stringResource(R.string.shooting_nd_filter),
+                                )
                             }
                         }
                     }
@@ -438,7 +454,11 @@ private fun NotationToggle(
                         if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
                         else Modifier
                     )
-                    .clickable(enabled = enabled) { onSelect(optionMode) }
+                    // selectable (not clickable) so TalkBack announces the
+                    // segment as a button with its selected state (PTIMER-182).
+                    .selectable(selected = selected, enabled = enabled, role = Role.Button) {
+                        onSelect(optionMode)
+                    }
                     .padding(horizontal = 7.dp, vertical = 3.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -461,15 +481,18 @@ private fun NotationToggle(
     }
 }
 
-/** Small circular start button used next to each computed exposure value. */
+/** Small circular start button used next to each computed exposure value.
+ *  Callers pass a context-specific description (adjusted/corrected/target)
+ *  so the three visually identical buttons stay distinguishable to
+ *  TalkBack (PTIMER-182). */
 @Composable
-internal fun StartButton(onClick: () -> Unit, enabled: Boolean) {
+internal fun StartButton(onClick: () -> Unit, enabled: Boolean, contentDescription: String) {
     // No explicit size: the default 40dp container keeps the 48dp interactive
     // touch target Material enforces (the old size(32) defeated it).
     FilledIconButton(onClick = onClick, enabled = enabled) {
         Icon(
             Icons.Filled.PlayArrow,
-            contentDescription = "Start timer",
+            contentDescription = contentDescription,
             modifier = Modifier.size(20.dp),
         )
     }
@@ -492,6 +515,7 @@ private fun ResultCard(
                 numeric = true,
                 onStart = onStartAdjusted,
                 startEnabled = state.adjustedStartEnabled,
+                startContentDescription = stringResource(R.string.start_timer_adjusted_cd),
             )
 
             if (state.hasFilm) {
@@ -523,6 +547,7 @@ private fun ResultCard(
                     numeric = state.correctedText != null,
                     onStart = onStartCorrected,
                     startEnabled = state.correctedStartEnabled,
+                    startContentDescription = stringResource(R.string.start_timer_corrected_cd),
                 )
             }
         }
@@ -538,6 +563,7 @@ private fun ResultRow(
     numeric: Boolean,
     onStart: () -> Unit,
     startEnabled: Boolean,
+    startContentDescription: String,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -570,7 +596,7 @@ private fun ResultRow(
             textAlign = TextAlign.End,
             maxLines = 1,
         )
-        StartButton(onClick = onStart, enabled = startEnabled)
+        StartButton(onClick = onStart, enabled = startEnabled, contentDescription = startContentDescription)
     }
 }
 

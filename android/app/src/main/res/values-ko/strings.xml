@@ -25,6 +25,13 @@
     <string name="shooting_corrected_exposure">보정 노출</string>
     <string name="shooting_no_corrected_value">보정 값 없음</string>
     <string name="notation_stops">스톱</string>
+    <!-- Start-button content descriptions (iOS VoiceOver parity, PTIMER-182) -->
+    <string name="start_timer_adjusted_cd">ND 적용 셔터로 타이머 시작</string>
+    <string name="start_timer_corrected_cd">보정 노출로 타이머 시작</string>
+    <string name="start_timer_target_cd">목표 셔터 타이머 시작</string>
+    <!-- SnapWheel accessibility custom actions (PTIMER-182) -->
+    <string name="wheel_action_previous">이전 값</string>
+    <string name="wheel_action_next">다음 값</string>
     <string name="reset_shooting_title">촬영 설정을 초기화할까요?</string>
     <string name="reset_settings">설정 초기화</string>
     <string name="reset_settings_and_name">설정과 이름 초기화</string>

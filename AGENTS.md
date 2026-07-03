@@ -86,7 +86,9 @@ in addition to its own.
 iOS sources live under `ios/`. Android sources live under `android/`.
 Shared cross-platform fixtures live at `shared/test-fixtures/`.
 Existing product documents live under `docs/`. Operational workflow
-documents may live at repository root, `docs/tasks/`, and `.codex/`.
+guidance may live at repository root and `.codex/`; see Task Spec
+Location below for what does — and does not — belong under
+`docs/tasks/`.
 
 PTimer is a portrait-only iPhone app for film photography exposure
 calculation and countdown timers. The architecture has strict layer
@@ -358,13 +360,27 @@ Cloud, or local hooks only) is resolved.
 
 ## Task Spec Location
 
-Preferred path for prepared task specs:
+This repository is public. Prepared task specs, worklogs, and other
+ticket-scoped working notes are session-local delivery artifacts —
+draft and use them in-session, but do not commit them under
+`docs/tasks/` or anywhere else in the public tree.
 
-- `docs/tasks/<TICKET_ID>.md`
-
-Use `docs/tasks/TASK_TEMPLATE.md` as the starting point for new
-tickets. Feature or verification reference material may remain in
-`docs/`.
+- Do not commit internal task, worklog, review, or handoff documents
+  (including ChatGPT / Claude / Codex conversation or planning logs)
+  to this repository.
+- Any product intent, requirement, or architectural decision that
+  should outlive a ticket belongs in the public spec/requirement
+  docs (`docs/requirements/`, `docs/specs/`, `docs/architecture/`),
+  not in a task note — update the relevant doc directly instead of
+  leaving the rationale only in ticket scratch material.
+- PR descriptions must include user test steps.
+- Jira/PR delivery reports should cover what changed, why it
+  matters, verification performed, and remaining follow-up — kept in
+  the PR/ticket system, not as a committed file.
+- Ignore macOS/temp/archive artifacts (`.DS_Store`, `__MACOSX`,
+  generated zip leftovers) — never commit them.
+- Keep changes surgical and source-verified per the Behavioral
+  Guardrails above.
 
 ---
 

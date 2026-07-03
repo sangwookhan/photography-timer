@@ -86,7 +86,9 @@ in addition to its own.
 iOS sources live under `ios/`. Android sources live under `android/`.
 Shared cross-platform fixtures live at `shared/test-fixtures/`.
 Existing product documents live under `docs/`. Operational workflow
-documents may live at repository root, `docs/tasks/`, and `.codex/`.
+guidance may live at repository root and `.codex/`; see Task Spec
+Location below for what does — and does not — belong under
+`docs/tasks/`.
 
 PTimer is a portrait-only iPhone app for film photography exposure
 calculation and countdown timers. The architecture has strict layer
@@ -358,13 +360,27 @@ Cloud, or local hooks only) is resolved.
 
 ## Task Spec Location
 
-Preferred path for prepared task specs:
+This repository is public. Prepared task specs, worklogs, and other
+ticket-scoped working notes are session-local delivery artifacts —
+draft and use them in-session, but do not commit them under
+`docs/tasks/` or anywhere else in the public tree.
 
-- `docs/tasks/<TICKET_ID>.md`
-
-Use `docs/tasks/TASK_TEMPLATE.md` as the starting point for new
-tickets. Feature or verification reference material may remain in
-`docs/`.
+- Do not commit internal task, worklog, review, or handoff documents
+  (including ChatGPT / Claude / Codex conversation or planning logs)
+  to this repository.
+- Any product intent, requirement, or architectural decision that
+  should outlive a ticket belongs in the public spec/requirement
+  docs (`docs/requirements/`, `docs/specs/`, `docs/architecture/`),
+  not in a task note — update the relevant doc directly instead of
+  leaving the rationale only in ticket scratch material.
+- PR descriptions must include user test steps.
+- Jira/PR delivery reports should cover what changed, why it
+  matters, verification performed, and remaining follow-up — kept in
+  the PR/ticket system, not as a committed file.
+- Ignore macOS/temp/archive artifacts (`.DS_Store`, `__MACOSX`,
+  generated zip leftovers) — never commit them.
+- Keep changes surgical and source-verified per the Behavioral
+  Guardrails above.
 
 ---
 
@@ -533,6 +549,33 @@ Body paragraphs wrapped consistently.
 PTIMER-102 Extend quantified extrapolation policy for table-profile
            films beyond the current limit
 ```
+
+---
+
+## Version Bump Policy
+
+App version is tracked in two places that must always match:
+`MARKETING_VERSION` in `ios/PTimer.xcodeproj/project.pbxproj` (all
+six occurrences) and `versionName` in `android/app/build.gradle.kts`.
+`README.md`'s "Current app/development version" line mirrors the
+same value.
+
+- **Every PR that changes app or catalog behavior bumps the patch
+  version** (`0.7.1` → `0.7.2`), as its own commit on that PR.
+  Documentation-only, workflow-only, or other no-behavior-change PRs
+  do not bump the version.
+- Before bumping, **read the current version directly from
+  `project.pbxproj` and `build.gradle.kts`** (not from memory, a
+  prior PR description, or `README.md` alone) and bump from that
+  verified value.
+- Default to a **patch** bump. Only bump **minor** or **major**
+  when the user explicitly instructs it in that conversation — do
+  not infer a minor/major bump from the size or nature of the
+  change.
+- `CURRENT_PROJECT_VERSION` (iOS build number) and `versionCode`
+  (Android) are separate from the marketing/patch version and are
+  not part of this policy — leave them untouched unless a task
+  explicitly calls for a build-number bump.
 
 ---
 

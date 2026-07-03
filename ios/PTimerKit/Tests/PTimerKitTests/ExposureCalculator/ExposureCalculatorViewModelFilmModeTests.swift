@@ -165,15 +165,14 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         let viewModel = makeFilmModeViewModel()
         let sections = viewModel.filmSelectorSections
 
-        // The leading section is the "No film" sentinel followed by
-        // the explicit "New custom film" action row — both headerless
-        // (manufacturer == nil) so the view renders them as plain
-        // rows outside any group card. Every subsequent section is a
+        // The leading section is the "No film" sentinel, headerless
+        // (manufacturer == nil) so the view renders it as a plain row
+        // outside any group card. Every subsequent section is a
         // manufacturer group card.
         let leading = try XCTUnwrap(sections.first, "Sections must not be empty.")
         XCTAssertEqual(leading.id, "no-film")
         XCTAssertNil(leading.manufacturer)
-        XCTAssertEqual(leading.entries.map(\.primaryText), ["No film", "New custom film"])
+        XCTAssertEqual(leading.entries.map(\.primaryText), ["No film"])
 
         let manufacturerSections = Array(sections.dropFirst())
         XCTAssertFalse(manufacturerSections.isEmpty, "Catalog should produce at least one manufacturer section.")

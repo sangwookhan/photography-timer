@@ -6,9 +6,8 @@ import PTimerKit
 import PTimerCore
 
 /// Edit flow + selector top-of-list affordances. Covers the
-/// prefilled editor, upsert-on-save behavior, the explicit
-/// "New custom film" row, the "No film" top row anchor, and
-/// stable list ordering after selection.
+/// prefilled editor, upsert-on-save behavior, the "No film" top
+/// row anchor, and stable list ordering after selection.
 @MainActor
 final class CustomFilmEditAndSelectorUXTests: XCTestCase {
 
@@ -104,36 +103,17 @@ final class CustomFilmEditAndSelectorUXTests: XCTestCase {
         XCTAssertEqual(alphaEntries.count, 1, "Custom film must appear exactly once")
     }
 
-    func test_filmSelectorEntries_includesCreateCustomFilmRow_belowNoFilm() {
+    func test_filmSelectorEntries_noFilmAnchorsTop() {
         let viewModel = makeViewModel()
         viewModel.addCustomFilm(makeFormulaFilm(id: "custom", stockName: "Custom"))
         let entries = viewModel.filmSelectorEntries
-        guard let noFilmIndex = entries.firstIndex(where: { $0.id == "no-film" }),
-              let createIndex = entries.firstIndex(where: { $0.isCreateCustomFilmAction }) else {
-            return XCTFail("Both 'No film' and Create rows must exist")
+        guard let noFilmIndex = entries.firstIndex(where: { $0.id == "no-film" }) else {
+            return XCTFail("'No film' row must exist")
         }
-        // No film anchors the top of the list, with the create-custom-film
-        // row immediately below it — stable even when custom films exist.
+        // No film anchors the top of the list — stable even when
+        // custom films exist. Creating a custom film is reached
+        // through the selector header's "+" button, not a row.
         XCTAssertEqual(noFilmIndex, 0)
-        XCTAssertEqual(createIndex, noFilmIndex + 1)
-        XCTAssertEqual(
-            entries[createIndex].id,
-            ExposureCalculatorViewModel.createCustomFilmEntryID
-        )
-    }
-
-    func test_createCustomFilmRow_isNeverMarkedSelected() {
-        let viewModel = makeViewModel()
-        viewModel.addCustomFilm(makeFormulaFilm(id: "selected", stockName: "Selected"))
-        let film = viewModel.customFilms.first!
-        viewModel.selectPresetFilm(film)
-        // The active selection should be on the canonical custom
-        // film id — never on the create-action row id.
-        XCTAssertEqual(viewModel.selectedSelectorEntryID, "selected")
-        XCTAssertNotEqual(
-            viewModel.selectedSelectorEntryID,
-            ExposureCalculatorViewModel.createCustomFilmEntryID
-        )
     }
 
     // MARK: - Stable list order

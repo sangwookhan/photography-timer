@@ -552,6 +552,33 @@ PTIMER-102 Extend quantified extrapolation policy for table-profile
 
 ---
 
+## Version Bump Policy
+
+App version is tracked in two places that must always match:
+`MARKETING_VERSION` in `ios/PTimer.xcodeproj/project.pbxproj` (all
+six occurrences) and `versionName` in `android/app/build.gradle.kts`.
+`README.md`'s "Current app/development version" line mirrors the
+same value.
+
+- **Every PR that changes app or catalog behavior bumps the patch
+  version** (`0.7.1` → `0.7.2`), as its own commit on that PR.
+  Documentation-only, workflow-only, or other no-behavior-change PRs
+  do not bump the version.
+- Before bumping, **read the current version directly from
+  `project.pbxproj` and `build.gradle.kts`** (not from memory, a
+  prior PR description, or `README.md` alone) and bump from that
+  verified value.
+- Default to a **patch** bump. Only bump **minor** or **major**
+  when the user explicitly instructs it in that conversation — do
+  not infer a minor/major bump from the size or nature of the
+  change.
+- `CURRENT_PROJECT_VERSION` (iOS build number) and `versionCode`
+  (Android) are separate from the marketing/patch version and are
+  not part of this policy — leave them untouched unless a task
+  explicitly calls for a build-number bump.
+
+---
+
 ## Escalation Triggers
 
 Escalate instead of guessing when:

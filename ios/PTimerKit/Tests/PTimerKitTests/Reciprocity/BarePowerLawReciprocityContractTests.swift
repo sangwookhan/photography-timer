@@ -45,6 +45,8 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
         BarePowerLawFilmCase(film: "Ortho Plus", exponent: 1.25),
         BarePowerLawFilmCase(film: "SFX 200", exponent: 1.43),
         BarePowerLawFilmCase(film: "XP2 Super", exponent: 1.31),
+        BarePowerLawFilmCase(film: "Phoenix 200", exponent: 1.31),
+        BarePowerLawFilmCase(film: "Phoenix II", exponent: 1.31),
     ]
 
     private func formulaRule(in profile: ReciprocityProfile) throws -> FormulaReciprocityRule {

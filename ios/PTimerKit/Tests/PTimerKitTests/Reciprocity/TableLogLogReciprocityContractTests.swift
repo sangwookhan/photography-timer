@@ -45,6 +45,9 @@ final class TableLogLogReciprocityContractTests: XCTestCase {
         FilmCase(film: "CHS 100 II", beyondSourceSample: 30),
         FilmCase(film: "RPX 100", beyondSourceSample: 90),
         FilmCase(film: "RPX 400", beyondSourceSample: 60),
+        FilmCase(film: "RPX 25", beyondSourceSample: 90),
+        FilmCase(film: "ORTHO 25 plus", beyondSourceSample: 90),
+        FilmCase(film: "Pancro 400", beyondSourceSample: 90),
     ]
 
     // MARK: - Rule structure

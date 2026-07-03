@@ -64,11 +64,12 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     private let manufacturerMembershipCases: [ManufacturerMembershipCase] = [
         ManufacturerMembershipCase(
-            manufacturer: "ILFORD / HARMAN", expectedCount: 12,
+            manufacturer: "ILFORD / HARMAN", expectedCount: 14,
             expectedStockNames: [
                 "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
                 "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
                 "Kentmere 100", "Kentmere 200", "Kentmere 400",
+                "Phoenix 200", "Phoenix II",
             ]),
         ManufacturerMembershipCase(
             manufacturer: "Kodak", expectedCount: 9,
@@ -89,6 +90,9 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         ManufacturerMembershipCase(
             manufacturer: "ADOX", expectedCount: 2,
             expectedStockNames: ["CHS 100 II", "CMS 20 II"]),
+        ManufacturerMembershipCase(
+            manufacturer: "BERGGER", expectedCount: 1,
+            expectedStockNames: ["Pancro 400"]),
     ]
 
     /// Each manufacturer family contributes exactly its expected member
@@ -144,6 +148,8 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             "Kentmere 100": 1.26,
             "Kentmere 200": 1.26,
             "Kentmere 400": 1.30,
+            "Phoenix 200": 1.31,
+            "Phoenix II": 1.31,
         ]
 
         for (canonicalName, exponent) in expected {
@@ -167,8 +173,9 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             XCTAssertFalse(canonical.contains(stock), "Kodak motion picture film '\(stock)' must not ship in the launch catalog.")
         }
 
-        // Deferred / weak-source manufacturers
-        for excluded in ["AgfaPhoto", "ORWO", "Bergger", "Film Ferrania"] {
+        // Deferred / weak-source manufacturers (BERGGER shipped as a
+        // launch-ready manufacturer in PTIMER-200 and is no longer excluded)
+        for excluded in ["AgfaPhoto", "ORWO", "Film Ferrania"] {
             XCTAssertFalse(manufacturers.contains(excluded), "'\(excluded)' is not launch-ready and must not ship.")
         }
 
@@ -557,13 +564,14 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 /// scope so the test class body stays under the SwiftLint
 /// `type_body_length` threshold.
 private enum LaunchCatalogExpectations {
-    static let scopeCount = 37
+    static let scopeCount = 40
 
     static let canonicalStockOrder: [String] = [
         // Batch 1 — ILFORD / HARMAN
         "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
         "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
         "Kentmere 100", "Kentmere 200", "Kentmere 400",
+        "Phoenix 200", "Phoenix II",
         // Batch 2 — Kodak
         "Tri-X 400", "T-MAX 100", "T-MAX 400",
         "Ektar 100", "Portra 160", "Portra 400",
@@ -575,6 +583,8 @@ private enum LaunchCatalogExpectations {
         "RPX 25", "RPX 100", "RPX 400", "ORTHO 25 plus",
         "RETRO 80S", "RETRO 400S", "SUPERPAN 200",
         "CHS 100 II", "CMS 20 II",
+        // PTIMER-200 — BERGGER
+        "Pancro 400",
     ]
 }
 
@@ -600,5 +610,8 @@ private struct SourceExemplarExpectation {
         .init(canonical: "RETRO 400S", publisherFragment: "Lafitte", citationContains: "Rollei Retro 400S"),
         .init(canonical: "CHS 100 II", publisherFragment: "ADOX", citationContains: nil),
         .init(canonical: "Ektachrome E100", publisherFragment: "Kodak", citationContains: "E-4000"),
+        .init(canonical: "Phoenix 200", publisherFragment: "HARMAN", citationContains: "Sep 2024"),
+        .init(canonical: "Phoenix II", publisherFragment: "HARMAN", citationContains: "Jul 2025"),
+        .init(canonical: "Pancro 400", publisherFragment: "Bergger", citationContains: "Jan 2017"),
     ]
 }

@@ -1,4 +1,4 @@
-  ▿ 37 elements
+  ▿ 40 elements
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-pan-f-plus-50"
       - kind: PTimerCore.FilmIdentityKind.preset
@@ -624,6 +624,110 @@
             - some: "https://www.ilfordphoto.com/technical-data/"
           ▿ downloadUrl: Optional("https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf")
             - some: "https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf"
+          - sourceNote: nil
+      - userMetadata: nil
+    ▿ PTimerCore.FilmIdentity
+      - id: "harman-phoenix-200"
+      - kind: PTimerCore.FilmIdentityKind.preset
+      - canonicalStockName: "Phoenix 200"
+      ▿ manufacturer: Optional("ILFORD / HARMAN")
+        - some: "ILFORD / HARMAN"
+      ▿ brandLabel: Optional("HARMAN PHOENIX 200")
+        - some: "HARMAN PHOENIX 200"
+      - aliases: 0 elements
+      - iso: 200
+      - productionStatus: PTimerCore.FilmProductionStatus.current
+      ▿ profiles: 1 element
+        ▿ PTimerCore.ReciprocityProfile
+          - id: "harman-phoenix-200-official-formula"
+          - name: "Official formula"
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
+            - publisher: "HARMAN technology Limited"
+            ▿ title: Optional("HARMAN Phoenix 200 — Technical information")
+              - some: "HARMAN Phoenix 200 — Technical information"
+            ▿ citation: Optional("Phoenix 200 technical data sheet (Sep 2024)")
+              - some: "Phoenix 200 technical data sheet (Sep 2024)"
+            - sourceVersion: nil
+          ▿ rules: 1 element
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
+                  - coefficientSeconds: 1.0
+                  - referenceMeteredTimeSeconds: 1.0
+                  - exponent: 1.31
+                  - offsetSeconds: 0.0
+                  - noCorrectionThroughSeconds: 1.0
+                  - sourceRangeThroughSeconds: nil
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Exponent p = 1.31 (Ta = Tm^1.31); no adjustment for exposures between 1 sec and 1/10,000 sec."
+          - notes: 0 elements
+          - userMetadata: nil
+          - sourceEvidence: 0 elements
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
+          - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/")
+            - some: "https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/"
+          - downloadUrl: nil
+          - sourceNote: nil
+      - userMetadata: nil
+    ▿ PTimerCore.FilmIdentity
+      - id: "harman-phoenix-ii"
+      - kind: PTimerCore.FilmIdentityKind.preset
+      - canonicalStockName: "Phoenix II"
+      ▿ manufacturer: Optional("ILFORD / HARMAN")
+        - some: "ILFORD / HARMAN"
+      ▿ brandLabel: Optional("HARMAN PHOENIX II")
+        - some: "HARMAN PHOENIX II"
+      - aliases: 0 elements
+      - iso: 200
+      - productionStatus: PTimerCore.FilmProductionStatus.current
+      ▿ profiles: 1 element
+        ▿ PTimerCore.ReciprocityProfile
+          - id: "harman-phoenix-ii-official-formula"
+          - name: "Official formula"
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
+            - publisher: "HARMAN technology Limited"
+            ▿ title: Optional("HARMAN Phoenix II — Technical information")
+              - some: "HARMAN Phoenix II — Technical information"
+            ▿ citation: Optional("Phoenix II technical data sheet (Jul 2025)")
+              - some: "Phoenix II technical data sheet (Jul 2025)"
+            - sourceVersion: nil
+          ▿ rules: 1 element
+            ▿ PTimerCore.ReciprocityRule.formula
+              ▿ formula: PTimerCore.FormulaReciprocityRule
+                ▿ formula: PTimerCore.ReciprocityFormula
+                  - formulaFamily: PTimerCore.FormulaFamily.modifiedSchwarzschild
+                  - coefficientSeconds: 1.0
+                  - referenceMeteredTimeSeconds: 1.0
+                  - exponent: 1.31
+                  - offsetSeconds: 0.0
+                  - noCorrectionThroughSeconds: 1.0
+                  - sourceRangeThroughSeconds: nil
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "Exponent p = 1.31 (Ta = Tm^1.31); no adjustment for exposures between 1 sec and 1/10,000 sec, same formula family as Phoenix 200."
+          - notes: 0 elements
+          - userMetadata: nil
+          - sourceEvidence: 0 elements
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula, calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerFormula
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.guardedFormula
+          - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/")
+            - some: "https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/"
+          - downloadUrl: nil
           - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -2301,8 +2405,10 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
-          - sourcePageUrl: nil
-          - downloadUrl: nil
+          ▿ sourcePageUrl: Optional("https://www.rolleianalog.com/downloads/?lang=en")
+            - some: "https://www.rolleianalog.com/downloads/?lang=en"
+          ▿ downloadUrl: Optional("https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX25_Data-Sheet_EN_R210701.pdf")
+            - some: "https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX25_Data-Sheet_EN_R210701.pdf"
           - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -2715,8 +2821,10 @@
               - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
               - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
           - selectorLabel: nil
-          - sourcePageUrl: nil
-          - downloadUrl: nil
+          ▿ sourcePageUrl: Optional("https://www.rolleianalog.com/downloads/?lang=en")
+            - some: "https://www.rolleianalog.com/downloads/?lang=en"
+          ▿ downloadUrl: Optional("https://www.rolleianalog.com/wp-content/uploads/2021/07/Ortho25_Data-Sheet_EN_R210701.pdf")
+            - some: "https://www.rolleianalog.com/wp-content/uploads/2021/07/Ortho25_Data-Sheet_EN_R210701.pdf"
           - sourceNote: nil
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
@@ -3318,5 +3426,115 @@
             - some: "https://www.adox.de/films/cms20ii-en/"
           ▿ downloadUrl: Optional("https://www.fotoimpex.com/shop/images/products/media/30945_5_PDF-Datasheet.pdf")
             - some: "https://www.fotoimpex.com/shop/images/products/media/30945_5_PDF-Datasheet.pdf"
+          - sourceNote: nil
+      - userMetadata: nil
+    ▿ PTimerCore.FilmIdentity
+      - id: "bergger-pancro-400"
+      - kind: PTimerCore.FilmIdentityKind.preset
+      - canonicalStockName: "Pancro 400"
+      ▿ manufacturer: Optional("BERGGER")
+        - some: "BERGGER"
+      ▿ brandLabel: Optional("BERGGER PANCRO 400")
+        - some: "BERGGER PANCRO 400"
+      - aliases: 0 elements
+      - iso: 400
+      - productionStatus: PTimerCore.FilmProductionStatus.current
+      ▿ profiles: 1 element
+        ▿ PTimerCore.ReciprocityProfile
+          - id: "bergger-pancro-400-official-table"
+          - name: "Official BERGGER table"
+          ▿ source: PTimerCore.ReciprocitySourceProvenance
+            - kind: PTimerCore.ReciprocitySourceKind.manufacturerPublished
+            - authority: PTimerCore.ReciprocityAuthority.official
+            - confidence: PTimerCore.ReciprocityConfidence.high
+            - publisher: "Bergger SAS"
+            ▿ title: Optional("BERGGER Pancro 400 — Data sheet")
+              - some: "BERGGER Pancro 400 — Data sheet"
+            ▿ citation: Optional("Pancro 400 data sheet (Jan 2017)")
+              - some: "Pancro 400 data sheet (Jan 2017)"
+            - sourceVersion: nil
+          ▿ rules: 1 element
+            ▿ PTimerCore.ReciprocityRule.tableInterpolation
+              ▿ tableInterpolation: PTimerCore.TableInterpolationReciprocityRule
+                ▿ anchors: 3 elements
+                  ▿ PTimerCore.TableAnchor
+                    - meteredSeconds: 1.0
+                    - correctedSeconds: 1.4142136
+                  ▿ PTimerCore.TableAnchor
+                    - meteredSeconds: 10.0
+                    - correctedSeconds: 20.0
+                  ▿ PTimerCore.TableAnchor
+                    - meteredSeconds: 60.0
+                    - correctedSeconds: 240.0
+                - additionalAdjustments: 0 elements
+                ▿ notes: 1 element
+                  - "BERGGER publishes long-exposure correction in stops, not corrected seconds (\'Long exposure corrections\', p2): no correction below 1 sec; +1/2 stop at 1 sec; +1 stop at 10 sec; +2 stops at 60 sec. Anchors convert each stop delta to corrected seconds via Tc = Tm x 2^stops, the same conversion used for other stop-published sources in this catalog. No-correction boundary set to 0.5 sec, below the first 1 sec anchor, since the source states no reciprocity failure only for exposures shorter than 1 sec."
+                - noCorrectionThroughSeconds: 0.5
+                - sourceRangeThroughSeconds: 60.0
+          - notes: 0 elements
+          - userMetadata: nil
+          ▿ sourceEvidence: 3 elements
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 1.0
+              ▿ adjustments: 2 elements
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
+                      - stopDelta: 0.5
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(1.0)
+                        - some: 1.0
+                      - correctedSeconds: 1.4142136
+                      - isApproximate: true
+              ▿ notes: 1 element
+                - "1 sec → +1/2 stop (≈1.4 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 10.0
+              ▿ adjustments: 2 elements
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
+                      - stopDelta: 1.0
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(10.0)
+                        - some: 10.0
+                      - correctedSeconds: 20.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "10 sec → +1 stop (20 sec)."
+              - isSourceEvidenceOnly: false
+            ▿ PTimerCore.ReciprocitySourceEvidenceRow
+              ▿ meteredExposure: PTimerCore.MeteredExposureSelector.exactSeconds
+                - exactSeconds: 60.0
+              ▿ adjustments: 2 elements
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.stopDelta
+                    ▿ stopDelta: PTimerCore.StopDeltaAdjustment
+                      - stopDelta: 2.0
+                ▿ PTimerCore.ReciprocityAdjustment.exposure
+                  ▿ exposure: PTimerCore.ExposureAdjustment.correctedTime
+                    ▿ correctedTime: PTimerCore.CorrectedTimeMapping
+                      ▿ meteredSeconds: Optional(60.0)
+                        - some: 60.0
+                      - correctedSeconds: 240.0
+                      - isApproximate: false
+              ▿ notes: 1 element
+                - "60 sec → +2 stops (240 sec)."
+              - isSourceEvidenceOnly: false
+          ▿ modelBasis: Optional(PTimerCore.ReciprocityProfileModelBasis(sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable, calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation))
+            ▿ some: PTimerCore.ReciprocityProfileModelBasis
+              - sourceModel: PTimerCore.ReciprocitySourceModel.manufacturerTable
+              - calculationModel: PTimerCore.ReciprocityCalculationModel.tableLogLogInterpolation
+          - selectorLabel: nil
+          ▿ sourcePageUrl: Optional("https://bergger.com/fr/index.php?controller=attachment&id_attachment=4")
+            - some: "https://bergger.com/fr/index.php?controller=attachment&id_attachment=4"
+          - downloadUrl: nil
           - sourceNote: nil
       - userMetadata: nil

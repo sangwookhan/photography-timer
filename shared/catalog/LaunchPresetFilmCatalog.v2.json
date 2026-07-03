@@ -213,6 +213,30 @@
       "sourceType": "manufacturerPublished",
       "authority": "official",
       "confidence": "high"
+    },
+    "harman-phoenix-200-sheet": {
+      "publisher": "HARMAN technology Limited",
+      "title": "HARMAN Phoenix 200 — Technical information",
+      "citation": "Phoenix 200 technical data sheet (Sep 2024)",
+      "sourceType": "manufacturerPublished",
+      "authority": "official",
+      "confidence": "high"
+    },
+    "harman-phoenix-ii-sheet": {
+      "publisher": "HARMAN technology Limited",
+      "title": "HARMAN Phoenix II — Technical information",
+      "citation": "Phoenix II technical data sheet (Jul 2025)",
+      "sourceType": "manufacturerPublished",
+      "authority": "official",
+      "confidence": "high"
+    },
+    "bergger-pancro-400-sheet": {
+      "publisher": "Bergger SAS",
+      "title": "BERGGER Pancro 400 — Data sheet",
+      "citation": "Pancro 400 data sheet (Jan 2017)",
+      "sourceType": "manufacturerPublished",
+      "authority": "official",
+      "confidence": "high"
     }
   },
   "films": [
@@ -594,6 +618,66 @@
             "noCorrectionThroughSeconds": 1,
             "notes": [
               "Exponent p = 1.3."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "harman-phoenix-200",
+      "canonicalStockName": "Phoenix 200",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "HARMAN PHOENIX 200",
+      "aliases": [],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profiles": [
+        {
+          "id": "harman-phoenix-200-official-formula",
+          "label": "Official formula",
+          "role": "primary",
+          "authority": "official",
+          "basis": "manufacturerFormula",
+          "sourceId": "harman-phoenix-200-sheet",
+          "sourcePageUrl": "https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/",
+          "model": "formula",
+          "calculation": {
+            "family": "modifiedSchwarzschild",
+            "exponent": 1.31,
+            "noCorrectionThroughSeconds": 1,
+            "notes": [
+              "Exponent p = 1.31 (Ta = Tm^1.31); no adjustment for exposures between 1 sec and 1/10,000 sec."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "harman-phoenix-ii",
+      "canonicalStockName": "Phoenix II",
+      "manufacturer": "ILFORD / HARMAN",
+      "brandLabel": "HARMAN PHOENIX II",
+      "aliases": [],
+      "iso": 200,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profiles": [
+        {
+          "id": "harman-phoenix-ii-official-formula",
+          "label": "Official formula",
+          "role": "primary",
+          "authority": "official",
+          "basis": "manufacturerFormula",
+          "sourceId": "harman-phoenix-ii-sheet",
+          "sourcePageUrl": "https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/",
+          "model": "formula",
+          "calculation": {
+            "family": "modifiedSchwarzschild",
+            "exponent": 1.31,
+            "noCorrectionThroughSeconds": 1,
+            "notes": [
+              "Exponent p = 1.31 (Ta = Tm^1.31); no adjustment for exposures between 1 sec and 1/10,000 sec, same formula family as Phoenix 200."
             ]
           }
         }
@@ -1539,6 +1623,8 @@
           "authority": "official",
           "basis": "manufacturerTable",
           "sourceId": "rollei-rpx-25-sheet",
+          "sourcePageUrl": "https://www.rolleianalog.com/downloads/?lang=en",
+          "downloadUrl": "https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX25_Data-Sheet_EN_R210701.pdf",
           "model": "table",
           "calculation": {
             "interpolation": "logLog",
@@ -1740,6 +1826,8 @@
           "authority": "official",
           "basis": "manufacturerTable",
           "sourceId": "rollei-ortho-25-plus-sheet",
+          "sourcePageUrl": "https://www.rolleianalog.com/downloads/?lang=en",
+          "downloadUrl": "https://www.rolleianalog.com/wp-content/uploads/2021/07/Ortho25_Data-Sheet_EN_R210701.pdf",
           "model": "table",
           "calculation": {
             "interpolation": "logLog",
@@ -2142,6 +2230,65 @@
                 "severity": "notRecommended",
                 "message": "100 sec is not recommended."
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bergger-pancro-400",
+      "canonicalStockName": "Pancro 400",
+      "manufacturer": "BERGGER",
+      "brandLabel": "BERGGER PANCRO 400",
+      "aliases": [],
+      "iso": 400,
+      "kind": "preset",
+      "productionStatus": "current",
+      "profiles": [
+        {
+          "id": "bergger-pancro-400-official-table",
+          "label": "Official BERGGER table",
+          "role": "primary",
+          "authority": "official",
+          "basis": "manufacturerTable",
+          "sourceId": "bergger-pancro-400-sheet",
+          "sourcePageUrl": "https://bergger.com/fr/index.php?controller=attachment&id_attachment=4",
+          "model": "table",
+          "calculation": {
+            "interpolation": "logLog",
+            "noCorrectionThroughSeconds": 0.5,
+            "sourceRangeThroughSeconds": 60.0,
+            "anchors": [
+              { "meteredSeconds": 1, "correctedSeconds": 1.4142136 },
+              { "meteredSeconds": 10, "correctedSeconds": 20 },
+              { "meteredSeconds": 60, "correctedSeconds": 240 }
+            ],
+            "notes": [
+              "BERGGER publishes long-exposure correction in stops, not corrected seconds ('Long exposure corrections', p2): no correction below 1 sec; +1/2 stop at 1 sec; +1 stop at 10 sec; +2 stops at 60 sec. Anchors convert each stop delta to corrected seconds via Tc = Tm x 2^stops, the same conversion used for other stop-published sources in this catalog. No-correction boundary set to 0.5 sec, below the first 1 sec anchor, since the source states no reciprocity failure only for exposures shorter than 1 sec."
+            ]
+          },
+          "evidence": [
+            {
+              "anchor": 0,
+              "stopDelta": 0.5,
+              "approx": true,
+              "rowNotes": [
+                "1 sec → +1/2 stop (≈1.4 sec)."
+              ]
+            },
+            {
+              "anchor": 1,
+              "stopDelta": 1,
+              "rowNotes": [
+                "10 sec → +1 stop (20 sec)."
+              ]
+            },
+            {
+              "anchor": 2,
+              "stopDelta": 2,
+              "rowNotes": [
+                "60 sec → +2 stops (240 sec)."
+              ]
             }
           ]
         }

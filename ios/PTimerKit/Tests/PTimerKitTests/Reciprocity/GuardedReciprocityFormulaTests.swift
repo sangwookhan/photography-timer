@@ -438,14 +438,17 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
     /// reads the boundary value itself as part of the no-correction
     /// band.
     func testInclusiveNoCorrectionBoundaryNoteUsesLeqWording() throws {
+        // Delta 100 (unlike HP5 Plus/Pan F Plus/FP4 Plus/Delta 400) keeps
+        // the family's inclusive 1 s no-correction boundary, so it stays
+        // representative of the general "≤ 1 sec" wording contract.
         let film = try XCTUnwrap(
-            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "HP5 Plus" }
+            LaunchPresetFilmCatalogV2.films.first { $0.canonicalStockName == "Delta 100" }
         )
         let profile = try XCTUnwrap(film.profiles.first)
-        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+        let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1)
         let noteText = result.metadata.notes
             .first(where: { $0.text.lowercased().contains("no-correction range") })?.text
-        let resolved = try XCTUnwrap(noteText, "HP5 Plus must surface a no-correction range note.")
+        let resolved = try XCTUnwrap(noteText, "Delta 100 must surface a no-correction range note.")
         XCTAssertTrue(
             resolved.contains("≤ 1 sec"),
             "Inclusive 1 s boundary must render as '≤ 1 sec'; got: \(resolved)"
@@ -662,6 +665,16 @@ final class GuardedReciprocityFormulaTests: XCTestCase {
         "RPX 100",
         "RETRO 80S",
         "SUPERPAN 200",
+        // PTIMER-200 follow-up: Pan F Plus, FP4 Plus, Delta 400, and HP5
+        // Plus publish "no adjustment between 1/2 sec and 1/10,000 sec"
+        // (their no-correction marker is 0.5 s), but every bare power-law
+        // exponent here is > 1, so Tm^p < Tm for any Tm in (0.5, 1) and
+        // the formula's natural Tc = Tm crossover sits at exactly 1 s —
+        // the same shape as the Rollei entries above.
+        "Pan F Plus",
+        "FP4 Plus",
+        "Delta 400",
+        "HP5 Plus",
     ]
 
     /// Representative formula-domain samples shared by the policy-

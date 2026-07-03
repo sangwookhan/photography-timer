@@ -23,21 +23,32 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
 
     private let evaluator = ReciprocityCalculationPolicyEvaluator()
 
-    /// One ILFORD / HARMAN bare power-law film. `exponent` is the only
-    /// per-film parameter; everything else (coefficient 1, reference 1,
-    /// 1 s threshold, no source range, no source evidence) is the
+    /// One ILFORD / HARMAN bare power-law film. `exponent` is the
+    /// published exponent; `noCorrectionThreshold` is 1 s for every film
+    /// except the four (Pan F Plus, FP4 Plus, Delta 400, HP5 Plus) whose
+    /// official sheet states "no adjustment between 1/2 sec and
+    /// 1/10,000 sec" — those carry the source's literal 0.5 s boundary
+    /// (PTIMER-200 follow-up). Everything else (coefficient 1,
+    /// reference 1, no source range, no source evidence) is the
     /// archetype constant verified by `testProfileIsNoSourceRangeBarePowerLaw`.
     private struct BarePowerLawFilmCase {
         let film: String
         let exponent: Double
+        let noCorrectionThreshold: Double
+
+        init(film: String, exponent: Double, noCorrectionThreshold: Double = 1) {
+            self.film = film
+            self.exponent = exponent
+            self.noCorrectionThreshold = noCorrectionThreshold
+        }
     }
 
     private let cases: [BarePowerLawFilmCase] = [
-        BarePowerLawFilmCase(film: "HP5 Plus", exponent: 1.31),
-        BarePowerLawFilmCase(film: "Pan F Plus", exponent: 1.33),
-        BarePowerLawFilmCase(film: "FP4 Plus", exponent: 1.26),
+        BarePowerLawFilmCase(film: "HP5 Plus", exponent: 1.31, noCorrectionThreshold: 0.5),
+        BarePowerLawFilmCase(film: "Pan F Plus", exponent: 1.33, noCorrectionThreshold: 0.5),
+        BarePowerLawFilmCase(film: "FP4 Plus", exponent: 1.26, noCorrectionThreshold: 0.5),
         BarePowerLawFilmCase(film: "Delta 100", exponent: 1.26),
-        BarePowerLawFilmCase(film: "Delta 400", exponent: 1.41),
+        BarePowerLawFilmCase(film: "Delta 400", exponent: 1.41, noCorrectionThreshold: 0.5),
         BarePowerLawFilmCase(film: "Delta 3200", exponent: 1.33),
         BarePowerLawFilmCase(film: "Kentmere 100", exponent: 1.26),
         BarePowerLawFilmCase(film: "Kentmere 200", exponent: 1.26),
@@ -71,7 +82,12 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
             XCTAssertEqual(formula.exponent, c.exponent, accuracy: 1e-6, "\(c.film): published exponent")
             XCTAssertEqual(formula.coefficientSeconds, 1, accuracy: 1e-9, "\(c.film): bare power-law coefficient must be 1")
             XCTAssertEqual(formula.referenceMeteredTimeSeconds, 1, accuracy: 1e-9, "\(c.film): bare power-law reference must be 1")
-            XCTAssertEqual(formula.noCorrectionThroughSeconds, 1, accuracy: 1e-9, "\(c.film): inclusive 1 s no-correction threshold")
+            XCTAssertEqual(
+                formula.noCorrectionThroughSeconds,
+                c.noCorrectionThreshold,
+                accuracy: 1e-9,
+                "\(c.film): inclusive no-correction threshold must match the published boundary"
+            )
             XCTAssertNil(formula.sourceRangeThroughSeconds, "\(c.film): bare power-law profiles have no bounded source range")
             XCTAssertTrue(profile.sourceEvidence.isEmpty, "\(c.film): no-source-range profiles carry no source evidence")
         }
@@ -79,17 +95,17 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
 
     // MARK: - No-correction threshold (inclusive at 1 s)
 
-    /// At and below the 1 s inclusive threshold the basis is official
-    /// no-correction with corrected == metered.
+    /// At and below the film's inclusive no-correction threshold the
+    /// basis is official no-correction with corrected == metered.
     func testAtAndBelowThresholdReturnsOfficialNoCorrection() throws {
         for c in cases {
             let profile = try FormulaProfileTestSupport.profile(for: c.film)
-            for metered in [0.5, 1.0] {
+            for metered in [c.noCorrectionThreshold / 2, c.noCorrectionThreshold] {
                 let result = evaluator.evaluate(profile: profile, meteredExposureSeconds: metered)
                 XCTAssertEqual(
                     result.metadata.basis,
                     .officialThresholdNoCorrection,
-                    "\(c.film) @ \(metered)s: at/below the 1 s threshold must read as official no-correction."
+                    "\(c.film) @ \(metered)s: at/below the \(c.noCorrectionThreshold) s threshold must read as official no-correction."
                 )
                 let corrected = try XCTUnwrap(result.correctedExposureSeconds, "\(c.film) @ \(metered)s: no-correction must report corrected.")
                 XCTAssertEqual(corrected, metered, accuracy: 1e-6, "\(c.film) @ \(metered)s: corrected must equal metered in the no-correction band.")

@@ -111,9 +111,13 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     }
 
     /// The no-source-range bare power-law family ships every entry as an
-    /// exponent-formula profile that preserves the 1-second
-    /// no-correction boundary in the formula.
+    /// exponent-formula profile that preserves its published
+    /// no-correction boundary in the formula. Most of the family states
+    /// an inclusive 1 s boundary; Pan F Plus, FP4 Plus, Delta 400, and
+    /// HP5 Plus publish "no adjustment between 1/2 sec and 1/10,000 sec"
+    /// instead, so those four carry 0.5 s (PTIMER-200 follow-up).
     func testBarePowerLawCatalogEntriesPreserveOneSecondNoCorrectionBoundary() throws {
+        let halfSecondBoundaryFilms: Set<String> = ["Pan F Plus", "FP4 Plus", "Delta 400", "HP5 Plus"]
         let films = LaunchPresetFilmCatalogV2.films.filter { $0.manufacturer == "ILFORD / HARMAN" }
         XCTAssertFalse(films.isEmpty, "Bare power-law family must have catalog members.")
         for film in films {
@@ -125,11 +129,12 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
                 }.first,
                 "\(film.canonicalStockName): bare power-law family must ship as exponent-formula profiles."
             )
+            let expectedThreshold: Double = halfSecondBoundaryFilms.contains(film.canonicalStockName) ? 0.5 : 1
             XCTAssertEqual(
                 formulaRule.formula.noCorrectionThroughSeconds,
-                1,
+                expectedThreshold,
                 accuracy: 1e-9,
-                "\(film.canonicalStockName): must preserve the 1-second no-compensation boundary in the formula."
+                "\(film.canonicalStockName): must preserve its published no-correction boundary in the formula."
             )
         }
     }
@@ -572,6 +577,91 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             let value = try XCTUnwrap(sourceReference.rows.first?.value, "\(filmName): must show a compact no-correction row.")
             XCTAssertTrue(value.contains("<= 1s") || value.contains("<= 1.0s"), "\(filmName): no-correction boundary must read <= 1s; got \(value)")
         }
+    }
+
+    // MARK: - Source-reference consistency (PTIMER-200 follow-up)
+
+    /// Pancro 400's official table cannot use `noCorrectionThroughSeconds
+    /// = 1` (the schema requires the boundary strictly below the first
+    /// anchor at 1 sec), so the catalog keeps the calculation-safe 0.5 sec
+    /// guard and instead surfaces the true published wording ("no
+    /// correction below 1 sec") as a `sourceNote`, per the existing
+    /// Sources-section mechanism (already used by SFX 200).
+    func testPancro400CalculationGuardStaysAtHalfSecondWithExplanatorySourceNote() throws {
+        let pancro = try XCTUnwrap(film(named: "Pancro 400"))
+        let profile = pancro.profiles[0]
+
+        XCTAssertEqual(profile.source.authority, .official)
+        let sourceNote = try XCTUnwrap(profile.sourceNote, "Pancro 400 must explain the calculation-guard vs source-wording gap.")
+        XCTAssertTrue(sourceNote.contains("no correction below 1 sec"), "Pancro 400 sourceNote must state the true published boundary.")
+        XCTAssertTrue(sourceNote.contains("1/2 sec"), "Pancro 400 sourceNote must explain the calculation guard used by the app.")
+
+        let evaluator = ReciprocityCalculationPolicyEvaluator()
+        let atGuard = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+        guard case let .quantified(atGuardPayload) = atGuard else {
+            return XCTFail("Pancro 400 @ 0.5s must be quantified no-correction, got \(atGuard).")
+        }
+        XCTAssertEqual(atGuardPayload.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(atGuardPayload.correctedExposureSeconds, 0.5, accuracy: 1e-6)
+
+        let atFirstAnchor = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1)
+        guard case let .quantified(anchorPayload) = atFirstAnchor else {
+            return XCTFail("Pancro 400 @ 1s must be quantified table-derived, got \(atFirstAnchor).")
+        }
+        XCTAssertEqual(anchorPayload.metadata.basis, .tableLogLogDerived, "Pancro 400 @ 1s must be corrected (+1/2 stop), not treated as no correction.")
+        XCTAssertEqual(anchorPayload.correctedExposureSeconds, 1.4142136, accuracy: 1e-4)
+    }
+
+    /// ILFORD's sheet for Delta 3200 is internally inconsistent (states
+    /// "no adjustment through 1/2 sec" then describes correction only for
+    /// exposures "longer than 1 sec"). The catalog keeps the existing 1 s
+    /// calculation boundary and surfaces the ambiguity via `sourceNote`
+    /// rather than silently picking a side.
+    func testDelta3200SurfacesSourceWordingAmbiguityNote() throws {
+        let delta3200 = try XCTUnwrap(film(named: "Delta 3200"))
+        let profile = delta3200.profiles[0]
+
+        let sourceNote = try XCTUnwrap(profile.sourceNote, "Delta 3200 must flag the official sheet's inconsistent threshold wording.")
+        XCTAssertTrue(sourceNote.contains("inconsistent"), "Delta 3200 sourceNote must call out the wording inconsistency.")
+        XCTAssertTrue(sourceNote.contains("1/2 sec") && sourceNote.contains("1 sec"), "Delta 3200 sourceNote must cite both boundaries the sheet mentions.")
+
+        let formulaRule = try XCTUnwrap(formulaRule(in: delta3200))
+        XCTAssertEqual(
+            formulaRule.formula.noCorrectionThroughSeconds,
+            1,
+            accuracy: 1e-9,
+            "Delta 3200's calculation boundary must stay unchanged pending product clarification."
+        )
+    }
+
+    /// FP4 Plus has no published `sourceEvidence`, so its corrected 1/2 sec
+    /// no-correction boundary surfaces through the compact fallback.
+    @MainActor
+    func testFP4PlusShowsCompactHalfSecondNoCorrectionBoundary() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "FP4 Plus", meteredExposureSeconds: 8)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("<= 0.5s"), "FP4 Plus: got \(value)")
+        XCTAssertTrue(value.contains("No correction range"))
+        XCTAssertFalse(value.contains("Source data through"), "FP4 Plus has no bounded source range.")
+    }
+
+    /// Delta 3200 has no published `sourceEvidence`, so it exercises the
+    /// compact fallback for its unchanged 1 sec boundary, alongside its
+    /// ambiguity `sourceNote` in the Sources section.
+    @MainActor
+    func testDelta3200ShowsCompactBoundaryAndAmbiguityNote() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "Delta 3200", meteredExposureSeconds: 10)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("<= 1s") || value.contains("<= 1.0s"), "Delta 3200: got \(value)")
+
+        let sources = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Sources" }))
+        XCTAssertTrue(
+            sources.rows.contains { $0.value.contains("inconsistent") },
+            "Delta 3200's ambiguity note must still render in Sources."
+        )
     }
 
     // MARK: - Helpers

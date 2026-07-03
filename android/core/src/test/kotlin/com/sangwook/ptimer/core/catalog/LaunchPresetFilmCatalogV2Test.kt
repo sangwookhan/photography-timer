@@ -439,7 +439,7 @@ class LaunchPresetFilmCatalogV2Test {
 
     private val expectedGoldenExposureRows = """
 ilford-pan-f-plus-50|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-pan-f-plus-50|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-pan-f-plus-50|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-pan-f-plus-50|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.514026749
 ilford-pan-f-plus-50|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.504134215
 ilford-pan-f-plus-50|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|21.379620895
@@ -449,7 +449,7 @@ ilford-pan-f-plus-50|120.000000000|quantified|formulaDerived|withinStatedRange|n
 ilford-pan-f-plus-50|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1970.476540663
 ilford-pan-f-plus-50|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|9772.372209558
 ilford-fp4-plus-125|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-fp4-plus-125|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-fp4-plus-125|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-fp4-plus-125|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.394957409
 ilford-fp4-plus-125|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.598051020
 ilford-fp4-plus-125|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|18.197008586
@@ -469,7 +469,7 @@ ilford-delta-100|120.000000000|quantified|formulaDerived|withinStatedRange|none|
 ilford-delta-100|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1321.821406765
 ilford-delta-100|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|6025.595860744
 ilford-delta-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-delta-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-delta-400|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-delta-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.657371628
 ilford-delta-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|9.672699729
 ilford-delta-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|25.703957828
@@ -489,7 +489,7 @@ ilford-delta-3200|120.000000000|quantified|formulaDerived|withinStatedRange|none
 ilford-delta-3200|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1970.476540663
 ilford-delta-3200|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|9772.372209558
 ilford-hp5-plus-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-hp5-plus-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-hp5-plus-400|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-hp5-plus-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.479415400
 ilford-hp5-plus-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.234755438
 ilford-hp5-plus-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.417379447

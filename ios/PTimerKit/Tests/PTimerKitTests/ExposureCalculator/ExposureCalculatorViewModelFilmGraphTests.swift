@@ -371,9 +371,12 @@ final class FilmModeGraphVisibilityTests: XCTestCase {
                                         viewportLowerBelow: 0.1,
                                         expectedNoCorrectionUpperBound: 0.1,
                                         upperBoundIsMinimum: false),
+        // PTIMER-200 follow-up: HP5 Plus's official source states no
+        // adjustment between 1/2 sec and 1/10,000 sec, so the catalog's
+        // no-correction boundary is 0.5 sec, not 1 sec.
         PresetSubSecondNoCorrectionCase(film: "HP5 Plus", sample: 0.25,
-                                        viewportLowerBelow: 1.0,
-                                        expectedNoCorrectionUpperBound: 1.0,
+                                        viewportLowerBelow: 0.5,
+                                        expectedNoCorrectionUpperBound: 0.5,
                                         upperBoundIsMinimum: false),
         // Provia 100F's published no-correction threshold extends to 128 s.
         PresetSubSecondNoCorrectionCase(film: "Provia 100F", sample: 0.5,

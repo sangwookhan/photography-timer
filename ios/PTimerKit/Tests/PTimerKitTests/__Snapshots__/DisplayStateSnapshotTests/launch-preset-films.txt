@@ -35,11 +35,11 @@
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.33
                   - offsetSeconds: 0.0
-                  - noCorrectionThroughSeconds: 1.0
+                  - noCorrectionThroughSeconds: 0.5
                   - sourceRangeThroughSeconds: nil
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Exponent p = 1.33."
+                  - "Exponent p = 1.33. Official source: no adjustment between 1/2 sec and 1/10,000 sec; correction applies for exposures longer than 1/2 sec."
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -87,11 +87,11 @@
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.26
                   - offsetSeconds: 0.0
-                  - noCorrectionThroughSeconds: 1.0
+                  - noCorrectionThroughSeconds: 0.5
                   - sourceRangeThroughSeconds: nil
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Exponent p = 1.26."
+                  - "Exponent p = 1.26. Official source: no adjustment between 1/2 sec and 1/10,000 sec; correction applies for exposures longer than 1/2 sec."
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -191,11 +191,11 @@
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.41
                   - offsetSeconds: 0.0
-                  - noCorrectionThroughSeconds: 1.0
+                  - noCorrectionThroughSeconds: 0.5
                   - sourceRangeThroughSeconds: nil
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Exponent p = 1.41."
+                  - "Exponent p = 1.41. Official source: no adjustment between 1/2 sec and 1/10,000 sec; correction applies for exposures longer than 1/2 sec."
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -247,7 +247,7 @@
                   - sourceRangeThroughSeconds: nil
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Exponent p = 1.33."
+                  - "Exponent p = 1.33. Official sheet states no adjustment through 1/2 sec in one sentence, then describes correction for exposures longer than 1 sec in the next -- kept at the more conservative 1 sec boundary pending clarification."
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -257,7 +257,8 @@
             - some: "https://www.ilfordphoto.com/technical-data/"
           ▿ downloadUrl: Optional("https://www.ilfordphoto.com/wp/wp-content/uploads/2025/07/DP3200_F25.pdf")
             - some: "https://www.ilfordphoto.com/wp/wp-content/uploads/2025/07/DP3200_F25.pdf"
-          - sourceNote: nil
+          ▿ sourceNote: Optional("Official sheet wording is inconsistent: it states no adjustment between 1/2 sec and 1/10,000 sec, then describes correction for exposures longer than 1 sec. The app uses 1 sec as the calculation boundary.")
+            - some: "Official sheet wording is inconsistent: it states no adjustment between 1/2 sec and 1/10,000 sec, then describes correction for exposures longer than 1 sec. The app uses 1 sec as the calculation boundary."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-hp5-plus-400"
@@ -296,11 +297,11 @@
                   - referenceMeteredTimeSeconds: 1.0
                   - exponent: 1.31
                   - offsetSeconds: 0.0
-                  - noCorrectionThroughSeconds: 1.0
+                  - noCorrectionThroughSeconds: 0.5
                   - sourceRangeThroughSeconds: nil
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Exponent p = 1.31."
+                  - "Exponent p = 1.31. Official source: no adjustment between 1/2 sec and 1/10,000 sec; correction applies for exposures longer than 1/2 sec."
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
@@ -3536,5 +3537,6 @@
           ▿ sourcePageUrl: Optional("https://bergger.com/fr/index.php?controller=attachment&id_attachment=4")
             - some: "https://bergger.com/fr/index.php?controller=attachment&id_attachment=4"
           - downloadUrl: nil
-          - sourceNote: nil
+          ▿ sourceNote: Optional("Official source says no correction below 1 sec. App uses ≤1/2 sec so 1 sec stays corrected (+1/2 stop).")
+            - some: "Official source says no correction below 1 sec. App uses ≤1/2 sec so 1 sec stays corrected (+1/2 stop)."
       - userMetadata: nil

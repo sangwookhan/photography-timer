@@ -9,7 +9,7 @@ title: Photography Timer
 
 Exposure calculator and countdown timer for film and digital photography.
 
-Photography Timer is preparing for its 0.7 public release.
+Photography Timer is preparing for its first public release.
 
 ## Features
 
@@ -80,7 +80,7 @@ For exact calculation behavior and source details, use the film detail/source vi
 
 Photography Timer does not require an account.
 
-For the current 0.7 release scope:
+For the current public release scope:
 
 - The app does not collect personal information.
 - The app does not use advertising.

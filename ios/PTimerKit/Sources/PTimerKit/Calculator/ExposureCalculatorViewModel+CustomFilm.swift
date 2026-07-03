@@ -22,13 +22,6 @@ extension ExposureCalculatorViewModel {
     /// string.
     public static let customFilmsSectionManufacturerLabel = "Custom films"
 
-    /// Sentinel entry id for the explicit "New custom film" row that
-    /// sits near the top of the selector (under the "No film" row).
-    /// Routing taps through this id keeps the editor entry point
-    /// out of the selection identity space — selecting the row
-    /// opens the editor instead of mutating the active film slot.
-    public static let createCustomFilmEntryID = "create-custom-film"
-
     /// Persists a freshly authored custom film through the library
     /// model. The editor view is the only caller; validation already
     /// ran inside `CustomFilmEditorFormState.validate()` so the
@@ -102,22 +95,5 @@ extension ExposureCalculatorViewModel {
                 )
             )
         }
-    }
-
-    /// Explicit, discoverable "New custom film" row rendered near
-    /// the top of the selector (just under the "No film" sentinel).
-    /// Tapping the row dispatches to the editor through
-    /// `FilmSelectorEntry.isCreateCustomFilmAction == true`; it is
-    /// not a selectable film and is never marked selected.
-    public func createCustomFilmSelectorEntry() -> FilmSelectorEntry {
-        FilmSelectorEntry(
-            id: Self.createCustomFilmEntryID,
-            primaryText: "New custom film",
-            secondaryText: nil,
-            manufacturer: nil,
-            film: nil,
-            supportState: .none,
-            isCreateCustomFilmAction: true
-        )
     }
 }

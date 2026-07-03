@@ -409,13 +409,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public var filmSelectorEntries: [FilmSelectorEntry] {
-        // One stable list: "No film" sentinel, the explicit
-        // "New custom film" action row, then the user's Custom
+        // One stable list: "No film" sentinel, then the user's Custom
         // Films section (above the preset catalog), then every
-        // built-in film grouped by manufacturer.
+        // built-in film grouped by manufacturer. Creating a custom
+        // film is reached through the selector's header "+" button
+        // only (FilmSelectorHeader), not through a row in this list.
         var entries: [FilmSelectorEntry] = [
             FilmSelectorEntry(id: "no-film", primaryText: "No film"),
-            createCustomFilmSelectorEntry(),
         ]
         entries.append(contentsOf: customFilmSelectorEntries())
 

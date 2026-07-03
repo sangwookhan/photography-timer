@@ -483,16 +483,14 @@
           "role": "primary",
           "authority": "official",
           "sourceId": "ilford-reciprocity",
-          "sourcePageUrl": "https://www.ilfordphoto.com/technical-data/",
-          "downloadUrl": "https://www.ilfordphoto.com/amfile/file/download/file/1907/product/702/",
-          "sourceNote": "Official sheet found, but no reciprocity correction data was found.",
+          "sourceNote": "The official ILFORD SFX 200 datasheet has no reciprocity formula, table, or graph section. The exponent below has no verified official source, so this profile is hidden from the film picker (PTIMER-200 follow-up) until a verified official source is found -- this is not manufacturer-published data.",
           "model": "formula",
           "calculation": {
             "family": "modifiedSchwarzschild",
             "exponent": 1.43,
             "noCorrectionThroughSeconds": 1,
             "notes": [
-              "Exponent p = 1.43."
+              "Exponent p = 1.43. Uncited -- no verified official source; retained for reference only, not presented to users."
             ]
           }
         }

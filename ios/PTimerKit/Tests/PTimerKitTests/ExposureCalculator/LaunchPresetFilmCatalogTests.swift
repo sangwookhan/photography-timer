@@ -664,6 +664,32 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         )
     }
 
+    /// ILFORD's official SFX 200 datasheet has no reciprocity section at
+    /// all (confirmed against the live PDF: no formula, table, or graph).
+    /// The catalog's exponent has no verified official origin, so SFX 200
+    /// must not be presented as official quantified reciprocity guidance:
+    /// it is hidden from `userSelectableFilms` (no source-page link) while
+    /// staying in the full catalog, schema-valid, for later restoration if
+    /// a verified source is ever found.
+    func testSFX200IsHiddenFromSelectionRatherThanPresentedAsFabricatedOfficialData() throws {
+        let sfx200 = try XCTUnwrap(film(named: "SFX 200"))
+        let profile = sfx200.profiles[0]
+
+        XCTAssertFalse(
+            LaunchPresetFilmCatalogV2.userSelectableFilms.contains { $0.id == sfx200.id },
+            "SFX 200 must not be user-selectable without a verified official reciprocity source."
+        )
+        XCTAssertTrue(
+            LaunchPresetFilmCatalogV2.films.contains { $0.id == sfx200.id },
+            "The full catalog must keep SFX 200 so the data is available for restoration."
+        )
+        XCTAssertNil(profile.sourcePageUrl, "SFX 200 must have no source-page link, which is what hides it from selection.")
+
+        let sourceNote = try XCTUnwrap(profile.sourceNote, "SFX 200 must explain why it is hidden.")
+        XCTAssertTrue(sourceNote.contains("no reciprocity formula, table, or graph"), "SFX 200 sourceNote must state the official sheet has no reciprocity data.")
+        XCTAssertTrue(sourceNote.contains("no verified official source"), "SFX 200 sourceNote must not imply the exponent is manufacturer-published.")
+    }
+
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {

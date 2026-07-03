@@ -407,18 +407,16 @@
                   - sourceRangeThroughSeconds: nil
                 - additionalAdjustments: 0 elements
                 ▿ notes: 1 element
-                  - "Exponent p = 1.43."
+                  - "Exponent p = 1.43. Uncited -- no verified official source; retained for reference only, not presented to users."
           - notes: 0 elements
           - userMetadata: nil
           - sourceEvidence: 0 elements
           - modelBasis: nil
           - selectorLabel: nil
-          ▿ sourcePageUrl: Optional("https://www.ilfordphoto.com/technical-data/")
-            - some: "https://www.ilfordphoto.com/technical-data/"
-          ▿ downloadUrl: Optional("https://www.ilfordphoto.com/amfile/file/download/file/1907/product/702/")
-            - some: "https://www.ilfordphoto.com/amfile/file/download/file/1907/product/702/"
-          ▿ sourceNote: Optional("Official sheet found, but no reciprocity correction data was found.")
-            - some: "Official sheet found, but no reciprocity correction data was found."
+          - sourcePageUrl: nil
+          - downloadUrl: nil
+          ▿ sourceNote: Optional("The official ILFORD SFX 200 datasheet has no reciprocity formula, table, or graph section. The exponent below has no verified official source, so this profile is hidden from the film picker (PTIMER-200 follow-up) until a verified official source is found -- this is not manufacturer-published data.")
+            - some: "The official ILFORD SFX 200 datasheet has no reciprocity formula, table, or graph section. The exponent below has no verified official source, so this profile is hidden from the film picker (PTIMER-200 follow-up) until a verified official source is found -- this is not manufacturer-published data."
       - userMetadata: nil
     ▿ PTimerCore.FilmIdentity
       - id: "ilford-ortho-plus-80"

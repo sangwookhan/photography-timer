@@ -82,9 +82,13 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         // a verified source-page link. That hides the community/practical
         // Retro 400S. PTIMER-200 added source-page links to the previously
         // official-but-unlinked Rollei RPX 25 / ORTHO 25 plus, so they are no
-        // longer hidden. The full catalog keeps Retro 400S for later
-        // restoration.
-        let hidden = ["rollei-retro-400s"]
+        // longer hidden. PTIMER-200 also found ILFORD SFX 200's official
+        // datasheet has no reciprocity formula/table/graph at all -- the
+        // shipped exponent has no verified source, so its source-page link
+        // was removed to hide it from selection rather than present a
+        // fabricated official formula. The full catalog keeps Retro 400S and
+        // SFX 200 for later restoration.
+        let hidden = ["rollei-retro-400s", "ilford-sfx-200"]
         let selectable = LaunchPresetFilmCatalogV2.userSelectableFilms
         for id in hidden {
             XCTAssertTrue(

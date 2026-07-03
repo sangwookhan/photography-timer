@@ -5,8 +5,9 @@ import Foundation
 import PTimerCore
 import XCTest
 
-/// PTIMER-161: review fixture that pins the data used by
-/// `docs/tasks/PTIMER-161/fomapan-100-multi-profile-review.md`.
+/// PTIMER-161: review fixture that pins the data used by the
+/// Fomapan 100 multi-profile reciprocity research record
+/// (preserved outside this repository).
 ///
 /// These tests do not change production behavior. They:
 ///

@@ -64,6 +64,30 @@ class ReciprocityDetailsPresenterTest {
         )
     }
 
+    // Pancro 400 publishes sourceEvidence, so it keeps its existing
+    // evidence-backed sourceReferenceRows -- it never goes through the
+    // no-evidence fallback.
+    @Test
+    fun pancro400KeepsEvidenceBackedSourceReference() {
+        val f = film("bergger-pancro-400")
+        val profile = f.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 10.0), 10.0, { "${it}s" })
+        assertTrue(state.sourceReferenceRows.any { it.meteredText == "<= 1/2s" && it.valueText == "No correction range" })
+    }
+
+    // Phoenix 200 and Phoenix II have no published sourceEvidence, so they
+    // exercise the compact no-evidence fallback for their published
+    // 1-second no-correction threshold.
+    @Test
+    fun phoenixFilmsShowCompactOneSecondNoCorrectionBoundary() {
+        for (id in listOf("harman-phoenix-200", "harman-phoenix-ii")) {
+            val f = film(id)
+            val profile = f.profiles.first()
+            val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 10.0), 10.0, { "${it}s" })
+            assertEquals("$id: no-correction boundary must read <= 1s.", "<= 1s", state.sourceReferenceRows.firstOrNull()?.meteredText)
+        }
+    }
+
     @Test
     fun correctedTextReflectsQuantifiedConfidence() {
         val f = film("ilford-pan-f-plus-50")

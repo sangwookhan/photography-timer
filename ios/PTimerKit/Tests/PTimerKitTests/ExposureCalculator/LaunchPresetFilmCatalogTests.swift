@@ -543,6 +543,37 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         XCTAssertTrue(value.contains("No correction range"), "T-MAX 100: got \(value)")
     }
 
+    // MARK: - Compact/elaborate source reference for the five new films
+
+    /// Pancro 400 publishes `sourceEvidence`, so it keeps its existing
+    /// elaborate "Source reference" block (anchors + the no-correction
+    /// row) unchanged -- it never goes through the compact no-evidence
+    /// fallback.
+    @MainActor
+    func testPancro400KeepsElaborateSourceReference() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "Pancro 400", meteredExposureSeconds: 10)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("<= 0.5s"), "Pancro 400: got \(value)")
+        XCTAssertTrue(value.contains("No correction range"))
+    }
+
+    /// Phoenix 200 and Phoenix II have no published `sourceEvidence`, so
+    /// they exercise the compact no-evidence fallback for their published
+    /// 1-second no-correction threshold.
+    @MainActor
+    func testPhoenixFilmsShowCompactOneSecondNoCorrectionBoundary() throws {
+        for filmName in ["Phoenix 200", "Phoenix II"] {
+            let displayState = try FormulaProfileTestSupport.makeDisplayState(film: filmName, meteredExposureSeconds: 10)
+            let sourceReference = try XCTUnwrap(
+                displayState.sections.first(where: { $0.title == "Source reference" }),
+                "\(filmName): must have a Source reference section."
+            )
+            let value = try XCTUnwrap(sourceReference.rows.first?.value, "\(filmName): must show a compact no-correction row.")
+            XCTAssertTrue(value.contains("<= 1s") || value.contains("<= 1.0s"), "\(filmName): no-correction boundary must read <= 1s; got \(value)")
+        }
+    }
+
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {

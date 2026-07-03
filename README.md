@@ -9,7 +9,7 @@ and shooting timers. PTIMER is the project and repository code name.
 
 - iPhone is the first release target.
 - Android has an MVP native implementation in progress.
-- Current app/development version: 0.6.0.
+- Current app/development version: 0.7.1.
 - Planned public release target: Photography Timer 0.7.
 - Homepage: https://sangwookhan.github.io/photography-timer/
 - Privacy Policy: https://sangwookhan.github.io/photography-timer/privacy.html

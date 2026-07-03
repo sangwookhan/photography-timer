@@ -85,6 +85,8 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
         .init(stock: "Kentmere 100", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "Kentmere 200", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "Kentmere 400", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Phoenix 200", kind: .formula, sampleMeteredSeconds: 10),
+        .init(stock: "Phoenix II", kind: .formula, sampleMeteredSeconds: 10),
 
         // Rollei
         .init(stock: "RPX 25", kind: .formula, sampleMeteredSeconds: 10),
@@ -94,6 +96,11 @@ final class FilmDetailsGraphKindInvariantTests: XCTestCase {
         .init(stock: "RETRO 80S", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "RETRO 400S", kind: .formula, sampleMeteredSeconds: 10),
         .init(stock: "SUPERPAN 200", kind: .formula, sampleMeteredSeconds: 10),
+
+        // BERGGER — table model, renders a graph of kind .formula
+        // sampled from the table curve (same convention as Fomapan/
+        // Kodak/RPX table profiles above).
+        .init(stock: "Pancro 400", kind: .formula, sampleMeteredSeconds: 10),
     ]
 
     func testEveryCatalogStockHasAGraphKindExpectation() throws {

@@ -376,10 +376,10 @@ final class FilmModeDetailsDisplayStateTests: XCTestCase {
         XCTAssertFalse(details.sections.contains { $0.title == "Profile" })
         XCTAssertFalse(details.sections.contains { $0.title == "Formula" })
         // HP5 Plus is a no-source-range manufacturer-formula profile: it
-        // leads with the active-model metadata (PTIMER-159) and keeps
-        // its Sources citation, with no source-evidence or comparison
-        // sections.
-        XCTAssertEqual(details.sections.map(\.title), ["Reciprocity model", "Sources"])
+        // leads with the active-model metadata (PTIMER-159), a minimal
+        // "Source reference" section for its no-correction boundary, and
+        // keeps its Sources citation, with no comparison section.
+        XCTAssertEqual(details.sections.map(\.title), ["Reciprocity model", "Source reference", "Sources"])
         let formula = try XCTUnwrap(details.graph?.formulaDisplayText)
         XCTAssertEqual(formula, "Tc = Tm^1.31")
         XCTAssertEqual(details.summary.badgeText, "Formula-derived")

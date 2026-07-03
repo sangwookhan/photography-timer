@@ -64,6 +64,59 @@ class ReciprocityDetailsPresenterTest {
         )
     }
 
+    // Pancro 400 publishes sourceEvidence, so it keeps its existing
+    // evidence-backed sourceReferenceRows -- it never goes through the
+    // no-evidence fallback. Its sourceNote explains the calculation-guard
+    // vs source-wording gap.
+    @Test
+    fun pancro400KeepsEvidenceBackedSourceReferenceAndSourceNote() {
+        val f = film("bergger-pancro-400")
+        val profile = f.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 10.0), 10.0, { "${it}s" })
+        assertTrue(state.sourceReferenceRows.any { it.meteredText == "<= 1/2s" && it.valueText == "No correction range" })
+        assertNotNull(state.sourceNote)
+        assertTrue(state.sourceNote!!.contains("Official source says no correction below 1 sec"))
+        assertTrue(state.sourceNote!!.contains("≤1/2 sec"))
+    }
+
+    // Phoenix 200 and Phoenix II have no published sourceEvidence, so they
+    // exercise the compact no-evidence fallback for their published
+    // 1-second no-correction threshold.
+    @Test
+    fun phoenixFilmsShowCompactOneSecondNoCorrectionBoundary() {
+        for (id in listOf("harman-phoenix-200", "harman-phoenix-ii")) {
+            val f = film(id)
+            val profile = f.profiles.first()
+            val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 10.0), 10.0, { "${it}s" })
+            assertEquals("$id: no-correction boundary must read <= 1s.", "<= 1s", state.sourceReferenceRows.firstOrNull()?.meteredText)
+        }
+    }
+
+    // FP4 Plus has no published sourceEvidence, so its corrected 1/2 sec
+    // no-correction boundary surfaces through the compact fallback.
+    @Test
+    fun fp4PlusShowsCompactHalfSecondNoCorrectionBoundary() {
+        val f = film("ilford-fp4-plus-125")
+        val profile = f.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 8.0), 8.0, { "${it}s" })
+        assertEquals(1, state.sourceReferenceRows.size)
+        assertEquals("<= 1/2s", state.sourceReferenceRows[0].meteredText)
+        assertEquals("No correction range", state.sourceReferenceRows[0].valueText)
+    }
+
+    // Delta 3200 has no published sourceEvidence, so it exercises the
+    // compact fallback for its unchanged 1 sec boundary, alongside its
+    // ambiguity sourceNote.
+    @Test
+    fun delta3200ShowsCompactBoundaryAndAmbiguityNote() {
+        val f = film("ilford-delta-3200")
+        val profile = f.profiles.first()
+        val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 10.0), 10.0, { "${it}s" })
+        assertEquals("<= 1s", state.sourceReferenceRows.firstOrNull()?.meteredText)
+        assertNotNull(state.sourceNote)
+        assertTrue(state.sourceNote!!.contains("inconsistent"))
+    }
+
     @Test
     fun correctedTextReflectsQuantifiedConfidence() {
         val f = film("ilford-pan-f-plus-50")
@@ -142,10 +195,12 @@ class ReciprocityDetailsPresenterTest {
         )
         val state = ReciprocityDetailsPresenter.make(film, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
 
-        // The glossary derives from the profile's rule adjustments. The source
-        // reference table is empty here because the adjustments live on the rule,
-        // not as published source-evidence rows (the table needs evidence).
-        assertTrue(state.sourceReferenceRows.isEmpty())
+        // The glossary derives from the profile's rule adjustments; those
+        // adjustments live on the rule, not as published source-evidence
+        // rows, so they don't populate the table. The table does carry the
+        // profile's own no-correction boundary.
+        assertEquals(1, state.sourceReferenceRows.size)
+        assertEquals("<= 1s", state.sourceReferenceRows[0].meteredText)
         assertTrue(state.legendLines.contains("Color correction: CC30M = color-compensating magenta filtration."))
         assertTrue(state.legendLines.contains("Development adjustment: Dev -10% means adjust development time by -10%."))
         assertTrue(state.legendLines.contains("Warning: Not recommended marks a manufacturer stop-signal."))
@@ -157,7 +212,11 @@ class ReciprocityDetailsPresenterTest {
         val profile = f.profiles.first()
         val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
         assertTrue(state.referenceRows.isEmpty())
-        assertTrue(state.sourceReferenceRows.isEmpty())
+        // Pan F Plus has no published sourceEvidence, but its no-correction
+        // boundary still surfaces as a minimal Source reference row, same
+        // conceptual place table models use.
+        assertEquals(1, state.sourceReferenceRows.size)
+        assertEquals("No correction range", state.sourceReferenceRows[0].valueText)
         assertTrue(state.guidanceBoundaryRows.isEmpty())
         assertTrue(state.legendLines.isEmpty())
     }

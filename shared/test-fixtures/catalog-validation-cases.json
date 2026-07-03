@@ -13,7 +13,7 @@
   },
   "catalogExpectations": {
     "description": "Expected properties of the bundled launch catalog (PTIMER-103 launch-ready scope).",
-    "expectedFilmCount": 37,
+    "expectedFilmCount": 40,
     "expectedFilmOrder": [
       "Pan F Plus",
       "FP4 Plus",
@@ -27,6 +27,8 @@
       "Kentmere 100",
       "Kentmere 200",
       "Kentmere 400",
+      "Phoenix 200",
+      "Phoenix II",
       "Tri-X 400",
       "T-MAX 100",
       "T-MAX 400",
@@ -51,7 +53,8 @@
       "RETRO 400S",
       "SUPERPAN 200",
       "CHS 100 II",
-      "CMS 20 II"
+      "CMS 20 II",
+      "Pancro 400"
     ],
     "expectedFilmIds": [
       "ilford-pan-f-plus-50",
@@ -66,6 +69,8 @@
       "ilford-kentmere-pan-100",
       "ilford-kentmere-pan-200",
       "ilford-kentmere-pan-400",
+      "harman-phoenix-200",
+      "harman-phoenix-ii",
       "kodak-tri-x-400",
       "kodak-tmax-100",
       "kodak-tmax-400",
@@ -90,15 +95,17 @@
       "rollei-retro-400s",
       "rollei-superpan-200",
       "adox-chs-100-ii",
-      "adox-cms-20-ii"
+      "adox-cms-20-ii",
+      "bergger-pancro-400"
     ],
     "expectedManufacturerCounts": {
-      "ILFORD / HARMAN": 12,
+      "ILFORD / HARMAN": 14,
       "Kodak": 9,
       "Fujifilm": 4,
       "FOMA BOHEMIA": 3,
       "Rollei": 7,
-      "ADOX": 2
+      "ADOX": 2,
+      "BERGGER": 1
     }
   }
 }

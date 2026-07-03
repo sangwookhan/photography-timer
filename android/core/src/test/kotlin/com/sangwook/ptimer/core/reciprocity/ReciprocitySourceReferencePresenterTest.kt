@@ -108,10 +108,15 @@ class ReciprocitySourceReferencePresenterTest {
     }
 
     @Test
-    fun profileWithoutSourceEvidenceProducesNoTable() {
+    fun profileWithoutSourceEvidenceProducesMinimalNoCorrectionRowOnly() {
+        // An official profile with no published sourceEvidence still
+        // surfaces its no-correction boundary as a minimal Source
+        // reference row; it never gets a Guidance boundary row since
+        // that only comes from published stop-signal evidence.
         val profile = velviaLikeProfile().copy(sourceEvidence = emptyList())
         val result = ReciprocitySourceReferencePresenter.rows(profile, fmt)
-        assertTrue(result.sourceReference.isEmpty())
+        assertEquals(1, result.sourceReference.size)
+        assertEquals("No correction range", result.sourceReference[0].valueText)
         assertTrue(result.guidanceBoundary.isEmpty())
     }
 }

@@ -80,13 +80,17 @@ public struct FilmModeDetailsReferencePresenter {
     ///   not-recommended warning (e.g. Provia 100F's 480 s boundary),
     ///   so the boundary never reads as a formula-fitting point.
     ///
-    /// Profiles without `sourceEvidence` (HP5 Plus and the rest of
-    /// the formula catalog today) produce neither section, preserving
-    /// their existing layout.
+    /// Profiles without `sourceEvidence` (HP5 Plus and the rest of the
+    /// bare formula/table catalog) produce neither of these two sections
+    /// -- instead they fall back to `compactCalculationSections`, a
+    /// minimal "Source reference" section in the same conceptual spot
+    /// (below the graph, above Sources) so a formula-only film is
+    /// visually consistent with a table-model film instead of having its
+    /// no-correction boundary buried in Sources (PTIMER-200 follow-up).
     private func sourceEvidenceSections(for input: Input) -> [FilmModeDetailsSectionState] {
         let evidence = input.bindingState.profile.sourceEvidence
         guard !evidence.isEmpty else {
-            return []
+            return compactCalculationSections(for: input)
         }
 
         // Source reference rows are ordered by `SourceReferenceRowSortKey`
@@ -431,6 +435,64 @@ public struct FilmModeDetailsReferencePresenter {
         }
 
         return rows
+    }
+
+    /// Minimal "Source reference" section for an official formula/table
+    /// profile with no published `sourceEvidence` (e.g. FP4 Plus, Phoenix
+    /// 200/II, Delta 3200), read straight from the same
+    /// `noCorrectionThroughSeconds` / `sourceRangeThroughSeconds` fields
+    /// the calculation already uses -- no new source data, no calculation
+    /// change. Reuses the elaborate evidence-backed block's exact row
+    /// format and section title so a formula-only film is visually
+    /// consistent with a table-model film. Empty for profiles with
+    /// neither rule (e.g. limited guidance) or non-official authority,
+    /// which keeps this scoped to "official quantified" profiles.
+    private func compactCalculationSections(for input: Input) -> [FilmModeDetailsSectionState] {
+        let profile = input.bindingState.profile
+        guard profile.source.authority == .official else { return [] }
+
+        var noCorrectionThroughSeconds: Double?
+        var sourceRangeThroughSeconds: Double?
+
+        for rule in profile.rules {
+            switch rule {
+            case let .formula(formulaRule):
+                noCorrectionThroughSeconds = formulaRule.formula.noCorrectionThroughSeconds
+                sourceRangeThroughSeconds = formulaRule.formula.sourceRangeThroughSeconds
+            case let .tableInterpolation(tableRule):
+                noCorrectionThroughSeconds = tableRule.noCorrectionThroughSeconds
+                sourceRangeThroughSeconds = tableRule.sourceRangeThroughSeconds
+            case .threshold, .limitedGuidance:
+                continue
+            }
+        }
+
+        var lines: [[String]] = []
+        if let noCorrectionThroughSeconds, noCorrectionThroughSeconds > 0 {
+            lines.append(
+                sourceReferenceFormulaNoCorrectionColumns(
+                    upperBoundSeconds: noCorrectionThroughSeconds,
+                    formatDuration: input.formatDuration
+                )
+            )
+        }
+        if let sourceRangeThroughSeconds {
+            lines.append([input.formatDuration(sourceRangeThroughSeconds), "Source data through"])
+        }
+        guard !lines.isEmpty else { return [] }
+
+        return [
+            FilmModeDetailsSectionState(
+                title: "Source reference",
+                rows: [
+                    FilmModeDetailsRowState(
+                        title: "",
+                        value: formattedReferenceBlock(from: lines),
+                        style: .referenceBlock
+                    ),
+                ]
+            ),
+        ]
     }
 
     /// A labeled Sources link row (PTIMER-158) whose full URL is the

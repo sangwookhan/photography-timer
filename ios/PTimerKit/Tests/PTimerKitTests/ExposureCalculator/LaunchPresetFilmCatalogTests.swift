@@ -64,11 +64,12 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 
     private let manufacturerMembershipCases: [ManufacturerMembershipCase] = [
         ManufacturerMembershipCase(
-            manufacturer: "ILFORD / HARMAN", expectedCount: 12,
+            manufacturer: "ILFORD / HARMAN", expectedCount: 14,
             expectedStockNames: [
                 "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
                 "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
                 "Kentmere 100", "Kentmere 200", "Kentmere 400",
+                "Phoenix 200", "Phoenix II",
             ]),
         ManufacturerMembershipCase(
             manufacturer: "Kodak", expectedCount: 9,
@@ -89,6 +90,9 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         ManufacturerMembershipCase(
             manufacturer: "ADOX", expectedCount: 2,
             expectedStockNames: ["CHS 100 II", "CMS 20 II"]),
+        ManufacturerMembershipCase(
+            manufacturer: "BERGGER", expectedCount: 1,
+            expectedStockNames: ["Pancro 400"]),
     ]
 
     /// Each manufacturer family contributes exactly its expected member
@@ -107,9 +111,13 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
     }
 
     /// The no-source-range bare power-law family ships every entry as an
-    /// exponent-formula profile that preserves the 1-second
-    /// no-correction boundary in the formula.
+    /// exponent-formula profile that preserves its published
+    /// no-correction boundary in the formula. Most of the family states
+    /// an inclusive 1 s boundary; Pan F Plus, FP4 Plus, Delta 400, and
+    /// HP5 Plus publish "no adjustment between 1/2 sec and 1/10,000 sec"
+    /// instead, so those four carry 0.5 s (PTIMER-200 follow-up).
     func testBarePowerLawCatalogEntriesPreserveOneSecondNoCorrectionBoundary() throws {
+        let halfSecondBoundaryFilms: Set<String> = ["Pan F Plus", "FP4 Plus", "Delta 400", "HP5 Plus"]
         let films = LaunchPresetFilmCatalogV2.films.filter { $0.manufacturer == "ILFORD / HARMAN" }
         XCTAssertFalse(films.isEmpty, "Bare power-law family must have catalog members.")
         for film in films {
@@ -121,11 +129,12 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
                 }.first,
                 "\(film.canonicalStockName): bare power-law family must ship as exponent-formula profiles."
             )
+            let expectedThreshold: Double = halfSecondBoundaryFilms.contains(film.canonicalStockName) ? 0.5 : 1
             XCTAssertEqual(
                 formulaRule.formula.noCorrectionThroughSeconds,
-                1,
+                expectedThreshold,
                 accuracy: 1e-9,
-                "\(film.canonicalStockName): must preserve the 1-second no-compensation boundary in the formula."
+                "\(film.canonicalStockName): must preserve its published no-correction boundary in the formula."
             )
         }
     }
@@ -144,6 +153,8 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             "Kentmere 100": 1.26,
             "Kentmere 200": 1.26,
             "Kentmere 400": 1.30,
+            "Phoenix 200": 1.31,
+            "Phoenix II": 1.31,
         ]
 
         for (canonicalName, exponent) in expected {
@@ -167,8 +178,9 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
             XCTAssertFalse(canonical.contains(stock), "Kodak motion picture film '\(stock)' must not ship in the launch catalog.")
         }
 
-        // Deferred / weak-source manufacturers
-        for excluded in ["AgfaPhoto", "ORWO", "Bergger", "Film Ferrania"] {
+        // Deferred / weak-source manufacturers (BERGGER shipped as a
+        // launch-ready manufacturer in PTIMER-200 and is no longer excluded)
+        for excluded in ["AgfaPhoto", "ORWO", "Film Ferrania"] {
             XCTAssertFalse(manufacturers.contains(excluded), "'\(excluded)' is not launch-ready and must not ship.")
         }
 
@@ -505,6 +517,179 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         )
     }
 
+    // MARK: - Compact reference info below the graph
+
+    /// Official formula/table profiles without published `sourceEvidence`
+    /// (Delta 100 here; the bare power-law family broadly) never surfaced
+    /// their no-correction boundary as readable text -- only via the
+    /// graph band color. A minimal "Source reference" section now always
+    /// carries this boundary, placed directly below the graph/legend --
+    /// the same conceptual spot table-model films already use -- read
+    /// straight from the same fields the calculation already uses.
+    @MainActor
+    func testBareFormulaProfileShowsCompactNoCorrectionBoundary() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "Delta 100", meteredExposureSeconds: 8)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("No correction range"), "Delta 100: got \(value)")
+        XCTAssertFalse(value.contains("Source data through"), "Delta 100 has no bounded source range.")
+    }
+
+    /// A profile that already publishes `sourceEvidence` (T-MAX 100)
+    /// keeps its existing elaborate "Source reference" block unchanged --
+    /// it never goes through the new no-evidence fallback.
+    @MainActor
+    func testTableProfileKeepsElaborateSourceReferenceUnchanged() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "T-MAX 100", meteredExposureSeconds: 10)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+        XCTAssertTrue(sourceReference.rows.count == 1, "T-MAX 100 keeps its single reference block row.")
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("No correction range"), "T-MAX 100: got \(value)")
+    }
+
+    // MARK: - Compact/elaborate source reference for the five new films
+
+    /// Pancro 400 publishes `sourceEvidence`, so it keeps its existing
+    /// elaborate "Source reference" block (anchors + the no-correction
+    /// row) unchanged -- it never goes through the compact no-evidence
+    /// fallback.
+    @MainActor
+    func testPancro400KeepsElaborateSourceReference() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "Pancro 400", meteredExposureSeconds: 10)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("<= 0.5s"), "Pancro 400: got \(value)")
+        XCTAssertTrue(value.contains("No correction range"))
+    }
+
+    /// Phoenix 200 and Phoenix II have no published `sourceEvidence`, so
+    /// they exercise the compact no-evidence fallback for their published
+    /// 1-second no-correction threshold.
+    @MainActor
+    func testPhoenixFilmsShowCompactOneSecondNoCorrectionBoundary() throws {
+        for filmName in ["Phoenix 200", "Phoenix II"] {
+            let displayState = try FormulaProfileTestSupport.makeDisplayState(film: filmName, meteredExposureSeconds: 10)
+            let sourceReference = try XCTUnwrap(
+                displayState.sections.first(where: { $0.title == "Source reference" }),
+                "\(filmName): must have a Source reference section."
+            )
+            let value = try XCTUnwrap(sourceReference.rows.first?.value, "\(filmName): must show a compact no-correction row.")
+            XCTAssertTrue(value.contains("<= 1s") || value.contains("<= 1.0s"), "\(filmName): no-correction boundary must read <= 1s; got \(value)")
+        }
+    }
+
+    // MARK: - Source-reference consistency (PTIMER-200 follow-up)
+
+    /// Pancro 400's official table cannot use `noCorrectionThroughSeconds
+    /// = 1` (the schema requires the boundary strictly below the first
+    /// anchor at 1 sec), so the catalog keeps the calculation-safe 0.5 sec
+    /// guard and instead surfaces the true published wording ("no
+    /// correction below 1 sec") as a `sourceNote`, per the existing
+    /// Sources-section mechanism (already used by SFX 200).
+    func testPancro400CalculationGuardStaysAtHalfSecondWithExplanatorySourceNote() throws {
+        let pancro = try XCTUnwrap(film(named: "Pancro 400"))
+        let profile = pancro.profiles[0]
+
+        XCTAssertEqual(profile.source.authority, .official)
+        let sourceNote = try XCTUnwrap(profile.sourceNote, "Pancro 400 must explain the calculation-guard vs source-wording gap.")
+        XCTAssertTrue(sourceNote.contains("no correction below 1 sec"), "Pancro 400 sourceNote must state the true published boundary.")
+        XCTAssertTrue(sourceNote.contains("1/2 sec"), "Pancro 400 sourceNote must explain the calculation guard used by the app.")
+
+        let evaluator = ReciprocityCalculationPolicyEvaluator()
+        let atGuard = evaluator.evaluate(profile: profile, meteredExposureSeconds: 0.5)
+        guard case let .quantified(atGuardPayload) = atGuard else {
+            return XCTFail("Pancro 400 @ 0.5s must be quantified no-correction, got \(atGuard).")
+        }
+        XCTAssertEqual(atGuardPayload.metadata.basis, .officialThresholdNoCorrection)
+        XCTAssertEqual(atGuardPayload.correctedExposureSeconds, 0.5, accuracy: 1e-6)
+
+        let atFirstAnchor = evaluator.evaluate(profile: profile, meteredExposureSeconds: 1)
+        guard case let .quantified(anchorPayload) = atFirstAnchor else {
+            return XCTFail("Pancro 400 @ 1s must be quantified table-derived, got \(atFirstAnchor).")
+        }
+        XCTAssertEqual(anchorPayload.metadata.basis, .tableLogLogDerived, "Pancro 400 @ 1s must be corrected (+1/2 stop), not treated as no correction.")
+        XCTAssertEqual(anchorPayload.correctedExposureSeconds, 1.4142136, accuracy: 1e-4)
+    }
+
+    /// ILFORD's sheet for Delta 3200 is internally inconsistent (states
+    /// "no adjustment through 1/2 sec" then describes correction only for
+    /// exposures "longer than 1 sec"). The catalog keeps the existing 1 s
+    /// calculation boundary and surfaces the ambiguity via `sourceNote`
+    /// rather than silently picking a side.
+    func testDelta3200SurfacesSourceWordingAmbiguityNote() throws {
+        let delta3200 = try XCTUnwrap(film(named: "Delta 3200"))
+        let profile = delta3200.profiles[0]
+
+        let sourceNote = try XCTUnwrap(profile.sourceNote, "Delta 3200 must flag the official sheet's inconsistent threshold wording.")
+        XCTAssertTrue(sourceNote.contains("inconsistent"), "Delta 3200 sourceNote must call out the wording inconsistency.")
+        XCTAssertTrue(sourceNote.contains("1/2 sec") && sourceNote.contains("1 sec"), "Delta 3200 sourceNote must cite both boundaries the sheet mentions.")
+
+        let formulaRule = try XCTUnwrap(formulaRule(in: delta3200))
+        XCTAssertEqual(
+            formulaRule.formula.noCorrectionThroughSeconds,
+            1,
+            accuracy: 1e-9,
+            "Delta 3200's calculation boundary must stay unchanged pending product clarification."
+        )
+    }
+
+    /// FP4 Plus has no published `sourceEvidence`, so its corrected 1/2 sec
+    /// no-correction boundary surfaces through the compact fallback.
+    @MainActor
+    func testFP4PlusShowsCompactHalfSecondNoCorrectionBoundary() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "FP4 Plus", meteredExposureSeconds: 8)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("<= 0.5s"), "FP4 Plus: got \(value)")
+        XCTAssertTrue(value.contains("No correction range"))
+        XCTAssertFalse(value.contains("Source data through"), "FP4 Plus has no bounded source range.")
+    }
+
+    /// Delta 3200 has no published `sourceEvidence`, so it exercises the
+    /// compact fallback for its unchanged 1 sec boundary, alongside its
+    /// ambiguity `sourceNote` in the Sources section.
+    @MainActor
+    func testDelta3200ShowsCompactBoundaryAndAmbiguityNote() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "Delta 3200", meteredExposureSeconds: 10)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("<= 1s") || value.contains("<= 1.0s"), "Delta 3200: got \(value)")
+
+        let sources = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Sources" }))
+        XCTAssertTrue(
+            sources.rows.contains { $0.value.contains("inconsistent") },
+            "Delta 3200's ambiguity note must still render in Sources."
+        )
+    }
+
+    /// ILFORD's official SFX 200 datasheet has no reciprocity section at
+    /// all (confirmed against the live PDF: no formula, table, or graph).
+    /// The catalog's exponent has no verified official origin, so SFX 200
+    /// must not be presented as official quantified reciprocity guidance:
+    /// it is hidden from `userSelectableFilms` (no source-page link) while
+    /// staying in the full catalog, schema-valid, for later restoration if
+    /// a verified source is ever found.
+    func testSFX200IsHiddenFromSelectionRatherThanPresentedAsFabricatedOfficialData() throws {
+        let sfx200 = try XCTUnwrap(film(named: "SFX 200"))
+        let profile = sfx200.profiles[0]
+
+        XCTAssertFalse(
+            LaunchPresetFilmCatalogV2.userSelectableFilms.contains { $0.id == sfx200.id },
+            "SFX 200 must not be user-selectable without a verified official reciprocity source."
+        )
+        XCTAssertTrue(
+            LaunchPresetFilmCatalogV2.films.contains { $0.id == sfx200.id },
+            "The full catalog must keep SFX 200 so the data is available for restoration."
+        )
+        XCTAssertNil(profile.sourcePageUrl, "SFX 200 must have no source-page link, which is what hides it from selection.")
+
+        let sourceNote = try XCTUnwrap(profile.sourceNote, "SFX 200 must explain why it is hidden.")
+        XCTAssertTrue(sourceNote.contains("no reciprocity formula, table, or graph"), "SFX 200 sourceNote must state the official sheet has no reciprocity data.")
+        XCTAssertTrue(sourceNote.contains("no verified official source"), "SFX 200 sourceNote must not imply the exponent is manufacturer-published.")
+    }
+
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {
@@ -526,13 +711,14 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
 /// scope so the test class body stays under the SwiftLint
 /// `type_body_length` threshold.
 private enum LaunchCatalogExpectations {
-    static let scopeCount = 37
+    static let scopeCount = 40
 
     static let canonicalStockOrder: [String] = [
         // Batch 1 — ILFORD / HARMAN
         "Pan F Plus", "FP4 Plus", "Delta 100", "Delta 400", "Delta 3200",
         "HP5 Plus", "XP2 Super", "SFX 200", "Ortho Plus",
         "Kentmere 100", "Kentmere 200", "Kentmere 400",
+        "Phoenix 200", "Phoenix II",
         // Batch 2 — Kodak
         "Tri-X 400", "T-MAX 100", "T-MAX 400",
         "Ektar 100", "Portra 160", "Portra 400",
@@ -544,6 +730,8 @@ private enum LaunchCatalogExpectations {
         "RPX 25", "RPX 100", "RPX 400", "ORTHO 25 plus",
         "RETRO 80S", "RETRO 400S", "SUPERPAN 200",
         "CHS 100 II", "CMS 20 II",
+        // PTIMER-200 — BERGGER
+        "Pancro 400",
     ]
 }
 
@@ -569,5 +757,8 @@ private struct SourceExemplarExpectation {
         .init(canonical: "RETRO 400S", publisherFragment: "Lafitte", citationContains: "Rollei Retro 400S"),
         .init(canonical: "CHS 100 II", publisherFragment: "ADOX", citationContains: nil),
         .init(canonical: "Ektachrome E100", publisherFragment: "Kodak", citationContains: "E-4000"),
+        .init(canonical: "Phoenix 200", publisherFragment: "HARMAN", citationContains: "Sep 2024"),
+        .init(canonical: "Phoenix II", publisherFragment: "HARMAN", citationContains: "Jul 2025"),
+        .init(canonical: "Pancro 400", publisherFragment: "Bergger", citationContains: "Jan 2017"),
     ]
 }

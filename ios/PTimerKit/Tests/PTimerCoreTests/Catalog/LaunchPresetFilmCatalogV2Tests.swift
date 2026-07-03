@@ -14,8 +14,8 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
 
         XCTAssertEqual(document.schema, "ptimer.catalog.v2")
         XCTAssertEqual(document.schemaVersion, 2)
-        XCTAssertEqual(document.films.count, 37)
-        XCTAssertEqual(v2Films.count, 37)
+        XCTAssertEqual(document.films.count, 40)
+        XCTAssertEqual(v2Films.count, 40)
 
         let filmIDs = document.films.map(\.id)
         let profileIDs = document.films.flatMap { film in film.profiles.map(\.id) }
@@ -80,9 +80,15 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
         // PTIMER-158 (0.7): the user-facing list ships official sources only —
         // a film is selectable only with an official profile that also carries
         // a verified source-page link. That hides the community/practical
-        // Retro 400S and the official-but-unlinked Rollei RPX 25 / ORTHO 25
-        // plus. The full catalog keeps all three for later restoration.
-        let hidden = ["rollei-retro-400s", "rollei-rpx-25", "rollei-ortho-25-plus"]
+        // Retro 400S. PTIMER-200 added source-page links to the previously
+        // official-but-unlinked Rollei RPX 25 / ORTHO 25 plus, so they are no
+        // longer hidden. PTIMER-200 also found ILFORD SFX 200's official
+        // datasheet has no reciprocity formula/table/graph at all -- the
+        // shipped exponent has no verified source, so its source-page link
+        // was removed to hide it from selection rather than present a
+        // fabricated official formula. The full catalog keeps Retro 400S and
+        // SFX 200 for later restoration.
+        let hidden = ["rollei-retro-400s", "ilford-sfx-200"]
         let selectable = LaunchPresetFilmCatalogV2.userSelectableFilms
         for id in hidden {
             XCTAssertTrue(
@@ -377,7 +383,7 @@ final class LaunchPresetFilmCatalogV2Tests: XCTestCase {
 
     private let expectedGoldenExposureRows = """
 ilford-pan-f-plus-50|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-pan-f-plus-50|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-pan-f-plus-50|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-pan-f-plus-50|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.514026749
 ilford-pan-f-plus-50|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.504134215
 ilford-pan-f-plus-50|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|21.379620895
@@ -387,7 +393,7 @@ ilford-pan-f-plus-50|120.000000000|quantified|formulaDerived|withinStatedRange|n
 ilford-pan-f-plus-50|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1970.476540663
 ilford-pan-f-plus-50|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|9772.372209558
 ilford-fp4-plus-125|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-fp4-plus-125|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-fp4-plus-125|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-fp4-plus-125|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.394957409
 ilford-fp4-plus-125|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|7.598051020
 ilford-fp4-plus-125|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|18.197008586
@@ -407,7 +413,7 @@ ilford-delta-100|120.000000000|quantified|formulaDerived|withinStatedRange|none|
 ilford-delta-100|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1321.821406765
 ilford-delta-100|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|6025.595860744
 ilford-delta-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-delta-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-delta-400|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-delta-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.657371628
 ilford-delta-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|9.672699729
 ilford-delta-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|25.703957828
@@ -427,7 +433,7 @@ ilford-delta-3200|120.000000000|quantified|formulaDerived|withinStatedRange|none
 ilford-delta-3200|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1970.476540663
 ilford-delta-3200|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|9772.372209558
 ilford-hp5-plus-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
-ilford-hp5-plus-400|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+ilford-hp5-plus-400|1.000000000|quantified|formulaDerived|withinStatedRange|none|true|1.000000000
 ilford-hp5-plus-400|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.479415400
 ilford-hp5-plus-400|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.234755438
 ilford-hp5-plus-400|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.417379447
@@ -496,6 +502,26 @@ ilford-kentmere-pan-400|60.000000000|quantified|formulaDerived|withinStatedRange
 ilford-kentmere-pan-400|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|504.586491741
 ilford-kentmere-pan-400|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1660.571695688
 ilford-kentmere-pan-400|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|7943.282347243
+harman-phoenix-200|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+harman-phoenix-200|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+harman-phoenix-200|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.479415400
+harman-phoenix-200|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.234755438
+harman-phoenix-200|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.417379447
+harman-phoenix-200|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|86.105093701
+harman-phoenix-200|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|213.490295331
+harman-phoenix-200|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|529.331125968
+harman-phoenix-200|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1758.040370392
+harman-phoenix-200|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|8511.380382024
+harman-phoenix-ii|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+harman-phoenix-ii|1.000000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|1.000000000
+harman-phoenix-ii|2.000000000|quantified|formulaDerived|withinStatedRange|none|true|2.479415400
+harman-phoenix-ii|5.000000000|quantified|formulaDerived|withinStatedRange|none|true|8.234755438
+harman-phoenix-ii|10.000000000|quantified|formulaDerived|withinStatedRange|none|true|20.417379447
+harman-phoenix-ii|30.000000000|quantified|formulaDerived|withinStatedRange|none|true|86.105093701
+harman-phoenix-ii|60.000000000|quantified|formulaDerived|withinStatedRange|none|true|213.490295331
+harman-phoenix-ii|120.000000000|quantified|formulaDerived|withinStatedRange|none|true|529.331125968
+harman-phoenix-ii|300.000000000|quantified|formulaDerived|withinStatedRange|none|true|1758.040370392
+harman-phoenix-ii|1000.000000000|quantified|formulaDerived|withinStatedRange|none|true|8511.380382024
 kodak-tri-x-400|0.500000000|quantified|tableLogLogDerived|withinStatedRange|none|true|0.811672705
 kodak-tri-x-400|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|2.000000000
 kodak-tri-x-400|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|5.000000000
@@ -746,6 +772,16 @@ adox-cms-20-ii|60.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicy
 adox-cms-20-ii|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|348.854412613
 adox-cms-20-ii|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|1001.106243169
 adox-cms-20-ii|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|4000.000166329
+bergger-pancro-400|0.500000000|quantified|officialThresholdNoCorrection|withinStatedRange|none|true|0.500000000
+bergger-pancro-400|1.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|1.414213600
+bergger-pancro-400|2.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|3.139456940
+bergger-pancro-400|5.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|9.009288085
+bergger-pancro-400|10.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|20.000000000
+bergger-pancro-400|30.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|91.775539710
+bergger-pancro-400|60.000000000|quantified|tableLogLogDerived|withinStatedRange|none|true|240.000000000
+bergger-pancro-400|120.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|627.618210498
+bergger-pancro-400|300.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|2236.555885014
+bergger-pancro-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyondPolicyLimit|strongWarning|true|11877.789110460
 """
 
     private func invalidCalculationKindData() -> Data {

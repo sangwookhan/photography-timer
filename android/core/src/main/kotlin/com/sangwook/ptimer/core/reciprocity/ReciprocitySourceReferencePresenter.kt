@@ -47,7 +47,21 @@ object ReciprocitySourceReferencePresenter {
                 guidanceBoundary = emptyList(),
             )
         }
-        if (profile.sourceEvidence.isEmpty()) return Result(emptyList(), emptyList(), emptyList())
+        if (profile.sourceEvidence.isEmpty()) {
+            // PTIMER-200 follow-up: official formula/table profiles without
+            // published sourceEvidence (FP4 Plus, Phoenix 200/II, Delta
+            // 3200, ...) never surfaced their no-correction boundary as
+            // text at all -- only via the graph band color. A minimal
+            // Source reference block gives them the same conceptual
+            // spot (below the graph, above Sources) that evidence-backed
+            // table models already use, instead of burying this in
+            // Sources.
+            return Result(
+                reference = emptyList(),
+                sourceReference = compactCalculationRows(profile, formatDuration),
+                guidanceBoundary = emptyList(),
+            )
+        }
 
         // (sortValue, row); the no-correction band sorts first at 0.
         val sourceReference = mutableListOf<Pair<Double, ReciprocityReferenceRow>>()
@@ -73,6 +87,39 @@ object ReciprocitySourceReferencePresenter {
 
     private fun usesLimitedGuidance(profile: ReciprocityProfile): Boolean =
         profile.rules.any { it.kind == ReciprocityRuleKind.limitedGuidance }
+
+    /**
+     * Minimal "Source reference" rows for an official formula/table
+     * profile with no published sourceEvidence, read straight from the
+     * same noCorrectionThroughSeconds / sourceRangeThroughSeconds fields
+     * the calculation already uses -- no new source data, no calculation
+     * change. Empty for non-official authority, which keeps this scoped
+     * to "official quantified" profiles.
+     */
+    private fun compactCalculationRows(
+        profile: ReciprocityProfile,
+        formatDuration: (Double) -> String,
+    ): List<ReciprocityReferenceRow> {
+        if (profile.source.authority != ReciprocityAuthority.official) return emptyList()
+        val rows = mutableListOf<ReciprocityReferenceRow>()
+        noCorrectionBandRow(profile, formatDuration)?.let { rows.add(it) }
+        sourceRangeThroughSeconds(profile)?.let {
+            rows.add(ReciprocityReferenceRow(formatDuration(it), "Source data through"))
+        }
+        return rows
+    }
+
+    private fun sourceRangeThroughSeconds(profile: ReciprocityProfile): Double? {
+        for (rule in profile.rules) {
+            when (rule.kind) {
+                ReciprocityRuleKind.formula -> rule.formula?.let { return it.formula.sourceRangeThroughSeconds }
+                ReciprocityRuleKind.tableInterpolation -> rule.tableInterpolation?.let { return it.sourceRangeThroughSeconds }
+                ReciprocityRuleKind.threshold,
+                ReciprocityRuleKind.limitedGuidance -> continue
+            }
+        }
+        return null
+    }
 
     private fun limitedGuidanceReferenceRows(
         profile: ReciprocityProfile,

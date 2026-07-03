@@ -314,7 +314,9 @@ final class ConvertedFormulaDetailsPresentationTests: XCTestCase {
         let sources = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Sources" }))
         // Identity + citation stay unlabeled; PTIMER-158 adds the labeled
         // "Source page" / "Download link" rows. The legacy Reference /
-        // Citation sub-labels remain absent.
+        // Citation sub-labels remain absent. Provia 100F publishes
+        // sourceEvidence, so its no-correction boundary lives in the
+        // elaborate "Source reference" section, not here.
         XCTAssertEqual(sources.rows.map(\.title), ["", "", "Source page", "Download link"])
         XCTAssertFalse(sources.rows.contains { $0.title == "Reference" })
         XCTAssertFalse(sources.rows.contains { $0.title == "Citation" })

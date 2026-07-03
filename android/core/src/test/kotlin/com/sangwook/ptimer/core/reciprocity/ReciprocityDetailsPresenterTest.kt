@@ -142,10 +142,12 @@ class ReciprocityDetailsPresenterTest {
         )
         val state = ReciprocityDetailsPresenter.make(film, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
 
-        // The glossary derives from the profile's rule adjustments. The source
-        // reference table is empty here because the adjustments live on the rule,
-        // not as published source-evidence rows (the table needs evidence).
-        assertTrue(state.sourceReferenceRows.isEmpty())
+        // The glossary derives from the profile's rule adjustments; those
+        // adjustments live on the rule, not as published source-evidence
+        // rows, so they don't populate the table. The table does carry the
+        // profile's own no-correction boundary.
+        assertEquals(1, state.sourceReferenceRows.size)
+        assertEquals("<= 1s", state.sourceReferenceRows[0].meteredText)
         assertTrue(state.legendLines.contains("Color correction: CC30M = color-compensating magenta filtration."))
         assertTrue(state.legendLines.contains("Development adjustment: Dev -10% means adjust development time by -10%."))
         assertTrue(state.legendLines.contains("Warning: Not recommended marks a manufacturer stop-signal."))
@@ -157,7 +159,11 @@ class ReciprocityDetailsPresenterTest {
         val profile = f.profiles.first()
         val state = ReciprocityDetailsPresenter.make(f, profile, policy.evaluate(profile, 30.0), 30.0, { "${it}s" })
         assertTrue(state.referenceRows.isEmpty())
-        assertTrue(state.sourceReferenceRows.isEmpty())
+        // Pan F Plus has no published sourceEvidence, but its no-correction
+        // boundary still surfaces as a minimal Source reference row, same
+        // conceptual place table models use.
+        assertEquals(1, state.sourceReferenceRows.size)
+        assertEquals("No correction range", state.sourceReferenceRows[0].valueText)
         assertTrue(state.guidanceBoundaryRows.isEmpty())
         assertTrue(state.legendLines.isEmpty())
     }

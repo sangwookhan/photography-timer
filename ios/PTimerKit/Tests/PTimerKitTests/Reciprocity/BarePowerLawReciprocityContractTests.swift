@@ -143,11 +143,15 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
 
     // MARK: - Presentation: no-source-range surfaces
 
-    /// No-source-range profiles must not activate any source-reference
-    /// presentation: no Source reference / Guidance boundary section, no
-    /// graph source markers, no not-recommended boundary, no
-    /// beyond-source region — while still surfacing the formula
-    /// expression and the formula-derived summary wording.
+    /// No-source-range profiles must not invent graph source markers, a
+    /// not-recommended boundary, or a beyond-source region — while still
+    /// surfacing the formula expression and the formula-derived summary
+    /// wording. They must also never surface a "Guidance boundary"
+    /// section (that only comes from published stop-signal evidence
+    /// rows, which these profiles have none of). They DO surface a
+    /// minimal "Source reference" section for their no-correction
+    /// boundary with no "Source data through" line, since none of these
+    /// profiles have a bounded source range.
     @MainActor
     func testNoSourceRangeProfileSuppressesSourceReferenceArtifacts() throws {
         for c in cases {
@@ -166,10 +170,13 @@ final class BarePowerLawReciprocityContractTests: XCTestCase {
             XCTAssertNotNil(graph.formulaDisplayText, "\(c.film): the formula expression must still surface near the graph.")
             XCTAssertTrue(graph.descriptionLines.isEmpty, "\(c.film): no-source-range profiles stay on the state-aware caption without description lines.")
 
-            XCTAssertFalse(
-                displayState.sections.contains(where: { $0.title == "Source reference" }),
-                "\(c.film): must not surface a Source reference section."
+            let sourceReference = try XCTUnwrap(
+                displayState.sections.first(where: { $0.title == "Source reference" }),
+                "\(c.film): must surface a minimal Source reference section for its no-correction boundary."
             )
+            let value = try XCTUnwrap(sourceReference.rows.first?.value)
+            XCTAssertTrue(value.contains("No correction range"), "\(c.film): Source reference must state the no-correction boundary.")
+            XCTAssertFalse(value.contains("Source data through"), "\(c.film): has no bounded source range.")
             XCTAssertFalse(
                 displayState.sections.contains(where: { $0.title == "Guidance boundary" }),
                 "\(c.film): must not surface a Guidance boundary section."

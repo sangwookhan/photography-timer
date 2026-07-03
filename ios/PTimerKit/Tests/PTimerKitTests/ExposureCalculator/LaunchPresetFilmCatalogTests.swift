@@ -505,6 +505,37 @@ final class LaunchPresetFilmCatalogTests: XCTestCase {
         )
     }
 
+    // MARK: - Compact reference info below the graph
+
+    /// Official formula/table profiles without published `sourceEvidence`
+    /// (Delta 100 here; the bare power-law family broadly) never surfaced
+    /// their no-correction boundary as readable text -- only via the
+    /// graph band color. A minimal "Source reference" section now always
+    /// carries this boundary, placed directly below the graph/legend --
+    /// the same conceptual spot table-model films already use -- read
+    /// straight from the same fields the calculation already uses.
+    @MainActor
+    func testBareFormulaProfileShowsCompactNoCorrectionBoundary() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "Delta 100", meteredExposureSeconds: 8)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("No correction range"), "Delta 100: got \(value)")
+        XCTAssertFalse(value.contains("Source data through"), "Delta 100 has no bounded source range.")
+    }
+
+    /// A profile that already publishes `sourceEvidence` (T-MAX 100)
+    /// keeps its existing elaborate "Source reference" block unchanged --
+    /// it never goes through the new no-evidence fallback.
+    @MainActor
+    func testTableProfileKeepsElaborateSourceReferenceUnchanged() throws {
+        let displayState = try FormulaProfileTestSupport.makeDisplayState(film: "T-MAX 100", meteredExposureSeconds: 10)
+        let sourceReference = try XCTUnwrap(displayState.sections.first(where: { $0.title == "Source reference" }))
+        XCTAssertTrue(sourceReference.rows.count == 1, "T-MAX 100 keeps its single reference block row.")
+        let value = try XCTUnwrap(sourceReference.rows.first?.value)
+        XCTAssertTrue(value.contains("No correction range"), "T-MAX 100: got \(value)")
+    }
+
     // MARK: - Helpers
 
     private func film(named canonicalStockName: String) -> FilmIdentity? {

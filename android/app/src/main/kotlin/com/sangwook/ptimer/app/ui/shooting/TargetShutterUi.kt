@@ -5,6 +5,7 @@ package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -142,7 +144,11 @@ internal fun TargetShutterRow(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                        StartButton(onClick = onStartTarget, enabled = true)
+                        StartButton(
+                            onClick = onStartTarget,
+                            enabled = true,
+                            contentDescription = stringResource(R.string.start_timer_target_cd),
+                        )
                     }
                 }
             }
@@ -188,13 +194,24 @@ internal fun TargetShutterSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            // The labeled row is the accessible switch element: toggleable
+            // merges the label text and the Switch into one named on/off
+            // control for TalkBack; the Switch itself becomes display-only
+            // (onCheckedChange = null) so it is not announced as a second,
+            // unnamed toggle (PTIMER-182).
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = useTarget,
+                        role = Role.Switch,
+                        onValueChange = { useTarget = it },
+                    ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(stringResource(R.string.target_use), style = MaterialTheme.typography.titleMedium)
-                Switch(checked = useTarget, onCheckedChange = { useTarget = it })
+                Switch(checked = useTarget, onCheckedChange = null)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -234,6 +251,7 @@ internal fun TargetShutterSheet(
                                     modifier = Modifier.fillMaxWidth(),
                                     visibleCount = 3,
                                     itemHeight = 44.dp,
+                                    accessibilityLabel = stringResource(R.string.target_shutter_label),
                                 )
                             }
                             // Right-edge cue: Fine lives one swipe away (iOS teaser).
@@ -314,7 +332,14 @@ private fun androidx.compose.foundation.layout.RowScope.HmsWheel(
 ) {
     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = MaterialTheme.typography.labelMedium)
-        SnapWheel(labels, value.coerceIn(labels.indices), onChange, visibleCount = 3, itemHeight = 40.dp)
+        SnapWheel(
+            labels,
+            value.coerceIn(labels.indices),
+            onChange,
+            visibleCount = 3,
+            itemHeight = 40.dp,
+            accessibilityLabel = label,
+        )
     }
 }
 

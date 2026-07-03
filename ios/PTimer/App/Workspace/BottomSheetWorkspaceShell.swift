@@ -281,10 +281,22 @@ private struct CompactTimerMiniCardView: View {
                 )
         )
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // The card renders loose text fragments; expose it as one
+        // button whose label/value are composed from the snapshot
+        // item so VoiceOver announces status + identity + remaining
+        // time and the tap action stays reachable (PTIMER-182).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabelText)
+        .accessibilityValue(accessibilityValueText)
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("bottom-sheet-compact-mini-card-\(item.id.uuidString)")
         // While this timer's alarm is sounding, a tap stops it (the strip routes
         // the tap); otherwise it opens/focuses the timer as before.
-        .accessibilityHint(isAlarmSounding ? "Alarm sounding. Tap to stop." : "")
+        .accessibilityHint(
+            isAlarmSounding
+                ? Text("Alarm sounding. Tap to stop.")
+                : Text("Opens the timers window")
+        )
         .onTapGesture(perform: onTap)
         .onAppear {
             updateRunningPulse()
@@ -295,6 +307,25 @@ private struct CompactTimerMiniCardView: View {
         .onChange(of: reduceMotion) { _, _ in
             updateRunningPulse()
         }
+    }
+
+    /// Status + identity, mirroring what the card shows visually
+    /// (status symbol, slot marker badge, film descriptor).
+    private var accessibilityLabelText: String {
+        var parts = [statusAccessibilityText(for: item.status), item.identityCue.markerText]
+        if let filmText = item.identityFilmText {
+            parts.append(filmText)
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    /// Remaining time, plus the relative completion time terminal
+    /// cards show in the same slot.
+    private var accessibilityValueText: String {
+        if let tertiaryText = item.tertiaryStatusText {
+            return "\(item.primaryRemainingText), \(tertiaryText)"
+        }
+        return item.primaryRemainingText
     }
 
     private var shouldAnimateRunningCue: Bool {
@@ -512,6 +543,12 @@ private struct CompactOverflowMiniCard: View {
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // Same treatment as the mini cards: one button element so the
+        // tap-to-open action is reachable by assistive tech (PTIMER-182).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("View all timers"))
+        .accessibilityValue(text)
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("bottom-sheet-compact-overflow-card")
         .onTapGesture(perform: onTap)
     }
@@ -805,6 +842,56 @@ private struct LargeWorkspaceTimerRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // The informational block is combined into a single
+            // VoiceOver element; the action buttons below stay
+            // OUTSIDE the combined element so Pause/Resume/Repeat
+            // Shot/Cancel/Remove remain individually focusable and
+            // activatable (PTIMER-182).
+            rowInformation
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(item.voiceOverLabel)
+                .accessibilityValue(item.remainingText)
+                .accessibilityIdentifier(rowAccessibilityIdentifier)
+
+            if !item.actions.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(item.actions, id: \.rawValue) { action in
+                        LargeActionButton(
+                            action: action,
+                            tint: tint(for: action),
+                            onTap: {
+                                onAction(action)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            isAlarmSounding
+                ? Color.red.opacity(0.10)
+                : (isFocused
+                    ? statusColor(for: item.status).opacity(0.04)
+                    : Color(.secondarySystemBackground))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    isAlarmSounding ? Color.red : statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
+                    lineWidth: isAlarmSounding ? 2 : (isFocused ? 1.5 : 1)
+                )
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // While this timer's alarm is sounding, a tap on the row stops it; when
+        // it is not, the row keeps its existing behaviour (the action buttons).
+        .onTapGesture { if isAlarmSounding { onStopAlarm() } }
+    }
+
+    private var rowInformation: some View {
+        VStack(alignment: .leading, spacing: 8) {
             if isAlarmSounding {
                 Text("Alarm sounding — tap to stop")
                     .font(.caption.weight(.semibold))
@@ -908,46 +995,7 @@ private struct LargeWorkspaceTimerRowView: View {
             ProgressView(value: item.progress)
                 .tint(statusColor(for: item.status))
                 .opacity(0.88)
-
-            if !item.actions.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(item.actions, id: \.rawValue) { action in
-                        LargeActionButton(
-                            action: action,
-                            tint: tint(for: action),
-                            onTap: {
-                                onAction(action)
-                            }
-                        )
-                    }
-                }
-            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 11)
-        .background(
-            isAlarmSounding
-                ? Color.red.opacity(0.10)
-                : (isFocused
-                    ? statusColor(for: item.status).opacity(0.04)
-                    : Color(.secondarySystemBackground))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    isAlarmSounding ? Color.red : statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
-                    lineWidth: isAlarmSounding ? 2 : (isFocused ? 1.5 : 1)
-                )
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        // While this timer's alarm is sounding, a tap on the row stops it; when
-        // it is not, the row keeps its existing behaviour (the action buttons).
-        .onTapGesture { if isAlarmSounding { onStopAlarm() } }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(item.voiceOverLabel)
-        .accessibilityValue(item.remainingText)
-        .accessibilityIdentifier(rowAccessibilityIdentifier)
     }
 
     /// Composed primary timer-state value (PTIMER-198). Running/paused:
@@ -1141,6 +1189,22 @@ enum BottomSheetIdentityPalette {
 
 private func identityTintColor(for cue: BottomSheetIdentityCue) -> Color {
     BottomSheetIdentityPalette.color(for: cue.tintSlot)
+}
+
+/// Spoken status for the compact mini card. Reuses the same
+/// localization keys as the workspace snapshot's visible status
+/// label so VoiceOver wording matches the opened Timers window.
+private func statusAccessibilityText(for status: TimerStatus) -> String {
+    switch status {
+    case .running:
+        return String(localized: "Running")
+    case .paused:
+        return String(localized: "Paused")
+    case .completed:
+        return String(localized: "Done")
+    case .canceled:
+        return String(localized: "Canceled")
+    }
 }
 
 private func statusColor(for status: TimerStatus) -> Color {

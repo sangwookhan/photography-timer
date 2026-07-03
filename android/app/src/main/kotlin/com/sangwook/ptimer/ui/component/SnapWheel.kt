@@ -28,9 +28,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sangwook.ptimer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
@@ -55,6 +65,7 @@ fun SnapWheel(
     visibleCount: Int = 5,
     itemHeight: Dp = 44.dp,
     edgeColor: Color = MaterialTheme.colorScheme.background,
+    accessibilityLabel: String? = null,
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -104,8 +115,78 @@ fun SnapWheel(
         }
     }
 
+    // PTIMER-182: expose the whole wheel as ONE adjustable accessibility
+    // control. clearAndSetSemantics removes the LazyColumn/Text row nodes
+    // from the accessibility tree, so TalkBack cannot focus an edge row and
+    // read a neighboring value; the single wheel node carries the label,
+    // the committed value, and adjustable (slider-style) semantics so
+    // TalkBack announces the control's role and its own "swipe up or down
+    // to adjust" usage hint — one swipe moves exactly one value (iOS
+    // adjustable-picker parity). The announced value reads the externally
+    // committed selectedIndex — never the transient centeredIndex, which
+    // stays visual-only (fade + snap emission). All mutations route through
+    // the existing onSelectedIndexChange only (the caller's state change
+    // then re-centers the list via the LaunchedEffect above), so snapping,
+    // scrolling, and live-emission behavior are untouched.
+    val previousActionLabel = stringResource(R.string.wheel_action_previous)
+    val nextActionLabel = stringResource(R.string.wheel_action_next)
+    val accessibilityModifier = if (accessibilityLabel != null) {
+        Modifier.clearAndSetSemantics {
+            contentDescription = accessibilityLabel
+            labels.getOrNull(selectedIndex)?.let { stateDescription = it }
+            // Adjustable role: rangeInfo tells TalkBack this is a seek-style
+            // control; setProgress receives the requested target value and
+            // is collapsed to a single step in the requested direction so
+            // one swipe never jumps several rows. stateDescription above
+            // overrides the default percentage announcement.
+            progressBarRangeInfo = ProgressBarRangeInfo(
+                current = selectedIndex.toFloat(),
+                range = 0f..labels.lastIndex.toFloat().coerceAtLeast(0f),
+                steps = (labels.size - 2).coerceAtLeast(0),
+            )
+            setProgress { targetValue ->
+                val direction = when {
+                    targetValue > selectedIndex -> 1
+                    targetValue < selectedIndex -> -1
+                    else -> 0
+                }
+                val target = selectedIndex + direction
+                if (direction != 0 && target in labels.indices) {
+                    currentOnSelectedIndexChange(target)
+                    true
+                } else {
+                    false
+                }
+            }
+            customActions = listOf(
+                CustomAccessibilityAction(previousActionLabel) {
+                    val target = selectedIndex - 1
+                    if (target in labels.indices) {
+                        currentOnSelectedIndexChange(target)
+                        true
+                    } else {
+                        false
+                    }
+                },
+                CustomAccessibilityAction(nextActionLabel) {
+                    val target = selectedIndex + 1
+                    if (target in labels.indices) {
+                        currentOnSelectedIndexChange(target)
+                        true
+                    } else {
+                        false
+                    }
+                },
+            )
+        }
+    } else {
+        Modifier
+    }
+
     Box(
-        modifier = modifier.height(itemHeight * visibleCount),
+        modifier = modifier
+            .height(itemHeight * visibleCount)
+            .then(accessibilityModifier),
     ) {
         LazyColumn(
             state = listState,

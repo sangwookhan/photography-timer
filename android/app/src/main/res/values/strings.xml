@@ -32,6 +32,13 @@
     <string name="notation_stops">Stops</string>
     <string name="notation_od" translatable="false">OD</string>
     <string name="notation_nd" translatable="false">ND</string>
+    <!-- Start-button content descriptions (iOS VoiceOver parity, PTIMER-182) -->
+    <string name="start_timer_adjusted_cd">Start timer from adjusted shutter</string>
+    <string name="start_timer_corrected_cd">Start timer from corrected exposure</string>
+    <string name="start_timer_target_cd">Start target shutter timer</string>
+    <!-- SnapWheel accessibility custom actions (PTIMER-182) -->
+    <string name="wheel_action_previous">Previous value</string>
+    <string name="wheel_action_next">Next value</string>
     <string name="reset_shooting_title">Reset shooting setup?</string>
     <string name="reset_settings">Reset settings</string>
     <string name="reset_settings_and_name">Reset settings and name</string>

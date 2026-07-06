@@ -91,8 +91,8 @@ Source-evidence rows shall never be promoted to calculation rules. The calculati
 
 Every reciprocity profile carries provenance:
 
-- **kind** — one of `manufacturerPublished`, `manufacturerArchive` (a manufacturer's own archived / superseded documentation), `thirdPartyPublication` (a non-manufacturer publication such as a community-tested practical formula), `userDefined`, `unknown`. The launch dataset shall use only `manufacturerPublished`. User-defined custom profiles (§13.4) use `userDefined`.
-- **authority** — one of `official`, `unofficial`, `userDefined`, `unknown`. The launch dataset shall use only `official`. Supplementary non-launch profiles (§13.3) use `unofficial`. User-defined custom profiles (§13.4) use `userDefined` and shall not be presented as manufacturer authority.
+- **kind** — one of `manufacturerPublished`, `manufacturerArchive` (a manufacturer's own archived / superseded documentation), `thirdPartyPublication` (a non-manufacturer publication such as a community-tested practical formula), `userDefined`, `unknown`. Launch primary profiles use `manufacturerPublished`, except the unofficial-primary class (§13), which uses `thirdPartyPublication`. User-defined custom profiles (§13.4) use `userDefined`.
+- **authority** — one of `official`, `unofficial`, `userDefined`, `unknown`. Launch primary profiles use `official`, except the documented unofficial-primary class (§13), which uses `unofficial`. Supplementary non-launch profiles (§13.3) also use `unofficial`. User-defined custom profiles (§13.4) use `userDefined` and shall not be presented as manufacturer authority.
 - **confidence** — one of `high`, `medium`, `low`, `unknown`. The default for omitted is `unknown`. The launch dataset uses `high`.
 - **publisher** — the entity that published the data, e.g. `"Kodak"`, `"Ilford Photo"`. Required non-empty string for launch (official) profiles. Supplementary unofficial profiles (§13.3) may leave this empty as the documented "source pending verification" marker; presentation suppresses the Sources section in that case and conveys the disclosure through the unofficial-authority subtitle plus the profile's caveat note.
 - **title** — optional string referring to a specific document or page.
@@ -310,8 +310,8 @@ A bundled launch catalog shall pass these checks before the runtime accepts it.
 5. Every identity has `productionStatus = "current"`.
 6. Every identity has a positive `iso` (box-speed ISO).
 7. Every identity has exactly **one** profile.
-8. Every profile's source has `kind = "manufacturerPublished"`.
-9. Every profile's source has `authority = "official"`.
+8. Every profile's source has `kind = "manufacturerPublished"`, except unofficial-primary profiles (§13), whose source kind is `thirdPartyPublication`.
+9. Every profile's source has `authority = "official"`, except unofficial-primary profiles (§13), whose source authority is `unofficial`.
 10. Every profile has at least one rule, and every rule decodes to a known variant (no `unknown` `kind` values).
 11. Every profile matches one of the three allowed launch shapes (§13): (a) a formula rule alone (the formula owns its no-correction guard; no companion threshold), with optional `sourceEvidence`; (b) a `tableInterpolation` rule alone (it owns its own no-correction band and source range), with optional `sourceEvidence`; or (c) a threshold rule plus a limited-guidance rule with no formula/table rule and an empty `sourceEvidence` array. A bare threshold rule or any other combination is rejected; the reserved `tableLookup` calculation model is rejected at load.
 
@@ -321,31 +321,34 @@ A catalog that fails any of these checks shall produce a clear decode diagnostic
 
 ## 13. Launch dataset scope
 
-The bundled launch catalog ships the **34-film launch-ready scope** (wiki 13172737, PTIMER-86 preset dataset policy outcome). Each shipped identity carries exactly one primary profile sourced from current official manufacturer documentation with `kind = "manufacturerPublished"`, `authority = "official"`, and `confidence = "high"`.
+The bundled launch catalog ships the **40-film launch scope** (wiki 13172737, PTIMER-86 preset dataset policy outcome, extended by the subsequent promotion waves). Each shipped identity carries exactly one primary profile. Primary profiles are sourced from current official manufacturer documentation with `kind = "manufacturerPublished"`, `authority = "official"`, and `confidence = "high"`, with one documented exception class:
+
+**Unofficial-primary class.** A film whose only usable quantified guidance is a verified third-party publication may ship with an unofficial primary profile (`kind = "thirdPartyPublication"`, `authority = "unofficial"`, and the source's honest confidence level). The class is allowed in the bundled catalog data but is **not yet opened to the user-facing picker**: the user-selectable set for the current release is filtered to films carrying an official source with a source-page link (PTIMER-158), so unofficial-primary films ship as data only. The restriction exists to avoid authority confusion in the initial public release; when to open these films to selection is intentionally undecided and will be prioritized separately (PTIMER-214 decision record). Rollei RETRO 400S (unofficial practical formula) is the class's current sole member.
 
 Every launch preset profile matches exactly one of three allowed shapes:
 
 1. **Official quantified formula** — formula rule only (the shared `ReciprocityFormula` owns its no-correction and source-range guards; PTIMER-160 retired the companion threshold rule), with optional `sourceEvidence` rows preserving the manufacturer's published reference points. Calculation produces `officialThresholdNoCorrection` for `T_m ≤ noCorrectionThroughSeconds`, `formulaDerived` for inputs above that boundary up through `sourceRangeThroughSeconds`, and `unsupportedOutOfPolicyRange` (carrying a numeric continuation) for inputs above the source range.
-2. **Official table log-log** (PTIMER-159) — a `tableInterpolation` rule that converts a manufacturer reciprocity *table* into a corrected exposure by piecewise log-log interpolation between published anchors, with `sourceEvidence` rows preserving those anchors. The rule owns its own no-correction band and source range. Calculation produces `officialThresholdNoCorrection` below the band, `tableLogLogDerived` within the published range, and `unsupportedOutOfPolicyRange` (carrying a numeric continuation, extrapolated from the last log-log segment) above the last anchor. Fomapan 100 Classic is the current launch profile of this shape; its app-derived power-law formula is preserved as a non-default alternate (§13.3).
+2. **Official table log-log** (PTIMER-159) — a `tableInterpolation` rule that converts a manufacturer reciprocity *table* into a corrected exposure by piecewise log-log interpolation between published anchors, with `sourceEvidence` rows preserving those anchors. The rule owns its own no-correction band and source range. Calculation produces `officialThresholdNoCorrection` below the band, `tableLogLogDerived` within the published range, and `unsupportedOutOfPolicyRange` (carrying a numeric continuation, extrapolated from the last log-log segment) above the last anchor. Twelve launch profiles use this shape after the PTIMER-168 table-origin migration (Kodak B/W, FOMA, four Rollei stocks, ADOX CHS 100 II, BERGGER Pancro 400); Fomapan 100 Classic's app-derived power-law formula is preserved as a non-default alternate (§13.3).
 3. **Official limited guidance** — threshold rule plus limited-guidance rule (§5.3) for the region above the threshold. Calculation produces `officialThresholdNoCorrection` inside the threshold band and `limitedGuidanceNoQuantifiedPrediction` above it; no quantified continuation.
 
-Unofficial practical profiles (`authority = "unofficial"`) are bundled outside the launch catalog file and are documented in §13.3.
+Unofficial practical profiles (`authority = "unofficial"`) are bundled outside the launch catalog file and are documented in §13.3 — except unofficial-primary profiles of the class above, which live inside the catalog file and satisfy the same shape rules.
 
 The only calculation table rule allowed on launch preset profiles is the **official table log-log** shape above (an explicit, anchored interpolation). A broad arbitrary table-interpolation engine is *not* implied; the reserved `tableLookup` calculation model remains unimplemented and is rejected at load.
 
 ### 13.1 Launch-ready manufacturer breakdown
 
-| Manufacturer       | Count | Profile shape |
-|--------------------|------:|---------------|
-| ILFORD / HARMAN    |    12 | Formula (`Tc = Tm^p`) |
-| Kodak Still Film   |     9 | Formula with `sourceEvidence` reference rows (B/W: Tri-X 400, T-MAX 100/400) or threshold + limited-guidance (color negatives, Ektachrome E100) |
+| Manufacturer       | Count | Primary profile shape |
+|--------------------|------:|-----------------------|
+| ILFORD / HARMAN    |    14 | Formula (`Tc = Tm^p`), including Kentmere 100/200/400 and the Phoenix stocks |
+| Kodak Still Film   |     9 | Table log-log (B/W: Tri-X 400, T-MAX 100/400) or threshold + limited-guidance (color negatives, Ektachrome E100) |
+| Rollei             |     7 | Table log-log (RPX 25/100/400, ORTHO 25 plus) or formula (Retro 80S, Superpan 200 — official; RETRO 400S — unofficial-primary class) |
 | Fujifilm           |     4 | Formula with `sourceEvidence` reference rows |
-| FOMA BOHEMIA       |     3 | Formula with `sourceEvidence` reference rows |
-| Rollei             |     4 | Formula with `sourceEvidence` reference rows |
-| ADOX               |     2 | Formula with `sourceEvidence` reference rows (CMS 20 II's 100 s "Not recommended" row is preserved as a published warning marker above the 10 s `sourceRangeThroughSeconds`) |
-| **Total**          |  **34** | |
+| FOMA BOHEMIA       |     3 | Table log-log |
+| ADOX               |     2 | Table log-log (CHS 100 II) or formula (CMS 20 II, whose 100 s "Not recommended" row is preserved as a published warning marker above the 10 s `sourceRangeThroughSeconds`) |
+| BERGGER            |     1 | Table log-log (Pancro 400) |
+| **Total**          |  **40** | |
 
-ILFORD/HARMAN films share the exponent-formula method with film-specific exponents and a common no-correction threshold at ≤ 1 sec. Kodak black-and-white films (TRI-X 400, T-MAX 100, T-MAX 400) ship as converted formula profiles whose `sourceEvidence` array preserves the published 1 / 10 / 100 sec reference rows for verification; Kodak color-negative films (Ektar 100, Portra 160 / 400, Gold 200, Ultra Max 400) ship as threshold + limited-guidance profiles — the manufacturer publishes only a no-correction range, with qualitative guidance ("test under your conditions") above it. Ektachrome E100 ships as a threshold + limited-guidance profile carrying a 120 sec CC10R color-filter recommendation as a `colorFilter` adjustment on its limited-guidance rule. Fujifilm, FOMA, Rollei, and ADOX films ship as converted formula profiles whose `sourceEvidence` array preserves the original manufacturer reference rows (with color-filter and corrected-time data attached) so users can see the formula curve passes through the published anchors.
+ILFORD/HARMAN films share the exponent-formula method with film-specific exponents and a common no-correction threshold at ≤ 1 sec. Kodak black-and-white films (TRI-X 400, T-MAX 100, T-MAX 400) ship as table log-log profiles whose `sourceEvidence` preserves the published 1 / 10 / 100 sec reference rows and whose anchors combine those rows with graph-sampled points (PTIMER-168 migrated the official table-origin profiles from converted formulas to table models); Kodak color-negative films (Ektar 100, Portra 160 / 400, Gold 200, Ultra Max 400) ship as threshold + limited-guidance profiles — the manufacturer publishes only a no-correction range, with qualitative guidance ("test under your conditions") above it. Ektachrome E100 ships as a threshold + limited-guidance profile carrying a 120 sec CC10R color-filter recommendation as a `colorFilter` adjustment on its limited-guidance rule. FOMA, BERGGER, and the table-origin Rollei and ADOX stocks likewise ship as table log-log profiles preserving the original manufacturer reference rows (with color-filter and corrected-time data attached); Fujifilm and the remaining Rollei / ADOX stocks ship as formula profiles whose `sourceEvidence` preserves the manufacturer rows so users can see the curve passes through the published anchors.
 
 ### 13.2 Excluded from the launch dataset
 
@@ -353,10 +356,10 @@ The following classes are intentionally outside the launch catalog (PTIMER-86 so
 
 - Kodak Motion Picture Film (Vision3, Ektachrome 100D, Double-X) — still-photography-first scope.
 - AgfaPhoto current films — current official reciprocity extraction is still pending.
-- ORWO, Bergger, Film Ferrania — current product line confirmed but reciprocity extraction is too thin.
+- ORWO, Film Ferrania — current product line confirmed but reciprocity extraction is too thin. (Bergger left this list when Pancro 400's official table was extracted and shipped.)
 - Archival-only Agfa / AgfaPhoto / Kodak Ektachrome E100G–E100GX entries — kept out so archival data is not promoted as current shipping data.
-- Any unofficial practical formula. In particular, the unofficial `T_c = T_m^1.34` Portra approximation is bundled outside the launch catalog (see §13.3) and shall not appear as the primary shipped Portra profile.
-- Films from the launch-ready manufacturer groups that the source list still classifies as `NV` (Fomapan R100, Cine 100, Cine 400, Cine Ortho 400; Rollei RPX 25, RETRO 400S, INFRARED, ORTHO 25 plus, PAUL & REINHOLD, BLACKBIRD, CROSSBIRD, REDBIRD; ADOX HR-50, Scala 50).
+- Any unofficial practical formula outside the unofficial-primary class (§13). The class applies only where no official quantified source exists; in particular, the unofficial `T_c = T_m^1.34` Portra approximation stays outside the launch catalog (see §13.3) and shall not appear as the primary shipped Portra profile, because Portra has official limited guidance.
+- Films from the launch-ready manufacturer groups that the source list still classifies as `NV` (Fomapan R100, Cine 100, Cine 400, Cine Ortho 400; Rollei INFRARED, PAUL & REINHOLD, BLACKBIRD, CROSSBIRD, REDBIRD; ADOX HR-50, Scala 50). RPX 25, ORTHO 25 plus, and RETRO 400S have since been promoted into the catalog — RETRO 400S as the unofficial-primary class member.
 
 ### 13.3 Non-launch profiles bundled outside the catalog
 
@@ -364,7 +367,7 @@ The system may bundle additional **non-launch profiles** *outside* the launch ca
 
 - follow the same domain shape (§§1–10) as launch profiles;
 - carry honest provenance — for example, an unofficial practical formula must declare `kind = "thirdPartyPublication"` and `authority = "unofficial"`, not pretend to be official;
-- be selectable by the user as a *secondary alternative* on a film identity that already has a launch (official) primary profile;
+- be selectable by the user as a *secondary alternative* on a film identity that already has a launch primary profile;
 - not pass through the §12 launch-catalog validator (validation rules in §12 apply only to the launch catalog file).
 
 Example: an unofficial practical formula `T_c = T_m^1.34` for Kodak PORTRA 400 is bundled outside the launch catalog as a secondary alternative to PORTRA 400's official threshold + limited-guidance profile.
@@ -412,7 +415,7 @@ The domain shall **not**:
 - **Multi-profile support.** Reserved by domain (an identity may carry multiple profiles) but the selection mechanism (which profile is "active" at a given metered exposure, push/pull semantics, developer-time variants) is not specified.
 - **Color correction metadata.** Velvia-style "M color correction" is captured via the `colorFilter` exposure adjustment (§10) on source-evidence rows. A first-class color-correction policy distinct from per-row annotations has no schema entry.
 - **Development-time adjustments.** Development-time adjustment metadata (e.g. Tri-X-style "dev −10%" from wiki guidance) is captured via the `development` exposure adjustment (§10) on source-evidence rows; a first-class development-time policy is not modeled.
-- **Next-wave catalog growth.** The bundled catalog covers the 34-film launch-ready scope; the next-wave candidates listed in PTIMER-86 (Kodak Motion Picture, NV-status films from the launch-ready manufacturer groups, deferred AgfaPhoto / ORWO / Bergger / Film Ferrania) have no prioritized work plan in spec form.
+- **Next-wave catalog growth.** The bundled catalog covers the 40-film launch scope; the next-wave candidates listed in PTIMER-86 (Kodak Motion Picture, remaining NV-status films from the launch-ready manufacturer groups, deferred AgfaPhoto / ORWO / Film Ferrania) have no prioritized work plan in spec form. Opening unofficial-primary films (§13) to the user-facing picker is likewise reserved: allowed by policy, intentionally unscheduled.
 - **Repackaging links.** The schema accepts `brandLabel` and `aliases` but does not formalize a "this brand X is the same film as identity Y" link suitable for runtime equivalence checks.
 - **Encoding versioning.** The encoding (JSON with `kind` discriminator) is informative-only in this spec, but no version field exists in the catalog. A future format change has no defined migration story.
 

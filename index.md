@@ -92,6 +92,8 @@ For the current public release scope:
 If you find a bug or have a feature request, please open an issue on GitHub:
 [https://github.com/sangwookhan/photography-timer/issues/new](https://github.com/sangwookhan/photography-timer/issues/new)
 
+You can also reach us by email: [photography.timer@gmail.com](mailto:photography.timer@gmail.com)
+
 ## Source Code and License
 
 Source code and license:

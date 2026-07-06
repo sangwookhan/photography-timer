@@ -18,6 +18,18 @@ Snapshot date: 2026-06-11, evaluated against the PTIMER-174 PR #6
 branch (app target 25 files; PTimerKit 71 + PTimerCore 17 source
 files; tests 129 app-hosted / 1069 package).
 
+**Status refresh: 2026-07-06.** Items re-checked against current
+`main` (app target 30 files; PTimerKit 78 + PTimerCore 20 source
+files; tests 120 app-hosted / 1,355 package). Item 4.3 has shipped
+and is marked completed below; file-size evidence in items 2.1, 3.1,
+3.3, and 3.4 is updated to current measurements (every cited file has
+grown since the snapshot); the RecordReplay note in §5 is revised.
+The cross-platform review
+([`CrossPlatformArchitectureReview.md`](CrossPlatformArchitectureReview.md),
+Appendix B) tracks a complementary set of items — defects and
+platform-glue gaps — that this backlog deliberately does not cover;
+consult both when ticketing.
+
 ---
 
 ## 1. What is working — preserve, do not regress
@@ -60,10 +72,12 @@ the items below must not break.
 
 ### 2.1 View files are oversized
 
-- **Evidence**: five files over 500 lines —
-  `CustomFilmEditorView` 1,022, `BottomSheetWorkspaceShell` 1,011,
-  `ExposureCalculatorScreen` 959, `ExposureWorkspaceMainLayoutStyle`
-  712, `FilmModeDetailsView` 586. Logic-clean (verified by
+- **Evidence** (re-measured 2026-07-06): five files over 500 lines —
+  `CustomFilmEditorView` 1,623 (was 1,022 at snapshot),
+  `BottomSheetWorkspaceShell` 1,273 (was 1,011),
+  `ExposureCalculatorScreen` 1,184 (was 959),
+  `ExposureWorkspaceMainLayoutStyle` 808 (was 712),
+  `FilmModeDetailsView` 586 (unchanged). Logic-clean (verified by
   domain-symbol grep), but UI iteration pays a growing diff/review
   cost, and these files dominate merge-conflict probability for any
   screen-level change.
@@ -94,8 +108,9 @@ the items below must not break.
 
 ### 3.1 `ExposureCalculatorViewModel` facade is the codebase's gravity well
 
-- **Evidence**: 1,671 lines — the largest file in the repository —
-  plus `+CustomFilm` extension (120). As an API it exposes the union
+- **Evidence** (re-measured 2026-07-06): 1,758 lines (was 1,671 at
+  snapshot; still growing) plus `+CustomFilm` extension (99). As an
+  API it exposes the union
   of four domains' published surfaces in one type; as code, every
   feature change routes through it, making it the single biggest
   source of review load and merge conflicts.
@@ -127,8 +142,9 @@ the items below must not break.
 
 ### 3.3 `CustomFilmEditorFormState` carries four responsibilities
 
-- **Evidence**: 1,334 lines in one Kit type: form field state,
-  validation, display formatting, and formula-expression tokenizing.
+- **Evidence** (re-measured 2026-07-06): 1,521 lines (was 1,334 at
+  snapshot) in one Kit type: form field state, validation, display
+  formatting, and formula-expression tokenizing.
 - **Direction**: Split along existing seams — the tokenizer and the
   formula presentation formatting are already tested as separable
   units (`CustomFilmEditorFormulaPresentationTests`). Extract those
@@ -137,8 +153,9 @@ the items below must not break.
 
 ### 3.4 Core domain monolith files
 
-- **Evidence**: `ReciprocityDomain.swift` 1,349 lines and
-  `ReciprocityCalculationPolicy.swift` 1,182 lines. Cohesive and
+- **Evidence** (re-measured 2026-07-06): `ReciprocityDomain.swift`
+  1,401 lines and `ReciprocityCalculationPolicy.swift` 1,185 lines.
+  Cohesive and
   protected, but any vocabulary addition lands in one of two huge
   files.
 - **Direction**: File-level split only (one type-cluster per file:
@@ -190,13 +207,17 @@ the items below must not break.
   `TimerRuntime` tests. Coverage is currently correct because the
   wrapper delegates 1:1 — but the protected area's tests depend on a
   target that is not its owner.
-- **Direction**: When PTIMER-177 resumes, either (a) re-home the
-  runtime-semantics suites to Kit against `TimerRuntime` and keep a
-  small app-hosted suite for the RunLoop ticking loop and UIKit alert
-  service, or (b) move `TimerManager` itself into Kit after splitting
-  its UIKit companions (`SystemTimerCompletionFeedbackPlayer`,
+- **Direction**: As a follow-up to PTIMER-177 (shipped), either
+  (a) re-home the runtime-semantics suites to Kit against
+  `TimerRuntime` and keep a small app-hosted suite for the RunLoop
+  ticking loop and UIKit alert service, or (b) move `TimerManager`
+  itself into Kit after splitting its UIKit companions
+  (`SystemTimerCompletionFeedbackPlayer`,
   `ForegroundTimerCompletionAlertService` stay app-side). Option (b)
-  also finishes the Reusable Kit Architecture intent.
+  also finishes the Reusable Kit Architecture intent. The 2026-07-06
+  cross-platform review quantified the same overlap from the test
+  side: ~52 app-hosted methods re-prove `TimerState` math
+  (`CrossPlatformArchitectureReview.md` §16.1).
 - **Constraint**: Protected Area — requires its own explicit ticket;
   do not fold into unrelated work.
 - **Effort/risk**: Medium / Medium.
@@ -215,22 +236,13 @@ the items below must not break.
   file-scoped `private` fakes are also what keeps tests independent.
 - **Effort/risk**: Small / Low.
 
-### 4.3 Conventions that exist only in PR history
+### 4.3 Conventions that exist only in PR history — COMPLETED
 
-- **Evidence**: two rules introduced during PTIMER-174 are enforced
-  only by doc comments and reviewer memory:
-  1. *Test placement*: a test lives in the module that owns its
-     subject; app-hosted is reserved for OS-boundary behavior
-     (RunLoop coordinator, ActivityKit, `UIApplication`, concrete
-     UserDefaults stores, SwiftUI shell, RecordReplay).
-  2. *Timer fake boundary*: `FakeTimerManaging` records starts but
-     must never gain time-advance or state-transition behavior;
-     anything needing transitions uses `RuntimeBackedTimerManaging`
-     (real `TimerRuntime`).
-- **Direction**: Add one short section to `Architecture.md` (or
-  `docs/verification/Strategy.md`) stating both rules. Documentation
-  only.
-- **Effort/risk**: Trivial / None.
+Completed as of the 2026-07-06 status refresh: both rules (test
+placement per owning module; the `FakeTimerManaging` /
+`RuntimeBackedTimerManaging` boundary) are now stated in `AGENTS.md`
+(Build and Test Commands → test placement rule) and reflected in
+`Architecture.md` §5. Retained here as a record; no ticket needed.
 
 ---
 
@@ -248,9 +260,18 @@ the items below must not break.
   target.** It exists so package tests run off-simulator and so the
   compiler polices the Kit layer. Do not remove it; do not start
   treating macOS as a supported product platform because of it.
-- **RecordReplay and the display-state baselines are the insurance for
-  facade/timer refactors** (items 3.1 and 4.1 depend on them). They
-  stay protected regardless of test-suite size pressure.
+- **RecordReplay status revised (2026-07-06).** The original decision
+  recorded here — "RecordReplay and the display-state baselines are
+  the insurance for facade/timer refactors, protected regardless of
+  suite-size pressure" — no longer holds for RecordReplay as-is: its
+  7 baselines have not been re-recorded since 2026-05-17 while the
+  harness kept changing, and its replays duplicate the assertion-based
+  lifecycle suites through injected spies
+  (`CrossPlatformArchitectureReview.md` §16.2). Before item 3.1 or 4.1
+  starts, make an explicit decision: **re-record and own it** (restore
+  its insurance role) **or retire it** and rely on the display-state
+  baselines plus the assertion suites. The display-state baselines
+  remain protected insurance either way.
 
 ---
 
@@ -258,9 +279,164 @@ the items below must not break.
 
 | Candidate ticket | Items | Why grouped |
 | ---------------- | ----- | ----------- |
-| Convention write-down | 4.3 | Trivial docs-only, do first |
-| Facade decomposition | 3.1 + 3.2 | The paradigm decision is cheapest made while the facade is being taken apart |
+| Facade decomposition | 3.1 + 3.2 | The paradigm decision is cheapest made while the facade is being taken apart; requires the §5 RecordReplay decision first |
 | Custom-film form split | 3.3 + 2.2 | Same feature area; 2.2 also clears a test residual |
-| View decomposition (per screen) | 2.1 | One screen per ticket, opportunistic |
-| Timer architecture completion | 4.1 + 3.5 | Protected Area; resumes PTIMER-177 |
+| View decomposition (per screen) | 2.1 | One screen per ticket, opportunistic; `CustomFilmEditorView` first (fastest-growing) |
+| Timer architecture completion | 4.1 + 3.5 | Protected Area; follow-up to PTIMER-177 (shipped) |
 | Deferred until triggered | 3.4, 3.6, 4.2 | Cheap to wait, cheap to do later |
+
+(4.3 completed 2026-07-06; removed from the grouping.)
+
+---
+
+## 7. Staged follow-up plan from the 2026-07-06 cross-platform review
+
+This section records the agreed ticketing plan for the findings in
+[`CrossPlatformArchitectureReview.md`](CrossPlatformArchitectureReview.md)
+(Appendix B holds the finding-level REQ/POS classification). The
+tickets below are **planned but not yet created**; this section is the
+source a future agent uses to create them.
+
+Conventions for these tickets:
+
+- **Granularity**: one ticket = one problem resolved to one verifiable
+  outcome. Investigation, implementation, and verification for the
+  same problem stay in one ticket (multi-step reviewable commits, not
+  multiple tickets). A ticket is split only if execution proves the
+  outcome genuinely divisible.
+- **Description format**: the ticket description states the Problem
+  and the Outcome (acceptance) precisely; implementation methods are
+  recorded only as non-binding candidate approaches. Direction changes
+  during execution update the approach, not the ticket set.
+- **Issue types**: tickets that change code or tests are Stories
+  (defect fixes stay Bugs); tickets whose outcome is documentation or
+  a recorded decision are Tasks. A decision ticket stays a Task even
+  when its execution regenerates test artifacts; reclassify only if
+  the decided outcome produces an actual code diff.
+- **Epics**: no new epics for Stage 1 — Android tickets attach to
+  PTIMER-144, the rest stand alone. Revisit epic structure when
+  Stage 3 begins.
+- References cite review sections; do not copy stale numbers into
+  tickets — re-verify counts at pickup.
+
+### Stage 1 — Problem resolution (start now; data/alarm items target the first store releases)
+
+**S1-1. Restore the green fast loop and remove dead test artifacts**
+(bug) — *Problem*: the package suite fails 4 display-state snapshot
+tests on `main` (baselines embed catalog provenance URLs, so a
+data-only link fix invalidated them); two orphaned duplicate
+test-support files and a stub test remain. *Outcome*: `swift test`
+green on `main`; a pure catalog-data edit no longer invalidates
+display-state baselines; the dead files are gone. *Candidates*:
+re-record with `SNAPSHOT_RECORD=1`; exclude provenance URLs from the
+serialized display state; delete the files listed in review §16.1.
+(Review §5, §16.1–16.2; REQ-1, REQ-10.)
+
+**S1-2. Decide RecordReplay disposition** (task — the deliverable is
+the decision; reclassify if the outcome produces a code diff) —
+*Problem*: the 7
+RecordReplay baselines have not been re-recorded since 2026-05-17
+while the harness kept changing; replays duplicate assertion suites
+through injected spies; §5 above makes this decision a prerequisite
+for facade decomposition. *Outcome*: a recorded decision (re-record
+and own, or retire) executed in the same ticket; §5 above updated.
+(Review §16.2.)
+
+**S1-3. Decide the launch-catalog primary-profile policy and
+reconcile DomainSchema §13** (task) — *Problem*: DomainSchema §13
+states every shipped primary profile is official, but the shipped
+catalog carries one unofficial primary (`rollei-retro-400s`); the
+film count (34 vs 40) and the §13.2 exclusion list also contradict
+the shipped set. *Outcome*: the policy decision is recorded (accept
+and document an unofficial-primary class, or reclassify the profile)
+and §13/§13.1/§13.2 match the shipped catalog. (Review §6.3; REQ-4.)
+
+**S1-4. Make persisted user data survive schema evolution** (story;
+touches protected persistence/restore contracts — explicit
+authorization required in the ticket) — *Problem*: one persisted
+custom film containing an unknown enum value or rule kind makes both
+platforms drop the entire custom library, and the next save destroys
+the original payload; version gating is inconsistent (iOS custom-film
+load ignores `schemaVersion`, iOS timer schemas carry none, Android
+rejects unknown versions); decode failures are silent. *Outcome*: a
+payload written by a newer schema degrades the affected record only,
+never a whole collection; version gating is consistent across
+platforms and schemas; decode failure is observable and the raw
+payload is preserved; all existing payloads decode to identical
+domain values (regression-gated). *Candidates*: unknown-fallback
+enum decoders / `coerceInputValues`; the per-record `mapNotNull`
+pattern already used by the Android workspace codec; a quarantine
+side key with a restore signal. (Review §12.2–12.3; REQ-2.)
+
+**S1-5. Verify the Android OS-glue contracts** (story, PTIMER-144) —
+*Problem*: the layer between the tested alert plan/policy and the OS
+is untested — `AndroidTimerAlertCoordinator.sync()` AlarmManager
+reconciliation (schedule/cancel/reschedule, stale pre-alert drop,
+exact→inexact fallback, foreground-service transitions), the concrete
+`TimerAlarmPlayer`, the Timer-spec §6 display-ordering contract, and
+the four `DataStore*Store` adapters (corrupt-blob fail-safe). The
+coordinator has no test seam (direct `AlarmManager` +
+`System.currentTimeMillis()`), and `ShootingViewModel` carries
+`android.content.Context` in the alarm-player signature. *Outcome*:
+these contracts are pinned by JVM tests; the coordinator has an
+injectable seam; the VM band is `Context`-free. (Review §16.3, §8 B2;
+REQ-9, POS-5, POS-18-part.)
+
+**S1-6. Remove Android main-thread blocking at startup and timer
+completion** (story, PTIMER-144) — *Problem*: first composition parses
+the 84 KB catalog and performs three `runBlocking` DataStore reads on
+the main thread; timer completion performs a `runBlocking` workspace
+write on the main thread. *Outcome*: no `runBlocking` on the main
+thread; startup I/O loads off-main behind the existing splash;
+completion persists off-main. (Review §11.2 #3–4; REQ-7.)
+
+**S1-7. Fix Android MVP usability defects** (story, PTIMER-144) —
+*Problem*: primary timer actions are 34 dp and ND segments ~26–30 dp
+(below the 48 dp guideline); the custom-film editor draft and dialog
+state are lost on configuration change; several visible strings and
+contentDescriptions are hard-coded English with a non-locale
+timestamp format. *Outcome*: 48 dp interactive targets; the editor
+draft survives configuration change and process death; all
+user-visible strings localize. (Review §13.1–13.2, §13.7; REQ-5/6/8.)
+
+### Stage 2 — Parity contract (gate: before resuming calculation-band work — the ND feature backlog or the next catalog wave)
+
+**S2-1. Establish the shared calculation golden contract and fix the
+divergences it exposes** (story) — *Problem*: shared fixtures pin
+only exposure calculation and catalog shape; reciprocity policy
+outputs, table interpolation, custom-film fitting, and target-shutter
+differences have no cross-platform oracle — and one live numeric
+divergence is already known (Android thirds rounding is half-even
+where iOS is half-away-from-zero). *Outcome*: golden fixtures under
+`shared/test-fixtures/` for those surfaces, consumed by both suites;
+known divergences fixed (rounding) or recorded as accepted in the UI
+spec (ASCII fraction rendering). If calculation-band work resumes
+earlier than expected, this ticket moves ahead of it. (Review §10.1,
+§10.3; REQ-3, POS-1.)
+
+### Stage 3 — Target structure (gate: store releases shipped and the feature surface stabilized; create tickets at pickup, not in advance)
+
+Candidates, in rough order, with their standing evidence:
+
+1. Facade decomposition (§3.1 + §3.2 above; S1-2 is its
+   prerequisite).
+2. Custom-film form split (§3.3 + §2.2 above).
+3. Per-screen view decomposition (§2.1 above; `CustomFilmEditorView`
+   first).
+4. iOS `UserDefaults*Store` move into PTimerKit, or a recorded
+   rejection (review §8 B1).
+5. Timer architecture completion: `TimerManager` into Kit and
+   re-homing the ~52 app-hosted state-machine tests (§4.1 + §3.5
+   above; protected area).
+6. Android `:kit` extraction once its trigger fires (review §8 B3 —
+   `:app` test slowdown or a second Android surface).
+7. `PTimerUI` target split once its trigger fires (§3.6 above).
+8. Versioned custom-profile interchange envelope (review §12.3 item
+   5; feeds PTIMER-195), then the shared-core experiments
+   (PTIMER-196/197) scoped to one rule set with the Stage 2 goldens
+   as the safety net.
+9. Android display-state snapshot layer and first Compose UI tests
+   (review §8 C3, §16.3).
+10. Android theme/haptics/predictive-back polish (review §13.3–13.6).
+11. iOS package-suite trim — catalog static-data assertions to
+    `verify.py`, snapshot-overlap merge (review §16.1; POS-15).

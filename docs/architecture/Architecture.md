@@ -4,6 +4,11 @@
 # PTimer — Architecture
 
 **Type**: Description of current code structure.
+**Scope**: The iOS codebase (`ios/` — the SwiftPM package and the
+Xcode targets). The Android module structure (`android/`) and the
+cross-platform comparison are documented in
+[`CrossPlatformArchitectureReview.md`](CrossPlatformArchitectureReview.md);
+this document does not describe them.
 **Audience**: Engineers working in the codebase who need to know which
 file owns which responsibility, where layer boundaries lie, and how the
 pieces compose at runtime.

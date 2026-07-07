@@ -5,11 +5,45 @@ import SwiftUI
 import PTimerKit
 
 struct ContentView: View {
+    #if DEBUG
+    @State private var showDebugRibbon = true
+    #endif
+
     var body: some View {
         ExposureCalculatorScreen()
             .ptimerComponentTheme(.system)
+            #if DEBUG
+            .overlay(alignment: .topTrailing) {
+                if showDebugRibbon {
+                    DebugBuildRibbon()
+                }
+            }
+            .task {
+                try? await Task.sleep(for: .seconds(10))
+                showDebugRibbon = false
+            }
+            #endif
     }
 }
+
+#if DEBUG
+/// Small corner marker shown only in debug builds (PTIMER-203) so a debug
+/// install is visually distinguishable from release on screen, not just by
+/// launcher icon/name. Auto-hides after 10s so it doesn't linger over
+/// screenshots taken later in the session.
+private struct DebugBuildRibbon: View {
+    var body: some View {
+        Text("DEBUG")
+            .font(.caption2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.red)
+            .padding(.top, 4)
+            .padding(.trailing, 4)
+    }
+}
+#endif
 
 private extension PTimerComponentTheme {
     /// Maps the platform's UIKit semantic colors into the kit theme. The

@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import com.sangwook.ptimer.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -45,6 +46,10 @@ fun PTimerAboutDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        // Dialog hosts its own AndroidComposeView, which re-derives LocalDensity
+        // from the system Configuration rather than inheriting ShootingApp's
+        // font-scale cap (PTIMER-219) — reapply it here.
+        CappedFontScale {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -73,7 +78,13 @@ fun PTimerAboutDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.about_title), style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            stringResource(R.string.about_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f, fill = false),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                         TextButton(onClick = onDismiss) {
                             Text(stringResource(R.string.action_done))
                         }
@@ -102,6 +113,7 @@ fun PTimerAboutDialog(
                     AboutLinkCard(stringResource(R.string.about_website), "https://sangwookhan.github.io/photography-timer/")
                 }
             }
+        }
         }
     }
 }
@@ -163,8 +175,13 @@ private fun AboutValueRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label)
-        Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            modifier = Modifier.weight(1f, fill = false),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

@@ -43,11 +43,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.draw.clip
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.core.target.TargetShutterStopDifferenceKind
@@ -84,6 +86,9 @@ internal fun TargetShutterRow(
                 stringResource(R.string.target_shutter_label),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f, fill = false),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             when (display) {
                 is TargetShutterDisplayState.Unavailable -> {
@@ -195,6 +200,10 @@ internal fun TargetShutterSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
+        // ModalBottomSheet hosts its own dialog window, which re-derives
+        // LocalDensity from the system Configuration rather than inheriting
+        // ShootingApp's font-scale cap (PTIMER-219) — reapply it here.
+        CappedFontScale {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             // The labeled row is the accessible switch element: toggleable
             // merges the label text and the Switch into one named on/off
@@ -212,7 +221,13 @@ internal fun TargetShutterSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.target_use), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.target_use),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Switch(checked = useTarget, onCheckedChange = null)
             }
 
@@ -288,6 +303,7 @@ internal fun TargetShutterSheet(
                 ) { Text(stringResource(R.string.action_confirm)) }
             }
             Spacer(Modifier.height(8.dp))
+        }
         }
     }
 }

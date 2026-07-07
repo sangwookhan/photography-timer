@@ -25,6 +25,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -331,6 +332,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
 
     // Timers live in a peeking bottom sheet so starting one adds it without
     // leaving the shooting surface (the sheet appears once any timer exists).
+    CappedFontScale {
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
@@ -538,6 +540,7 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
             )
         }
     }
+    }
 }
 
 /**
@@ -580,15 +583,23 @@ private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit, onDismiss: () ->
  */
 @Composable
 private fun ExactAlarmInfoDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    // AlertDialog composes each slot inside its own dialog window, which
+    // re-derives LocalDensity from the system Configuration rather than
+    // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot needs
+    // its own CappedFontScale wrap, not just the AlertDialog call site.
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.alarm_warning_title)) },
-        text = { Text(stringResource(R.string.alarm_warning_body)) },
+        title = { CappedFontScale { Text(stringResource(R.string.alarm_warning_title)) } },
+        text = { CappedFontScale { Text(stringResource(R.string.alarm_warning_body)) } },
         confirmButton = {
-            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.alarm_warning_open_settings)) }
+            CappedFontScale {
+                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.alarm_warning_open_settings)) }
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.alarm_warning_dismiss)) }
+            CappedFontScale {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.alarm_warning_dismiss)) }
+            }
         },
     )
 }

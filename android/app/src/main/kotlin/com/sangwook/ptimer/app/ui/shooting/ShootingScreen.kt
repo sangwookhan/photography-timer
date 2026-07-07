@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,6 +72,7 @@ import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedCoreText
 import com.sangwook.ptimer.app.ui.localizedFilmName
 
@@ -178,12 +180,16 @@ fun ShootingScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.clickable { showRename = true },
+                            // weight(fill = false) keeps a long renamed camera
+                            // name from squeezing the action icons (PTIMER-219).
+                            modifier = Modifier.clickable { showRename = true }.weight(1f, fill = false),
                         ) {
                             Text(
                                 pageState.activeSlotName,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             Icon(
                                 Icons.Filled.Edit,
@@ -236,7 +242,14 @@ fun ShootingScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(localizedFilmName(pageState.selectedFilmName), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                localizedFilmName(pageState.selectedFilmName),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(8.dp))
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Choose film",
@@ -247,12 +260,20 @@ fun ShootingScreen(
 
                     if (pageState.modelOptions.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Equal width per option (PTIMER-219): without weight(),
+                        // the first chip's wrap-content width claims whatever it
+                        // needs and squeezes a longer-labeled sibling into a
+                        // narrow, character-wrapped column at large font scale.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             pageState.modelOptions.forEach { option ->
                                 FilterChip(
                                     selected = option.id == pageState.selectedProfileId,
                                     onClick = { onSelectProfile(option.id) },
                                     label = { Text(option.label) },
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
                         }
@@ -403,22 +424,28 @@ fun ShootingScreen(
     }
 
     if (showResetConfirm) {
+        // AlertDialog composes each slot inside its own dialog window, which
+        // re-derives LocalDensity from the system Configuration rather than
+        // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot
+        // needs its own CappedFontScale wrap, not just the AlertDialog call site.
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { Text(stringResource(R.string.reset_shooting_title)) },
+            title = { CappedFontScale { Text(stringResource(R.string.reset_shooting_title)) } },
             // Two destructive choices: keep the camera name, or clear it
             // too. Stacked in the confirm slot (with Cancel) so the
             // single Reset entry point still gates the wipe behind a
             // deliberate choice.
             confirmButton = {
-                Column(horizontalAlignment = Alignment.End) {
-                    TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
-                        Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
+                CappedFontScale {
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
+                            Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
+                        }
+                        TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
+                            Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
+                        }
+                        TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                     }
-                    TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
-                        Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
-                    }
-                    TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                 }
             },
         )
@@ -569,7 +596,14 @@ private fun ResultCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.shooting_reciprocity), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(R.string.shooting_reciprocity),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         state.confidenceLabel?.let { Pill(localizedCoreText(it)) }
                         IconButton(onClick = onOpenDetails) {
@@ -662,21 +696,33 @@ private fun RenameSlotDialog(
     onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf(initial) }
+    // AlertDialog composes each slot inside its own dialog window, which
+    // re-derives LocalDensity from the system Configuration rather than
+    // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot
+    // needs its own CappedFontScale wrap, not just the AlertDialog call site.
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rename_camera_title)) },
+        title = { CappedFontScale { Text(stringResource(R.string.rename_camera_title)) } },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                label = { Text(stringResource(R.string.camera_name)) },
-            )
+            CappedFontScale {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.camera_name)) },
+                )
+            }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.action_save)) } },
+        confirmButton = {
+            CappedFontScale {
+                TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.action_save)) }
+            }
+        },
         dismissButton = {
             // Empty name clears the custom label back to the canonical default.
-            TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.action_reset)) }
+            CappedFontScale {
+                TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.action_reset)) }
+            }
         },
     )
 }

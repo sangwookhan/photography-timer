@@ -5,6 +5,7 @@ package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +74,10 @@ internal fun FilmPickerSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
+        // ModalBottomSheet hosts its own dialog window, which re-derives
+        // LocalDensity from the system Configuration rather than inheriting
+        // ShootingApp's font-scale cap (PTIMER-219) — reapply it here.
+        CappedFontScale {
         LazyColumn {
             item {
                 Row(
@@ -80,17 +85,30 @@ internal fun FilmPickerSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.films_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.films_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Box {
                         IconButton(onClick = { showCreateMenu = true }) {
                             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.filmpicker_add_cd))
                         }
                         DropdownMenu(expanded = showCreateMenu, onDismissRequest = { showCreateMenu = false }) {
+                            // DropdownMenu is Popup-based, which hosts its own
+                            // dialog window and re-derives LocalDensity from the
+                            // system Configuration rather than inheriting the
+                            // ModalBottomSheet's font-scale cap (PTIMER-219).
+                            CappedFontScale {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.create_custom_film)) },
                                 leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
                                 onClick = { showCreateMenu = false; onCreateNew() },
                             )
+                            }
                         }
                     }
                 }
@@ -125,6 +143,7 @@ internal fun FilmPickerSheet(
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }
+        }
         }
     }
 }
@@ -177,6 +196,11 @@ private fun FilmPickerRow(
                             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.filmpicker_actions_cd))
                         }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            // DropdownMenu is Popup-based, which hosts its own
+                            // dialog window and re-derives LocalDensity from the
+                            // system Configuration rather than inheriting the
+                            // ModalBottomSheet's font-scale cap (PTIMER-219).
+                            CappedFontScale {
                             onEdit?.let { edit ->
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.action_edit)) },
@@ -190,6 +214,7 @@ private fun FilmPickerRow(
                                     leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                                     onClick = { menu = false; del() },
                                 )
+                            }
                             }
                         }
                     }

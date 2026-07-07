@@ -125,12 +125,20 @@ fun ReciprocityDetailsScreen(
                 Text(stringResource(R.string.recip_model), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (state.modelOptions.size > 1) {
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Equal width per option (PTIMER-219): without weight(),
+                    // the first chip's wrap-content width claims whatever it
+                    // needs and squeezes a longer-labeled sibling into a
+                    // narrow, character-wrapped column at large font scale.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         state.modelOptions.forEach { option ->
                             FilterChip(
                                 selected = option.id == state.selectedModelId,
                                 onClick = { onSelectModel(option.id) },
                                 label = { Text(option.label) },
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }

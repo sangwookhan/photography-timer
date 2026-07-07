@@ -234,6 +234,7 @@
     <string name="alarm_warning_title">Exact timer alerts are off.</string>
     <string name="alarm_warning_body">Allow Alarms &amp; reminders for more reliable completion alerts.</string>
     <string name="alarm_warning_open_settings">Open settings</string>
+    <string name="alarm_warning_dismiss">Got it</string>
     <!-- Custom film leftovers -->
     <string name="cf_validation_table">Add a label and at least two metered→corrected rows.</string>
     <string name="cf_validation_table_order">Each row\'s metered time and its correction must increase down the list, and a correction can\'t be shorter than its metered time.</string>

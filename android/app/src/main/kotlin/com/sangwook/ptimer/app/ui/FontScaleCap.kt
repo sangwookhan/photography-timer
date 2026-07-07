@@ -20,16 +20,17 @@ internal const val MaxCappedFontScale = 1.3f
 
 /**
  * Wraps [content] with a [LocalDensity] whose fontScale is clamped to
- * [MaxCappedFontScale]. Must be applied INSIDE each `Dialog`/`AlertDialog`/
- * `ModalBottomSheet` composable's own content, not just once at an ancestor:
- * Compose's `Dialog` hosts content in a new `AndroidComposeView` that
- * re-derives `LocalDensity` from the system Configuration at its own
- * composition root, which shadows (and ignores) any `CompositionLocalProvider`
- * set up by a calling composition outside that dialog.
+ * [maxFontScale] (defaults to [MaxCappedFontScale]). Must be applied INSIDE
+ * each `Dialog`/`AlertDialog`/`ModalBottomSheet` composable's own content, not
+ * just once at an ancestor: Compose's `Dialog` hosts content in a new
+ * `AndroidComposeView` that re-derives `LocalDensity` from the system
+ * Configuration at its own composition root, which shadows (and ignores) any
+ * `CompositionLocalProvider` set up by a calling composition outside that
+ * dialog.
  */
 @Composable
-internal fun CappedFontScale(content: @Composable () -> Unit) {
+internal fun CappedFontScale(maxFontScale: Float = MaxCappedFontScale, content: @Composable () -> Unit) {
     val base = LocalDensity.current
-    val capped = Density(density = base.density, fontScale = base.fontScale.coerceAtMost(MaxCappedFontScale))
+    val capped = Density(density = base.density, fontScale = base.fontScale.coerceAtMost(maxFontScale))
     CompositionLocalProvider(LocalDensity provides capped, content = content)
 }

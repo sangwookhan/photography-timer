@@ -481,6 +481,12 @@ private fun NotationToggle(
         NDNotationMode.OPTICAL_DENSITY to "OD",
         NDNotationMode.FILTER_FACTOR to "ND",
     )
+    // The track shares its row with the "ND Filter" title (PTIMER-219), so it
+    // only ever gets the ND column's leftover width — not enough room left
+    // for 3 segments once the system font scale grows past 1x, which silently
+    // clips the last label (no overflow/ellipsis on a 2-char string helps).
+    // Hold this control's own labels at 1x rather than reflowing the row.
+    CappedFontScale(maxFontScale = 1f) {
     Row(
         modifier = Modifier
             .height(NotationTrackHeight)
@@ -527,6 +533,7 @@ private fun NotationToggle(
                 )
             }
         }
+    }
     }
 }
 

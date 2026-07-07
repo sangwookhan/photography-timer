@@ -577,7 +577,7 @@ private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit, onDismiss: () ->
 }
 
 /**
- * Reopens the banner's explanation on demand from the header's settings icon
+ * Reopens the banner's explanation on demand from the header's warning icon
  * (PTIMER-219): a deliberate second step before leaving the app, rather than
  * jumping straight to system settings with no context or way back.
  */

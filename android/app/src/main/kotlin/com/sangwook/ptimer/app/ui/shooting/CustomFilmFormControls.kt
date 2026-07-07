@@ -5,6 +5,7 @@ package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedSourceTypeLabel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,6 +112,11 @@ internal fun FullScreenFormDialog(
         // bottom slides under the navigation bar).
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
+        // Dialog hosts its own AndroidComposeView, which re-derives LocalDensity
+        // from the system Configuration at its own composition root — the app's
+        // font-scale cap set up in ShootingApp does not reach here on its own
+        // (PTIMER-219), so it must be reapplied inside every dialog.
+        CappedFontScale {
         Surface(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
@@ -156,6 +163,7 @@ internal fun FullScreenFormDialog(
                     content()
                 }
             }
+        }
         }
     }
 }
@@ -238,12 +246,20 @@ internal fun EditorRow(label: String, value: String, expanded: Boolean, onClick:
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 value.ifBlank { "—" },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Icon(
                 if (expanded) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -265,15 +281,33 @@ internal fun SourceTypeRow(value: CustomProfileSourceType, onSelect: (CustomProf
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.recip_source), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.recip_source),
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(localizedSourceTypeLabel(value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    localizedSourceTypeLabel(value),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            // DropdownMenu is Popup-based, which hosts its own dialog window
+            // and re-derives LocalDensity from the system Configuration
+            // rather than inheriting the enclosing dialog's font-scale cap
+            // (PTIMER-219).
+            CappedFontScale {
             CustomProfileSourceType.values().forEach { type ->
                 DropdownMenuItem(text = { Text(localizedSourceTypeLabel(type)) }, onClick = { onSelect(type); open = false })
+            }
             }
         }
     }

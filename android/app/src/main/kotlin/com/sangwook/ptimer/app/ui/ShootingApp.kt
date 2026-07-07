@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,6 +25,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -159,6 +161,14 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     val ndNotationMode by notationModeFlow.collectAsStateWithLifecycle(initialValue = initialNotationMode)
     LaunchedEffect(ndNotationMode) { controller.setNotationMode(ndNotationMode) }
 
+    // Persisted exact-alarm warning acknowledgment (PTIMER-219): once the user
+    // dismisses the banner, it stops reappearing on every active timer. The
+    // underlying info stays reachable via a small icon instead.
+    val initialExactAlarmWarningDismissed = remember { displaySettingsStore.loadExactAlarmWarningDismissed() }
+    val exactAlarmWarningDismissedFlow = remember { displaySettingsStore.exactAlarmWarningDismissedFlow() }
+    val exactAlarmWarningDismissed by exactAlarmWarningDismissedFlow
+        .collectAsStateWithLifecycle(initialValue = initialExactAlarmWarningDismissed)
+
     LaunchedEffect(timerState.active.size, viewModel.hasRunningTimers) {
         if (viewModel.hasRunningTimers) coordinator.start() else coordinator.stop()
     }
@@ -230,18 +240,26 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
 
     var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }
     var showAbout by remember { mutableStateOf(false) }
+    var showExactAlarmInfo by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()
-    // Warn when exact alarms are gated + denied and a timer is actually active,
-    // so completion-alert reliability is limited (fallback is inexact).
-    val showExactAlarmWarning = exactAlarmAvailability.isPermissionGated &&
-        !exactAlarmAllowed && timerState.active.isNotEmpty()
+    // Exact alarms are gated + denied, so completion-alert reliability is
+    // limited (fallback is inexact) — relevant regardless of whether a timer
+    // is active right now.
+    val exactAlarmWarningRelevant = exactAlarmAvailability.isPermissionGated && !exactAlarmAllowed
+    // Nudge with the full banner only while it concretely matters (a timer is
+    // running) and the user has not already acknowledged it — the header's
+    // status icon (showExactAlarmSettingsAction) reflects the same underlying
+    // condition at all times regardless of dismissal, so nothing is lost by
+    // suppressing the louder banner once dismissed (PTIMER-219).
+    val showExactAlarmWarning = exactAlarmWarningRelevant &&
+        timerState.active.isNotEmpty() && !exactAlarmWarningDismissed
 
     // Peek shows the compact MiniTimerBar; the full list appears only once the
-    // sheet is expanded. Peek height = the bar plus the drag-handle region so
-    // the mini card is never clipped.
+    // sheet is expanded. No drag handle is rendered (PTIMER-219: the sheet
+    // only opens by tapping a mini card, never by dragging), so the peek is
+    // just the bar's own height with nothing extra reserved above it.
     val expanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
-    val handleHeight = 48.dp
     // The mini card a user tapped to open the full list, so it can be focused.
     var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
 
@@ -314,10 +332,12 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
 
     // Timers live in a peeking bottom sheet so starting one adds it without
     // leaving the shooting surface (the sheet appears once any timer exists).
+    CappedFontScale {
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (hasTimers) MiniTimerBarHeight + handleHeight else 0.dp,
+        sheetPeekHeight = if (hasTimers) MiniTimerBarHeight else 0.dp,
+        sheetDragHandle = null,
         sheetContent = {
             if (expanded) {
                 FullTimerList(
@@ -353,9 +373,6 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.statusBars),
         ) {
-            if (showExactAlarmWarning) {
-                ExactAlarmWarningBanner(onOpenSettings = exactAlarmAvailability::openSettings)
-            }
             ShootingScreen(
                     modifier = Modifier.weight(1f),
                     state = calcState,
@@ -450,8 +467,28 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                     },
                     onReferencePoints = { input, anchors -> controller.referencePoints(input, anchors) },
                     onOpenAbout = { showAbout = true },
+                    showExactAlarmSettingsAction = exactAlarmWarningRelevant,
+                    onOpenExactAlarmSettings = { showExactAlarmInfo = true },
                 )
         }
+            // Overlay, not part of the Column above: the calculator's
+            // non-scrolling layout must not reflow while the banner is up
+            // (PTIMER-219). It floats over the header until dismissed instead
+            // of sharing the Column's weight-based space with ShootingScreen.
+            if (showExactAlarmWarning) {
+                Box(
+                    Modifier
+                        .padding(innerPadding)
+                        .windowInsetsPadding(WindowInsets.statusBars),
+                ) {
+                    ExactAlarmWarningBanner(
+                        onOpenSettings = exactAlarmAvailability::openSettings,
+                        onDismiss = {
+                            scope.launch { displaySettingsStore.setExactAlarmWarningDismissed(true) }
+                        },
+                    )
+                }
+            }
             // Modal scrim while the timer list is expanded: dims and blocks the
             // shooting surface (so Reset and the wheels aren't reachable behind
             // the list) and collapses the sheet on a tap outside it. The standard
@@ -492,16 +529,31 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
                 onDismiss = { showAbout = false },
             )
         }
+
+        if (showExactAlarmInfo) {
+            ExactAlarmInfoDialog(
+                onOpenSettings = {
+                    exactAlarmAvailability.openSettings()
+                    showExactAlarmInfo = false
+                },
+                onDismiss = { showExactAlarmInfo = false },
+            )
+        }
+    }
     }
 }
 
 /**
  * Non-intrusive banner shown when exact alarms are denied while a timer is
- * active: completion alerts fall back to inexact (less reliable), with a path to
- * the system Alarms & reminders settings.
+ * active: completion alerts fall back to inexact (less reliable), with a path
+ * to the system Alarms & reminders settings. Dismiss acknowledges the
+ * limitation so it stops reappearing on every timer (PTIMER-219); the
+ * explanation stays reachable afterward via a header icon next to About
+ * (see `showExactAlarmSettingsAction` on `ShootingScreen`), which reopens
+ * [ExactAlarmInfoDialog] rather than jumping straight to system settings.
  */
 @Composable
-private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit) {
+private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -519,6 +571,35 @@ private fun ExactAlarmWarningBanner(onOpenSettings: () -> Unit) {
                 )
             }
             TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.alarm_warning_open_settings)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.alarm_warning_dismiss)) }
         }
     }
+}
+
+/**
+ * Reopens the banner's explanation on demand from the header's warning icon
+ * (PTIMER-219): a deliberate second step before leaving the app, rather than
+ * jumping straight to system settings with no context or way back.
+ */
+@Composable
+private fun ExactAlarmInfoDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    // AlertDialog composes each slot inside its own dialog window, which
+    // re-derives LocalDensity from the system Configuration rather than
+    // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot needs
+    // its own CappedFontScale wrap, not just the AlertDialog call site.
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { CappedFontScale { Text(stringResource(R.string.alarm_warning_title)) } },
+        text = { CappedFontScale { Text(stringResource(R.string.alarm_warning_body)) } },
+        confirmButton = {
+            CappedFontScale {
+                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.alarm_warning_open_settings)) }
+            }
+        },
+        dismissButton = {
+            CappedFontScale {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.alarm_warning_dismiss)) }
+            }
+        },
+    )
 }

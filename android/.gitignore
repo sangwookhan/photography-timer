@@ -1,6 +1,7 @@
 .gradle/
 build/
 local.properties
+release-env.sh
 .idea/
 *.iml
 captures/

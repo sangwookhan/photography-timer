@@ -219,6 +219,7 @@
     <string name="alarm_warning_title">정확한 타이머 알림이 꺼져 있습니다.</string>
     <string name="alarm_warning_body">더 안정적인 완료 알림을 위해 알람 및 리마인더를 허용하세요.</string>
     <string name="alarm_warning_open_settings">설정 열기</string>
+    <string name="alarm_warning_dismiss">확인</string>
     <!-- Custom film leftovers -->
     <string name="cf_validation_table">이름과 측정→보정 행을 두 개 이상 추가하세요.</string>
     <string name="cf_validation_table_order">각 행의 측정 시간과 보정 값은 아래로 갈수록 커져야 하며, 보정 값은 측정 시간보다 짧을 수 없습니다.</string>

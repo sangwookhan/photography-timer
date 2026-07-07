@@ -64,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedFilmName
 import com.sangwook.ptimer.app.ui.localizedTimerSubtitle
 import com.sangwook.ptimer.app.ui.localizedTimerTitle
@@ -237,7 +238,13 @@ fun FullTimerList(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionHeader(stringResource(R.string.history_header))
+                    // weight(1f, fill = false) (PTIMER-219): keeps the Clear button
+                    // from being squeezed at large font scale.
+                    SectionHeader(
+                        stringResource(R.string.history_header),
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(Modifier.width(8.dp))
                     // Clear removes completed records only; canceled history is
                     // preserved (iOS clearCompletedTimers, label kept "Clear").
                     // Routed through the confirmation dialog like the card actions.
@@ -256,35 +263,43 @@ fun FullTimerList(
     }
 
     confirm?.let { req ->
+        // AlertDialog composes each slot inside its own dialog window, which
+        // re-derives LocalDensity from the system Configuration rather than
+        // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot
+        // needs its own CappedFontScale wrap, not just the AlertDialog call site.
         AlertDialog(
             onDismissRequest = { confirm = null },
-            title = { Text(stringResource(req.titleRes)) },
-            text = { Text(stringResource(req.messageRes)) },
+            title = { CappedFontScale { Text(stringResource(req.titleRes)) } },
+            text = { CappedFontScale { Text(stringResource(req.messageRes)) } },
             confirmButton = {
-                TextButton(onClick = {
-                    onEvent(req.intent)
-                    confirm = null
-                }) {
-                    Text(
-                        stringResource(req.confirmRes),
-                        color = if (req.destructive) MaterialTheme.colorScheme.error else Color.Unspecified,
-                    )
+                CappedFontScale {
+                    TextButton(onClick = {
+                        onEvent(req.intent)
+                        confirm = null
+                    }) {
+                        Text(
+                            stringResource(req.confirmRes),
+                            color = if (req.destructive) MaterialTheme.colorScheme.error else Color.Unspecified,
+                        )
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.action_cancel)) }
+                CappedFontScale {
+                    TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.action_cancel)) }
+                }
             },
         )
     }
 }
 
 @Composable
-private fun SectionHeader(text: String) {
+private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp),
+        modifier = modifier.padding(top = 8.dp),
     )
 }
 
@@ -582,7 +597,18 @@ private fun TimerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(localizedTimerTitle(card.identity.title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                // weight(1f, fill = false) + maxLines/ellipsis (PTIMER-219): without
+                // it, a long title at large font scale claims unbounded width and
+                // squeezes StatusBadge into a near-zero, character-wrapped column.
+                Text(
+                    localizedTimerTitle(card.identity.title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(8.dp))
                 StatusBadge(card.status)
             }
             if (card.identity.subtitle.isNotEmpty()) {
@@ -689,11 +715,18 @@ private fun TimerCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
+                    // weight(1f, fill = false) + maxLines/ellipsis (PTIMER-219):
+                    // prevents the order/slot Row from being squeezed at large
+                    // font scale (see the title/StatusBadge row above).
                     Text(
                         basisText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    Spacer(Modifier.width(8.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -733,7 +766,14 @@ private fun StatusBadge(status: TimerStatus) {
         TimerStatus.running, TimerStatus.paused -> MaterialTheme.colorScheme.primary
         TimerStatus.completed, TimerStatus.canceled -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, color = color)
+    Text(
+        label,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Medium,
+        color = color,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 /**

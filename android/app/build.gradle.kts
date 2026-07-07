@@ -1,11 +1,37 @@
 // Copyright © 2026 Sangwook Han
 // SPDX-License-Identifier: Apache-2.0
 
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Release signing values come from environment variables first, falling back
+// to android/local.properties (untracked). Neither source is committed.
+// Required: PTIMER_UPLOAD_STORE_FILE, PTIMER_UPLOAD_STORE_PASSWORD,
+// PTIMER_UPLOAD_KEY_ALIAS, PTIMER_UPLOAD_KEY_PASSWORD.
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        FileInputStream(localPropertiesFile).use { load(it) }
+    }
+}
+
+fun releaseSigningProperty(name: String): String? =
+    System.getenv(name) ?: localProperties.getProperty(name)
+
+val releaseStoreFile = releaseSigningProperty("PTIMER_UPLOAD_STORE_FILE")
+val releaseStorePassword = releaseSigningProperty("PTIMER_UPLOAD_STORE_PASSWORD")
+val releaseKeyAlias = releaseSigningProperty("PTIMER_UPLOAD_KEY_ALIAS")
+val releaseKeyPassword = releaseSigningProperty("PTIMER_UPLOAD_KEY_PASSWORD")
+val hasReleaseSigningConfig = !releaseStoreFile.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "com.sangwook.ptimer"
@@ -16,13 +42,34 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "0.7.4"
+        versionName = "0.7.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    if (hasReleaseSigningConfig) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                storeType = "PKCS12"
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "PTimer Debug"
+        }
         release {
+            manifestPlaceholders["appLabel"] = "@string/app_name"
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -38,6 +85,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

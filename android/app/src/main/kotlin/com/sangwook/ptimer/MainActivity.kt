@@ -8,6 +8,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -17,18 +18,24 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.ui.ShootingApp
+import com.sangwook.ptimer.ui.component.DebugBuildRibbon
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 import kotlinx.coroutines.delay
 
 // Brief branded splash shown on cold start (PTIMER-202); the platform's own
 // splash-screen API is icon-only and cannot show the full illustration.
 private const val SPLASH_DURATION_MS = 300L
+
+// The DEBUG marker auto-hides so it doesn't linger over screenshots taken
+// later in the session (PTIMER-203).
+private const val DEBUG_RIBBON_DURATION_MS = 10_000L
 
 class MainActivity : ComponentActivity() {
     // Incremented each time the app is opened from a timer notification so the
@@ -62,18 +69,30 @@ class MainActivity : ComponentActivity() {
                         showSplash = false
                     }
 
-                    if (showSplash) {
-                        Image(
-                            painter = painterResource(R.drawable.splash_illustration),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                        )
-                    } else {
-                        ShootingApp(
-                            openTimersSignal = openTimersSignal.intValue,
-                            notificationFocusTimerId = focusTimerId.value,
-                        )
+                    Box(Modifier.fillMaxSize()) {
+                        if (showSplash) {
+                            Image(
+                                painter = painterResource(R.drawable.splash_illustration),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            ShootingApp(
+                                openTimersSignal = openTimersSignal.intValue,
+                                notificationFocusTimerId = focusTimerId.value,
+                            )
+                        }
+                        if (BuildConfig.DEBUG) {
+                            var showDebugRibbon by rememberSaveable { mutableStateOf(true) }
+                            LaunchedEffect(Unit) {
+                                delay(DEBUG_RIBBON_DURATION_MS)
+                                showDebugRibbon = false
+                            }
+                            if (showDebugRibbon) {
+                                DebugBuildRibbon(modifier = Modifier.align(Alignment.TopEnd))
+                            }
+                        }
                     }
                 }
             }

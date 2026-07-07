@@ -19,18 +19,20 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +46,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,6 +72,7 @@ import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedCoreText
 import com.sangwook.ptimer.app.ui.localizedFilmName
 
@@ -109,6 +113,8 @@ fun ShootingScreen(
     onCreateFormulaFromTable: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
     onOpenAbout: () -> Unit,
+    showExactAlarmSettingsAction: Boolean,
+    onOpenExactAlarmSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showFilmPicker by remember { mutableStateOf(false) }
@@ -174,12 +180,16 @@ fun ShootingScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.clickable { showRename = true },
+                            // weight(fill = false) keeps a long renamed camera
+                            // name from squeezing the action icons (PTIMER-219).
+                            modifier = Modifier.clickable { showRename = true }.weight(1f, fill = false),
                         ) {
                             Text(
                                 pageState.activeSlotName,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             Icon(
                                 Icons.Filled.Edit,
@@ -196,6 +206,19 @@ fun ShootingScreen(
                             if (writesActiveSlot && pageState.canReset) {
                                 TextButton(onClick = { showResetConfirm = true }) { Text(stringResource(R.string.action_reset)) }
                             }
+                            // Exact alarms are off (PTIMER-219): keep a
+                            // persistent status icon next to the existing
+                            // info icon instead of a separate row or banner
+                            // that only shows post-dismissal.
+                            if (showExactAlarmSettingsAction) {
+                                IconButton(onClick = onOpenExactAlarmSettings) {
+                                    Icon(
+                                        Icons.Outlined.Warning,
+                                        contentDescription = stringResource(R.string.alarm_warning_title),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
                                     Icons.Outlined.Info,
@@ -206,19 +229,27 @@ fun ShootingScreen(
                         }
                     }
 
-                    // Film selector
-                    Text(stringResource(R.string.shooting_film), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(4.dp))
+                    // Film selector. No standalone "Film" label: the "No
+                    // film" placeholder value already names it for a
+                    // first-time user, and once a film is picked the row's
+                    // position + chevron carry the same context (PTIMER-219).
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(CardRowPadding),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(localizedFilmName(pageState.selectedFilmName), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                localizedFilmName(pageState.selectedFilmName),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(8.dp))
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Choose film",
@@ -229,12 +260,20 @@ fun ShootingScreen(
 
                     if (pageState.modelOptions.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Equal width per option (PTIMER-219): without weight(),
+                        // the first chip's wrap-content width claims whatever it
+                        // needs and squeezes a longer-labeled sibling into a
+                        // narrow, character-wrapped column at large font scale.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             pageState.modelOptions.forEach { option ->
                                 FilterChip(
                                     selected = option.id == pageState.selectedProfileId,
                                     onClick = { onSelectProfile(option.id) },
                                     label = { Text(option.label) },
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
                         }
@@ -254,7 +293,7 @@ fun ShootingScreen(
                     // Base shutter + ND wheels (compact: 3 visible rows).
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(CardRowPadding),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                         ) {
                             Column(
@@ -385,28 +424,38 @@ fun ShootingScreen(
     }
 
     if (showResetConfirm) {
+        // AlertDialog composes each slot inside its own dialog window, which
+        // re-derives LocalDensity from the system Configuration rather than
+        // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot
+        // needs its own CappedFontScale wrap, not just the AlertDialog call site.
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { Text(stringResource(R.string.reset_shooting_title)) },
+            title = { CappedFontScale { Text(stringResource(R.string.reset_shooting_title)) } },
             // Two destructive choices: keep the camera name, or clear it
             // too. Stacked in the confirm slot (with Cancel) so the
             // single Reset entry point still gates the wipe behind a
             // deliberate choice.
             confirmButton = {
-                Column(horizontalAlignment = Alignment.End) {
-                    TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
-                        Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
+                CappedFontScale {
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
+                            Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
+                        }
+                        TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
+                            Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
+                        }
+                        TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                     }
-                    TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
-                        Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
-                    }
-                    TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                 }
             },
         )
     }
 }
 
+
+/** Shared content padding for the film/wheel/result cards (PTIMER-219): one
+ *  consistent value instead of each card picking its own (was 16/8/12dp). */
+private val CardRowPadding = 8.dp
 
 /** Header-row height reserved for the ND notation toggle (PTIMER-187). */
 private val NotationToggleHeight = 30.dp
@@ -432,6 +481,12 @@ private fun NotationToggle(
         NDNotationMode.OPTICAL_DENSITY to "OD",
         NDNotationMode.FILTER_FACTOR to "ND",
     )
+    // The track shares its row with the "ND Filter" title (PTIMER-219), so it
+    // only ever gets the ND column's leftover width — not enough room left
+    // for 3 segments once the system font scale grows past 1x, which silently
+    // clips the last label (no overflow/ellipsis on a 2-char string helps).
+    // Hold this control's own labels at 1x rather than reflowing the row.
+    CappedFontScale(maxFontScale = 1f) {
     Row(
         modifier = Modifier
             .height(NotationTrackHeight)
@@ -479,6 +534,7 @@ private fun NotationToggle(
             }
         }
     }
+    }
 }
 
 /** Small circular start button used next to each computed exposure value.
@@ -487,14 +543,35 @@ private fun NotationToggle(
  *  TalkBack (PTIMER-182). */
 @Composable
 internal fun StartButton(onClick: () -> Unit, enabled: Boolean, contentDescription: String) {
-    // No explicit size: the default 40dp container keeps the 48dp interactive
-    // touch target Material enforces (the old size(32) defeated it).
-    FilledIconButton(onClick = onClick, enabled = enabled) {
-        Icon(
-            Icons.Filled.PlayArrow,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp),
-        )
+    // Shrunk from Material3's default 40dp container (PTIMER-219; iOS uses a
+    // 40-44pt circle) down to 36dp, while still guaranteeing the 48dp
+    // accessibility touch target. minimumInteractiveComponentSize() must wrap
+    // the sized Surface from the OUTSIDE via a separate Box: passing
+    // Modifier.size() straight into FilledIconButton's own modifier collapses
+    // its internal touch-target padding down to that fixed size instead of
+    // reserving extra space around it (the old size(32) attempt hit exactly
+    // this).
+    val colors = IconButtonDefaults.filledIconButtonColors()
+    Box(
+        modifier = Modifier.minimumInteractiveComponentSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            shape = CircleShape,
+            color = if (enabled) colors.containerColor else colors.disabledContainerColor,
+            contentColor = if (enabled) colors.contentColor else colors.disabledContentColor,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Filled.PlayArrow,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 }
 
@@ -506,7 +583,7 @@ private fun ResultCard(
     onOpenDetails: () -> Unit,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(Modifier.fillMaxWidth().padding(CardRowPadding)) {
             ResultRow(
                 label = stringResource(R.string.shooting_adjusted_shutter),
                 value = state.adjustedText,
@@ -526,7 +603,14 @@ private fun ResultCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.shooting_reciprocity), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(R.string.shooting_reciprocity),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         state.confidenceLabel?.let { Pill(localizedCoreText(it)) }
                         IconButton(onClick = onOpenDetails) {
@@ -619,21 +703,33 @@ private fun RenameSlotDialog(
     onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf(initial) }
+    // AlertDialog composes each slot inside its own dialog window, which
+    // re-derives LocalDensity from the system Configuration rather than
+    // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot
+    // needs its own CappedFontScale wrap, not just the AlertDialog call site.
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rename_camera_title)) },
+        title = { CappedFontScale { Text(stringResource(R.string.rename_camera_title)) } },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                label = { Text(stringResource(R.string.camera_name)) },
-            )
+            CappedFontScale {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.camera_name)) },
+                )
+            }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.action_save)) } },
+        confirmButton = {
+            CappedFontScale {
+                TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.action_save)) }
+            }
+        },
         dismissButton = {
             // Empty name clears the custom label back to the canonical default.
-            TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.action_reset)) }
+            CappedFontScale {
+                TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.action_reset)) }
+            }
         },
     )
 }

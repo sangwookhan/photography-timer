@@ -19,18 +19,20 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -109,6 +111,8 @@ fun ShootingScreen(
     onCreateFormulaFromTable: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
     onOpenAbout: () -> Unit,
+    showExactAlarmSettingsAction: Boolean,
+    onOpenExactAlarmSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showFilmPicker by remember { mutableStateOf(false) }
@@ -196,6 +200,19 @@ fun ShootingScreen(
                             if (writesActiveSlot && pageState.canReset) {
                                 TextButton(onClick = { showResetConfirm = true }) { Text(stringResource(R.string.action_reset)) }
                             }
+                            // Exact alarms are off (PTIMER-219): keep a
+                            // persistent status icon next to the existing
+                            // info icon instead of a separate row or banner
+                            // that only shows post-dismissal.
+                            if (showExactAlarmSettingsAction) {
+                                IconButton(onClick = onOpenExactAlarmSettings) {
+                                    Icon(
+                                        Icons.Outlined.Warning,
+                                        contentDescription = stringResource(R.string.alarm_warning_title),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
                                     Icons.Outlined.Info,
@@ -206,15 +223,16 @@ fun ShootingScreen(
                         }
                     }
 
-                    // Film selector
-                    Text(stringResource(R.string.shooting_film), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(4.dp))
+                    // Film selector. No standalone "Film" label: the "No
+                    // film" placeholder value already names it for a
+                    // first-time user, and once a film is picked the row's
+                    // position + chevron carry the same context (PTIMER-219).
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(CardRowPadding),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -254,7 +272,7 @@ fun ShootingScreen(
                     // Base shutter + ND wheels (compact: 3 visible rows).
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(CardRowPadding),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                         ) {
                             Column(
@@ -408,6 +426,10 @@ fun ShootingScreen(
 }
 
 
+/** Shared content padding for the film/wheel/result cards (PTIMER-219): one
+ *  consistent value instead of each card picking its own (was 16/8/12dp). */
+private val CardRowPadding = 8.dp
+
 /** Header-row height reserved for the ND notation toggle (PTIMER-187). */
 private val NotationToggleHeight = 30.dp
 
@@ -487,14 +509,35 @@ private fun NotationToggle(
  *  TalkBack (PTIMER-182). */
 @Composable
 internal fun StartButton(onClick: () -> Unit, enabled: Boolean, contentDescription: String) {
-    // No explicit size: the default 40dp container keeps the 48dp interactive
-    // touch target Material enforces (the old size(32) defeated it).
-    FilledIconButton(onClick = onClick, enabled = enabled) {
-        Icon(
-            Icons.Filled.PlayArrow,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp),
-        )
+    // Shrunk from Material3's default 40dp container (PTIMER-219; iOS uses a
+    // 40-44pt circle) down to 36dp, while still guaranteeing the 48dp
+    // accessibility touch target. minimumInteractiveComponentSize() must wrap
+    // the sized Surface from the OUTSIDE via a separate Box: passing
+    // Modifier.size() straight into FilledIconButton's own modifier collapses
+    // its internal touch-target padding down to that fixed size instead of
+    // reserving extra space around it (the old size(32) attempt hit exactly
+    // this).
+    val colors = IconButtonDefaults.filledIconButtonColors()
+    Box(
+        modifier = Modifier.minimumInteractiveComponentSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            shape = CircleShape,
+            color = if (enabled) colors.containerColor else colors.disabledContainerColor,
+            contentColor = if (enabled) colors.contentColor else colors.disabledContentColor,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Filled.PlayArrow,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 }
 
@@ -506,7 +549,7 @@ private fun ResultCard(
     onOpenDetails: () -> Unit,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(Modifier.fillMaxWidth().padding(CardRowPadding)) {
             ResultRow(
                 label = stringResource(R.string.shooting_adjusted_shutter),
                 value = state.adjustedText,

@@ -87,6 +87,12 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Generates a LocaleConfig from the res/values-*/ locales present (en, ko)
+    // so Android 13+ per-app language settings can list them (PTIMER-210).
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
 kotlin {

@@ -14,18 +14,15 @@ Photography Timer is preparing for its first public release.
 ## Get the App
 
 <div class="store-badges">
-  <figure>
-    <a href="https://apps.apple.com/us/app/photography-timer/id6787153428">
-      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="50">
-    </a>
-  </figure>
-  <figure>
-    <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
-      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
-    </a>
-    <figcaption>Android is currently in beta. Complete the steps below to install it.</figcaption>
-  </figure>
+  <a href="https://apps.apple.com/us/app/photography-timer/id6787153428">
+    <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="50">
+  </a>
+  <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
+    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
+  </a>
 </div>
+
+<p class="badge-note">Android is currently in beta. Complete the steps below to install it.</p>
 
 1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
 2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)
@@ -59,8 +56,8 @@ Official formula-based and table-based profiles included in the 0.7 public relea
 - [Kentmere 100](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-100_04_07_22.pdf))
 - [Kentmere 200](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2025/05/KENTMERE-PAN-200-260325.pdf))
 - [Kentmere 400](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf))
-- [Phoenix 200](https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/) (pdf)
-- [Phoenix II](https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/) (pdf)
+- [Phoenix 200 (pdf)](https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/)
+- [Phoenix II (pdf)](https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/)
 
 ### Kodak
 
@@ -77,9 +74,9 @@ Official formula-based and table-based profiles included in the 0.7 public relea
 
 ### FOMA BOHEMIA
 
-- [Fomapan 100 Classic](https://www.foma.cz/en/fomapan-100) (pdf)
-- [Fomapan 200 Creative](https://www.foma.cz/en/fomapan-200) (pdf)
-- [Fomapan 400 Action](https://www.foma.cz/en/fomapan-400) (pdf)
+- [Fomapan 100 Classic (pdf)](https://www.foma.cz/en/fomapan-100)
+- [Fomapan 200 Creative (pdf)](https://www.foma.cz/en/fomapan-200)
+- [Fomapan 400 Action (pdf)](https://www.foma.cz/en/fomapan-400)
 
 ### Rollei
 
@@ -97,7 +94,7 @@ Official formula-based and table-based profiles included in the 0.7 public relea
 
 ### BERGGER
 
-- [Pancro 400](https://bergger.com/fr/index.php?controller=attachment&id_attachment=4) (pdf)
+- [Pancro 400 (pdf)](https://bergger.com/fr/index.php?controller=attachment&id_attachment=4)
 
 Some internal catalog entries are not listed here because they are limited-guidance entries, hidden from the current public release, or not part of the official formula/table support set.
 

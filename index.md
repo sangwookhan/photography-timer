@@ -13,20 +13,24 @@ Photography Timer is preparing for its first public release.
 
 ## Get the App
 
-<div class="store-badges">
-  <a href="https://apps.apple.com/us/app/photography-timer/id6787153428">
-    <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="50">
-  </a>
-  <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
-    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
-  </a>
+<div class="platform-row">
+  <div class="platform-block">
+    <a href="https://apps.apple.com/us/app/photography-timer/id6787153428">
+      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="50">
+    </a>
+  </div>
+  <div class="platform-block">
+    <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
+      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
+    </a>
+    <p class="badge-note">Currently in closed testing. Complete these steps to install:</p>
+    <ol>
+      <li><a href="https://groups.google.com/u/0/g/photography-timer-testers">Join the tester group</a></li>
+      <li><a href="https://play.google.com/apps/testing/com.sangwook.ptimer">Become a tester</a></li>
+      <li>On that page, follow the &quot;Download it on Google Play&quot; link.</li>
+    </ol>
+  </div>
 </div>
-
-<p class="badge-note">The Google Play button above is in closed testing. Complete these steps first to install it:</p>
-
-1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
-2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)
-3. On that page, follow the "Download it on Google Play" link.
 
 ## Features
 

@@ -52,56 +52,56 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 
 ### ILFORD / HARMAN
 
-- Pan F Plus
-- FP4 Plus
-- Delta 100
-- Delta 400
-- Delta 3200
-- HP5 Plus
-- XP2 Super
-- Ortho Plus
-- Kentmere 100
-- Kentmere 200
-- Kentmere 400
-- Phoenix 200
-- Phoenix II
+- [Pan F Plus](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/1905/product/700/))
+- [FP4 Plus](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/1919/product/690/))
+- [Delta 100](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/3/product/681/))
+- [Delta 400](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/1915/product/685/))
+- [Delta 3200](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2025/07/DP3200_F25.pdf))
+- [HP5 Plus](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/1903/product/695/))
+- [XP2 Super](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/1909/product/704/))
+- [Ortho Plus](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/amfile/file/download/file/1948/product/698/))
+- [Kentmere 100](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-100_04_07_22.pdf))
+- [Kentmere 200](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2025/05/KENTMERE-PAN-200-260325.pdf))
+- [Kentmere 400](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf))
+- [Phoenix 200](https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/)
+- [Phoenix II](https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/)
 
 ### Kodak
 
-- Tri-X 400
-- T-MAX 100
-- T-MAX 400
+- [Tri-X 400](https://www.kodakprofessional.com/photographers/film/black-white/kodak-professional-tri-x-films/515) ([pdf](https://business.kodakmoments.com/sites/default/files/files/products/triXf4017.pdf))
+- [T-MAX 100](https://kodakprofessional.com/photographers/film/black-white/kodak-professional-t-max-100-film/525) ([pdf](https://business.kodakmoments.com/sites/default/files/files/resources/f4016_TMax_100.pdf))
+- [T-MAX 400](https://kodakprofessional.com/photographers/film/black-white/kodak-professional-t-max-400-film/526) ([pdf](https://business.kodakmoments.com/sites/default/files/files/products/f4043_tmax_400.pdf))
 
 ### Fujifilm
 
-- Acros II
-- Velvia 50
-- Velvia 100
-- Provia 100F
+- [Acros II](https://www.fujifilm.com/us/en/business/professional-photography/film/neopan-100-acros-ii/support) ([pdf](https://asset.fujifilm.com/www/us/files/2020-08/73080443d0289b1a7b116add14a9bdfc/films_neopan100acros2_135_01_0.pdf))
+- [Velvia 50](https://www.fujifilm.com/us/en/business/professional-photography/film/velvia-50) ([pdf](https://asset.fujifilm.com/www/us/files/2020-03/742f83fe2440fce58fbcc08f7370a7e6/AF3-0221E2Velvia50PIB.pdf))
+- [Velvia 100](https://www.fujifilm.com/us/en/business/professional-photography/film/velvia-100) ([pdf](https://asset.fujifilm.com/www/us/files/2020-03/0a569e6e2a9921af89a81a75a526611c/AF3-202E.pdf))
+- [Provia 100F](https://www.fujifilm.com/us/en/business/professional-photography/film/provia-100f/support) ([pdf](https://asset.fujifilm.com/www/us/files/2020-03/dc6e1c21c643f82b7fb393cef94d524a/Provia100FAF3-036E.pdf))
 
 ### FOMA BOHEMIA
 
-- Fomapan 100 Classic
-- Fomapan 200 Creative
-- Fomapan 400 Action
+- [Fomapan 100 Classic](https://www.foma.cz/en/fomapan-100)
+- [Fomapan 200 Creative](https://www.foma.cz/en/fomapan-200)
+- [Fomapan 400 Action](https://www.foma.cz/en/fomapan-400)
 
 ### Rollei
 
-- RPX 25
-- RPX 100
-- RPX 400
-- ORTHO 25 plus
-- RETRO 80S
-- SUPERPAN 200
+- [RPX 25](https://www.rolleianalog.com/downloads/?lang=en) ([pdf](https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX25_Data-Sheet_EN_R210701.pdf))
+- [RPX 100](https://www.rolleianalog.com/downloads/?lang=en) ([pdf](https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX100_Data-Sheet_EN_R210701.pdf))
+- [RPX 400](https://www.rolleianalog.com/downloads/?lang=en) ([pdf](https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX400_Data-Sheet_EN_R210701.pdf))
+- [ORTHO 25 plus](https://www.rolleianalog.com/downloads/?lang=en) ([pdf](https://www.rolleianalog.com/wp-content/uploads/2021/07/Ortho25_Data-Sheet_EN_R210701.pdf))
+- [RETRO 80S](https://www.rolleianalog.com/downloads/?lang=en) ([pdf](https://www.rolleianalog.com/wp-content/uploads/2021/07/Retro80S_Data-Sheet_EN_R210701.pdf))
+- [SUPERPAN 200](https://www.rolleianalog.com/downloads/?lang=en) ([pdf](https://www.rolleianalog.com/wp-content/uploads/2021/07/SUPERPAN200_Data-Sheet_EN_R210701.pdf))
 
 ### ADOX
 
-- CHS 100 II
-- CMS 20 II
+- [CHS 100 II](https://www.adox.de/films/chs100ii-en/)
+- [CMS 20 II](https://www.adox.de/films/cms20ii-en/) ([pdf](https://www.fotoimpex.com/shop/images/products/media/30945_5_PDF-Datasheet.pdf))
 
 ### BERGGER
 
-- Pancro 400
+- [Pancro 400](https://bergger.com/fr/index.php?controller=attachment&id_attachment=4)
 
 Some internal catalog entries are not listed here because they are limited-guidance entries, hidden from the current public release, or not part of the official formula/table support set.
 

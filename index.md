@@ -60,8 +60,8 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 - [Kentmere 100](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-100_04_07_22.pdf))
 - [Kentmere 200](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2025/05/KENTMERE-PAN-200-260325.pdf))
 - [Kentmere 400](https://www.ilfordphoto.com/technical-data/) ([pdf](https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf))
-- [Phoenix 200](https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/)
-- [Phoenix II](https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/)
+- [Phoenix 200](https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/) (pdf)
+- [Phoenix II](https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/) (pdf)
 
 ### Kodak
 
@@ -78,9 +78,9 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 
 ### FOMA BOHEMIA
 
-- [Fomapan 100 Classic](https://www.foma.cz/en/fomapan-100)
-- [Fomapan 200 Creative](https://www.foma.cz/en/fomapan-200)
-- [Fomapan 400 Action](https://www.foma.cz/en/fomapan-400)
+- [Fomapan 100 Classic](https://www.foma.cz/en/fomapan-100) (pdf)
+- [Fomapan 200 Creative](https://www.foma.cz/en/fomapan-200) (pdf)
+- [Fomapan 400 Action](https://www.foma.cz/en/fomapan-400) (pdf)
 
 ### Rollei
 
@@ -98,7 +98,7 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 
 ### BERGGER
 
-- [Pancro 400](https://bergger.com/fr/index.php?controller=attachment&id_attachment=4)
+- [Pancro 400](https://bergger.com/fr/index.php?controller=attachment&id_attachment=4) (pdf)
 
 Some internal catalog entries are not listed here because they are limited-guidance entries, hidden from the current public release, or not part of the official formula/table support set.
 

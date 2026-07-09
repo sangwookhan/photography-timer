@@ -22,7 +22,7 @@ Photography Timer is preparing for its first public release.
   </a>
 </div>
 
-<p class="badge-note">Android is currently in beta. Complete the steps below to install it.</p>
+<p class="badge-note">The Google Play button above is in closed testing. Complete these steps first to install it:</p>
 
 1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
 2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)

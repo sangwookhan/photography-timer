@@ -53,11 +53,12 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 - Delta 3200
 - HP5 Plus
 - XP2 Super
-- SFX 200
 - Ortho Plus
 - Kentmere 100
 - Kentmere 200
 - Kentmere 400
+- Phoenix 200
+- Phoenix II
 
 ### Kodak
 
@@ -80,8 +81,10 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 
 ### Rollei
 
+- RPX 25
 - RPX 100
 - RPX 400
+- ORTHO 25 plus
 - RETRO 80S
 - SUPERPAN 200
 
@@ -89,6 +92,10 @@ Official formula-based and table-based profiles included in the 0.7.1 public rel
 
 - CHS 100 II
 - CMS 20 II
+
+### BERGGER
+
+- Pancro 400
 
 Some internal catalog entries are not listed here because they are limited-guidance entries, hidden from the current public release, or not part of the official formula/table support set.
 

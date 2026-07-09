@@ -16,12 +16,12 @@ Photography Timer is preparing for its first public release.
 <div class="platform-row">
   <div class="platform-block">
     <a href="https://apps.apple.com/us/app/photography-timer/id6787153428">
-      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="50">
+      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="44">
     </a>
   </div>
   <div class="platform-block">
     <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
-      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
+      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="65">
     </a>
     <p class="badge-note">Currently in closed testing. Complete these steps to install:</p>
     <ol>

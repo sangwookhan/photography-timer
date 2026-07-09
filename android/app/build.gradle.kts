@@ -41,8 +41,8 @@ android {
         applicationId = "com.sangwook.ptimer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.7.5"
+        versionCode = 3
+        versionName = "0.7.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -86,6 +86,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // Generates a LocaleConfig from the res/values-*/ locales present (en, ko)
+    // so Android 13+ per-app language settings can list them (PTIMER-210).
+    androidResources {
+        generateLocaleConfig = true
     }
 }
 

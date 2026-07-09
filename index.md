@@ -13,14 +13,6 @@ Photography Timer is preparing for its first public release.
 
 ## Get the App
 
-**iOS** — Photography Timer is available now on the App Store.
-
-**Android** — Photography Timer for Android is currently in closed testing. Public release is expected in about two weeks. To try the beta:
-
-1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
-2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)
-3. On that page, follow the "Download it on Google Play" link.
-
 <div class="store-badges">
   <figure>
     <a href="https://apps.apple.com/us/app/photography-timer/id6787153428">
@@ -31,9 +23,14 @@ Photography Timer is preparing for its first public release.
     <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
       <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
     </a>
-    <figcaption>Closed testing — complete the steps above first</figcaption>
   </figure>
 </div>
+
+**Android beta:**
+
+1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
+2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)
+3. On that page, follow the "Download it on Google Play" link.
 
 ## Features
 

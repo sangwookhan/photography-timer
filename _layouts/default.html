@@ -21,7 +21,12 @@
     main ul { padding-left: 1.25rem; }
     main li { margin: 0.25rem 0; }
     .platform-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1rem 0; align-items: flex-start; }
-    .platform-block { flex: 0 1 260px; }
+    .platform-block { flex: 0 0 auto; }
+    .platform-block--android { max-width: 260px; }
+    /* Google's badge PNG has ~41px of transparent padding baked in on every
+       side of its 646x250 canvas; Apple's SVG has none. Nudge the Apple
+       badge down so the two visible pills line up at the same height. */
+    .platform-block:first-child img { margin-top: 11px; }
     .platform-block ol { margin: 0.5rem 0 0; padding-left: 1.25rem; }
     .platform-block li { margin: 0.25rem 0; }
     .badge-note { font-weight: 600; margin: 0.6rem 0 0; }

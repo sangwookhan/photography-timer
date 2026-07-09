@@ -11,6 +11,17 @@ Exposure calculator and countdown timer for film and digital photography.
 
 Photography Timer is preparing for its first public release.
 
+## Get the App
+
+**iOS** — Photography Timer is available now on the App Store.
+[Download on the App Store](https://apps.apple.com/us/app/photography-timer/id6787153428)
+
+**Android** — Photography Timer for Android is currently in closed testing. Public release is expected in about two weeks. To try the beta:
+
+1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
+2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)
+3. On that page, follow the "Download it on Google Play" link.
+
 ## Features
 
 - ND filter exposure calculation

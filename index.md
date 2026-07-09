@@ -23,10 +23,9 @@ Photography Timer is preparing for its first public release.
     <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
       <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="58">
     </a>
+    <figcaption>Android is currently in beta. Complete the steps below to install it.</figcaption>
   </figure>
 </div>
-
-**Android beta:**
 
 1. [Join the tester group](https://groups.google.com/u/0/g/photography-timer-testers)
 2. [Become a tester](https://play.google.com/apps/testing/com.sangwook.ptimer)

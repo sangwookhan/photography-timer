@@ -6,6 +6,7 @@ package com.sangwook.ptimer.app.vm
 import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
 import com.sangwook.ptimer.core.persistence.PersistentWorkspaceSnapshot
 import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
+import com.sangwook.ptimer.app.persistence.PersistenceWriter
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +64,11 @@ class ShootingViewModelTest {
             clock = clock,
             idProvider = { UUID.fromString("00000000-0000-0000-0000-%012d".format(++counter)) },
             alarmPlayer = alarmPlayer,
+            // A synchronous writer runs the store write inline: these tests cover
+            // state transitions and that a save is issued, not async timing. The
+            // writer's real deferral, ordering, and lifecycle behavior are
+            // covered by PersistenceWriterTest.
+            persistenceWriter = PersistenceWriter { it() },
         )
     }
 
@@ -259,7 +265,7 @@ class ShootingViewModelTest {
     fun restoreWithFailingStoreFallsBackToEmptyAndStaysUsable() {
         val sut = vm(ThrowingStore()) { t0 }
 
-        sut.restore() // read failure must not crash
+        sut.restore(sut.readPersistedSnapshot()) // read failure must not crash
 
         assertEquals(0, sut.uiState.value.active.size)
         assertEquals(0, sut.uiState.value.history.size)
@@ -278,7 +284,7 @@ class ShootingViewModelTest {
 
         val store = FakeStore().apply { toLoad = saved }
         val sut = vm(store) { t0.plusSeconds(40) }
-        sut.restore()
+        sut.restore(sut.readPersistedSnapshot())
         assertEquals(1, sut.uiState.value.active.size)
         assertEquals(60.0, sut.uiState.value.active.first().remainingSeconds, 1e-6)
     }

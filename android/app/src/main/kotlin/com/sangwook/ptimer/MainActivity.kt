@@ -22,15 +22,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.runtime.produceState
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.ui.ShootingApp
+import com.sangwook.ptimer.app.ui.ShootingAppBootstrap
 import com.sangwook.ptimer.ui.component.DebugBuildRibbon
 import com.sangwook.ptimer.ui.theme.PTimerTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 // Brief branded splash shown on cold start (PTIMER-202); the platform's own
-// splash-screen API is icon-only and cannot show the full illustration.
+// splash-screen API is icon-only and cannot show the full illustration. The
+// splash ends only once BOTH this minimum has elapsed AND the app bootstrap
+// (catalog parse + initial store reads, on IO) has finished (PTIMER-217), so
+// the main UI never composes against incomplete state.
 private const val SPLASH_DURATION_MS = 300L
 
 // The DEBUG marker auto-hides so it doesn't linger over screenshots taken
@@ -58,19 +65,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
+                    // App bootstrap (catalog parse + every initial store read) on
+                    // IO, concurrent with the splash minimum (PTIMER-217). On
+                    // config-change recreation it re-runs like the old in-
+                    // composition reads did, but warm (catalog lazy already
+                    // parsed, DataStore caches hot), so the gap is a few ms.
+                    val bootstrap by produceState<ShootingAppBootstrap?>(initialValue = null) {
+                        value = withContext(Dispatchers.IO) {
+                            ShootingAppBootstrap.load(applicationContext)
+                        }
+                    }
                     // rememberSaveable (not remember): onCreate reruns on every
                     // config-change recreation (rotation, dark/light toggle, font
-                    // scale). remember would replay the splash on top of running
-                    // app state each time; the saved value survives recreation so
-                    // it only shows once per process.
-                    var showSplash by rememberSaveable { mutableStateOf(true) }
+                    // scale). remember would replay the splash minimum on top of
+                    // running app state each time; the saved value survives
+                    // recreation so the 300 ms floor applies once per process.
+                    var splashMinimumShown by rememberSaveable { mutableStateOf(false) }
                     LaunchedEffect(Unit) {
                         delay(SPLASH_DURATION_MS)
-                        showSplash = false
+                        splashMinimumShown = true
                     }
 
                     Box(Modifier.fillMaxSize()) {
-                        if (showSplash) {
+                        val readyBootstrap = bootstrap
+                        if (!splashMinimumShown || readyBootstrap == null) {
                             Image(
                                 painter = painterResource(R.drawable.splash_illustration),
                                 contentDescription = null,
@@ -79,6 +97,7 @@ class MainActivity : ComponentActivity() {
                             )
                         } else {
                             ShootingApp(
+                                bootstrap = readyBootstrap,
                                 openTimersSignal = openTimersSignal.intValue,
                                 notificationFocusTimerId = focusTimerId.value,
                             )

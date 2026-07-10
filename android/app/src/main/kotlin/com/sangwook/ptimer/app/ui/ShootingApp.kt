@@ -49,7 +49,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.sangwook.ptimer.app.notify.AndroidExactAlarmAvailability
+import com.sangwook.ptimer.app.notify.AndroidTimerAlarmPlayer
+import com.sangwook.ptimer.app.notify.AndroidTimerAlarmScheduling
 import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
+import com.sangwook.ptimer.app.notify.AndroidTimerForegroundServiceControlling
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
@@ -91,12 +94,16 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     val scope = rememberCoroutineScope()
 
     val viewModel = remember {
-        ShootingViewModel(store = DataStoreTimerWorkspaceStore(context), clock = { Instant.now() })
+        ShootingViewModel(
+            store = DataStoreTimerWorkspaceStore.create(context),
+            clock = { Instant.now() },
+            alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
+        )
     }
     val coordinator = remember { AndroidTimerCoordinator(scope, viewModel, clock = { Instant.now() }) }
-    val slotStore = remember { DataStoreSlotSessionStore(context) }
-    val library = remember { CustomFilmLibrary(store = DataStoreCustomFilmLibraryStore(context)) }
-    val displaySettingsStore = remember { DataStoreDisplaySettingsStore(context) }
+    val slotStore = remember { DataStoreSlotSessionStore.create(context) }
+    val library = remember { CustomFilmLibrary(store = DataStoreCustomFilmLibraryStore.create(context)) }
+    val displaySettingsStore = remember { DataStoreDisplaySettingsStore.create(context) }
     val controller = remember {
         CalculatorController(
             films = LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms,
@@ -132,7 +139,13 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     // Notifications: ensure channels, request POST_NOTIFICATIONS (API 33+), and
     // reconcile the AlarmManager alarms + ongoing foreground service with state.
     val exactAlarmAvailability = remember { AndroidExactAlarmAvailability(context) }
-    val alertCoordinator = remember { AndroidTimerAlertCoordinator(context, exactAlarmAvailability) }
+    val alertCoordinator = remember {
+        AndroidTimerAlertCoordinator(
+            availability = exactAlarmAvailability,
+            scheduler = AndroidTimerAlarmScheduling(context),
+            foregroundService = AndroidTimerForegroundServiceControlling(context),
+        )
+    }
     // Cached exact-alarm permission state; refreshed on resume (e.g. after the
     // user returns from the Alarms & reminders settings).
     var exactAlarmAllowed by remember { mutableStateOf(exactAlarmAvailability.isAllowed()) }

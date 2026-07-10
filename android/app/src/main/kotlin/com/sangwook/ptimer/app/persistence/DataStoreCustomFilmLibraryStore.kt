@@ -4,6 +4,8 @@
 package com.sangwook.ptimer.app.persistence
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -21,14 +23,20 @@ private val LIBRARY_KEY = stringPreferencesKey("custom_film_library_json")
  * library as the codec's JSON string under a single Preferences key. Writes
  * are infrequent (only on create/delete), so the bridged blocking write is
  * negligible; decode is fail-safe so a corrupt store reads as empty.
+ *
+ * Takes the [DataStore] directly (PTIMER-216) rather than a [Context] so it
+ * is directly unit-testable with a JVM-local instance; use [create] to build
+ * the production instance from a [Context].
  */
-class DataStoreCustomFilmLibraryStore(private val context: Context) : CustomFilmLibraryStoring {
+class DataStoreCustomFilmLibraryStore(
+    private val dataStore: DataStore<Preferences>,
+) : CustomFilmLibraryStoring {
 
     // IO wrapped so a DataStore read/write failure degrades safely (read ->
     // null = empty library, write/clear -> no-op) instead of crashing.
     override fun loadSnapshot(): PersistentCustomFilmLibrarySnapshot? = runCatching {
         runBlocking {
-            val prefs = context.customFilmLibraryDataStore.data.firstOrNull()
+            val prefs = dataStore.data.firstOrNull()
             val json = prefs?.get(LIBRARY_KEY) ?: return@runBlocking null
             CustomFilmLibraryCodec.decode(json)
         }
@@ -37,14 +45,19 @@ class DataStoreCustomFilmLibraryStore(private val context: Context) : CustomFilm
     override fun saveSnapshot(snapshot: PersistentCustomFilmLibrarySnapshot) {
         runCatching {
             runBlocking {
-                context.customFilmLibraryDataStore.edit { it[LIBRARY_KEY] = CustomFilmLibraryCodec.encode(snapshot) }
+                dataStore.edit { it[LIBRARY_KEY] = CustomFilmLibraryCodec.encode(snapshot) }
             }
         }
     }
 
     override fun clearSnapshot() {
         runCatching {
-            runBlocking { context.customFilmLibraryDataStore.edit { it.remove(LIBRARY_KEY) } }
+            runBlocking { dataStore.edit { it.remove(LIBRARY_KEY) } }
         }
+    }
+
+    companion object {
+        fun create(context: Context): DataStoreCustomFilmLibraryStore =
+            DataStoreCustomFilmLibraryStore(context.customFilmLibraryDataStore)
     }
 }

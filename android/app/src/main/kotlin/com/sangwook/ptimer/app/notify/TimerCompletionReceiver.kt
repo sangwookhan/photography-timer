@@ -47,7 +47,7 @@ class TimerCompletionReceiver : BroadcastReceiver() {
                 // pre2 (not foreground): the stronger escalation is the audible
                 // alarm itself.
                 runCatching { UUID.fromString(timerId) }.getOrNull()?.let {
-                    AndroidTimerAlarmPlayer.playAlarm(context, it)
+                    AndroidTimerAlarmPlayer.instance(context).playAlarm(it)
                 }
             } else if (stage == AlertStage.PRE1) {
                 // pre1 is haptic-first and silent.

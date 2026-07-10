@@ -68,3 +68,19 @@ class TimerForegroundService : Service() {
         }
     }
 }
+
+/**
+ * Foreground-service start/stop seam for [AndroidTimerAlertCoordinator]
+ * (PTIMER-216): lets the coordinator's "ongoing timer present" decision be
+ * unit-tested through a fake without starting a real Android [Service].
+ */
+interface TimerForegroundServiceControlling {
+    fun start(content: OngoingContent)
+    fun stop()
+}
+
+/** Production [TimerForegroundServiceControlling] backed by [TimerForegroundService]. */
+class AndroidTimerForegroundServiceControlling(private val context: Context) : TimerForegroundServiceControlling {
+    override fun start(content: OngoingContent) = TimerForegroundService.start(context, content)
+    override fun stop() = TimerForegroundService.stop(context)
+}

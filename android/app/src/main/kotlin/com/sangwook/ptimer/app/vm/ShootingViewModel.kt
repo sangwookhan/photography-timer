@@ -4,6 +4,8 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
+import com.sangwook.ptimer.app.persistence.AppPersistenceWriter
+import com.sangwook.ptimer.app.persistence.PersistenceWriter
 import com.sangwook.ptimer.app.timer.TimerWorkspace
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -59,12 +61,20 @@ data class ShootingUiState(
  *
  * Not an `androidx.lifecycle.ViewModel` subclass so it instantiates trivially
  * in JVM unit tests; the Compose wiring holds it across recompositions.
+ *
+ * Store writes are handed to [persistenceWriter] so the store's blocking bridge
+ * never runs on the main thread (PTIMER-217). The default is the process-wide
+ * single writer, so every view-model generation (including the one a
+ * configuration change replaces) shares one ordered writer — a stale generation
+ * cannot leak a scope or race a newer one. Tests inject a synchronous writer to
+ * keep persistence assertable.
  */
 class ShootingViewModel(
     private val store: WorkspacePersistenceStoring,
     private val clock: () -> Instant = { Instant.now() },
     private val idProvider: () -> UUID = { UUID.randomUUID() },
     private val alarmPlayer: TimerAlarmPlayer,
+    private val persistenceWriter: PersistenceWriter = AppPersistenceWriter,
 ) {
     private val workspace = MutableStateFlow(TimerWorkspace())
     private val now = MutableStateFlow(clock())
@@ -87,10 +97,23 @@ class ShootingViewModel(
     /** True while at least one timer is running (the coordinator ticks then). */
     val hasRunningTimers: Boolean get() = workspace.value.hasRunning
 
-    /** Restores the persisted workspace, reconciling against the current time. */
-    fun restore() {
-        // A failing store read must not crash startup; degrade to empty.
-        val snapshot = runCatching { store.loadSnapshot() }.getOrNull() ?: return
+    /**
+     * Reads the persisted workspace snapshot. This is the only blocking step of
+     * restore; the store bridge blocks the calling thread, so call it off the
+     * main thread (PTIMER-217) and hand the result to [restore], which applies
+     * it on the main thread. A failing read degrades to `null` (empty restore).
+     */
+    fun readPersistedSnapshot(): PersistentWorkspaceSnapshot? =
+        runCatching { store.loadSnapshot() }.getOrNull()
+
+    /**
+     * Applies a snapshot read by [readPersistedSnapshot], reconciling against
+     * the current time. Pure state work (no blocking read) — runs on the main
+     * thread. A `null` snapshot (nothing persisted, or a failed read) leaves the
+     * empty initial state untouched.
+     */
+    fun restore(snapshot: PersistentWorkspaceSnapshot?) {
+        if (snapshot == null) return
         val n = clock()
         workspace.value = TimerWorkspace(snapshot.restore(n)).reconciled(n)
         now.value = n
@@ -129,8 +152,15 @@ class ShootingViewModel(
     }
 
     private fun persist() {
-        // A failing store write must not crash timer interaction.
-        runCatching { store.saveSnapshot(PersistentWorkspaceSnapshot.from(workspace.value.timers)) }
+        // Snapshot captured here, at the same save points and with the same
+        // content as before; only the store write moves off the calling thread,
+        // onto the shared ordered writer (PTIMER-217). The write is async, so it
+        // commits shortly after this returns rather than before.
+        val snapshot = PersistentWorkspaceSnapshot.from(workspace.value.timers)
+        persistenceWriter.submit {
+            // A failing store write must not crash timer interaction.
+            runCatching { store.saveSnapshot(snapshot) }
+        }
     }
 
     private fun render(ws: TimerWorkspace, n: Instant): ShootingUiState =

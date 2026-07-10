@@ -55,9 +55,7 @@ import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
 import com.sangwook.ptimer.app.notify.AndroidTimerForegroundServiceControlling
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
-import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
-import com.sangwook.ptimer.app.persistence.DataStoreDisplaySettingsStore
-import com.sangwook.ptimer.app.persistence.DataStoreSlotSessionStore
+import com.sangwook.ptimer.app.persistence.AppPersistenceWriter
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
 import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -73,7 +71,6 @@ import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingViewModel
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.customfilm.CustomFilmBuilder
-import com.sangwook.ptimer.core.customfilm.CustomFilmLibrary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -86,10 +83,18 @@ import java.time.Instant
  * shooting calculator controller (whose Start feeds the timer workspace), and
  * switches between the shooting screen and the full-screen timer list. The
  * coordinator ticks only while a timer is running.
+ *
+ * [bootstrap] carries the catalog parse and every initial store read, already
+ * performed off the main thread before this composes (PTIMER-217) — no
+ * `remember` block here performs a blocking read.
  */
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = null) {
+fun ShootingApp(
+    bootstrap: ShootingAppBootstrap,
+    openTimersSignal: Int = 0,
+    notificationFocusTimerId: String? = null,
+) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
 
@@ -101,14 +106,14 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
         )
     }
     val coordinator = remember { AndroidTimerCoordinator(scope, viewModel, clock = { Instant.now() }) }
-    val slotStore = remember { DataStoreSlotSessionStore.create(context) }
-    val library = remember { CustomFilmLibrary(store = DataStoreCustomFilmLibraryStore.create(context)) }
-    val displaySettingsStore = remember { DataStoreDisplaySettingsStore.create(context) }
+    val slotStore = bootstrap.slotStore
+    val library = bootstrap.library
+    val displaySettingsStore = bootstrap.displaySettingsStore
     val controller = remember {
         CalculatorController(
-            films = LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms,
+            films = bootstrap.presetFilms + library.customFilms,
             onStart = { duration, identity -> viewModel.onEvent(ShootingIntent.StartTimer(duration, identity)) },
-            initialSession = slotStore.loadSession(),
+            initialSession = bootstrap.initialSession,
         )
     }
     val aboutVersion = remember {
@@ -125,7 +130,15 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
         }
     }
 
-    LaunchedEffect(Unit) { viewModel.restore() }
+    // Restore: the blocking store read runs on the shared writer's ordered read,
+    // so a configuration-change restore waits behind any workspace write the
+    // replaced generation submitted (a just-removed/cleared timer cannot
+    // resurface); the snapshot is applied (state reconciliation) back on the
+    // main thread, as it always was (PTIMER-217). Same post-first-frame timing.
+    LaunchedEffect(Unit) {
+        val snapshot = AppPersistenceWriter.readOrdered { viewModel.readPersistedSnapshot() }
+        viewModel.restore(snapshot)
+    }
 
     // Persist the slot session off the hot wheel-tick path: debounce the state
     // stream and write the latest exported session. `drop(1)` skips the initial
@@ -166,10 +179,11 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     val soundingAlarmId by viewModel.soundingAlarmTimerId.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
 
-    // Persisted ND notation display mode (PTIMER-187): seed from the store, then
-    // observe it. Keep the controller (picker labels) in sync with the observed
-    // value so a change persists and reflects across the picker and timer cards.
-    val initialNotationMode = remember { displaySettingsStore.loadNdNotationMode() }
+    // Persisted ND notation display mode (PTIMER-187): seed from the bootstrap
+    // read, then observe the store. Keep the controller (picker labels) in sync
+    // with the observed value so a change persists and reflects across the
+    // picker and timer cards.
+    val initialNotationMode = bootstrap.initialNdNotationMode
     val notationModeFlow = remember { displaySettingsStore.ndNotationModeFlow() }
     val ndNotationMode by notationModeFlow.collectAsStateWithLifecycle(initialValue = initialNotationMode)
     LaunchedEffect(ndNotationMode) { controller.setNotationMode(ndNotationMode) }
@@ -177,10 +191,9 @@ fun ShootingApp(openTimersSignal: Int = 0, notificationFocusTimerId: String? = n
     // Persisted exact-alarm warning acknowledgment (PTIMER-219): once the user
     // dismisses the banner, it stops reappearing on every active timer. The
     // underlying info stays reachable via a small icon instead.
-    val initialExactAlarmWarningDismissed = remember { displaySettingsStore.loadExactAlarmWarningDismissed() }
     val exactAlarmWarningDismissedFlow = remember { displaySettingsStore.exactAlarmWarningDismissedFlow() }
     val exactAlarmWarningDismissed by exactAlarmWarningDismissedFlow
-        .collectAsStateWithLifecycle(initialValue = initialExactAlarmWarningDismissed)
+        .collectAsStateWithLifecycle(initialValue = bootstrap.initialExactAlarmWarningDismissed)
 
     LaunchedEffect(timerState.active.size, viewModel.hasRunningTimers) {
         if (viewModel.hasRunningTimers) coordinator.start() else coordinator.stop()

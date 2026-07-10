@@ -40,7 +40,6 @@
 		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
 		A00000000000000000000F02 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000F01 /* Localizable.xcstrings */; };
 		A00000000000000000000A92 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000A91 /* LaunchScreen.storyboard */; };
-		A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000401 /* SharedFixtureLocator.swift */; };
 		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
 		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
 		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
@@ -51,7 +50,6 @@
 		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
-		A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */; };
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
@@ -144,7 +142,6 @@
 		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
-		A00000000000000000000401 /* SharedFixtureLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedFixtureLocator.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
 		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
 		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
@@ -155,7 +152,6 @@
 		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorViewModelFilmModeTestSupport.swift; sourceTree = "<group>"; };
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
@@ -294,7 +290,6 @@
 		A000000000000000000000BC /* ExposureCalculator */ = {
 			isa = PBXGroup;
 			children = (
-				A00000000000000000000911 /* ExposureCalculatorViewModelFilmModeTestSupport.swift */,
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
@@ -442,7 +437,6 @@
 		A00000000000000000000402 /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				A00000000000000000000401 /* SharedFixtureLocator.swift */,
 				EE0000000000000000000C93 /* CustomFilmTestSupport.swift */,
 			);
 			path = Support;
@@ -638,7 +632,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A00000000000000000000400 /* SharedFixtureLocator.swift in Sources */,
 				EE0000000000000000000C92 /* CustomFilmTestSupport.swift in Sources */,
 				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 				A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */,
@@ -654,7 +647,6 @@
 				A0000000000000000000011A /* RecordReplaySpies.swift in Sources */,
 				A0000000000000000000011C /* RecordReplayHarness.swift in Sources */,
 				A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */,
-				A00000000000000000000910 /* ExposureCalculatorViewModelFilmModeTestSupport.swift in Sources */,
 				A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,

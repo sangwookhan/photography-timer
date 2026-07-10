@@ -139,7 +139,7 @@ object TimerNotifications {
         // (foreground, where the receiver's alarm is cancelled by the
         // running-set sync). Exactly once per timer either way.
         runCatching { UUID.fromString(timerId) }.getOrNull()?.let {
-            AndroidTimerAlarmPlayer.playAlarm(context, it)
+            AndroidTimerAlarmPlayer.instance(context).playAlarm(it)
         }
         val notification = NotificationCompat.Builder(context, ALERT_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)

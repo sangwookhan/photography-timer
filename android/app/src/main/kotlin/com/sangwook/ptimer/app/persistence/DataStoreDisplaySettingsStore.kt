@@ -4,6 +4,8 @@
 package com.sangwook.ptimer.app.persistence
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -22,26 +24,32 @@ private val EXACT_ALARM_WARNING_DISMISSED_KEY = booleanPreferencesKey("exact_ala
  * DataStore-backed store for app-global display preferences (PTIMER-187).
  * Reads fail safe to the default; a malformed/absent value decodes to the
  * documented default for each preference.
+ *
+ * Takes the [DataStore] directly (PTIMER-216) rather than a [Context] so it
+ * is directly unit-testable with a JVM-local instance; use [create] to build
+ * the production instance from a [Context].
  */
-class DataStoreDisplaySettingsStore(private val context: Context) {
+class DataStoreDisplaySettingsStore(
+    private val dataStore: DataStore<Preferences>,
+) {
 
     /** Reactive ND notation mode; emits the default until a value is written. */
     fun ndNotationModeFlow(): Flow<NDNotationMode> =
-        context.displaySettingsDataStore.data.map { prefs ->
+        dataStore.data.map { prefs ->
             NDNotationMode.fromName(prefs[ND_NOTATION_MODE_KEY])
         }
 
     /** Blocking initial read for seeding UI state at composition. */
     fun loadNdNotationMode(): NDNotationMode = runCatching {
         runBlocking {
-            val prefs = context.displaySettingsDataStore.data.firstOrNull()
+            val prefs = dataStore.data.firstOrNull()
             NDNotationMode.fromName(prefs?.get(ND_NOTATION_MODE_KEY))
         }
     }.getOrDefault(NDNotationMode.DEFAULT)
 
     suspend fun setNdNotationMode(mode: NDNotationMode) {
         runCatching {
-            context.displaySettingsDataStore.edit { it[ND_NOTATION_MODE_KEY] = mode.name }
+            dataStore.edit { it[ND_NOTATION_MODE_KEY] = mode.name }
         }
     }
 
@@ -50,21 +58,26 @@ class DataStoreDisplaySettingsStore(private val context: Context) {
      * once dismissed, the banner stops reappearing on every active timer.
      */
     fun exactAlarmWarningDismissedFlow(): Flow<Boolean> =
-        context.displaySettingsDataStore.data.map { prefs ->
+        dataStore.data.map { prefs ->
             prefs[EXACT_ALARM_WARNING_DISMISSED_KEY] ?: false
         }
 
     /** Blocking initial read for seeding UI state at composition. */
     fun loadExactAlarmWarningDismissed(): Boolean = runCatching {
         runBlocking {
-            val prefs = context.displaySettingsDataStore.data.firstOrNull()
+            val prefs = dataStore.data.firstOrNull()
             prefs?.get(EXACT_ALARM_WARNING_DISMISSED_KEY) ?: false
         }
     }.getOrDefault(false)
 
     suspend fun setExactAlarmWarningDismissed(dismissed: Boolean) {
         runCatching {
-            context.displaySettingsDataStore.edit { it[EXACT_ALARM_WARNING_DISMISSED_KEY] = dismissed }
+            dataStore.edit { it[EXACT_ALARM_WARNING_DISMISSED_KEY] = dismissed }
         }
+    }
+
+    companion object {
+        fun create(context: Context): DataStoreDisplaySettingsStore =
+            DataStoreDisplaySettingsStore(context.displaySettingsDataStore)
     }
 }

@@ -3,7 +3,6 @@
 
 package com.sangwook.ptimer.app.vm
 
-import android.content.Context
 import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
 import com.sangwook.ptimer.core.persistence.PersistentWorkspaceSnapshot
 import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
@@ -39,7 +38,7 @@ class ShootingViewModelTest {
         var stopCount = 0
             private set
 
-        override fun playAlarm(context: Context, timerId: UUID) { _soundingTimerId.value = timerId }
+        override fun playAlarm(timerId: UUID) { _soundingTimerId.value = timerId }
         override fun stop() { stopCount++; _soundingTimerId.value = null }
 
         /** Set the sounding timer without needing a Context (no real playback). */

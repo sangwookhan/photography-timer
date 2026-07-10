@@ -4,6 +4,8 @@
 package com.sangwook.ptimer.app.persistence
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,14 +24,20 @@ private val SNAPSHOT_KEY = stringPreferencesKey("workspace_snapshot_json")
  * writes are bridged synchronously to satisfy the store interface; the payload
  * is small (a handful of timers) so blocking is negligible, and decode is
  * fail-safe so a corrupt store reads as empty.
+ *
+ * Takes the [DataStore] directly (PTIMER-216) rather than a [Context] so it
+ * is directly unit-testable with a JVM-local instance; use [create] to build
+ * the production instance from a [Context].
  */
-class DataStoreTimerWorkspaceStore(private val context: Context) : WorkspacePersistenceStoring {
+class DataStoreTimerWorkspaceStore(
+    private val dataStore: DataStore<Preferences>,
+) : WorkspacePersistenceStoring {
 
     // Each IO call is wrapped so a DataStore read/write failure degrades safely
     // (read -> null, write/clear -> no-op) instead of crashing the caller.
     override fun loadSnapshot(): PersistentWorkspaceSnapshot? = runCatching {
         runBlocking {
-            val prefs = context.timerWorkspaceDataStore.data.firstOrNull()
+            val prefs = dataStore.data.firstOrNull()
             val json = prefs?.get(SNAPSHOT_KEY) ?: return@runBlocking null
             WorkspaceSnapshotCodec.decode(json)
         }
@@ -38,14 +46,19 @@ class DataStoreTimerWorkspaceStore(private val context: Context) : WorkspacePers
     override fun saveSnapshot(snapshot: PersistentWorkspaceSnapshot) {
         runCatching {
             runBlocking {
-                context.timerWorkspaceDataStore.edit { it[SNAPSHOT_KEY] = WorkspaceSnapshotCodec.encode(snapshot) }
+                dataStore.edit { it[SNAPSHOT_KEY] = WorkspaceSnapshotCodec.encode(snapshot) }
             }
         }
     }
 
     override fun clearSnapshot() {
         runCatching {
-            runBlocking { context.timerWorkspaceDataStore.edit { it.remove(SNAPSHOT_KEY) } }
+            runBlocking { dataStore.edit { it.remove(SNAPSHOT_KEY) } }
         }
+    }
+
+    companion object {
+        fun create(context: Context): DataStoreTimerWorkspaceStore =
+            DataStoreTimerWorkspaceStore(context.timerWorkspaceDataStore)
     }
 }

@@ -3,7 +3,6 @@
 
 package com.sangwook.ptimer.app.vm
 
-import com.sangwook.ptimer.app.notify.AndroidTimerAlarmPlayer
 import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
 import com.sangwook.ptimer.app.timer.TimerWorkspace
 import com.sangwook.ptimer.core.timer.TimerIdentity
@@ -65,7 +64,7 @@ class ShootingViewModel(
     private val store: WorkspacePersistenceStoring,
     private val clock: () -> Instant = { Instant.now() },
     private val idProvider: () -> UUID = { UUID.randomUUID() },
-    private val alarmPlayer: TimerAlarmPlayer = AndroidTimerAlarmPlayer,
+    private val alarmPlayer: TimerAlarmPlayer,
 ) {
     private val workspace = MutableStateFlow(TimerWorkspace())
     private val now = MutableStateFlow(clock())

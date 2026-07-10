@@ -158,7 +158,51 @@ enum DisplayStateSnapshot {
         pattern: #"\$[0-9a-fA-F]{6,16}"#
     )
 
-    private static func canonicalize(_ output: String) -> String {
+    /// `ReciprocityProfile.sourcePageUrl` / `.downloadUrl` (PTIMER-158) are
+    /// display-only catalog reference links, not read by the calculation
+    /// policy. They can change when a manufacturer moves a page (PTIMER-212:
+    /// a Kodak link fix invalidated snapshots whose only diff was these
+    /// URLs), so the baseline pins field presence, not the current URL text.
+    private static let catalogProvenanceURLFieldNames = ["sourcePageUrl", "downloadUrl"]
+    private static let redactedURLPlaceholder = "<redacted-for-snapshot>"
+
+    private static func catalogProvenanceURLPairPattern(field: String) -> NSRegularExpression? {
+        try? NSRegularExpression(
+            pattern: #"▿ \#(field): Optional\("[^"]*"\)\n(\s*)- some: "[^"]*""#
+        )
+    }
+
+    private static func catalogProvenanceURLInlinePattern(field: String) -> NSRegularExpression? {
+        try? NSRegularExpression(pattern: #"\#(field): Optional\("[^"]*"\)"#)
+    }
+
+    private static func redactCatalogProvenanceURLs(_ output: String) -> String {
+        var result = output
+        for field in catalogProvenanceURLFieldNames {
+            if let pairPattern = catalogProvenanceURLPairPattern(field: field) {
+                let range = NSRange(result.startIndex..., in: result)
+                result = pairPattern.stringByReplacingMatches(
+                    in: result,
+                    range: range,
+                    withTemplate: "▿ \(field): Optional(\"\(redactedURLPlaceholder)\")\n$1- some: \"\(redactedURLPlaceholder)\""
+                )
+            }
+            if let inlinePattern = catalogProvenanceURLInlinePattern(field: field) {
+                let range = NSRange(result.startIndex..., in: result)
+                result = inlinePattern.stringByReplacingMatches(
+                    in: result,
+                    range: range,
+                    withTemplate: "\(field): Optional(\"\(redactedURLPlaceholder)\")"
+                )
+            }
+        }
+        return result
+    }
+
+    /// `internal` (not `private`) so `DisplayStateSnapshotCanonicalizationTests`
+    /// can assert on this observable text transform directly, without
+    /// writing throwaway snapshot baseline files.
+    static func canonicalize(_ output: String) -> String {
         // Strip the test-module qualifier `Swift.dump` prepends to
         // file-private (anonymous-context) helper types, so a baseline is
         // portable between the app (PTimerTests) and package
@@ -169,6 +213,7 @@ enum DisplayStateSnapshot {
         var result = output
             .replacingOccurrences(of: "PTimerTests.(unknown context", with: "(unknown context")
             .replacingOccurrences(of: "PTimerKitTests.(unknown context", with: "(unknown context")
+        result = redactCatalogProvenanceURLs(result)
         guard let regex = hexAddressPattern else {
             return result
         }

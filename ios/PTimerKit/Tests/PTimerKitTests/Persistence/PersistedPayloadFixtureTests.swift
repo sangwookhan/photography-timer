@@ -61,4 +61,17 @@ final class PersistedPayloadFixtureTests: XCTestCase {
         let second = snapshot.timers[1]
         XCTAssertEqual(second.customProfileSummary, "Beta · ISO 400")
     }
+
+    /// The PTIMER-215 per-record path must decode the same frozen bytes to the
+    /// same records with a clean outcome on both schemas.
+    func test_frozenPayloads_decodeIdenticallyThroughPerRecordPath() throws {
+        let customFilm = PersistentCustomFilmLibrarySnapshot.decode(from: Data(Self.frozenCustomFilm.utf8))
+        XCTAssertEqual(customFilm.outcome, .loaded)
+        XCTAssertEqual(customFilm.snapshot.films.map(\.id), ["cf-1", "cf-2"])
+
+        let metadata = PersistentTimerMetadataCollection.decode(from: Data(Self.frozenTimerMetadata.utf8))
+        XCTAssertEqual(metadata.outcome, .loaded)
+        XCTAssertEqual(metadata.snapshot.nextTimerOrder, 5)
+        XCTAssertEqual(metadata.snapshot.timers.count, 2)
+    }
 }

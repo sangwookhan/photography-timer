@@ -47,4 +47,15 @@ final class PersistentTimerSnapshotFixtureTests: XCTestCase {
         XCTAssertEqual(canceled.pausedRemainingDuration, 170)
         XCTAssertEqual(canceled.completedAt, Date(timeIntervalSinceReferenceDate: 700_000_030))
     }
+
+    /// The PTIMER-215 per-record path must decode the same frozen bytes to the
+    /// same records with a clean outcome — the hardened decoder agrees with
+    /// the legacy direct decode on well-formed legacy payloads.
+    func test_frozenLegacyPayload_decodesIdenticallyThroughPerRecordPath() throws {
+        let data = Data(Self.frozenPayload.utf8)
+        let direct = try JSONDecoder().decode(PersistentTimerCollectionSnapshot.self, from: data)
+        let perRecord = PersistentTimerCollectionSnapshot.decode(from: data)
+        XCTAssertEqual(perRecord.outcome, .loaded)
+        XCTAssertEqual(perRecord.snapshot.timers, direct.timers)
+    }
 }

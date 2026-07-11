@@ -186,11 +186,68 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
 }
 
 public struct PersistentTimerMetadataCollection: Codable, Equatable {
+    /// On-disk format version. Added in PTIMER-215; a payload with no version
+    /// decodes as the legacy v1 so shipping builds restore unchanged.
+    public static let currentSchemaVersion = 1
+
+    public let schemaVersion: Int
     public let nextTimerOrder: Int
     public let timers: [PersistentTimerMetadataSnapshot]
-    public init(nextTimerOrder: Int, timers: [PersistentTimerMetadataSnapshot]) {
+
+    public init(
+        schemaVersion: Int = currentSchemaVersion,
+        nextTimerOrder: Int,
+        timers: [PersistentTimerMetadataSnapshot]
+    ) {
+        self.schemaVersion = schemaVersion
         self.nextTimerOrder = nextTimerOrder
         self.timers = timers
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case nextTimerOrder
+        case timers
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
+            ?? Self.currentSchemaVersion
+        self.nextTimerOrder = try container.decode(Int.self, forKey: .nextTimerOrder)
+        self.timers = try container.decode([PersistentTimerMetadataSnapshot].self, forKey: .timers)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(nextTimerOrder, forKey: .nextTimerOrder)
+        try container.encode(timers, forKey: .timers)
+    }
+
+    /// Decodes a persisted payload with per-record isolation (PTIMER-215).
+    /// A single undecodable metadata entry is dropped; the rest survive, and
+    /// duplicate ids collapse first-valid-wins — which also removes the
+    /// duplicate-key trap the restore path's dictionary build would otherwise
+    /// hit. `nextTimerOrder` is read from the root best-effort (default 1).
+    public static func decode(from data: Data) -> SnapshotDecodeResult<PersistentTimerMetadataCollection> {
+        let result = VersionedCollectionDecoder.decodeRecords(
+            PersistentTimerMetadataSnapshot.self,
+            from: data,
+            recordsKey: "timers",
+            expectedSchemaVersion: currentSchemaVersion,
+            idOf: { AnyHashable($0.id) }
+        )
+        let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let nextTimerOrder = (root?["nextTimerOrder"] as? Int) ?? 1
+        return SnapshotDecodeResult(
+            snapshot: PersistentTimerMetadataCollection(
+                nextTimerOrder: nextTimerOrder,
+                timers: result.records
+            ),
+            outcome: result.outcome,
+            droppedRecordCount: result.droppedRecordCount
+        )
     }
 }
 

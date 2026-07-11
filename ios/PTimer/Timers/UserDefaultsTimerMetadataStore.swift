@@ -2,14 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
+import os
 import PTimerCore
 import PTimerKit
 
+/// PTIMER-215: decode is per-record and version-gated (see
+/// `PersistentTimerMetadataCollection.decode(from:)`). On a decode failure the
+/// raw payload is copied to a sibling `.quarantine` key before any save can
+/// overwrite it, and a signal is logged. Storage key is unchanged.
 struct UserDefaultsTimerMetadataStore: TimerMetadataPersistenceStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
+    private let quarantineKey: String
     private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private static let log = Logger(subsystem: "com.sangwook.ptimer", category: "persistence")
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -17,6 +23,7 @@ struct UserDefaultsTimerMetadataStore: TimerMetadataPersistenceStoring {
     ) {
         self.userDefaults = userDefaults
         self.snapshotKey = snapshotKey
+        self.quarantineKey = snapshotKey + ".quarantine"
     }
 
     func loadSnapshot() -> PersistentTimerMetadataCollection? {
@@ -24,7 +31,17 @@ struct UserDefaultsTimerMetadataStore: TimerMetadataPersistenceStoring {
             return nil
         }
 
-        return try? decoder.decode(PersistentTimerMetadataCollection.self, from: data)
+        let result = PersistentTimerMetadataCollection.decode(from: data)
+        if result.indicatesFailure {
+            userDefaults.set(data, forKey: quarantineKey)
+            Self.log.error(
+                """
+                Timer metadata decode degraded: outcome=\(result.outcome.rawValue, privacy: .public) \
+                dropped=\(result.droppedRecordCount, privacy: .public); raw payload quarantined.
+                """
+            )
+        }
+        return result.snapshot
     }
 
     func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection) {
@@ -37,5 +54,6 @@ struct UserDefaultsTimerMetadataStore: TimerMetadataPersistenceStoring {
 
     func clearSnapshot() {
         userDefaults.removeObject(forKey: snapshotKey)
+        userDefaults.removeObject(forKey: quarantineKey)
     }
 }

@@ -268,6 +268,59 @@ class CalculatorControllerTest {
     }
 
     @Test
+    fun digitalWorkflowTargetComparesAgainstAdjustedShutter() {
+        // ND mode must keep comparing against the Adjusted Shutter — this is
+        // the regression guard for PTIMER-191's Android fix.
+        val c = controller()
+        c.setNdIndex(6)
+        c.setTargetShutter(999.0)
+
+        val display = c.state.value.targetDisplay
+            as com.sangwook.ptimer.core.target.TargetShutterDisplayState.Available
+        val comparison = display.state.comparison
+        assertNotNull(comparison)
+        assertEquals("Adjusted Shutter", comparison!!.label)
+        assertNotNull(display.state.stopDifference)
+    }
+
+    @Test
+    fun filmWorkflowQuantifiedTargetComparesAgainstCorrectedExposure() {
+        val c = controller()
+        c.selectFilm("ilford-pan-f-plus-50")
+        c.setNdIndex(6)
+        assertNotNull(c.state.value.correctedText)
+
+        c.setTargetShutter(999.0)
+
+        val display = c.state.value.targetDisplay
+            as com.sangwook.ptimer.core.target.TargetShutterDisplayState.Available
+        val comparison = display.state.comparison
+        assertNotNull(comparison)
+        assertEquals("Corrected Exposure", comparison!!.label)
+        assertNotNull(display.state.stopDifference)
+    }
+
+    @Test
+    fun filmWorkflowLimitedGuidanceTargetComparisonIsUnavailable() {
+        // With the current launch catalog, Portra 400 at a 15s metered
+        // exposure resolves without a quantified corrected exposure.
+        // Target Shutter comparison must not silently fall back to the
+        // intermediate Adjusted Shutter value (PTIMER-191).
+        val c = controller()
+        c.selectFilm("kodak-portra-400")
+        c.setShutterIndex(c.state.value.shutterLabels.indexOf("15s"))
+        assertNull(c.state.value.correctedText)
+
+        c.setTargetShutter(60.0)
+
+        val display = c.state.value.targetDisplay
+            as com.sangwook.ptimer.core.target.TargetShutterDisplayState.Available
+        assertEquals(60.0, display.state.targetSeconds, 0.0)
+        assertNull(display.state.comparison)
+        assertNull(display.state.stopDifference)
+    }
+
+    @Test
     fun renameActiveSlotFlowsIntoStateAndTimerIdentity() {
         var identity: TimerIdentity? = null
         val c = controller { _, id -> identity = id }

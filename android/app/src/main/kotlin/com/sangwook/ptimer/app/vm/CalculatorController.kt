@@ -385,14 +385,20 @@ class CalculatorController(
 
     private fun comparisonSource(result: ShootingResult): TargetShutterPresenter.ComparisonSource {
         // Compare the target against the corrected exposure when a usable number
-        // exists (including an out-of-range "outside guidance" value); otherwise
-        // fall back to the adjusted shutter so the ↑/↓ stop guidance is always
-        // shown while a target is set — even when there is no corrected value.
+        // exists (including an out-of-range "outside guidance" value). Digital
+        // workflow falls back to the adjusted shutter so the ↑/↓ stop guidance
+        // is always shown while a target is set. Film workflow without a
+        // quantified corrected exposure (limited-guidance / unsupported) must
+        // not silently fall back to the intermediate adjusted shutter — the
+        // comparison is unavailable instead (PTIMER-191).
         val corrected = result.correctedSeconds ?: result.reciprocity?.calculatedCorrectedSeconds
-        return if (corrected != null && corrected.isFinite() && corrected > 0) {
-            TargetShutterPresenter.ComparisonSource.CorrectedExposure(corrected)
-        } else {
+        if (corrected != null && corrected.isFinite() && corrected > 0) {
+            return TargetShutterPresenter.ComparisonSource.CorrectedExposure(corrected)
+        }
+        return if (result.isDigital) {
             TargetShutterPresenter.ComparisonSource.AdjustedShutter(result.adjustedShutterSeconds)
+        } else {
+            TargetShutterPresenter.ComparisonSource.Unavailable
         }
     }
 

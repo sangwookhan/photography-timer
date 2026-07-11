@@ -37,6 +37,9 @@
     <string name="reset_settings_and_name">설정과 이름 초기화</string>
     <string name="rename_camera_title">카메라 이름 변경</string>
     <string name="camera_name">카메라 이름</string>
+    <string name="shooting_about_cd">PTIMER 정보</string>
+    <string name="shooting_choose_film_cd">필름 선택</string>
+    <string name="pager_position_format">%2$d개 중 %1$d번째</string>
 
     <!-- Target shutter -->
     <string name="target_shutter_label">목표 셔터</string>
@@ -246,4 +249,21 @@
     <string name="filmpicker_add_cd">커스텀 필름 추가</string>
     <string name="common_selected_cd">선택됨</string>
     <string name="filmpicker_actions_cd">커스텀 필름 작업</string>
+
+    <!-- Reciprocity graph legend -->
+    <string name="graph_legend_calculation_curve">계산 곡선</string>
+    <string name="graph_legend_current_result">현재 결과</string>
+    <string name="graph_legend_source_reference">출처 참조</string>
+    <string name="graph_legend_no_correction_range">무보정 범위</string>
+    <string name="graph_legend_not_recommended_boundary">권장하지 않는 경계</string>
+    <string name="graph_legend_beyond_source_range">출처 범위 초과</string>
+    <string name="graph_legend_outside_visible_range">표시 범위 밖</string>
+
+    <!-- Custom film editor: preview graph axis caption and reference table -->
+    <string name="cf_preview_axis_label">가로: 측정 시간 · 세로: 보정 노출</string>
+    <string name="cf_ref_header_metered">측정</string>
+    <string name="cf_ref_header_error">오차</string>
+    <string name="cf_reference_points_caption">이 공식이 유래된 표와 비교합니다. 표를 수정하면 이 값도 갱신됩니다.</string>
+    <string name="cf_checkpoint_no_correction">보정 없음</string>
+    <string name="cf_checkpoint_stops_format">+%1$.1f 스톱</string>
 </resources>

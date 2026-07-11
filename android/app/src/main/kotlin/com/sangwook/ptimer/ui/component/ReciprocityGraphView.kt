@@ -23,11 +23,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sangwook.ptimer.R
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.ui.theme.StatusDanger
 import com.sangwook.ptimer.ui.theme.StatusSuccess
@@ -141,13 +143,13 @@ fun GraphLegend(graph: ReciprocityGraph) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        LegendItem(curveColor, "Calculation curve")
-        LegendItem(curveColor, "Current result")
-        if (hasReference) LegendItem(StatusSuccess, "Source reference")
-        if (graph.noCorrectionFraction != null) LegendItem(StatusSuccess.copy(alpha = 0.2f), "No-correction range")
-        if (graph.notRecommendedBoundaryFraction != null) LegendItem(StatusDanger, "Not-recommended boundary")
-        if (graph.sourceRangeFraction != null) LegendItem(StatusDanger.copy(alpha = 0.2f), "Beyond source range")
-        if (graph.currentOutOfRange) LegendItem(StatusWarning, "Outside visible range")
+        LegendItem(curveColor, stringResource(R.string.graph_legend_calculation_curve))
+        LegendItem(curveColor, stringResource(R.string.graph_legend_current_result))
+        if (hasReference) LegendItem(StatusSuccess, stringResource(R.string.graph_legend_source_reference))
+        if (graph.noCorrectionFraction != null) LegendItem(StatusSuccess.copy(alpha = 0.2f), stringResource(R.string.graph_legend_no_correction_range))
+        if (graph.notRecommendedBoundaryFraction != null) LegendItem(StatusDanger, stringResource(R.string.graph_legend_not_recommended_boundary))
+        if (graph.sourceRangeFraction != null) LegendItem(StatusDanger.copy(alpha = 0.2f), stringResource(R.string.graph_legend_beyond_source_range))
+        if (graph.currentOutOfRange) LegendItem(StatusWarning, stringResource(R.string.graph_legend_outside_visible_range))
     }
 }
 

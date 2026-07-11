@@ -53,12 +53,11 @@ data class CameraSlotIdentity(
 }
 
 /**
- * Per-slot snapshot of the calculator working state. Inactive slots keep
- * their snapshot in the session so a switch can restore the slot's
- * exposure inputs and film selection without resetting the active
- * calculator. Stored in controller-native terms (wheel indices + film /
- * profile ids) rather than re-deriving seconds. (iOS:
- * CameraSlotCalculatorSnapshot.)
+ * Per-slot snapshot of the calculator working state. Every slot keeps its
+ * own snapshot in the session so a switch preserves the slot's exposure
+ * inputs and film selection without resetting the active calculator. Stored
+ * in controller-native terms (wheel indices + film / profile ids) rather than
+ * re-deriving seconds. (iOS: CameraSlotCalculatorSnapshot.)
  */
 @Serializable
 data class SlotCalculatorSnapshot(
@@ -71,17 +70,19 @@ data class SlotCalculatorSnapshot(
 )
 
 /**
- * Owns the camera-slot session state: which slot is active and the
- * calculator snapshot for every slot the user is not currently on.
- * Inactive snapshots stay untouched so a slot switch restores the slot's
- * inputs without invoking any reset on the active calculator. The active
- * slot's snapshot is intentionally absent — its live state lives on the
- * caller (the calculator controller). (iOS: CameraSlotSessionModel.)
+ * Owns the camera-slot session state: which slot is active and a stable
+ * calculator snapshot for *every* slot. Each slot's snapshot lives here for
+ * the life of the session, so switching the active slot is a pure change of
+ * [activeSlotId] with no cross-slot capture/restore side effect — the caller
+ * (the calculator controller) reads and mutates the active slot's snapshot in
+ * place through [activeSnapshot] / [updateActiveSnapshot]. (iOS keeps the
+ * active slot's live state on its calc/film models; the Android controller has
+ * no such split, so the session is the single per-slot owner here.)
  */
 class CameraSlotSession(
     val availableSlots: List<CameraSlotId> = CameraSlotId.allOrdered,
     initialActiveSlotId: CameraSlotId = CameraSlotId.camera1,
-    private val defaultSnapshot: SlotCalculatorSnapshot,
+    defaultSnapshot: SlotCalculatorSnapshot,
     initialSnapshots: Map<CameraSlotId, SlotCalculatorSnapshot> = emptyMap(),
     initialCustomNames: Map<CameraSlotId, String> = emptyMap(),
 ) {
@@ -101,8 +102,10 @@ class CameraSlotSession(
     var activeSlotId: CameraSlotId = initialActiveSlotId
         private set
 
-    private val inactiveSnapshots: MutableMap<CameraSlotId, SlotCalculatorSnapshot> =
-        initialSnapshots.filterKeys { it != initialActiveSlotId }.toMutableMap()
+    // One stable snapshot per available slot (active included). Missing entries
+    // seed from the default so every slot has an owner from construction.
+    private val snapshots: MutableMap<CameraSlotId, SlotCalculatorSnapshot> =
+        availableSlots.associateWith { initialSnapshots[it] ?: defaultSnapshot }.toMutableMap()
 
     private val customNames: MutableMap<CameraSlotId, String> =
         sanitizeCustomNames(initialCustomNames).toMutableMap()
@@ -131,32 +134,32 @@ class CameraSlotSession(
         customNames.remove(slotId)
     }
 
-    /** Snapshot for an inactive slot (the default when none stored); null for the active/unknown slot. */
-    fun snapshot(forInactiveSlot: CameraSlotId): SlotCalculatorSnapshot? {
-        if (forInactiveSlot == activeSlotId || forInactiveSlot !in availableSlots) return null
-        return inactiveSnapshots[forInactiveSlot] ?: defaultSnapshot
+    /** Snapshot for any available slot (active or not); null for an unknown slot. */
+    fun snapshot(slotId: CameraSlotId): SlotCalculatorSnapshot? =
+        if (slotId in availableSlots) snapshots.getValue(slotId) else null
+
+    /** The active slot's stable snapshot. */
+    val activeSnapshot: SlotCalculatorSnapshot get() = snapshots.getValue(activeSlotId)
+
+    /** Replaces the active slot's snapshot in place; other slots are untouched. */
+    fun updateActiveSnapshot(transform: (SlotCalculatorSnapshot) -> SlotCalculatorSnapshot) {
+        snapshots[activeSlotId] = transform(snapshots.getValue(activeSlotId))
     }
 
     /**
-     * Atomic slot switch: stores [outgoingSnapshot] for the currently
-     * active slot, makes [targetSlotId] active, and returns the snapshot
-     * the caller should load into the live calculator for the incoming
-     * slot. A no-op switch (target already active, or unknown) returns
-     * null so the caller can skip redundant model writes.
+     * Makes [targetSlotId] the active slot. Each slot keeps its own snapshot
+     * entry, so no capture/restore crosses slots. Returns false for a no-op
+     * (unknown target, or the slot is already active) so the caller can skip
+     * a redundant republish.
      */
-    fun switchActiveSlot(
-        targetSlotId: CameraSlotId,
-        outgoingSnapshot: SlotCalculatorSnapshot,
-    ): SlotCalculatorSnapshot? {
-        if (targetSlotId !in availableSlots || targetSlotId == activeSlotId) return null
-        inactiveSnapshots[activeSlotId] = outgoingSnapshot
-        val incoming = inactiveSnapshots.remove(targetSlotId) ?: defaultSnapshot
+    fun switchActiveSlot(targetSlotId: CameraSlotId): Boolean {
+        if (targetSlotId !in availableSlots || targetSlotId == activeSlotId) return false
         activeSlotId = targetSlotId
-        return incoming
+        return true
     }
 
-    /** Snapshot of every inactive slot (the active slot's live state lives on the caller). */
-    fun currentInactiveSnapshots(): Map<CameraSlotId, SlotCalculatorSnapshot> = inactiveSnapshots.toMap()
+    /** Snapshot of every available slot (active included). */
+    fun currentSnapshots(): Map<CameraSlotId, SlotCalculatorSnapshot> = snapshots.toMap()
 
     /** Current photographer-supplied display names, keyed by slot. */
     fun currentCustomNames(): Map<CameraSlotId, String> = customNames.toMap()

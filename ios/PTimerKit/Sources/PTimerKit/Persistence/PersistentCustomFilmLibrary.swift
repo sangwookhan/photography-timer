@@ -29,6 +29,27 @@ public struct PersistentCustomFilmLibrarySnapshot: Codable, Equatable {
         self.schemaVersion = schemaVersion
         self.films = films
     }
+
+    /// Decodes a persisted payload with per-record isolation (PTIMER-215).
+    /// One film carrying an unknown enum value or rule kind is dropped; the
+    /// rest of the library survives. A `schemaVersion` mismatch rejects the
+    /// whole payload; a missing version is accepted as the legacy v1.
+    /// Duplicate ids collapse first-valid-wins. The store uses the returned
+    /// `outcome` to decide whether to quarantine the raw payload.
+    public static func decode(from data: Data) -> SnapshotDecodeResult<PersistentCustomFilmLibrarySnapshot> {
+        let result = VersionedCollectionDecoder.decodeRecords(
+            FilmIdentity.self,
+            from: data,
+            recordsKey: "films",
+            expectedSchemaVersion: currentSchemaVersion,
+            idOf: { AnyHashable($0.id) }
+        )
+        return SnapshotDecodeResult(
+            snapshot: PersistentCustomFilmLibrarySnapshot(films: result.records),
+            outcome: result.outcome,
+            droppedRecordCount: result.droppedRecordCount
+        )
+    }
 }
 
 /// Persistence-facing API the runtime `CustomFilmLibrary` consumes.

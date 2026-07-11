@@ -4,7 +4,8 @@
 package com.sangwook.ptimer.core.slots
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CameraSlotSessionTest {
@@ -22,22 +23,26 @@ class CameraSlotSessionTest {
     }
 
     @Test
-    fun switchCapturesOutgoingAndRestoresIncomingDefault() {
+    fun eachSlotOwnsItsSnapshotAcrossSwitches() {
         val s = session()
-        val outgoing = SlotCalculatorSnapshot(shutterIndex = 12, ndIndex = 3, selectedFilmId = "kodak", selectedProfileId = "p1")
-        val incoming = s.switchActiveSlot(CameraSlotId.camera2, outgoing)
-        // Incoming camera2 has no stored snapshot yet → default.
-        assertEquals(default, incoming)
+        // Mutate camera1's owned snapshot in place, then switch away.
+        s.updateActiveSnapshot { SlotCalculatorSnapshot(shutterIndex = 12, ndIndex = 3, selectedFilmId = "kodak", selectedProfileId = "p1") }
+        assertTrue(s.switchActiveSlot(CameraSlotId.camera2))
         assertEquals(CameraSlotId.camera2, s.activeSlotId)
-        // Switching back restores camera1's captured inputs.
-        val back = s.switchActiveSlot(CameraSlotId.camera1, SlotCalculatorSnapshot(0, 0, null, null))
-        assertEquals(outgoing, back)
+        // camera2 keeps its own default; camera1's snapshot is untouched.
+        assertEquals(default, s.activeSnapshot)
+        s.updateActiveSnapshot { it.copy(ndIndex = 5) }
+
+        // Switching back exposes camera1's snapshot exactly as left; camera2 kept its own.
+        assertTrue(s.switchActiveSlot(CameraSlotId.camera1))
+        assertEquals(SlotCalculatorSnapshot(12, 3, "kodak", "p1"), s.activeSnapshot)
+        assertEquals(5, s.snapshot(CameraSlotId.camera2)?.ndIndex)
     }
 
     @Test
     fun sameSlotSwitchIsNoOp() {
         val s = session()
-        assertNull(s.switchActiveSlot(CameraSlotId.camera1, SlotCalculatorSnapshot(9, 9, "x", "y")))
+        assertFalse(s.switchActiveSlot(CameraSlotId.camera1))
         assertEquals(CameraSlotId.camera1, s.activeSlotId)
     }
 
@@ -56,10 +61,23 @@ class CameraSlotSessionTest {
     }
 
     @Test
-    fun snapshotForActiveSlotIsNull() {
+    fun everyAvailableSlotHasAnOwnedSnapshot() {
         val s = session()
-        assertNull(s.snapshot(forInactiveSlot = CameraSlotId.camera1))
-        assertEquals(default, s.snapshot(forInactiveSlot = CameraSlotId.camera2))
+        // Both the active and inactive slots expose their own snapshot (default until mutated).
+        assertEquals(default, s.snapshot(CameraSlotId.camera1))
+        assertEquals(default, s.snapshot(CameraSlotId.camera2))
+        assertEquals(s.activeSnapshot, s.snapshot(s.activeSlotId))
+    }
+
+    @Test
+    fun restoresInitialSnapshotsPerSlot() {
+        val camera2Snapshot = SlotCalculatorSnapshot(shutterIndex = 8, ndIndex = 2, selectedFilmId = "ilford", selectedProfileId = null)
+        val s = CameraSlotSession(
+            defaultSnapshot = default,
+            initialSnapshots = mapOf(CameraSlotId.camera2 to camera2Snapshot),
+        )
+        assertEquals(default, s.snapshot(CameraSlotId.camera1))
+        assertEquals(camera2Snapshot, s.snapshot(CameraSlotId.camera2))
     }
 
     @Test

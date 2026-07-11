@@ -89,12 +89,12 @@ data class CalculatorUiState(
 /**
  * Owns the shooting calculator surface across camera slots: base-shutter /
  * ND wheel indices, film + alternate-model selection, and the derived
- * result for the active slot. A slot switch captures the active slot's live
- * inputs into the [CameraSlotSession] and restores the incoming slot's
- * snapshot, so each camera keeps its own exposure context (iOS
- * capture-on-switch). Start delegates the computed duration + captured
- * identity to the timer workspace via [onStart]. Pure of Android;
- * deterministic and unit-testable.
+ * result for the active slot. Per-slot state lives in the [CameraSlotSession],
+ * which owns a stable snapshot for every slot; the controller reads and mutates
+ * the active slot's snapshot in place, so a slot switch just re-points the
+ * active slot without capturing or restoring live state. Start delegates the
+ * computed duration + captured identity to the timer workspace via [onStart].
+ * Pure of Android; deterministic and unit-testable.
  */
 class CalculatorController(
     films: List<FilmIdentity>,
@@ -110,43 +110,58 @@ class CalculatorController(
     private val ndStopRange = 0..ExposureScale.MAXIMUM_WHOLE_ND_STOPS
     private val defaultShutterIndex = shutterLabels.indexOf("1/30").coerceAtLeast(0)
 
-    // Live state for the active slot.
-    private var shutterIndex = defaultShutterIndex
-    private var ndIndex = 0
     // App-global ND notation display mode (PTIMER-187); display-only, never feeds calc.
     private var ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT
 
     /** ND wheel labels for the current notation mode (same length/order as the stop ladder). */
     private fun ndLabels(): List<String> =
         ndStopRange.map { NDNotationFormatter.display(it.toDouble(), ndNotationMode).value }
-    private var selectedFilmId: String? = null
-    private var selectedProfileId: String? = null
-    private var targetSeconds: Double? = null
 
+    private val defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null)
+
+    // The session is the single owner of every slot's calculator state; the
+    // active slot's inputs are read/written through [session] in place, not
+    // mirrored into controller-level fields.
     private val session = CameraSlotSession(
         initialActiveSlotId = initialSession?.activeSlotId ?: CameraSlotId.camera1,
-        defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null),
+        defaultSnapshot = defaultSnapshot,
         initialSnapshots = initialSession?.snapshots ?: emptyMap(),
         initialCustomNames = initialSession?.customNames ?: emptyMap(),
     )
 
+    // Read-only views of the active slot's owned state.
+    private val shutterIndex: Int get() = session.activeSnapshot.shutterIndex
+    private val ndIndex: Int get() = session.activeSnapshot.ndIndex
+    private val selectedFilmId: String? get() = session.activeSnapshot.selectedFilmId
+    private val selectedProfileId: String? get() = session.activeSnapshot.selectedProfileId
+    private val targetSeconds: Double? get() = session.activeSnapshot.targetSeconds
+
     init {
-        // Restore the active slot's live state from the persisted session.
-        initialSession?.snapshots?.get(session.activeSlotId)?.let { loadSnapshot(it) }
+        // Normalize the restored active slot (coerce indices, drop a stale film /
+        // profile reference) so a deleted custom film is not re-persisted as a
+        // broken selection. Inactive slots normalize when they become active.
+        session.updateActiveSnapshot { normalizeSnapshot(it) }
     }
 
     private val _state = MutableStateFlow(compute())
     val state: StateFlow<CalculatorUiState> = _state.asStateFlow()
 
-    /** Serializable snapshot of the whole slot session (active slot's live state included). */
+    /** Serializable snapshot of the whole slot session (every slot's owned state). */
     fun exportSession(): PersistentSlotSession = PersistentSlotSession(
         activeSlotId = session.activeSlotId,
-        snapshots = session.currentInactiveSnapshots() + (session.activeSlotId to captureSnapshot()),
+        snapshots = session.currentSnapshots(),
         customNames = session.currentCustomNames(),
     )
 
-    fun setShutterIndex(index: Int) { shutterIndex = index.coerceIn(shutterLabels.indices); publish() }
-    fun setNdIndex(index: Int) { ndIndex = index.coerceIn(ndStopRange.first, ndStopRange.last); publish() }
+    fun setShutterIndex(index: Int) {
+        session.updateActiveSnapshot { it.copy(shutterIndex = index.coerceIn(shutterLabels.indices)) }
+        publish()
+    }
+
+    fun setNdIndex(index: Int) {
+        session.updateActiveSnapshot { it.copy(ndIndex = index.coerceIn(ndStopRange.first, ndStopRange.last)) }
+        publish()
+    }
 
     /** Sets the ND notation display mode; re-publishes so wheel labels update. */
     fun setNotationMode(mode: NDNotationMode) {
@@ -156,9 +171,9 @@ class CalculatorController(
     }
 
     fun selectFilm(id: String?) {
-        selectedFilmId = id
         // Reset the model selection to the film's primary profile.
-        selectedProfileId = id?.let { films.firstOrNull { f -> f.id == it }?.profiles?.firstOrNull()?.id }
+        val profileId = id?.let { films.firstOrNull { f -> f.id == it }?.profiles?.firstOrNull()?.id }
+        session.updateActiveSnapshot { it.copy(selectedFilmId = id, selectedProfileId = profileId) }
         publish()
     }
 
@@ -167,7 +182,8 @@ class CalculatorController(
         // be activated; a hidden community/practical or otherwise unknown id
         // normalizes to the film's primary official profile.
         val film = selectedFilm()
-        selectedProfileId = id.takeIf { pid -> film != null && modelProfiles(film).any { it.id == pid } }
+        val resolved = id.takeIf { pid -> film != null && modelProfiles(film).any { it.id == pid } }
+        session.updateActiveSnapshot { it.copy(selectedProfileId = resolved) }
         publish()
     }
 
@@ -176,7 +192,8 @@ class CalculatorController(
 
     /** Sets the active slot's Target Shutter duration; a non-finite/≤0 value clears it. */
     fun setTargetShutter(seconds: Double?) {
-        targetSeconds = seconds?.takeIf { it.isFinite() && it > 0 }
+        val target = seconds?.takeIf { it.isFinite() && it > 0 }
+        session.updateActiveSnapshot { it.copy(targetSeconds = target) }
         publish()
     }
 
@@ -224,11 +241,7 @@ class CalculatorController(
     }
 
     private fun resetActiveSlotSettingsFields() {
-        shutterIndex = defaultShutterIndex
-        ndIndex = 0
-        selectedFilmId = null
-        selectedProfileId = null
-        targetSeconds = null
+        session.updateActiveSnapshot { defaultSnapshot }
     }
 
     // --- Custom-film editing (delegated to CustomFilmEditingPresenter) ---
@@ -285,10 +298,14 @@ class CalculatorController(
         )
     }
 
-    /** Switches the active camera slot, capturing the current slot's inputs and restoring the target's. */
+    /** Switches the active camera slot. Each slot owns its own snapshot, so this
+     * only re-points the active slot — no capture/restore of live state. The
+     * newly-active slot is normalized in place so visiting a slot heals a stale
+     * film/profile or an out-of-range index in its stored snapshot (matching the
+     * pre-refactor load-on-switch behavior) without re-persisting a broken ref. */
     fun selectSlot(id: CameraSlotId) {
-        val incoming = session.switchActiveSlot(id, captureSnapshot()) ?: return
-        loadSnapshot(incoming)
+        if (!session.switchActiveSlot(id)) return
+        session.updateActiveSnapshot { normalizeSnapshot(it) }
         publish()
     }
 
@@ -309,22 +326,24 @@ class CalculatorController(
         onStart(duration, identity(result, source, duration, includesAdjusted))
     }
 
-    private fun captureSnapshot() =
-        SlotCalculatorSnapshot(shutterIndex, ndIndex, selectedFilmId, selectedProfileId, targetSeconds)
-
-    private fun loadSnapshot(snapshot: SlotCalculatorSnapshot) {
-        shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices)
-        ndIndex = snapshot.ndIndex.coerceIn(ndStopRange.first, ndStopRange.last)
-        // Normalize a stale film/profile selection so a deleted custom film (or
-        // a profile id no longer valid for the film) is not re-persisted as a
-        // broken selection. An unknown film clears both; an invalid profile for
-        // a known film clears the profile (it falls back to the film's primary).
+    /**
+     * Coerces a restored snapshot into a safe state: wheel indices back into
+     * range, and a stale film/profile selection dropped so a deleted custom
+     * film (or a profile id no longer valid for the film) is not re-persisted
+     * as a broken reference. An unknown film clears both; an invalid profile
+     * for a known film clears the profile (it falls back to the film's primary).
+     */
+    private fun normalizeSnapshot(snapshot: SlotCalculatorSnapshot): SlotCalculatorSnapshot {
         val film = snapshot.selectedFilmId?.let { id -> films.firstOrNull { it.id == id } }
-        selectedFilmId = film?.id
-        selectedProfileId = film?.let { f ->
-            snapshot.selectedProfileId?.takeIf { pid -> modelProfiles(f).any { it.id == pid } }
-        }
-        targetSeconds = snapshot.targetSeconds?.takeIf { it.isFinite() && it > 0 }
+        return SlotCalculatorSnapshot(
+            shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices),
+            ndIndex = snapshot.ndIndex.coerceIn(ndStopRange.first, ndStopRange.last),
+            selectedFilmId = film?.id,
+            selectedProfileId = film?.let { f ->
+                snapshot.selectedProfileId?.takeIf { pid -> modelProfiles(f).any { it.id == pid } }
+            },
+            targetSeconds = snapshot.targetSeconds?.takeIf { it.isFinite() && it > 0 },
+        )
     }
 
     private fun publish() { _state.value = compute() }
@@ -405,18 +424,12 @@ class CalculatorController(
     /**
      * Top-level state: the active slot's state, carrying every slot's read-only
      * state in [CalculatorUiState.slotStates] so the camera pager renders each
-     * page from its own slot (no clone-until-settle during a swipe). The active
-     * slot reads the live fields; inactive slots read their session snapshots.
+     * page from its own slot (no clone-until-settle during a swipe). Every slot
+     * reads its own session-owned snapshot.
      */
     private fun compute(): CalculatorUiState {
-        val activeSnapshot = captureSnapshot()
         val perSlot = session.availableSlots.map { slotId ->
-            val snapshot = if (slotId == session.activeSlotId) {
-                activeSnapshot
-            } else {
-                session.snapshot(slotId) ?: activeSnapshot
-            }
-            computeSlot(snapshot, slotId)
+            computeSlot(session.snapshot(slotId) ?: defaultSnapshot, slotId)
         }
         val activeIndex = session.availableSlots.indexOf(session.activeSlotId).coerceAtLeast(0)
         return perSlot[activeIndex].copy(slotStates = perSlot)

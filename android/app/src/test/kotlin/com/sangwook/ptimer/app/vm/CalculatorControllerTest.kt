@@ -4,7 +4,9 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
+import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
+import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -132,6 +134,83 @@ class CalculatorControllerTest {
         val restored = c.state.value
         assertEquals(camera1State.selectedFilmName, restored.selectedFilmName)
         assertEquals(camera1State.ndIndex, restored.ndIndex)
+    }
+
+    @Test
+    fun twoSlotsKeepIndependentCalculatorAndFilmStateAcrossSwitches() {
+        // PTIMER-192: per-slot state is owned independently, so switching between
+        // two slots with different calculator + Film mode state never bleeds one
+        // slot's inputs into the other.
+        val c = controller()
+
+        // Camera 1: Pan F Plus, base index 4, ND 6, film primary profile.
+        c.selectFilm("ilford-pan-f-plus-50")
+        c.setShutterIndex(4)
+        c.setNdIndex(6)
+
+        // Camera 2: a different film with alternate models, its own base + ND + profile.
+        c.selectSlot(CameraSlotId.camera2)
+        c.selectFilm("foma-fomapan-100")
+        // A non-primary alternate model (the picker exposes more than one).
+        val fomaModel = c.state.value.modelOptions[1]
+        c.selectProfile(fomaModel.id)
+        c.setShutterIndex(9)
+        c.setNdIndex(3)
+
+        // Back to Camera 1: its film, base, and ND are intact.
+        c.selectSlot(CameraSlotId.camera1)
+        val camera1 = c.state.value
+        assertEquals("ilford-pan-f-plus-50", camera1.selectedFilmId)
+        assertEquals(4, camera1.shutterIndex)
+        assertEquals(6, camera1.ndIndex)
+
+        // Camera 2 still holds its own distinct film, base, ND, and profile.
+        c.selectSlot(CameraSlotId.camera2)
+        val camera2 = c.state.value
+        assertEquals("foma-fomapan-100", camera2.selectedFilmId)
+        assertEquals(9, camera2.shutterIndex)
+        assertEquals(3, camera2.ndIndex)
+        assertEquals(fomaModel.id, camera2.selectedProfileId)
+    }
+
+    @Test
+    fun customCameraNamesArePreservedPerSlotAcrossSwitches() {
+        // PTIMER-192: each slot owns its custom name; switching does not carry a
+        // name from one slot onto another or lose it on return.
+        val c = controller()
+        c.renameActiveSlot("Leica M6")
+
+        c.selectSlot(CameraSlotId.camera2)
+        assertEquals("Camera 2", c.state.value.activeSlotName)
+        c.renameActiveSlot("Hasselblad 500")
+
+        c.selectSlot(CameraSlotId.camera1)
+        assertEquals("Leica M6", c.state.value.activeSlotName)
+        c.selectSlot(CameraSlotId.camera2)
+        assertEquals("Hasselblad 500", c.state.value.activeSlotName)
+    }
+
+    @Test
+    fun startedTimerKeepsCameraIdentityWhenSlotStateChangesLater() {
+        // PTIMER-192: the identity handed to the timer is a snapshot taken at start,
+        // so renaming the slot or switching cameras afterwards does not mutate it.
+        var identity: TimerIdentity? = null
+        val c = controller { _, id -> identity = id }
+        c.renameActiveSlot("Nikon F3")
+        c.selectFilm("ilford-pan-f-plus-50")
+        c.start()
+        val captured = identity!!
+
+        // Later slot activity must not retroactively change the started timer.
+        c.renameActiveSlot("Renamed After Start")
+        c.selectSlot(CameraSlotId.camera2)
+        c.selectFilm("kodak-portra-400")
+
+        assertTrue(captured.title.startsWith("Nikon F3"))
+        assertTrue(captured.title.contains("Pan F Plus"))
+        assertEquals("C1", captured.slotLabel)
+        // The captured value is unchanged by the later edits.
+        assertEquals(captured, identity)
     }
 
     @Test
@@ -396,6 +475,45 @@ class CalculatorControllerTest {
         val activeSnapshot = restored.exportSession().snapshots[CameraSlotId.camera1]
         assertNull(activeSnapshot?.selectedFilmId)
         assertNull(activeSnapshot?.selectedProfileId)
+    }
+
+    @Test
+    fun switchingToASlotWithStaleStoredStateNormalizesUiAndPersistence() {
+        // PTIMER-192 regression: an inactive slot restored with a stale film /
+        // profile reference, an out-of-range shutter index, and an invalid
+        // target must be normalized the moment it becomes active — both the
+        // rendered state and what exportSession persists — not carried forward
+        // as a broken reference. (ND stays a valid value: an out-of-range ND
+        // is not reachable through normal persistence, since the pager compute
+        // would reject it at construction.)
+        val staleCamera2 = SlotCalculatorSnapshot(
+            shutterIndex = 9_999,
+            ndIndex = 2,
+            selectedFilmId = "deleted-custom-film",
+            selectedProfileId = "gone-profile",
+            targetSeconds = -5.0,
+        )
+        val session = PersistentSlotSession(
+            activeSlotId = CameraSlotId.camera1,
+            snapshots = mapOf(CameraSlotId.camera2 to staleCamera2),
+        )
+        val c = CalculatorController(films = films, initialSession = session)
+
+        c.selectSlot(CameraSlotId.camera2)
+        val ui = c.state.value
+        assertEquals("Camera 2", ui.activeSlotName)
+        assertEquals("No film", ui.selectedFilmName)
+        assertNull(ui.selectedProfileId)
+        assertTrue("shutter index coerced into range", ui.shutterIndex in ui.shutterLabels.indices)
+        assertEquals(2, ui.ndIndex)
+        assertTrue(ui.targetDisplay is com.sangwook.ptimer.core.target.TargetShutterDisplayState.Unavailable)
+
+        val persisted = c.exportSession().snapshots.getValue(CameraSlotId.camera2)
+        assertNull(persisted.selectedFilmId)
+        assertNull(persisted.selectedProfileId)
+        assertTrue(persisted.shutterIndex in ui.shutterLabels.indices)
+        assertEquals(2, persisted.ndIndex)
+        assertNull(persisted.targetSeconds)
     }
 
     @Test

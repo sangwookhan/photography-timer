@@ -110,7 +110,9 @@ fun MiniTimerBar(
     soundingAlarmId: UUID? = null,
     onStopAlarm: () -> Unit = {},
 ) {
-    val dock = state.active.asReversed() + state.history
+    // active/history already carry their final newest-first order (PTIMER-194);
+    // consumed verbatim, no reversal here.
+    val dock = state.active + state.history
     if (dock.isEmpty()) {
         Box(
             modifier = modifier
@@ -173,7 +175,9 @@ fun FullTimerList(
     soundingAlarmId: UUID? = null,
     onStopAlarm: () -> Unit = {},
 ) {
-    val activeReversed = state.active.asReversed()
+    // state.active already carries its final newest-first order (PTIMER-194);
+    // consumed verbatim, no reversal here.
+    val active = state.active
     val listState = rememberLazyListState()
     // History rows show relative completion/cancellation time; refresh it from
     // a UI-local clock so it advances while the list stays open.
@@ -184,9 +188,9 @@ fun FullTimerList(
     // an active timer; a tapped completion notification focuses a finished timer
     // in History. (Row at index 0 is the header; for the first active card, anchor
     // on the header so the close X stays visible.)
-    LaunchedEffect(focusId, activeReversed.size, state.history.size) {
+    LaunchedEffect(focusId, active.size, state.history.size) {
         if (focusId == null) return@LaunchedEffect
-        val activePos = activeReversed.indexOfFirst { it.id == focusId }
+        val activePos = active.indexOfFirst { it.id == focusId }
         if (activePos >= 0) {
             listState.animateScrollToItem(if (activePos == 0) 0 else activePos + 1)
             return@LaunchedEffect
@@ -194,7 +198,7 @@ fun FullTimerList(
         val historyPos = state.history.indexOfFirst { it.id == focusId }
         if (historyPos < 0) return@LaunchedEffect
         // header(1) + active cards + History header(1) + the card's position.
-        listState.animateScrollToItem(1 + activeReversed.size + 1 + historyPos)
+        listState.animateScrollToItem(1 + active.size + 1 + historyPos)
     }
     LazyColumn(
         state = listState,
@@ -223,7 +227,7 @@ fun FullTimerList(
         }
         // Active timers as full cards, newest first to match the peek order.
         if (state.active.isNotEmpty()) {
-            items(activeReversed, key = { it.id }) { card ->
+            items(active, key = { it.id }) { card ->
                 TimerCard(
                     card, now, ndNotationMode, onEvent, onConfirm = { confirm = it },
                     highlighted = card.id == focusId,

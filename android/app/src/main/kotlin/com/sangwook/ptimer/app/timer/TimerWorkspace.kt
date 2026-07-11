@@ -19,9 +19,18 @@ import java.util.UUID
 
 /**
  * Pure, immutable timer workspace: the single-owner collection of timers the
- * ViewModel mutates. Active timers (running/paused) sort by start ascending;
- * history (completed/canceled) sorts by terminal stamp descending so the most
- * recent finish leads — matching the iOS workspace ordering (PTIMER-50).
+ * ViewModel mutates. This is the sole owner of display ordering (PTIMER-194):
+ * [active] and [history] emit the final presentation order, and every UI
+ * surface consumes them verbatim without re-sorting or reversing.
+ *
+ * The policy mirrors the iOS `TimerWorkspaceOrdering` (Timer spec §6): active
+ * timers (running + paused, one group) lead in LIFO-by-creation order — highest
+ * [WorkspaceTimer.order] first — and history (completed + canceled, one group)
+ * follows by terminal stamp descending. A final `id` tie-break keeps the order
+ * deterministic even when creation counters or terminal stamps collide. Keying
+ * active on the monotonic [WorkspaceTimer.order] rather than the start instant
+ * means a running/paused transition (which preserves start date) never moves a
+ * card, and near-simultaneous starts still order deterministically.
  *
  * Pure value type: every mutation returns a new workspace, and a fresh id is
  * supplied by the caller so this stays deterministic and testable.
@@ -68,11 +77,15 @@ data class TimerWorkspace(val timers: List<WorkspaceTimer> = emptyList()) {
 
     fun active(): List<WorkspaceTimer> = timers
         .filter { it.state.status == TimerStatus.running || it.state.status == TimerStatus.paused }
-        .sortedBy { it.state.startDate }
+        .sortedWith(compareByDescending<WorkspaceTimer> { it.order }.thenBy { it.id.toString() })
 
     fun history(): List<WorkspaceTimer> = timers
         .filter { it.state.status == TimerStatus.completed || it.state.status == TimerStatus.canceled }
-        .sortedByDescending { it.state.endDate }
+        .sortedWith(
+            compareByDescending<WorkspaceTimer> { it.state.endDate }
+                .thenByDescending { it.order }
+                .thenBy { it.id.toString() },
+        )
 
     private fun transform(id: UUID, change: (TimerState) -> TimerState): TimerWorkspace =
         copy(timers = timers.map { if (it.id == id) it.copy(state = change(it.state)) else it })

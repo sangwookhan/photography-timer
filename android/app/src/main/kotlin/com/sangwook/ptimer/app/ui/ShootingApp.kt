@@ -339,9 +339,10 @@ fun ShootingApp(
             return@LaunchedEffect
         }
         val added = current - knownActiveIds
-        // active is ordered oldest-first, so the last added id is the newest.
+        // active is ordered newest-first (PTIMER-194), so the first added id is
+        // the newest.
         if (added.isNotEmpty()) {
-            timerState.active.lastOrNull { it.id in added }?.let { focusTimerId = it.id }
+            timerState.active.firstOrNull { it.id in added }?.let { focusTimerId = it.id }
         }
         knownActiveIds = current
     }

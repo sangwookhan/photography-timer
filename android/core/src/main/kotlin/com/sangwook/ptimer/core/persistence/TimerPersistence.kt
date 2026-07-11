@@ -15,7 +15,6 @@ import com.sangwook.ptimer.core.timer.TIMER_STABILITY_EPSILON
 import com.sangwook.ptimer.core.timer.secondsBetween
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -23,6 +22,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.time.Instant
 import java.util.UUID
 
@@ -160,20 +160,39 @@ class NoOpTimerPersistenceStore : TimerPersistenceStoring {
 }
 
 /**
- * Pure JSON codec for the timer collection snapshot. Encoding is total;
- * decoding fails safe to null on malformed payloads or an unrecognized future
- * schema version, so a corrupt store reads as "no saved timers" rather than
- * crashing.
+ * Pure JSON codec for the timer collection snapshot. Encoding is total.
+ * Decoding is per-record and version-gated (PTIMER-215): one timer with an
+ * unknown status token is dropped and the rest survive; a missing version is
+ * accepted as the legacy v1; a version mismatch or malformed root rejects the
+ * whole payload. [decodeWithDiagnostics] reports the outcome so a store can
+ * quarantine; [decode] is the fail-safe wrapper.
  */
 object TimerSnapshotCodec {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun encode(snapshot: PersistentTimerCollectionSnapshot): String = json.encodeToString(snapshot)
 
-    fun decode(text: String): PersistentTimerCollectionSnapshot? = try {
-        val snapshot = json.decodeFromString<PersistentTimerCollectionSnapshot>(text)
-        if (snapshot.schemaVersion == PersistentTimerCollectionSnapshot.CURRENT_SCHEMA_VERSION) snapshot else null
-    } catch (_: Exception) {
-        null
+    fun decodeWithDiagnostics(text: String): SnapshotDecodeResult<PersistentTimerCollectionSnapshot> {
+        val result = VersionedCollectionDecoder.decodeRecords(
+            json = json,
+            text = text,
+            recordsKey = "timers",
+            expectedSchemaVersion = PersistentTimerCollectionSnapshot.CURRENT_SCHEMA_VERSION,
+            idOf = { it.id },
+            decodeRecord = { json.decodeFromJsonElement<PersistentTimerSnapshot>(it) },
+        )
+        return SnapshotDecodeResult(
+            snapshot = PersistentTimerCollectionSnapshot(timers = result.records),
+            outcome = result.outcome,
+            droppedRecordCount = result.droppedRecordCount,
+        )
+    }
+
+    fun decode(text: String): PersistentTimerCollectionSnapshot? {
+        val result = decodeWithDiagnostics(text)
+        return when (result.outcome) {
+            PersistenceLoadOutcome.malformed, PersistenceLoadOutcome.versionRejected -> null
+            else -> result.snapshot
+        }
     }
 }

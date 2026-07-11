@@ -93,6 +93,12 @@ android {
     androidResources {
         generateLocaleConfig = true
     }
+
+    testOptions {
+        // Let android.util.Log calls no-op in JVM unit tests (used by the
+        // persistence stores' quarantine signal) instead of throwing.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {

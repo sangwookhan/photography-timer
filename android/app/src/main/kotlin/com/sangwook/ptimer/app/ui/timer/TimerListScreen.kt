@@ -47,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,11 +82,10 @@ import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.UUID
 
 private val calc = ExposureCalculator()
-private val endFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault())
 
 /** Fixed peek-bar height: tall enough to show one mini card without clipping. */
 val MiniTimerBarHeight = 128.dp
@@ -567,6 +568,13 @@ private fun TimerCard(
     isAlarmSounding: Boolean = false,
     onStopAlarm: () -> Unit = {},
 ) {
+    // Locale-aware (PTIMER-218): was a fixed "yyyy-MM-dd HH:mm:ss" pattern,
+    // which ignores the user's locale conventions entirely. Recomputed on
+    // locale/configuration change via LocalConfiguration.
+    val locale = LocalConfiguration.current.locales[0]
+    val endFormatter = remember(locale) {
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale).withZone(ZoneId.systemDefault())
+    }
     Card(
         // While this timer's alarm is sounding the whole card is a stop control;
         // when it is not, the row keeps its existing (display-only) behaviour.
@@ -858,25 +866,32 @@ private fun CardActions(
 // Compact action buttons keep the timer-card action row dense (closer to the
 // iOS small-control weight): reduced height + horizontal padding, no oversized
 // pill, while staying readable with a reasonable tap target. Action policy is
-// unchanged — these are styling-only wrappers.
+// unchanged — these are styling-only wrappers. minimumInteractiveComponentSize()
+// (PTIMER-218) pads the actual touch/semantics bounds out to 48dp without
+// stretching the visible 34dp pill, same technique as ShootingScreen's
+// StartButton.
 private val CompactActionPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
 private val CompactActionMinHeight = 34.dp
 
 @Composable
-private fun CompactFilledAction(text: String, onClick: () -> Unit) {
+internal fun CompactFilledAction(text: String, onClick: () -> Unit) {
     FilledTonalButton(
         onClick = onClick,
         contentPadding = CompactActionPadding,
-        modifier = Modifier.defaultMinSize(minWidth = 0.dp, minHeight = CompactActionMinHeight),
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .defaultMinSize(minWidth = 0.dp, minHeight = CompactActionMinHeight),
     ) { Text(text, style = MaterialTheme.typography.labelLarge) }
 }
 
 @Composable
-private fun CompactOutlinedAction(text: String, onClick: () -> Unit) {
+internal fun CompactOutlinedAction(text: String, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         contentPadding = CompactActionPadding,
-        modifier = Modifier.defaultMinSize(minWidth = 0.dp, minHeight = CompactActionMinHeight),
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .defaultMinSize(minWidth = 0.dp, minHeight = CompactActionMinHeight),
     ) { Text(text, style = MaterialTheme.typography.labelLarge) }
 }
 

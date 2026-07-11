@@ -44,6 +44,10 @@
     <string name="reset_settings_and_name">Reset settings and name</string>
     <string name="rename_camera_title">Rename camera</string>
     <string name="camera_name">Camera name</string>
+    <string name="shooting_about_cd">About PTIMER</string>
+    <string name="shooting_choose_film_cd">Choose film</string>
+    <!-- Pager position under the camera-slot dots (%1$s = 1-based current, %2$s = total) -->
+    <string name="pager_position_format">%1$d of %2$d</string>
 
     <!-- Target shutter -->
     <string name="target_shutter_label">Target Shutter</string>
@@ -261,4 +265,24 @@
     <string name="filmpicker_add_cd">Add custom film</string>
     <string name="common_selected_cd">Selected</string>
     <string name="filmpicker_actions_cd">Custom film actions</string>
+
+    <!-- Reciprocity graph legend (shared by the reciprocity details screen and
+         the custom-film editor preview) -->
+    <string name="graph_legend_calculation_curve">Calculation curve</string>
+    <string name="graph_legend_current_result">Current result</string>
+    <string name="graph_legend_source_reference">Source reference</string>
+    <string name="graph_legend_no_correction_range">No-correction range</string>
+    <string name="graph_legend_not_recommended_boundary">Not-recommended boundary</string>
+    <string name="graph_legend_beyond_source_range">Beyond source range</string>
+    <string name="graph_legend_outside_visible_range">Outside visible range</string>
+
+    <!-- Custom film editor: preview graph axis caption and reference table -->
+    <string name="cf_preview_axis_label">Horizontal: metered time · Vertical: corrected exposure</string>
+    <string name="cf_ref_header_metered">Metered</string>
+    <string name="cf_ref_header_error">Error</string>
+    <string name="cf_reference_points_caption">Formula vs the table it was derived from. Edit the table to update these.</string>
+    <string name="cf_checkpoint_no_correction">No correction</string>
+    <!-- Checkpoint table stop-delta (%1$s = stops, always shown with a
+         leading "+" to match the reference/reciprocity-row stop format) -->
+    <string name="cf_checkpoint_stops_format">+%1$.1f stops</string>
 </resources>

@@ -160,7 +160,7 @@ internal fun ReciprocityPreviewSection(
         ReciprocityGraphView(graph, Modifier.fillMaxWidth().height(220.dp))
         Spacer(Modifier.height(4.dp))
         Text(
-            "Horizontal: metered time · Vertical: corrected exposure",
+            stringResource(R.string.cf_preview_axis_label),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -224,10 +224,12 @@ internal fun CheckpointTable(rows: List<CustomFilmCheckpointRow>) {
                     maxLines = 1,
                     modifier = Modifier.weight(1.3f),
                 )
+                val stopDelta = row.stopDelta
                 Text(
-                    when {
-                        row.stopDelta == null -> "No correction"
-                        else -> "+%.1f stops".format(row.stopDelta)
+                    if (stopDelta == null) {
+                        stringResource(R.string.cf_checkpoint_no_correction)
+                    } else {
+                        stringResource(R.string.cf_checkpoint_stops_format, stopDelta)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = when {
@@ -259,10 +261,10 @@ internal fun ReferencePointsSection(rows: List<CustomFilmReferencePointRow>) {
     )
     Spacer(Modifier.height(6.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Metered", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.weight(1.1f))
-        Text("Formula", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.weight(1.2f))
-        Text("Table", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.weight(1.2f))
-        Text("Error", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.cf_ref_header_metered), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.weight(1.1f))
+        Text(stringResource(R.string.cf_formula), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.weight(1.2f))
+        Text(stringResource(R.string.cf_table), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.weight(1.2f))
+        Text(stringResource(R.string.cf_ref_header_error), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
     }
     Spacer(Modifier.height(4.dp))
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -284,7 +286,7 @@ internal fun ReferencePointsSection(rows: List<CustomFilmReferencePointRow>) {
     }
     Spacer(Modifier.height(4.dp))
     Text(
-        "Formula vs the table it was derived from. Edit the table to update these.",
+        stringResource(R.string.cf_reference_points_caption),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

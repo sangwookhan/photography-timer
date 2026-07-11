@@ -35,7 +35,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +62,13 @@ import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
+
+/** Saves/restores a [SnapshotStateList] of table-anchor input strings (PTIMER-218). */
+private val stringListSaver = listSaver<SnapshotStateList<String>, String>(
+    save = { it.toList() },
+    restore = { it.toMutableStateList() },
+)
+
 /**
  * Single custom-film editor with a Formula/Table segmented toggle (iOS's
  * "New custom film"): a shared identity card, the mode toggle, then the
@@ -86,41 +97,47 @@ internal fun CustomFilmEditorDialog(
     val linkedTableAnchors = initial?.linkedTableAnchors ?: emptyList()
     val editId = initial?.filmId
     val isEditing = initial != null
-    var isTable by remember { mutableStateOf(initial?.isTable ?: false) }
+    // rememberSaveable (PTIMER-218): survives configuration change and process
+    // recreation so an in-progress edit isn't silently reset back to [initial].
+    // These fields are all Bundle-primitive (String/Boolean/enum) so the
+    // default Saver handles them without a custom one.
+    var isTable by rememberSaveable { mutableStateOf(initial?.isTable ?: false) }
 
     // Shared identity. A blank numeric field falls back to its default so the
     // form is creatable without filling every box (no required-field dead ends).
-    var label by remember { mutableStateOf(initial?.label ?: "") }
-    var manufacturer by remember { mutableStateOf(initial?.manufacturer ?: "") }
-    var iso by remember { mutableStateOf(initial?.iso ?: "100") }
+    var label by rememberSaveable { mutableStateOf(initial?.label ?: "") }
+    var manufacturer by rememberSaveable { mutableStateOf(initial?.manufacturer ?: "") }
+    var iso by rememberSaveable { mutableStateOf(initial?.iso ?: "100") }
     // Blank by default: formula falls back to 1s; table derives first-anchor ÷ 10
     // (so a typical table like 1→2 / 10→20 isn't rejected by a no-correction time
     // that collides with the first anchor).
-    var noCorrection by remember { mutableStateOf(initial?.noCorrection ?: "") }
+    var noCorrection by rememberSaveable { mutableStateOf(initial?.noCorrection ?: "") }
     // Formula fields (all default to a usable starting point, incl. Tc₀).
-    var tc0 by remember { mutableStateOf(initial?.tc0?.ifEmpty { "1" } ?: "1") }
-    var tm0 by remember { mutableStateOf(initial?.tm0?.ifEmpty { "1" } ?: "1") }
-    var exponent by remember { mutableStateOf(initial?.exponent?.ifEmpty { "1.3" } ?: "1.3") }
-    var offset by remember { mutableStateOf(initial?.offset?.ifEmpty { "0" } ?: "0") }
-    var sourceThrough by remember { mutableStateOf(initial?.sourceThrough?.ifEmpty { "Unlimited" } ?: "Unlimited") }
+    var tc0 by rememberSaveable { mutableStateOf(initial?.tc0?.ifEmpty { "1" } ?: "1") }
+    var tm0 by rememberSaveable { mutableStateOf(initial?.tm0?.ifEmpty { "1" } ?: "1") }
+    var exponent by rememberSaveable { mutableStateOf(initial?.exponent?.ifEmpty { "1.3" } ?: "1.3") }
+    var offset by rememberSaveable { mutableStateOf(initial?.offset?.ifEmpty { "0" } ?: "0") }
+    var sourceThrough by rememberSaveable { mutableStateOf(initial?.sourceThrough?.ifEmpty { "Unlimited" } ?: "Unlimited") }
     // Details (provenance) — descriptive only, never read by the calculation.
-    var notes by remember { mutableStateOf(initial?.notes ?: "") }
-    var sourceType by remember { mutableStateOf(initial?.sourceType ?: CustomProfileSourceType.userDefined) }
-    var referenceUrl by remember { mutableStateOf(initial?.referenceUrl ?: "") }
+    var notes by rememberSaveable { mutableStateOf(initial?.notes ?: "") }
+    var sourceType by rememberSaveable { mutableStateOf(initial?.sourceType ?: CustomProfileSourceType.userDefined) }
+    var referenceUrl by rememberSaveable { mutableStateOf(initial?.referenceUrl ?: "") }
     // Table anchors (prefilled; start with two empty rows when creating).
-    val metered = remember {
+    // A SnapshotStateList isn't Bundle-primitive, so it needs an explicit
+    // listSaver rather than the default Saver.
+    val metered = rememberSaveable(saver = stringListSaver) {
         val seed = initial?.anchors?.map { it.first } ?: emptyList()
         mutableStateListOf<String>().apply { addAll(if (seed.size >= 2) seed else listOf("", "")) }
     }
-    val corrected = remember {
+    val corrected = rememberSaveable(saver = stringListSaver) {
         val seed = initial?.anchors?.map { it.second } ?: emptyList()
         mutableStateListOf<String>().apply { addAll(if (seed.size >= 2) seed else listOf("", "")) }
     }
     // Which formula/identity value is expanded for inline stepper/preset editing
     // (one at a time). Table anchor cells are plain numeric fields (iOS parity).
-    var editing by remember { mutableStateOf<EditField?>(null) }
+    var editing by rememberSaveable { mutableStateOf<EditField?>(null) }
     // Formula concept help panel, toggled by the (i) button (iOS parity).
-    var showHelp by remember { mutableStateOf(false) }
+    var showHelp by rememberSaveable { mutableStateOf(false) }
     fun toggle(f: EditField) { editing = if (editing == f) null else f }
 
     // Sort complete (both-filled) anchor rows by metered time, keeping any

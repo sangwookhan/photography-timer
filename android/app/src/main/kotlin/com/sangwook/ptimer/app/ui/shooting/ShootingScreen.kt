@@ -39,14 +39,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.mapSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -64,6 +69,7 @@ import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
 import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.core.reciprocity.CustomProfileSourceType
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
@@ -117,16 +123,21 @@ fun ShootingScreen(
     onOpenExactAlarmSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showFilmPicker by remember { mutableStateOf(false) }
-    var showRename by remember { mutableStateOf(false) }
-    // Non-null when editing an existing custom film (prefilled dialog, save in place).
-    var editDraft by remember { mutableStateOf<CustomFilmDraft?>(null) }
-    var showTarget by remember { mutableStateOf(false) }
-    var showEditor by remember { mutableStateOf(false) }
+    // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
+    // screen, so a configuration change or process recreation must reopen
+    // whichever one was showing rather than silently dropping it.
+    var showFilmPicker by rememberSaveable { mutableStateOf(false) }
+    var showRename by rememberSaveable { mutableStateOf(false) }
+    // Non-null when editing an existing custom film (prefilled dialog, save
+    // in place). CustomFilmDraft isn't a Bundle-primitive type, so it needs
+    // the explicit CustomFilmDraftSaver rather than the default Saver.
+    var editDraft by rememberSaveable(stateSaver = CustomFilmDraftSaver) { mutableStateOf<CustomFilmDraft?>(null) }
+    var showTarget by rememberSaveable { mutableStateOf(false) }
+    var showEditor by rememberSaveable { mutableStateOf(false) }
     // Gates the destructive reset behind an explicit confirmation so a
     // single accidental tap (Reset sits next to the About icon) cannot
     // wipe the slot's shooting setup. PTIMER-208.
-    var showResetConfirm by remember { mutableStateOf(false) }
+    var showResetConfirm by rememberSaveable { mutableStateOf(false) }
 
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
@@ -222,7 +233,7 @@ fun ShootingScreen(
                             IconButton(onClick = onOpenAbout) {
                                 Icon(
                                     Icons.Outlined.Info,
-                                    contentDescription = "About PTIMER",
+                                    contentDescription = stringResource(R.string.shooting_about_cd),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -252,7 +263,7 @@ fun ShootingScreen(
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
-                                contentDescription = "Choose film",
+                                contentDescription = stringResource(R.string.shooting_choose_film_cd),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -463,6 +474,97 @@ private val NotationToggleHeight = 30.dp
 /** Height of the notation toggle's rounded track. */
 private val NotationTrackHeight = 26.dp
 
+/** Minimum accessible touch/semantics target size (PTIMER-218). */
+private val MinTouchTargetSize = 48.dp
+
+/**
+ * Saves/restores [CustomFilmDraft] across configuration change and process
+ * recreation (PTIMER-218). Not a Bundle-primitive type (it carries an enum
+ * and Pair lists), so the default rememberSaveable Saver can't handle it —
+ * every field is flattened into Bundle-safe values instead. A blank
+ * [CustomFilmDraft.filmId] map key is used as the "no draft" sentinel so the
+ * saved value type can stay non-null.
+ */
+private val CustomFilmDraftSaver: Saver<CustomFilmDraft?, Any> = mapSaver(
+    save = { draft ->
+        if (draft == null) {
+            mapOf("filmId" to "")
+        } else {
+            mapOf(
+                "filmId" to draft.filmId,
+                "isTable" to draft.isTable,
+                "label" to draft.label,
+                "manufacturer" to draft.manufacturer,
+                "iso" to draft.iso,
+                "tc0" to draft.tc0,
+                "tm0" to draft.tm0,
+                "exponent" to draft.exponent,
+                "offset" to draft.offset,
+                "noCorrection" to draft.noCorrection,
+                "sourceThrough" to draft.sourceThrough,
+                "anchorsMetered" to ArrayList(draft.anchors.map { it.first }),
+                "anchorsCorrected" to ArrayList(draft.anchors.map { it.second }),
+                "notes" to draft.notes,
+                "sourceType" to draft.sourceType.name,
+                "referenceUrl" to draft.referenceUrl,
+                "referenceTableFilmId" to (draft.referenceTableFilmId ?: ""),
+                "linkedAnchorsMetered" to ArrayList(draft.linkedTableAnchors.map { it.first }),
+                "linkedAnchorsCorrected" to ArrayList(draft.linkedTableAnchors.map { it.second }),
+            )
+        }
+    },
+    restore = { map ->
+        val filmId = map["filmId"] as? String
+        if (filmId.isNullOrEmpty()) return@mapSaver null
+        @Suppress("UNCHECKED_CAST")
+        val anchorsMetered = map["anchorsMetered"] as? ArrayList<String> ?: arrayListOf()
+        @Suppress("UNCHECKED_CAST")
+        val anchorsCorrected = map["anchorsCorrected"] as? ArrayList<String> ?: arrayListOf()
+        @Suppress("UNCHECKED_CAST")
+        val linkedMetered = map["linkedAnchorsMetered"] as? ArrayList<Double> ?: arrayListOf()
+        @Suppress("UNCHECKED_CAST")
+        val linkedCorrected = map["linkedAnchorsCorrected"] as? ArrayList<Double> ?: arrayListOf()
+        CustomFilmDraft(
+            filmId = filmId,
+            isTable = map["isTable"] as? Boolean ?: false,
+            label = map["label"] as? String ?: "",
+            manufacturer = map["manufacturer"] as? String ?: "",
+            iso = map["iso"] as? String ?: "",
+            tc0 = map["tc0"] as? String ?: "",
+            tm0 = map["tm0"] as? String ?: "",
+            exponent = map["exponent"] as? String ?: "",
+            offset = map["offset"] as? String ?: "",
+            noCorrection = map["noCorrection"] as? String ?: "",
+            sourceThrough = map["sourceThrough"] as? String ?: "",
+            anchors = anchorsMetered.zip(anchorsCorrected),
+            notes = map["notes"] as? String ?: "",
+            sourceType = (map["sourceType"] as? String)?.let { CustomProfileSourceType.valueOf(it) }
+                ?: CustomProfileSourceType.userDefined,
+            referenceUrl = map["referenceUrl"] as? String ?: "",
+            referenceTableFilmId = (map["referenceTableFilmId"] as? String)?.ifEmpty { null },
+            linkedTableAnchors = linkedMetered.zip(linkedCorrected),
+        )
+    },
+)
+
+/**
+ * Expands only the touch/semantics HEIGHT of the modified node to [minHeight],
+ * centering its unmodified content — unlike Material3's
+ * `minimumInteractiveComponentSize()` this leaves width untouched. The ND
+ * notation segments (PTIMER-218) sit in a width-constrained row sharing space
+ * with the "ND Filter" title; growing touch width there would overflow that
+ * row, so only height is expanded. The wrapped content still measures and
+ * draws at its natural (unchanged) size — this only enlarges the reported
+ * layout bounds used for touch/semantics.
+ */
+private fun Modifier.expandedTouchHeight(minHeight: Dp): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val height = maxOf(placeable.height, minHeight.roundToPx())
+    layout(placeable.width, height) {
+        placeable.placeRelative(0, (height - placeable.height) / 2)
+    }
+}
+
 /**
  * Compact 3-state ND notation toggle (Stops / OD / ND) for the ND Filter
  * header. Reads as one cohesive segmented control: a single low-emphasis
@@ -471,7 +573,7 @@ private val NotationTrackHeight = 26.dp
  * header row without adding vertical space below the picker (PTIMER-187).
  */
 @Composable
-private fun NotationToggle(
+internal fun NotationToggle(
     mode: NDNotationMode,
     enabled: Boolean,
     onSelect: (NDNotationMode) -> Unit,
@@ -504,6 +606,11 @@ private fun NotationToggle(
             val selected = optionMode == mode
             Box(
                 modifier = Modifier
+                    // Expands the touch/semantics target to 48dp tall without
+                    // growing the segment's own width or the visible pill
+                    // (PTIMER-218) — the row only has room for its current,
+                    // content-driven width alongside the "ND Filter" title.
+                    .expandedTouchHeight(MinTouchTargetSize)
                     .clip(CircleShape)
                     .then(
                         if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
@@ -757,7 +864,7 @@ internal fun PagerDots(count: Int, current: Int) {
         }
         Spacer(Modifier.width(12.dp))
         Text(
-            "${current + 1} of $count",
+            stringResource(R.string.pager_position_format, current + 1, count),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

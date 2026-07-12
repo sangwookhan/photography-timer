@@ -42,7 +42,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 3
-        versionName = "0.7.9"
+        versionName = "0.7.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -92,6 +92,12 @@ android {
     // so Android 13+ per-app language settings can list them (PTIMER-210).
     androidResources {
         generateLocaleConfig = true
+    }
+
+    testOptions {
+        // Let android.util.Log calls no-op in JVM unit tests (used by the
+        // persistence stores' quarantine signal) instead of throwing.
+        unitTests.isReturnDefaultValues = true
     }
 }
 

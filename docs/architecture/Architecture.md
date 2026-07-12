@@ -227,6 +227,18 @@ stores live in the app target.
 All persistence stores follow a `*Storing` protocol pair pattern with a
 real implementation plus a `NoOp*` implementation that unit tests use.
 
+Record-collection snapshots (custom-film library, timer state, timer
+metadata) decode through `PTimerCore` `Persistence/`
+`VersionedCollectionDecoder`: it gates `schemaVersion` (missing ⇒
+legacy v1), decodes each record independently so one poisoned record
+cannot wipe the collection, and de-duplicates ids first-valid-wins.
+On any decode failure the concrete `UserDefaults*Store` copies the raw
+payload to a sibling key (primary key + `.quarantine`) at load time,
+logs a signal, and clears both keys on `clearSnapshot()`. See
+[DomainSchema §7.5](../specs/DomainSchema.md). The Android side mirrors
+this with `VersionedCollectionDecoder` in `core` and `.quarantine`
+preference keys in the DataStore stores.
+
 ### 1.7a Camera slot domain
 
 Directory: Kit `CameraSlots/` (the concrete

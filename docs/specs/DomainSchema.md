@@ -243,6 +243,24 @@ The slot session snapshot (§7.4) is the source of truth on restore. The legacy 
 
 The slot-session snapshot evolves only via backward-compatible additions ([Requirements](../requirements/Requirements.md) NFR-S.2). Adding an Optional field — for example the `customDisplayName` or `targetShutterSeconds` fields above — is permitted without bumping `schemaVersion`; an older snapshot that lacks the field decodes unchanged, with the field treated as absent. A breaking change (renaming an existing field, dropping a required field, or changing the meaning of an existing field) is not permitted without a coordinated `schemaVersion` increment and a documented migration step.
 
+### 7.5 Durability policy for persisted record collections
+
+Every persisted collection whose records embed domain enums or sum-type discriminators — the custom film library, the timer-state collection, the timer-metadata collection, and the timer workspace snapshot — follows one uniform decode policy so that a payload written by a newer schema degrades only the affected record rather than discarding the whole collection. This is the same isolation the workspace snapshot has always had, now applied across every such collection on both platforms.
+
+**Version gate.** `schemaVersion` is an equality gate. A payload whose version equals the current value decodes; a payload with a different version is rejected whole (no records restored). A payload with **no** `schemaVersion` field is accepted as the legacy version 1, so snapshots written by builds that predate the field restore unchanged. Adding an Optional field never bumps the version (as in §7.1 / §7.4.2); a breaking change requires a coordinated increment and a migration step.
+
+| Persisted collection | Version state on disk | Missing-version behavior |
+| --- | --- | --- |
+| Custom film library | `schemaVersion` present (v1) | accepted as v1 |
+| Timer-state collection | `schemaVersion` present (v1) | accepted as v1 |
+| Timer-metadata collection | `schemaVersion` present (v1) | accepted as v1 |
+| Timer workspace snapshot | `schemaVersion` present (v1) | accepted as v1 |
+| Camera-slot session | `schemaVersion` present (v1) | rejected → legacy single-context migration (§7.4.1) |
+
+**Per-record isolation.** Within an accepted payload, each record decodes independently. A record that fails to decode — an unrecognised enum value, an unknown rule-kind or status discriminator, or a structurally malformed entry — is dropped; the remaining records restore. Records are keyed by their stable id; a duplicate id collapses to the first valid occurrence (first-valid-wins). Domain enum decoders themselves stay strict: the tolerance lives only in the persistence codec, so the bundled catalog loader and the calculation policy are unaffected. The records array must be present: the encoders always write it (empty when there are no records), so an accepted payload that lacks the array — or whose value is not an array — is treated as malformed rather than as an empty collection. A genuinely empty store is the absence of the payload itself (there is nothing to decode), which is distinct from a payload present on disk but corrupt.
+
+**Quarantine and signal.** When any decode failure occurs — a dropped record, a rejected version, or a malformed root — the original raw payload is copied to a sibling quarantine key (the primary storage key with a `.quarantine` suffix) at load time, before any subsequent save can overwrite the primary key, and a diagnostic signal is logged. The quarantine retains the latest failed payload: a later failed load replaces it, and any non-failing operation leaves it intact. In particular, clearing a collection to empty — the "no live snapshot" operation the runtime performs when a collection's last record is removed (or when a restore recovers zero records) — removes only the primary key and preserves the quarantine, so the recoverable copy is never destroyed by a normal edit or by the restore cycle that created it. Primary storage keys are unchanged; the quarantine key is additive.
+
 ---
 
 ## 8. Reciprocity time range

@@ -70,14 +70,53 @@ class TimerPersistenceTest {
 
     @Test
     fun collectionRoundTripsThroughCodec() {
+        // Distinct ids so the round-trip exercises three surviving records
+        // (per-record decode de-duplicates by id, first-valid-wins).
+        fun runningWithId(last: Int, duration: Double) =
+            TimerState.Running(
+                UUID.fromString("00000000-0000-0000-0000-00000000000$last"),
+                duration, t0, t0.plusSecondsDouble(duration),
+            )
         val timers = listOf(
-            running(100.0),
-            running(50.0).pausing(at(10.0)),
-            running(20.0).completed(at(20.0)),
+            runningWithId(1, 100.0),
+            runningWithId(2, 50.0).pausing(at(10.0)),
+            runningWithId(3, 20.0).completed(at(20.0)),
         )
         val snapshot = PersistentTimerCollectionSnapshot.from(timers)
         val decoded = TimerSnapshotCodec.decode(TimerSnapshotCodec.encode(snapshot))
         assertEquals(snapshot, decoded)
+    }
+
+    @Test
+    fun duplicateTimerIdsAreDeduplicated() {
+        // Two timers sharing an id collapse to one (first valid wins),
+        // reported as a degraded decode (PTIMER-215).
+        val snapshot = PersistentTimerCollectionSnapshot.from(listOf(running(100.0), running(50.0)))
+        val result = TimerSnapshotCodec.decodeWithDiagnostics(TimerSnapshotCodec.encode(snapshot))
+        assertEquals(1, result.snapshot.timers.size)
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+    }
+
+    @Test
+    fun unknownStatusTokenDropsOnlyThatTimer() {
+        val valid = TimerSnapshotCodec.encode(
+            PersistentTimerCollectionSnapshot.from(
+                listOf(
+                    TimerState.Running(
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        100.0, t0, t0.plusSecondsDouble(100.0),
+                    ),
+                    TimerState.Running(
+                        UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                        50.0, t0, t0.plusSecondsDouble(50.0),
+                    ),
+                ),
+            ),
+        )
+        val corrupted = valid.replaceFirst("\"status\":\"running\"", "\"status\":\"warping\"")
+        val result = TimerSnapshotCodec.decodeWithDiagnostics(corrupted)
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+        assertEquals(1, result.snapshot.timers.size)
     }
 
     @Test
@@ -96,5 +135,21 @@ class TimerPersistenceTest {
     fun malformedAndFutureSchemaFailSafeToNull() {
         assertNull(TimerSnapshotCodec.decode("not json"))
         assertNull(TimerSnapshotCodec.decode("""{"schemaVersion":999,"timers":[]}"""))
+    }
+
+    @Test
+    fun missingTimersKeyReportsMalformed() {
+        // The encoder always writes `timers` (empty when none), so an absent
+        // key is corruption, not an empty collection.
+        val result = TimerSnapshotCodec.decodeWithDiagnostics("""{"schemaVersion":1}""")
+        assertEquals(PersistenceLoadOutcome.malformed, result.outcome)
+        assertNull(TimerSnapshotCodec.decode("""{"schemaVersion":1}"""))
+    }
+
+    @Test
+    fun explicitEmptyTimersArrayIsLoadedEmpty() {
+        val result = TimerSnapshotCodec.decodeWithDiagnostics("""{"schemaVersion":1,"timers":[]}""")
+        assertEquals(PersistenceLoadOutcome.loaded, result.outcome)
+        assertTrue(result.snapshot.timers.isEmpty())
     }
 }

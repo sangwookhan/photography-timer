@@ -3,6 +3,7 @@
 
 import Combine
 import Foundation
+import os
 import UIKit
 import PTimerCore
 import PTimerKit
@@ -219,8 +220,9 @@ final class TimerManager: ObservableObject, TimerManaging {
 struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
+    private let quarantineKey: String
     private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private static let log = Logger(subsystem: "com.sangwook.ptimer", category: "persistence")
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -228,14 +230,29 @@ struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
     ) {
         self.userDefaults = userDefaults
         self.snapshotKey = snapshotKey
+        self.quarantineKey = snapshotKey + ".quarantine"
     }
 
+    // PTIMER-215: per-record, version-gated decode. One timer with an unknown
+    // status token is dropped; the rest of the collection survives. On a
+    // decode failure the raw payload is quarantined before any save can
+    // overwrite it, and a signal is logged. Storage key is unchanged.
     func loadSnapshot() -> PersistentTimerCollectionSnapshot? {
         guard let data = userDefaults.data(forKey: snapshotKey) else {
             return nil
         }
 
-        return try? decoder.decode(PersistentTimerCollectionSnapshot.self, from: data)
+        let result = PersistentTimerCollectionSnapshot.decode(from: data)
+        if result.indicatesFailure {
+            userDefaults.set(data, forKey: quarantineKey)
+            Self.log.error(
+                """
+                Timer state decode degraded: outcome=\(result.outcome.rawValue, privacy: .public) \
+                dropped=\(result.droppedRecordCount, privacy: .public); raw payload quarantined.
+                """
+            )
+        }
+        return result.snapshot
     }
 
     func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) {
@@ -247,6 +264,11 @@ struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
     }
 
     func clearSnapshot() {
+        // Clears the live collection only. TimerRuntime calls this whenever
+        // the timer set empties (a normal remove-to-empty, including right
+        // after restoring an all-records-dropped snapshot), so it must not
+        // destroy the quarantine; the quarantine is replaced only by a later
+        // failed load.
         userDefaults.removeObject(forKey: snapshotKey)
     }
 }

@@ -8,13 +8,8 @@ import com.sangwook.ptimer.core.timer.WorkspaceTimer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
-import java.util.UUID
 
 // Persistence for the timer workspace: each timer's runtime snapshot plus its
 // captured display identity, consolidated into one snapshot (round2 §4).
@@ -63,37 +58,40 @@ class NoOpWorkspacePersistenceStore : WorkspacePersistenceStoring {
 }
 
 /**
- * Pure JSON codec for the workspace snapshot. Encoding is total; decoding fails
- * safe to null on malformed payloads or an unrecognized future schema version.
+ * Pure JSON codec for the workspace snapshot. Encoding is total. Decoding is
+ * per-record and version-gated: a single undecodable timer entry is dropped
+ * rather than discarding the whole collection, duplicate ids collapse
+ * first-valid-wins, a missing version is accepted as the legacy v1, and a
+ * version mismatch or malformed root rejects the whole payload.
+ * [decodeWithDiagnostics] reports the outcome so the store can quarantine
+ * (PTIMER-215); [decode] is the fail-safe wrapper with the prior contract.
  */
 object WorkspaceSnapshotCodec {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun encode(snapshot: PersistentWorkspaceSnapshot): String = json.encodeToString(snapshot)
 
-    /**
-     * Decodes the workspace snapshot, hardened against partial corruption:
-     * a malformed payload or unrecognized schema version fails safe to null;
-     * a single undecodable timer entry is dropped rather than discarding the
-     * whole collection; and duplicate timer ids are de-duplicated (first valid
-     * wins). The typed [PersistentWorkspaceTimer] schema is unchanged.
-     */
+    fun decodeWithDiagnostics(text: String): SnapshotDecodeResult<PersistentWorkspaceSnapshot> {
+        val result = VersionedCollectionDecoder.decodeRecords(
+            json = json,
+            text = text,
+            recordsKey = "timers",
+            expectedSchemaVersion = PersistentWorkspaceSnapshot.CURRENT_SCHEMA_VERSION,
+            idOf = { it.snapshot.id },
+            decodeRecord = { json.decodeFromJsonElement<PersistentWorkspaceTimer>(it) },
+        )
+        return SnapshotDecodeResult(
+            snapshot = PersistentWorkspaceSnapshot(timers = result.records),
+            outcome = result.outcome,
+            droppedRecordCount = result.droppedRecordCount,
+        )
+    }
+
     fun decode(text: String): PersistentWorkspaceSnapshot? {
-        return try {
-            val root = json.parseToJsonElement(text).jsonObject
-            val version = root["schemaVersion"]?.jsonPrimitive?.intOrNull
-                ?: PersistentWorkspaceSnapshot.CURRENT_SCHEMA_VERSION
-            if (version != PersistentWorkspaceSnapshot.CURRENT_SCHEMA_VERSION) return null
-            val timersArray = root["timers"] as? JsonArray ?: JsonArray(emptyList())
-            val seen = HashSet<UUID>()
-            val timers = timersArray.mapNotNull { element ->
-                runCatching { json.decodeFromJsonElement<PersistentWorkspaceTimer>(element) }
-                    .getOrNull()
-                    ?.takeIf { seen.add(it.snapshot.id) }
-            }
-            PersistentWorkspaceSnapshot(timers = timers, schemaVersion = version)
-        } catch (_: Exception) {
-            null
+        val result = decodeWithDiagnostics(text)
+        return when (result.outcome) {
+            PersistenceLoadOutcome.malformed, PersistenceLoadOutcome.versionRejected -> null
+            else -> result.snapshot
         }
     }
 }

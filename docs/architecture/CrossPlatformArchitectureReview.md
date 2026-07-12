@@ -786,6 +786,21 @@ candidate follow-up.
 
 ### 12.2 Custom film profiles and persisted user state — the weak spot
 
+> **Status (PTIMER-215, resolved).** The custom-film library, the
+> timer-state collection, and the timer-metadata collection now decode
+> per-record through a shared `VersionedCollectionDecoder` on both
+> platforms: one record with an unknown enum, rule kind, or status
+> token degrades only itself; version gating is uniform (missing ⇒
+> legacy v1, mismatch rejects the payload); and any decode failure
+> quarantines the raw payload under a sibling key and logs a signal.
+> Domain enum decoders stay strict — tolerance lives only in the
+> persistence codec. Playbook items 1–4 below are done for these
+> schemas (item 1 was met by record-level isolation rather than
+> `.unknown` decode fallbacks, which would have leaked into the
+> calculation path and round-trip-destroyed the newer value). Item 5
+> (import/export envelope) remains future work. The original findings
+> are retained below for context.
+
 The custom-film library persists the **full domain
 `FilmIdentity`/`ReciprocityProfile` graph directly**, coupling the
 on-disk format to every domain enum. Audit of all persisted schemas
@@ -941,7 +956,7 @@ maps each row to its Appendix B IDs (a value-ranked row can be
 | # | Item | Class (Appendix B) | Axis | Cost | Section |
 | --- | --- | --- | --- | --- | --- |
 | P1 | Re-record 4 stale snapshot baselines; trim provenance URLs from display-state snapshots | REQ-1 | test hygiene | XS | §5 |
-| P2 | Persistence evolution safety: enum `.unknown` fallbacks, per-record decode, version-gate unification | REQ-2 | extensibility / data preservation | S–M | §12.3 |
+| P2 | Persistence evolution safety: per-record decode, version-gate unification, quarantine (PTIMER-215, done; import/export envelope remains) | REQ-2 | extensibility / data preservation | S–M | §12.3 |
 | P3 | Shared reciprocity/fitting/target-shutter golden fixtures | POS-1 | function (parity) | S | §10.3 |
 | P4 | Android main-thread blocking: off-main cold-start loads + timer-completion workspace write | REQ-7 | performance | S | §11.2 #3–4 |
 | P5 | Android perf polish: memoize `filmOptions()`, stop history-card churn, `@Immutable` display state | POS-2 | performance | S | §11.2 #1–2 |

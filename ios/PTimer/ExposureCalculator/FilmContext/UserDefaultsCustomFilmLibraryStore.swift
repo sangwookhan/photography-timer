@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
+import os
 import PTimerCore
 import PTimerKit
 
@@ -9,11 +10,24 @@ import PTimerKit
 /// under a dedicated UserDefaults key, kept separate from the
 /// preset catalog and camera-slot session keys so the custom
 /// library can be cleared (or migrated) independently.
+///
+/// PTIMER-215: decode is per-record and version-gated. A payload
+/// written by a newer schema degrades only the affected film; the
+/// surviving films still load. When a decode fails (a dropped record,
+/// a version mismatch, or a malformed root) the original raw payload
+/// is copied to a sibling quarantine key so it survives the next save,
+/// and a signal is logged. Storage keys are unchanged; the quarantine
+/// key is additive. `clearSnapshot()` clears the live collection only:
+/// it is the "no live snapshot" operation callers use when a
+/// collection empties, not a recovery-data reset, so it must leave the
+/// quarantine intact (the quarantine is replaced only by a later
+/// failed load).
 struct UserDefaultsCustomFilmLibraryStore: CustomFilmLibraryStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
+    private let quarantineKey: String
     private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private static let log = Logger(subsystem: "com.sangwook.ptimer", category: "persistence")
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -21,18 +35,28 @@ struct UserDefaultsCustomFilmLibraryStore: CustomFilmLibraryStoring {
     ) {
         self.userDefaults = userDefaults
         self.snapshotKey = snapshotKey
+        self.quarantineKey = snapshotKey + ".quarantine"
     }
 
     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? {
         guard let data = userDefaults.data(forKey: snapshotKey) else {
             return nil
         }
-        // `try?` swallows decode errors so a malformed payload
-        // (manual UserDefaults edit, an in-development schema that
-        // never shipped, etc.) does not crash launch — the library
-        // restores to an empty list and any subsequent save
-        // overwrites the bad blob.
-        return try? decoder.decode(PersistentCustomFilmLibrarySnapshot.self, from: data)
+
+        let result = PersistentCustomFilmLibrarySnapshot.decode(from: data)
+        if result.indicatesFailure {
+            // Preserve the raw payload before any subsequent save can
+            // overwrite the main key, then surface a signal. Latest failed
+            // payload wins; a good load never clears the quarantine.
+            userDefaults.set(data, forKey: quarantineKey)
+            Self.log.error(
+                """
+                Custom film library decode degraded: outcome=\(result.outcome.rawValue, privacy: .public) \
+                dropped=\(result.droppedRecordCount, privacy: .public); raw payload quarantined.
+                """
+            )
+        }
+        return result.snapshot
     }
 
     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) {
@@ -43,6 +67,9 @@ struct UserDefaultsCustomFilmLibraryStore: CustomFilmLibraryStoring {
     }
 
     func clearSnapshot() {
+        // Clears the live collection only; the quarantine is recovery state,
+        // not part of the collection, so it survives (replaced only by a
+        // later failed load).
         userDefaults.removeObject(forKey: snapshotKey)
     }
 }

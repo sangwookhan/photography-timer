@@ -50,6 +50,7 @@
 		A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000907 /* TimerManagerReconcileTests.swift */; };
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
+		A00000000000000000000D03 /* TimerPersistenceQuarantineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */; };
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
@@ -57,6 +58,7 @@
 		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
 		A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */; };
 		A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */; };
+		A00000000000000000000D01 /* CustomFilmLibraryQuarantineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000D02 /* CustomFilmLibraryQuarantineTests.swift */; };
 		A000000000000000000009A0 /* TimerAlarmAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */; };
 		A0000000000000000000B0A0 /* SilentModeAdvisory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000B0A1 /* SilentModeAdvisory.swift */; };
 		A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */; };
@@ -152,6 +154,7 @@
 		A00000000000000000000907 /* TimerManagerReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerReconcileTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerPersistenceQuarantineTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
@@ -159,6 +162,7 @@
 		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCustomFilmLibraryStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentCustomFilmLibraryTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000D02 /* CustomFilmLibraryQuarantineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmLibraryQuarantineTests.swift; sourceTree = "<group>"; };
 		A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerAlarmAudioPlayer.swift; sourceTree = "<group>"; };
 		A0000000000000000000B0A1 /* SilentModeAdvisory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SilentModeAdvisory.swift; sourceTree = "<group>"; };
 		A00000000000000000000B91 /* CustomFilmEditorLiveCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorLiveCheckView.swift; sourceTree = "<group>"; };
@@ -293,6 +297,7 @@
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
+				A00000000000000000000D02 /* CustomFilmLibraryQuarantineTests.swift */,
 				A00000000000000000000B9F /* CustomFilmEditorPolishTests.swift */,
 			);
 			path = ExposureCalculator;
@@ -375,6 +380,7 @@
 				A00000000000000000000907 /* TimerManagerReconcileTests.swift */,
 				A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */,
 				A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */,
+				A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */,
 				A00000000000000000000142 /* B4TimerLifecycleBaselineTests.swift */,
 			);
 			path = Timers;
@@ -642,6 +648,7 @@
 				A00000000000000000000906 /* TimerManagerReconcileTests.swift in Sources */,
 				A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */,
 				A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */,
+				A00000000000000000000D03 /* TimerPersistenceQuarantineTests.swift in Sources */,
 				A00000000000000000000116 /* RecordReplayTrace.swift in Sources */,
 				A00000000000000000000118 /* RecordReplayBaseline.swift in Sources */,
 				A0000000000000000000011A /* RecordReplaySpies.swift in Sources */,
@@ -654,6 +661,7 @@
 				A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */,
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 				A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */,
+				A00000000000000000000D01 /* CustomFilmLibraryQuarantineTests.swift in Sources */,
 				A00000000000000000000B9E /* CustomFilmEditorPolishTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -704,7 +712,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -734,7 +742,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -867,7 +875,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -888,7 +896,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -915,7 +923,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -942,7 +950,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.9;
+				MARKETING_VERSION = 0.7.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

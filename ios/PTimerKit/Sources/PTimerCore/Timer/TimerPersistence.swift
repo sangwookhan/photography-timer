@@ -189,10 +189,60 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
 }
 
 public struct PersistentTimerCollectionSnapshot: Codable, Equatable {
+    /// On-disk format version. Added in PTIMER-215 so this schema gates
+    /// versions the same way the custom-film and camera-slot schemas do; a
+    /// payload with no version decodes as the legacy v1 so shipping builds
+    /// that never wrote the field restore unchanged.
+    public static let currentSchemaVersion = 1
+
+    public let schemaVersion: Int
     public let timers: [PersistentTimerSnapshot]
 
     public init(timers: [TimerState]) {
+        self.schemaVersion = Self.currentSchemaVersion
         self.timers = timers.map(PersistentTimerSnapshot.init)
+    }
+
+    public init(schemaVersion: Int = currentSchemaVersion, snapshots: [PersistentTimerSnapshot]) {
+        self.schemaVersion = schemaVersion
+        self.timers = snapshots
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case timers
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
+            ?? Self.currentSchemaVersion
+        self.timers = try container.decode([PersistentTimerSnapshot].self, forKey: .timers)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(timers, forKey: .timers)
+    }
+
+    /// Decodes a persisted payload with per-record isolation (PTIMER-215).
+    /// A single timer carrying an unknown status token (or otherwise
+    /// undecodable) is dropped; the rest of the collection survives. The
+    /// store uses the returned `outcome` to decide whether to quarantine.
+    public static func decode(from data: Data) -> SnapshotDecodeResult<PersistentTimerCollectionSnapshot> {
+        let result = VersionedCollectionDecoder.decodeRecords(
+            PersistentTimerSnapshot.self,
+            from: data,
+            recordsKey: "timers",
+            expectedSchemaVersion: currentSchemaVersion,
+            idOf: { AnyHashable($0.id) }
+        )
+        return SnapshotDecodeResult(
+            snapshot: PersistentTimerCollectionSnapshot(snapshots: result.records),
+            outcome: result.outcome,
+            droppedRecordCount: result.droppedRecordCount
+        )
     }
 }
 

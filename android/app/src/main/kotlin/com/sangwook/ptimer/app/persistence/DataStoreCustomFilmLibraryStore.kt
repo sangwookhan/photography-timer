@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.persistence
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -11,12 +12,14 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sangwook.ptimer.core.persistence.CustomFilmLibraryCodec
 import com.sangwook.ptimer.core.persistence.CustomFilmLibraryStoring
+import com.sangwook.ptimer.core.persistence.PersistenceLoadOutcome
 import com.sangwook.ptimer.core.persistence.PersistentCustomFilmLibrarySnapshot
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 
 private val Context.customFilmLibraryDataStore by preferencesDataStore(name = "custom_film_library")
 private val LIBRARY_KEY = stringPreferencesKey("custom_film_library_json")
+private val QUARANTINE_KEY = stringPreferencesKey("custom_film_library_json.quarantine")
 
 /**
  * DataStore-backed [CustomFilmLibraryStoring]. Persists the custom film
@@ -34,11 +37,33 @@ class DataStoreCustomFilmLibraryStore(
 
     // IO wrapped so a DataStore read/write failure degrades safely (read ->
     // null = empty library, write/clear -> no-op) instead of crashing.
+    // PTIMER-215: on a per-record decode failure the raw payload is copied to
+    // a sibling quarantine key before any save can overwrite it, and a signal
+    // is logged. A normal save never touches the quarantine.
     override fun loadSnapshot(): PersistentCustomFilmLibrarySnapshot? = runCatching {
         runBlocking {
             val prefs = dataStore.data.firstOrNull()
             val json = prefs?.get(LIBRARY_KEY) ?: return@runBlocking null
-            CustomFilmLibraryCodec.decode(json)
+            val result = CustomFilmLibraryCodec.decodeWithDiagnostics(json)
+            if (result.indicatesFailure) {
+                Log.e(
+                    "ptimer.persistence",
+                    "Custom film library decode degraded: outcome=${result.outcome} " +
+                        "dropped=${result.droppedRecordCount}; quarantining raw payload.",
+                )
+                // Best-effort: a quarantine write failure must not hide the
+                // records the codec already recovered, so it is isolated from
+                // the load result.
+                runCatching { dataStore.edit { it[QUARANTINE_KEY] = json } }
+                    .onFailure { Log.e("ptimer.persistence", "Failed to quarantine degraded payload.", it) }
+            }
+            // A whole-payload failure reads as an empty library (null),
+            // matching the prior contract; a partial failure returns the
+            // recovered films.
+            when (result.outcome) {
+                PersistenceLoadOutcome.malformed, PersistenceLoadOutcome.versionRejected -> null
+                else -> result.snapshot
+            }
         }
     }.getOrNull()
 
@@ -51,6 +76,9 @@ class DataStoreCustomFilmLibraryStore(
     }
 
     override fun clearSnapshot() {
+        // Clears the live collection only; the quarantine is recovery state,
+        // not part of the collection, so it survives (replaced only by a later
+        // failed load).
         runCatching {
             runBlocking { dataStore.edit { it.remove(LIBRARY_KEY) } }
         }

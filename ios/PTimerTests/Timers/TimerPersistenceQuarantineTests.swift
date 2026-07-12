@@ -8,8 +8,9 @@ import PTimerKit
 
 /// PTIMER-215 quarantine state-transition coverage for the concrete
 /// timer-state and timer-metadata UserDefaults stores. A decode failure
-/// copies the raw payload to a sibling quarantine key at load time; a normal
-/// save never touches it; an explicit clear removes both keys.
+/// copies the raw payload to a sibling quarantine key at load time; normal
+/// saves and live-snapshot clears never touch it; a later failed load
+/// replaces it. No recovery-reset API is introduced in this ticket.
 final class TimerPersistenceQuarantineTests: XCTestCase {
     private func makeDefaults() throws -> UserDefaults {
         let suiteName = "ptimer.tests.timer-quarantine.\(UUID().uuidString)"

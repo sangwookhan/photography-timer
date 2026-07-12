@@ -7,18 +7,27 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.sangwook.ptimer.core.persistence.CustomFilmLibraryCodec
 import com.sangwook.ptimer.core.persistence.PersistentCustomFilmLibrarySnapshot
+import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
+import com.sangwook.ptimer.core.reciprocity.FilmProductionStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.IOException
 
 /**
  * PTIMER-216: round-trip and corrupt-payload contract tests for the concrete
@@ -120,6 +129,36 @@ class DataStoreCustomFilmLibraryStoreTest {
 
         store.saveSnapshot(PersistentCustomFilmLibrarySnapshot(films = emptyList()))
         assertEquals("bad", ds.readQuarantine())
+    }
+
+    /** Reads succeed from [prefs]; every write (updateData/edit) fails. */
+    private class ReadOkWriteFailsDataStore(private val prefs: Preferences) : DataStore<Preferences> {
+        override val data: Flow<Preferences> = flowOf(prefs)
+        override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+            throw IOException("simulated quarantine write failure")
+    }
+
+    @Test
+    fun quarantineWriteFailureStillReturnsRecoveredFilms() {
+        // One undecodable film ahead of a valid one → degraded decode with a
+        // survivor. The quarantine write then fails; the recovered film must
+        // still be returned, not lost to a whole-load null.
+        val real = FilmIdentity(
+            id = "cf-1",
+            kind = FilmIdentityKind.custom,
+            canonicalStockName = "Alpha",
+            aliases = emptyList(),
+            iso = 100,
+            productionStatus = FilmProductionStatus.unknown,
+            profiles = emptyList(),
+        )
+        val withBad = CustomFilmLibraryCodec.encode(PersistentCustomFilmLibrarySnapshot(films = listOf(real)))
+            .replaceFirst("\"films\":[", "\"films\":[{\"id\":\"broken\",\"kind\":\"NOPE\"},")
+        val store = DataStoreCustomFilmLibraryStore(ReadOkWriteFailsDataStore(preferencesOf(libraryKey to withBad)))
+
+        val loaded = store.loadSnapshot()
+        assertNotNull(loaded)
+        assertEquals(listOf("cf-1"), loaded!!.films.map { it.id })
     }
 
     @Test

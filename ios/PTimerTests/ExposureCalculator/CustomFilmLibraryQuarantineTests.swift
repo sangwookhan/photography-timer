@@ -8,9 +8,9 @@ import PTimerKit
 
 /// PTIMER-215 quarantine state-transition coverage for the concrete
 /// `UserDefaultsCustomFilmLibraryStore`. A decode failure copies the raw
-/// payload to a sibling quarantine key at load time; a normal save never
-/// touches it; a later failure replaces it; a good load keeps it; and an
-/// explicit clear removes both keys.
+/// payload to a sibling quarantine key at load time; normal saves and
+/// live-snapshot clears never touch it; a later failed load replaces it. No
+/// recovery-reset API is introduced in this ticket.
 final class CustomFilmLibraryQuarantineTests: XCTestCase {
     private let mainKey = "ptimer.exposure-calculator.custom-films.snapshot"
     private var quarantineKey: String { mainKey + ".quarantine" }

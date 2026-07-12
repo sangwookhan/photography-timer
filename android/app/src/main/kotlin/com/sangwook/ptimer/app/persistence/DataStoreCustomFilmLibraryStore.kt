@@ -46,12 +46,16 @@ class DataStoreCustomFilmLibraryStore(
             val json = prefs?.get(LIBRARY_KEY) ?: return@runBlocking null
             val result = CustomFilmLibraryCodec.decodeWithDiagnostics(json)
             if (result.indicatesFailure) {
-                dataStore.edit { it[QUARANTINE_KEY] = json }
                 Log.e(
                     "ptimer.persistence",
                     "Custom film library decode degraded: outcome=${result.outcome} " +
-                        "dropped=${result.droppedRecordCount}; raw payload quarantined.",
+                        "dropped=${result.droppedRecordCount}; quarantining raw payload.",
                 )
+                // Best-effort: a quarantine write failure must not hide the
+                // records the codec already recovered, so it is isolated from
+                // the load result.
+                runCatching { dataStore.edit { it[QUARANTINE_KEY] = json } }
+                    .onFailure { Log.e("ptimer.persistence", "Failed to quarantine degraded payload.", it) }
             }
             // A whole-payload failure reads as an empty library (null),
             // matching the prior contract; a partial failure returns the

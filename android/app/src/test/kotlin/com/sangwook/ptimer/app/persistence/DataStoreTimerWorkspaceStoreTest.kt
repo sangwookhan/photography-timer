@@ -7,8 +7,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.sangwook.ptimer.core.persistence.PersistentWorkspaceSnapshot
+import com.sangwook.ptimer.core.persistence.WorkspaceSnapshotCodec
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerState
 import com.sangwook.ptimer.core.timer.WorkspaceTimer
@@ -16,13 +18,17 @@ import com.sangwook.ptimer.core.timer.plusSecondsDouble
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.IOException
 import java.time.Instant
 import java.util.UUID
 
@@ -138,6 +144,27 @@ class DataStoreTimerWorkspaceStoreTest {
 
         store.saveSnapshot(sample)
         assertEquals("bad", ds.readQuarantine())
+    }
+
+    /** Reads succeed from [prefs]; every write (updateData/edit) fails. */
+    private class ReadOkWriteFailsDataStore(private val prefs: Preferences) : DataStore<Preferences> {
+        override val data: Flow<Preferences> = flowOf(prefs)
+        override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+            throw IOException("simulated quarantine write failure")
+    }
+
+    @Test
+    fun quarantineWriteFailureStillReturnsRecoveredRecords() {
+        // One undecodable entry ahead of a valid one → degraded decode with a
+        // survivor. The quarantine write then fails; the recovered timer must
+        // still be returned, not lost to a whole-load null.
+        val withBad = WorkspaceSnapshotCodec.encode(sample)
+            .replaceFirst("\"timers\":[", "\"timers\":[{\"snapshot\":{\"id\":\"not-a-uuid\"}},")
+        val store = DataStoreTimerWorkspaceStore(ReadOkWriteFailsDataStore(preferencesOf(snapshotKey to withBad)))
+
+        val loaded = store.loadSnapshot()
+        assertNotNull(loaded)
+        assertEquals(sample.timers.size, loaded!!.timers.size)
     }
 
     @Test

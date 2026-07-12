@@ -141,7 +141,7 @@ class DataStoreTimerWorkspaceStoreTest {
     }
 
     @Test
-    fun clearRemovesQuarantineToo() {
+    fun clearRemovesLiveSnapshotButKeepsQuarantine() {
         val ds = newDataStore("workspace_q4.preferences_pb")
         val store = DataStoreTimerWorkspaceStore(ds)
 
@@ -149,7 +149,9 @@ class DataStoreTimerWorkspaceStoreTest {
         store.loadSnapshot()
         assertEquals("bad", ds.readQuarantine())
 
+        // A normal remove-to-empty must not destroy the quarantine.
         store.clearSnapshot()
-        assertNull(ds.readQuarantine())
+        assertNull(store.loadSnapshot())
+        assertEquals("bad", ds.readQuarantine())
     }
 }

@@ -264,7 +264,11 @@ struct UserDefaultsTimerPersistenceStore: TimerPersistenceStoring {
     }
 
     func clearSnapshot() {
+        // Clears the live collection only. TimerRuntime calls this whenever
+        // the timer set empties (a normal remove-to-empty, including right
+        // after restoring an all-records-dropped snapshot), so it must not
+        // destroy the quarantine; the quarantine is replaced only by a later
+        // failed load.
         userDefaults.removeObject(forKey: snapshotKey)
-        userDefaults.removeObject(forKey: quarantineKey)
     }
 }

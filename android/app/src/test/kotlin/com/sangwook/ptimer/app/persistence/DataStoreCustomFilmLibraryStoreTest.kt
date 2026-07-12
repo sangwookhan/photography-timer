@@ -123,7 +123,7 @@ class DataStoreCustomFilmLibraryStoreTest {
     }
 
     @Test
-    fun clearRemovesQuarantineToo() {
+    fun clearRemovesLiveSnapshotButKeepsQuarantine() {
         val ds = newDataStore("library_q4.preferences_pb")
         val store = DataStoreCustomFilmLibraryStore(ds)
 
@@ -131,7 +131,10 @@ class DataStoreCustomFilmLibraryStoreTest {
         store.loadSnapshot()
         assertEquals("bad", ds.readQuarantine())
 
+        // clearSnapshot is the "no live snapshot" operation, not a recovery
+        // reset: the live key goes, the quarantine stays recoverable.
         store.clearSnapshot()
-        assertNull(ds.readQuarantine())
+        assertNull(store.loadSnapshot())
+        assertEquals("bad", ds.readQuarantine())
     }
 }

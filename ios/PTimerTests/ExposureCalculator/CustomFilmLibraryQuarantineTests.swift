@@ -109,16 +109,19 @@ final class CustomFilmLibraryQuarantineTests: XCTestCase {
         XCTAssertNotNil(defaults.data(forKey: mainKey))
     }
 
-    func test_clearSnapshot_removesBothKeys() throws {
+    func test_clearSnapshot_removesLiveKeyButKeepsQuarantine() throws {
         let (defaults, _) = try makeDefaults()
         let store = UserDefaultsCustomFilmLibraryStore(userDefaults: defaults, snapshotKey: mainKey)
 
-        defaults.set(Data("bad".utf8), forKey: mainKey)
+        let bad = Data("bad".utf8)
+        defaults.set(bad, forKey: mainKey)
         _ = store.loadSnapshot()
         XCTAssertNotNil(defaults.data(forKey: quarantineKey))
 
+        // clearSnapshot is the "no live snapshot" operation, not a recovery
+        // reset: the live key goes, the quarantine stays recoverable.
         store.clearSnapshot()
         XCTAssertNil(defaults.data(forKey: mainKey))
-        XCTAssertNil(defaults.data(forKey: quarantineKey))
+        XCTAssertEqual(defaults.data(forKey: quarantineKey), bad)
     }
 }

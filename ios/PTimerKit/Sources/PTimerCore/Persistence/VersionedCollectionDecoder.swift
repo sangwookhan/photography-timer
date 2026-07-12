@@ -69,8 +69,12 @@ public struct PerRecordDecodeResult<Record> {
 /// - Each element of the `recordsKey` array is decoded independently; an
 ///   element that fails to decode is dropped and counted. Duplicate ids are
 ///   de-duplicated first-valid-wins (matching the Android workspace codec).
-/// - A missing `recordsKey` is a legitimately empty collection (`.loaded`); a
-///   `recordsKey` present but not an array is `.malformed`.
+/// - The `recordsKey` array must be present: the encoders always write it,
+///   even for an empty collection, so an absent key means a truncated or
+///   otherwise corrupt payload and is `.malformed` (a truly empty store is
+///   the absence of the payload itself, handled before decode). A present
+///   `recordsKey` that is not an array is likewise `.malformed`. Only an
+///   explicit empty array is a legitimately empty collection (`.loaded`).
 public enum VersionedCollectionDecoder {
     public static func decodeRecords<Record: Decodable>(
         _ type: Record.Type = Record.self,
@@ -91,10 +95,10 @@ public enum VersionedCollectionDecoder {
             }
         }
 
-        guard let rawRecords = root[recordsKey] else {
-            return PerRecordDecodeResult(records: [], droppedRecordCount: 0, outcome: .loaded)
-        }
-        guard let elements = rawRecords as? [Any] else {
+        guard let rawRecords = root[recordsKey], let elements = rawRecords as? [Any] else {
+            // The encoders always write the records array (empty when there
+            // are no records), so an absent or non-array key is corruption,
+            // not an empty collection.
             return PerRecordDecodeResult(records: [], droppedRecordCount: 0, outcome: .malformed)
         }
 

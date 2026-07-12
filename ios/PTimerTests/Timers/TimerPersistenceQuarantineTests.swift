@@ -52,17 +52,20 @@ final class TimerPersistenceQuarantineTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: key + ".quarantine"), raw)
     }
 
-    func test_timerState_clearRemovesBothKeys() throws {
+    func test_timerState_clearRemovesLiveKeyButKeepsQuarantine() throws {
         let defaults = try makeDefaults()
         let key = "ptimer.timer-state.snapshot"
-        defaults.set(Data("bad".utf8), forKey: key)
+        let bad = Data("bad".utf8)
+        defaults.set(bad, forKey: key)
         let store = UserDefaultsTimerPersistenceStore(userDefaults: defaults, snapshotKey: key)
         _ = store.loadSnapshot()
         XCTAssertNotNil(defaults.data(forKey: key + ".quarantine"))
 
+        // A normal remove-to-empty (what TimerRuntime does) must not destroy
+        // the quarantine.
         store.clearSnapshot()
         XCTAssertNil(defaults.data(forKey: key))
-        XCTAssertNil(defaults.data(forKey: key + ".quarantine"))
+        XCTAssertEqual(defaults.data(forKey: key + ".quarantine"), bad)
     }
 
     func test_timerState_normalSaveKeepsQuarantine() throws {
@@ -112,16 +115,50 @@ final class TimerPersistenceQuarantineTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: key + ".quarantine"), raw)
     }
 
-    func test_timerMetadata_clearRemovesBothKeys() throws {
+    func test_timerMetadata_clearRemovesLiveKeyButKeepsQuarantine() throws {
         let defaults = try makeDefaults()
         let key = "ptimer.timer-metadata.snapshot"
-        defaults.set(Data("bad".utf8), forKey: key)
+        let bad = Data("bad".utf8)
+        defaults.set(bad, forKey: key)
         let store = UserDefaultsTimerMetadataStore(userDefaults: defaults, snapshotKey: key)
         _ = store.loadSnapshot()
         XCTAssertNotNil(defaults.data(forKey: key + ".quarantine"))
 
         store.clearSnapshot()
         XCTAssertNil(defaults.data(forKey: key))
-        XCTAssertNil(defaults.data(forKey: key + ".quarantine"))
+        XCTAssertEqual(defaults.data(forKey: key + ".quarantine"), bad)
+    }
+
+    // MARK: - Runtime empty-persist path (PTIMER-215 review Blocker 1)
+
+    /// Restoring a timer-state payload whose every record is undecodable
+    /// yields an empty runtime, which persists empty via clearSnapshot(). The
+    /// quarantine written during that same load must survive — otherwise the
+    /// only recoverable copy is destroyed in the load cycle that created it.
+    @MainActor
+    func test_timerRuntimeRestore_allRecordsDropped_keepsQuarantine() throws {
+        let defaults = try makeDefaults()
+        let key = "ptimer.timer-state.snapshot"
+        // One timer with an unknown status → the only record is dropped, so
+        // the restored collection is empty.
+        let ref = Date(timeIntervalSinceReferenceDate: 700_000_000)
+        let one = PersistentTimerCollectionSnapshot(timers: [
+            TimerState(
+                id: UUID(), duration: 120, startDate: ref, endDate: ref.addingTimeInterval(120),
+                pausedRemainingTime: nil, pausedAt: nil, status: .running
+            )
+        ])
+        let json = try XCTUnwrap(String(data: try JSONEncoder().encode(one), encoding: .utf8))
+            .replacingOccurrences(of: "\"status\":\"running\"", with: "\"status\":\"warping\"")
+        let raw = Data(json.utf8)
+        defaults.set(raw, forKey: key)
+
+        let store = UserDefaultsTimerPersistenceStore(userDefaults: defaults, snapshotKey: key)
+        // Constructing the runtime restores (all dropped → empty) and then
+        // persists the empty result via clearSnapshot().
+        let runtime = TimerRuntime(persistenceStore: store)
+        XCTAssertTrue(runtime.timers.isEmpty)
+
+        XCTAssertEqual(defaults.data(forKey: key + ".quarantine"), raw)
     }
 }

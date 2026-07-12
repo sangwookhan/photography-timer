@@ -72,14 +72,11 @@ class DataStoreCustomFilmLibraryStore(
     }
 
     override fun clearSnapshot() {
-        // Explicit reset clears the quarantine too; a normal save never does.
+        // Clears the live collection only; the quarantine is recovery state,
+        // not part of the collection, so it survives (replaced only by a later
+        // failed load).
         runCatching {
-            runBlocking {
-                dataStore.edit {
-                    it.remove(LIBRARY_KEY)
-                    it.remove(QUARANTINE_KEY)
-                }
-            }
+            runBlocking { dataStore.edit { it.remove(LIBRARY_KEY) } }
         }
     }
 

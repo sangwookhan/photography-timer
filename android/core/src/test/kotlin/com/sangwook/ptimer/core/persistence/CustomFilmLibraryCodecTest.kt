@@ -131,4 +131,21 @@ class CustomFilmLibraryCodecTest {
         assertTrue(result.snapshot.films.isEmpty())
         assertNull(CustomFilmLibraryCodec.decode("not json"))
     }
+
+    @Test
+    fun missingFilmsKeyReportsMalformed() {
+        // The encoder always writes `films` (empty when none), so an absent
+        // key is corruption, not an empty library.
+        val result = CustomFilmLibraryCodec.decodeWithDiagnostics("""{"schemaVersion":1}""")
+        assertEquals(PersistenceLoadOutcome.malformed, result.outcome)
+        assertTrue(result.snapshot.films.isEmpty())
+        assertNull(CustomFilmLibraryCodec.decode("""{"schemaVersion":1}"""))
+    }
+
+    @Test
+    fun explicitEmptyFilmsArrayIsLoadedEmpty() {
+        val result = CustomFilmLibraryCodec.decodeWithDiagnostics("""{"films":[],"schemaVersion":1}""")
+        assertEquals(PersistenceLoadOutcome.loaded, result.outcome)
+        assertTrue(result.snapshot.films.isEmpty())
+    }
 }

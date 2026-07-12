@@ -53,7 +53,10 @@ struct UserDefaultsTimerMetadataStore: TimerMetadataPersistenceStoring {
     }
 
     func clearSnapshot() {
+        // Clears the live collection only. The workspace calls this whenever
+        // the metadata set empties (a normal remove-to-empty), so it must not
+        // destroy the quarantine; the quarantine is replaced only by a later
+        // failed load.
         userDefaults.removeObject(forKey: snapshotKey)
-        userDefaults.removeObject(forKey: quarantineKey)
     }
 }

@@ -82,4 +82,13 @@ final class TimerMetadataDecodeTests: XCTestCase {
         XCTAssertEqual(result.outcome, .malformed)
         XCTAssertTrue(result.snapshot.timers.isEmpty)
     }
+
+    func test_missingTimersKey_reportsMalformed() {
+        // The encoder always writes `timers`, so an absent key is corruption.
+        let result = PersistentTimerMetadataCollection.decode(
+            from: Data(#"{"schemaVersion":1,"nextTimerOrder":5}"#.utf8)
+        )
+        XCTAssertEqual(result.outcome, .malformed)
+        XCTAssertTrue(result.snapshot.timers.isEmpty)
+    }
 }

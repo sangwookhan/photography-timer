@@ -136,4 +136,20 @@ class TimerPersistenceTest {
         assertNull(TimerSnapshotCodec.decode("not json"))
         assertNull(TimerSnapshotCodec.decode("""{"schemaVersion":999,"timers":[]}"""))
     }
+
+    @Test
+    fun missingTimersKeyReportsMalformed() {
+        // The encoder always writes `timers` (empty when none), so an absent
+        // key is corruption, not an empty collection.
+        val result = TimerSnapshotCodec.decodeWithDiagnostics("""{"schemaVersion":1}""")
+        assertEquals(PersistenceLoadOutcome.malformed, result.outcome)
+        assertNull(TimerSnapshotCodec.decode("""{"schemaVersion":1}"""))
+    }
+
+    @Test
+    fun explicitEmptyTimersArrayIsLoadedEmpty() {
+        val result = TimerSnapshotCodec.decodeWithDiagnostics("""{"schemaVersion":1,"timers":[]}""")
+        assertEquals(PersistenceLoadOutcome.loaded, result.outcome)
+        assertTrue(result.snapshot.timers.isEmpty())
+    }
 }

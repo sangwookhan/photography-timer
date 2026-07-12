@@ -17,7 +17,11 @@ import PTimerKit
 /// a version mismatch, or a malformed root) the original raw payload
 /// is copied to a sibling quarantine key so it survives the next save,
 /// and a signal is logged. Storage keys are unchanged; the quarantine
-/// key is additive.
+/// key is additive. `clearSnapshot()` clears the live collection only:
+/// it is the "no live snapshot" operation callers use when a
+/// collection empties, not a recovery-data reset, so it must leave the
+/// quarantine intact (the quarantine is replaced only by a later
+/// failed load).
 struct UserDefaultsCustomFilmLibraryStore: CustomFilmLibraryStoring {
     private let userDefaults: UserDefaults
     private let snapshotKey: String
@@ -63,8 +67,9 @@ struct UserDefaultsCustomFilmLibraryStore: CustomFilmLibraryStoring {
     }
 
     func clearSnapshot() {
-        // Explicit reset clears the quarantine too; a normal save never does.
+        // Clears the live collection only; the quarantine is recovery state,
+        // not part of the collection, so it survives (replaced only by a
+        // later failed load).
         userDefaults.removeObject(forKey: snapshotKey)
-        userDefaults.removeObject(forKey: quarantineKey)
     }
 }

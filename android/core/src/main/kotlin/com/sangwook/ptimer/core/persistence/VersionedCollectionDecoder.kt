@@ -83,9 +83,10 @@ object VersionedCollectionDecoder {
             }
         }
 
-        val rawRecords = root[recordsKey]
-            ?: return PerRecordDecodeResult(emptyList(), 0, PersistenceLoadOutcome.loaded)
-        val elements = rawRecords as? JsonArray
+        // The encoders always write the records array (empty when there are no
+        // records), so an absent or non-array key is corruption, not an empty
+        // collection. A truly empty store is the absence of the payload itself.
+        val elements = root[recordsKey] as? JsonArray
             ?: return PerRecordDecodeResult(emptyList(), 0, PersistenceLoadOutcome.malformed)
 
         val seen = HashSet<Any>()

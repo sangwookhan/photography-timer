@@ -89,6 +89,20 @@ final class CustomFilmLibraryDecodeTests: XCTestCase {
         XCTAssertEqual(result.outcome, .malformed)
         XCTAssertTrue(result.snapshot.films.isEmpty)
     }
+
+    func test_missingFilmsKey_reportsMalformed() {
+        // The encoder always writes `films` (empty when none), so an absent
+        // key is corruption, not an empty library.
+        let result = PersistentCustomFilmLibrarySnapshot.decode(from: Data(#"{"schemaVersion":1}"#.utf8))
+        XCTAssertEqual(result.outcome, .malformed)
+        XCTAssertTrue(result.snapshot.films.isEmpty)
+    }
+
+    func test_explicitEmptyFilmsArray_isLoadedEmpty() {
+        let result = PersistentCustomFilmLibrarySnapshot.decode(from: Data(#"{"films":[],"schemaVersion":1}"#.utf8))
+        XCTAssertEqual(result.outcome, .loaded)
+        XCTAssertTrue(result.snapshot.films.isEmpty)
+    }
 }
 
 private extension String {

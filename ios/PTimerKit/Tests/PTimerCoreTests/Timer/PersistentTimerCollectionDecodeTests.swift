@@ -68,6 +68,20 @@ final class PersistentTimerCollectionDecodeTests: XCTestCase {
         XCTAssertEqual(result.outcome, .malformed)
         XCTAssertTrue(result.snapshot.timers.isEmpty)
     }
+
+    func test_missingTimersKey_reportsMalformed() {
+        // The encoder always writes `timers` (empty when none), so an absent
+        // key is corruption, not an empty collection.
+        let result = PersistentTimerCollectionSnapshot.decode(from: Data(#"{"schemaVersion":1}"#.utf8))
+        XCTAssertEqual(result.outcome, .malformed)
+        XCTAssertTrue(result.snapshot.timers.isEmpty)
+    }
+
+    func test_explicitEmptyTimersArray_isLoadedEmpty() {
+        let result = PersistentTimerCollectionSnapshot.decode(from: Data(#"{"schemaVersion":1,"timers":[]}"#.utf8))
+        XCTAssertEqual(result.outcome, .loaded)
+        XCTAssertTrue(result.snapshot.timers.isEmpty)
+    }
 }
 
 private extension String {

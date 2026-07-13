@@ -1,15 +1,32 @@
 # Record-Replay Trace Infrastructure
 
-Event-sequence record-replay harness used as the L2 *semantic
-equivalence* gate for B1 (ViewModel 4분할), B3 (Reciprocity Result
-enum), and B4 (Timer state types). Complementary to B8 (`Snapshots/`)
-and B6 (`shared/test-fixtures/`), not a replacement.
+Event-sequence record-replay harness. The 7 committed baselines pin
+one thing the assertion suites do not: the **cross-collaborator call
+order and payload** — lock-screen exposer, notification scheduler,
+and persistence store, interleaved per Timer lifecycle scenario —
+as a single trace. The assertion suites (`Timers/TimerManager*`)
+verify each collaborator's state in isolation; this harness locks how
+their calls interleave over a time-driven scenario.
+
+Scope, stated precisely (PTIMER-213): the committed scenarios drive
+`TimerManager` directly (via `harness.underlyingTimerManager`), so
+what they pin is the **TimerManager-to-collaborator call contract**.
+The `ExposureCalculatorViewModel` is constructed for wiring but its
+public surface is not the subject. The harness *mechanism* can serve
+as an L2 semantic-equivalence gate for a ViewModel-facade split
+(B1) or Result/state type renames (B3/B4) — that is its design
+intent — but the current baselines are Timer-lifecycle integration
+contracts, not full ViewModel-facade insurance. Complementary to
+B8 (`Snapshots/`) and B6 (`shared/test-fixtures/`), not a
+replacement.
 
 ## 무엇을 검증하나
 
-- **이벤트 시퀀스의 결정적 직렬화**. ViewModel + TimerManager가
-  외부 협력자(LockScreen exposer, persistence, notification
-  scheduler)에게 *어떤 호출을 어떤 순서로* 발행하는지를 lock한다.
+- **이벤트 시퀀스의 결정적 직렬화**. `TimerManager`가 외부 협력자
+  (LockScreen exposer, persistence, notification scheduler)에게
+  *어떤 호출을 어떤 순서로* 발행하는지를 lock한다. (하니스는
+  ViewModel surface로도 구동 가능하지만, 현재 baseline은
+  TimerManager를 직접 구동한다 — 위 Scope 참조.)
 - 같은 시나리오 → 같은 trace.
 - 시간은 가상 시계(`RecordReplayHarness.virtualNow`)로 진행되며
   `Date` 값은 trace에서 reference date 기준 상대 offset으로
@@ -31,21 +48,45 @@ and B6 (`shared/test-fixtures/`), not a replacement.
    (의도 commit 강제).
 2. **이후 실행**: baseline 읽고 `recorder.renderTrace()` 결과와
    비교. 다르면 fail + sidecar `.actual.txt` 작성.
-3. **의도적 갱신**: `RECORD_REPLAY=1` env로 실행 → baseline
-   덮어쓰고 fail. 두 번째 실행(env 없이)으로 verify.
+3. **의도적 갱신**: 테스트 프로세스에 `RECORD_REPLAY=1` env를
+   전달해 실행 → baseline 덮어쓰고 fail. 두 번째 실행(env 없이)
+   으로 verify.
+
+`xcodebuild`는 쉘 env를 시뮬레이터 테스트 프로세스로 전달하지
+않는다. `TEST_RUNNER_` 접두사를 붙이면 접두사를 벗겨 테스트
+프로세스에 주입된다 (`TEST_RUNNER_RECORD_REPLAY=1` → 테스트에서
+`RECORD_REPLAY=1`). 접두사 없는 `RECORD_REPLAY=1`은 조용히
+무시되어 verify 실행과 구별되지 않으니 주의.
 
 ```bash
 # Re-record after deliberate change (run from repository root)
-cd ios && RECORD_REPLAY=1 xcodebuild test \
+cd ios && TEST_RUNNER_RECORD_REPLAY=1 xcodebuild test \
   -project PTimer.xcodeproj -scheme PTimer \
-  -destination 'platform=iOS Simulator,id=1D7DAD65-A280-4114-A928-585CAEE969E9' \
-  -only-testing:PTimerTests/RecordReplayBaselineSmokeTests
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:PTimerTests/RecordReplayBaselineSmokeTests \
+  -only-testing:PTimerTests/B4TimerLifecycleBaselineTests
 
 # Verify (no env)
-cd ios && xcodebuild test ... -only-testing:PTimerTests/RecordReplayBaselineSmokeTests
+cd ios && xcodebuild test ... \
+  -only-testing:PTimerTests/RecordReplayBaselineSmokeTests \
+  -only-testing:PTimerTests/B4TimerLifecycleBaselineTests
 ```
 
 Baseline 위치: `PTimerTests/__RecordReplay__/<TestClass>/<name>.txt`.
+
+## 관리 원칙
+
+PTIMER-213에서 유지(re-record & own)로 결정. baseline이 다시
+방치되지 않도록:
+
+1. **Protected Area 변경 후 suite 실행.** 타이머 런타임 semantics
+   또는 persistence/restore 계약을 건드린 티켓은 완료 전에 이
+   suite를 실행한다.
+2. **diff 발생 시 원인 검토 먼저.** 호출 순서·payload 변화가 해당
+   티켓이 의도한 것인지 확인한다. 의도하지 않은 diff는 회귀다.
+3. **의도된 변경일 때만 갱신.** 위의 재기록 명령
+   (`TEST_RUNNER_RECORD_REPLAY=1`)으로 재기록하고, env 없이
+   재실행해 verify한 뒤 baseline diff를 커밋에 포함한다.
 
 ## 언제 사용하나 (3개 헬퍼 비교)
 

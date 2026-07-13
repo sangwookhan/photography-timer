@@ -260,18 +260,26 @@ placement per owning module; the `FakeTimerManaging` /
   target.** It exists so package tests run off-simulator and so the
   compiler polices the Kit layer. Do not remove it; do not start
   treating macOS as a supported product platform because of it.
-- **RecordReplay status revised (2026-07-06).** The original decision
-  recorded here — "RecordReplay and the display-state baselines are
-  the insurance for facade/timer refactors, protected regardless of
-  suite-size pressure" — no longer holds for RecordReplay as-is: its
-  7 baselines have not been re-recorded since 2026-05-17 while the
-  harness kept changing, and its replays duplicate the assertion-based
-  lifecycle suites through injected spies
-  (`CrossPlatformArchitectureReview.md` §16.2). Before item 3.1 or 4.1
-  starts, make an explicit decision: **re-record and own it** (restore
-  its insurance role) **or retire it** and rely on the display-state
-  baselines plus the assertion suites. The display-state baselines
-  remain protected insurance either way.
+- **RecordReplay is kept and owned (PTIMER-213, 2026-07-13).** The
+  re-record-or-retire question raised on 2026-07-06
+  (`CrossPlatformArchitectureReview.md` §16.2) is resolved: keep it.
+  All 7 baselines were re-recorded against the current harness and
+  came out byte-identical to the 2026-05-01 recordings — the
+  observable collaborator-call contract survived the TimerRuntime
+  extraction and the PTimerKit move unchanged, which is the
+  equivalence guarantee the harness exists to provide. Rationale for
+  keeping: the cross-collaborator call *ordering* (lock-screen
+  exposer / notification scheduler / persistence interleaving per
+  scenario) is coverage nothing else pins; the assertion suites
+  verify each collaborator's state in isolation. Scope note recorded
+  for accuracy: the scenarios drive `TimerManager` directly, so the
+  harness pins the TimerManager-to-collaborator call contract — it
+  is not, by itself, full semantic-equivalence insurance for the
+  ViewModel facade (item 3.1). Maintenance policy lives in
+  `ios/PTimerTests/RecordReplay/README.md`: run the suite after any
+  Protected Area change, treat unexplained diffs as regressions, and
+  re-record only for intended changes. The display-state baselines
+  remain protected insurance alongside it.
 
 ---
 

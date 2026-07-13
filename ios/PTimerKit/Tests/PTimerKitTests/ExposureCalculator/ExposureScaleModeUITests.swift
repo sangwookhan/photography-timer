@@ -9,23 +9,25 @@ import XCTest
 /// ViewModel-level coverage for the shipping one-third-stop
 /// calculator scale (per `docs/specs/Calculator.md` §1.4). The
 /// shipping calculator does not expose a runtime scale selector —
-/// the one-third-stop scale is the only user-facing scale, applies
-/// to the **Base Shutter ladder only**, and the ND picker stays
-/// whole-stop in every shipping mode. The reserved full-stop scale
-/// stays in the model only for regression coverage and the future
-/// Settings preference; the tests below assert that contract.
+/// the one-third-stop scale is the only user-facing scale and applies
+/// to the **Base Shutter ladder only**; the ND ladder is whole stops
+/// plus the three commercial fractional presets (PTIMER-209) in every
+/// shipping mode. The reserved full-stop scale stays in the model only
+/// for regression coverage and the future Settings preference; the
+/// tests below assert that contract.
 ///
 /// Coverage:
 /// 1. Default `scaleMode` is `.oneThirdStop`; out of the box the
 ///    picker data sources are the 1/3-stop densified shutter ladder
-///    paired with the whole-stop ND ladder (`0…30`).
+///    paired with the ND ladder (`0…30` plus 6.6/7.6/16.6).
 /// 2. The camera-facing shutter label LUT renders sub-1 s rows as
 ///    `1/N` fractions (including the slow end `1/1.3, 1/1.6, 1/2`)
 ///    and ≥ 1 s rows as integer / `N.Ns` per the Nikon Z7 ladder.
-/// 3. The ND label formatter renders shipping whole-stop values as
-///    bare integers; the mixed-fraction renderer is exercised
-///    through the reserved fractional path so future custom-ND
-///    workflows do not lose the fractional component.
+/// 3. The ND label formatter renders whole-stop values as bare
+///    integers and the commercial presets as decimals; the
+///    mixed-fraction renderer is exercised through the reserved
+///    third-stop path so future custom-ND workflows do not lose the
+///    fractional component.
 /// 4. Persistence round-trips the scale token; legacy snapshots
 ///    without the new field restore as `.oneThirdStop` (the
 ///    shipping default).
@@ -34,7 +36,7 @@ final class ExposureScaleModeUITests: XCTestCase {
     // MARK: - Default scale is one-third-stop without any UI flip
 
     @MainActor
-    func testDefaultViewModelExposesOneThirdStopShutterAndWholeStopND() {
+    func testDefaultViewModelExposesOneThirdStopShutterAndPresetND() {
         let viewModel = makeViewModel()
 
         XCTAssertEqual(viewModel.scaleMode, .oneThirdStop)
@@ -46,42 +48,42 @@ final class ExposureScaleModeUITests: XCTestCase {
             ExposureScale.oneThirdStop.shutterSteps.count
         )
 
-        // ND picker is whole-stop only (per docs/specs/Calculator.md
-        // §2.2). One-third-stop applies to the shutter ladder only;
-        // the ND picker stays on whole stops because real-world fixed
-        // ND filters are sold in whole-stop strengths.
-        XCTAssertEqual(viewModel.pickerNDSteps.count, 31)
-        XCTAssertEqual(viewModel.pickerNDSteps.map(\.stops), (0...30).map { Double($0) })
-        XCTAssertTrue(
-            viewModel.pickerNDSteps.allSatisfy { $0.isWholeStop },
-            "shipping ND picker must not surface fractional 1/3-stop entries"
+        // ND picker is whole stops 0…30 plus the three PTIMER-209
+        // commercial fractional presets (per docs/specs/Calculator.md
+        // §2.2). One-third-stop applies to the shutter ladder only; the
+        // ND ladder is not densified to 1/3-stop entries.
+        XCTAssertEqual(viewModel.pickerNDSteps.count, 34)
+        XCTAssertEqual(
+            viewModel.pickerNDSteps.map(\.stops),
+            ((0...30).map(Double.init) + ExposureScale.commercialFractionalNDStops).sorted()
         )
+        // The only non-whole entries are the three commercial presets.
+        let fractional = viewModel.pickerNDSteps.filter { !$0.isWholeStop }.map(\.stops)
+        XCTAssertEqual(fractional, ExposureScale.commercialFractionalNDStops)
+        // The legacy whole-stop surface still exposes 0…30 unchanged.
         XCTAssertEqual(viewModel.pickerWholeNDStops, Array(0...30))
     }
 
     @MainActor
-    func testShippingNDPickerOptionsAroundSevenAreWholeStopsOnly() {
-        // Regression for the reported screenshot: the ND option
-        // values straddling the `7-stop` row must be `6, 7, 8` — never
-        // `7 1/3` or `7 2/3`. Asserted both by canonical stops and by
-        // the formatted picker label.
+    func testShippingNDPickerOptionsAroundSevenUsePresetsNotThirdStops() {
+        // The ND wheel never enumerates third-stop rows (`7 1/3`,
+        // `7 2/3`). PTIMER-209 does add the decimal presets 6.6 and 7.6
+        // around the 7-stop row, so the neighbours read `6, 6.6, 7,
+        // 7.6, 8`. Asserted by canonical stops and by picker labels.
         let viewModel = makeViewModel()
 
         let labels = viewModel.pickerNDSteps.map { viewModel.formatNDStop($0) }
-        XCTAssertFalse(
-            labels.contains("7 1/3"),
-            "shipping ND picker must not enumerate `7 1/3`"
-        )
-        XCTAssertFalse(
-            labels.contains("7 2/3"),
-            "shipping ND picker must not enumerate `7 2/3`"
-        )
+        XCTAssertFalse(labels.contains("7 1/3"))
+        XCTAssertFalse(labels.contains("7 2/3"))
         for label in labels {
             XCTAssertFalse(
                 label.contains("/"),
                 "shipping ND picker label \(label) must not contain a fraction"
             )
         }
+        // The commercial presets are present as decimals.
+        XCTAssertTrue(labels.contains("6.6"))
+        XCTAssertTrue(labels.contains("7.6"))
 
         guard let sevenIndex = viewModel.pickerNDSteps.firstIndex(where: { $0.wholeStops == 7 }) else {
             XCTFail("shipping ND ladder must include the 7-stop entry")
@@ -89,9 +91,12 @@ final class ExposureScaleModeUITests: XCTestCase {
         }
         XCTAssertGreaterThan(sevenIndex, 0)
         XCTAssertLessThan(sevenIndex + 1, viewModel.pickerNDSteps.count)
-        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex - 1].wholeStops, 6)
+        // 6 → 6.6 → 7 → 7.6 → 8 around the 7-stop row.
+        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex - 2].wholeStops, 6)
+        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex - 1].stops, 6.6, accuracy: 1e-9)
         XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex].wholeStops, 7)
-        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex + 1].wholeStops, 8)
+        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex + 1].stops, 7.6, accuracy: 1e-9)
+        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex + 2].wholeStops, 8)
     }
 
     // MARK: - Snap policy: the shipping scale never snaps
@@ -167,8 +172,9 @@ final class ExposureScaleModeUITests: XCTestCase {
     func testViewModelReservedFractionalPathsCalculateWithoutSnapping() {
         // Drives the reserved fractional paths directly through the
         // ViewModel boundary (the shipping ND picker emits whole stops
-        // only; these cases exercise the reserved infrastructure so a
-        // future custom-ND workflow stays calc-correct). A fractional
+        // and the three commercial presets only; a 1/3-stop value
+        // exercises the reserved infrastructure so a future custom-ND
+        // workflow stays calc-correct). A fractional
         // base shutter with zero ND passes through unsnapped, and a
         // fractional ND applies its exact factor.
         let fractionalShutter = (1.0 / 30.0) * pow(2.0, 1.0 / 3.0)
@@ -342,11 +348,11 @@ final class ExposureScaleModeUITests: XCTestCase {
 
     @MainActor
     func testFractionalNDStepWriteEmitsObjectWillChange() {
-        // Reserved-path coverage: a fractional `NDStep` write must
-        // still emit `objectWillChange` even though the shipping ND
-        // picker only emits whole-stop values, so a future custom /
-        // variable-ND workflow that drives `ndStep` directly does not
-        // skip a SwiftUI redraw.
+        // Reserved-path coverage: a 1/3-stop `NDStep` write must still
+        // emit `objectWillChange` even though the shipping ND picker
+        // only emits whole stops and the three commercial presets, so a
+        // future custom / variable-ND workflow that drives `ndStep`
+        // directly does not skip a SwiftUI redraw.
         let viewModel = makeViewModel()
         var emissionCount = 0
         let cancellable = viewModel.objectWillChange.sink { _ in emissionCount += 1 }
@@ -366,10 +372,10 @@ final class ExposureScaleModeUITests: XCTestCase {
     @MainActor
     func testFormatNDStopRendersWholeAndReservedFractionalValues() {
         // Whole-stop values render as bare integers; the reserved
-        // fractional path (the shipping ND picker emits whole stops
-        // only) must still render mixed fractions so a future custom-ND
-        // workflow that drives `formatNDStop` does not lose the
-        // fractional component.
+        // third-stop path (the shipping ND picker emits whole stops and
+        // the three commercial presets only) must still render mixed
+        // fractions so a future custom-ND workflow that drives
+        // `formatNDStop` does not lose the fractional component.
         let viewModel = makeViewModel()
         let cases: [(NDStep, String)] = [
             (NDStep(stops: 0), "0"),
@@ -392,8 +398,9 @@ final class ExposureScaleModeUITests: XCTestCase {
         // Live-preview reserved-path coverage: writing a fractional
         // `NDStep` to the live overlay drives the calc result while
         // leaving the committed `ndStep` at zero. The shipping ND
-        // picker writes whole-stop values; this test pins the
-        // reserved fractional path so it stays calc-correct.
+        // picker writes whole stops and the three commercial presets;
+        // this test pins the reserved third-stop path so it stays
+        // calc-correct.
         let viewModel = makeViewModel()
         viewModel.ndStep = NDStep(stops: 0)
 
@@ -496,10 +503,11 @@ final class ExposureScaleModeUITests: XCTestCase {
     func testResetFilmModeWorkingContextRestoresShippingOneThirdStop() {
         // `canReset` should report true when the working context
         // drifts from the shipping default. Here the drift is
-        // produced by a **reserved-path fractional ND write** —
-        // the shipping ND picker emits whole stops only, so this
-        // setup exercises the reserved fractional `NDStep` write
-        // surface directly. The reset must drop the film, clear ND
+        // produced by a **reserved-path fractional ND write** — the
+        // shipping ND picker emits whole stops and the three commercial
+        // presets only, so a 1/3-stop value exercises the reserved
+        // fractional `NDStep` write surface directly. The reset must
+        // drop the film, clear ND
         // (including any reserved-path fractional drift), and
         // leave the model on the shipping `.oneThirdStop` scale.
         let viewModel = makeViewModel()

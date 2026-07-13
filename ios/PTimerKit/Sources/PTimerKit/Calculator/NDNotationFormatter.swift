@@ -21,9 +21,15 @@ import PTimerCore
 /// can move when these defaults are localized later.
 ///
 /// Rounding policy (deterministic; exercised by `NDNotationFormatterTests`):
+/// - Stops: whole stops render as an integer; the three commercial
+///   fractional presets (PTIMER-209: 6.6, 7.6, 16.6) render as one
+///   decimal; the reserved third-stop path renders as a mixed
+///   fraction (`1 1/3`).
 /// - Optical density: `stops × 0.3`, one decimal (`OD 0.0`, `OD 2.7`,
-///   `OD 3.0`).
-/// - Filter factor: `2^stops`, via PTIMER's compact app display policy
+///   `OD 3.0`; the presets land on `OD 2.0`, `OD 2.3`, `OD 5.0`).
+/// - Filter factor: the commercial presets map to their marketed
+///   labels (`ND100`, `ND200`, `ND100k`); every other value uses
+///   `2^stops` via PTIMER's compact app display policy
 ///   (not an external standard):
 ///   - 0–9 stops (factor < 1000): the exact factor — `ND1`, `ND2`,
 ///     `ND8`, `ND512`.
@@ -79,14 +85,24 @@ public enum NDNotationFormatter {
 
     // MARK: - Stops
 
-    /// Whole stops render as an integer (`9`); the reserved fractional
+    /// Whole stops render as an integer (`9`); the reserved third-stop
     /// path renders as a mixed fraction (`1 1/3`) so a future
-    /// fractional-ND surface keeps its third-stop component. Mirrors
-    /// the legacy picker formatting so the stops mode is unchanged.
+    /// fractional-ND surface keeps its third-stop component. The
+    /// PTIMER-209 commercial presets (6.6, 7.6, 16.6) are neither whole
+    /// nor third-stop, so they render as a one-decimal value (`6.6`)
+    /// rather than being forced onto the third-stop grid as `6 2/3`.
     private static func stopsValueText(forStops stops: Double) -> String {
         let step = NDStep(stops: stops)
         if let wholeStops = step.wholeStops {
             return "\(wholeStops)"
+        }
+
+        // Supported commercial presets: show the canonical tenth of a
+        // stop (normalizing any near-match). Only these off-grid values
+        // render as a decimal; any other non-whole value falls through
+        // to the reserved third-stop path below.
+        if let preset = ExposureScale.commercialNDPresetStop(matching: stops) {
+            return String(format: "%.1f", preset)
         }
 
         let totalThirds = step.thirdStopCount
@@ -117,6 +133,15 @@ public enum NDNotationFormatter {
     // MARK: - Filter factor
 
     private static func filterFactorValueText(forStops stops: Double) -> String {
+        // Commercial fixed-ND presets carry their marketed factor label,
+        // which is not `2^stops` (2^6.6 = 97 is sold as ND100, 2^16.6 ≈
+        // 99 420 as ND100k). Only the three PTIMER-209 fractional
+        // presets use this table; every whole stop keeps the compact
+        // power-of-two policy below.
+        if let label = commercialFactorLabel(forStops: stops) {
+            return label
+        }
+
         let factor = pow(2.0, stops)
 
         // 0–9 stops: the exact factor (1, 2, 4, … 512).
@@ -148,6 +173,20 @@ public enum NDNotationFormatter {
 
         // Unreachable for factor >= 10000; deterministic fallback.
         return "\(Int(factor.rounded()))"
+    }
+
+    /// Marketed filter-factor label for a commercial fractional ND
+    /// preset (PTIMER-209), or `nil` for any other stop value. Matched
+    /// on the canonical stop value within the shared stability epsilon.
+    private static func commercialFactorLabel(forStops stops: Double) -> String? {
+        let presets: [(stops: Double, label: String)] = [
+            (6.6, "100"),
+            (7.6, "200"),
+            (16.6, "100k"),
+        ]
+        return presets.first {
+            abs($0.stops - stops) <= ExposureCalculator.stabilityEpsilon
+        }?.label
     }
 
     // MARK: - Localization templates

@@ -239,7 +239,15 @@ public struct CameraSlotSessionPersistenceController {
             selectedProfileID: snapshot.selectedProfileOverride?.id,
             baseShutterSeconds: snapshot.baseShutterSeconds,
             ndStop: snapshot.ndStep.wholeStops,
-            ndStopThirds: snapshot.ndStep.isWholeStop ? nil : snapshot.ndStep.thirdStopCount,
+            // Whole → `ndStop`; third-stop fractional → `ndStopThirds`;
+            // a supported commercial preset (PTIMER-209) → its canonical
+            // `ndStopsExact`. Exactly one is populated, so pre-PTIMER-209
+            // whole/third-stop snapshots stay identical, and an
+            // unsupported off-grid value persists none of the three and
+            // restores to the default rather than as a drifting value.
+            ndStopThirds: snapshot.ndStep.isWholeStop || !snapshot.ndStep.isThirdStop
+                ? nil : snapshot.ndStep.thirdStopCount,
+            ndStopsExact: ExposureScale.commercialNDPresetStop(matching: snapshot.ndStep.stops),
             // Persist `nil` for the shipping `.oneThirdStop` so a
             // steady-state snapshot stays compact, mirroring the
             // legacy convention.

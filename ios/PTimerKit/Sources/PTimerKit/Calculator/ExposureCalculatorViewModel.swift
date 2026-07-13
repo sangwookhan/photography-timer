@@ -28,8 +28,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             // Mirror writes through to the canonical `ndStep` so the
             // calc engine, the SwiftUI `NDStep` binding, and the
             // `@Published` observers stay in sync regardless of which
-            // surface drove the write. The shipping ND picker writes
-            // whole-stop values through this wrapper.
+            // surface drove the write. This integer wrapper carries
+            // whole-stop writes from legacy Int-bound callers; the
+            // shipping picker itself writes `ndStep` directly.
             let newStep = NDStep(stops: Double(ndStop))
             if ndStep != newStep {
                 ndStep = newStep
@@ -38,12 +39,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
     /// Canonical fractional-aware ND value. Source of truth for the
     /// calc engine and the SwiftUI ND-picker binding. The shipping
-    /// picker writes whole-stop values; the fractional path is
-    /// reserved infrastructure (see `docs/specs/Calculator.md` §1.4).
-    /// `@Published` so a fractional-only write — e.g. exercising the
-    /// reserved path from a test or a future custom-ND workflow —
-    /// still emits `objectWillChange` without going through the
-    /// integer wrapper.
+    /// picker writes whole stops and the three commercial presets
+    /// (§2.2); other third-stop values remain reserved infrastructure
+    /// (see `docs/specs/Calculator.md` §1.4). `@Published` so a
+    /// reserved-path fractional write — e.g. from a test or a future
+    /// custom-ND workflow — still emits `objectWillChange` without
+    /// going through the integer wrapper.
     @Published public var ndStep: NDStep = NDStep(stops: Double(defaultFilmModeNDStop)) {
         didSet {
             guard oldValue != ndStep else { return }
@@ -371,9 +372,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     /// `NDStep` values the SwiftUI ND picker renders. Sourced from
-    /// the active scale; the shipping ND ladder is whole-stop
-    /// (`0…30`) per `docs/specs/Calculator.md` §2.2 in every shipping
-    /// scale mode.
+    /// the active scale; the shipping ND ladder is whole stops
+    /// (`0…30`) plus the three commercial fractional presets per
+    /// `docs/specs/Calculator.md` §2.2 in every shipping scale mode.
     public var pickerNDSteps: [NDStep] {
         calculatorModel.exposureScale.ndSteps
     }
@@ -401,8 +402,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             // wrapper — otherwise a reserved-path fractional ND
             // write away from the default zero state would not
             // register as "working" (the shipping ND picker emits
-            // whole stops, but this guard must still cover the
-            // reserved fractional path).
+            // whole stops and the three commercial presets, but this
+            // guard must still cover the reserved third-stop path).
             || abs(ndStep.stops - Double(defaultFilmModeNDStop)) > ExposureCalculator.stabilityEpsilon
             || scaleMode != .oneThirdStop
             || targetShutterModel.isActive
@@ -1104,9 +1105,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // once the gesture commits, the `didSet` clear-preview path
         // on `baseShutter` / `ndStop` keeps the model's state
         // consistent. The fractional-aware `ndStep` overload is
-        // always taken so the reserved fractional path stays
-        // identity-preserving even though the shipping picker only
-        // emits whole-stop ND values.
+        // always taken so the reserved third-stop path stays
+        // identity-preserving alongside the whole-stop and commercial-
+        // preset values the shipping picker emits.
         calculatorModel.calculate(
             baseShutterSeconds: calculatorModel.effectiveBaseShutter,
             ndStep: calculatorModel.effectiveNDStep
@@ -1583,25 +1584,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.clearLiveNDStopPreview()
     }
 
-    /// Picker label for an `NDStep` value. The shipping ND picker
-    /// advances in 1/3-stop increments (per `docs/specs/Calculator.md`
-    /// §2.2), so this formatter renders whole stops as the integer
-    /// alone (`"0"`, `"1"`, …) and fractional steps as mixed fractions
-    /// (`"1/3"`, `"2/3"`, `"1 1/3"`, …).
+    /// Picker label (Stops notation) for an `NDStep` value. Delegates
+    /// to `NDNotationFormatter` so there is a single source of truth for
+    /// stops rendering: whole stops as the integer (`"0"`, `"1"`, …),
+    /// the PTIMER-209 commercial presets as a decimal (`"6.6"`), and the
+    /// reserved third-stop path as a mixed fraction (`"1 1/3"`).
     public func formatNDStop(_ ndStep: NDStep) -> String {
-        if let wholeStops = ndStep.wholeStops {
-            return "\(wholeStops)"
-        }
-
-        let totalThirds = Int((ndStep.stops * 3).rounded())
-        let wholePart = totalThirds / 3
-        let fractionalThirds = totalThirds % 3
-        let fractionLabel = fractionalThirds == 1 ? "1/3" : "2/3"
-
-        if wholePart == 0 {
-            return fractionLabel
-        }
-        return "\(wholePart) \(fractionLabel)"
+        NDNotationFormatter.display(forStops: ndStep.stops, mode: .stops).value
     }
 
     /// Picker label for a shutter value in the active scale. In

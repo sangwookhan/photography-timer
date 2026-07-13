@@ -68,13 +68,13 @@ public final class CalculatorModel {
         exposureScale.shutterSteps.map(\.seconds)
     }
 
-    /// Whole-stop ND values shown by the shipping picker. The
-    /// shipping ND ladder is whole-stop in every scale mode (per
-    /// `docs/specs/Calculator.md` §2.2), so this helper filters the
-    /// scale to the whole-stop subset for any caller still bound to
-    /// `Int`. The fractional-aware `pickerNDSteps` surface is the
-    /// canonical source for the SwiftUI picker; both views are kept
-    /// for the legacy integer binding compatibility.
+    /// Whole-stop subset of the ND ladder, for callers still bound to
+    /// `Int`. The shipping ND ladder is whole stops plus the three
+    /// commercial fractional presets (per `docs/specs/Calculator.md`
+    /// §2.2); this helper drops the presets and returns only the
+    /// whole-stop values. The fractional-aware `pickerNDSteps` surface
+    /// is the canonical source for the SwiftUI picker; both views are
+    /// kept for the legacy integer binding compatibility.
     public var pickerWholeNDStops: [Int] {
         exposureScale.ndSteps.compactMap(\.wholeStops)
     }
@@ -87,8 +87,9 @@ public final class CalculatorModel {
     /// Canonical ND input as a fractional-aware `NDStep`. Source of
     /// truth for the calc engine; the legacy `ndStop` integer setter
     /// mirrors writes into this field so any integer-bound caller
-    /// stays compatible. The shipping picker writes whole-stop
-    /// values; the fractional path is reserved infrastructure.
+    /// stays compatible. The shipping picker writes whole stops and the
+    /// three commercial presets; arbitrary third-stop values remain
+    /// reserved infrastructure.
     public var ndStep: NDStep
 
     /// Working ND stop, integer-binding compatibility wrapper around
@@ -136,10 +137,10 @@ public final class CalculatorModel {
     }
 
     /// Whole-stop view of `effectiveNDStep`, kept for callers still
-    /// bound to the legacy `Int` ND surface. The shipping ND picker
-    /// emits whole-stop values, so this view is exact for shipping
-    /// drag gestures and falls back to a rounded integer only when
-    /// reserved-path fractional `NDStep` values reach the model.
+    /// bound to the legacy `Int` ND surface. Exact for whole-stop
+    /// selections; the three commercial presets and any reserved-path
+    /// third-stop value round to the nearest integer here, so callers
+    /// that need the true fractional value must read `effectiveNDStep`.
     public var effectiveNDStop: Int {
         effectiveNDStep.wholeStops ?? Int(effectiveNDStep.stops.rounded())
     }
@@ -199,17 +200,15 @@ public final class CalculatorModel {
     /// Sets the live ND-stop preview, with the same
     /// equal-clears-preview rule as `updateLiveBaseShutter`.
     /// Integer-binding compatibility wrapper around
-    /// `updateLiveNDStep(_:)`; the shipping ND drag gesture writes
-    /// whole-stop values through this entry point.
+    /// `updateLiveNDStep(_:)` for callers on the legacy `Int` surface.
     public func updateLiveNDStop(_ value: Int) {
         updateLiveNDStep(NDStep(stops: Double(value)))
     }
 
-    /// Fractional-aware preview update. The shipping picker drives
-    /// this through whole-stop NDStep values; the fractional path is
-    /// exercised by tests covering the reserved infrastructure.
-    /// Equal-clears-preview keeps the same idle-state rule as the
-    /// integer overload.
+    /// Fractional-aware preview update. The shipping picker drives this
+    /// through whole stops and the three commercial presets; the
+    /// reserved third-stop path is exercised by tests. Equal-clears-
+    /// preview keeps the same idle-state rule as the integer overload.
     public func updateLiveNDStep(_ value: NDStep) {
         liveNDStep = value == ndStep ? nil : value
     }
@@ -283,6 +282,19 @@ public final class CalculatorModel {
         _ step: NDStep,
         for mode: ExposureScaleMode
     ) -> NDStep {
+        // A value at or near an entry on the target scale's ND ladder
+        // snaps to that canonical entry. This preserves the PTIMER-209
+        // commercial presets (6.6, 7.6, 16.6) — which are neither whole
+        // nor third-stop and would otherwise be forced off the ladder —
+        // and normalizes any drift to the canonical value rather than
+        // keeping a near-match double.
+        let ladder = ExposureScale.scale(for: mode).ndSteps
+        if let match = ladder.first(where: {
+            abs($0.stops - step.stops) <= ExposureCalculator.stabilityEpsilon
+        }) {
+            return match
+        }
+
         switch mode {
         case .fullStop:
             return NDStep(stops: step.stops.rounded())

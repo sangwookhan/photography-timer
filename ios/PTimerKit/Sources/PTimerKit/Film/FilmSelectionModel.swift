@@ -218,7 +218,14 @@ public final class FilmSelectionModel: ObservableObject {
                 selectedPresetFilmID: activeContext.selectedPresetFilm?.id,
                 baseShutterSeconds: currentBaseShutterSeconds(),
                 ndStop: ndStep.wholeStops,
-                ndStopThirds: ndStep.isWholeStop ? nil : ndStep.thirdStopCount,
+                // Third-stop fractional → `ndStopThirds`; a supported
+                // commercial preset (PTIMER-209) → its canonical
+                // `ndStopsExact`. Whole/third-stop snapshots keep the
+                // pre-PTIMER-209 shape; an unsupported off-grid value
+                // persists none of the three.
+                ndStopThirds: ndStep.isWholeStop || !ndStep.isThirdStop
+                    ? nil : ndStep.thirdStopCount,
+                ndStopsExact: ExposureScale.commercialNDPresetStop(matching: ndStep.stops),
                 // Persist `nil` for the shipping one-third-stop default so
                 // a steady-state snapshot stays compact. Only the reserved
                 // full-stop scale (kept for tests / the future Settings

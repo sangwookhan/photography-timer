@@ -140,6 +140,45 @@ final class ExposureCalculationAccuracyTests: XCTestCase {
         )
     }
 
+    /// PTIMER-209: the commercial fractional presets feed the exposure
+    /// engine as their configured one-decimal stop value (`base ×
+    /// 2^stops`) in the shipping one-third-stop scale — never rounded to
+    /// an adjacent whole stop. Adjacent whole stops differ materially,
+    /// so this also guards against a "display-only" drift where the
+    /// label changes but the math uses 6/7/16/17.
+    func testCommercialFractionalPresetsUseConfiguredStopValue() throws {
+        let calculator = ExposureCalculator()
+        let base = 1.0 / 30.0
+        for stops in ExposureScale.commercialFractionalNDStops {
+            let result = try calculator.calculate(
+                baseShutterSeconds: base,
+                ndStep: NDStep(stops: stops),
+                scaleMode: .oneThirdStop
+            )
+            XCTAssertEqual(result, base * pow(2.0, stops), accuracy: tolerance,
+                           "stops=\(stops) must use the configured fractional value")
+            // Materially distinct from both integer neighbours.
+            let lower = base * pow(2.0, stops.rounded(.down))
+            let upper = base * pow(2.0, stops.rounded(.up))
+            XCTAssertGreaterThan(result, lower)
+            XCTAssertLessThan(result, upper)
+        }
+    }
+
+    /// The presets are on the ND ladder, so the fractional-aware engine
+    /// must not apply any snap in the shipping scale — the exact
+    /// fractional multiplier survives even past the 30s/64s region.
+    func testND100kPresetDoesNotSnapAtHighStops() throws {
+        let calculator = ExposureCalculator()
+        let base = 1.0
+        let result = try calculator.calculate(
+            baseShutterSeconds: base,
+            ndStep: NDStep(stops: 16.6),
+            scaleMode: .oneThirdStop
+        )
+        XCTAssertEqual(result, pow(2.0, 16.6), accuracy: pow(2.0, 16.6) * 1e-9)
+    }
+
     func testInverseConsistencyAtSnapBoundary() throws {
         let base = 1.0 / 30.0
         let stop = 10

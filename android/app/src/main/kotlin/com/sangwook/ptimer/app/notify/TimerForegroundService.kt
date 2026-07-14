@@ -22,15 +22,27 @@ class TimerForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        val title = intent?.getStringExtra(EXTRA_TITLE).orEmpty()
-        val text = intent?.getStringExtra(EXTRA_TEXT).orEmpty()
-        val endAt = intent?.getLongExtra(EXTRA_END, 0L) ?: 0L
+        val stopping = intent?.action == ACTION_STOP
         TimerNotifications.ensureChannels(this)
+
+        // Always fulfil the startForegroundService() contract by calling
+        // startForeground() first — even for a STOP command. Any delivery to a
+        // foreground-service-declared service can carry a pending "must call
+        // startForeground() in time" obligation; tearing the service down (the
+        // old STOP path called stopForeground()/stopSelf() without promoting)
+        // leaves that obligation unmet and crashes with
+        // ForegroundServiceDidNotStartInTimeException on API 26+ ("Bringing down
+        // service while still waiting for start foreground"). A STOP promotes to
+        // a transient empty notification that is removed immediately below.
+        val content = if (stopping) {
+            OngoingContent("", "", 0L)
+        } else {
+            OngoingContent(
+                intent?.getStringExtra(EXTRA_TITLE).orEmpty(),
+                intent?.getStringExtra(EXTRA_TEXT).orEmpty(),
+                intent?.getLongExtra(EXTRA_END, 0L) ?: 0L,
+            )
+        }
         // ServiceCompat with an explicit FGS type is required on API 34+;
         // passing the type also avoids the silent startForeground failures some
         // OEMs exhibit when the type is left implicit.
@@ -42,9 +54,15 @@ class TimerForegroundService : Service() {
         ServiceCompat.startForeground(
             this,
             TimerNotifications.ONGOING_NOTIFICATION_ID,
-            TimerNotifications.buildOngoing(this, OngoingContent(title, text, endAt)),
+            TimerNotifications.buildOngoing(this, content),
             type,
         )
+
+        if (stopping) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         return START_STICKY
     }
 

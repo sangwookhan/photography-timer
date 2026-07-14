@@ -45,15 +45,15 @@ The Corrected Exposure row shall remain visible in all film-workflow states, inc
 
 ### 1.4 Exposure scale mode
 
-The calculator runs on an **exposure scale** that defines the granularity of one Base Shutter increment. The current shipping scale is **one-third stop**: Base Shutter advances in 1/3-stop increments along a densified ladder with conventional camera-facing labels (§2.3). One-third-stop applies to the **Base Shutter ladder only** — the ND picker stays whole-stop in every shipping mode (§2.2).
+The calculator runs on an **exposure scale** that defines the granularity of one Base Shutter increment. The current shipping scale is **one-third stop**: Base Shutter advances in 1/3-stop increments along a densified ladder with conventional camera-facing labels (§2.3). One-third-stop applies to the **Base Shutter ladder only** — the ND picker uses whole stops plus the three commercial fractional presets in every shipping mode (§2.2).
 
-The model layer also retains a **full-stop** scale (1-stop shutter, same whole-stop ND) as a reserved abstraction. The full-stop scale shall not surface in the main calculator UI in the current release; it remains in the model so:
+The model layer also retains a **full-stop** scale (1-stop shutter, same shared ND ladder) as a reserved abstraction. The full-stop scale shall not surface in the main calculator UI in the current release; it remains in the model so:
 
 - the model layer keeps a single ladder-aware abstraction rather than splitting "the shipping scale" from "everything else";
 - regression tests can validate full-stop math directly;
 - a future Settings preference (Full / 1/2 / 1/3 stop) can swap the active scale without redesigning the calculator domain.
 
-The fractional-aware `NDStep` domain primitive (with integer `thirdStopCount` round-trip) is likewise retained as **reserved domain infrastructure**, not a shipping ND option. It exists so a future custom or variable-ND workflow can flow through the same calculation and persistence path; the shipping ND picker shall not enumerate fractional ND values.
+The fractional-aware `NDStep` domain primitive backs the three fixed fractional ND presets (§2.2) and is otherwise retained as **reserved domain infrastructure** for a future custom or variable-ND workflow, so such a workflow can flow through the same calculation and persistence path. Apart from the three named presets, the shipping ND picker shall not enumerate arbitrary fractional ND values.
 
 Until those future preferences exist, the user shall not see a runtime control for the active scale. Persistence still records the active scale token (§5) so when a future preference ships, an upgrade carries the user's prior choice rather than overwriting it on first launch.
 
@@ -83,13 +83,21 @@ All exposure adjustment math is performed in **stop space** (base-2 logarithmic)
 output_seconds = base_seconds × 2^stops
 ```
 
-ND values are stops. The shipping ND ladder is whole-stop (§2.2); the fractional-capable `NDStep` domain primitive is kept as reserved infrastructure for a future custom / variable-ND workflow (§1.4) and shall not surface in the shipping ND picker. Inputs that arrive in factor form (e.g. ND 64×) shall be converted to stops before entering the calculator.
+ND values are stops. The shipping ND ladder is whole-stop with three fixed fractional presets (§2.2); the fractional-capable `NDStep` domain primitive supports these presets and remains available for a future custom / variable-ND workflow (§1.4). Inputs that arrive in factor form (e.g. ND 64×) shall be converted to stops before entering the calculator.
 
 ### 2.2 ND input range
 
-The ND picker shall present **integer stops in the closed range [0, 30]** in every shipping mode. One-third-stop applies to the Base Shutter ladder only (§1.4); the ND ladder stays whole-stop because real-world fixed ND filters are sold in whole-stop strengths (ND2 = 1, ND4 = 2, ND8 = 3, …). Picker rows are `0, 1, 2, …, 30` — fractional values such as `1/3, 2/3, 7 1/3, 7 2/3` are **not** part of the shipping ND option set, and shall not be filtered out at the view layer (they shall not exist in the option list at all). Values outside the `[0, 30]` range shall not be representable through the picker.
+The ND picker shall present **integer stops in the closed range [0, 30]** plus three fixed fractional presets, in every shipping mode. One-third-stop applies to the Base Shutter ladder only (§1.4); the ND ladder stays whole-stop apart from those presets because real-world fixed ND filters are sold in whole-stop strengths (ND2 = 1, ND4 = 2, ND8 = 3, …). The picker shall not be densified to a continuous 1/3-stop or 0.1-stop ND scale, and one-third-stop rows such as `7 1/3, 7 2/3` shall not exist in the option list.
 
-The fractional-capable `NDStep` domain primitive (and its integer `thirdStopCount` persistence round-trip) is reserved infrastructure for a future custom / variable-ND workflow (§1.4); it shall not surface in the shipping ND picker without an explicit product decision.
+The three fractional presets are the materially non-integer commercial fixed-ND products that would lose over ~0.3 stop if rounded to a whole stop (PTIMER-209):
+
+- `6.6 stops` — ND100 / OD 2.0
+- `7.6 stops` — ND200 / OD 2.3
+- `16.6 stops` — ND100k / OD 5.0
+
+They are **permanent** entries, present regardless of the active ND notation or any navigation history, and are spliced into the ladder in numeric order (`… 6, 6.6, 7, 7.6, 8, … 16, 16.6, 17 …`). Stops remain the canonical unit: each preset feeds the exposure engine as its configured one-decimal stop value (`6.6` is the app's chosen value, not the exact `log2` of the marketed factor). Its OD is formatted from stops (`stops × 0.3`); its ND factor label uses the configured commercial mapping, not a `2^stops` computation. The presets carry no separate "ND100k" identity — moving the wheel off `16.6` simply selects the neighbouring stop value. Values outside the `[0, 30]` range shall not be representable through the picker.
+
+The fractional-capable `NDStep` domain primitive (and its integer `thirdStopCount` persistence round-trip for third-stop values) also remains reserved infrastructure for a future custom / variable-ND workflow (§1.4); further fractional ND options shall not surface in the shipping picker without an explicit product decision.
 
 ### 2.3 Base shutter values
 

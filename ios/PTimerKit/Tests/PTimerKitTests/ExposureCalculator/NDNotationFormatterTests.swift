@@ -75,9 +75,82 @@ final class NDNotationFormatterTests: XCTestCase {
     }
 
     func testReservedFractionalStopsRenderMixedFraction() {
-        // The shipping picker emits whole stops only; this guards the
-        // reserved fractional path the NDStep type still supports.
+        // The reserved third-stop path (still supported by NDStep) keeps
+        // its mixed-fraction rendering; only the off-grid commercial
+        // presets render as decimals (see the PTIMER-209 tests below).
         XCTAssertEqual(inline(1.0 / 3.0, .stops), "1/3 stops")
         XCTAssertEqual(inline(4.0 / 3.0, .stops), "1 1/3 stops")
+    }
+
+    // MARK: - PTIMER-209 commercial fractional presets
+
+    /// The three permanent Stops-wheel presets map to their marketed
+    /// labels across all three notations. Stops render as a decimal
+    /// (not a third-stop mixed fraction); OD falls out of `stops × 0.3`;
+    /// the filter factor uses the commercial label, not `2^stops`.
+    func testCommercialPresetsRenderInEveryNotation() {
+        struct PresetCase {
+            let stops: Double
+            let stopsLabel: String
+            let od: String
+            let nd: String
+        }
+        let cases: [PresetCase] = [
+            PresetCase(stops: 6.6, stopsLabel: "6.6", od: "OD 2.0", nd: "ND100"),
+            PresetCase(stops: 7.6, stopsLabel: "7.6", od: "OD 2.3", nd: "ND200"),
+            PresetCase(stops: 16.6, stopsLabel: "16.6", od: "OD 5.0", nd: "ND100k"),
+        ]
+        for testCase in cases {
+            XCTAssertEqual(
+                NDNotationFormatter.display(forStops: testCase.stops, mode: .stops).value,
+                testCase.stopsLabel, "stops value for \(testCase.stops)"
+            )
+            XCTAssertEqual(inline(testCase.stops, .stops), "\(testCase.stopsLabel) stops")
+            XCTAssertEqual(inline(testCase.stops, .opticalDensity), testCase.od, "OD for \(testCase.stops)")
+            XCTAssertEqual(inline(testCase.stops, .filterFactor), testCase.nd, "ND for \(testCase.stops)")
+        }
+    }
+
+    /// Drift guard for the split product definition (stop values live in
+    /// `ExposureScale`, factor labels live in the formatter). Every
+    /// domain preset must resolve to a commercial factor label — i.e.
+    /// an override, not the raw `2^stops` rounding — and the labels must
+    /// be distinct. Adding a ladder preset without a matching formatter
+    /// label (or vice versa) fails here.
+    func testEveryDomainPresetHasADistinctOverriddenFactorLabel() {
+        var labels: [String] = []
+        for stops in ExposureScale.commercialFractionalNDStops {
+            let label = NDNotationFormatter.display(forStops: stops, mode: .filterFactor).value
+            XCTAssertNotEqual(
+                label, "\(Int(pow(2.0, stops).rounded()))",
+                "preset \(stops) must use a commercial label, not the 2^stops value"
+            )
+            labels.append(label)
+        }
+        XCTAssertEqual(
+            Set(labels).count, ExposureScale.commercialFractionalNDStops.count,
+            "each domain preset must map to a distinct commercial label"
+        )
+    }
+
+    /// Each preset's OD and ND label is unique across the whole ND
+    /// ladder, so selecting `ND100k` in one notation and switching to
+    /// another round-trips back to the same wheel row — no integer stop
+    /// aliases the preset's label.
+    func testCommercialPresetLabelsDoNotCollideWithIntegerStops() {
+        let ladder = ExposureScale.oneThirdStop.ndSteps.map(\.stops)
+        for preset in ExposureScale.commercialFractionalNDStops {
+            for mode in [NDNotationMode.opticalDensity, .filterFactor] {
+                let presetLabel = NDNotationFormatter.display(forStops: preset, mode: mode).value
+                let aliases = ladder.filter { other in
+                    abs(other - preset) > ExposureCalculator.stabilityEpsilon
+                        && NDNotationFormatter.display(forStops: other, mode: mode).value == presetLabel
+                }
+                XCTAssertTrue(
+                    aliases.isEmpty,
+                    "\(mode) label \(presetLabel) for preset \(preset) also produced by stops \(aliases)"
+                )
+            }
+        }
     }
 }

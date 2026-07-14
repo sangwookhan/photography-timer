@@ -4,10 +4,12 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
+import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.timer.TimerIdentity
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -134,6 +136,59 @@ class CalculatorControllerTest {
         val restored = c.state.value
         assertEquals(camera1State.selectedFilmName, restored.selectedFilmName)
         assertEquals(camera1State.ndIndex, restored.ndIndex)
+    }
+
+    // --- PTIMER-209 commercial fractional presets ---
+
+    private fun ladderIndexOf(stops: Double): Int =
+        ExposureScale.shippingNDLadder.indexOfFirst { abs(it.stops - stops) < 1e-9 }
+
+    @Test
+    fun commercialPresetSelectionRoundTripsThroughPersistence() {
+        val nd100kIndex = ladderIndexOf(16.6)
+        val c = controller()
+        c.setNdIndex(nd100kIndex)
+
+        // The wheel keeps the preset selected (position round-trips).
+        assertEquals(nd100kIndex, c.state.value.ndIndex)
+
+        // Exported snapshot: exact value in ndStops, nearest whole in ndIndex.
+        val exported = c.exportSession().snapshots.getValue(CameraSlotId.camera1)
+        assertEquals(16.6, exported.ndStops!!, 1e-9)
+        assertEquals(17, exported.ndIndex)
+
+        // Relaunch: a fresh controller restores the preset exactly.
+        val relaunched = CalculatorController(films = films, initialSession = c.exportSession())
+        assertEquals(nd100kIndex, relaunched.state.value.ndIndex)
+    }
+
+    @Test
+    fun wholeStopSelectionLeavesExactFieldNull() {
+        val c = controller()
+        c.setNdIndex(ladderIndexOf(7.0))
+        val exported = c.exportSession().snapshots.getValue(CameraSlotId.camera1)
+        assertNull(exported.ndStops)
+        assertEquals(7, exported.ndIndex)
+    }
+
+    @Test
+    fun unsupportedExactValueIgnoredOnRestore() {
+        // An off-grid ndStops (cannot arise from the picker) is ignored on
+        // restore; the whole-stop ndIndex is used instead.
+        val session = PersistentSlotSession(
+            activeSlotId = CameraSlotId.camera1,
+            snapshots = mapOf(
+                CameraSlotId.camera1 to SlotCalculatorSnapshot(
+                    shutterIndex = 0,
+                    ndIndex = 5,
+                    selectedFilmId = null,
+                    selectedProfileId = null,
+                    ndStops = 12.4,
+                ),
+            ),
+        )
+        val c = CalculatorController(films = films, initialSession = session)
+        assertEquals(ladderIndexOf(5.0), c.state.value.ndIndex)
     }
 
     @Test

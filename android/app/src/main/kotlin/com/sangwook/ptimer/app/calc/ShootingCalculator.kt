@@ -26,11 +26,11 @@ class ShootingCalculator(
 ) {
     private val ladder = ExposureScale.oneThirdStop.shutterSteps
 
-    fun result(shutterIndex: Int, ndStops: Int, profile: ReciprocityProfile?): ShootingResult {
+    fun result(shutterIndex: Int, ndStops: Double, profile: ReciprocityProfile?): ShootingResult {
         val base = ladder[shutterIndex.coerceIn(ladder.indices)].seconds
         val adjusted = exposure.calculate(
             baseShutterSeconds = base,
-            ndStep = NDStep(ndStops.toDouble()),
+            ndStep = NDStep(ndStops),
             scaleMode = ExposureScaleMode.ONE_THIRD_STOP,
         )
 

@@ -9,8 +9,9 @@ import kotlin.math.pow
 /**
  * Granularity of one increment along an exposure scale. `oneThirdStop` is a
  * first-class step (the shipping product runs on the one-third-stop shutter
- * ladder); the ND ladder stays whole-stop in every shipping mode. `fullStop`
- * is retained as a reserved scale for tests and a future Settings preference.
+ * ladder); the ND ladder is whole stops plus three commercial fractional
+ * presets in every shipping mode. `fullStop` is retained as a reserved scale
+ * for tests and a future Settings preference.
  *
  * Port of iOS `ExposureScaleMode` (PTimerCore). Behavior parity.
  */
@@ -30,9 +31,10 @@ enum class ExposureScaleMode {
 data class ShutterStep(val seconds: Double)
 
 /**
- * One ND-filter entry, expressed in stops. Fractional values are
- * representable as reserved domain infrastructure; the shipping ND picker
- * enumerates whole stops only. `wholeStops` is non-null only on a whole-stop
+ * One ND-filter entry, expressed in stops. The shipping ND picker enumerates
+ * whole stops plus the three commercial fractional presets (PTIMER-209); the
+ * fractional-capable type also stays reserved infrastructure for a future
+ * custom / variable-ND workflow. `wholeStops` is non-null only on a whole-stop
  * boundary.
  */
 data class NDStep(val stops: Double) {
@@ -42,6 +44,15 @@ data class NDStep(val stops: Double) {
 
     val wholeStops: Int?
         get() = if (isWholeStop) stops.swiftRounded().toInt() else null
+
+    /**
+     * Whether the step lies on the one-third-stop grid (0, 1/3, 2/3, 1, …).
+     * Whole stops are also third-stops. Distinguishes the reserved third-stop
+     * path from the PTIMER-209 commercial ND presets (6.6, 7.6, 16.6), which
+     * are neither whole nor third-stop.
+     */
+    val isThirdStop: Boolean
+        get() = abs(stops * 3 - (stops * 3).swiftRounded()) <= ExposureCalculator.STABILITY_EPSILON
 
     /** Count of one-third-stop increments this step represents. */
     val thirdStopCount: Int
@@ -66,18 +77,43 @@ data class ExposureScale(
         /** Maximum whole ND stops the calculator supports. */
         const val MAXIMUM_WHOLE_ND_STOPS: Int = 30
 
-        /** Default full-stop scale; ND ladder spans 0…30 stops. */
+        /**
+         * App-configured commercial fixed-ND presets: the one-decimal stop
+         * values chosen to represent products that would lose materially if
+         * rounded to a whole stop (PTIMER-209). These are the app's canonical
+         * values, not the exact log2 of the marketed factor (`ND100` is `6.6`
+         * here, not `log2(100) ≈ 6.644`). The presentation layer maps each to
+         * its marketed label: `6.6 → ND100 / OD 2.0`, `7.6 → ND200 / OD 2.3`,
+         * `16.6 → ND100k / OD 5.0`. These are the only non-integer values the
+         * shipping ND picker exposes, and the only off-grid values eligible
+         * for commercial labels and exact persistence. Parity with iOS
+         * `ExposureScale.commercialFractionalNDStops`.
+         */
+        val commercialFractionalNDStops: List<Double> = listOf(6.6, 7.6, 16.6)
+
+        /**
+         * The shipping ND ladder: whole stops `0…MAXIMUM_WHOLE_ND_STOPS` plus
+         * the commercial fractional presets, merged in numeric order so the
+         * wheel reads `… 6, 6.6, 7, 7.6, 8, … 16, 16.6, 17 …`. Shared by both
+         * scales so the ND ladder stays identical across modes.
+         */
+        val shippingNDLadder: List<NDStep> =
+            ((0..MAXIMUM_WHOLE_ND_STOPS).map { it.toDouble() } + commercialFractionalNDStops)
+                .sorted()
+                .map { NDStep(it) }
+
+        /** Default full-stop scale; shares the shipping ND ladder. */
         val fullStop: ExposureScale = ExposureScale(
             mode = ExposureScaleMode.FULL_STOP,
             shutterSteps = ExposureCalculator.FULL_STOP_SHUTTER_SPEEDS.map { ShutterStep(it) },
-            ndSteps = (0..MAXIMUM_WHOLE_ND_STOPS).map { NDStep(it.toDouble()) },
+            ndSteps = shippingNDLadder,
         )
 
-        /** Densified shutter ladder (55 entries) paired with whole-stop ND. */
+        /** Densified shutter ladder (55 entries) paired with the shared ND ladder. */
         val oneThirdStop: ExposureScale = ExposureScale(
             mode = ExposureScaleMode.ONE_THIRD_STOP,
             shutterSteps = oneThirdStopShutterSteps(ExposureCalculator.FULL_STOP_SHUTTER_SPEEDS),
-            ndSteps = (0..MAXIMUM_WHOLE_ND_STOPS).map { NDStep(it.toDouble()) },
+            ndSteps = shippingNDLadder,
         )
 
         /** The shipping calculator scale. */
@@ -85,6 +121,19 @@ data class ExposureScale(
 
         /** Canonical [NDStep] for a whole-stop value. */
         fun ndStep(forWholeStops: Int): NDStep = NDStep(forWholeStops.toDouble())
+
+        /**
+         * The canonical commercial preset stop value matching [matching] within
+         * the stability epsilon, or `null` when it is not one of the supported
+         * presets. Keeps the fixed product set a domain invariant: exact
+         * persistence and commercial notation labels apply only to these values,
+         * and a near-match is normalized to the canonical value rather than kept
+         * as a drifting [Double]. Parity with iOS `commercialNDPresetStop`.
+         */
+        fun commercialNDPresetStop(matching: Double): Double? =
+            commercialFractionalNDStops.firstOrNull {
+                abs(it - matching) <= ExposureCalculator.STABILITY_EPSILON
+            }
 
         /** Returns the canonical scale for a given mode. */
         fun scale(mode: ExposureScaleMode): ExposureScale = when (mode) {

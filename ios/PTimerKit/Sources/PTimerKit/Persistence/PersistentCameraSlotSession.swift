@@ -56,10 +56,19 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     /// Whole-stop ND value, kept for byte-for-byte parity with the
     /// legacy `PersistentCalculatorContextSnapshot.ndStop`.
     public let ndStop: Int?
-    /// Count of one-third-stop increments for a fractional ND value.
-    /// Mirrors the legacy `ndStopThirds` field so a fractional snapshot
-    /// survives a relaunch without truncation.
+    /// Count of one-third-stop increments for a reserved third-stop ND
+    /// value. Mirrors the legacy `ndStopThirds` field so a third-stop
+    /// snapshot survives a relaunch without truncation. (Commercial
+    /// presets use `ndStopsExact` instead.)
     public let ndStopThirds: Int?
+    /// Exact ND strength in stops for a supported commercial preset
+    /// (PTIMER-209: 6.6, 7.6, 16.6) — values that are neither whole nor
+    /// on the third-stop grid. Additive Optional: whole-stop and
+    /// third-stop snapshots leave it `nil`, so a pre-PTIMER-209 record
+    /// stays backward-compatible and simply omits this key. Preferred by
+    /// `restoredNDStep` (when it matches a preset) so 6.6 is not
+    /// truncated to 6 2/3.
+    public let ndStopsExact: Double?
     /// Persisted exposure-scale mode `rawValue`. Optional so legacy
     /// snapshots default to the shipping `.oneThirdStop` scale.
     public let exposureScaleMode: String?
@@ -85,6 +94,7 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         baseShutterSeconds: Double?,
         ndStop: Int?,
         ndStopThirds: Int? = nil,
+        ndStopsExact: Double? = nil,
         exposureScaleMode: String? = nil,
         customDisplayName: String? = nil,
         targetShutterSeconds: TimeInterval? = nil
@@ -95,6 +105,7 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         self.baseShutterSeconds = baseShutterSeconds
         self.ndStop = ndStop
         self.ndStopThirds = ndStopThirds
+        self.ndStopsExact = ndStopsExact
         self.exposureScaleMode = exposureScaleMode
         self.customDisplayName = customDisplayName
         self.targetShutterSeconds = targetShutterSeconds
@@ -102,9 +113,17 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
 }
 
 extension PersistentCameraSlotCalculatorSnapshot {
-    /// Reconstructs the persisted ND value as an `NDStep`, preferring
-    /// the fractional-safe `ndStopThirds` field when present.
+    /// Reconstructs the persisted ND value as an `NDStep`. Prefers the
+    /// exact-stops field, but only when it matches a supported
+    /// commercial preset (PTIMER-209) — an unsupported value is ignored
+    /// and falls through to the fractional-safe `ndStopThirds`, then the
+    /// legacy whole-stop `ndStop`. A near-match is normalized to the
+    /// canonical preset value rather than restored as a drifting double.
     public var restoredNDStep: NDStep? {
+        if let exact = ndStopsExact,
+           let canonical = ExposureScale.commercialNDPresetStop(matching: exact) {
+            return NDStep(stops: canonical)
+        }
         if let thirds = ndStopThirds {
             return NDStep.fromThirdStopCount(thirds)
         }

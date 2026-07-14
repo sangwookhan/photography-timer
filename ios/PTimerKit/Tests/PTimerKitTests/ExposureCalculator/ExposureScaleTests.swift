@@ -11,9 +11,10 @@ import PTimerCore
 ///    tests and the future Settings preference) reproduces the
 ///    legacy ladders byte-for-byte.
 /// 2. `.oneThirdStop` (the shipping calculator scale) pairs the
-///    1/3-stop densified shutter ladder with the **whole-stop** ND
-///    ladder; one-third-stop applies to the Base Shutter only, so
-///    the shipping ND picker enumerates `0…30` whole stops in
+///    1/3-stop densified shutter ladder with the shared ND ladder;
+///    one-third-stop applies to the Base Shutter only, so the
+///    shipping ND picker enumerates `0…30` whole stops plus the three
+///    commercial fractional presets (6.6/7.6/16.6, PTIMER-209) in
 ///    every shipping mode.
 /// 3. `NDStep` represents fractional-stop values losslessly as
 ///    reserved domain infrastructure so a future custom /
@@ -44,12 +45,14 @@ final class ExposureScaleTests: XCTestCase {
         }
     }
 
-    func testFullStopNDLadderSpansZeroThroughThirty() {
+    func testFullStopNDLadderSpansZeroThroughThirtyPlusPresets() {
+        // The full-stop scale shares the shipping ND ladder, so it too
+        // carries the PTIMER-209 commercial fractional presets.
         let stops = ExposureScale.fullStop.ndSteps.map(\.stops)
-        XCTAssertEqual(stops, (0...30).map { Double($0) })
-        for step in ExposureScale.fullStop.ndSteps {
-            XCTAssertTrue(step.isWholeStop)
-            XCTAssertEqual(step.wholeStops, Int(step.stops))
+        XCTAssertEqual(stops, Self.expectedShippingNDLadder)
+        // Every whole stop still reports itself as a whole-stop entry.
+        for step in ExposureScale.fullStop.ndSteps where step.isWholeStop {
+            XCTAssertEqual(step.wholeStops, Int(step.stops.rounded()))
         }
     }
 
@@ -104,32 +107,43 @@ final class ExposureScaleTests: XCTestCase {
         XCTAssertEqual(ladder[baseIndex + 2], (1.0 / 30.0) * twoThirdsRatio, accuracy: 1e-9)
     }
 
-    func testOneThirdStopNDLadderIsWholeStopOnly() {
-        // Per docs/specs/Calculator.md §2.2: in the shipping product
-        // one-third-stop applies to the **shutter** ladder only; the
-        // ND picker stays whole-stop because real-world fixed ND
-        // filters are sold in whole-stop strengths. Fractional ND
-        // domain primitives (`NDStep.thirdStopCount`,
-        // `fromThirdStopCount`) are retained as reserved
-        // infrastructure but shall never appear as shipping ND
-        // options.
+    func testOneThirdStopNDLadderInsertsCommercialPresetsInOrder() {
+        // Per docs/specs/Calculator.md §2.2 (PTIMER-209): the shipping
+        // ND ladder is whole stops 0…30 plus exactly three commercial
+        // fractional presets (6.6 = ND100, 7.6 = ND200, 16.6 = ND100k),
+        // merged in numeric order. One-third-stop still applies to the
+        // shutter ladder only; the ND ladder is not densified to 1/3
+        // steps.
         let ndSteps = ExposureScale.oneThirdStop.ndSteps
 
-        XCTAssertEqual(ndSteps.count, 31)
-        XCTAssertEqual(ndSteps.map(\.stops), (0...30).map { Double($0) })
-        XCTAssertTrue(
-            ndSteps.allSatisfy { $0.isWholeStop },
-            "Shipping 1/3-stop scale ND ladder must not enumerate fractional stops"
-        )
+        XCTAssertEqual(ndSteps.count, 34)
+        XCTAssertEqual(ndSteps.map(\.stops), Self.expectedShippingNDLadder)
 
-        // The shipping ND ladder is identical to the reserved
-        // full-stop scale's ND ladder so a future Settings flip
-        // between scales does not reshuffle the ND wheel.
+        // The three presets appear exactly once, and each sits between
+        // its integer neighbours (…6, 6.6, 7… and …16, 16.6, 17…).
+        let stops = ndSteps.map(\.stops)
+        for preset in ExposureScale.commercialFractionalNDStops {
+            let matches = stops.filter { abs($0 - preset) <= ExposureCalculator.stabilityEpsilon }
+            XCTAssertEqual(matches.count, 1, "Preset \(preset) must appear exactly once")
+        }
+        XCTAssertEqual(Array(stops[6...9]), [6.0, 6.6, 7.0, 7.6])
+        XCTAssertEqual(Array(stops[18...20]), [16.0, 16.6, 17.0])
+
+        // Both scales share the ND ladder so a future Settings flip
+        // between scales never reshuffles the ND wheel.
         XCTAssertEqual(
             ndSteps.map(\.stops),
             ExposureScale.fullStop.ndSteps.map(\.stops)
         )
     }
+
+    /// The expected shipping ND ladder in numeric order: whole stops
+    /// 0…30 with the three PTIMER-209 commercial fractional presets
+    /// spliced in at their sorted positions.
+    static let expectedShippingNDLadder: [Double] = [
+        0, 1, 2, 3, 4, 5, 6, 6.6, 7, 7.6, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+        16.6, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+    ]
 
     // MARK: - NDStep fractional representation
 

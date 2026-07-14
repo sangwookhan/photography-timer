@@ -75,6 +75,36 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(camera4Page.ndStep.stops, 0, accuracy: 1e-9)
     }
 
+    /// PTIMER-209: a commercial fractional preset selected on the ND
+    /// wheel survives a relaunch as its exact stop value (16.6, not
+    /// 16 / 17 / the third-stop-rounded 16 2/3). The persisted entry
+    /// carries the exact value in `ndStopsExact`, leaving the
+    /// third-stop and whole-stop fields empty.
+    func testCommercialFractionalPresetSurvivesRelaunchExactly() throws {
+        let sessionStore = InMemorySessionStore()
+        let viewModel = makeViewModel(sessionStore: sessionStore)
+
+        viewModel.ndStep = NDStep(stops: 16.6)
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.ndStep = NDStep(stops: 6.6)
+        viewModel.selectCameraSlot(.camera1)
+
+        // On-disk shape: the exact field is populated; the whole and
+        // third-stop fields stay nil so pre-PTIMER-209 records are
+        // untouched.
+        let snapshot = try XCTUnwrap(sessionStore.loadSnapshot())
+        let camera1Entry = try XCTUnwrap(snapshot.slots.first { $0.slotIDRaw == "camera1" })
+        XCTAssertEqual(try XCTUnwrap(camera1Entry.ndStopsExact), 16.6, accuracy: 1e-9)
+        XCTAssertNil(camera1Entry.ndStop)
+        XCTAssertNil(camera1Entry.ndStopThirds)
+
+        let restored = makeViewModel(sessionStore: sessionStore)
+        XCTAssertEqual(restored.ndStep.stops, 16.6, accuracy: 1e-9)
+        XCTAssertEqual(
+            restored.cameraSlotPageState(for: .camera2).ndStep.stops, 6.6, accuracy: 1e-9
+        )
+    }
+
     /// Two-relaunch regression. The bug being fenced: on first
     /// relaunch, the restore path used to apply the active
     /// snapshot before loading the inactive map, and the trailing

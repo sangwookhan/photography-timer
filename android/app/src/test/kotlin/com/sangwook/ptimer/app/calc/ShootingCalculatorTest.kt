@@ -21,7 +21,7 @@ class ShootingCalculatorTest {
     @Test
     fun digitalYieldsAdjustedShutterAndEnablesStart() {
         // 1 s + 0 ND, no film → adjusted = 1 s, startable.
-        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 0, profile = null)
+        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 0.0, profile = null)
         assertTrue(r.isDigital)
         assertEquals(1.0, r.adjustedShutterSeconds, 1e-9)
         assertTrue(r.startEnabled)
@@ -32,7 +32,7 @@ class ShootingCalculatorTest {
     @Test
     fun ndExtendsTheAdjustedShutter() {
         // 1 s + 6 ND (one-third-stop scale, no snap) → 64 s.
-        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 6, profile = null)
+        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 6.0, profile = null)
         assertEquals(64.0, r.adjustedShutterSeconds, 1e-6)
     }
 
@@ -40,7 +40,7 @@ class ShootingCalculatorTest {
     fun formulaFilmYieldsCorrectedExposureAndEnablesStart() {
         val panF = films.first { it.id == "ilford-pan-f-plus-50" }.profiles.first()
         // 6 ND → 64 s metered → corrected (formula) > 64 s, quantified → startable.
-        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 6, profile = panF)
+        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 6.0, profile = panF)
         assertFalse(r.isDigital)
         assertNotNull(r.correctedSeconds)
         assertTrue(r.correctedSeconds!! > 64.0)
@@ -57,7 +57,7 @@ class ShootingCalculatorTest {
                 it.kind == com.sangwook.ptimer.core.reciprocity.ReciprocityRuleKind.limitedGuidance
             }
         }.profiles.first()
-        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 8, profile = limited)
+        val r = calc.result(shutterIndex = oneSecIndex, ndStops = 8.0, profile = limited)
         assertFalse(r.startEnabled)
         assertNull(r.startDurationSeconds)
         assertNotNull(r.hint)

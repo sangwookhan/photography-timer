@@ -8,7 +8,8 @@ import Foundation
 /// formatting choice — the **shutter** ladder changes with the
 /// selected mode (the shipping product runs on the one-third-stop
 /// shutter ladder; per `docs/specs/Calculator.md` §1.4 the ND ladder
-/// stays whole-stop in every shipping mode).
+/// is whole stops plus the three commercial fractional presets in
+/// every shipping mode).
 ///
 /// `.fullStop` is retained as a reserved scale for tests and a future
 /// Settings preference; the shipping calculator does not surface a
@@ -44,13 +45,13 @@ public struct ShutterStep: Equatable, Hashable, Sendable {
 }
 
 /// One ND-filter entry on an exposure scale's ND ladder, expressed
-/// in stops. Fractional values are representable on the type as
-/// **reserved domain infrastructure** so a future custom /
+/// in stops. The shipping ND picker enumerates whole stops plus the
+/// three fixed commercial fractional presets (per
+/// `docs/specs/Calculator.md` §2.2); the fractional-capable type also
+/// remains **reserved domain infrastructure** so a future custom /
 /// variable-ND workflow can flow through the same calculation and
-/// persistence path; the shipping ND picker enumerates whole stops
-/// only (per `docs/specs/Calculator.md` §2.2). `wholeStops` is
-/// non-nil only when the step lies on a whole-stop boundary, which
-/// is what the legacy integer calc API
+/// persistence path. `wholeStops` is non-nil only when the step lies
+/// on a whole-stop boundary, which is what the legacy integer calc API
 /// (`ExposureCalculator.calculate(baseShutterSeconds:stop: Int)`)
 /// consumes.
 public struct NDStep: Equatable, Hashable, Sendable {
@@ -66,6 +67,15 @@ public struct NDStep: Equatable, Hashable, Sendable {
 
     public var wholeStops: Int? {
         isWholeStop ? Int(stops.rounded()) : nil
+    }
+
+    /// Whether the step lies on the one-third-stop grid (0, 1/3, 2/3,
+    /// 1, …). Whole stops are also third-stops. Distinguishes the
+    /// reserved third-stop fractional path from the PTIMER-209
+    /// commercial ND presets (6.6, 7.6, 16.6), which are neither whole
+    /// nor third-stop and therefore need exact `Double` persistence.
+    public var isThirdStop: Bool {
+        abs(stops * 3 - (stops * 3).rounded()) <= ExposureCalculator.stabilityEpsilon
     }
 }
 
@@ -93,33 +103,32 @@ extension ExposureScale {
     /// Default scale used by the shipping calculator. Backed by
     /// `ExposureCalculator.fullStopShutterSpeeds` so every change to
     /// the canonical full-stop ladder shows up here without
-    /// duplication, and an integer ND ladder spanning 0…30 stops to
-    /// match the picker range that's been in production since
-    /// PTIMER-19.
+    /// duplication, and the shared `shippingNDLadder` (whole stops
+    /// 0…30 plus the three commercial fractional presets, PTIMER-209).
     public static let fullStop: ExposureScale = ExposureScale(
         mode: .fullStop,
         shutterSteps: ExposureCalculator.fullStopShutterSpeeds.map(ShutterStep.init(seconds:)),
-        ndSteps: (0...maximumWholeNDStops).map { NDStep(stops: Double($0)) }
+        ndSteps: shippingNDLadder
     )
 
-    /// Densified shutter ladder paired with the whole-stop ND ladder —
-    /// the shipping calculator scale. Shutter is the geometric-mean
-    /// densified ladder (55 entries spanning 1/8000…30s); ND stays on
-    /// the integer `0…maximumWholeNDStops` ladder because the shipping
-    /// product treats fractional ND as out-of-scope (real-world fixed
-    /// ND filters ship in whole-stop strengths). The fractional-aware
-    /// `NDStep` type is retained as a reserved domain primitive (e.g.
-    /// `thirdStopCount` for persistence round-trip) so a future
-    /// custom/variable-ND workflow can route through the same calc
-    /// path without redesigning the model layer; that capability
-    /// shall not surface in the shipping ND picker.
+    /// Densified shutter ladder paired with the shared ND ladder — the
+    /// shipping calculator scale. Shutter is the geometric-mean
+    /// densified ladder (55 entries spanning 1/8000…30s); ND is
+    /// `shippingNDLadder` (whole stops `0…maximumWholeNDStops` plus the
+    /// three commercial fractional presets) because real-world fixed ND
+    /// filters ship in whole-stop strengths apart from those products.
+    /// The fractional-aware `NDStep` type additionally stays a reserved
+    /// domain primitive (e.g. `thirdStopCount` for third-stop
+    /// persistence) so a future custom/variable-ND workflow can route
+    /// through the same calc path; arbitrary fractional ND beyond the
+    /// three presets shall not surface in the shipping ND picker.
     /// (Per Calculator spec §2.2, §2.3.)
     public static let oneThirdStop: ExposureScale = ExposureScale(
         mode: .oneThirdStop,
         shutterSteps: oneThirdStopShutterSteps(
             fromFullStops: ExposureCalculator.fullStopShutterSpeeds
         ),
-        ndSteps: (0...maximumWholeNDStops).map { NDStep(stops: Double($0)) }
+        ndSteps: shippingNDLadder
     )
 
     /// The shipping calculator scale. Routes through the one-third-stop
@@ -132,17 +141,53 @@ extension ExposureScale {
     /// single constant so the full-stop scale and the one-third-stop
     /// scale stay in lockstep instead of repeating `0...30`.
     public static let maximumWholeNDStops: Int = 30
+
+    /// App-configured commercial fixed-ND presets: the one-decimal stop
+    /// values chosen to represent products that would lose materially if
+    /// rounded to a whole stop (PTIMER-209). These are the app's
+    /// canonical values, not the exact log₂ of the marketed factor
+    /// (`ND100` is `6.6` here, not `log2(100) ≈ 6.644`). Stops stay the
+    /// canonical unit; the presentation layer maps each to its marketed
+    /// label: `6.6 → ND100 / OD 2.0`, `7.6 → ND200 / OD 2.3`,
+    /// `16.6 → ND100k / OD 5.0`. These are the only non-integer values
+    /// the shipping ND picker exposes, and the only off-grid values
+    /// eligible for commercial labels and exact persistence; they are
+    /// permanent Stops-wheel entries, independent of the active ND
+    /// notation. (The `NDStep` type still supports reserved third-stop
+    /// values for a future custom / variable-ND workflow.)
+    public static let commercialFractionalNDStops: [Double] = [6.6, 7.6, 16.6]
+
+    /// The canonical commercial preset stop value matching `stops`
+    /// within the stability epsilon, or `nil` when `stops` is not one of
+    /// the supported presets. Callers use this to keep the fixed product
+    /// set a domain invariant: exact persistence and commercial notation
+    /// labels apply only to these values, and a near-match is normalized
+    /// to the canonical value rather than kept as a drifting `Double`.
+    public static func commercialNDPresetStop(matching stops: Double) -> Double? {
+        commercialFractionalNDStops.first {
+            abs($0 - stops) <= ExposureCalculator.stabilityEpsilon
+        }
+    }
+
+    /// The shipping ND ladder: whole stops `0…maximumWholeNDStops` plus
+    /// the commercial fractional presets, merged in numeric order so
+    /// the wheel reads `… 6, 6.6, 7, 7.6, 8, … 16, 16.6, 17 …`. Shared
+    /// by both scales so the ND ladder stays identical across modes.
+    static let shippingNDLadder: [NDStep] =
+        ((0...maximumWholeNDStops).map(Double.init) + commercialFractionalNDStops)
+            .sorted()
+            .map(NDStep.init(stops:))
 }
 
 extension ExposureScale {
     /// Lookup helper used by the calc layer. For whole-stop ND
     /// values, returns the canonical `NDStep` from the ladder; for
     /// fractional values the result is also a valid `NDStep` even
-    /// when the scale itself does not enumerate it (the shipping
-    /// scale enumerates whole stops only). Kept here so the
-    /// fractional-aware calc routing has a single conversion site
-    /// when the reserved fractional path is exercised by tests or
-    /// a future workflow.
+    /// when the scale itself does not enumerate it (the shipping scale
+    /// enumerates whole stops plus the three commercial presets only).
+    /// Kept here so the fractional-aware calc routing has a single
+    /// conversion site when the reserved fractional path is exercised
+    /// by tests or a future workflow.
     public static func ndStep(forWholeStops stop: Int) -> NDStep {
         NDStep(stops: Double(stop))
     }

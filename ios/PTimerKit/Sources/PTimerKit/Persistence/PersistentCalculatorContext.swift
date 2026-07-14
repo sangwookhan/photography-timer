@@ -31,8 +31,9 @@ public struct PersistentCalculatorContextSnapshot: Codable, Equatable {
     public let baseShutterSeconds: Double?
     /// Whole-stop ND value, kept for byte-for-byte backward compat with
     /// PTIMER-79 snapshots. Populated only when the active ND value sits
-    /// on a whole-stop boundary; fractional steps land in
-    /// `ndStopThirds` instead.
+    /// on a whole-stop boundary. Fractional values split by kind:
+    /// third-stop steps land in `ndStopThirds`, and the PTIMER-209
+    /// commercial presets land in `ndStopsExact`.
     public let ndStop: Int?
     /// Count of one-third-stop increments for the persisted ND value.
     /// PTIMER-80 introduces this field so a `1/3` or `2/3` ND step
@@ -40,6 +41,13 @@ public struct PersistentCalculatorContextSnapshot: Codable, Equatable {
     /// integer. Optional so existing PTIMER-79 snapshots decode
     /// unchanged.
     public let ndStopThirds: Int?
+    /// Exact ND strength in stops for a value that is neither whole nor
+    /// on the third-stop grid — the PTIMER-209 commercial presets
+    /// (6.6, 7.6, 16.6). Additive Optional: pre-PTIMER-209 snapshots
+    /// leave it `nil` (field omitted) and decode unchanged. Preferred
+    /// by `restoredNDStep` so a preset like 6.6 is not truncated to the
+    /// nearest third-stop.
+    public let ndStopsExact: Double?
     /// Persisted exposure-scale mode. Stored as the raw
     /// `ExposureScaleMode` value so the field survives later scale
     /// additions. Optional so legacy snapshots that predate the
@@ -64,6 +72,7 @@ public struct PersistentCalculatorContextSnapshot: Codable, Equatable {
         baseShutterSeconds: Double?,
         ndStop: Int?,
         ndStopThirds: Int? = nil,
+        ndStopsExact: Double? = nil,
         exposureScaleMode: String? = nil,
         activeCameraSlotIDRaw: String? = nil
     ) {
@@ -71,17 +80,24 @@ public struct PersistentCalculatorContextSnapshot: Codable, Equatable {
         self.baseShutterSeconds = baseShutterSeconds
         self.ndStop = ndStop
         self.ndStopThirds = ndStopThirds
+        self.ndStopsExact = ndStopsExact
         self.exposureScaleMode = exposureScaleMode
         self.activeCameraSlotIDRaw = activeCameraSlotIDRaw
     }
 }
 
 extension PersistentCalculatorContextSnapshot {
-    /// Reconstructs the persisted ND value as an `NDStep`, preferring
-    /// the fractional-safe `ndStopThirds` field when present so a
-    /// PTIMER-80 fractional snapshot decodes losslessly. Falls back to
-    /// the legacy `ndStop` integer for PTIMER-79 snapshots.
+    /// Reconstructs the persisted ND value as an `NDStep`. Prefers the
+    /// exact-stops field, but only when it matches a supported
+    /// commercial preset (PTIMER-209); an unsupported value is ignored
+    /// and falls through to the fractional-safe `ndStopThirds`
+    /// (PTIMER-80), then the legacy `ndStop` integer (PTIMER-79). A
+    /// near-match is normalized to the canonical preset value.
     public var restoredNDStep: NDStep? {
+        if let exact = ndStopsExact,
+           let canonical = ExposureScale.commercialNDPresetStop(matching: exact) {
+            return NDStep(stops: canonical)
+        }
         if let thirds = ndStopThirds {
             return NDStep.fromThirdStopCount(thirds)
         }

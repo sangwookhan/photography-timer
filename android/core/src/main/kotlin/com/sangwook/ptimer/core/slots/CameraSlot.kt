@@ -3,6 +3,7 @@
 
 package com.sangwook.ptimer.core.slots
 
+import com.sangwook.ptimer.core.exposure.ExposureScale
 import kotlinx.serialization.Serializable
 
 /**
@@ -56,18 +57,45 @@ data class CameraSlotIdentity(
  * Per-slot snapshot of the calculator working state. Every slot keeps its
  * own snapshot in the session so a switch preserves the slot's exposure
  * inputs and film selection without resetting the active calculator. Stored
- * in controller-native terms (wheel indices + film / profile ids) rather than
- * re-deriving seconds. (iOS: CameraSlotCalculatorSnapshot.)
+ * in controller-native terms rather than re-deriving seconds: [shutterIndex]
+ * is a wheel position, while ND is kept as the canonical stop value —
+ * [ndIndex] carries the whole-stop value (the legacy field / fallback) and
+ * [ndStops] the exact value for a commercial preset (PTIMER-209). Film /
+ * profile are ids. (iOS: CameraSlotCalculatorSnapshot.)
  */
 @Serializable
 data class SlotCalculatorSnapshot(
     val shutterIndex: Int,
+    /**
+     * Whole-stop ND value (0…30). Kept as the legacy field and the fallback
+     * when [ndStops] is absent, so pre-PTIMER-209 payloads decode unchanged.
+     * For a commercial preset this holds the nearest whole stop; the exact
+     * value lives in [ndStops].
+     */
     val ndIndex: Int,
     val selectedFilmId: String?,
     val selectedProfileId: String?,
     /** Per-slot Target Shutter duration in seconds; `null` when unset. */
     val targetSeconds: Double? = null,
+    /**
+     * Exact ND strength in stops for a supported commercial preset (PTIMER-209:
+     * 6.6, 7.6, 16.6). Additive optional: whole-stop selections leave it null,
+     * so pre-PTIMER-209 payloads stay backward-compatible. Preferred over
+     * [ndIndex] by [canonicalNDStops] when it matches a preset, so a value like
+     * 6.6 is not truncated to a whole stop on restore.
+     */
+    val ndStops: Double? = null,
 )
+
+/**
+ * Canonical ND strength in stops for this snapshot: the exact preset value
+ * when [SlotCalculatorSnapshot.ndStops] matches a supported commercial preset,
+ * otherwise the legacy whole-stop [SlotCalculatorSnapshot.ndIndex]. An
+ * unsupported [ndStops] is ignored so the fixed product set stays a domain
+ * invariant. Mirrors iOS `restoredNDStep` precedence.
+ */
+fun SlotCalculatorSnapshot.canonicalNDStops(): Double =
+    ndStops?.let { ExposureScale.commercialNDPresetStop(it) } ?: ndIndex.toDouble()
 
 /**
  * Owns the camera-slot session state: which slot is active and a stable

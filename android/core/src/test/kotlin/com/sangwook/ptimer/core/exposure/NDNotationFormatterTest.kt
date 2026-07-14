@@ -60,4 +60,45 @@ class NDNotationFormatterTest {
         assertEquals("ND", nd.unit)
         assertEquals("ND512", nd.inline)
     }
+
+    // --- PTIMER-209 commercial fractional presets ---
+
+    /**
+     * The three permanent Stops-wheel presets map to their marketed labels in
+     * every notation. Stops render as a decimal (not a third-stop mixed
+     * fraction); OD falls out of stops × 0.3; the factor uses the commercial
+     * label, not 2^stops. Parity with iOS.
+     */
+    @Test fun commercialPresetsRenderInEveryNotation() {
+        data class Case(val stops: Double, val stopsLabel: String, val od: String, val nd: String)
+        val cases = listOf(
+            Case(6.6, "6.6", "OD 2.0", "ND100"),
+            Case(7.6, "7.6", "OD 2.3", "ND200"),
+            Case(16.6, "16.6", "OD 5.0", "ND100k"),
+        )
+        for (c in cases) {
+            assertEquals(c.stopsLabel, NDNotationFormatter.display(c.stops, NDNotationMode.STOPS).value)
+            assertEquals("${c.stopsLabel} stops", inline(c.stops, NDNotationMode.STOPS))
+            assertEquals(c.od, inline(c.stops, NDNotationMode.OPTICAL_DENSITY))
+            assertEquals(c.nd, inline(c.stops, NDNotationMode.FILTER_FACTOR))
+        }
+    }
+
+    /**
+     * Drift guard for the split product definition (stop values live in
+     * ExposureScale; factor labels live in the formatter). Every domain preset
+     * must resolve to a commercial factor label — an override, not the raw
+     * 2^stops rounding — and the labels must be distinct.
+     */
+    @Test fun everyDomainPresetHasADistinctOverriddenFactorLabel() {
+        val labels = ExposureScale.commercialFractionalNDStops.map { stops ->
+            val label = NDNotationFormatter.display(stops, NDNotationMode.FILTER_FACTOR).value
+            assertNotEquals(
+                "preset $stops must use a commercial label, not 2^stops",
+                Math.pow(2.0, stops).let { Math.round(it).toString() }, label,
+            )
+            label
+        }
+        assertEquals(ExposureScale.commercialFractionalNDStops.size, labels.toSet().size)
+    }
 }

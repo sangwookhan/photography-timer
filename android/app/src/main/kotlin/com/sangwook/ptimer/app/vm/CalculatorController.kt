@@ -11,6 +11,7 @@ import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.NDNotationFormatter
 import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.core.exposure.NDStep
 import com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModels
 import com.sangwook.ptimer.core.reciprocity.ReciprocityAuthority
 import com.sangwook.ptimer.core.reciprocity.calculatedCorrectedSeconds
@@ -23,6 +24,9 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotSession
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
+import com.sangwook.ptimer.core.slots.canonicalNDStops
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.core.target.TargetShutterPresenter
 import com.sangwook.ptimer.core.timer.TimerIdentity
@@ -107,7 +111,13 @@ class CalculatorController(
     private var films: List<FilmIdentity> = films
 
     private val shutterLabels = ExposureScale.oneThirdStopShutterCameraLabels
-    private val ndStopRange = 0..ExposureScale.MAXIMUM_WHOLE_ND_STOPS
+
+    /**
+     * Ordered ND stop values shown on the wheel: whole stops 0…30 plus the
+     * three commercial presets (PTIMER-209), in numeric order. The wheel index
+     * is a position into this list, decoupled from the stop value it carries.
+     */
+    private val ndStopValues: List<Double> = ExposureScale.shippingNDLadder.map { it.stops }
     private val defaultShutterIndex = shutterLabels.indexOf("1/30").coerceAtLeast(0)
 
     // App-global ND notation display mode (PTIMER-187); display-only, never feeds calc.
@@ -115,7 +125,14 @@ class CalculatorController(
 
     /** ND wheel labels for the current notation mode (same length/order as the stop ladder). */
     private fun ndLabels(): List<String> =
-        ndStopRange.map { NDNotationFormatter.display(it.toDouble(), ndNotationMode).value }
+        ndStopValues.map { NDNotationFormatter.display(it, ndNotationMode).value }
+
+    /** Canonical ND stops for a snapshot (preset-exact or legacy whole stop). */
+    private fun ndStopsOf(snapshot: SlotCalculatorSnapshot): Double = snapshot.canonicalNDStops()
+
+    /** Wheel position for a canonical stop value: the nearest ladder entry. */
+    private fun ndWheelIndex(stops: Double): Int =
+        ndStopValues.indices.minByOrNull { abs(ndStopValues[it] - stops) } ?: 0
 
     private val defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null)
 
@@ -131,7 +148,7 @@ class CalculatorController(
 
     // Read-only views of the active slot's owned state.
     private val shutterIndex: Int get() = session.activeSnapshot.shutterIndex
-    private val ndIndex: Int get() = session.activeSnapshot.ndIndex
+    private val currentNdStops: Double get() = ndStopsOf(session.activeSnapshot)
     private val selectedFilmId: String? get() = session.activeSnapshot.selectedFilmId
     private val selectedProfileId: String? get() = session.activeSnapshot.selectedProfileId
     private val targetSeconds: Double? get() = session.activeSnapshot.targetSeconds
@@ -159,7 +176,17 @@ class CalculatorController(
     }
 
     fun setNdIndex(index: Int) {
-        session.updateActiveSnapshot { it.copy(ndIndex = index.coerceIn(ndStopRange.first, ndStopRange.last)) }
+        // The wheel emits a ladder position; store the canonical stop value it
+        // carries. A whole stop keeps `ndStops` null (legacy shape); a
+        // commercial preset records its exact value in `ndStops` and the
+        // nearest whole in `ndIndex` for legacy/back-compat readers.
+        val stops = ndStopValues[index.coerceIn(ndStopValues.indices)]
+        session.updateActiveSnapshot {
+            it.copy(
+                ndIndex = NDStep(stops).wholeStops ?: stops.roundToInt(),
+                ndStops = ExposureScale.commercialNDPresetStop(stops),
+            )
+        }
         publish()
     }
 
@@ -200,13 +227,13 @@ class CalculatorController(
     /** Starts a timer from the active slot's target duration (no-op when unset). */
     fun startFromTarget() {
         val target = targetSeconds ?: return
-        val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
+        val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         onStart(target, identity(result, "Target Exposure", target, includesAdjusted = true))
     }
 
     /** Starts a timer from the ND-adjusted shutter (the digital / pre-reciprocity value). */
     fun startFromAdjusted() {
-        val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
+        val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         val d = result.adjustedShutterSeconds
         if (d.isFinite() && d > 0) onStart(d, identity(result, "Adjusted Exposure", d, includesAdjusted = false))
     }
@@ -214,7 +241,7 @@ class CalculatorController(
     /** Starts a timer from the reciprocity-corrected exposure, including an
      * out-of-range ("outside guidance") computed value; no-op when truly none. */
     fun startFromCorrected() {
-        val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
+        val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         val d = (result.correctedSeconds ?: result.reciprocity?.calculatedCorrectedSeconds) ?: return
         if (d.isFinite() && d > 0) onStart(d, identity(result, "Corrected Exposure", d, includesAdjusted = true))
     }
@@ -277,7 +304,7 @@ class CalculatorController(
         CustomFilmEditingPresenter.calculationBasis(input)
 
     private fun currentAdjustedSeconds(): Double =
-        calculator.result(shutterIndex, ndIndex, null).adjustedShutterSeconds
+        calculator.result(shutterIndex, currentNdStops, null).adjustedShutterSeconds
 
     fun customFilmDraft(filmId: String) = CustomFilmEditingPresenter.customFilmDraft(films, filmId)
 
@@ -287,7 +314,7 @@ class CalculatorController(
     fun detailsState(): ReciprocityDetailsDisplayState? {
         val film = selectedFilm() ?: return null
         val profile = resolvedProfile() ?: return null
-        val result = calculator.result(shutterIndex, ndIndex, profile)
+        val result = calculator.result(shutterIndex, currentNdStops, profile)
         val recip = result.reciprocity ?: return null
         return ReciprocityDetailsPresenter.make(
             film = film,
@@ -316,7 +343,7 @@ class CalculatorController(
     }
 
     fun start() {
-        val result = calculator.result(shutterIndex, ndIndex, resolvedProfile())
+        val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         val duration = result.startDurationSeconds ?: return
         // Digital/no-film start uses the same shape as Adjusted (the digital
         // result is the ND-adjusted shutter); film starts go through the
@@ -337,12 +364,16 @@ class CalculatorController(
         val film = snapshot.selectedFilmId?.let { id -> films.firstOrNull { it.id == id } }
         return SlotCalculatorSnapshot(
             shutterIndex = snapshot.shutterIndex.coerceIn(shutterLabels.indices),
-            ndIndex = snapshot.ndIndex.coerceIn(ndStopRange.first, ndStopRange.last),
+            ndIndex = snapshot.ndIndex.coerceIn(0, ExposureScale.MAXIMUM_WHOLE_ND_STOPS),
             selectedFilmId = film?.id,
             selectedProfileId = film?.let { f ->
                 snapshot.selectedProfileId?.takeIf { pid -> modelProfiles(f).any { it.id == pid } }
             },
             targetSeconds = snapshot.targetSeconds?.takeIf { it.isFinite() && it > 0 },
+            // Keep the exact ND value only when it is a supported commercial
+            // preset; an unsupported off-grid value is dropped so restore falls
+            // back to the legacy whole-stop field.
+            ndStops = snapshot.ndStops?.let { ExposureScale.commercialNDPresetStop(it) },
         )
     }
 
@@ -388,7 +419,7 @@ class CalculatorController(
             title = "${slot.displayName} · $filmName",
             subtitle = "$source ${exposure.formatExtendedClock(finalSeconds)}",
             slotLabel = slot.id.shortLabel,
-            ndStops = ndIndex.toDouble(),
+            ndStops = currentNdStops,
             baseShutterSeconds = base,
             adjustedShutterSeconds = result.adjustedShutterSeconds,
             basisIncludesAdjusted = includesAdjusted,
@@ -439,14 +470,14 @@ class CalculatorController(
     private fun computeSlot(snapshot: SlotCalculatorSnapshot, slotId: CameraSlotId): CalculatorUiState {
         val film = snapshot.selectedFilmId?.let { id -> films.firstOrNull { it.id == id } }
         val profile = resolvedProfileFor(film, snapshot.selectedProfileId)
-        val result = calculator.result(snapshot.shutterIndex, snapshot.ndIndex, profile)
+        val result = calculator.result(snapshot.shutterIndex, ndStopsOf(snapshot), profile)
         val modelOptions = film?.let { f ->
             val options = modelProfiles(f)
             if (options.size > 1) options.map { ModelOption(it.id, it.selectorLabel ?: it.name) } else emptyList()
         } ?: emptyList()
 
         val canReset = snapshot.shutterIndex != defaultShutterIndex ||
-            snapshot.ndIndex != 0 ||
+            ndStopsOf(snapshot) != 0.0 ||
             film != null ||
             snapshot.targetSeconds != null ||
             slotId in session.currentCustomNames()
@@ -459,7 +490,7 @@ class CalculatorController(
             shutterLabels = shutterLabels,
             shutterIndex = snapshot.shutterIndex,
             ndLabels = ndLabels(),
-            ndIndex = snapshot.ndIndex,
+            ndIndex = ndWheelIndex(ndStopsOf(snapshot)),
             filmOptions = filmOptions(),
             selectedFilmId = snapshot.selectedFilmId,
             selectedFilmName = film?.canonicalStockName ?: "No film",

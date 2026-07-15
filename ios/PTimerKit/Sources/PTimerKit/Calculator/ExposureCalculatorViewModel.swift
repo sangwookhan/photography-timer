@@ -1584,6 +1584,53 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.clearLiveNDStopPreview()
     }
 
+    // MARK: ND filter stack (PTIMER-199)
+
+    /// Individual ND filter wheel values in display order (1–4
+    /// entries). Wheel 0 is the single-filter path; see
+    /// `CalculatorModel.ndFilterSteps`.
+    public var ndFilterSteps: [NDStep] {
+        calculatorModel.ndFilterSteps
+    }
+
+    /// Whether another ND wheel can be added (< 4 wheels). Drives the
+    /// edge Add control's visibility and the menu item's enablement.
+    public var canAddFilterWheel: Bool {
+        calculatorModel.canAddFilterWheel
+    }
+
+    /// Whether a 0-stop wheel can be removed (> 1 wheel and at least
+    /// one wheel at 0 stops). Drives the menu item's enablement.
+    public var canRemoveEmptyFilterWheel: Bool {
+        calculatorModel.canRemoveEmptyFilterWheel
+    }
+
+    /// Appends one 0-stop wheel at the right (no-op at 4 wheels).
+    public func addFilterWheel() {
+        calculatorModel.addFilterWheel()
+        objectWillChange.send()
+    }
+
+    /// Removes the rightmost 0-stop wheel (no-op when unavailable).
+    public func removeEmptyFilterWheel() {
+        calculatorModel.removeEmptyFilterWheel()
+        objectWillChange.send()
+    }
+
+    /// Commits one wheel's value. Wheel 0 routes through the
+    /// published `ndStep` so the existing single-filter side effects
+    /// (live-preview clearing, integer mirror, persistence) are
+    /// preserved; extra wheels write model state directly — their
+    /// summation and persistence arrive with later PTIMER-199 slices.
+    public func setNDFilterStep(_ step: NDStep, at index: Int) {
+        if index == 0 {
+            ndStep = step
+        } else {
+            calculatorModel.setNDFilterStep(step, at: index)
+            objectWillChange.send()
+        }
+    }
+
     /// Picker label (Stops notation) for an `NDStep` value. Delegates
     /// to `NDNotationFormatter` so there is a single source of truth for
     /// stops rendering: whole stops as the integer (`"0"`, `"1"`, …),

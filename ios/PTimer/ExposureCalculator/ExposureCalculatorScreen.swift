@@ -727,7 +727,9 @@ private struct CameraSlotCalculatorPage: View {
 
             VariableSectionView(
                 baseShutter: baseShutterBinding,
-                ndStep: ndStepBinding,
+                ndFilterSteps: pageState.isActive
+                    ? viewModel.ndFilterSteps
+                    : [pageState.ndStep],
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
                 ndStepValues: viewModel.pickerNDSteps(forPage: pageState),
                 formatShutter: viewModel.formatShutterStepLabel,
@@ -739,8 +741,15 @@ private struct CameraSlotCalculatorPage: View {
                         viewModel.updateLiveBaseShutter(value)
                     }
                 },
-                onContinuousNDStepChange: { value in
+                onCommitNDFilterStep: { index, step in
                     guard pageState.isActive else { return }
+                    viewModel.setNDFilterStep(step, at: index)
+                },
+                onContinuousNDStepChange: { index, value in
+                    // Live preview drives the result read; until the
+                    // M1b summation slice only wheel 0 feeds the
+                    // calculation, so only its drags preview.
+                    guard pageState.isActive, index == 0 else { return }
                     Task { @MainActor in
                         viewModel.updateLiveNDStep(value)
                     }
@@ -751,11 +760,21 @@ private struct CameraSlotCalculatorPage: View {
                         viewModel.clearLiveBaseShutterPreview()
                     }
                 },
-                onNDStopInteractionEnd: {
-                    guard pageState.isActive else { return }
+                onNDStopInteractionEnd: { index in
+                    guard pageState.isActive, index == 0 else { return }
                     Task { @MainActor in
                         viewModel.clearLiveNDStopPreview()
                     }
+                },
+                canAddFilterWheel: pageState.isActive && viewModel.canAddFilterWheel,
+                onAddFilterWheel: {
+                    guard pageState.isActive else { return }
+                    viewModel.addFilterWheel()
+                },
+                canRemoveEmptyFilterWheel: pageState.isActive && viewModel.canRemoveEmptyFilterWheel,
+                onRemoveEmptyFilterWheel: {
+                    guard pageState.isActive else { return }
+                    viewModel.removeEmptyFilterWheel()
                 },
                 style: style
             )
@@ -808,15 +827,6 @@ private struct CameraSlotCalculatorPage: View {
         return .constant(pageState.baseShutter)
     }
 
-    private var ndStepBinding: Binding<NDStep> {
-        if pageState.isActive {
-            return Binding(
-                get: { viewModel.ndStep },
-                set: { viewModel.ndStep = $0 }
-            )
-        }
-        return .constant(pageState.ndStep)
-    }
 }
 
 private struct HeaderView: View {

@@ -36,7 +36,9 @@ public final class CalculatorModel {
             // Re-snap committed and live ND values onto the new scale's
             // ladder so a scale flip does not leave stale fractional
             // or whole values that are illegal on the active scale.
-            ndStep = sanitizedNDStep(ndStep, for: scaleMode)
+            // All stacked wheels re-snap, not just wheel 0
+            // (PTIMER-199).
+            ndFilterSteps = ndFilterSteps.map { sanitizedNDStep($0, for: scaleMode) }
             if let live = liveNDStep {
                 liveNDStep = sanitizedNDStep(live, for: scaleMode)
             }
@@ -84,13 +86,69 @@ public final class CalculatorModel {
     /// for `effectiveBaseShutter` while the user is dragging the wheel.
     public var baseShutterSeconds: Double
 
+    /// Individual ND filter wheel values in display order (1–4
+    /// entries, PTIMER-199). Wheel 0 is the single-filter path; extra
+    /// wheels are appended by `addFilterWheel()`. Summation into one
+    /// effective value arrives with the M1b slice; until then the
+    /// calc engine keeps reading wheel 0 via `ndStep`.
+    public private(set) var ndFilterSteps: [NDStep]
+
+    /// Maximum number of stacked ND filter wheels (PTIMER-199).
+    public nonisolated static let maximumNDFilterWheels = 4
+
     /// Canonical ND input as a fractional-aware `NDStep`. Source of
     /// truth for the calc engine; the legacy `ndStop` integer setter
     /// mirrors writes into this field so any integer-bound caller
     /// stays compatible. The shipping picker writes whole stops and the
     /// three commercial presets; arbitrary third-stop values remain
     /// reserved infrastructure.
-    public var ndStep: NDStep
+    ///
+    /// PTIMER-199 (M1a intermediate): proxies wheel 0 of
+    /// `ndFilterSteps` so single-wheel behavior is unchanged; the M1b
+    /// slice repoints this at the stack's effective (summed) value.
+    public var ndStep: NDStep {
+        get { ndFilterSteps[0] }
+        set { ndFilterSteps[0] = newValue }
+    }
+
+    /// Writes one wheel of the stack. Out-of-range indices are
+    /// ignored (defensive: the UI only offers existing wheels).
+    public func setNDFilterStep(_ step: NDStep, at index: Int) {
+        guard ndFilterSteps.indices.contains(index) else {
+            return
+        }
+        ndFilterSteps[index] = step
+    }
+
+    /// Whether another wheel can be added (< 4 wheels).
+    public var canAddFilterWheel: Bool {
+        ndFilterSteps.count < Self.maximumNDFilterWheels
+    }
+
+    /// Whether a wheel can be removed: more than one wheel AND at
+    /// least one wheel sitting at 0 stops (wheels holding a value are
+    /// never removed).
+    public var canRemoveEmptyFilterWheel: Bool {
+        ndFilterSteps.count > 1 && ndFilterSteps.contains { $0.stops == 0 }
+    }
+
+    /// Appends one wheel at 0 stops (no-op at the 4-wheel maximum).
+    /// A 0-stop wheel never changes the calculation result.
+    public func addFilterWheel() {
+        guard canAddFilterWheel else {
+            return
+        }
+        ndFilterSteps.append(NDStep(stops: 0))
+    }
+
+    /// Removes the rightmost 0-stop wheel (no-op when unavailable).
+    public func removeEmptyFilterWheel() {
+        guard canRemoveEmptyFilterWheel,
+              let index = ndFilterSteps.lastIndex(where: { $0.stops == 0 }) else {
+            return
+        }
+        ndFilterSteps.remove(at: index)
+    }
 
     /// Working ND stop, integer-binding compatibility wrapper around
     /// `ndStep`. Setting writes a whole-stop `NDStep`; reading
@@ -153,7 +211,7 @@ public final class CalculatorModel {
     ) {
         self.calculator = calculator
         self.baseShutterSeconds = baseShutterSeconds
-        self.ndStep = ndStep
+        self.ndFilterSteps = [ndStep]
         self.scaleMode = scaleMode
     }
 

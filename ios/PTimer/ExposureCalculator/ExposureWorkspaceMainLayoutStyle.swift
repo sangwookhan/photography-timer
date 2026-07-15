@@ -485,16 +485,21 @@ private struct PickerColumnLayout {
 /// `pickerColumnLayout(for:)`, which is fileprivate.
 struct VariableSectionView: View {
     @Binding var baseShutter: Double
-    @Binding var ndStep: NDStep
+    let ndFilterSteps: [NDStep]
     let shutterSpeeds: [Double]
     let ndStepValues: [NDStep]
     let formatShutter: (TimeInterval) -> String
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
     let onContinuousBaseShutterChange: (Double) -> Void
-    let onContinuousNDStepChange: (NDStep) -> Void
+    let onCommitNDFilterStep: (Int, NDStep) -> Void
+    let onContinuousNDStepChange: (Int, NDStep) -> Void
     let onBaseShutterInteractionEnd: () -> Void
-    let onNDStopInteractionEnd: () -> Void
+    let onNDStopInteractionEnd: (Int) -> Void
+    let canAddFilterWheel: Bool
+    let onAddFilterWheel: () -> Void
+    let canRemoveEmptyFilterWheel: Bool
+    let onRemoveEmptyFilterWheel: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     var body: some View {
@@ -511,12 +516,17 @@ struct VariableSectionView: View {
                 )
 
                 NDFilterGroupView(
-                    ndStep: $ndStep,
+                    ndFilterSteps: ndFilterSteps,
                     ndStepValues: ndStepValues,
                     ndNotationMode: ndNotationMode,
                     onSelectNotationMode: onSelectNotationMode,
+                    onCommitStep: onCommitNDFilterStep,
                     onContinuousSelectionChange: onContinuousNDStepChange,
                     onInteractionEnd: onNDStopInteractionEnd,
+                    canAddFilterWheel: canAddFilterWheel,
+                    onAddFilterWheel: onAddFilterWheel,
+                    canRemoveEmptyFilterWheel: canRemoveEmptyFilterWheel,
+                    onRemoveEmptyFilterWheel: onRemoveEmptyFilterWheel,
                     pickerHeight: style.pickerHeight,
                     style: style
                 )
@@ -527,17 +537,25 @@ struct VariableSectionView: View {
 }
 
 /// ND filter group: the ND header row (title + notation toggle)
-/// spanning the ND wheel area, above a horizontal row of ND wheels.
-/// Introduced as a behavior-invariant seam (PTIMER-199) so the group
-/// can host 1–4 wheels; it currently renders exactly one wheel driven
-/// by the single `ndStep`.
+/// spanning the ND wheel area, above a horizontal row of 1–4 ND
+/// wheels plus the edge Add control (PTIMER-199).
+///
+/// Add/remove paths (PTIMER-199 v2): the edge Add control appends a
+/// 0-stop wheel; removal is self-cleaning (§4.2.2) plus the
+/// overscroll-past-zero gesture (§4.2.3) — there are no menus.
+/// VoiceOver custom actions mirror Add filter / Remove empty filter.
 private struct NDFilterGroupView: View {
-    @Binding var ndStep: NDStep
+    let ndFilterSteps: [NDStep]
     let ndStepValues: [NDStep]
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
-    let onContinuousSelectionChange: (NDStep) -> Void
-    let onInteractionEnd: () -> Void
+    let onCommitStep: (Int, NDStep) -> Void
+    let onContinuousSelectionChange: (Int, NDStep) -> Void
+    let onInteractionEnd: (Int) -> Void
+    let canAddFilterWheel: Bool
+    let onAddFilterWheel: () -> Void
+    let canRemoveEmptyFilterWheel: Bool
+    let onRemoveEmptyFilterWheel: () -> Void
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
 
@@ -550,6 +568,11 @@ private struct NDFilterGroupView: View {
                 // segmented control clips "Stops" in this half-width
                 // area, so a compact custom toggle is used to match the
                 // Android placement and keep all three labels readable.
+                //
+                // No long-press menus anywhere in the group (user
+                // product decision, PTIMER-199 §4.2.5): removal is
+                // handled by the self-cleaning rules and the
+                // accessibility custom actions below.
                 Text("ND Filter")
                     .font(.footnote.weight(.semibold))
                     .fixedSize()
@@ -562,18 +585,81 @@ private struct NDFilterGroupView: View {
             .frame(height: pickerHeaderHeight)
 
             HStack(spacing: style.inputColumnSpacing) {
-                NDWheelView(
-                    ndStep: $ndStep,
-                    ndStepValues: ndStepValues,
-                    ndNotationMode: ndNotationMode,
-                    onContinuousSelectionChange: onContinuousSelectionChange,
-                    onInteractionEnd: onInteractionEnd,
-                    pickerHeight: pickerHeight,
-                    style: style
-                )
+                ForEach(ndFilterSteps.indices, id: \.self) { index in
+                    NDWheelView(
+                        ndStep: wheelBinding(at: index),
+                        ndStepValues: ndStepValues,
+                        ndNotationMode: ndNotationMode,
+                        isCompact: ndFilterSteps.count > 1,
+                        onContinuousSelectionChange: { onContinuousSelectionChange(index, $0) },
+                        onInteractionEnd: { onInteractionEnd(index) },
+                        pickerHeight: pickerHeight,
+                        style: style
+                    )
+                }
+
+                if canAddFilterWheel {
+                    AddFilterWheelControl(
+                        pickerHeight: pickerHeight,
+                        action: onAddFilterWheel
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .contain)
+        // Actions are registered CONDITIONALLY so VoiceOver never
+        // surfaces a dead command — same availability rules as the
+        // menu items (PTIMER-199 §4.2).
+        .accessibilityActions {
+            if canAddFilterWheel {
+                Button(String(localized: "Add filter"), action: onAddFilterWheel)
+            }
+            if canRemoveEmptyFilterWheel {
+                Button(String(localized: "Remove empty filter"), action: onRemoveEmptyFilterWheel)
+            }
+        }
+    }
+
+    /// Per-wheel picker binding: reads the passed-in display value and
+    /// routes writes through the indexed commit callback.
+    private func wheelBinding(at index: Int) -> Binding<NDStep> {
+        Binding(
+            get: { ndFilterSteps[index] },
+            set: { onCommitStep(index, $0) }
+        )
+    }
+}
+
+/// Edge Add control (PTIMER-199): the trailing-edge affordance of the
+/// ND wheel row — a real, tappable control rendered as a dim ghost
+/// column with a plus glyph. Visible only while a wheel can be added;
+/// the 44 pt frame keeps the HIG minimum touch target while the
+/// visual stays subordinate to the wheels. Deliberately menu-free
+/// (§4.2.5): removal is covered by the self-cleaning rules and the
+/// accessibility custom actions.
+private struct AddFilterWheelControl: View {
+    let pickerHeight: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color(.tertiarySystemFill), lineWidth: 1.5)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.tertiarySystemFill).opacity(0.35))
+                )
+                .overlay {
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
+                }
+                .frame(height: pickerHeight)
+        }
+        .buttonStyle(.plain)
+        .frame(width: 44)
+        .accessibilityLabel(Text("Add filter"))
     }
 }
 
@@ -584,6 +670,11 @@ private struct NDWheelView: View {
     @Binding var ndStep: NDStep
     let ndStepValues: [NDStep]
     let ndNotationMode: NDNotationMode
+    /// True when the wheel is part of a multi-wheel stack: values
+    /// center and the per-wheel unit band text drops, because the
+    /// single-column band metrics push the value out of the narrow
+    /// stacked column (PTIMER-199, R2 evidence).
+    let isCompact: Bool
     let onContinuousSelectionChange: (NDStep) -> Void
     let onInteractionEnd: () -> Void
     let pickerHeight: CGFloat
@@ -606,7 +697,8 @@ private struct NDWheelView: View {
                     NDStopPickerValue(
                         valueText: NDNotationFormatter.display(for: step, mode: ndNotationMode).value,
                         style: style,
-                        layout: layout
+                        layout: layout,
+                        isCompact: isCompact
                     )
                     .tag(step)
                 }
@@ -631,7 +723,7 @@ private struct NDWheelView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 PickerUnitSelectionBand(
-                    unitText: unitText,
+                    unitText: isCompact ? "" : unitText,
                     style: style,
                     layout: layout
                 )
@@ -768,20 +860,35 @@ private struct NDStopPickerValue: View {
     let valueText: String
     let style: ExposureWorkspaceMainLayoutStyle
     let layout: PickerColumnLayout
+    /// Multi-wheel (stacked) rendering: the fixed unit-band metrics
+    /// assume the full half-width column and push the value out of a
+    /// narrow stacked wheel, so stacked wheels center the value and
+    /// drop the per-wheel unit instead (PTIMER-199, R2 evidence).
+    var isCompact = false
 
     var body: some View {
-        Text(valueText)
-            .font(style.pickerValueFont)
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(
-                .trailing,
-                layout.valueTextTrailingInset(
-                    selectionBandContentTrailingInset: style.pickerSelectionBandContentTrailingInset
+        if isCompact {
+            Text(valueText)
+                .font(style.pickerValueFont)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 4)
+        } else {
+            Text(valueText)
+                .font(style.pickerValueFont)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(
+                    .trailing,
+                    layout.valueTextTrailingInset(
+                        selectionBandContentTrailingInset: style.pickerSelectionBandContentTrailingInset
+                    )
                 )
-            )
+        }
     }
 }
 

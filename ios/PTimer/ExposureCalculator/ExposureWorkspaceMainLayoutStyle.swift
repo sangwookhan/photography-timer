@@ -510,7 +510,7 @@ struct VariableSectionView: View {
                     style: style
                 )
 
-                NDStopSelectionRow(
+                NDFilterGroupView(
                     ndStep: $ndStep,
                     ndStepValues: ndStepValues,
                     ndNotationMode: ndNotationMode,
@@ -526,11 +526,64 @@ struct VariableSectionView: View {
     }
 }
 
-private struct NDStopSelectionRow: View {
+/// ND filter group: the ND header row (title + notation toggle)
+/// spanning the ND wheel area, above a horizontal row of ND wheels.
+/// Introduced as a behavior-invariant seam (PTIMER-199) so the group
+/// can host 1–4 wheels; it currently renders exactly one wheel driven
+/// by the single `ndStep`.
+private struct NDFilterGroupView: View {
     @Binding var ndStep: NDStep
     let ndStepValues: [NDStep]
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
+    let onContinuousSelectionChange: (NDStep) -> Void
+    let onInteractionEnd: () -> Void
+    let pickerHeight: CGFloat
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
+            HStack(spacing: 6) {
+                // Title carries the group's weight; the selector labels
+                // are intentionally smaller and compact so the control
+                // does not dominate the header (PTIMER-187). The native
+                // segmented control clips "Stops" in this half-width
+                // area, so a compact custom toggle is used to match the
+                // Android placement and keep all three labels readable.
+                Text("ND Filter")
+                    .font(.footnote.weight(.semibold))
+                    .fixedSize()
+
+                Spacer(minLength: 4)
+
+                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
+                    .accessibilityIdentifier("nd-notation-mode-control")
+            }
+            .frame(height: pickerHeaderHeight)
+
+            HStack(spacing: style.inputColumnSpacing) {
+                NDWheelView(
+                    ndStep: $ndStep,
+                    ndStepValues: ndStepValues,
+                    ndNotationMode: ndNotationMode,
+                    onContinuousSelectionChange: onContinuousSelectionChange,
+                    onInteractionEnd: onInteractionEnd,
+                    pickerHeight: pickerHeight,
+                    style: style
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+/// A single ND wheel picker column (value wheel + live-scroll
+/// observer + unit selection band), header-less so the group above
+/// can lay out 1–4 of them in one row (PTIMER-199).
+private struct NDWheelView: View {
+    @Binding var ndStep: NDStep
+    let ndStepValues: [NDStep]
+    let ndNotationMode: NDNotationMode
     let onContinuousSelectionChange: (NDStep) -> Void
     let onInteractionEnd: () -> Void
     let pickerHeight: CGFloat
@@ -547,31 +600,8 @@ private struct NDStopSelectionRow: View {
         NDNotationFormatter.display(for: ndStep, mode: ndNotationMode).unit
     }
 
-    private var notationSelection: Binding<NDNotationMode> {
-        Binding(get: { ndNotationMode }, set: { onSelectNotationMode($0) })
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
-            HStack(spacing: 6) {
-                // Title carries the column's weight; the selector labels
-                // are intentionally smaller and compact so the control
-                // does not dominate the header (PTIMER-187). The native
-                // segmented control clips "Stops" in this half-width
-                // column, so a compact custom toggle is used to match the
-                // Android placement and keep all three labels readable.
-                Text("ND Filter")
-                    .font(.footnote.weight(.semibold))
-                    .fixedSize()
-
-                Spacer(minLength: 4)
-
-                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
-                    .accessibilityIdentifier("nd-notation-mode-control")
-            }
-            .frame(height: pickerHeaderHeight)
-
-            Picker("ND Filter", selection: $ndStep) {
+        Picker("ND Filter", selection: $ndStep) {
                 ForEach(ndStepValues, id: \.self) { step in
                     NDStopPickerValue(
                         valueText: NDNotationFormatter.display(for: step, mode: ndNotationMode).value,
@@ -606,8 +636,6 @@ private struct NDStopSelectionRow: View {
                     layout: layout
                 )
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 

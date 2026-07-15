@@ -730,6 +730,8 @@ private struct CameraSlotCalculatorPage: View {
                 ndFilterSteps: pageState.isActive
                     ? viewModel.ndFilterSteps
                     : [pageState.ndStep],
+                ndDisplaySteps: viewModel.ndDisplayFilterSteps(forPage: pageState),
+                ndFilterWheelIDs: viewModel.ndFilterWheelIDs(forPage: pageState),
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
                 ndStepValuesForWheel: { index in
                     // Active page: budget-truncated per-wheel ladder
@@ -748,28 +750,44 @@ private struct CameraSlotCalculatorPage: View {
                         viewModel.updateLiveBaseShutter(value)
                     }
                 },
-                onCommitNDFilterStep: { index, step in
-                    guard pageState.isActive else { return }
-                    viewModel.setNDFilterStep(step, at: index)
-                },
-                onContinuousNDStepChange: { index, value in
-                    guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.updateLiveNDFilterStep(value, forWheel: index)
-                    }
-                },
                 onBaseShutterInteractionEnd: {
                     guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.clearLiveBaseShutterPreview()
                     }
                 },
-                onNDStopInteractionEnd: { _ in
+                // Owned-picker measurements (PTIMER-199 v2): no gate,
+                // no animation scope here — the ViewModel's state
+                // machine judges every event (identity + generation)
+                // and owns the barrier's withAnimation.
+                onNDWheelRowObserved: { wheelID, value, generation in
                     guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.clearLiveNDStopPreview()
-                    }
+                    viewModel.ndWheelDidObserveRow(value, wheelID: wheelID, generation: generation)
                 },
+                onNDWheelSelected: { wheelID, value, generation in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelDidSelect(value, wheelID: wheelID, generation: generation)
+                },
+                onNDWheelTouchBegan: { wheelID, generation in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelTouchBegan(wheelID: wheelID, generation: generation)
+                },
+                onNDWheelTouchEnded: { wheelID in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelTouchEnded(wheelID: wheelID)
+                },
+                onNDWheelOverscrollReleased: { wheelID, generation in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelOverscrollReleased(wheelID: wheelID, generation: generation)
+                },
+                isNDWheelResolved: { wheelID in
+                    pageState.isActive ? viewModel.isNDWheelResolved(wheelID) : true
+                },
+                areNDWheelsInteractive: pageState.isActive
+                    ? viewModel.areNDWheelsInteractive
+                    : false,
+                ndWheelGeneration: pageState.isActive ? viewModel.ndWheelGeneration : 0,
+                showsAddFilterWheelControl: pageState.isActive && viewModel.showsAddFilterWheelControl,
                 canAddFilterWheel: pageState.isActive && viewModel.canAddFilterWheel,
                 onAddFilterWheel: {
                     guard pageState.isActive else { return }
@@ -778,8 +796,15 @@ private struct CameraSlotCalculatorPage: View {
                 canRemoveEmptyFilterWheel: pageState.isActive && viewModel.canRemoveEmptyFilterWheel,
                 onRemoveEmptyFilterWheel: {
                     guard pageState.isActive else { return }
-                    viewModel.removeEmptyFilterWheel()
+                    viewModel.cleanupEmptyFilterWheels()
                 },
+
+                ndStackTotalDisplayState: pageState.isActive
+                    ? viewModel.ndStackTotalDisplayState
+                    : NDStackTotalDisplayState(
+                        effectiveStep: pageState.ndStep,
+                        wheelCount: 1
+                    ),
                 style: style
             )
 

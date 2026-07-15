@@ -102,6 +102,22 @@ public struct NDFilterStack: Equatable, Sendable {
         return copy
     }
 
+    /// Removes the 0-stop wheel at `index`; no-op for out-of-range
+    /// indices, non-zero wheels, and single-wheel stacks. The
+    /// overscroll gesture removes exactly the wheel it acted on
+    /// (PTIMER-199 §4.2.3) — identity matters to the UI's reorder
+    /// and removal animations even though zeros are value-identical.
+    public func removingEmptyWheel(at index: Int) -> NDFilterStack {
+        guard entries.indices.contains(index),
+              entries[index].stops == 0,
+              entries.count > 1 else {
+            return self
+        }
+        var copy = self
+        copy.entries.remove(at: index)
+        return copy
+    }
+
     /// Removes the rightmost 0-stop wheel; no-op when unavailable.
     public func removingRightmostEmptyWheel() -> NDFilterStack {
         guard canRemoveEmptyWheel,
@@ -140,15 +156,24 @@ public struct NDFilterStack: Equatable, Sendable {
     /// Sorting reorders VALUES only, so `effectiveStep` is unchanged.
     public func sortedForCommit() -> NDFilterStack {
         var copy = self
-        copy.entries = entries.enumerated()
+        copy.entries = commitSortPermutation().map { entries[$0] }
+        return copy
+    }
+
+    /// The index permutation `sortedForCommit()` applies:
+    /// `permutation[i]` is the CURRENT index of the wheel that lands
+    /// at position `i`. Exposed so a caller tracking per-wheel
+    /// identity (for the reorder animation) can move companion state
+    /// through the exact same stable sort.
+    public func commitSortPermutation() -> [Int] {
+        entries.enumerated()
             .sorted { lhs, rhs in
                 if lhs.element.stops != rhs.element.stops {
                     return lhs.element.stops > rhs.element.stops
                 }
                 return lhs.offset < rhs.offset
             }
-            .map(\.element)
-        return copy
+            .map(\.offset)
     }
 }
 

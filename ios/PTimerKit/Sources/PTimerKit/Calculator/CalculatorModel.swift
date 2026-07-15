@@ -110,6 +110,28 @@ public final class CalculatorModel {
     /// domain type; the model owns lifecycle and observation.
     public private(set) var ndFilterStack = NDFilterStack(single: NDStep(stops: 0))
 
+    /// Stable per-wheel identity (PTIMER-199 §4.3): `ndFilterWheelIDs[i]`
+    /// names the wheel at `ndFilterSteps[i]` and follows it through
+    /// the commit sort, so the UI can render a reorder as wheels
+    /// MOVING rather than values teleporting between columns.
+    /// Presentation-side bookkeeping only — never persisted, never
+    /// part of the calculation. IDs start at 101 and increase
+    /// monotonically (user rule, PTIMER-199 v2): a value ≥ 101 can
+    /// never be mistaken for a position index, IDs are never derived
+    /// from positions, and a removed ID is never reused within a
+    /// generation (the monotonic counter guarantees it).
+    public private(set) var ndFilterWheelIDs: [Int] = [101]
+    private var nextNDFilterWheelID = 102
+
+    private func makeNDFilterWheelID() -> Int {
+        defer { nextNDFilterWheelID += 1 }
+        return nextNDFilterWheelID
+    }
+
+    private func regenerateNDFilterWheelIDs() {
+        ndFilterWheelIDs = ndFilterStack.entries.map { _ in makeNDFilterWheelID() }
+    }
+
     /// Individual ND filter wheel values in display order (1–4).
     /// Convenience projection of `ndFilterStack`.
     public var ndFilterSteps: [NDStep] {
@@ -125,7 +147,10 @@ public final class CalculatorModel {
     /// value. Per-wheel writes go through `setNDFilterStep(_:at:)`.
     public var ndStep: NDStep {
         get { ndFilterStack.effectiveStep }
-        set { ndFilterStack = NDFilterStack(single: newValue) }
+        set {
+            ndFilterStack = NDFilterStack(single: newValue)
+            regenerateNDFilterWheelIDs()
+        }
     }
 
     /// Commits one wheel of the stack, then applies the agreed
@@ -134,9 +159,10 @@ public final class CalculatorModel {
     /// never reorders mid-scroll. Out-of-range indices are ignored
     /// (defensive: the UI only offers existing wheels).
     public func setNDFilterStep(_ step: NDStep, at index: Int) {
-        ndFilterStack = ndFilterStack
-            .replacingWheel(at: index, with: step)
-            .sortedForCommit()
+        let replaced = ndFilterStack.replacingWheel(at: index, with: step)
+        let permutation = replaced.commitSortPermutation()
+        ndFilterStack = replaced.sortedForCommit()
+        ndFilterWheelIDs = permutation.map { ndFilterWheelIDs[$0] }
     }
 
     /// Whether another wheel can be added (PTIMER-199 C1): below
@@ -173,11 +199,38 @@ public final class CalculatorModel {
             return
         }
         ndFilterStack = ndFilterStack.addingWheel()
+        ndFilterWheelIDs.append(makeNDFilterWheelID())
+    }
+
+    /// A2 cleanup (PTIMER-199 §4.2.2): removes every CLEANABLE
+    /// 0-stop wheel — all zeros while a non-zero wheel exists; all
+    /// but one when every wheel is 0-stop.
+    public func cleanupEmptyFilterWheels() {
+        while canRemoveEmptyFilterWheel {
+            removeEmptyFilterWheel()
+        }
+    }
+
+    /// Removes the 0-stop wheel at `index` — the overscroll
+    /// gesture's target (§4.2.3): exactly the wheel the photographer
+    /// pulled, not the rightmost zero. No-op when the index is not a
+    /// removable zero.
+    public func removeEmptyFilterWheel(at index: Int) {
+        let countBefore = ndFilterStack.entries.count
+        ndFilterStack = ndFilterStack.removingEmptyWheel(at: index)
+        if ndFilterStack.entries.count < countBefore {
+            ndFilterWheelIDs.remove(at: index)
+        }
     }
 
     /// Removes the rightmost 0-stop wheel (no-op when unavailable).
     public func removeEmptyFilterWheel() {
+        let removedIndex = ndFilterStack.entries.lastIndex { $0.stops == 0 }
+        let countBefore = ndFilterStack.entries.count
         ndFilterStack = ndFilterStack.removingRightmostEmptyWheel()
+        if ndFilterStack.entries.count < countBefore, let removedIndex {
+            ndFilterWheelIDs.remove(at: removedIndex)
+        }
     }
 
     /// Picker ladder for one wheel: the active scale's ND ladder
@@ -218,24 +271,27 @@ public final class CalculatorModel {
     /// wheel's committed entry in `effectiveNDStep`. Values are
     /// `NDStep` so the reserved fractional path never loses
     /// precision through this preview.
+    /// Keys are WHEEL IDENTITY values (`ndFilterWheelIDs` entries),
+    /// never positions (PTIMER-199 v2 계약 3): entries survive the
+    /// commit sort untouched because identity moves with the wheel.
     public private(set) var liveNDSteps: [Int: NDStep] = [:]
 
     /// Which wheel the LAST live update touched. Backs the legacy
     /// single-overlay projection below; wheel 0 for the
     /// single-filter workflow and all legacy callers.
-    private var liveNDWheelIndex = 0
+    private var liveNDWheelID = 0
 
     /// Legacy single-overlay view of `liveNDSteps`: the most recently
     /// updated wheel's live value. Kept so pre-stack callers and the
     /// integer wrapper keep compiling; multi-wheel-aware callers read
     /// `liveNDSteps` directly.
     public var liveNDStep: NDStep? {
-        get { liveNDSteps[liveNDWheelIndex] }
+        get { liveNDSteps[liveNDWheelID] }
         set {
             if let newValue {
-                liveNDSteps[liveNDWheelIndex] = newValue
+                liveNDSteps[liveNDWheelID] = newValue
             } else {
-                liveNDSteps.removeValue(forKey: liveNDWheelIndex)
+                liveNDSteps.removeValue(forKey: liveNDWheelID)
             }
         }
     }
@@ -269,7 +325,9 @@ public final class CalculatorModel {
         // the actual transient sum and the set commit resolves it by
         // rejection (§4.5).
         let total = ndFilterStack.entries.enumerated().reduce(0.0) { sum, entry in
-            sum + (liveNDSteps[entry.offset]?.stops ?? entry.element.stops)
+            let wheelID = ndFilterWheelIDs.indices.contains(entry.offset)
+                ? ndFilterWheelIDs[entry.offset] : -1
+            return sum + (liveNDSteps[wheelID]?.stops ?? entry.element.stops)
         }
         return NDStep(stops: total)
     }
@@ -356,14 +414,25 @@ public final class CalculatorModel {
     /// to the wheel's committed value clears the overlay, matching
     /// the single-wheel idle-state rule.
     public func updateLiveNDFilterStep(_ value: NDStep, forWheel index: Int) {
-        guard ndFilterStack.entries.indices.contains(index) else {
+        guard ndFilterStack.entries.indices.contains(index),
+              ndFilterWheelIDs.indices.contains(index) else {
             return
         }
-        liveNDWheelIndex = index
+        updateLiveNDStep(value, forWheelID: ndFilterWheelIDs[index])
+    }
+
+    /// Identity-keyed live preview write (PTIMER-199 v2 계약 3): the
+    /// canonical entry point — the index overload above is a legacy
+    /// shim that derives the id at call time.
+    public func updateLiveNDStep(_ value: NDStep, forWheelID wheelID: Int) {
+        guard let index = ndFilterWheelIDs.firstIndex(of: wheelID) else {
+            return
+        }
+        liveNDWheelID = wheelID
         if value == ndFilterStack.entries[index] {
-            liveNDSteps.removeValue(forKey: index)
+            liveNDSteps.removeValue(forKey: wheelID)
         } else {
-            liveNDSteps[index] = value
+            liveNDSteps[wheelID] = value
         }
     }
 

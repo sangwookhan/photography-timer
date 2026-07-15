@@ -48,6 +48,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     @Published public var ndStep: NDStep = NDStep(stops: Double(defaultFilmModeNDStop)) {
         didSet {
             guard oldValue != ndStep else { return }
+            // Mirror sync (PTIMER-199): when the model's EFFECTIVE
+            // (summed) value is being reflected into this published
+            // surface after a stack mutation, skip every write-path
+            // side effect — assigning it back into the model would
+            // collapse the stack to a single wheel.
+            if isSyncingNDStepMirror {
+                if let whole = ndStep.wholeStops, whole != ndStop {
+                    ndStop = whole
+                }
+                return
+            }
             if calculatorModel.liveNDStep == ndStep {
                 calculatorModel.clearLiveNDStopPreview()
             }
@@ -62,6 +73,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             persistCalculatorContext()
         }
     }
+    /// True while `ndStep` is being refreshed FROM the model's
+    /// effective value (PTIMER-199) rather than written by a caller.
+    private var isSyncingNDStepMirror = false
     /// Active exposure-scale mode. The shipping calculator runs on the
     /// one-third-stop scale (per `docs/specs/Calculator.md` §1.4); the
     /// full-stop scale is retained on the model for tests and the
@@ -1606,6 +1620,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     /// Appends one 0-stop wheel at the right (no-op at 4 wheels).
+    /// A 0-stop wheel leaves the effective value unchanged, so no
+    /// persistence or mirror refresh is needed.
     public func addFilterWheel() {
         calculatorModel.addFilterWheel()
         objectWillChange.send()
@@ -1617,18 +1633,46 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         objectWillChange.send()
     }
 
-    /// Commits one wheel's value. Wheel 0 routes through the
-    /// published `ndStep` so the existing single-filter side effects
-    /// (live-preview clearing, integer mirror, persistence) are
-    /// preserved; extra wheels write model state directly — their
-    /// summation and persistence arrive with later PTIMER-199 slices.
+    /// Commits one wheel's value: writes the wheel through the model
+    /// (which applies the agreed post-commit sort), clears a live
+    /// preview that settled on the committed value, refreshes the
+    /// published `ndStep` mirror with the new effective sum, and
+    /// persists. The published `ndStep` property itself remains the
+    /// single-filter assignment surface — committing a wheel must not
+    /// collapse the stack.
     public func setNDFilterStep(_ step: NDStep, at index: Int) {
-        if index == 0 {
-            ndStep = step
-        } else {
-            calculatorModel.setNDFilterStep(step, at: index)
-            objectWillChange.send()
+        if calculatorModel.liveNDStep == step {
+            calculatorModel.clearLiveNDStopPreview()
         }
+        calculatorModel.setNDFilterStep(step, at: index)
+        syncNDStepMirrorFromModel()
+        persistCalculatorContext()
+        objectWillChange.send()
+    }
+
+    /// Per-wheel live preview forwarding (PTIMER-199 §4.5: the
+    /// dragging wheel's live value + every other wheel's committed
+    /// value drive the live result).
+    public func updateLiveNDFilterStep(_ value: NDStep, forWheel index: Int) {
+        calculatorModel.updateLiveNDFilterStep(value, forWheel: index)
+    }
+
+    /// Picker ladder for one wheel, truncated from the top to the
+    /// wheel's remaining budget under the 30-stop total limit.
+    public func pickerNDSteps(forWheel index: Int) -> [NDStep] {
+        calculatorModel.pickerNDSteps(forWheel: index)
+    }
+
+    /// Refreshes the published `ndStep` mirror from the model's
+    /// effective (summed) value without re-entering the write path.
+    private func syncNDStepMirrorFromModel() {
+        let effective = calculatorModel.ndStep
+        guard ndStep != effective else {
+            return
+        }
+        isSyncingNDStepMirror = true
+        ndStep = effective
+        isSyncingNDStepMirror = false
     }
 
     /// Picker label (Stops notation) for an `NDStep` value. Delegates

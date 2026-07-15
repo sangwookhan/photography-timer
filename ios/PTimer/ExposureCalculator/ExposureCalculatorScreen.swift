@@ -731,7 +731,14 @@ private struct CameraSlotCalculatorPage: View {
                     ? viewModel.ndFilterSteps
                     : [pageState.ndStep],
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
-                ndStepValues: viewModel.pickerNDSteps(forPage: pageState),
+                ndStepValuesForWheel: { index in
+                    // Active page: budget-truncated per-wheel ladder
+                    // (30-stop structural limit). Inactive pages show
+                    // a single snapshot wheel on the full ladder.
+                    pageState.isActive
+                        ? viewModel.pickerNDSteps(forWheel: index)
+                        : viewModel.pickerNDSteps(forPage: pageState)
+                },
                 formatShutter: viewModel.formatShutterStepLabel,
                 ndNotationMode: viewModel.ndNotationMode,
                 onSelectNotationMode: { viewModel.ndNotationMode = $0 },
@@ -746,12 +753,9 @@ private struct CameraSlotCalculatorPage: View {
                     viewModel.setNDFilterStep(step, at: index)
                 },
                 onContinuousNDStepChange: { index, value in
-                    // Live preview drives the result read; until the
-                    // M1b summation slice only wheel 0 feeds the
-                    // calculation, so only its drags preview.
-                    guard pageState.isActive, index == 0 else { return }
+                    guard pageState.isActive else { return }
                     Task { @MainActor in
-                        viewModel.updateLiveNDStep(value)
+                        viewModel.updateLiveNDFilterStep(value, forWheel: index)
                     }
                 },
                 onBaseShutterInteractionEnd: {
@@ -760,8 +764,8 @@ private struct CameraSlotCalculatorPage: View {
                         viewModel.clearLiveBaseShutterPreview()
                     }
                 },
-                onNDStopInteractionEnd: { index in
-                    guard pageState.isActive, index == 0 else { return }
+                onNDStopInteractionEnd: { _ in
+                    guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.clearLiveNDStopPreview()
                     }

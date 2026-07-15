@@ -38,10 +38,28 @@ public final class CalculatorModel {
             // or whole values that are illegal on the active scale.
             // All stacked wheels re-snap, not just wheel 0
             // (PTIMER-199).
-            ndFilterSteps = ndFilterSteps.map { sanitizedNDStep($0, for: scaleMode) }
-            if let live = liveNDStep {
-                liveNDStep = sanitizedNDStep(live, for: scaleMode)
+            //
+            // Nearest-snapping can round several wheels UP and push a
+            // legal sum past the 30-stop cap (reserved fractional
+            // path, e.g. 10⅔+10⅔+8⅔ = 30 → 11+11+9 = 31), which the
+            // stack's invariant treats as a programmer error.
+            // Deterministic overflow policy: downgrade wheels to
+            // their FLOOR-snapped value from the RIGHTMOST side until
+            // the sum fits. Flooring every wheel bounds the sum by
+            // the original (legal) sum, so this always terminates
+            // within the cap — no crash, no clamp of the whole stack.
+            let originals = ndFilterStack.entries
+            var snapped = originals.map { sanitizedNDStep($0, for: scaleMode) }
+            if !NDFilterStack.isWithinTotalLimit(snapped) {
+                for index in snapped.indices.reversed() {
+                    guard !NDFilterStack.isWithinTotalLimit(snapped) else {
+                        break
+                    }
+                    snapped[index] = sanitizedNDStepRoundingDown(originals[index], for: scaleMode)
+                }
             }
+            ndFilterStack = NDFilterStack(entries: snapped)
+            liveNDSteps = liveNDSteps.mapValues { sanitizedNDStep($0, for: scaleMode) }
 
             // Same reasoning for the shutter ladder: a scale flip
             // away from the active ladder must collapse the committed
@@ -86,68 +104,94 @@ public final class CalculatorModel {
     /// for `effectiveBaseShutter` while the user is dragging the wheel.
     public var baseShutterSeconds: Double
 
-    /// Individual ND filter wheel values in display order (1–4
-    /// entries, PTIMER-199). Wheel 0 is the single-filter path; extra
-    /// wheels are appended by `addFilterWheel()`. Summation into one
-    /// effective value arrives with the M1b slice; until then the
-    /// calc engine keeps reading wheel 0 via `ndStep`.
-    public private(set) var ndFilterSteps: [NDStep]
+    /// The ND filter wheel stack (PTIMER-199): 1–4 committed wheel
+    /// values in display order, collapsing to one effective summed
+    /// value. Shape rules (add/remove/sort/budget) live on the
+    /// domain type; the model owns lifecycle and observation.
+    public private(set) var ndFilterStack = NDFilterStack(single: NDStep(stops: 0))
 
-    /// Maximum number of stacked ND filter wheels (PTIMER-199).
-    public nonisolated static let maximumNDFilterWheels = 4
+    /// Individual ND filter wheel values in display order (1–4).
+    /// Convenience projection of `ndFilterStack`.
+    public var ndFilterSteps: [NDStep] {
+        ndFilterStack.entries
+    }
 
-    /// Canonical ND input as a fractional-aware `NDStep`. Source of
-    /// truth for the calc engine; the legacy `ndStop` integer setter
-    /// mirrors writes into this field so any integer-bound caller
-    /// stays compatible. The shipping picker writes whole stops and the
-    /// three commercial presets; arbitrary third-stop values remain
-    /// reserved infrastructure.
-    ///
-    /// PTIMER-199 (M1a intermediate): proxies wheel 0 of
-    /// `ndFilterSteps` so single-wheel behavior is unchanged; the M1b
-    /// slice repoints this at the stack's effective (summed) value.
+    /// Canonical ND input as a fractional-aware `NDStep`. ONE meaning
+    /// for every caller (PTIMER-199): reading returns the stack's
+    /// EFFECTIVE (summed) value — the value the calc engine consumes.
+    /// Writing is the single-filter assignment surface kept for
+    /// compatibility (legacy `ndStop` mirror, persistence restore,
+    /// tests): it replaces the whole stack with one wheel holding the
+    /// value. Per-wheel writes go through `setNDFilterStep(_:at:)`.
     public var ndStep: NDStep {
-        get { ndFilterSteps[0] }
-        set { ndFilterSteps[0] = newValue }
+        get { ndFilterStack.effectiveStep }
+        set { ndFilterStack = NDFilterStack(single: newValue) }
     }
 
-    /// Writes one wheel of the stack. Out-of-range indices are
-    /// ignored (defensive: the UI only offers existing wheels).
+    /// Commits one wheel of the stack, then applies the agreed
+    /// post-commit ordering (descending, zeros rightmost, stable).
+    /// Commits only happen once a wheel has settled, so sorting here
+    /// never reorders mid-scroll. Out-of-range indices are ignored
+    /// (defensive: the UI only offers existing wheels).
     public func setNDFilterStep(_ step: NDStep, at index: Int) {
-        guard ndFilterSteps.indices.contains(index) else {
-            return
-        }
-        ndFilterSteps[index] = step
+        ndFilterStack = ndFilterStack
+            .replacingWheel(at: index, with: step)
+            .sortedForCommit()
     }
 
-    /// Whether another wheel can be added (< 4 wheels).
+    /// Whether another wheel can be added (PTIMER-199 C1): below
+    /// four wheels AND the NEW wheel's allowed ladder must contain
+    /// at least one value greater than 0. A remaining budget above
+    /// zero is not sufficient — if the ladder truncated to the
+    /// remaining budget is [0] only (e.g. a 29.6-stop sum leaves
+    /// 0.4, below every integer and preset), a new wheel could never
+    /// hold a value, so the Add affordance hides.
     public var canAddFilterWheel: Bool {
-        ndFilterSteps.count < Self.maximumNDFilterWheels
+        guard ndFilterStack.canAddWheel else {
+            return false
+        }
+        let newWheelBudget = Double(ExposureScale.maximumWholeNDStops)
+            - ndFilterStack.effectiveStep.stops
+        return exposureScale.ndSteps(upToStops: newWheelBudget)
+            .contains { $0.stops > 0 }
     }
 
     /// Whether a wheel can be removed: more than one wheel AND at
     /// least one wheel sitting at 0 stops (wheels holding a value are
     /// never removed).
     public var canRemoveEmptyFilterWheel: Bool {
-        ndFilterSteps.count > 1 && ndFilterSteps.contains { $0.stops == 0 }
+        ndFilterStack.canRemoveEmptyWheel
     }
 
-    /// Appends one wheel at 0 stops (no-op at the 4-wheel maximum).
-    /// A 0-stop wheel never changes the calculation result.
+    /// Appends one wheel at 0 stops. The C1 rule is enforced HERE,
+    /// not just on the Add affordance: a direct command call is
+    /// refused (no-op) at the 4-wheel maximum and whenever the new
+    /// wheel's ladder could not hold a value above 0 — the same
+    /// condition that hides the UI control.
     public func addFilterWheel() {
         guard canAddFilterWheel else {
             return
         }
-        ndFilterSteps.append(NDStep(stops: 0))
+        ndFilterStack = ndFilterStack.addingWheel()
     }
 
     /// Removes the rightmost 0-stop wheel (no-op when unavailable).
     public func removeEmptyFilterWheel() {
-        guard canRemoveEmptyFilterWheel,
-              let index = ndFilterSteps.lastIndex(where: { $0.stops == 0 }) else {
-            return
+        ndFilterStack = ndFilterStack.removingRightmostEmptyWheel()
+    }
+
+    /// Picker ladder for one wheel: the active scale's ND ladder
+    /// truncated from the top to that wheel's remaining budget under
+    /// the 30-stop total limit. Derives from COMMITTED values only,
+    /// so sibling ladders never reload while another wheel is being
+    /// dragged.
+    public func pickerNDSteps(forWheel index: Int) -> [NDStep] {
+        guard ndFilterStack.entries.indices.contains(index) else {
+            return exposureScale.ndSteps
         }
-        ndFilterSteps.remove(at: index)
+        return exposureScale.ndSteps(
+            upToStops: ndFilterStack.remainingBudget(excludingWheelAt: index)
+        )
     }
 
     /// Working ND stop, integer-binding compatibility wrapper around
@@ -167,12 +211,34 @@ public final class CalculatorModel {
     /// equals the committed value.
     public var liveBaseShutter: Double?
 
-    /// Transient ND step shown while the user drags the ND wheel,
-    /// before the gesture commits to `ndStep`. Stored as `NDStep` so
-    /// the field never needs widening if a future custom /
-    /// variable-ND workflow ever feeds the reserved fractional path
-    /// through this preview.
-    public var liveNDStep: NDStep?
+    /// Transient per-wheel selections shown while wheels are in
+    /// motion, before the epoch's set commit (PTIMER-199 §4.5).
+    /// Several wheels can be live at once (multi-touch / overlapping
+    /// flings): each key is a wheel index whose value overlays that
+    /// wheel's committed entry in `effectiveNDStep`. Values are
+    /// `NDStep` so the reserved fractional path never loses
+    /// precision through this preview.
+    public private(set) var liveNDSteps: [Int: NDStep] = [:]
+
+    /// Which wheel the LAST live update touched. Backs the legacy
+    /// single-overlay projection below; wheel 0 for the
+    /// single-filter workflow and all legacy callers.
+    private var liveNDWheelIndex = 0
+
+    /// Legacy single-overlay view of `liveNDSteps`: the most recently
+    /// updated wheel's live value. Kept so pre-stack callers and the
+    /// integer wrapper keep compiling; multi-wheel-aware callers read
+    /// `liveNDSteps` directly.
+    public var liveNDStep: NDStep? {
+        get { liveNDSteps[liveNDWheelIndex] }
+        set {
+            if let newValue {
+                liveNDSteps[liveNDWheelIndex] = newValue
+            } else {
+                liveNDSteps.removeValue(forKey: liveNDWheelIndex)
+            }
+        }
+    }
 
     /// Integer-binding compatibility wrapper around `liveNDStep` for
     /// the existing whole-stop drag gesture. Setting writes a
@@ -188,10 +254,24 @@ public final class CalculatorModel {
         liveBaseShutter ?? baseShutterSeconds
     }
 
-    /// Effective ND step — the value the calculator actually uses.
-    /// Returns the live preview when set, otherwise the committed value.
+    /// Effective ND step — the value the calculator actually uses:
+    /// the stack's sum, with the dragging wheel's live value
+    /// substituted for its committed value while a preview is active
+    /// (PTIMER-199 §4.5: live wheel + committed others).
     public var effectiveNDStep: NDStep {
-        liveNDStep ?? ndStep
+        guard !liveNDSteps.isEmpty else {
+            return ndFilterStack.effectiveStep
+        }
+        // Sum of every wheel's current value: live overlay when the
+        // wheel is in motion, committed value otherwise. During a
+        // multi-wheel epoch the frozen ladders can transiently allow
+        // a combined sum above the 30-stop cap; the display shows
+        // the actual transient sum and the set commit resolves it by
+        // rejection (§4.5).
+        let total = ndFilterStack.entries.enumerated().reduce(0.0) { sum, entry in
+            sum + (liveNDSteps[entry.offset]?.stops ?? entry.element.stops)
+        }
+        return NDStep(stops: total)
     }
 
     /// Whole-stop view of `effectiveNDStep`, kept for callers still
@@ -211,7 +291,7 @@ public final class CalculatorModel {
     ) {
         self.calculator = calculator
         self.baseShutterSeconds = baseShutterSeconds
-        self.ndFilterSteps = [ndStep]
+        self.ndFilterStack = NDFilterStack(single: ndStep)
         self.scaleMode = scaleMode
     }
 
@@ -263,12 +343,28 @@ public final class CalculatorModel {
         updateLiveNDStep(NDStep(stops: Double(value)))
     }
 
-    /// Fractional-aware preview update. The shipping picker drives this
-    /// through whole stops and the three commercial presets; the
-    /// reserved third-stop path is exercised by tests. Equal-clears-
-    /// preview keeps the same idle-state rule as the integer overload.
+    /// Fractional-aware preview update for wheel 0 — the
+    /// single-filter compatibility surface. Equal-clears-preview
+    /// keeps the same idle-state rule as the integer overload.
     public func updateLiveNDStep(_ value: NDStep) {
-        liveNDStep = value == ndStep ? nil : value
+        updateLiveNDFilterStep(value, forWheel: 0)
+    }
+
+    /// Per-wheel live preview (PTIMER-199): the dragging wheel's live
+    /// value overlays its committed entry in `effectiveNDStep` while
+    /// every other wheel keeps its committed value. A preview equal
+    /// to the wheel's committed value clears the overlay, matching
+    /// the single-wheel idle-state rule.
+    public func updateLiveNDFilterStep(_ value: NDStep, forWheel index: Int) {
+        guard ndFilterStack.entries.indices.contains(index) else {
+            return
+        }
+        liveNDWheelIndex = index
+        if value == ndFilterStack.entries[index] {
+            liveNDSteps.removeValue(forKey: index)
+        } else {
+            liveNDSteps[index] = value
+        }
     }
 
     public func clearLiveBaseShutterPreview() {
@@ -276,7 +372,7 @@ public final class CalculatorModel {
     }
 
     public func clearLiveNDStopPreview() {
-        liveNDStep = nil
+        liveNDSteps.removeAll()
     }
 
     /// Computes the calculation result from the current inputs with the
@@ -358,6 +454,30 @@ public final class CalculatorModel {
             return NDStep(stops: step.stops.rounded())
         case .oneThirdStop:
             return NDStep(stops: Double((step.stops * 3).rounded()) / 3.0)
+        }
+    }
+
+    /// Floor variant of `sanitizedNDStep(_:for:)`, used by the
+    /// scale-flip overflow policy (PTIMER-199): rounds DOWN to the
+    /// target grid so a downgraded wheel never exceeds its original
+    /// value. Ladder near-matches still normalize to the canonical
+    /// entry (a preset is already ≤ itself).
+    private func sanitizedNDStepRoundingDown(
+        _ step: NDStep,
+        for mode: ExposureScaleMode
+    ) -> NDStep {
+        let ladder = ExposureScale.scale(for: mode).ndSteps
+        if let match = ladder.first(where: {
+            abs($0.stops - step.stops) <= ExposureCalculator.stabilityEpsilon
+        }) {
+            return match
+        }
+
+        switch mode {
+        case .fullStop:
+            return NDStep(stops: step.stops.rounded(.down))
+        case .oneThirdStop:
+            return NDStep(stops: (step.stops * 3).rounded(.down) / 3.0)
         }
     }
 

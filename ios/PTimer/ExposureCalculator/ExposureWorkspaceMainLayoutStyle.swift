@@ -487,7 +487,7 @@ struct VariableSectionView: View {
     @Binding var baseShutter: Double
     let ndFilterSteps: [NDStep]
     let shutterSpeeds: [Double]
-    let ndStepValues: [NDStep]
+    let ndStepValuesForWheel: (Int) -> [NDStep]
     let formatShutter: (TimeInterval) -> String
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
@@ -517,7 +517,7 @@ struct VariableSectionView: View {
 
                 NDFilterGroupView(
                     ndFilterSteps: ndFilterSteps,
-                    ndStepValues: ndStepValues,
+                    ndStepValuesForWheel: ndStepValuesForWheel,
                     ndNotationMode: ndNotationMode,
                     onSelectNotationMode: onSelectNotationMode,
                     onCommitStep: onCommitNDFilterStep,
@@ -546,7 +546,7 @@ struct VariableSectionView: View {
 /// VoiceOver custom actions mirror Add filter / Remove empty filter.
 private struct NDFilterGroupView: View {
     let ndFilterSteps: [NDStep]
-    let ndStepValues: [NDStep]
+    let ndStepValuesForWheel: (Int) -> [NDStep]
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
     let onCommitStep: (Int, NDStep) -> Void
@@ -588,7 +588,7 @@ private struct NDFilterGroupView: View {
                 ForEach(ndFilterSteps.indices, id: \.self) { index in
                     NDWheelView(
                         ndStep: wheelBinding(at: index),
-                        ndStepValues: ndStepValues,
+                        ndStepValues: ndStepValuesForWheel(index),
                         ndNotationMode: ndNotationMode,
                         isCompact: ndFilterSteps.count > 1,
                         onContinuousSelectionChange: { onContinuousSelectionChange(index, $0) },

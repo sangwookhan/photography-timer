@@ -233,6 +233,25 @@ public final class CalculatorModel {
         }
     }
 
+    /// Restores a wheel stack from persistence or a slot switch. The
+    /// caller (persistence validation, slot snapshots) supplies
+    /// pre-validated values; this guard is the last defensive shield
+    /// so corrupted input can never trip the domain type's
+    /// programmer-error preconditions — a violating stack restores
+    /// as the default single wheel instead (reject, never clamp).
+    public func restoreNDFilterSteps(_ steps: [NDStep]) {
+        guard (1...NDFilterStack.maximumWheelCount).contains(steps.count),
+              steps.allSatisfy({ $0.stops >= 0 && $0.stops.isFinite }),
+              NDFilterStack.isWithinTotalLimit(steps) else {
+            ndFilterStack = NDFilterStack(single: CalculatorDefaults.ndStep)
+            regenerateNDFilterWheelIDs()
+            return
+        }
+        clearLiveNDStopPreview()
+        ndFilterStack = NDFilterStack(entries: steps)
+        regenerateNDFilterWheelIDs()
+    }
+
     /// Picker ladder for one wheel: the active scale's ND ladder
     /// truncated from the top to that wheel's remaining budget under
     /// the 30-stop total limit. Derives from COMMITTED values only,

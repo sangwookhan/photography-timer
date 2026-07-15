@@ -727,9 +727,7 @@ private struct CameraSlotCalculatorPage: View {
 
             VariableSectionView(
                 baseShutter: baseShutterBinding,
-                ndFilterSteps: pageState.isActive
-                    ? viewModel.ndFilterSteps
-                    : [pageState.ndStep],
+                ndFilterSteps: viewModel.ndFilterSteps(forPage: pageState),
                 ndDisplaySteps: viewModel.ndDisplayFilterSteps(forPage: pageState),
                 ndFilterWheelIDs: viewModel.ndFilterWheelIDs(forPage: pageState),
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),

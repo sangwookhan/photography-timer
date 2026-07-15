@@ -121,6 +121,20 @@ final class NDWheelIdentityTests: XCTestCase {
     }
 
     @MainActor
+    func testRestoreRegeneratesParallelUniqueIDs() {
+        let model = makeModel()
+        model.restoreNDFilterSteps(steps([7, 3, 0]))
+
+        XCTAssertEqual(model.ndFilterWheelIDs.count, 3)
+        XCTAssertEqual(Set(model.ndFilterWheelIDs).count, 3)
+
+        // The reject path also lands on a consistent single wheel.
+        model.restoreNDFilterSteps(steps([40]))
+        XCTAssertEqual(model.ndFilterSteps.count, 1)
+        XCTAssertEqual(model.ndFilterWheelIDs.count, 1)
+    }
+
+    @MainActor
     func testLegacySingleAssignmentResetsToOneID() {
         let model = makeModel()
         model.addFilterWheel()

@@ -1070,7 +1070,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     private func currentCameraSlotSnapshot() -> CameraSlotCalculatorSnapshot {
         CameraSlotCalculatorSnapshot(
             baseShutterSeconds: calculatorModel.baseShutterSeconds,
-            ndStep: calculatorModel.ndStep,
+            ndFilterSteps: calculatorModel.ndFilterSteps,
             scaleMode: calculatorModel.scaleMode,
             selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
             selectedProfileOverride: filmSelectionModel.selectedProfileOverride,
@@ -1109,8 +1109,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         if baseShutter != snapshot.baseShutterSeconds {
             baseShutter = snapshot.baseShutterSeconds
         }
-        if ndStep != snapshot.ndStep {
-            ndStep = snapshot.ndStep
+        // Restore the WHOLE wheel stack, not just the effective sum
+        // (PTIMER-199 M2): the slot's wheel layout is part of its
+        // shooting context. The published `ndStep` mirror refreshes
+        // from the model afterwards.
+        if calculatorModel.ndFilterSteps != snapshot.ndFilterSteps {
+            calculatorModel.restoreNDFilterSteps(snapshot.ndFilterSteps)
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
         }
 
         filmSelectionModel.replaceActiveSelection(
@@ -1657,7 +1663,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         if pageState.isActive {
             return ndDisplayFilterSteps
         }
-        return [pageState.ndStep]
+        return ndFilterSteps(forPage: pageState)
     }
 
     /// Whether another ND wheel can be added (C1). Drives the edge
@@ -1690,9 +1696,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     /// Appends one 0-stop wheel at the right (no-op while C1 denies
-    /// it). A 0-stop wheel leaves the effective value unchanged. The
-    /// fresh wheel is itself cleanable, so the cleanup timer re-arms
-    /// (A3) — 0-stop wheels are ephemeral regardless of origin.
+    /// it). A 0-stop wheel leaves the effective value unchanged, but
+    /// the wheel LAYOUT is part of the slot's persisted shooting
+    /// context (M2), so an actual add persists — an add-only session
+    /// must survive relaunch; no-ops skip the write. The fresh wheel
+    /// is itself cleanable, so the cleanup timer re-arms (A3) —
+    /// 0-stop wheels are ephemeral regardless of origin.
     public func addFilterWheel() {
         exitNDWheelReshapingIfNeeded()
         guard canAddFilterWheel else {
@@ -1710,7 +1719,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// action: removes ALL 0-stop wheels when a non-zero wheel
     /// exists; keeps exactly one when every wheel is 0-stop. One
     /// action cleans everything, so a screen-reader user never has
-    /// to repeat it.
+    /// to repeat it. The layout change persists (M2).
     public func cleanupEmptyFilterWheels() {
         exitNDWheelReshapingIfNeeded()
         guard canRemoveEmptyFilterWheel else {
@@ -2164,16 +2173,28 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.pickerNDSteps(forWheel: index)
     }
 
+    /// ND wheel stack for a page: the live model for the active slot,
+    /// the stored slot snapshot for inactive pages (so an adjacent
+    /// pager page previews the slot's actual wheel layout, not a
+    /// collapsed — possibly off-ladder — sum).
+    public func ndFilterSteps(forPage pageState: CameraSlotPageState) -> [NDStep] {
+        if pageState.isActive {
+            return ndFilterSteps
+        }
+        return cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.ndFilterSteps
+            ?? [pageState.ndStep]
+    }
+
     /// Page-aware companion of `ndFilterWheelIDs`. Inactive pages
-    /// render a static single-wheel preview that never reorders, so
-    /// positional identity suffices there; the identity swap when a
-    /// page activates is deliberately NOT animated (the commit path
-    /// owns the reorder animation), so it stays visually instant.
+    /// render static snapshots that never reorder, so positional
+    /// identity suffices there; the identity swap when a page
+    /// activates is deliberately NOT animated (the commit path owns
+    /// the reorder animation), so it stays visually instant.
     public func ndFilterWheelIDs(forPage pageState: CameraSlotPageState) -> [Int] {
         if pageState.isActive {
             return ndFilterWheelIDs
         }
-        return [0]
+        return Array(0..<ndFilterSteps(forPage: pageState).count)
     }
 
     /// Transient Total-overlay content (PTIMER-199 §4.6): the

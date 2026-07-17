@@ -242,7 +242,7 @@ change the stack while preserving the minimum-one-wheel rule.
 - Never reorder while any wheel is being scrolled. Animate the
   reorder after the epoch closes.
 - The epoch/set-commit machinery is realized by the v2
-  architecture (see `PTIMER-199-nd-wheel-architecture-v2.md`): an
+  architecture (see `PTIMER-199-nd-wheel-architecture-ios-v2.md`): an
   IDLE/SCROLLING/RESHAPING state machine with per-wheel unresolved
   tracking, an OWNED wheel picker whose delegate the app controls
   (a selection event outside a programmatic-change lock and under

@@ -2,7 +2,7 @@
 
 PTIMER-199 ticket-scoped 기록. 재설계 아키텍처의 전체 정의 —
 큰 그림에서 시작해 상태 기계, 컴포넌트, 개별 흐름의 세부로
-내려간다. 현행(v1) 기록인 `PTIMER-199-nd-wheel-architecture.md`와
+내려간다. 현행(v1) 기록인 `PTIMER-199-nd-wheel-architecture-ios.md`와
 함께 커밋되어 히스토리에 남고, 병합 전 최종 정리 커밋에서 함께
 삭제된다. 작성일: 2026-07-17.
 

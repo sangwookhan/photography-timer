@@ -39,6 +39,12 @@
     <!-- SnapWheel accessibility custom actions (PTIMER-182) -->
     <string name="wheel_action_previous">Previous value</string>
     <string name="wheel_action_next">Next value</string>
+    <!-- ND filter wheel stack (PTIMER-199) -->
+    <string name="nd_wheel_cd">ND filter %1$d of %2$d</string>
+    <string name="nd_add_filter">Add filter</string>
+    <string name="nd_remove_empty_filter">Remove empty filter</string>
+    <string name="nd_total_stops">Total %1$s stops</string>
+    <string name="nd_total_stops_maximum">Total %1$s stops · Maximum</string>
     <string name="reset_shooting_title">Reset shooting setup?</string>
     <string name="reset_settings">Reset settings</string>
     <string name="reset_settings_and_name">Reset settings and name</string>

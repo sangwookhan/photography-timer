@@ -32,6 +32,12 @@
     <!-- SnapWheel accessibility custom actions (PTIMER-182) -->
     <string name="wheel_action_previous">이전 값</string>
     <string name="wheel_action_next">다음 값</string>
+    <!-- ND filter wheel stack (PTIMER-199) -->
+    <string name="nd_wheel_cd">ND 필터 %2$d개 중 %1$d번째</string>
+    <string name="nd_add_filter">필터 추가</string>
+    <string name="nd_remove_empty_filter">빈 필터 제거</string>
+    <string name="nd_total_stops">합계 %1$s 스톱</string>
+    <string name="nd_total_stops_maximum">합계 %1$s 스톱 · 최대</string>
     <string name="reset_shooting_title">촬영 설정을 초기화할까요?</string>
     <string name="reset_settings">설정 초기화</string>
     <string name="reset_settings_and_name">설정과 이름 초기화</string>

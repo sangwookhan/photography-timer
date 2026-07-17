@@ -360,7 +360,12 @@ fun ShootingApp(
                     modifier = Modifier.weight(1f),
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
-                    onNdIndex = controller::setNdIndex,
+                    onNdWheelActive = controller::setNdWheelActive,
+                    onNdWheelValue = controller::setNdWheelValue,
+                    onAddNdWheel = controller::addNdWheel,
+                    onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
+                    onCleanupEmptyNdWheels = controller::cleanupEmptyNdWheels,
+                    onRunNdCleanup = controller::runNdCleanupIfQuiet,
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }

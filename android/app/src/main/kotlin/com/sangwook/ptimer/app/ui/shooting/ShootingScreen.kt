@@ -93,7 +93,14 @@ import com.sangwook.ptimer.app.ui.localizedFilmName
 fun ShootingScreen(
     state: CalculatorUiState,
     onShutterIndex: (Int) -> Unit,
-    onNdIndex: (Int) -> Unit,
+    // ND wheel stack (PTIMER-199): per-wheel activity/selection plus the
+    // structural add/remove/cleanup commands, all keyed by wheel identity.
+    onNdWheelActive: (Int, Boolean) -> Unit,
+    onNdWheelValue: (Int, Int) -> Unit,
+    onAddNdWheel: () -> Unit,
+    onRemoveNdWheelOverscroll: (Int) -> Unit,
+    onCleanupEmptyNdWheels: () -> Unit,
+    onRunNdCleanup: () -> Boolean,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
@@ -176,7 +183,6 @@ fun ShootingScreen(
                 // display-only.
                 val writesActiveSlot = page == activeIndex
                 val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
-                val onNdForPage: (Int) -> Unit = if (writesActiveSlot) onNdIndex else { _ -> }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -329,7 +335,12 @@ fun ShootingScreen(
                                 )
                             }
                             Column(
-                                modifier = Modifier.weight(1f),
+                                // The ND column widens once wheels stack so
+                                // 3–4 side-by-side ladders keep readable
+                                // labels; the shutter wheel needs less room.
+                                modifier = Modifier.weight(
+                                    if (pageState.ndWheels.size >= 2) 1.6f else 1f,
+                                ),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 // One horizontal header row: a stronger "ND Filter"
@@ -347,13 +358,15 @@ fun ShootingScreen(
                                         onSelect = onSelectNotation,
                                     )
                                 }
-                                SnapWheel(
-                                    pageState.ndLabels,
-                                    pageState.ndIndex,
-                                    onNdForPage,
-                                    visibleCount = 3,
-                                    itemHeight = 34.dp,
-                                    accessibilityLabel = stringResource(R.string.shooting_nd_filter),
+                                NdFilterStackGroup(
+                                    state = pageState,
+                                    isActivePage = writesActiveSlot,
+                                    onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
+                                    onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
+                                    onAddWheel = if (writesActiveSlot) onAddNdWheel else fun() {},
+                                    onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
+                                    onCleanupEmptyWheels = if (writesActiveSlot) onCleanupEmptyNdWheels else fun() {},
+                                    onRunCleanupIfQuiet = onRunNdCleanup,
                                 )
                             }
                         }

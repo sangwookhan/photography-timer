@@ -1,13 +1,15 @@
 # Cross-Platform Architecture Review
 
-Revision 4 — 2026-07-06. Revision 1 covered structure, test
+Revision 5 — 2026-07-18. Revision 1 covered structure, test
 architecture, and the shared-data pipeline (§1–§8, Appendix A);
 Revision 2 added a holistic assessment across function, performance,
 extensibility, and usability (§10–§15); Revision 3 added the
 test-suite utility audit (§16) and the required/possible improvement
 appendix (Appendix B); Revision 4 re-verified claims against source
 and corrected §1, §6.3, §10.1, §15, §16, and Appendix B (verification
-notes in Appendix C).
+notes in Appendix C); Revision 5 updated §4 for the Android
+state-ownership change (PTIMER-223: AndroidX ViewModel owns the state
+holders; Compose no longer owns their lifetime).
 
 Evidence classes used in this document: **measured** (command run
 during the review, output recorded in Appendix C), **source-verified**
@@ -240,8 +242,8 @@ owns each layer today. Bracketed = module.
 | --- | --- | --- |
 | Screens / navigation shell | `*Screen`, `BottomSheetWorkspaceShell` [app] | `ShootingApp`, `ShootingScreen`, `TimerListScreen`, dialogs [:app] |
 | Reusable UI components | `Components/`, `Theme/`, graph views [Kit] | `ui/component/` (SnapWheel, ReciprocityGraphView), `ui/theme/` [:app] |
-| Composition / DI | `WorkspaceCoordinator` [Kit], `ViewModelDependencyFactory` [app] | wiring inside `ShootingApp` via `remember { … }` [:app] |
-| View-model facade / feature models | `ExposureCalculatorViewModel` + six `@Observable` feature models [Kit] | `CalculatorController` (StateFlow), `ShootingViewModel` (intent + StateFlow) [:app] |
+| Composition / DI | `WorkspaceCoordinator` [Kit], `ViewModelDependencyFactory` [app] | `ShootingAppViewModel` (AndroidX ViewModel) built once per Activity store from the bootstrap; `ShootingApp` renders it [:app] |
+| View-model facade / feature models | `ExposureCalculatorViewModel` + six `@Observable` feature models [Kit] | `CalculatorController` (StateFlow), `ShootingViewModel` (intent + StateFlow) — plain Kotlin, held by `ShootingAppViewModel` [:app] |
 | Presenters / display state | feature-adjacent presenters [Kit], `PresentationSemantics` [Core] | reciprocity/timer/target/customfilm presenters [:core] |
 | Domain + policy (protected) | `ExposureCalculator`, `ReciprocityCalculationPolicy`, `TimerState` [Core] | line-faithful ports, same names [:core] |
 | Timer runtime | `TimerRuntime` pure state machine [Kit] + RunLoop `TimerManager` [app] | `TimerState` machine [:core] + 200 ms coroutine tick `AndroidTimerCoordinator` [:app] |
@@ -328,6 +330,59 @@ Deliberate platform divergences (G2, all justified):
   localization path (PTIMER-183).
 - Android's tick cadence is 200 ms coroutine vs iOS 100 ms RunLoop —
   both satisfy the Timer spec's display contract.
+
+### 4.1 Android state ownership and restore model (PTIMER-223)
+
+Android screen state is owned through an AndroidX lifecycle
+`ViewModel` boundary, not the Composition:
+
+- `ShootingAppViewModel` (`:app/vm`) is a thin lifecycle owner scoped
+  to the Activity's ViewModelStore. It holds the unchanged pure
+  Kotlin state holders — `ShootingViewModel` (timer workspace),
+  `CalculatorController` (calculator across camera slots), and the
+  `CustomFilmLibrary` — and builds them once per store lifetime from
+  the first `ShootingAppBootstrap`. The state holders stay plain
+  Kotlin and JVM-unit-testable; only the owner touches AndroidX.
+- State-owner asynchronous work lives in `viewModelScope`: the
+  one-shot timer-workspace restore, the debounced calculator
+  slot-session persistence collector, and the 200 ms tick loop
+  (`AndroidTimerCoordinator`). Compose `LaunchedEffect`s no longer
+  own any of these; composition-side effects are limited to idempotent
+  OS-surface reconciliation (alarm-plan and ongoing-notification sync,
+  permission refresh) plus one-shot UI event handling
+  (notification-tap navigation).
+- **Configuration change** (theme, font scale, locale): the Activity
+  and Composition are recreated, but the ViewModel — and with it every
+  committed calculator, slot, and timer state — is retained in memory.
+  The Activity shell still re-runs the splash-gating bootstrap read,
+  but the retained ViewModel ignores its payload: state retention does
+  not depend on any persistence round trip completing. A change still
+  inside the 400 ms persistence debounce window is not lost; the
+  collector keeps running and the write lands. `onCleared`
+  additionally flushes a pending debounced write when the owner is
+  destroyed for good. Completion-transition tracking for the in-app
+  alert also lives in the owner, so a timer that finishes while the
+  Composition is gone mid-recreation still alerts, exactly once.
+- **Process death / cold launch**: the ViewModel dies with the
+  process, and so do its pending in-memory jobs — the next launch
+  constructs a fresh owner from the bootstrap and restores only what
+  was durably committed to the DataStore payloads before the process
+  died. Within a live process, bootstrap reads remain ordered behind
+  writes already submitted to the process-wide persistence writer
+  (PTIMER-217). Persistence schemas are unchanged.
+
+This mirrors the iOS split (retained `WorkspaceCoordinator` + pure
+feature models) at the closest Android-native equivalent.
+
+The detailed contract — the before/after ownership migration
+(previous Composition-owned lifetime, the concrete problems it
+caused, and the problem-to-change mapping), the authoritative state
+source map, ownership and async-work diagrams, lifecycle sequence
+diagrams, the committed vs interaction-transient state table, the
+PTIMER-199 ND cleanup lifecycle boundary, and the verification
+matrix — lives in
+[`../tasks/PTIMER-223-android-viewmodel-architecture.md`](../tasks/PTIMER-223-android-viewmodel-architecture.md)
+until PTIMER-199 completes.
 
 ---
 

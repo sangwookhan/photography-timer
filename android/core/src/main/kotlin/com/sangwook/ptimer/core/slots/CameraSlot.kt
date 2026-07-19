@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.core.slots
 
 import com.sangwook.ptimer.core.exposure.ExposureScale
+import com.sangwook.ptimer.core.exposure.NdFilterStack
 import kotlinx.serialization.Serializable
 
 /**
@@ -85,6 +86,16 @@ data class SlotCalculatorSnapshot(
      * 6.6 is not truncated to a whole stop on restore.
      */
     val ndStops: Double? = null,
+    /**
+     * ND filter wheel stack (PTIMER-199): committed wheel values in
+     * display order, canonical stops, 1..4 entries. Additive optional
+     * so pre-stack payloads decode unchanged. When present AND valid
+     * it is the source of truth; [ndIndex]/[ndStops] then carry the
+     * MAXIMUM wheel so an older build downgrades to the strongest
+     * single filter (iOS parity). Invalid stacks are rejected at read
+     * time (never clamped) and fall back to the legacy scalar.
+     */
+    val ndStack: List<Double>? = null,
 )
 
 /**
@@ -96,6 +107,21 @@ data class SlotCalculatorSnapshot(
  */
 fun SlotCalculatorSnapshot.canonicalNDStops(): Double =
     ndStops?.let { ExposureScale.commercialNDPresetStop(it) } ?: ndIndex.toDouble()
+
+/**
+ * Canonical ND wheel stack for this snapshot (PTIMER-199): the
+ * validated [SlotCalculatorSnapshot.ndStack] when present, otherwise a
+ * single wheel holding the legacy scalar. Restore rejects — it never
+ * clamps: an invalid persisted stack (bad count, off-ladder value,
+ * over-30 sum) is treated as absent. Mirrors the iOS restore
+ * precedence.
+ */
+fun SlotCalculatorSnapshot.canonicalNdStackStops(): List<Double> =
+    if (NdFilterStack.isValidRestoredStack(ndStack)) {
+        ndStack!!
+    } else {
+        listOf(canonicalNDStops())
+    }
 
 /**
  * Owns the camera-slot session state: which slot is active and a stable

@@ -153,6 +153,17 @@
         }
       }
     },
+    "%lld filters, total %@ stops" : {
+      "comment" : "ND filter stack accessibility value: wheel count and effective total (PTIMER-199).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "필터 %lld개, 합계 %@ 스톱"
+          }
+        }
+      }
+    },
     "%lld hr ago" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -329,6 +340,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "공식을 피팅하려면 앵커를 2개 이상 추가하세요."
+          }
+        }
+      }
+    },
+    "Add filter" : {
+      "comment" : "ND filter stack: edge Add control and VoiceOver custom action (PTIMER-199).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "필터 추가"
           }
         }
       }
@@ -2583,6 +2605,17 @@
         }
       }
     },
+    "Remove empty filter" : {
+      "comment" : "ND filter stack: VoiceOver custom action running the full empty-wheel cleanup (PTIMER-199).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빈 필터 제거"
+          }
+        }
+      }
+    },
     "Reset" : {
       "localizations" : {
         "ko" : {
@@ -3309,6 +3342,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tm₀ 값은 0보다 커야 합니다."
+          }
+        }
+      }
+    },
+    "Total %@ stops" : {
+      "comment" : "ND filter stack transient overlay: effective sum in stops (PTIMER-199).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "합계 %@ 스톱"
+          }
+        }
+      }
+    },
+    "Total %@ stops · Maximum" : {
+      "comment" : "ND filter stack transient overlay at the 30-stop cap (PTIMER-199).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "합계 %@ 스톱 · 최대"
           }
         }
       }

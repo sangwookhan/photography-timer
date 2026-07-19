@@ -60,14 +60,14 @@ data class ShootingUiState(
  * deterministic and unit-testable without Android.
  *
  * Not an `androidx.lifecycle.ViewModel` subclass so it instantiates trivially
- * in JVM unit tests; the Compose wiring holds it across recompositions.
+ * in JVM unit tests; [ShootingAppViewModel] holds it across recompositions and
+ * Activity recreations (PTIMER-223).
  *
  * Store writes are handed to [persistenceWriter] so the store's blocking bridge
  * never runs on the main thread (PTIMER-217). The default is the process-wide
- * single writer, so every view-model generation (including the one a
- * configuration change replaces) shares one ordered writer — a stale generation
- * cannot leak a scope or race a newer one. Tests inject a synchronous writer to
- * keep persistence assertable.
+ * single writer, so every state-holder generation shares one ordered writer —
+ * a stale generation cannot leak a scope or race a newer one. Tests inject a
+ * synchronous writer to keep persistence assertable.
  */
 class ShootingViewModel(
     private val store: WorkspacePersistenceStoring,

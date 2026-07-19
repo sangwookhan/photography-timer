@@ -365,7 +365,6 @@ fun ShootingApp(
                     onAddNdWheel = controller::addNdWheel,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
                     onCleanupEmptyNdWheels = controller::cleanupEmptyNdWheels,
-                    onRunNdCleanup = controller::runNdCleanupIfQuiet,
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }

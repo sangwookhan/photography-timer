@@ -55,28 +55,24 @@ private val WheelSpacing = 4.dp
 private val NdWheelItemHeight = 34.dp
 private const val NdWheelVisibleCount = 3
 
-/** Self-cleaning delay for committed 0-stop wheels (PTIMER-199 §4.2.2;
- *  fire-time judged by the controller, this layer only hosts the timer). */
-private const val NdCleanupDelayMillis = 4_000L
-
 /**
  * The ND wheel stack group (PTIMER-199 M3): 1–4 side-by-side SnapWheels
  * keyed by wheel identity (a commit sort animates as movement), the slim
  * Add control on the trailing edge (presence = C1 on committed values,
- * enabled = quiet machine), the transient Total overlay, the 4-second
- * self-cleaning timer host, and the Add/Remove TalkBack custom actions.
- * All stack STATE lives in the controller; this layer renders and times.
+ * enabled = quiet machine), the transient Total overlay, and the
+ * Add/Remove TalkBack custom actions. All stack STATE — including the
+ * 4-second self-cleaning timer, which lives in the ViewModel-owned
+ * controller scope (PTIMER-223) — stays out of this layer; it renders,
+ * and times only its own presentation (the badge fade).
  */
 @Composable
 internal fun NdFilterStackGroup(
     state: CalculatorUiState,
-    isActivePage: Boolean,
     onWheelActive: (Int, Boolean) -> Unit,
     onWheelValue: (Int, Int) -> Unit,
     onAddWheel: () -> Unit,
     onOverscrollRemove: (Int) -> Unit,
     onCleanupEmptyWheels: () -> Unit,
-    onRunCleanupIfQuiet: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val wheels = state.ndWheels
@@ -91,23 +87,6 @@ internal fun NdFilterStackGroup(
         if (state.canAddNdWheel) add(CustomAccessibilityAction(addLabel) { onAddWheel(); true })
         if (state.canCleanupEmptyNdWheels) {
             add(CustomAccessibilityAction(removeLabel) { onCleanupEmptyWheels(); true })
-        }
-    }
-
-    // Self-cleaning zeros, fire-time semantics: the timer arms per wheel
-    // STRUCTURE (identity list) and fires blind; the controller judges
-    // quiet/cleanable at fire time and the loop re-arms after a refusal.
-    // Display-value changes deliberately do NOT restart the delay —
-    // interaction defers cleanup through the fire-time judgment, not by
-    // rescheduling.
-    if (isActivePage) {
-        val stackFingerprint = wheels.joinToString("|") { it.id.toString() }
-        LaunchedEffect(stackFingerprint, state.canRemoveEmptyNdWheel) {
-            if (!state.canRemoveEmptyNdWheel) return@LaunchedEffect
-            while (true) {
-                delay(NdCleanupDelayMillis)
-                if (onRunCleanupIfQuiet()) break
-            }
         }
     }
 

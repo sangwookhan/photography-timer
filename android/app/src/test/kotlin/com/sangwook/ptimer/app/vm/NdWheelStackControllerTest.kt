@@ -8,6 +8,9 @@ import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.slots.canonicalNdStackStops
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -334,6 +337,55 @@ class NdWheelStackControllerTest {
         assertTrue(c2.runNdCleanupIfQuiet())
         assertEquals(listOf(7.0, 5.0, 4.0), wheelStops(c2))
         assertTrue(c2.state.value.canAddNdWheel)
+    }
+
+    // MARK: ViewModel-scope-owned cleanup timer (PTIMER-223 handoff)
+
+    @Test
+    fun ownedTimerCleansAnUntouchedZeroAfterTheGracePeriod() = runTest {
+        val c = CalculatorController(films = films, ndCleanupScope = backgroundScope)
+        c.addNdWheel()
+        commitStops(c, 0, "10")
+        // [10, 0]: the commit write armed the timer.
+        advanceTimeBy(4_001)
+        runCurrent()
+        assertEquals(listOf(10.0), wheelStops(c))
+    }
+
+    @Test
+    fun ownedTimerDefersUnderAFingerThenCleansOnTheNextFire() = runTest {
+        val c = CalculatorController(films = films, ndCleanupScope = backgroundScope)
+        c.addNdWheel()
+        commitStops(c, 0, "10")
+        val zeroId = c.state.value.ndWheels[1].id
+        c.setNdWheelActive(zeroId, true)
+        advanceTimeBy(4_001)
+        runCurrent()
+        assertEquals("Fire is refused under the finger.", 2, c.state.value.ndWheels.size)
+
+        c.setNdWheelActive(zeroId, false)
+        advanceTimeBy(4_001)
+        runCurrent()
+        assertEquals(listOf(10.0), wheelStops(c))
+    }
+
+    @Test
+    fun structuralChangeRestartsTheGracePeriodForNewZeros() = runTest {
+        val c = CalculatorController(films = films, ndCleanupScope = backgroundScope)
+        c.addNdWheel()
+        commitStops(c, 0, "10")
+        advanceTimeBy(3_900)
+        runCurrent()
+        // A wheel added just before the old fire time must get the
+        // FULL grace period — the add re-arms the timer.
+        c.addNdWheel()
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(3, c.state.value.ndWheels.size)
+
+        advanceTimeBy(3_900)
+        runCurrent()
+        assertEquals(listOf(10.0), wheelStops(c))
     }
 
     // MARK: cleanup (fire-time judgment)

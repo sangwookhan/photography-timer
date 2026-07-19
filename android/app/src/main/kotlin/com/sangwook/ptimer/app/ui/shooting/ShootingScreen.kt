@@ -100,7 +100,6 @@ fun ShootingScreen(
     onAddNdWheel: () -> Unit,
     onRemoveNdWheelOverscroll: (Int) -> Unit,
     onCleanupEmptyNdWheels: () -> Unit,
-    onRunNdCleanup: () -> Boolean,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
@@ -360,13 +359,11 @@ fun ShootingScreen(
                                 }
                                 NdFilterStackGroup(
                                     state = pageState,
-                                    isActivePage = writesActiveSlot,
                                     onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
                                     onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
                                     onAddWheel = if (writesActiveSlot) onAddNdWheel else fun() {},
                                     onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
                                     onCleanupEmptyWheels = if (writesActiveSlot) onCleanupEmptyNdWheels else fun() {},
-                                    onRunCleanupIfQuiet = onRunNdCleanup,
                                 )
                             }
                         }

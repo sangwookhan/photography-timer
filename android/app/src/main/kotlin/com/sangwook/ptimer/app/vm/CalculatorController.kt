@@ -32,9 +32,13 @@ import kotlin.math.roundToInt
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.core.target.TargetShutterPresenter
 import com.sangwook.ptimer.core.timer.TimerIdentity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class FilmOption(
     val id: String?,
@@ -143,6 +147,13 @@ class CalculatorController(
     private val exposure: ExposureCalculator = ExposureCalculator(),
     private val onStart: (duration: Double, identity: TimerIdentity) -> Unit = { _, _ -> },
     initialSession: PersistentSlotSession? = null,
+    /** Scope that owns the ND cleanup timer (PTIMER-199 §4.2.2 /
+     *  PTIMER-223): the ViewModel scope in production, so the timer
+     *  survives configuration changes with the state it judges. Null
+     *  keeps the timer disarmed and pure state tests drive
+     *  [runNdCleanupIfQuiet] directly. */
+    private val ndCleanupScope: CoroutineScope? = null,
+    private val ndCleanupDelayMillis: Long = 4_000,
 ) {
     // Catalog + custom films; replaced via [setFilms] when the custom library changes.
     private var films: List<FilmIdentity> = films
@@ -198,6 +209,32 @@ class CalculatorController(
         if (ndWheelIds.size != count) {
             ndWheelIds = List(count) { makeNdWheelId() }
         }
+        rearmNdCleanupTimer()
+    }
+
+    /** Controller-owned self-cleaning timer for committed 0-stop
+     *  wheels. (Re)armed on STRUCTURAL changes only — commit writes
+     *  and identity re-syncs — never on display-value publishes, so
+     *  a fresh zero always gets the full grace period. Interaction
+     *  defers cleanup through the fire-time judgment in
+     *  [runNdCleanupIfQuiet], not by rescheduling. */
+    private var ndCleanupJob: Job? = null
+
+    private fun rearmNdCleanupTimer() {
+        ndCleanupJob?.cancel()
+        ndCleanupJob = null
+        val scope = ndCleanupScope ?: return
+        if (!activeNdStack().canRemoveEmptyWheel) return
+        ndCleanupJob = scope.launch {
+            while (true) {
+                delay(ndCleanupDelayMillis)
+                // Fires blind; the judgment decides. A refusal (a
+                // wheel was moving) re-arms; a stack that stopped
+                // being cleanable ends the loop.
+                if (runNdCleanupIfQuiet()) break
+                if (!activeNdStack().canRemoveEmptyWheel) break
+            }
+        }
     }
 
     /** Slot switches and resets discard in-flight selections. */
@@ -240,6 +277,7 @@ class CalculatorController(
             )
         }
         publish()
+        rearmNdCleanupTimer()
     }
 
     /** UI signal: the wheel at [wheelId] is in motion / under a

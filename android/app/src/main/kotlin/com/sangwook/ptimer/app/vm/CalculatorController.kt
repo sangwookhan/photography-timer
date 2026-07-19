@@ -12,6 +12,7 @@ import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.NDNotationFormatter
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.exposure.NDStep
+import com.sangwook.ptimer.core.exposure.NdFilterStack
 import com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModels
 import com.sangwook.ptimer.core.reciprocity.ReciprocityAuthority
 import com.sangwook.ptimer.core.reciprocity.calculatedCorrectedSeconds
@@ -25,14 +26,19 @@ import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotSession
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.slots.canonicalNDStops
+import com.sangwook.ptimer.core.slots.canonicalNdStackStops
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.core.target.TargetShutterPresenter
 import com.sangwook.ptimer.core.timer.TimerIdentity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class FilmOption(
     val id: String?,
@@ -45,6 +51,21 @@ data class FilmOption(
 )
 
 data class ModelOption(val id: String, val label: String)
+
+/**
+ * One ND filter wheel of the stack (PTIMER-199). [id] is the wheel's
+ * stable identity (monotonic from 101, position-independent — the
+ * Compose row keys on it so the commit sort animates as movement);
+ * [labels] is the wheel's budget-truncated ladder in the current
+ * notation; [selectedIndex] points at the wheel's DISPLAY value
+ * (pending selection while the set commit is open, committed value
+ * otherwise).
+ */
+data class NdWheelUiState(
+    val id: Int,
+    val labels: List<String>,
+    val selectedIndex: Int,
+)
 data class SlotTab(val id: CameraSlotId, val displayName: String, val isActive: Boolean)
 
 /** Immutable state the shooting calculator surface renders. */
@@ -55,6 +76,25 @@ data class CalculatorUiState(
     val shutterIndex: Int,
     val ndLabels: List<String>,
     val ndIndex: Int,
+    /** ND wheel stack (PTIMER-199): 1..4 wheels in display order. */
+    val ndWheels: List<NdWheelUiState> = emptyList(),
+    /** Layout presence of the Add control (C1, committed-only). */
+    val showsAddNdWheel: Boolean = false,
+    /** Add availability (presence AND the machine is quiet). */
+    val canAddNdWheel: Boolean = false,
+    /** True while a removable 0-stop wheel exists on the COMMITTED
+     *  stack. */
+    val canRemoveEmptyNdWheel: Boolean = false,
+    /** True only while the one-shot cleanup would actually run NOW —
+     *  a removable zero exists AND the machine is quiet. Gates the
+     *  TalkBack "Remove empty filter" custom action so assistive
+     *  users are never offered a command that would no-op. */
+    val canCleanupEmptyNdWheels: Boolean = false,
+    /** Stack total in stops ("18", "13.2"); null below two wheels. */
+    val ndTotalStopsText: String? = null,
+    /** True when the LIVE total (pending selections included, the
+     *  same basis as [ndTotalStopsText]) sits at the 30-stop cap. */
+    val ndTotalIsMaximum: Boolean = false,
     val filmOptions: List<FilmOption>,
     val selectedFilmId: String?,
     val selectedFilmName: String,
@@ -106,6 +146,13 @@ class CalculatorController(
     private val exposure: ExposureCalculator = ExposureCalculator(),
     private val onStart: (duration: Double, identity: TimerIdentity) -> Unit = { _, _ -> },
     initialSession: PersistentSlotSession? = null,
+    /** Scope that owns the ND cleanup timer (PTIMER-199 §4.2.2 /
+     *  PTIMER-223): the ViewModel scope in production, so the timer
+     *  survives configuration changes with the state it judges. Null
+     *  keeps the timer disarmed and pure state tests drive
+     *  [runNdCleanupIfQuiet] directly. */
+    private val ndCleanupScope: CoroutineScope? = null,
+    private val ndCleanupDelayMillis: Long = 4_000,
 ) {
     // Catalog + custom films; replaced via [setFilms] when the custom library changes.
     private var films: List<FilmIdentity> = films
@@ -127,12 +174,244 @@ class CalculatorController(
     private fun ndLabels(): List<String> =
         ndStopValues.map { NDNotationFormatter.display(it, ndNotationMode).value }
 
-    /** Canonical ND stops for a snapshot (preset-exact or legacy whole stop). */
-    private fun ndStopsOf(snapshot: SlotCalculatorSnapshot): Double = snapshot.canonicalNDStops()
+    /** Effective (summed) ND stops for a snapshot's wheel stack. */
+    private fun ndStopsOf(snapshot: SlotCalculatorSnapshot): Double =
+        snapshot.canonicalNdStackStops().sum()
 
     /** Wheel position for a canonical stop value: the nearest ladder entry. */
     private fun ndWheelIndex(stops: Double): Int =
         ndStopValues.indices.minByOrNull { abs(ndStopValues[it] - stops) } ?: 0
+
+    // --- ND wheel stack interaction state (PTIMER-199, iOS-parity) ---
+
+    /** Stable identity per active-slot wheel (101+, never index-like). */
+    private var ndWheelIds: List<Int> = emptyList()
+    private var nextNdWheelId = 101
+
+    /** Wheels currently in motion or under a finger (first-class
+     *  Compose signals reported by the UI). Structural mutation and
+     *  the set commit require this to be empty. */
+    private val activeNdWheelIds = mutableSetOf<Int>()
+
+    /** Selections recorded while wheels move, applied as ONE SET when
+     *  the last wheel goes quiet. Insertion order = settle order. */
+    private val pendingNdCommits = LinkedHashMap<Int, Double>()
+
+    private fun makeNdWheelId(): Int = nextNdWheelId++
+
+    private fun activeNdStack(): NdFilterStack =
+        NdFilterStack(session.activeSnapshot.canonicalNdStackStops())
+
+    /** Regenerates wheel identities for the active slot's stack. */
+    private fun syncNdWheelIds() {
+        val count = session.activeSnapshot.canonicalNdStackStops().size
+        if (ndWheelIds.size != count) {
+            ndWheelIds = List(count) { makeNdWheelId() }
+        }
+        rearmNdCleanupTimer()
+    }
+
+    /** Controller-owned self-cleaning timer for committed 0-stop
+     *  wheels. Every (re)arm cancels the previous job and grants a
+     *  FULL grace period; it happens on committed stack writes and
+     *  wheel-identity re-syncs — never on live-preview values or
+     *  touch/scroll signals. Interaction defers cleanup through the
+     *  fire-time judgment in [runNdCleanupIfQuiet] (busy at fire →
+     *  wait again), not by rescheduling. */
+    private var ndCleanupJob: Job? = null
+
+    private fun rearmNdCleanupTimer() {
+        ndCleanupJob?.cancel()
+        ndCleanupJob = null
+        val scope = ndCleanupScope ?: return
+        if (!activeNdStack().canRemoveEmptyWheel) return
+        ndCleanupJob = scope.launch {
+            while (true) {
+                delay(ndCleanupDelayMillis)
+                // Fires blind; the judgment decides. A refusal (a
+                // wheel was moving) re-arms; a stack that stopped
+                // being cleanable ends the loop.
+                if (runNdCleanupIfQuiet()) break
+                if (!activeNdStack().canRemoveEmptyWheel) break
+            }
+        }
+    }
+
+    /** Slot switches and resets discard in-flight selections. */
+    private fun clearNdInteraction() {
+        activeNdWheelIds.clear()
+        pendingNdCommits.clear()
+    }
+
+    /** Per-wheel ladder: the shipping ladder top-truncated to the
+     *  wheel's remaining budget (derived from COMMITTED values only,
+     *  so sibling ladders never reload while another wheel moves). */
+    private fun ndWheelLadderStops(index: Int, stack: NdFilterStack): List<Double> {
+        val budget = stack.remainingBudget(excludingWheelAt = index)
+        return ndStopValues.filter { it <= budget + ExposureCalculator.STABILITY_EPSILON }
+    }
+
+    private fun isSaturated(stack: NdFilterStack): Boolean =
+        stack.effectiveStops >=
+            NdFilterStack.MAX_TOTAL_STOPS - ExposureCalculator.STABILITY_EPSILON
+
+    /** C1: a new wheel must be able to hold a value above 0. */
+    private fun ndLadderAllowsNewWheel(stack: NdFilterStack): Boolean {
+        if (!stack.canAddWheel) return false
+        val budget = NdFilterStack.MAX_TOTAL_STOPS - stack.effectiveStops
+        return ndStopValues.any {
+            it > 0.0 && it <= budget + ExposureCalculator.STABILITY_EPSILON
+        }
+    }
+
+    /** Writes the committed stack; the legacy scalar fields carry the
+     *  MAXIMUM wheel so an older build downgrades to the strongest
+     *  single filter (iOS parity). */
+    private fun writeNdStack(stack: NdFilterStack) {
+        val maxWheel = stack.entries.max()
+        session.updateActiveSnapshot {
+            it.copy(
+                ndStack = stack.entries,
+                ndIndex = NDStep(maxWheel).wholeStops ?: maxWheel.roundToInt(),
+                ndStops = ExposureScale.commercialNDPresetStop(maxWheel),
+            )
+        }
+        publish()
+        rearmNdCleanupTimer()
+    }
+
+    /** UI signal: the wheel at [wheelId] is in motion / under a
+     *  finger (true) or has gone quiet (false). Quiescence triggers
+     *  the set commit. */
+    fun setNdWheelActive(wheelId: Int, isActive: Boolean) {
+        if (isActive) {
+            if (wheelId in ndWheelIds) activeNdWheelIds.add(wheelId)
+        } else {
+            activeNdWheelIds.remove(wheelId)
+            // The barrier applies pendings in SETTLE order — the order
+            // wheels went quiet — not last-value-change order. Going
+            // quiet moves this wheel's entry to the map's tail, so once
+            // every wheel has settled the LinkedHashMap order IS the
+            // settle order (a wheel that pended without ever being
+            // active keeps its value-change position, which is when it
+            // settled).
+            pendingNdCommits.remove(wheelId)?.let { pendingNdCommits[wheelId] = it }
+            commitNdSetIfQuiet()
+        }
+        // Activity flips the quiet-gated availability flags
+        // (canAddNdWheel, canCleanupEmptyNdWheels) even when no value
+        // has changed yet; equal states dedup downstream.
+        publish()
+    }
+
+    /** SnapWheel emission for one wheel: records the selection (live
+     *  display + pending set commit). A value equal to the wheel's
+     *  committed entry clears the record — programmatic re-centers
+     *  and return-to-committed scrolls leave nothing pending. */
+    fun setNdWheelValue(wheelId: Int, ladderIndex: Int) {
+        val wheelIndex = ndWheelIds.indexOf(wheelId)
+        if (wheelIndex < 0) return
+        val stack = activeNdStack()
+        val ladder = ndWheelLadderStops(wheelIndex, stack)
+        val stops = ladder.getOrNull(ladderIndex) ?: return
+        if (abs(stops - stack.entries[wheelIndex]) <= ExposureCalculator.STABILITY_EPSILON) {
+            pendingNdCommits.remove(wheelId)
+        } else {
+            // Provisional position: last-change order stands in until
+            // the wheel settles, when setNdWheelActive(_, false) moves
+            // the entry to the tail so the barrier applies in true
+            // settle order.
+            pendingNdCommits.remove(wheelId)
+            pendingNdCommits[wheelId] = stops
+        }
+        publish()
+        commitNdSetIfQuiet()
+    }
+
+    /** The set commit (barrier): applies pendings in settle order
+     *  (the domain refuses over-30 applications; that wheel
+     *  reverts), sheds zeros when the set saturates the cap (A0),
+     *  sorts once with identity following the permutation, persists
+     *  once via the caller's export flow. */
+    private fun commitNdSetIfQuiet() {
+        if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isEmpty()) return
+        var applied = activeNdStack()
+        for ((wheelId, stops) in pendingNdCommits) {
+            val index = ndWheelIds.indexOf(wheelId)
+            if (index >= 0) applied = applied.replacingWheel(index, stops)
+        }
+        pendingNdCommits.clear()
+        val permutation = applied.commitSortPermutation()
+        var sorted = applied.sortedForCommit()
+        var ids = permutation.map { ndWheelIds[it] }
+        if (isSaturated(sorted)) {
+            while (sorted.canRemoveEmptyWheel) {
+                val zeroIndex = sorted.entries.indexOfLast { it == 0.0 }
+                sorted = sorted.removingEmptyWheel(at = zeroIndex)
+                ids = ids.filterIndexed { i, _ -> i != zeroIndex }
+            }
+        }
+        ndWheelIds = ids
+        writeNdStack(sorted)
+    }
+
+    /** Adds a 0-stop wheel (C1 + quiet-machine gate). */
+    fun addNdWheel() {
+        if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty()) return
+        val stack = activeNdStack()
+        if (!ndLadderAllowsNewWheel(stack)) return
+        ndWheelIds = ndWheelIds + makeNdWheelId()
+        writeNdStack(stack.addingWheel())
+    }
+
+    /** Overscroll-past-zero removal, validate-first: the pull is
+     *  accepted only when no OTHER wheel is in motion, NO selections
+     *  are pending (a removal must never flush another wheel's
+     *  pending commit), the pulled wheel exists, its COMMITTED value
+     *  is zero, and it is not the last wheel. A refused pull mutates
+     *  no state at all — transient or committed — so the set commit
+     *  machinery proceeds exactly as if the pull never happened. */
+    fun removeNdWheelFromOverscroll(wheelId: Int) {
+        if ((activeNdWheelIds - wheelId).isNotEmpty()) return
+        if (pendingNdCommits.isNotEmpty()) return
+        val index = ndWheelIds.indexOf(wheelId)
+        val stack = activeNdStack()
+        if (index < 0 || stack.entries.getOrNull(index) != 0.0 || stack.entries.size <= 1) return
+        // Validated: remove exactly the pulled wheel. Its own active
+        // entry goes with it (the wheel is leaving the screen); with
+        // no pendings there is nothing to flush.
+        activeNdWheelIds.remove(wheelId)
+        ndWheelIds = ndWheelIds.filterIndexed { i, _ -> i != index }
+        writeNdStack(stack.removingEmptyWheel(at = index))
+    }
+
+    /** A2 cleanup in one action (TalkBack command and the fire-time
+     *  timer's execution path): removes ALL 0-stop wheels when a
+     *  non-zero wheel exists; keeps exactly one otherwise. */
+    fun cleanupEmptyNdWheels() {
+        if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty()) return
+        var stack = activeNdStack()
+        if (!stack.canRemoveEmptyWheel) return
+        var ids = ndWheelIds
+        while (stack.canRemoveEmptyWheel) {
+            val zeroIndex = stack.entries.indexOfLast { it == 0.0 }
+            stack = stack.removingEmptyWheel(at = zeroIndex)
+            ids = ids.filterIndexed { i, _ -> i != zeroIndex }
+        }
+        ndWheelIds = ids
+        writeNdStack(stack)
+    }
+
+    /** Fire-time judgment for the controller-owned 4-second timer:
+     *  executes only when the machine is quiet and the stack is
+     *  still cleanable; the caller re-arms otherwise. Returns
+     *  whether a cleanup ran. */
+    fun runNdCleanupIfQuiet(): Boolean {
+        if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty()) return false
+        if (!activeNdStack().canRemoveEmptyWheel) return false
+        cleanupEmptyNdWheels()
+        return true
+    }
 
     private val defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null)
 
@@ -158,6 +437,7 @@ class CalculatorController(
         // profile reference) so a deleted custom film is not re-persisted as a
         // broken selection. Inactive slots normalize when they become active.
         session.updateActiveSnapshot { normalizeSnapshot(it) }
+        syncNdWheelIds()
     }
 
     private val _state = MutableStateFlow(compute())
@@ -176,15 +456,17 @@ class CalculatorController(
     }
 
     fun setNdIndex(index: Int) {
-        // The wheel emits a ladder position; store the canonical stop value it
-        // carries. A whole stop keeps `ndStops` null (legacy shape); a
-        // commercial preset records its exact value in `ndStops` and the
-        // nearest whole in `ndIndex` for legacy/back-compat readers.
+        // Legacy single-filter assignment surface: replaces the whole
+        // stack with one wheel holding the value (iOS `ndStep` setter
+        // parity). The stack path goes through `setNdWheelValue`.
         val stops = ndStopValues[index.coerceIn(ndStopValues.indices)]
+        clearNdInteraction()
+        ndWheelIds = listOf(makeNdWheelId())
         session.updateActiveSnapshot {
             it.copy(
                 ndIndex = NDStep(stops).wholeStops ?: stops.roundToInt(),
                 ndStops = ExposureScale.commercialNDPresetStop(stops),
+                ndStack = listOf(stops),
             )
         }
         publish()
@@ -269,6 +551,9 @@ class CalculatorController(
 
     private fun resetActiveSlotSettingsFields() {
         session.updateActiveSnapshot { defaultSnapshot }
+        clearNdInteraction()
+        ndWheelIds = emptyList()
+        syncNdWheelIds()
     }
 
     // --- Custom-film editing (delegated to CustomFilmEditingPresenter) ---
@@ -333,6 +618,11 @@ class CalculatorController(
     fun selectSlot(id: CameraSlotId) {
         if (!session.switchActiveSlot(id)) return
         session.updateActiveSnapshot { normalizeSnapshot(it) }
+        // In-flight selections belong to the outgoing slot; the
+        // arriving slot gets fresh wheel identities.
+        clearNdInteraction()
+        ndWheelIds = emptyList()
+        syncNdWheelIds()
         publish()
     }
 
@@ -374,6 +664,9 @@ class CalculatorController(
             // preset; an unsupported off-grid value is dropped so restore falls
             // back to the legacy whole-stop field.
             ndStops = snapshot.ndStops?.let { ExposureScale.commercialNDPresetStop(it) },
+            // Reject-never-clamp: an invalid persisted stack restores
+            // through the legacy scalar instead of being repaired.
+            ndStack = snapshot.ndStack?.takeIf { NdFilterStack.isValidRestoredStack(it) },
         )
     }
 
@@ -470,14 +763,38 @@ class CalculatorController(
     private fun computeSlot(snapshot: SlotCalculatorSnapshot, slotId: CameraSlotId): CalculatorUiState {
         val film = snapshot.selectedFilmId?.let { id -> films.firstOrNull { it.id == id } }
         val profile = resolvedProfileFor(film, snapshot.selectedProfileId)
-        val result = calculator.result(snapshot.shutterIndex, ndStopsOf(snapshot), profile)
+        val committedStack = NdFilterStack(snapshot.canonicalNdStackStops())
+        val isActiveSlot = slotId == session.activeSlotId
+        // Active slot: pending selections overlay their wheels so the
+        // result follows each wheel while the set commit is open.
+        val effectiveStops = if (isActiveSlot) {
+            committedStack.entries.mapIndexed { i, committed ->
+                ndWheelIds.getOrNull(i)?.let { pendingNdCommits[it] } ?: committed
+            }.sum()
+        } else {
+            committedStack.effectiveStops
+        }
+        val result = calculator.result(snapshot.shutterIndex, effectiveStops, profile)
+        val ndWheels = committedStack.entries.mapIndexed { i, committed ->
+            val wheelId = if (isActiveSlot) ndWheelIds.getOrElse(i) { i } else i
+            val display = if (isActiveSlot) pendingNdCommits[wheelId] ?: committed else committed
+            val ladder = ndWheelLadderStops(i, committedStack)
+            NdWheelUiState(
+                id = wheelId,
+                labels = ladder.map { NDNotationFormatter.display(it, ndNotationMode).value },
+                selectedIndex = ladder.indexOfFirst {
+                    abs(it - display) <= ExposureCalculator.STABILITY_EPSILON
+                }.coerceAtLeast(0),
+            )
+        }
+        val showsAdd = ndLadderAllowsNewWheel(committedStack)
         val modelOptions = film?.let { f ->
             val options = modelProfiles(f)
             if (options.size > 1) options.map { ModelOption(it.id, it.selectorLabel ?: it.name) } else emptyList()
         } ?: emptyList()
 
         val canReset = snapshot.shutterIndex != defaultShutterIndex ||
-            ndStopsOf(snapshot) != 0.0 ||
+            committedStack.entries != listOf(0.0) ||
             film != null ||
             snapshot.targetSeconds != null ||
             slotId in session.currentCustomNames()
@@ -491,6 +808,23 @@ class CalculatorController(
             shutterIndex = snapshot.shutterIndex,
             ndLabels = ndLabels(),
             ndIndex = ndWheelIndex(ndStopsOf(snapshot)),
+            ndWheels = ndWheels,
+            showsAddNdWheel = showsAdd,
+            canAddNdWheel = showsAdd &&
+                (!isActiveSlot || (activeNdWheelIds.isEmpty() && pendingNdCommits.isEmpty())),
+            canRemoveEmptyNdWheel = committedStack.canRemoveEmptyWheel,
+            canCleanupEmptyNdWheels = committedStack.canRemoveEmptyWheel &&
+                (!isActiveSlot || (activeNdWheelIds.isEmpty() && pendingNdCommits.isEmpty())),
+            ndTotalStopsText = if (committedStack.entries.size >= 2) {
+                formatTotalStops(effectiveStops)
+            } else {
+                null
+            },
+            // Same live basis as the total text, so the badge never
+            // shows "30" without its Maximum marker mid-scroll.
+            ndTotalIsMaximum = committedStack.entries.size >= 2 &&
+                effectiveStops >=
+                NdFilterStack.MAX_TOTAL_STOPS - ExposureCalculator.STABILITY_EPSILON,
             filmOptions = filmOptions(),
             selectedFilmId = snapshot.selectedFilmId,
             selectedFilmName = film?.canonicalStockName ?: "No film",
@@ -516,6 +850,17 @@ class CalculatorController(
             hint = result.hint,
             targetDisplay = TargetShutterPresenter.makeDisplayState(snapshot.targetSeconds, comparisonSource(result)),
         )
+    }
+
+    /** Stack total, always in stops: "18" for whole values, one
+     *  decimal ("13.2") otherwise (iOS Total-overlay parity). */
+    private fun formatTotalStops(stops: Double): String {
+        val rounded = Math.round(stops).toDouble()
+        return if (abs(stops - rounded) <= 0.05) {
+            Math.round(stops).toString()
+        } else {
+            String.format(java.util.Locale.US, "%.1f", stops)
+        }
     }
 
     private fun filmOptions(): List<FilmOption> {

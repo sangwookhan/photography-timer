@@ -96,6 +96,11 @@ class ShootingAppViewModel(
             timers.onEvent(ShootingIntent.StartTimer(duration, identity))
         },
         initialSession = initialSession,
+        // The ND cleanup timer lives with the state it judges
+        // (PTIMER-199 M3 follow-up, PTIMER-223's remaining scope):
+        // owned here, it keeps running across configuration changes
+        // and dies with the owner, not with a UI generation.
+        ndCleanupScope = viewModelScope,
     )
 
     private val coordinator = AndroidTimerCoordinator(viewModelScope, timers, clock)

@@ -54,13 +54,14 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Steps.**
 1. Set base shutter from the 1/3-stop densified ladder with camera-facing labels.
-2. Set ND from the whole-stop ND ladder.
+2. Set ND from the ND ladder — as a single filter wheel, or as a stack of up to four wheels mirroring physically stacked filters.
 3. Read the output shutter on the result row.
 4. (Optional) Start a timer from the output shutter when the value is long enough that an in-camera shutter or wristwatch is impractical.
 
 **Boundary conditions.**
 - The base shutter must come from the 1/3-stop densified ladder (55 values spanning 1/8000 .. 30 s) with conventional camera-facing labels. Free-text input is rejected.
-- ND values come from the whole-stop ladder `0, 1, 2, …, 30`. One-third-stop applies to the base shutter only; the ND picker stays whole-stop because real-world fixed ND filters are sold in whole-stop strengths. Values outside the range are not accepted.
+- ND values come from the whole-stop ladder `0, 1, 2, …, 30` plus the three fixed fractional commercial presets (`6.6`, `7.6`, `16.6`). One-third-stop applies to the base shutter only; the ND picker stays whole-stop apart from those presets because real-world fixed ND filters are sold in whole-stop strengths. Values outside the range are not accepted.
+- Up to four ND wheels can be stacked; the effective ND is their sum and the sum never exceeds 30 stops. Over-cap combinations are unrepresentable (each wheel's range shrinks to the remaining budget) rather than clamped after the fact.
 - The output shutter is reported using conventional photographic notation. In the shipping 1/3-stop scale the calculated value is reported directly (formatted by the standard time-display rules) without snapping to a coarser ladder; the precise value drives any downstream timer.
 - A future Settings preference may let a user request a coarser scale (Full / 1/2 stop). When such a preference exists, in-range full-stop results may snap to the conventional reference and long values above 30 s may present in a power-of-two doubling ladder (64, 128, 256 …). In the current release no such selector is exposed; all results follow the 1/3-stop reporting rule.
 
@@ -168,7 +169,8 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Boundary conditions.**
 - A persisted film id that no longer exists in the catalog drops the selection silently and writes a clean snapshot back so subsequent reads are not confused.
 - Base shutter and ND are sanitized on restore against the active exposure scale's ladders: out-of-range values are rejected, only ladder values are accepted.
-- A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the shipping 1/3-stop scale, and a legacy whole-stop value shall be accepted because the shipping ladder is a strict superset of the legacy full-stop ladder.
+- A persisted ND filter stack restores wholesale — every wheel and its position. An invalid stack (wheel count, off-ladder value, or a sum over 30 stops) is rejected as a whole back to the legacy single ND value; it is never partially recovered or clamped.
+- A snapshot written by an older release that predates the exposure scale token (or fractional ND, or the ND filter stack) shall continue to restore correctly: missing fields shall resolve to the shipping 1/3-stop scale, a legacy whole-stop value shall be accepted because the shipping ladder is a strict superset of the legacy full-stop ladder, and a missing stack restores as a single wheel holding the legacy ND value.
 
 ---
 
@@ -179,7 +181,8 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 ### 3.1 Calculator
 
 - **FR-1.1** The user shall enter base shutter values only from the shipping 1/3-stop densified ladder with conventional camera-facing labels (sub-1 s as `1/N` reciprocal fractions, ≥ 1 s as integer or `N.Ns` per camera convention). Free-form numeric entry is not accepted. (Scenario 1, 2)
-- **FR-1.2** The user shall enter ND values only from the whole-stop ladder `0, 1, 2, …, 30`. The supported range is wide enough to cover stacked-ND practical use. One-third-stop applies to the base shutter only; the ND ladder stays whole-stop in every shipping mode. (Scenario 1)
+- **FR-1.2** The user shall enter ND values only from the shipping ND ladder — whole stops `0, 1, 2, …, 30` plus the three fixed fractional commercial presets. One-third-stop applies to the base shutter only; the ND ladder stays whole-stop apart from those presets in every shipping mode. (Scenario 1)
+- **FR-1.2a** The user shall be able to stack up to four ND filter wheels, each selecting from the shipping ND ladder. The system shall compute with the stack's sum as the effective ND value and shall keep that sum within 30 stops by construction — per-wheel selectable ranges shrink to the remaining budget, and a selection that would exceed the cap is rejected, never clamped. After a change commits, wheels shall order themselves descending by value (zeros last) while keeping per-wheel identity. (Scenario 1)
 - **FR-1.3** The system shall compute the output shutter from base shutter and ND using exposure-stop arithmetic. (Scenario 1)
 - **FR-1.4** The system shall present the output shutter using conventional photographic notation. In the shipping 1/3-stop scale the calculated value is reported directly, formatted by the standard time-display rules, without snapping back to a coarser ladder. The exact value is preserved for downstream timer use. A future Settings preference may enable snapping to a full-stop ladder (and the power-of-two ladder above 30 s) when the user opts into a coarser scale; until then no such snap is applied. (Scenario 1)
 - **FR-1.5** The system shall reject calculation inputs that produce non-finite results (overflow / NaN) by surfacing a typed failure to the caller rather than a number that could mislead. (Scenario 1 boundary)
@@ -225,7 +228,7 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 ### 3.5 Persistence
 
 - **FR-5.1** Timer state (running / paused / completed information needed for the state machine) and timer presentation metadata (the name, the basis-summary line, and the LIFO insertion order the user sees) shall both survive an app restart. (Scenario 7)
-- **FR-5.2** The calculator context — selected film, exposure scale token, base shutter, ND, and Target Shutter duration when set (FR-9.1, FR-9.5) — shall survive an app restart so the user does not redo the picker on every interruption. The exposure scale token is recorded so a future Settings preference can carry the user's prior choice across an upgrade rather than overwriting it. (Scenario 8)
+- **FR-5.2** The calculator context — selected film, exposure scale token, base shutter, the ND filter stack (FR-1.2a; restored wholesale, with an invalid persisted stack rejected as a whole back to the legacy single ND value, never clamped), and Target Shutter duration when set (FR-9.1, FR-9.5) — shall survive an app restart so the user does not redo the picker on every interruption. The exposure scale token is recorded so a future Settings preference can carry the user's prior choice across an upgrade rather than overwriting it. (Scenario 8)
 - **FR-5.3** Persisted shapes shall evolve only via backward-compatible additions. A snapshot written by an older release of the app must continue to restore correctly under the current release; in particular, status tokens that older releases used must continue to be accepted on read. (Scenario 7)
 - **FR-5.4** A running timer whose end date has already passed during the app's downtime shall restore as completed, with the original end date as the completion timestamp — not the moment of restoration. (Scenario 7 boundary)
 - **FR-5.5** A persisted paused timer whose freeze metadata is missing or inconsistent shall be treated as corrupted input. The system shall surface such an entry as completed rather than fabricating a plausible-looking timestamp. (Scenario 7 boundary)

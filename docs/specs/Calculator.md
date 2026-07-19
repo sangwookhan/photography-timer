@@ -141,6 +141,18 @@ ND adjustment runs forward or reverse:
 
 Both directions use the same stop-space math.
 
+### 2.6 ND filter stack
+
+The ND input is a **stack of one to four filter wheel values** (PTIMER-199), mirroring physically stacked fixed ND filters. Every wheel selects from the same shipping ND ladder (§2.2). The stack collapses to a single **effective ND value — the sum of its wheels — before entering the calculation**; the stop-space math (§2.4, §2.5), reciprocity hand-off (§3), and timer integration (§4) consume only that sum and are unchanged by stacking. A single-value ND selection is simply a stack of one wheel.
+
+Invariants and rules:
+
+- **30-stop total cap.** The stack's sum shall never exceed 30 stops — the same bound as the single-value range (§2.2), now applied to the total. The cap is enforced by construction: each wheel's selectable range is truncated to the remaining budget left by the other wheels' committed values, so an over-cap combination is unrepresentable through the pickers. A selection that would exceed the cap once concurrent selections settle is rejected (the wheel reverts); values are never silently clamped.
+- **Add availability.** A wheel can be added only while the stack holds fewer than four wheels AND the remaining budget under the cap still admits at least one non-zero ladder value on a new wheel. Availability is judged on committed values only — an in-flight (uncommitted) selection shall not flip it.
+- **Descending order on commit.** After a wheel interaction commits, wheels order themselves by value, largest first, 0-stop wheels last; wheels of equal value keep their relative order (stable sort). Each wheel keeps its identity through the reorder — a wheel is the same filter after moving, not a new one whose value happens to match.
+- **Concurrent interaction.** While any wheel is being touched or is still settling, other wheels' pending selections stay display-only; the whole set of pending selections commits at once when every wheel is quiet, applied in the order the wheels settled. Live result previews during interaction use each moving wheel's current value plus the committed rest.
+- **Self-cleaning zero wheels.** A committed 0-stop wheel in a multi-wheel stack is transient: it is removed automatically after a short idle interval (about four seconds), judged at removal time so an interaction that resumed in the meantime defers it. A wheel holding a non-zero value is never auto-removed, and the stack always keeps at least one wheel. An explicit removal gesture on a 0-stop wheel (see [UI Spec](UI.md) §2.2) removes exactly that wheel immediately.
+
 ---
 
 ## 3. Reciprocity correction (film workflow)
@@ -255,7 +267,7 @@ A timer's metadata shall be a snapshot of the calculation result at creation tim
 
 ## 5. Restoration across relaunches
 
-The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, ND value, and Target Shutter duration (§3.6) when set — shall be persisted and restored on relaunch in both digital and film workflows. The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
+The calculator's working context — selected film identity, **exposure scale token** (§1.4), Base Shutter, the ND filter stack (§2.6), and Target Shutter duration (§3.6) when set — shall be persisted and restored on relaunch in both digital and film workflows. The ND stack restores wholesale — every wheel and its position — and is validated as a whole on restore: a persisted stack that violates the stack invariants (wheel count, ladder membership, 30-stop total) is rejected entirely, never partially recovered or clamped, and the slot falls back to the legacy single ND value. The legacy single-value field keeps being written alongside the stack, carrying the stack's largest wheel, so a build that predates stacking restores the strongest single filter (see [DomainSchema Spec](DomainSchema.md) §7.4). The working context is scoped per camera slot (§1.5): every slot's state is preserved, the active-slot id is preserved, and the on-disk shape of the multi-slot session is described in [DomainSchema Spec](DomainSchema.md) §7.4. If a stored preset identity does not resolve to any catalog entry, or if numeric values fail validation against the active scale's ladder, the system shall fall back safely to a defined default rather than crash or silently drift.
 
 A snapshot written by an older release that predates the exposure scale token (or fractional ND) shall continue to restore correctly: missing fields shall resolve to the **shipping one-third-stop scale** (§1.4) with the integer ND value treated as a whole-stop count on the new ladder. The shipping ladder is a strict superset of the legacy full-stop ladder, so a legacy whole-stop value remains valid without rewriting it. A snapshot written by a release that predates the multi-slot session shall similarly continue to restore correctly: the legacy single-context shape is read at first launch after upgrade and the next save writes the multi-slot session shape (see [DomainSchema Spec](DomainSchema.md) §7.4.1).
 

@@ -86,6 +86,14 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     /// "no target set"; a positive finite value means the
     /// photographer has a target locked in for this slot.
     public let targetShutterSeconds: TimeInterval?
+    /// ND filter wheel stack (PTIMER-199), one entry per wheel in
+    /// display order. Additive Optional: pre-stack snapshots omit the
+    /// key and restore through the legacy scalar triple above. The
+    /// legacy scalar fields keep being written alongside this array —
+    /// carrying the explicitly selected MAXIMUM wheel — so an older
+    /// app build downgrades to a valid single filter instead of
+    /// falling back to defaults.
+    public let ndStack: [PersistentNDFilterWheelSnapshot]?
 
     public init(
         slotIDRaw: String,
@@ -97,7 +105,8 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         ndStopsExact: Double? = nil,
         exposureScaleMode: String? = nil,
         customDisplayName: String? = nil,
-        targetShutterSeconds: TimeInterval? = nil
+        targetShutterSeconds: TimeInterval? = nil,
+        ndStack: [PersistentNDFilterWheelSnapshot]? = nil
     ) {
         self.slotIDRaw = slotIDRaw
         self.selectedPresetFilmID = selectedPresetFilmID
@@ -109,6 +118,107 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         self.exposureScaleMode = exposureScaleMode
         self.customDisplayName = customDisplayName
         self.targetShutterSeconds = targetShutterSeconds
+        self.ndStack = ndStack
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case slotIDRaw
+        case selectedPresetFilmID
+        case selectedProfileID
+        case baseShutterSeconds
+        case ndStop
+        case ndStopThirds
+        case ndStopsExact
+        case exposureScaleMode
+        case customDisplayName
+        case targetShutterSeconds
+        case ndStack
+    }
+
+    /// Custom decode ONLY for `ndStack` isolation (PTIMER-199 §7): a
+    /// malformed stack array — wrong type, or a wheel entry of the
+    /// wrong shape — must decode as if the key were ABSENT rather
+    /// than failing the whole snapshot, so the rest of the slot
+    /// (base shutter, film, scale, legacy ND scalar) still restores
+    /// and the ND value falls back through the legacy scalar path.
+    /// Every other field decodes strictly, as before.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        slotIDRaw = try container.decode(String.self, forKey: .slotIDRaw)
+        selectedPresetFilmID = try container.decodeIfPresent(String.self, forKey: .selectedPresetFilmID)
+        selectedProfileID = try container.decodeIfPresent(String.self, forKey: .selectedProfileID)
+        baseShutterSeconds = try container.decodeIfPresent(Double.self, forKey: .baseShutterSeconds)
+        ndStop = try container.decodeIfPresent(Int.self, forKey: .ndStop)
+        ndStopThirds = try container.decodeIfPresent(Int.self, forKey: .ndStopThirds)
+        ndStopsExact = try container.decodeIfPresent(Double.self, forKey: .ndStopsExact)
+        exposureScaleMode = try container.decodeIfPresent(String.self, forKey: .exposureScaleMode)
+        customDisplayName = try container.decodeIfPresent(String.self, forKey: .customDisplayName)
+        targetShutterSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .targetShutterSeconds)
+        ndStack = (try? container.decodeIfPresent(
+            [PersistentNDFilterWheelSnapshot].self,
+            forKey: .ndStack
+        )) ?? nil
+    }
+}
+
+/// One ND filter wheel in its on-disk shape (PTIMER-199). Reuses the
+/// lossless triple discipline of the legacy scalar fields: exactly
+/// one of `ndStop` (whole), `ndStopThirds` (reserved third-stop), or
+/// `ndStopsExact` (commercial preset) is populated per wheel.
+public struct PersistentNDFilterWheelSnapshot: Codable, Equatable {
+    public let ndStop: Int?
+    public let ndStopThirds: Int?
+    public let ndStopsExact: Double?
+
+    public init(ndStop: Int?, ndStopThirds: Int? = nil, ndStopsExact: Double? = nil) {
+        self.ndStop = ndStop
+        self.ndStopThirds = ndStopThirds
+        self.ndStopsExact = ndStopsExact
+    }
+
+    /// Serialises one runtime wheel value using the same field split
+    /// as the legacy scalar: whole → `ndStop`, reserved third-stop →
+    /// `ndStopThirds`, supported commercial preset → its canonical
+    /// `ndStopsExact`.
+    public init(step: NDStep) {
+        self.init(
+            ndStop: step.wholeStops,
+            ndStopThirds: step.isWholeStop || !step.isThirdStop
+                ? nil : step.thirdStopCount,
+            ndStopsExact: ExposureScale.commercialNDPresetStop(matching: step.stops)
+        )
+    }
+
+    /// Restores the wheel value. EXACTLY ONE of the triple's fields
+    /// must be populated — a conflicting entry (e.g. `ndStop` AND
+    /// `ndStopsExact` together) is structurally corrupted and
+    /// resolves to `nil`, as do reserved third-stop values and empty
+    /// triples: stack wheels are restricted to the shipping ladder
+    /// envelope (whole stops + presets, per the task spec), and any
+    /// unresolvable wheel invalidates the WHOLE stack at the
+    /// validation layer (reject, never clamp).
+    public var restoredNDStep: NDStep? {
+        let populatedFieldCount = [
+            ndStop != nil,
+            ndStopThirds != nil,
+            ndStopsExact != nil,
+        ].filter { $0 }.count
+        guard populatedFieldCount == 1 else {
+            return nil
+        }
+        if let exact = ndStopsExact {
+            guard let canonical = ExposureScale.commercialNDPresetStop(matching: exact) else {
+                return nil
+            }
+            return NDStep(stops: canonical)
+        }
+        if ndStopThirds != nil {
+            return nil
+        }
+        if let ndStop {
+            return NDStep(stops: Double(ndStop))
+        }
+        return nil
     }
 }
 

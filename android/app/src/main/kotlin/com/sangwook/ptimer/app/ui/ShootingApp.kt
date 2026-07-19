@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -55,9 +56,7 @@ import com.sangwook.ptimer.app.notify.AndroidTimerAlertCoordinator
 import com.sangwook.ptimer.app.notify.AndroidTimerForegroundServiceControlling
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
-import com.sangwook.ptimer.app.persistence.AppPersistenceWriter
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
-import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
 import com.sangwook.ptimer.core.timer.TimerStatus
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -66,29 +65,25 @@ import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBar
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBarHeight
-import com.sangwook.ptimer.app.vm.CalculatorController
-import com.sangwook.ptimer.app.vm.ShootingIntent
-import com.sangwook.ptimer.app.vm.ShootingViewModel
+import com.sangwook.ptimer.app.vm.ShootingAppViewModel
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.customfilm.CustomFilmBuilder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.withContext
-import java.time.Instant
 
 /**
- * App host: builds the timer ViewModel + coordinator (DataStore-backed) and the
- * shooting calculator controller (whose Start feeds the timer workspace), and
- * switches between the shooting screen and the full-screen timer list. The
- * coordinator ticks only while a timer is running.
+ * App host: renders the screen state owned by the Activity-scoped
+ * [ShootingAppViewModel] (PTIMER-223) — the timer workspace, the shooting
+ * calculator (whose Start feeds the timer workspace), and the custom film
+ * library — and switches between the shooting screen and the full-screen timer
+ * list. The tick loop, timer restore, and calculator persistence live in the
+ * ViewModel, not the composition, so they survive Activity recreation.
  *
  * [bootstrap] carries the catalog parse and every initial store read, already
  * performed off the main thread before this composes (PTIMER-217) — no
- * `remember` block here performs a blocking read.
+ * `remember` block here performs a blocking read. On a configuration-change
+ * recreation the fresh bootstrap only gates the splash; the retained ViewModel
+ * keeps the state holders built from the first one.
  */
-@OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShootingApp(
     bootstrap: ShootingAppBootstrap,
@@ -98,24 +93,36 @@ fun ShootingApp(
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
 
-    val viewModel = remember {
-        ShootingViewModel(
-            store = DataStoreTimerWorkspaceStore.create(context),
-            clock = { Instant.now() },
-            alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
-        )
-    }
-    val coordinator = remember { AndroidTimerCoordinator(scope, viewModel, clock = { Instant.now() }) }
-    val slotStore = bootstrap.slotStore
-    val library = bootstrap.library
-    val displaySettingsStore = bootstrap.displaySettingsStore
-    val controller = remember {
-        CalculatorController(
-            films = bootstrap.presetFilms + library.customFilms,
-            onStart = { duration, identity -> viewModel.onEvent(ShootingIntent.StartTimer(duration, identity)) },
+    // Created once per Activity ViewModelStore: the first composition after a
+    // cold launch builds it from the bootstrap; a recreation reuses the
+    // retained instance (committed in-memory state included) and ignores this
+    // initializer.
+    val holder: ShootingAppViewModel = viewModel {
+        ShootingAppViewModel(
+            films = bootstrap.presetFilms + bootstrap.library.customFilms,
+            library = bootstrap.library,
             initialSession = bootstrap.initialSession,
+            timerStore = DataStoreTimerWorkspaceStore.create(context),
+            alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
+            slotStore = bootstrap.slotStore,
+            // In-app completion alert, de-duped with the AlarmManager path in
+            // TimerNotifications.notifyCompletion. The alarm remains the
+            // delivery path when the app process is killed.
+            completionNotifier = { card ->
+                TimerNotifications.ensureChannels(context)
+                TimerNotifications.notifyCompletion(
+                    context,
+                    card.id.toString(),
+                    card.identity.title,
+                    card.identity.subtitle,
+                )
+            },
         )
     }
+    val viewModel = holder.timers
+    val controller = holder.calculator
+    val library = holder.library
+    val displaySettingsStore = bootstrap.displaySettingsStore
     val aboutVersion = remember {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unavailable"
@@ -127,25 +134,6 @@ fun ShootingApp(
         } else {
             @Suppress("DEPRECATION")
             packageInfo.versionCode.toString()
-        }
-    }
-
-    // Restore: the blocking store read runs on the shared writer's ordered read,
-    // so a configuration-change restore waits behind any workspace write the
-    // replaced generation submitted (a just-removed/cleared timer cannot
-    // resurface); the snapshot is applied (state reconciliation) back on the
-    // main thread, as it always was (PTIMER-217). Same post-first-frame timing.
-    LaunchedEffect(Unit) {
-        val snapshot = AppPersistenceWriter.readOrdered { viewModel.readPersistedSnapshot() }
-        viewModel.restore(snapshot)
-    }
-
-    // Persist the slot session off the hot wheel-tick path: debounce the state
-    // stream and write the latest exported session. `drop(1)` skips the initial
-    // emission so a fresh launch does not immediately rewrite the restored state.
-    LaunchedEffect(Unit) {
-        controller.state.drop(1).debounce(400).collect {
-            withContext(Dispatchers.IO) { slotStore.saveSession(controller.exportSession()) }
         }
     }
 
@@ -195,10 +183,6 @@ fun ShootingApp(
     val exactAlarmWarningDismissed by exactAlarmWarningDismissedFlow
         .collectAsStateWithLifecycle(initialValue = bootstrap.initialExactAlarmWarningDismissed)
 
-    LaunchedEffect(timerState.active.size, viewModel.hasRunningTimers) {
-        if (viewModel.hasRunningTimers) coordinator.start() else coordinator.stop()
-    }
-
     // Re-sync alarms + the ongoing notification whenever the running set (ids +
     // end instants) changes — not every tick. Collected straight from the
     // ViewModel flow rather than the lifecycle-aware UI state, so the ongoing
@@ -219,34 +203,6 @@ fun ShootingApp(
                 }
                 alertCoordinator.sync(plan)
             }
-        }
-    }
-
-    // Ring the completion alert the moment a timer finishes while the app is
-    // alive (foreground or backgrounded-but-running), not only via the
-    // AlarmManager alarm. On the inexact-alarm fallback the running-set sync
-    // cancels a just-completed timer's alarm before it fires, so a short
-    // backgrounded timer would otherwise complete silently. De-duped with the
-    // alarm in TimerNotifications.notifyCompletion. The alarm remains the
-    // delivery path when the app is killed.
-    LaunchedEffect(Unit) {
-        var seenRunning = setOf<java.util.UUID>()
-        var notified = setOf<java.util.UUID>()
-        viewModel.uiState.collect { state ->
-            state.history
-                .filter { it.status == TimerStatus.completed && it.id in seenRunning && it.id !in notified }
-                .forEach { card ->
-                    TimerNotifications.ensureChannels(context)
-                    TimerNotifications.notifyCompletion(
-                        context,
-                        card.id.toString(),
-                        card.identity.title,
-                        card.identity.subtitle,
-                    )
-                    notified = notified + card.id
-                }
-            seenRunning = seenRunning +
-                state.active.filter { it.status == TimerStatus.running }.map { it.id }
         }
     }
 

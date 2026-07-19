@@ -23,14 +23,26 @@ fun interface PersistenceWriter {
 }
 
 /**
- * A [PersistenceWriter] backed by an explicit single-worker [dispatcher], so
- * writes and ordered reads share one serial queue. Writes launched via [submit]
- * and reads run via [readOrdered] execute one at a time on [dispatcher] in the
- * order they were dispatched. Production uses [AppPersistenceWriter]; tests pass
- * a dispatcher they own (real single-thread IO, or a test dispatcher) so they
- * can await and assert ordering.
+ * A [PersistenceWriter] that also runs reads on the same serial queue as its
+ * writes, so a read never observes state behind a write submitted before it.
+ * The state-owner layer (PTIMER-223) takes this as its injectable persistence
+ * surface: [AppPersistenceWriter] in production, a [ScopePersistenceWriter] on
+ * a test dispatcher in unit tests.
  */
-class ScopePersistenceWriter(private val dispatcher: CoroutineDispatcher) : PersistenceWriter {
+interface OrderedPersistenceWriter : PersistenceWriter {
+    /** Runs [read] after every write submitted before this call; returns its result. */
+    suspend fun <T> readOrdered(read: () -> T): T
+}
+
+/**
+ * An [OrderedPersistenceWriter] backed by an explicit single-worker
+ * [dispatcher], so writes and ordered reads share one serial queue. Writes
+ * launched via [submit] and reads run via [readOrdered] execute one at a time
+ * on [dispatcher] in the order they were dispatched. Production uses
+ * [AppPersistenceWriter]; tests pass a dispatcher they own (real single-thread
+ * IO, or a test dispatcher) so they can await and assert ordering.
+ */
+class ScopePersistenceWriter(private val dispatcher: CoroutineDispatcher) : OrderedPersistenceWriter {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     override fun submit(write: () -> Unit) {
@@ -45,7 +57,7 @@ class ScopePersistenceWriter(private val dispatcher: CoroutineDispatcher) : Pers
      * for configuration-change bootstrap/restore reads, which must not run ahead
      * of a pending write from the generation being replaced.
      */
-    suspend fun <T> readOrdered(read: () -> T): T = withContext(dispatcher) { read() }
+    override suspend fun <T> readOrdered(read: () -> T): T = withContext(dispatcher) { read() }
 }
 
 /**
@@ -69,12 +81,12 @@ class ScopePersistenceWriter(private val dispatcher: CoroutineDispatcher) : Pers
  * narrows the loss window to the interval between submission and commit (a few
  * milliseconds for these small payloads) while keeping the main thread free.
  */
-object AppPersistenceWriter : PersistenceWriter {
+object AppPersistenceWriter : OrderedPersistenceWriter {
     @OptIn(ExperimentalCoroutinesApi::class)
     private val delegate = ScopePersistenceWriter(Dispatchers.IO.limitedParallelism(1))
 
     override fun submit(write: () -> Unit) = delegate.submit(write)
 
     /** Ordered read on the shared writer; see [ScopePersistenceWriter.readOrdered]. */
-    suspend fun <T> readOrdered(read: () -> T): T = delegate.readOrdered(read)
+    override suspend fun <T> readOrdered(read: () -> T): T = delegate.readOrdered(read)
 }

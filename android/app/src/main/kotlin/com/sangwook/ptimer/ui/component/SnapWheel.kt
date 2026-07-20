@@ -67,6 +67,27 @@ import kotlin.math.roundToInt
 private const val OverscrollVisualDamping = 0.5f
 
 /**
+ * A wheel's scroll must never leak into outer surfaces. When a fling
+ * runs past the ladder's end (most easily from a 0-stop wheel, whose
+ * top end is one row away), the unconsumed deltas and the leftover
+ * fling velocity would otherwise propagate up the nested-scroll chain
+ * into ancestors — the camera pager among them, which could visibly
+ * move pages seconds after the wheel gesture. This outermost
+ * connection swallows everything the wheel (and the stack's own
+ * overscroll accounting, which sits inside it) leaves unconsumed.
+ */
+private object WheelNestedScrollFence : NestedScrollConnection {
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset = available
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+        available
+}
+
+/**
  * Reusable snap wheel (the Android analogue of the iOS picker wheel; used for
  * base shutter, ND, and target shutter).
  *
@@ -308,6 +329,11 @@ fun SnapWheel(
             .height(itemHeight * visibleCount)
             .then(accessibilityModifier)
             .then(pressTrackingModifier)
+            // Fence OUTSIDE the overscroll connection: the removal
+            // accounting gets first crack at unconsumed deltas, the
+            // fence swallows whatever remains so nothing reaches the
+            // pager or the bottom sheet.
+            .nestedScroll(WheelNestedScrollFence)
             .then(if (overscrollActive) Modifier.nestedScroll(overscrollConnection) else Modifier),
     ) {
         LazyColumn(

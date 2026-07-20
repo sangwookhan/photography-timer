@@ -9,7 +9,7 @@ title: Photography Timer
 
 Exposure calculator and countdown timer for film and digital photography.
 
-Photography Timer is preparing for its first public release.
+Photography Timer is available now on iOS. Android is currently in closed testing.
 
 ## Get the App
 

@@ -576,6 +576,16 @@ same value.
   (Android) are separate from the marketing/patch version and are
   not part of this policy — leave them untouched unless a task
   explicitly calls for a build-number bump.
+- **Exception:** when preparing an Android release build (bumping
+  `versionName`), always bump `versionCode` in
+  `android/app/build.gradle.kts` together with it. Leaving
+  `versionCode` unchanged causes Play Console to reject the upload,
+  delaying release with a resubmission. Before picking the new
+  value, check the highest `versionCode` used on any Play Console
+  track so far — internal testing, closed testing, and production
+  included — and set the new value above that maximum. Checking
+  only the Production track is not enough; a higher `versionCode`
+  may already exist on another track.
 
 ---
 

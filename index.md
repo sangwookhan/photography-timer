@@ -45,7 +45,7 @@ Photography Timer includes selected official film reciprocity data derived from 
 
 The app stores normalized factual values and source references only. It does not redistribute datasheet PDFs, copied tables, table images, or third-party copyrighted documents.
 
-Official formula-based and table-based profiles included in the 0.7 public release:
+Official formula-based and table-based profiles included in the current public release:
 
 ### ILFORD / HARMAN
 

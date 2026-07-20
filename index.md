@@ -11,8 +11,6 @@ Exposure calculator and countdown timer for film and digital photography.
 
 Photography Timer is available now on iOS. Android is currently in closed testing.
 
-See what's new in each version: [Release Notes](release-notes.html).
-
 ## Get the App
 
 <div class="platform-row">
@@ -130,3 +128,7 @@ Source code and license:
 [https://github.com/sangwookhan/photography-timer](https://github.com/sangwookhan/photography-timer)
 
 Photography Timer is licensed under the Apache License, Version 2.0.
+
+## Release History
+
+See what changed in each version: [Release Notes](release-notes.html).

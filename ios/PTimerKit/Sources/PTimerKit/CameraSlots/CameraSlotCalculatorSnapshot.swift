@@ -16,7 +16,17 @@ import PTimerCore
 /// snapshot stays clean.
 public struct CameraSlotCalculatorSnapshot: Equatable {
     public var baseShutterSeconds: Double
-    public var ndStep: NDStep
+    /// Individual ND filter wheel values in display order (1–4,
+    /// PTIMER-199). A slot switch must restore the photographer's
+    /// wheel layout, not just the collapsed sum.
+    public var ndFilterSteps: [NDStep]
+    /// Effective ND value — the sum of every wheel in canonical
+    /// stops. Computed so the snapshot keeps a single source of
+    /// truth; calculation-oriented readers (inactive-page results,
+    /// basis summaries) consume this.
+    public var ndStep: NDStep {
+        NDStep(stops: ndFilterSteps.reduce(0) { $0 + $1.stops })
+    }
     public var scaleMode: ExposureScaleMode
     public var selectedPresetFilm: FilmIdentity?
     public var selectedProfileOverride: ReciprocityProfile?
@@ -39,9 +49,23 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
         selectedProfileOverride: nil,
         targetShutterSeconds: nil
     )
+
+    /// Single-wheel convenience kept for the legacy restore path and
+    /// pre-stack call sites: one wheel holding `ndStep`.
     public init(baseShutterSeconds: Double, ndStep: NDStep, scaleMode: ExposureScaleMode, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, targetShutterSeconds: TimeInterval? = nil) {
+        self.init(
+            baseShutterSeconds: baseShutterSeconds,
+            ndFilterSteps: [ndStep],
+            scaleMode: scaleMode,
+            selectedPresetFilm: selectedPresetFilm,
+            selectedProfileOverride: selectedProfileOverride,
+            targetShutterSeconds: targetShutterSeconds
+        )
+    }
+
+    public init(baseShutterSeconds: Double, ndFilterSteps: [NDStep], scaleMode: ExposureScaleMode, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, targetShutterSeconds: TimeInterval? = nil) {
         self.baseShutterSeconds = baseShutterSeconds
-        self.ndStep = ndStep
+        self.ndFilterSteps = ndFilterSteps
         self.scaleMode = scaleMode
         self.selectedPresetFilm = selectedPresetFilm
         self.selectedProfileOverride = selectedProfileOverride

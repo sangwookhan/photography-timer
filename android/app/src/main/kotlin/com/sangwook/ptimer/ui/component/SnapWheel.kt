@@ -4,12 +4,15 @@
 package com.sangwook.ptimer.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,16 +21,27 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -39,11 +53,39 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
+import kotlin.math.roundToInt
+
+/** Fraction of an overscroll pull that moves the wheel content, so the
+ *  removal gesture (PTIMER-199 §4.2.3) gives damped, elastic feedback. */
+private const val OverscrollVisualDamping = 0.5f
+
+/**
+ * A wheel's scroll must never leak into outer surfaces. When a fling
+ * runs past the ladder's end (most easily from a 0-stop wheel, whose
+ * top end is one row away), the unconsumed deltas and the leftover
+ * fling velocity would otherwise propagate up the nested-scroll chain
+ * into ancestors — the camera pager among them, which could visibly
+ * move pages seconds after the wheel gesture. This outermost
+ * connection swallows everything the wheel (and the stack's own
+ * overscroll accounting, which sits inside it) leaves unconsumed.
+ */
+private object WheelNestedScrollFence : NestedScrollConnection {
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset = available
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+        available
+}
 
 /**
  * Reusable snap wheel (the Android analogue of the iOS picker wheel; used for
@@ -66,6 +108,19 @@ fun SnapWheel(
     itemHeight: Dp = 44.dp,
     edgeColor: Color = MaterialTheme.colorScheme.background,
     accessibilityLabel: String? = null,
+    // PTIMER-199 (ND wheel stack) additions; every default keeps the
+    // pre-stack call sites (base shutter, target shutter) unchanged.
+    /** Smaller text so 3–4 side-by-side stack wheels stay legible. */
+    dense: Boolean = false,
+    /** Reports true while the wheel is under a finger or scrolling,
+     *  false at quiescence — the stack's set-commit signal. */
+    onActiveChange: ((Boolean) -> Unit)? = null,
+    /** Overscroll-past-zero removal (§4.2.3): pulling the wheel down
+     *  past its top (0-stop) end by at least one item height and
+     *  releasing invokes [onOverscrollRemoval]. */
+    overscrollRemovalEnabled: Boolean = false,
+    onOverscrollRemoval: (() -> Unit)? = null,
+    extraAccessibilityActions: List<CustomAccessibilityAction> = emptyList(),
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -99,6 +154,67 @@ fun SnapWheel(
             .filterNotNull()
             .distinctUntilChanged()
             .collect { currentOnSelectedIndexChange(it) }
+    }
+
+    // PTIMER-199: activity signal. Pressed is tracked from the Final pass
+    // without consuming, so a resting finger — which never becomes a
+    // scroll — still counts as active and keeps the caller's set commit
+    // open until the finger lifts.
+    var pressed by remember { mutableStateOf(false) }
+    val currentOnActiveChange by rememberUpdatedState(onActiveChange)
+    if (onActiveChange != null) {
+        LaunchedEffect(listState) {
+            snapshotFlow { pressed || listState.isScrollInProgress }
+                .distinctUntilChanged()
+                .collect { currentOnActiveChange?.invoke(it) }
+        }
+        // A wheel can leave composition mid-interaction (slot switch,
+        // removal): never leave the caller thinking it is still active.
+        DisposableEffect(Unit) {
+            onDispose { currentOnActiveChange?.invoke(false) }
+        }
+    }
+
+    // PTIMER-199: overscroll-past-zero removal. Index 0 (the 0-stop row)
+    // sits at the top, so a downward drag the list cannot consume is the
+    // photographer pulling the wheel past its zero end. The pull is
+    // accumulated (damped visually via the offset below) and judged on
+    // release; the threshold is one item height.
+    var overscrollPx by remember { mutableFloatStateOf(0f) }
+    val currentOnOverscrollRemoval by rememberUpdatedState(onOverscrollRemoval)
+    val overscrollActive = overscrollRemovalEnabled && onOverscrollRemoval != null
+    val removalThresholdPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val overscrollConnection = remember(removalThresholdPx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // Unwind an open pull before the list scrolls again.
+                if (source == NestedScrollSource.UserInput && available.y < 0f && overscrollPx > 0f) {
+                    val consumed = maxOf(available.y, -overscrollPx)
+                    overscrollPx += consumed
+                    return Offset(0f, consumed)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (source == NestedScrollSource.UserInput && available.y > 0f) {
+                    overscrollPx += available.y
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val pulled = overscrollPx
+                overscrollPx = 0f
+                if (pulled >= removalThresholdPx) currentOnOverscrollRemoval?.invoke()
+                return Velocity.Zero
+            }
+        }
     }
 
     // Re-center when the selection is set from outside the wheel (Quick/Fine
@@ -177,7 +293,32 @@ fun SnapWheel(
                         false
                     }
                 },
-            )
+            ) + extraAccessibilityActions
+        }
+    } else {
+        Modifier
+    }
+
+    // A pull left open when the gate flips (e.g. the wheel's value
+    // commits to non-zero mid-gesture) must not strand a visual offset.
+    LaunchedEffect(overscrollActive) {
+        if (!overscrollActive) overscrollPx = 0f
+    }
+
+    val pressTrackingModifier = if (onActiveChange != null) {
+        Modifier.pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                try {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Final)
+                        if (event.changes.none { it.pressed }) break
+                    }
+                } finally {
+                    pressed = false
+                }
+            }
         }
     } else {
         Modifier
@@ -186,14 +327,24 @@ fun SnapWheel(
     Box(
         modifier = modifier
             .height(itemHeight * visibleCount)
-            .then(accessibilityModifier),
+            .then(accessibilityModifier)
+            .then(pressTrackingModifier)
+            // Fence OUTSIDE the overscroll connection: the removal
+            // accounting gets first crack at unconsumed deltas, the
+            // fence swallows whatever remains so nothing reaches the
+            // pager or the bottom sheet.
+            .nestedScroll(WheelNestedScrollFence)
+            .then(if (overscrollActive) Modifier.nestedScroll(overscrollConnection) else Modifier),
     ) {
         LazyColumn(
             state = listState,
             flingBehavior = flingBehavior,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = itemHeight * halfVisible),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                // Damped live push-out while the wheel is pulled past zero.
+                .offset { IntOffset(0, (overscrollPx * OverscrollVisualDamping).roundToInt()) },
         ) {
             itemsIndexed(labels) { index, label ->
                 val distance = abs((centeredIndex ?: selectedIndex) - index)
@@ -209,10 +360,12 @@ fun SnapWheel(
                         text = label,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
-                        style = if (isCenter) {
-                            MaterialTheme.typography.titleMedium
-                        } else {
-                            MaterialTheme.typography.bodyLarge
+                        softWrap = false,
+                        style = when {
+                            isCenter && dense -> MaterialTheme.typography.bodyMedium
+                            isCenter -> MaterialTheme.typography.titleMedium
+                            dense -> MaterialTheme.typography.bodySmall
+                            else -> MaterialTheme.typography.bodyLarge
                         },
                         color = LocalContentColor.current.copy(alpha = alpha),
                     )

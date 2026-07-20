@@ -198,12 +198,55 @@ public struct CameraSlotSessionPersistenceController {
 
         return CameraSlotCalculatorSnapshot(
             baseShutterSeconds: entry.baseShutterSeconds ?? CalculatorDefaults.baseShutterSeconds,
-            ndStep: entry.restoredNDStep ?? CalculatorDefaults.ndStep,
+            ndFilterSteps: restoredNDFilterSteps(from: entry),
             scaleMode: entry.restoredScaleMode,
             selectedPresetFilm: film,
             selectedProfileOverride: profile,
             targetShutterSeconds: sanitizedTargetShutterSeconds(entry.targetShutterSeconds)
         )
+    }
+
+    /// Restores the ND wheel stack (PTIMER-199 §7). A present, VALID
+    /// `ndStack` wins; any violation — wheel count outside 1–4, a
+    /// wheel that does not resolve to a ladder value, or a sum over
+    /// the 30-stop cap — drops the WHOLE stack (no partial recovery,
+    /// which would silently change the saved combination's sum) and
+    /// falls back to the legacy scalar, then to the default. An
+    /// absent or malformed-at-decode stack takes the same fallback.
+    private func restoredNDFilterSteps(
+        from entry: PersistentCameraSlotCalculatorSnapshot
+    ) -> [NDStep] {
+        if let stack = entry.ndStack,
+           let validated = Self.validatedStackSteps(stack) {
+            return validated
+        }
+        return [entry.restoredNDStep ?? CalculatorDefaults.ndStep]
+    }
+
+    /// Validates raw persisted wheels BEFORE any `NDFilterStack`
+    /// construction, per the domain type's contract (its initializer
+    /// treats violations as programmer errors; persisted data must
+    /// be screened here, rejected rather than clamped).
+    static func validatedStackSteps(
+        _ wheels: [PersistentNDFilterWheelSnapshot]
+    ) -> [NDStep]? {
+        guard (1...NDFilterStack.maximumWheelCount).contains(wheels.count) else {
+            return nil
+        }
+        var steps: [NDStep] = []
+        for wheel in wheels {
+            guard let step = wheel.restoredNDStep,
+                  step.stops >= 0,
+                  step.stops <= Double(ExposureScale.maximumWholeNDStops)
+                      + ExposureCalculator.stabilityEpsilon else {
+                return nil
+            }
+            steps.append(step)
+        }
+        guard NDFilterStack.isWithinTotalLimit(steps) else {
+            return nil
+        }
+        return steps
     }
 
     /// Re-sanitises a persisted target value at decode time. Anything
@@ -233,27 +276,39 @@ public struct CameraSlotSessionPersistenceController {
             return trimmed.isEmpty ? nil : trimmed
         }()
 
+        // Legacy scalar fields carry the EXPLICITLY SELECTED MAXIMUM
+        // wheel (max over entries, never positional stack[0]) so an
+        // older app build restoring this snapshot degrades to a valid
+        // single filter: the effective sum could be off-ladder (e.g.
+        // 13.2) and legacy validation would reject it to defaults.
+        let legacyScalarStep = snapshot.ndFilterSteps
+            .max(by: { $0.stops < $1.stops }) ?? CalculatorDefaults.ndStep
+
         return PersistentCameraSlotCalculatorSnapshot(
             slotIDRaw: slotID.rawValue,
             selectedPresetFilmID: snapshot.selectedPresetFilm?.id,
             selectedProfileID: snapshot.selectedProfileOverride?.id,
             baseShutterSeconds: snapshot.baseShutterSeconds,
-            ndStop: snapshot.ndStep.wholeStops,
+            ndStop: legacyScalarStep.wholeStops,
             // Whole → `ndStop`; third-stop fractional → `ndStopThirds`;
             // a supported commercial preset (PTIMER-209) → its canonical
             // `ndStopsExact`. Exactly one is populated, so pre-PTIMER-209
             // whole/third-stop snapshots stay identical, and an
             // unsupported off-grid value persists none of the three and
             // restores to the default rather than as a drifting value.
-            ndStopThirds: snapshot.ndStep.isWholeStop || !snapshot.ndStep.isThirdStop
-                ? nil : snapshot.ndStep.thirdStopCount,
-            ndStopsExact: ExposureScale.commercialNDPresetStop(matching: snapshot.ndStep.stops),
+            ndStopThirds: legacyScalarStep.isWholeStop || !legacyScalarStep.isThirdStop
+                ? nil : legacyScalarStep.thirdStopCount,
+            ndStopsExact: ExposureScale.commercialNDPresetStop(matching: legacyScalarStep.stops),
             // Persist `nil` for the shipping `.oneThirdStop` so a
             // steady-state snapshot stays compact, mirroring the
             // legacy convention.
             exposureScaleMode: snapshot.scaleMode == .oneThirdStop ? nil : snapshot.scaleMode.rawValue,
             customDisplayName: trimmedCustomName,
-            targetShutterSeconds: snapshot.targetShutterSeconds
+            targetShutterSeconds: snapshot.targetShutterSeconds,
+            // The stack itself is ALWAYS written, single wheel
+            // included, so the array is the forward-facing source of
+            // truth from the first save (PTIMER-199 §7).
+            ndStack: snapshot.ndFilterSteps.map(PersistentNDFilterWheelSnapshot.init(step:))
         )
     }
 }

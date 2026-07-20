@@ -7,12 +7,12 @@ import UIKit
 /// `WheelPickerContinuousObserver` is a UIKit bridge that lets SwiftUI's
 /// wheel picker emit drag-state callbacks (`onChange`) and live-preview
 /// updates while the user spins the wheel, before the gesture commits
-/// to a value. Extracted from `ExposureCalculatorScreen.swift` so the
-/// screen does not carry a 220+ line UIViewRepresentable inline.
+/// to a value.
 ///
-/// Used by `NDStopSelectionRow` and `ShutterSelectionRow` (both still
-/// in Screen.swift) so the type is internal to the module rather than
-/// file-private.
+/// Used ONLY by the Base Shutter wheel (`ShutterSelectionRow` in
+/// Screen.swift). The ND wheels moved to the OWNED picker
+/// (`NDWheelPickerView`, PTIMER-199 v2) and no longer observe
+/// through this bridge.
 
 struct WheelPickerContinuousObserver: UIViewRepresentable {
     let onSelectedRowChange: (Int) -> Void
@@ -50,9 +50,26 @@ struct WheelPickerContinuousObserver: UIViewRepresentable {
         var onInteractionEnd: () -> Void
 
         private weak var pickerView: UIPickerView?
-        private weak var panGestureRecognizer: UIPanGestureRecognizer?
+        /// The SwiftUI-side anchor this coordinator observes from.
+        /// Kept so the display link can RE-LOCATE the picker when
+        /// SwiftUI recreates the UIPickerView instance outside any
+        /// layout pass of the anchor (observed after identity-move
+        /// reorders) — a dead weak `pickerView` would otherwise
+        /// leave the wheel permanently unobserved.
+        private weak var observedView: UIView?
+        private var panGestureRecognizers: [UIPanGestureRecognizer] = []
+
+        /// Periodic pairing re-validation: geometric matching can
+        /// transiently pair an observer with a NEIGHBOR's picker
+        /// while wheels animate, and if the last SwiftUI render lands
+        /// mid-flight the wrong pairing would otherwise stick,
+        /// leaving the wheel unobserved. Re-running the match on a
+        /// slow cadence heals any mispairing within a second.
+        private var revalidateTicks = 0
+        private let revalidateTickThreshold = 30
         private var displayLink: CADisplayLink?
         private var lastObservedRow: Int?
+        private var isPanActive = false
 
         init(
             onSelectedRowChange: @escaping (Int) -> Void,
@@ -63,6 +80,7 @@ struct WheelPickerContinuousObserver: UIViewRepresentable {
         }
 
         func attachIfNeeded(from observedView: UIView) {
+            self.observedView = observedView
             guard let picker = locatePicker(near: observedView) else {
                 DispatchQueue.main.async { [weak self, weak observedView] in
                     guard let self, let observedView else {
@@ -78,8 +96,12 @@ struct WheelPickerContinuousObserver: UIViewRepresentable {
                 detachPanObservation()
                 pickerView = picker
                 lastObservedRow = nil
-                attachPanObservation(to: picker)
             }
+            // Re-scan on every layout pass, not just on a picker
+            // change: UIPickerView RECREATES its internal pan
+            // recognizers when it resizes (wheel count changes), which
+            // silently orphans previously added targets.
+            refreshPanObservationIfNeeded(on: picker)
 
             startDisplayLinkIfNeeded()
             emitSelectionIfNeeded()
@@ -104,20 +126,45 @@ struct WheelPickerContinuousObserver: UIViewRepresentable {
             self.displayLink = displayLink
         }
 
-        private func attachPanObservation(to picker: UIPickerView) {
-            guard let panGestureRecognizer = picker.gestureRecognizers?
-                .compactMap({ $0 as? UIPanGestureRecognizer })
-                .first else {
+        private func refreshPanObservationIfNeeded(on picker: UIPickerView) {
+            // iOS moves the wheel's pan between internal views across
+            // releases: directly on the picker historically, on
+            // `UIPickerColumnView` / `UIPickerTableView` on current
+            // builds. Hook every descendant pan — a given touch is
+            // driven by exactly one of them.
+            let pans = descendantPanGestureRecognizers(of: picker)
+            guard pans != panGestureRecognizers else {
                 return
             }
+            detachPanObservation()
+            for pan in pans {
+                pan.addTarget(self, action: #selector(handlePanGestureChange(_:)))
+            }
+            panGestureRecognizers = pans
+        }
 
-            panGestureRecognizer.addTarget(self, action: #selector(handlePanGestureChange(_:)))
-            self.panGestureRecognizer = panGestureRecognizer
+        /// True when any hooked recognizer's view has left the window
+        /// — the picker rebuilt its internals and our targets died
+        /// with them. Cheap enough to poll from the display link.
+        private var hooksAreStale: Bool {
+            panGestureRecognizers.isEmpty
+                || panGestureRecognizers.contains { $0.view?.window == nil }
         }
 
         private func detachPanObservation() {
-            panGestureRecognizer?.removeTarget(self, action: #selector(handlePanGestureChange(_:)))
-            panGestureRecognizer = nil
+            for pan in panGestureRecognizers {
+                pan.removeTarget(self, action: #selector(handlePanGestureChange(_:)))
+            }
+            panGestureRecognizers = []
+        }
+
+        private func descendantPanGestureRecognizers(of view: UIView) -> [UIPanGestureRecognizer] {
+            var found = (view.gestureRecognizers ?? [])
+                .compactMap { $0 as? UIPanGestureRecognizer }
+            for subview in view.subviews {
+                found.append(contentsOf: descendantPanGestureRecognizers(of: subview))
+            }
+            return found
         }
 
         private func emitSelectionIfNeeded() {
@@ -214,15 +261,50 @@ struct WheelPickerContinuousObserver: UIViewRepresentable {
 
         @objc
         private func handleDisplayLinkTick() {
+            // The picker can rebuild its internal recognizers OUTSIDE
+            // a layout pass of the observation view (e.g. at the end
+            // of a width-change animation); re-hook as soon as the
+            // current hooks go stale so the next touch is observed.
+            if pickerView == nil || pickerView?.window == nil {
+                // The picker instance died or left the hierarchy
+                // (SwiftUI recreates pickers around identity-move
+                // reorders): re-locate from the anchor.
+                if let observedView, observedView.window != nil {
+                    attachIfNeeded(from: observedView)
+                }
+            } else if let pickerView, hooksAreStale {
+                refreshPanObservationIfNeeded(on: pickerView)
+            } else if !isPanActive {
+                revalidateTicks += 1
+                if revalidateTicks >= revalidateTickThreshold {
+                    revalidateTicks = 0
+                    if let observedView, observedView.window != nil {
+                        attachIfNeeded(from: observedView)
+                    }
+                }
+            }
             emitSelectionIfNeeded()
         }
 
         @objc
         private func handlePanGestureChange(_ gestureRecognizer: UIPanGestureRecognizer) {
-            if gestureRecognizer.state == .ended
-                || gestureRecognizer.state == .cancelled
-                || gestureRecognizer.state == .failed {
+            // A stale hook can deliver events from a recognizer that
+            // now belongs to a DIFFERENT (reused) picker; acting on
+            // them would fire against the wrong wheel.
+            guard let pickerView,
+                  gestureRecognizer.view?.isDescendant(of: pickerView) == true else {
+                return
+            }
+            switch gestureRecognizer.state {
+            case .began:
+                isPanActive = true
+
+            case .ended, .cancelled, .failed:
+                isPanActive = false
                 onInteractionEnd()
+
+            default:
+                break
             }
         }
     }

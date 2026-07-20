@@ -4,6 +4,7 @@
 import Combine
 import Foundation
 import PTimerCore
+import SwiftUI
 
 private let defaultFilmModeBaseShutter = CalculatorDefaults.baseShutterSeconds
 private let defaultFilmModeNDStop = CalculatorDefaults.ndStop
@@ -48,6 +49,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     @Published public var ndStep: NDStep = NDStep(stops: Double(defaultFilmModeNDStop)) {
         didSet {
             guard oldValue != ndStep else { return }
+            // Mirror sync (PTIMER-199): when the model's EFFECTIVE
+            // (summed) value is being reflected into this published
+            // surface after a stack mutation, skip every write-path
+            // side effect — assigning it back into the model would
+            // collapse the stack to a single wheel.
+            if isSyncingNDStepMirror {
+                if let whole = ndStep.wholeStops, whole != ndStop {
+                    ndStop = whole
+                }
+                return
+            }
             if calculatorModel.liveNDStep == ndStep {
                 calculatorModel.clearLiveNDStopPreview()
             }
@@ -62,6 +74,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             persistCalculatorContext()
         }
     }
+    /// True while `ndStep` is being refreshed FROM the model's
+    /// effective value (PTIMER-199) rather than written by a caller.
+    private var isSyncingNDStepMirror = false
     /// Active exposure-scale mode. The shipping calculator runs on the
     /// one-third-stop scale (per `docs/specs/Calculator.md` §1.4); the
     /// full-stop scale is retained on the model for tests and the
@@ -82,6 +97,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     @Published public var ndNotationMode: NDNotationMode = .stops {
         didSet {
             guard oldValue != ndNotationMode else { return }
+            // v2: notation switching neither cancels nor defers the
+            // self-cleaning timer — the timer judges at fire time
+            // (state must be quiet), so no interaction bookkeeping
+            // is needed here.
             persistDisplaySettings()
         }
     }
@@ -766,6 +785,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public func resetFilmModeWorkingContext() {
+        resetNDWheelInteractionState()
         filmSelectionModel.dropActiveSelectionWithoutPersisting()
         calculatorModel.clearLiveBaseShutterPreview()
         calculatorModel.clearLiveNDStopPreview()
@@ -788,6 +808,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // calculator inputs.
         targetShutterModel.clear()
         filmSelectionModel.clearPersistedContext()
+        // A3: re-examine the arriving (reset) state — a single [0]
+        // stack has nothing cleanable, so no timer starts.
+        reexamineNDWheelCleanup()
     }
 
     /// Resets the active slot's working context *and* clears its
@@ -1047,7 +1070,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     private func currentCameraSlotSnapshot() -> CameraSlotCalculatorSnapshot {
         CameraSlotCalculatorSnapshot(
             baseShutterSeconds: calculatorModel.baseShutterSeconds,
-            ndStep: calculatorModel.ndStep,
+            ndFilterSteps: calculatorModel.ndFilterSteps,
             scaleMode: calculatorModel.scaleMode,
             selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
             selectedProfileOverride: filmSelectionModel.selectedProfileOverride,
@@ -1061,6 +1084,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// the end so the on-disk state always matches a single slot's
     /// view of the world.
     private func applyCameraSlotSnapshot(_ snapshot: CameraSlotCalculatorSnapshot) {
+        // A slot switch discards every interaction trace — pending
+        // selections, unresolved motion, touches, and the cleanup
+        // timer all belong to the outgoing slot's transient UI state
+        // (v2 §2.2); the generation bump invalidates late callbacks.
+        resetNDWheelInteractionState()
         isApplyingSlotSnapshot = true
         defer {
             isApplyingSlotSnapshot = false
@@ -1081,8 +1109,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         if baseShutter != snapshot.baseShutterSeconds {
             baseShutter = snapshot.baseShutterSeconds
         }
-        if ndStep != snapshot.ndStep {
-            ndStep = snapshot.ndStep
+        // Restore the WHOLE wheel stack, not just the effective sum
+        // (PTIMER-199 M2): the slot's wheel layout is part of its
+        // shooting context. The published `ndStep` mirror refreshes
+        // from the model afterwards.
+        if calculatorModel.ndFilterSteps != snapshot.ndFilterSteps {
+            calculatorModel.restoreNDFilterSteps(snapshot.ndFilterSteps)
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
         }
 
         filmSelectionModel.replaceActiveSelection(
@@ -1095,6 +1129,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // invalid target — same rule the persistence controller
         // applies at decode time.
         targetShutterModel.setTarget(snapshot.targetShutterSeconds)
+
+        // A3: re-examine the ARRIVING slot's stack (not a blind
+        // restart) — cleanable zeros in the restored state start the
+        // idle timer, and A0 saturation cleans immediately.
+        reexamineNDWheelCleanup()
     }
 
     public var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
@@ -1582,6 +1621,603 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     public func clearLiveNDStopPreview() {
         calculatorModel.clearLiveNDStopPreview()
+    }
+
+    // MARK: ND filter stack (PTIMER-199)
+
+    /// Individual ND filter wheel values in display order (1–4
+    /// entries). Wheel 0 is the single-filter path; see
+    /// `CalculatorModel.ndFilterSteps`.
+    public var ndFilterSteps: [NDStep] {
+        calculatorModel.ndFilterSteps
+    }
+
+    /// Stable per-wheel identity parallel to `ndFilterSteps`
+    /// (PTIMER-199 §4.3): lets the view key wheels by identity so a
+    /// commit-sort reorder animates as movement.
+    public var ndFilterWheelIDs: [Int] {
+        calculatorModel.ndFilterWheelIDs
+    }
+
+    /// Per-wheel BINDING values: each wheel's recorded (pending)
+    /// selection when the epoch's set commit is still open, else its
+    /// committed value. Deliberately EXCLUDES transient drag rows —
+    /// the binding must stay stable while a wheel is being dragged
+    /// (a mid-drag binding change makes SwiftUI reassert the picker
+    /// selection and kills the pan), and change exactly once at the
+    /// wheel's own commit.
+    public var ndDisplayFilterSteps: [NDStep] {
+        let ids = calculatorModel.ndFilterWheelIDs
+        return calculatorModel.ndFilterSteps.enumerated().map { entry in
+            guard ids.indices.contains(entry.offset) else {
+                return entry.element
+            }
+            let id = ids[entry.offset]
+            return pendingNDWheelCommits.last(where: { $0.id == id })?.step
+                ?? entry.element
+        }
+    }
+
+    /// Page-aware companion of `ndDisplayFilterSteps`.
+    public func ndDisplayFilterSteps(forPage pageState: CameraSlotPageState) -> [NDStep] {
+        if pageState.isActive {
+            return ndDisplayFilterSteps
+        }
+        return ndFilterSteps(forPage: pageState)
+    }
+
+    /// Whether another ND wheel can be added (C1). Drives the edge
+    /// Add control's visibility and the "Add filter" accessibility
+    /// action.
+    public var canAddFilterWheel: Bool {
+        ndWheelInteractionState == .idle
+            && touchedNDWheelIDs.isEmpty
+            && calculatorModel.canAddFilterWheel
+    }
+
+    /// LAYOUT presence of the Add control, deliberately separate
+    /// from `canAddFilterWheel`: presence derives from committed
+    /// values only (stable mid-epoch — the control must not appear
+    /// or vanish and resize wheels under a moving finger), while
+    /// availability adds the quiescence gate and only dims the
+    /// control.
+    public var showsAddFilterWheelControl: Bool {
+        calculatorModel.canAddFilterWheel
+    }
+
+    /// Whether a CLEANABLE 0-stop wheel exists (removal would change
+    /// the stack while preserving the minimum-one-wheel rule).
+    /// Drives the "Remove empty filter" accessibility action and the
+    /// cleanup machinery.
+    public var canRemoveEmptyFilterWheel: Bool {
+        ndWheelInteractionState == .idle
+            && touchedNDWheelIDs.isEmpty
+            && calculatorModel.canRemoveEmptyFilterWheel
+    }
+
+    /// Appends one 0-stop wheel at the right (no-op while C1 denies
+    /// it). A 0-stop wheel leaves the effective value unchanged, but
+    /// the wheel LAYOUT is part of the slot's persisted shooting
+    /// context (M2), so an actual add persists — an add-only session
+    /// must survive relaunch; no-ops skip the write. The fresh wheel
+    /// is itself cleanable, so the cleanup timer re-arms (A3) —
+    /// 0-stop wheels are ephemeral regardless of origin.
+    public func addFilterWheel() {
+        exitNDWheelReshapingIfNeeded()
+        guard canAddFilterWheel else {
+            return
+        }
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            calculatorModel.addFilterWheel()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+    }
+
+    /// A2 cleanup on demand — the "Remove empty filter" accessibility
+    /// action: removes ALL 0-stop wheels when a non-zero wheel
+    /// exists; keeps exactly one when every wheel is 0-stop. One
+    /// action cleans everything, so a screen-reader user never has
+    /// to repeat it. The layout change persists (M2).
+    public func cleanupEmptyFilterWheels() {
+        exitNDWheelReshapingIfNeeded()
+        guard canRemoveEmptyFilterWheel else {
+            return
+        }
+        performNDWheelCleanup()
+    }
+
+    /// Commits one wheel's value: writes the wheel through the model
+    /// (which applies the agreed post-commit sort), clears a live
+    /// preview that settled on the committed value, refreshes the
+    /// published `ndStep` mirror with the new effective sum, and
+    /// persists. The published `ndStep` property itself remains the
+    /// single-filter assignment surface — committing a wheel must not
+    /// collapse the stack. A commit is an ND-area interaction: it
+    /// cancels a pending cleanup and re-examines the resulting stack
+    /// (A3), which also applies the A0 budget-saturation rule.
+    public func setNDFilterStep(_ step: NDStep, at index: Int) {
+        // Programmatic surface (tests, VoiceOver adjustments routed
+        // through legacy call sites): a command arriving inside the
+        // RESHAPING window force-completes it first — real picker
+        // input cannot arrive there (input is blocked), so this
+        // never conflicts with a gesture.
+        exitNDWheelReshapingIfNeeded()
+        guard calculatorModel.ndFilterWheelIDs.indices.contains(index) else {
+            return
+        }
+        commitNDWheelSelection(step, wheelID: calculatorModel.ndFilterWheelIDs[index])
+    }
+
+    // MARK: ND wheel interaction state machine (PTIMER-199 v2)
+
+    /// The single decision point for every ND-wheel judgment
+    /// (architecture v2): IDLE is the only state that allows
+    /// structural mutation; SCROLLING tracks unresolved wheel
+    /// motion; RESHAPING is the explicit noise window (sort/add/
+    /// remove/cleanup animation + ladder reloads) during which the
+    /// wheels accept no input at all.
+    public enum NDWheelInteractionState: Equatable {
+        case idle
+        case scrolling
+        case reshaping
+    }
+
+    @Published public private(set) var ndWheelInteractionState: NDWheelInteractionState = .idle
+
+    /// Generation token (v2 contract 4): bumped on every slot
+    /// switch/restore and every RESHAPING entry. Every asynchronous
+    /// arrival — picker events, timers, the reshape-exit backstop —
+    /// carries the generation it was issued under and is discarded
+    /// on mismatch, so a late callback from a previous operation can
+    /// never mutate current state.
+    public private(set) var ndWheelGeneration = 1
+
+    /// Wheels whose motion has started but not yet concluded (v2
+    /// contract 1). A wheel leaves this set ONLY through its own
+    /// didSelectRow, through the return-to-committed resolution
+    /// (row stable for `ndWheelResolutionDelay` AND equal to the
+    /// committed value), through the long backstop, or through a
+    /// slot reset. Display-overlay emptiness never means settled.
+    private var unresolvedNDWheelIDs: Set<Int> = []
+
+    /// Wheels with a finger currently down (own pan recognizer;
+    /// blocking-only signal): every structural mutation additionally
+    /// requires this to be empty (v2 §3.3).
+    private var touchedNDWheelIDs: Set<Int> = []
+
+    /// Selections recorded in settle order, applied as ONE SET at
+    /// the barrier. Keyed by wheel identity.
+    private var pendingNDWheelCommits: [(id: Int, step: NDStep)] = []
+
+    private var ndWheelResolutionTasks: [Int: Task<Void, Never>] = [:]
+    private var ndWheelReshapeExitTask: Task<Void, Never>?
+
+    /// Return-to-committed resolution window S (v2 §3.1 ②). Test seam.
+    public var ndWheelResolutionDelay: TimeInterval = 1.0
+    /// Long backstop W for a wheel that never concludes. Test seam.
+    public var ndWheelResolutionBackstopDelay: TimeInterval = 5.0
+    /// RESHAPING exit backstop (the animation itself is 0.35 s).
+    /// Test seam.
+    public var ndWheelReshapeDuration: TimeInterval = 0.45
+
+    /// False during RESHAPING: the views bind the wheels'
+    /// `isUserInteractionEnabled` to this, so input in the noise
+    /// window is BLOCKED, never silently dropped (v2 contract 2).
+    public var areNDWheelsInteractive: Bool {
+        ndWheelInteractionState != .reshaping
+    }
+
+    /// Whether a wheel's motion has concluded — the owned picker
+    /// enforces its displayed row only while resolved, so display
+    /// re-sync can never fight a finger or a decelerating wheel.
+    public func isNDWheelResolved(_ wheelID: Int) -> Bool {
+        !unresolvedNDWheelIDs.contains(wheelID)
+    }
+
+    /// Legacy index-based live-preview surface (tests, pre-v2 call
+    /// sites): routed through the observe-row entry so the same
+    /// state rules apply.
+    public func updateLiveNDFilterStep(_ value: NDStep, forWheel index: Int) {
+        guard calculatorModel.ndFilterWheelIDs.indices.contains(index) else {
+            return
+        }
+        ndWheelDidObserveRow(
+            value,
+            wheelID: calculatorModel.ndFilterWheelIDs[index],
+            generation: ndWheelGeneration
+        )
+    }
+
+    // MARK: Picker events (identity + generation stamped)
+
+    /// A row change observed on a wheel (30 fps polling of the OWNED
+    /// picker). Motion detection is data-based: any row change marks
+    /// the wheel unresolved — there is no "missed begin" class.
+    public func ndWheelDidObserveRow(_ value: NDStep, wheelID: Int, generation: Int) {
+        guard generation == ndWheelGeneration,
+              ndWheelInteractionState != .reshaping,
+              calculatorModel.ndFilterWheelIDs.contains(wheelID) else {
+            return
+        }
+        if ndWheelInteractionState == .idle {
+            ndWheelInteractionState = .scrolling
+        }
+        unresolvedNDWheelIDs.insert(wheelID)
+        calculatorModel.updateLiveNDStep(value, forWheelID: wheelID)
+        objectWillChange.send()
+        scheduleNDWheelResolution(for: wheelID, observedValue: value)
+    }
+
+    /// `didSelectRow` from the OWNED picker — outside a reload lock
+    /// and under the current generation this is a user selection by
+    /// construction (v2 §4). VoiceOver adjustments arrive through
+    /// the same path; no separate carve-out exists.
+    public func ndWheelDidSelect(_ value: NDStep, wheelID: Int, generation: Int) {
+        guard generation == ndWheelGeneration,
+              ndWheelInteractionState != .reshaping else {
+            return
+        }
+        commitNDWheelSelection(value, wheelID: wheelID)
+    }
+
+    public func ndWheelTouchBegan(wheelID: Int, generation: Int) {
+        guard generation == ndWheelGeneration,
+              ndWheelInteractionState != .reshaping else {
+            return
+        }
+        touchedNDWheelIDs.insert(wheelID)
+    }
+
+    public func ndWheelTouchEnded(wheelID: Int) {
+        // No generation guard on removal: the touch set is a
+        // blocking-only signal and must never leak a stale entry.
+        touchedNDWheelIDs.remove(wheelID)
+        evaluateNDWheelQuiescence()
+    }
+
+    /// Overscroll-past-zero release (§4.2.3): removes exactly the
+    /// pulled wheel. Allowed only from IDLE with no OTHER finger
+    /// down; a wheel that jiggled into SCROLLING is refused and left
+    /// to the normal cleanup rules (v2 §3.4).
+    public func ndWheelOverscrollReleased(wheelID: Int, generation: Int) {
+        guard generation == ndWheelGeneration,
+              ndWheelInteractionState == .idle,
+              touchedNDWheelIDs.subtracting([wheelID]).isEmpty,
+              let index = calculatorModel.ndFilterWheelIDs.firstIndex(of: wheelID),
+              calculatorModel.ndFilterSteps[index].stops == 0,
+              calculatorModel.ndFilterSteps.count > 1 else {
+            return
+        }
+        touchedNDWheelIDs.remove(wheelID)
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            calculatorModel.removeEmptyFilterWheel(at: index)
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+    }
+
+    /// Legacy index-based removal surface (tests). The picker path
+    /// is `ndWheelOverscrollReleased(wheelID:generation:)`.
+    public func removeZeroWheelFromOverscroll(at index: Int) {
+        exitNDWheelReshapingIfNeeded()
+        guard calculatorModel.ndFilterWheelIDs.indices.contains(index) else {
+            return
+        }
+        ndWheelOverscrollReleased(
+            wheelID: calculatorModel.ndFilterWheelIDs[index],
+            generation: ndWheelGeneration
+        )
+    }
+
+    // MARK: Unresolved tracking and the set-commit barrier
+
+    private func scheduleNDWheelResolution(for wheelID: Int, observedValue: NDStep) {
+        ndWheelResolutionTasks[wheelID]?.cancel()
+        guard let index = calculatorModel.ndFilterWheelIDs.firstIndex(of: wheelID) else {
+            return
+        }
+        let committed = calculatorModel.ndFilterSteps[index]
+        // v2 §3.1 ②: a row resting ON the committed value resolves
+        // after S (no commit will follow); any other stable row is a
+        // didSelectRow waiting to happen, so it only gets the long
+        // backstop W as a safety net.
+        let delay = observedValue == committed
+            ? ndWheelResolutionDelay
+            : ndWheelResolutionBackstopDelay
+        let generation = ndWheelGeneration
+        ndWheelResolutionTasks[wheelID] = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard let self, !Task.isCancelled,
+                  self.ndWheelGeneration == generation else {
+                return
+            }
+            self.resolveNDWheel(wheelID)
+        }
+    }
+
+    private func resolveNDWheel(_ wheelID: Int) {
+        ndWheelResolutionTasks[wheelID] = nil
+        unresolvedNDWheelIDs.remove(wheelID)
+        objectWillChange.send()
+        evaluateNDWheelQuiescence()
+    }
+
+    private func commitNDWheelSelection(_ step: NDStep, wheelID: Int) {
+        guard calculatorModel.ndFilterWheelIDs.contains(wheelID) else {
+            return
+        }
+        pendingNDWheelCommits.removeAll { $0.id == wheelID }
+        pendingNDWheelCommits.append((id: wheelID, step: step))
+        unresolvedNDWheelIDs.remove(wheelID)
+        ndWheelResolutionTasks[wheelID]?.cancel()
+        ndWheelResolutionTasks[wheelID] = nil
+        // The chosen value holds in the display overlay until the
+        // barrier so results stay correct wheel by wheel.
+        calculatorModel.updateLiveNDStep(step, forWheelID: wheelID)
+        objectWillChange.send()
+        evaluateNDWheelQuiescence()
+    }
+
+    /// Barrier condition (v2 §3.2), evaluated on every mutation of
+    /// the unresolved/touched/pending sets — never on a timer.
+    private func evaluateNDWheelQuiescence() {
+        guard ndWheelInteractionState != .reshaping,
+              unresolvedNDWheelIDs.isEmpty,
+              touchedNDWheelIDs.isEmpty else {
+            return
+        }
+        guard !pendingNDWheelCommits.isEmpty else {
+            if ndWheelInteractionState == .scrolling {
+                ndWheelInteractionState = .idle
+                calculatorModel.clearLiveNDStopPreview()
+                objectWillChange.send()
+            }
+            return
+        }
+        runNDWheelBarrier()
+    }
+
+    /// The set commit (v2 §7): applies pendings in settle order (the
+    /// domain refuses over-30 applications; that wheel reverts),
+    /// sorts once, clears the overlay, persists once — all inside
+    /// the RESHAPING window so the resulting reloads and moves are
+    /// inert. A0 saturation cleanup runs in the same window.
+    private func runNDWheelBarrier() {
+        let pending = pendingNDWheelCommits
+        pendingNDWheelCommits = []
+        enterNDWheelReshaping()
+        var stackChanged = false
+        withAnimation(.easeInOut(duration: 0.35)) {
+            for entry in pending {
+                guard let index = calculatorModel.ndFilterWheelIDs.firstIndex(of: entry.id) else {
+                    continue
+                }
+                let before = calculatorModel.ndFilterSteps
+                calculatorModel.setNDFilterStep(entry.step, at: index)
+                if calculatorModel.ndFilterSteps != before {
+                    stackChanged = true
+                }
+            }
+            calculatorModel.clearLiveNDStopPreview()
+            // A0: a set that saturates the 30-stop budget sheds its
+            // leftover zeros immediately, inside the same window.
+            let saturated = calculatorModel.ndStep.stops
+                >= Double(ExposureScale.maximumWholeNDStops) - ExposureCalculator.stabilityEpsilon
+            if saturated, calculatorModel.canRemoveEmptyFilterWheel {
+                calculatorModel.cleanupEmptyFilterWheels()
+                stackChanged = true
+            }
+            objectWillChange.send()
+        }
+        if stackChanged {
+            syncNDStepMirrorFromModel()
+            persistCalculatorContext()
+        }
+    }
+
+    // MARK: RESHAPING window
+
+    private func enterNDWheelReshaping() {
+        ndWheelGeneration += 1
+        ndWheelInteractionState = .reshaping
+        unresolvedNDWheelIDs.removeAll()
+        touchedNDWheelIDs.removeAll()
+        for task in ndWheelResolutionTasks.values {
+            task.cancel()
+        }
+        ndWheelResolutionTasks.removeAll()
+        disarmNDWheelCleanup()
+        scheduleNDWheelReshapeExit()
+    }
+
+    private func scheduleNDWheelReshapeExit() {
+        ndWheelReshapeExitTask?.cancel()
+        let generation = ndWheelGeneration
+        ndWheelReshapeExitTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(
+                nanoseconds: UInt64(self.ndWheelReshapeDuration * 1_000_000_000)
+            )
+            guard !Task.isCancelled,
+                  self.ndWheelGeneration == generation,
+                  self.ndWheelInteractionState == .reshaping else {
+                return
+            }
+            self.exitNDWheelReshapingIfNeeded()
+        }
+    }
+
+    /// Ends the RESHAPING window (backstop timer, or forced by a
+    /// programmatic command arriving mid-window): state transition
+    /// only — no data is touched, so a lost exit signal can never
+    /// corrupt or permanently lock anything (v2 §3).
+    private func exitNDWheelReshapingIfNeeded() {
+        guard ndWheelInteractionState == .reshaping else { return }
+        ndWheelReshapeExitTask?.cancel()
+        ndWheelReshapeExitTask = nil
+        ndWheelInteractionState = .idle
+        objectWillChange.send()
+        armNDWheelCleanup()
+    }
+
+    /// Drops every interaction trace without applying it — slot
+    /// switches and restores discard in-flight selections along with
+    /// the outgoing slot's transient UI state (v2 §2.2).
+    private func resetNDWheelInteractionState() {
+        ndWheelGeneration += 1
+        ndWheelInteractionState = .idle
+        unresolvedNDWheelIDs.removeAll()
+        touchedNDWheelIDs.removeAll()
+        pendingNDWheelCommits.removeAll()
+        for task in ndWheelResolutionTasks.values {
+            task.cancel()
+        }
+        ndWheelResolutionTasks.removeAll()
+        ndWheelReshapeExitTask?.cancel()
+        ndWheelReshapeExitTask = nil
+        disarmNDWheelCleanup()
+    }
+
+    // MARK: ND wheel self-cleaning (PTIMER-199 §4.2.2, v2 §8)
+
+    /// Grace period before cleanable 0-stop wheels are cleaned up.
+    /// Fixed product value (4 s) — mutable ONLY as a test seam.
+    public var ndWheelCleanupDelay: TimeInterval = 4.0
+
+    /// True while the cleanup timer is armed (a cleanable 0-stop
+    /// wheel exists). v2: there is NO cancellation concept — the
+    /// timer judges AT FIRE TIME (IDLE, no finger down, still
+    /// cleanable) and re-arms otherwise.
+    @Published public private(set) var isNDWheelCleanupPending = false
+
+    private var ndWheelCleanupTask: Task<Void, Never>?
+
+    /// Arms the fire-time-judged cleanup timer while a cleanable
+    /// 0-stop wheel exists; disarms when none does. Idempotent.
+    public func armNDWheelCleanup() {
+        guard calculatorModel.canRemoveEmptyFilterWheel else {
+            disarmNDWheelCleanup()
+            return
+        }
+        // A0: budget saturation sheds zeros immediately when the
+        // machine is quiet (the barrier also applies A0 inline).
+        let saturated = calculatorModel.ndStep.stops
+            >= Double(ExposureScale.maximumWholeNDStops) - ExposureCalculator.stabilityEpsilon
+        if saturated, ndWheelInteractionState == .idle, touchedNDWheelIDs.isEmpty {
+            performNDWheelCleanup()
+            return
+        }
+        guard ndWheelCleanupTask == nil else { return }
+        isNDWheelCleanupPending = true
+        scheduleNDWheelCleanupFire()
+    }
+
+    private func disarmNDWheelCleanup() {
+        ndWheelCleanupTask?.cancel()
+        ndWheelCleanupTask = nil
+        if isNDWheelCleanupPending {
+            isNDWheelCleanupPending = false
+        }
+    }
+
+    private func scheduleNDWheelCleanupFire() {
+        ndWheelCleanupTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(
+                nanoseconds: UInt64(self.ndWheelCleanupDelay * 1_000_000_000)
+            )
+            guard !Task.isCancelled else { return }
+            self.fireNDWheelCleanup()
+        }
+    }
+
+    /// Fire-time judgment (v2 §8): execute only when quiet and still
+    /// cleanable; otherwise re-arm. There is deliberately no
+    /// touch/scroll cancellation path.
+    private func fireNDWheelCleanup() {
+        ndWheelCleanupTask = nil
+        guard calculatorModel.canRemoveEmptyFilterWheel else {
+            disarmNDWheelCleanup()
+            return
+        }
+        guard ndWheelInteractionState == .idle, touchedNDWheelIDs.isEmpty else {
+            scheduleNDWheelCleanupFire()
+            return
+        }
+        performNDWheelCleanup()
+    }
+
+    private func performNDWheelCleanup() {
+        disarmNDWheelCleanup()
+        guard calculatorModel.canRemoveEmptyFilterWheel else { return }
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            calculatorModel.cleanupEmptyFilterWheels()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+    }
+
+    /// v2 compatibility alias: call sites that used to "re-examine"
+    /// now simply (re)arm the fire-time-judged timer.
+    public func reexamineNDWheelCleanup() {
+        armNDWheelCleanup()
+    }
+
+    /// Picker ladder for one wheel, truncated from the top to the
+    /// wheel's remaining budget under the 30-stop total limit.
+    public func pickerNDSteps(forWheel index: Int) -> [NDStep] {
+        calculatorModel.pickerNDSteps(forWheel: index)
+    }
+
+    /// ND wheel stack for a page: the live model for the active slot,
+    /// the stored slot snapshot for inactive pages (so an adjacent
+    /// pager page previews the slot's actual wheel layout, not a
+    /// collapsed — possibly off-ladder — sum).
+    public func ndFilterSteps(forPage pageState: CameraSlotPageState) -> [NDStep] {
+        if pageState.isActive {
+            return ndFilterSteps
+        }
+        return cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.ndFilterSteps
+            ?? [pageState.ndStep]
+    }
+
+    /// Page-aware companion of `ndFilterWheelIDs`. Inactive pages
+    /// render static snapshots that never reorder, so positional
+    /// identity suffices there; the identity swap when a page
+    /// activates is deliberately NOT animated (the commit path owns
+    /// the reorder animation), so it stays visually instant.
+    public func ndFilterWheelIDs(forPage pageState: CameraSlotPageState) -> [Int] {
+        if pageState.isActive {
+            return ndFilterWheelIDs
+        }
+        return Array(0..<ndFilterSteps(forPage: pageState).count)
+    }
+
+    /// Transient Total-overlay content (PTIMER-199 §4.6): the
+    /// EFFECTIVE value — live wheel + committed others — always in
+    /// stops. The view layer owns fade timing; this state only
+    /// carries content and the ≥ 2 wheels visibility precondition.
+    public var ndStackTotalDisplayState: NDStackTotalDisplayState {
+        NDStackTotalDisplayState(
+            effectiveStep: calculatorModel.effectiveNDStep,
+            wheelCount: calculatorModel.ndFilterSteps.count
+        )
+    }
+
+    /// Refreshes the published `ndStep` mirror from the model's
+    /// effective (summed) value without re-entering the write path.
+    private func syncNDStepMirrorFromModel() {
+        let effective = calculatorModel.ndStep
+        guard ndStep != effective else {
+            return
+        }
+        isSyncingNDStepMirror = true
+        ndStep = effective
+        isSyncingNDStepMirror = false
     }
 
     /// Picker label (Stops notation) for an `NDStep` value. Delegates

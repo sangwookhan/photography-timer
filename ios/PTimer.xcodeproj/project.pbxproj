@@ -34,6 +34,7 @@
 		A00000000000000000000147 /* UserDefaultsTimerMetadataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000145 /* UserDefaultsTimerMetadataStore.swift */; };
 		A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000148 /* FilmModeDetailsView.swift */; };
 		A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014A /* WheelPickerContinuousObserver.swift */; };
+		A0000000000000000000014D /* NDWheelPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014C /* NDWheelPickerView.swift */; };
 		A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000203 /* CameraSlotPagerIndicator.swift */; };
 		A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* CameraSlotRenameSheet.swift */; };
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
@@ -140,6 +141,7 @@
 		A00000000000000000000145 /* UserDefaultsTimerMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsTimerMetadataStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000148 /* FilmModeDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmModeDetailsView.swift; sourceTree = "<group>"; };
 		A0000000000000000000014A /* WheelPickerContinuousObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelPickerContinuousObserver.swift; sourceTree = "<group>"; };
+		A0000000000000000000014C /* NDWheelPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerView.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../docs; sourceTree = "<group>"; };
 		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
@@ -281,6 +283,7 @@
 				A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */,
 				A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
+				A0000000000000000000014C /* NDWheelPickerView.swift */,
 				A00000000000000000000209 /* CameraSlot */,
 				A000000000000000000000F0 /* FilmContext */,
 				A00000000000000000000127 /* Models */,
@@ -628,6 +631,7 @@
 				A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */,
 				A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */,
 				A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */,
+				A0000000000000000000014D /* NDWheelPickerView.swift in Sources */,
 				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,
 				A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */,
 				A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */,
@@ -712,7 +716,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.12;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -742,7 +746,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.12;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -875,7 +879,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.7.12;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -896,7 +900,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.7.12;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -923,7 +927,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.12;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -950,7 +954,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.12;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

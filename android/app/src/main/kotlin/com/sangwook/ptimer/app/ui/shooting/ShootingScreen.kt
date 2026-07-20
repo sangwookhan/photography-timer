@@ -45,6 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -93,7 +94,13 @@ import com.sangwook.ptimer.app.ui.localizedFilmName
 fun ShootingScreen(
     state: CalculatorUiState,
     onShutterIndex: (Int) -> Unit,
-    onNdIndex: (Int) -> Unit,
+    // ND wheel stack (PTIMER-199): per-wheel activity/selection plus the
+    // structural add/remove/cleanup commands, all keyed by wheel identity.
+    onNdWheelActive: (Int, Boolean) -> Unit,
+    onNdWheelValue: (Int, Int) -> Unit,
+    onAddNdWheel: () -> Unit,
+    onRemoveNdWheelOverscroll: (Int) -> Unit,
+    onCleanupEmptyNdWheels: () -> Unit,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
@@ -142,17 +149,17 @@ fun ShootingScreen(
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
 
-    // Swiping the pager settles on a page → make that camera the active slot
-    // (capture-on-switch). The reverse effect keeps the pager aligned when the
-    // slot changes from elsewhere (e.g. a restored session).
+    // The pager is the single source of truth for slot switching:
+    // swiping settles on a page → that camera becomes the active slot
+    // (capture-on-switch). There is deliberately NO reverse effect
+    // driving the pager from the controller's active slot — two-way
+    // sync could fight (a late signal while the controller still saw
+    // the previous slot could snap the pager back mid-swipe). A
+    // restored session is covered by rememberPagerState(initialPage),
+    // and nothing else changes the active slot outside this handler.
     LaunchedEffect(pagerState.settledPage) {
         val idx = pagerState.settledPage
         if (idx in state.slots.indices) onSelectSlot(state.slots[idx].id)
-    }
-    LaunchedEffect(activeIndex) {
-        if (!pagerState.isScrollInProgress && pagerState.currentPage != activeIndex) {
-            pagerState.animateScrollToPage(activeIndex)
-        }
     }
 
     Scaffold(modifier = modifier) { padding ->
@@ -160,6 +167,16 @@ fun ShootingScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
+                // The default page connection lets CHILD scrolls steer the
+                // pager (re-settling it while unsettled, consuming leftover
+                // child flings). A wheel fling overlapping a page swipe can
+                // thereby drag the pager back to the origin page (observed
+                // on device: the pager returned mid-session with no slot
+                // switch involved). Pages hold no scrollables that should
+                // ever steer the pager, so child nested scroll is ignored
+                // entirely — page swipes are the pager's own drags and are
+                // unaffected.
+                pageNestedScrollConnection = remember { object : NestedScrollConnection {} },
             ) { page ->
                 // Each page renders its OWN slot's state so a swipe reveals the
                 // destination camera immediately (no clone-until-settle). Editing
@@ -176,7 +193,6 @@ fun ShootingScreen(
                 // display-only.
                 val writesActiveSlot = page == activeIndex
                 val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
-                val onNdForPage: (Int) -> Unit = if (writesActiveSlot) onNdIndex else { _ -> }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -329,7 +345,12 @@ fun ShootingScreen(
                                 )
                             }
                             Column(
-                                modifier = Modifier.weight(1f),
+                                // The ND column widens once wheels stack so
+                                // 3–4 side-by-side ladders keep readable
+                                // labels; the shutter wheel needs less room.
+                                modifier = Modifier.weight(
+                                    if (pageState.ndWheels.size >= 2) 1.6f else 1f,
+                                ),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 // One horizontal header row: a stronger "ND Filter"
@@ -347,13 +368,13 @@ fun ShootingScreen(
                                         onSelect = onSelectNotation,
                                     )
                                 }
-                                SnapWheel(
-                                    pageState.ndLabels,
-                                    pageState.ndIndex,
-                                    onNdForPage,
-                                    visibleCount = 3,
-                                    itemHeight = 34.dp,
-                                    accessibilityLabel = stringResource(R.string.shooting_nd_filter),
+                                NdFilterStackGroup(
+                                    state = pageState,
+                                    onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
+                                    onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
+                                    onAddWheel = if (writesActiveSlot) onAddNdWheel else fun() {},
+                                    onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
+                                    onCleanupEmptyWheels = if (writesActiveSlot) onCleanupEmptyNdWheels else fun() {},
                                 )
                             }
                         }

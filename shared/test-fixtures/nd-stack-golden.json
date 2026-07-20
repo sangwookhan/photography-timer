@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "copyright": "Copyright © 2026 Sangwook Han",
+    "license": "Apache-2.0",
+    "version": "1.0.0",
+    "description": "Golden cases for the ND filter wheel stack (PTIMER-199). wheelStops are the committed wheel values in INPUT order; expectedSortedStops is the agreed post-commit ordering (descending, zeros rightmost, stable); expectedEffectiveStops is the summed effective value in canonical stops; expectedCalculatedSeconds is base x 2^effective evaluated on the shipping one-third-stop scale, which never snaps the output. Both platforms consume this file so stack summation, sorting, and calculation stay in lockstep."
+  },
+  "cases": [
+    {
+      "description": "Two ND100 presets stack to 13.2 stops on 1/30",
+      "baseShutterSeconds": 0.03333333333333333,
+      "wheelStops": [6.6, 6.6],
+      "expectedSortedStops": [6.6, 6.6],
+      "expectedEffectiveStops": 13.2,
+      "expectedCalculatedSeconds": 313.67123080452353,
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Full four-wheel stack 10+6+3+0 on 1/8000",
+      "baseShutterSeconds": 0.000125,
+      "wheelStops": [10, 6, 3, 0],
+      "expectedSortedStops": [10, 6, 3, 0],
+      "expectedEffectiveStops": 19,
+      "expectedCalculatedSeconds": 65.536,
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Unsorted input 0,10,0,6 sorts to 10,6,0,0 on 0.5s",
+      "baseShutterSeconds": 0.5,
+      "wheelStops": [0, 10, 0, 6],
+      "expectedSortedStops": [10, 6, 0, 0],
+      "expectedEffectiveStops": 16,
+      "expectedCalculatedSeconds": 32768.0,
+      "tolerance": 0.001
+    },
+    {
+      "description": "ND200 + ND100 presets stack to 14.2 stops on 1/30",
+      "baseShutterSeconds": 0.03333333333333333,
+      "wheelStops": [7.6, 6.6],
+      "expectedSortedStops": [7.6, 6.6],
+      "expectedEffectiveStops": 14.2,
+      "expectedCalculatedSeconds": 627.3424616090471,
+      "tolerance": 0.0001
+    },
+    {
+      "description": "Saturated 30-stop stack on 1/8000",
+      "baseShutterSeconds": 0.000125,
+      "wheelStops": [30, 0],
+      "expectedSortedStops": [30, 0],
+      "expectedEffectiveStops": 30,
+      "expectedCalculatedSeconds": 134217.728,
+      "tolerance": 0.001
+    },
+    {
+      "description": "Near-cap preset mix 16.6+13 = 29.6 stops on 1/8000",
+      "baseShutterSeconds": 0.000125,
+      "wheelStops": [16.6, 13],
+      "expectedSortedStops": [16.6, 13],
+      "expectedEffectiveStops": 29.6,
+      "expectedCalculatedSeconds": 101718.01692449336,
+      "tolerance": 0.001
+    },
+    {
+      "description": "Single zero wheel is the identity",
+      "baseShutterSeconds": 0.03333333333333333,
+      "wheelStops": [0],
+      "expectedSortedStops": [0],
+      "expectedEffectiveStops": 0,
+      "expectedCalculatedSeconds": 0.03333333333333333,
+      "tolerance": 0.0000001
+    }
+  ]
+}

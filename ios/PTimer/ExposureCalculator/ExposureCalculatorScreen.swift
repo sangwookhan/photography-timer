@@ -727,9 +727,18 @@ private struct CameraSlotCalculatorPage: View {
 
             VariableSectionView(
                 baseShutter: baseShutterBinding,
-                ndStep: ndStepBinding,
+                ndFilterSteps: viewModel.ndFilterSteps(forPage: pageState),
+                ndDisplaySteps: viewModel.ndDisplayFilterSteps(forPage: pageState),
+                ndFilterWheelIDs: viewModel.ndFilterWheelIDs(forPage: pageState),
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
-                ndStepValues: viewModel.pickerNDSteps(forPage: pageState),
+                ndStepValuesForWheel: { index in
+                    // Active page: budget-truncated per-wheel ladder
+                    // (30-stop structural limit). Inactive pages show
+                    // a single snapshot wheel on the full ladder.
+                    pageState.isActive
+                        ? viewModel.pickerNDSteps(forWheel: index)
+                        : viewModel.pickerNDSteps(forPage: pageState)
+                },
                 formatShutter: viewModel.formatShutterStepLabel,
                 ndNotationMode: viewModel.ndNotationMode,
                 onSelectNotationMode: { viewModel.ndNotationMode = $0 },
@@ -739,24 +748,61 @@ private struct CameraSlotCalculatorPage: View {
                         viewModel.updateLiveBaseShutter(value)
                     }
                 },
-                onContinuousNDStepChange: { value in
-                    guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.updateLiveNDStep(value)
-                    }
-                },
                 onBaseShutterInteractionEnd: {
                     guard pageState.isActive else { return }
                     Task { @MainActor in
                         viewModel.clearLiveBaseShutterPreview()
                     }
                 },
-                onNDStopInteractionEnd: {
+                // Owned-picker measurements (PTIMER-199 v2): no gate,
+                // no animation scope here — the ViewModel's state
+                // machine judges every event (identity + generation)
+                // and owns the barrier's withAnimation.
+                onNDWheelRowObserved: { wheelID, value, generation in
                     guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.clearLiveNDStopPreview()
-                    }
+                    viewModel.ndWheelDidObserveRow(value, wheelID: wheelID, generation: generation)
                 },
+                onNDWheelSelected: { wheelID, value, generation in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelDidSelect(value, wheelID: wheelID, generation: generation)
+                },
+                onNDWheelTouchBegan: { wheelID, generation in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelTouchBegan(wheelID: wheelID, generation: generation)
+                },
+                onNDWheelTouchEnded: { wheelID in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelTouchEnded(wheelID: wheelID)
+                },
+                onNDWheelOverscrollReleased: { wheelID, generation in
+                    guard pageState.isActive else { return }
+                    viewModel.ndWheelOverscrollReleased(wheelID: wheelID, generation: generation)
+                },
+                isNDWheelResolved: { wheelID in
+                    pageState.isActive ? viewModel.isNDWheelResolved(wheelID) : true
+                },
+                areNDWheelsInteractive: pageState.isActive
+                    ? viewModel.areNDWheelsInteractive
+                    : false,
+                ndWheelGeneration: pageState.isActive ? viewModel.ndWheelGeneration : 0,
+                showsAddFilterWheelControl: pageState.isActive && viewModel.showsAddFilterWheelControl,
+                canAddFilterWheel: pageState.isActive && viewModel.canAddFilterWheel,
+                onAddFilterWheel: {
+                    guard pageState.isActive else { return }
+                    viewModel.addFilterWheel()
+                },
+                canRemoveEmptyFilterWheel: pageState.isActive && viewModel.canRemoveEmptyFilterWheel,
+                onRemoveEmptyFilterWheel: {
+                    guard pageState.isActive else { return }
+                    viewModel.cleanupEmptyFilterWheels()
+                },
+
+                ndStackTotalDisplayState: pageState.isActive
+                    ? viewModel.ndStackTotalDisplayState
+                    : NDStackTotalDisplayState(
+                        effectiveStep: pageState.ndStep,
+                        wheelCount: 1
+                    ),
                 style: style
             )
 
@@ -808,15 +854,6 @@ private struct CameraSlotCalculatorPage: View {
         return .constant(pageState.baseShutter)
     }
 
-    private var ndStepBinding: Binding<NDStep> {
-        if pageState.isActive {
-            return Binding(
-                get: { viewModel.ndStep },
-                set: { viewModel.ndStep = $0 }
-            )
-        }
-        return .constant(pageState.ndStep)
-    }
 }
 
 private struct HeaderView: View {

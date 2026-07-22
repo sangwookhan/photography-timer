@@ -41,7 +41,7 @@ android {
         applicationId = "com.sangwook.ptimer"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
+        versionCode = 5
         versionName = "0.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -4,7 +4,6 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
 import com.sangwook.ptimer.R
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -207,7 +206,10 @@ internal fun CustomFilmEditorDialog(
         )
     }
 
-    val context = LocalContext.current
+    val validationTableMessage = stringResource(R.string.cf_validation_table)
+    val validationTableOrderMessage = stringResource(R.string.cf_validation_table_order)
+    val validationFormulaNameMessage = stringResource(R.string.cf_validation_formula_name)
+    val validationFormulaShortenMessage = stringResource(R.string.cf_validation_formula_shorten)
     FullScreenFormDialog(
         title = if (isEditing) stringResource(R.string.cf_edit) else stringResource(R.string.cf_new),
         confirmLabel = if (isEditing) stringResource(R.string.action_save) else stringResource(R.string.action_create),
@@ -220,15 +222,15 @@ internal fun CustomFilmEditorDialog(
             if (isTable) {
                 val input = parsedTable()
                 when {
-                    input == null -> context.getString(R.string.cf_validation_table)
-                    !onCreateTable(input, editId) -> context.getString(R.string.cf_validation_table_order)
+                    input == null -> validationTableMessage
+                    !onCreateTable(input, editId) -> validationTableOrderMessage
                     else -> null
                 }
             } else {
                 val input = parsedFormula()
                 when {
-                    input == null -> context.getString(R.string.cf_validation_formula_name)
-                    !onCreateFormula(input, editId) -> context.getString(R.string.cf_validation_formula_shorten)
+                    input == null -> validationFormulaNameMessage
+                    !onCreateFormula(input, editId) -> validationFormulaShortenMessage
                     else -> null
                 }
             }

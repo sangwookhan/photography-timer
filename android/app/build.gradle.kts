@@ -6,7 +6,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -35,12 +34,13 @@ val hasReleaseSigningConfig = !releaseStoreFile.isNullOrBlank() &&
 
 android {
     namespace = "com.sangwook.ptimer"
-    compileSdk = 35
+    compileSdk = 37
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "com.sangwook.ptimer"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 4
         versionName = "0.8.0"
 

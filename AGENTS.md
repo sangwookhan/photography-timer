@@ -14,13 +14,19 @@ supported pipelines:
 - **Two-role pipeline** — ChatGPT → Codex CLI (Codex CLI acts as
   both planner and implementer)
 
-For ticket work, the **execution-ready task spec** is the primary
-implementation source of truth. That spec MAY be authored by Claude
-Code (three-role) or by Codex CLI itself (two-role). In either case
-the spec should reflect the product intent, UX direction, and
-higher-level architectural guidance prepared by ChatGPT. Raw Jira
-and Confluence pages are supporting references unless the user
-explicitly says otherwise.
+For ticket work, **behavior authority lives in the living
+specification layer** — `docs/requirements/Requirements.md` and
+`docs/specs/**` (see Documentation map below and
+`docs/development/SpecificationWorkflow.md`). The **execution-ready
+task spec** is the implementation/delivery plan derived from that
+layer: it sequences the work and states scope, protected areas, and
+review checkpoints, but it does not itself define product behavior.
+That spec MAY be authored by Claude Code (three-role) or by Codex CLI
+itself (two-role). In either case the spec should reflect the product
+intent, UX direction, and higher-level architectural guidance
+prepared by ChatGPT, and stay consistent with the current living
+specs. Raw Jira and Confluence pages are supporting references unless
+the user explicitly says otherwise.
 
 ---
 
@@ -79,8 +85,9 @@ in addition to its own.
   - `ios/PTimerTests` — app-hosted; reserved for OS-boundary
     behavior (see test placement rule under Build and Test Commands)
 - iOS automated tests use `XCTest`
-- Secondary platform: native Android skeleton (`android/`,
-  Kotlin + Jetpack Compose, Gradle). Android build entry point:
+- Secondary platform: native Android app (`android/`, Kotlin +
+  Jetpack Compose, Gradle; MVP implementation, in active development
+  toward parity with iOS). Android build entry point:
   `android/build.gradle.kts`; app module: `android/app`.
 
 iOS sources live under `ios/`. Android sources live under `android/`.
@@ -90,11 +97,12 @@ guidance may live at repository root and `.codex/`; see Task Spec
 Location below for what does — and does not — belong under
 `docs/tasks/`.
 
-PTimer is a portrait-only iPhone app for film photography exposure
-calculation and countdown timers. The architecture has strict layer
-boundaries (one-way reads, single-owner state, dedicated coordinators
-for external surfaces) and a small set of fitness rules enforced via
-SwiftLint.
+PTimer is a portrait-only app for film photography exposure
+calculation and countdown timers, shipping on iOS with a native
+Android counterpart (see Repository Context above). The architecture
+has strict layer boundaries (one-way reads, single-owner state,
+dedicated coordinators for external surfaces) and a small set of
+fitness rules enforced via SwiftLint.
 
 The current structure — layer-by-layer file ownership, dependency
 direction, naming conventions, and source-of-truth ownership table —
@@ -106,21 +114,56 @@ responsibility.
 
 ## Source of Truth Order
 
-Use this order when deciding what to implement:
+Two distinct questions get different orderings: what the product
+*should do* (behavior authority), and how a specific ticket's work
+gets planned and delivered (delivery guidance). Conflating the two —
+treating ChatGPT guidance or a task spec as if it could independently
+outrank an approved living spec — is not correct; see
+`docs/development/SpecificationWorkflow.md` §6 for the canonical
+version of the behavior-authority ordering below.
 
-1. Explicit user instruction in the current conversation
-2. ChatGPT product intent, UX direction, and senior architectural
-   guidance
-3. Execution-ready task spec and delivery instructions (whether
-   authored by Claude Code or by Codex CLI itself)
-4. Existing architecture, tests, and code contracts
-5. Jira ticket
-6. Confluence page
-7. Existing implementation details not covered above
+### Behavior authority — what the product does
 
-If Jira or Confluence wording conflicts with ChatGPT guidance or the
-execution-ready task spec, follow the higher-priority source unless
-the user explicitly overrides it.
+1. An explicit user decision in the current conversation.
+2. Approved current product specifications
+   (`docs/requirements/Requirements.md`, current `docs/specs/**`; see
+   Documentation map below).
+3. Current source implementation and tests — evidence, not an
+   automatic override of an approved spec.
+4. Historical material (Jira, Confluence, prior task specs, prior
+   agent reconstructions) — supporting evidence only.
+
+ChatGPT's product intent, UX direction, and senior architectural
+guidance is not a separate tier that can override an already-approved
+living spec on its own. It informs what gets *proposed* into tier 2,
+through the Spec PR process (`docs/development/SpecificationWorkflow.md`
+§10). If ChatGPT's guidance disagrees with an approved spec, that
+disagreement is a Spec PR revision, and — if it is a genuine product
+ambiguity — a decision for the user (workflow §8/§9), not something
+resolved ad hoc by picking whichever guidance arrived most recently.
+
+### Delivery guidance — how the work gets planned and done
+
+These do not define product behavior; they plan and constrain how an
+already-decided behavior gets implemented, and none of them may be
+used to override tier 1–2 above:
+
+- **Execution-ready task spec** — scope, sequencing, protected areas,
+  and verification plan for a specific ticket, derived from the
+  approved living spec above (never a substitute for it).
+- **`docs/architecture/**`** — implementation constraints (module
+  boundaries, layering, naming).
+- **Jira ticket** — supporting reference for delivery context.
+- **Confluence page** — supporting reference for delivery context.
+- **Existing implementation details not covered above.**
+
+If Jira or Confluence wording conflicts with an approved living spec
+or the execution-ready task spec, the living spec wins per Behavior
+authority above, and the task spec is revised to match. A
+disagreement between the execution-ready task spec and an approved
+living spec is not resolved by defaulting to the task spec — escalate
+it (see Escalation Triggers below and
+`docs/development/SpecificationWorkflow.md` §6/§8).
 
 ---
 
@@ -128,7 +171,14 @@ the user explicitly overrides it.
 
 For each ticket:
 
-1. Read the execution-ready task spec first
+1. Read the execution-ready task spec first, alongside the behavior
+   it targets. If the task/Code PR implements a Spec PR
+   (`docs/development/SpecificationWorkflow.md` §10), read the exact
+   Spec PR revision (commit SHA) it records — not whatever
+   `docs/specs/**` shows on `main`, which is still the old shipped
+   contract for that capability until the Spec PR merges. For every
+   other capability the ticket does not touch, `main`'s current
+   living spec remains the baseline.
 2. Restate the goal, scope, and protected areas
 3. Limit changes to the declared scope
 4. Do not broaden the task through interpretation
@@ -136,8 +186,9 @@ For each ticket:
 6. Run relevant verification before finishing
 7. Report summary, tests, and remaining risks
 
-Implementation should follow the product intent defined by ChatGPT
-and the execution scope captured in the task spec.
+Implementation should follow the living spec (the exact approved Spec
+PR revision when one applies, per step 1 above) and the execution
+scope captured in the task spec.
 
 When something is unclear, say what is ambiguous instead of guessing.
 
@@ -331,8 +382,8 @@ Requires JDK 17 or newer (Android Studio's bundled JBR is
 sufficient; for CLI builds, point `JAVA_HOME` at a JDK 17+ install)
 and `ANDROID_HOME` pointing at the Android SDK (or
 `android/local.properties` with `sdk.dir=<path>`).
-`connectedAndroidTest` is not part of skeleton DoD; gate it when
-instrumented UI tests are introduced.
+`connectedAndroidTest` is not part of the current Definition of Done;
+gate it when instrumented UI tests are introduced.
 
 Prefer opening the repository root in Android Studio when reviewing
 Git history across both platforms. If you open `android/` directly
@@ -352,9 +403,8 @@ from the repository root:
 cd ios && swiftlint lint
 ```
 
-CI integration is deferred until the platform decision (Bitbucket
-Pipelines with self-hosted macOS runner, GitHub Actions, Xcode
-Cloud, or local hooks only) is resolved.
+CI integration is deferred until the platform decision (GitHub
+Actions, Xcode Cloud, or local hooks only) is resolved.
 
 ---
 
@@ -400,11 +450,17 @@ single-rooted on the English paths.
   performance, persistence stability), and explicit out-of-scope /
   reserved decisions. Read this first when answering "what does the
   app need to do, and why".
-- **`docs/specs/{Calculator,Timer,UI,DomainSchema}.md`** — behavior
-  contracts. Authoritative description of *what* the system does,
-  written so the documents survive refactoring. Specs deliberately
-  contain no code identifiers, file paths, or line numbers. Specs
-  realize the requirements above at contract level.
+- **`docs/specs/**`** — behavior contracts, organized by product
+  capability (`calculator/`, `shooting/`, `reciprocity/`, `timers/`,
+  `cross-cutting/`; see `docs/specs/README.md` for the capability
+  map). Authoritative description of *what* the system does, written
+  so the documents survive refactoring. Specs deliberately contain no
+  code identifiers, file paths, line numbers, ticket references, or
+  architecture/module-ownership detail. Specs realize the
+  requirements above at contract level, one capability file at a
+  time. `docs/development/SpecificationWorkflow.md` governs how these
+  files are created, changed, and reconciled against historical
+  material — read it before editing anything under `docs/specs/`.
 - **`docs/architecture/Architecture.md`** — current code structure:
   layer stack, file-level responsibilities, dependency direction,
   source-of-truth ownership, naming conventions, and architectural
@@ -418,22 +474,29 @@ single-rooted on the English paths.
 
 ### Korean translations
 
-A Korean translation of Requirements and Specs lives under
-`docs/translations/ko/` (same filenames). It is for human reference
-only — this file and agent tooling reference the canonical English
-paths above. Cross-references in any document shall point at the
-English path (`docs/specs/Calculator.md`) so the citation graph
-stays single-rooted.
+A Korean translation of `docs/requirements/Requirements.md` lives
+under `docs/translations/ko/requirements/` (same filename). It is for
+human reference only — this file and agent tooling reference the
+canonical English path above. Cross-references in any document shall
+point at the English path so the citation graph stays single-rooted.
+The capability-oriented `docs/specs/**` tree does not yet have a
+Korean translation; the prior translation mirrored the four
+monolithic spec files that `docs/specs/**` replaced (PTIMER-225) and
+was retired along with them rather than left pointing at nothing.
+Re-translating the new tree is a distinct, unscheduled follow-up.
 
 ### Spec precedence
 
-When code under `ios/PTimer/` disagrees with a spec under
+When code under `ios/` or `android/` disagrees with a spec under
 `docs/specs/`, treat it as either a bug or a spec drift, not as a
 license to ignore the spec.
 
-1. Follow the Source of Truth Order above.
-2. If higher-priority guidance confirms a deliberate behavior
-   change, update the spec.
+1. Follow the Behavior authority order above.
+2. If an explicit user decision (tier 1) confirms this is a
+   deliberate behavior change, update the spec — through a Spec PR
+   per `docs/development/SpecificationWorkflow.md` §10, not by
+   editing `docs/specs/**` directly in the Code PR that found the
+   drift.
 3. Otherwise, change the code to match the spec.
 
 The Protected Areas above carry a stronger form of this rule: a
@@ -522,8 +585,11 @@ Implementation output should always include:
 4. Remaining risks or follow-up items
 5. Notes for human review
 
-Review should be done against ChatGPT product intent and the
-execution-ready task spec, not personal preference alone.
+Review should be done against the exact approved living-spec revision
+the change targets (the Spec PR revision it records, or `main`'s
+current spec when no Spec PR is in play) and the delivery scope
+captured in the execution-ready task spec — not personal preference
+alone.
 
 ---
 
@@ -594,6 +660,8 @@ same value.
 Escalate instead of guessing when:
 
 - the task spec is incomplete
+- the task spec conflicts with the approved living specs
+  (`docs/requirements/Requirements.md`, `docs/specs/**`)
 - Jira or Confluence implies a different behavior
 - protected calculation behavior may be affected
 - architecture boundaries would need to expand

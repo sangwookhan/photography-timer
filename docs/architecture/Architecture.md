@@ -145,7 +145,7 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`).
   `cameraSlotCustomDisplayNames` so SwiftUI surfaces redraw without
   a slot switch.
 - **`TargetShutterModel`** — the active slot's optional Target
-  Shutter duration ([Calculator Spec](../specs/Calculator.md) §3.6)
+  Shutter duration ([Target Shutter spec](../specs/calculator/target-shutter.md))
   plus an in-session last-used memory. Per-slot persistence lives on
   the snapshot layer (`CameraSlotCalculatorSnapshot.targetShutterSeconds`);
   the session-global last-used memory is **not** wired into the
@@ -170,7 +170,7 @@ Module: `PTimerCore`.
 - `Reciprocity/ReciprocityCalculationPolicy.swift` —
   `ReciprocityCalculationPolicyEvaluator` evaluates a
   `ReciprocityProfile` against a metered exposure. Evaluation order is
-  a contract; see `docs/specs/Calculator.md` §3.2.
+  a contract; see `docs/specs/reciprocity/calculation.md`.
 - `PresentationSemantics/ReciprocityConfidencePresentation.swift` —
   maps a policy result to a `ReciprocityConfidencePresentation` used
   for badge styling and text display.
@@ -192,7 +192,7 @@ Split across all three modules along the OS boundary:
   and the timer-persistence `*Storing` protocol — the one persistence
   contract that lives in Core beside its schema rather than in Kit
   `Persistence/` (§1.7). The on-disk schema is independent of the
-  in-memory representation; see `docs/specs/Timer.md` §3.
+  in-memory representation; see `docs/specs/timers/lifecycle.md`.
 - `PTimerKit` `Runtime/` — `TimerRuntime`, the pure timer state
   machine (start/pause/resume/tick/reconcile/remove, completion
   events, persistence + notification scheduling through injected
@@ -235,7 +235,7 @@ cannot wipe the collection, and de-duplicates ids first-valid-wins.
 On any decode failure the concrete `UserDefaults*Store` copies the raw
 payload to a sibling key (primary key + `.quarantine`) at load time,
 logs a signal, and clears both keys on `clearSnapshot()`. See
-[DomainSchema §7.5](../specs/DomainSchema.md). The Android side mirrors
+[the persistence spec](../specs/cross-cutting/persistence.md). The Android side mirrors
 this with `VersionedCollectionDecoder` in `core` and `.quarantine`
 preference keys in the DataStore stores.
 
@@ -305,7 +305,7 @@ Files: `PTimerCore` `Catalog/PresetFilmCatalogV2.swift` +
 
 Preset films load from the bundled JSON at launch via
 `LaunchPresetFilmCatalogV2`. Catalog validation (see
-`docs/specs/DomainSchema.md` §12) runs at load time; a failing catalog
+`docs/specs/reciprocity/catalog.md`) runs at load time; a failing catalog
 is a load-time error rather than a soft-warn.
 
 ### 1.9 Widgets

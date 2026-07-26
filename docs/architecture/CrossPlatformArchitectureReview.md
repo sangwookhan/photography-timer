@@ -374,15 +374,19 @@ Android screen state is owned through an AndroidX lifecycle
 This mirrors the iOS split (retained `WorkspaceCoordinator` + pure
 feature models) at the closest Android-native equivalent.
 
-The detailed contract — the before/after ownership migration
-(previous Composition-owned lifetime, the concrete problems it
-caused, and the problem-to-change mapping), the authoritative state
-source map, ownership and async-work diagrams, lifecycle sequence
-diagrams, the committed vs interaction-transient state table, the
-PTIMER-199 ND cleanup lifecycle boundary, and the verification
-matrix — lives in
-[`../tasks/PTIMER-223-android-viewmodel-architecture.md`](../tasks/PTIMER-223-android-viewmodel-architecture.md)
-until PTIMER-199 completes.
+The ND empty-wheel cleanup timer that PTIMER-199 added to the
+calculator follows the same ownership rule: `CalculatorController`
+takes an injected `ndCleanupScope`, wired to `viewModelScope` in
+`ShootingAppViewModel`, so the delay job survives configuration
+change and is neither duplicated nor silently dropped across
+recreation, slot switch, reset, or restoration.
+
+The detailed migration note (before/after ownership diagrams, the
+problem-to-change mapping, lifecycle sequence diagrams, the committed
+vs interaction-transient state table, and the verification matrix)
+was retired now that PTIMER-199 has landed the ND cleanup migration
+onto this structure (PTIMER-223, PTIMER-199); this summary is the
+canonical record going forward.
 
 ---
 

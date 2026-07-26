@@ -79,7 +79,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Boundary conditions.**
 - The Corrected Exposure row is *always visible* in film workflow — the layout shape does not change as the user pans through metered values that switch the result between *quantified*, *limited-guidance*, and *unsupported* outcomes.
-- A *quantified* corrected exposure surfaces a numeric primary line plus a status badge. The status category is one of *No correction* (inside the manufacturer's no-correction threshold), *Formula-derived* or *Table-derived* (on the active calculation curve — a guarded formula or a log-log interpolation of the official table), or *Beyond source range* / *Outside guidance* (a formula- or table-backed numeric continuation past the manufacturer's supported boundary; the badge carries a warning tone).
+- A *quantified* corrected exposure surfaces a numeric primary line plus a status badge. The status category is one of *No correction* (inside the source's no-correction threshold), *Formula-derived* / *Custom formula* or *Table-derived* / *Custom table* (on the active calculation curve — a guarded formula or a log-log table interpolation; the table or formula may be an official manufacturer source or a user-authored custom profile, with the same calculation basis either way), or *Beyond source range* / *Outside guidance* (a formula- or table-backed numeric continuation past the source's supported boundary; the badge carries a warning tone).
 - A *limited-guidance* result surfaces calm explanatory text in place of a number. The app never fabricates a numeric corrected value when the data does not support one.
 - An *unsupported* result with no numeric continuation surfaces a guidance note. The Start Timer button on the corrected row is disabled with an explanatory accessibility hint.
 - The base shutter ladder, the ND ladder, and the result-reporting rules are identical to Scenario 1. Film selection does not change the calculator's exposure scale.
@@ -90,13 +90,13 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Steps.**
 1. From the result section, the user activates a Start Timer affordance on the row whose value they want to time. In film workflow there are two start affordances — one on the Adjusted Shutter row, one on the Corrected Exposure row — and the user picks based on intent.
-2. The timer enters a *workspace surface* that remains visible alongside the calculator. The user can adjust ND or swap films for the next shot without dismissing the timer or losing sight of it. The workspace surface's exact placement is a design decision, not a requirement.
-3. The workspace surface communicates, for each running timer: remaining time, *some sense of progress* over multiple time scales (so a 30 s timer and a 30 min timer both feel responsive), and a distinguishing identity cue independent of name and time text.
-4. The user can switch the workspace surface between a glanceable summary mode and an expanded mode that shows every running, paused, and completed timer together.
+2. The timer appears on a *compact dock* that stays visible alongside the calculator on the shooting screen. The user can adjust ND or swap films for the next shot without dismissing the timer or losing sight of it.
+3. The compact dock communicates, for each running timer: remaining time, *some sense of progress* over multiple time scales (so a 30 s timer and a 30 min timer both feel responsive), and a distinguishing identity cue independent of name and time text.
+4. The user can open a *full-screen Timers workspace* from the compact dock — a separate destination that shows every running, paused, completed, and canceled timer together for full management. Its exact placement/entry gesture is a design decision, not a requirement.
 5. When the timer's duration elapses, the system surfaces a completion signal that reaches the user even if they are not looking at the phone (camera in hand, phone in pocket), and the timer's card transitions to a "Done" state in-app.
 
 **Boundary conditions.**
-- Each timer has a stable identity. Ordering: active group with most recent first, completed group with most recent completion first.
+- Each timer has a stable identity. Ordering: active group with most recent first, terminal group (completed and canceled together) with most recent terminal time first.
 - A timer's duration is rejected at start time if it is not strictly positive *and* finite — `Inf` and `NaN` are forbidden.
 - A timer carries an auto-generated name and a basis-summary line so the user can reconstruct *which shot* the timer belongs to. The name reflects the start source (digital result vs. film adjusted vs. film corrected) and includes the film stock name when relevant.
 
@@ -118,14 +118,14 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Goal.** Photographer running two or more cameras (or two pending exposures from the same camera) keeps a separate timer per shot.
 
 **Steps.**
-1. Repeat Scenario 3 to start a second timer. The workspace surface accommodates additional timers without losing the calculator above; each timer carries a unique identity cue so the user can pick a card at a glance without reading text.
+1. Repeat Scenario 3 to start a second timer. The compact dock accommodates additional timers without losing the calculator above; each timer carries a unique identity cue so the user can pick a card at a glance without reading text.
 2. The user can focus a single timer to inspect it more closely.
 3. The user can pause one timer while the others continue running.
-4. Completed timers gather in the completed group, most recent completion first.
+4. Completed and canceled timers gather together in the terminal group, most recent terminal time first.
 
 **Boundary conditions.**
-- A timer's identity cue is *stable for the timer's lifetime* — it does not shift when the user reorders, focuses, or moves a timer between active and completed groups.
-- The workspace surface remains stable in shape across summary / expanded transitions; switching modes does not recompute layout for cards that were already visible.
+- A timer's identity cue is *stable for the timer's lifetime* — it does not shift when the user reorders, focuses, or moves a timer between the active group and the terminal (completed/canceled) group.
+- The compact dock and the full-screen Timers workspace each present timer cards from the same underlying collection; opening or closing the full-screen workspace does not recompute the compact dock's cards.
 - The lock-screen surface (Scenario 6) shows *one* representative timer at a time, even when multiple timers are running. Selection rule lives in Scenario 6.
 
 ### Scenario 6 — Lock-screen monitoring
@@ -136,7 +136,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 1. Start a timer (Scenario 3).
 2. Lock the phone. A lock-screen surface communicates the *representative* timer's name, duration, and end date.
 3. The lock-screen surface updates frequently enough that the user perceives time advancing without unlocking.
-4. When all timers stop (completed or removed), the lock-screen surface goes away.
+4. Once no running or paused timer remains (each has completed, been canceled, or been removed), the lock-screen surface goes away.
 
 **Boundary conditions.**
 - The representative is the active timer with the earliest end date. Ties resolve deterministically — the user shall never see the surface flicker between two timers because the implementation broke a tie inconsistently.
@@ -190,34 +190,38 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.2 Reciprocity
 
-- **FR-2.1** The system shall present a curated set of preset films at launch, each with exactly one published reciprocity profile. The launch catalog shall be sourced from current official manufacturer documentation and shall cover quantified profiles — guarded-formula profiles and official table log-log profiles (both with optional manufacturer source-evidence rows) — and limited-guidance profiles whose long-exposure section is qualitative only. It shall preserve published guidance — threshold ranges, table anchors, color-filter recommendations, development-time hints, and stop-signal boundaries — in a form the user can drill into. (Scenario 2)
+- **FR-2.1** The system shall present a curated set of preset films at launch, each with exactly one primary reciprocity profile. The launch catalog shall be sourced primarily from current official manufacturer documentation and shall cover quantified profiles — guarded-formula profiles and official table log-log profiles (both with optional manufacturer source-evidence rows) — and limited-guidance profiles whose long-exposure section is qualitative only. A film whose only usable quantified guidance is a verified third-party publication may ship with an honestly-labeled unofficial-authority primary profile instead (see reciprocity/catalog.md); this class exists in the current release. It shall preserve published guidance — threshold ranges, table anchors, color-filter recommendations, development-time hints, and stop-signal boundaries — in a form the user can drill into. (Scenario 2)
 - **FR-2.2** Given a metered exposure and an active profile, the system shall classify the result into exactly one of three forms — *quantified*, *limited-guidance*, or *unsupported* — and shall not allow a result that represents more than one form at once. (Scenario 2)
 - **FR-2.3** A *quantified* result shall carry a corrected exposure value, a status badge the user can read at a glance, and provenance the user can drill into to see the source and calculation method — the formula expression where the model is a formula, or the published table anchors where the model is the official log-log table — plus any manufacturer reference points. (Scenario 2)
 - **FR-2.4** A *limited-guidance* result shall present calm guidance text instead of a corrected number. The system shall not fabricate a numeric corrected value when the underlying data does not support one. (Scenario 2 boundary)
 - **FR-2.5** An *unsupported* result with no numeric continuation shall present a guidance note and shall disable the Start Timer affordance on the corrected-exposure row, with an accessibility hint explaining why. An *unsupported* result that carries a numeric continuation outside the supported range (a formula prediction or a table-derived extrapolation past the source-range boundary) shall surface the value with a warning-toned badge and shall keep the Start Timer affordance enabled. (Scenario 2 boundary)
 - **FR-2.6** Reciprocity evaluation shall be deterministic — the same profile and metered value shall always produce the same result form, corrected value, and status indication. (NFR-D.1)
 - **FR-2.7** The user shall reach the film selection through a dedicated, dismissible surface rather than an inline dropdown that competes with the calculator for screen room. (Scenario 2)
-- **FR-2.8** Reciprocity coverage shall not be limited to films with a quantified formula. Threshold-only and limited-guidance published guidance are first-class scope rather than lesser fallbacks, and the domain shall reserve capacity for future unofficial or user-defined entries. (Scenario 2 boundary; complements FR-2.2)
+- **FR-2.8** Reciprocity coverage shall not be limited to films with a quantified formula. Threshold-only and limited-guidance published guidance are first-class scope rather than lesser fallbacks. Honestly-labeled unofficial-authority preset entries (FR-2.1) and user-defined custom entries (FR-2.9, FR-2.15) are current, first-class scope alongside official manufacturer-sourced profiles — neither is reserved future capacity. (Scenario 2 boundary; complements FR-2.2)
 - **FR-2.9** The user shall be able to author a **custom reciprocity formula profile** through a formula-first editor that exposes the four formula terms (corrected exposure at the anchor, metered exposure at the anchor, curve exponent, fixed offset) and the two range/policy boundaries (the no-correction upper bound and the source / confidence upper bound). A custom profile shall use the same shared guarded formula evaluation path as a preset formula profile. (Persona 1.2)
 - **FR-2.10** The user shall be able to **save, reuse, select, edit, and delete** custom reciprocity profiles. A saved custom profile shall survive an app restart and shall be selectable from the same film picker as the preset catalog, presented in its own group so it cannot be mistaken for a manufacturer-published entry. (Persona 1.2; Scenario 2)
 - **FR-2.11** A custom profile selected on the calculator shall drive the Corrected Exposure on the same terms as a preset profile, and the **Start Timer** affordance on the Corrected Exposure row shall be available whenever the custom-profile result is quantified or carries a numeric formula continuation past the source range. (Persona 1.2; Scenarios 2, 3; extends FR-2.5)
 - **FR-2.12** The editor shall **reject or safely present** invalid formula input — for example a non-positive anchor exposure, a missing exponent, or range boundaries in the wrong order — by surfacing an inline explanation of the violated constraint and suppressing preview output that would suggest the invalid state produces a usable correction. The system shall never persist a custom profile whose formula state violates the shared parameter contract. (Persona 1.2)
 - **FR-2.13** A custom profile's **photographer-supplied source metadata** (source kind, manufacturer / stock label, reference URL) shall be preserved verbatim and shall **never be presented as manufacturer authority**. The film row authority subtitle, the picker row badge, the Details surface, and any timer launched from a custom profile shall make clear that the result came from a user-defined profile. (Persona 1.2; complements FR-2.3)
 - **FR-2.14** Each timer started from a custom-profile calculation shall preserve enough custom-profile identity in its metadata for the photographer to recognise that the timer's duration came from a user-defined profile, even after the source custom profile is later edited or deleted. (Scenarios 3, 5; extends FR-4.6)
+- **FR-2.15** The user shall be able to author a **custom reciprocity table profile** by entering metered→corrected duration anchor rows; the table shall calculate through the same log-log interpolation model a preset table profile uses. A custom table profile shall support the same save/reuse/select/edit/delete lifecycle as a custom formula profile (extends FR-2.10). (Persona 1.2)
+- **FR-2.16** From a saved custom table, the system shall derive a fitted-formula preview for inspection only — it is never itself an active shooting calculation. The preview shall include fit/error information; a fit that would shorten exposure anywhere in range shall present as unusable with no adoption path, and a merely poor fit shall carry a warning without blocking inspection. (Persona 1.2)
+- **FR-2.17** The user shall be able to create a new, independent **custom Formula** profile seeded from a saved table's fitted preview ("Create Formula from table"). Cancel shall create nothing; Save shall create a separate profile whose calculation parameters remain independent of the source table afterward — editing or deleting either one shall not mutate the other. (Persona 1.2; extends FR-2.9, FR-2.10)
+- **FR-2.18** A preset film may expose more than one selectable reciprocity profile — a primary plus an alternate/derived model (for example an app-derived formula alongside an official table). When a film offers more than one, the user shall be able to select among them, and the selection shall persist per camera slot across an app restart (extends FR-8.2, FR-5.2). (Persona 1.2, 1.3; Scenario 2)
 
 ### 3.3 Timer lifecycle
 
 - **FR-3.1** The system shall start a timer only with a duration that is strictly positive and finite. Infinite, NaN, or non-positive durations are rejected at the entry point, before any persisted state is written. (Scenario 3 boundary)
-- **FR-3.2** A timer shall move only along these state transitions: *running → paused*, *paused → running*, *running → completed*, *paused → completed* (via resume when the frozen remaining time has reached zero). Other transitions are not representable. (Scenario 3, 4)
+- **FR-3.2** A timer shall move only along these state transitions: *running → paused*, *paused → running*, *running → completed*, *running → canceled*, and *paused → canceled*. *Paused → completed* is not a direct transition — a paused timer must resume before it can complete; a pause attempted with zero remaining time short-circuits directly to completed instead of entering paused (FR-3.5). Other transitions are not representable; *completed* and *canceled* are both terminal and distinct from each other — a canceled timer never becomes completed. (Scenario 3, 4)
 - **FR-3.3** A paused timer shall not consume wall-clock time toward its completion. The frozen remaining time is preserved as the user left it. (Scenario 4)
 - **FR-3.4** Resume shall restart the timer from *now + frozen remaining time*; the original end date is not preserved across pause. (Scenario 4 boundary)
 - **FR-3.5** A pause whose remaining time has already reached zero shall short-circuit to completed rather than enter a zero-remaining paused state. (Scenario 4 boundary)
 - **FR-3.6** Each transition into completed shall produce exactly one external completion signal to the user. Pending signals shall be cancelled when a timer is removed or transitions running → paused. (Scenario 3)
-- **FR-3.7** Active timers shall be presented most-recent-first; completed timers shall be presented most-recently-completed-first; ties shall resolve deterministically so the user does not see an unstable order. (Scenario 5)
+- **FR-3.7** Active timers shall be presented most-recent-first; completed and canceled timers together form one terminal group, presented most-recently-terminated-first; ties shall resolve deterministically so the user does not see an unstable order. (Scenario 5)
 
 ### 3.4 Multi-timer + lock-screen
 
-- **FR-4.1** The system shall support multiple concurrent timers, each with a stable identity that survives running, paused, completed, reordered, focused, and inspected transitions. (Scenario 5)
+- **FR-4.1** The system shall support multiple concurrent timers, each with a stable identity that survives running, paused, completed, canceled, reordered, focused, and inspected transitions. (Scenario 5)
 - **FR-4.2** Each timer shall carry a non-text identity cue (e.g. a tint, shape, or pattern) that distinguishes it from sibling timers at a glance, without depending on the user reading name or time text. The cue shall be stable for the timer's lifetime. (Scenario 5)
 - **FR-4.3** The lock-screen surface shall show at most one timer at a time. The selection rule (earliest end date, deterministic tiebreak) is documented in Scenario 6. (Scenario 6)
 - **FR-4.4** When no running or paused timer remains, the lock-screen surface shall end. The user shall never see a lock-screen timer that no longer exists. (Scenario 6)
@@ -227,7 +231,7 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.5 Persistence
 
-- **FR-5.1** Timer state (running / paused / completed information needed for the state machine) and timer presentation metadata (the name, the basis-summary line, and the LIFO insertion order the user sees) shall both survive an app restart. (Scenario 7)
+- **FR-5.1** Timer state (running / paused / completed / canceled information needed for the state machine) and timer presentation metadata (the name, the basis-summary line, and the LIFO insertion order the user sees) shall both survive an app restart. (Scenario 7)
 - **FR-5.2** The calculator context — selected film, exposure scale token, base shutter, the ND filter stack (FR-1.2a; restored wholesale, with an invalid persisted stack rejected as a whole back to the legacy single ND value, never clamped), and Target Shutter duration when set (FR-9.1, FR-9.5) — shall survive an app restart so the user does not redo the picker on every interruption. The exposure scale token is recorded so a future Settings preference can carry the user's prior choice across an upgrade rather than overwriting it. (Scenario 8)
 - **FR-5.3** Persisted shapes shall evolve only via backward-compatible additions. A snapshot written by an older release of the app must continue to restore correctly under the current release; in particular, status tokens that older releases used must continue to be accepted on read. (Scenario 7)
 - **FR-5.4** A running timer whose end date has already passed during the app's downtime shall restore as completed, with the original end date as the completion timestamp — not the moment of restoration. (Scenario 7 boundary)
@@ -236,10 +240,10 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.6 Calculator screen and workspace
 
-- **FR-6.1** Calculation and timer execution shall live on a single primary surface. The user shall not navigate to a separate "timer screen" to monitor a running exposure. (Scenario 3, 5)
+- **FR-6.1** Calculation and a compact, glanceable timer presence shall live together on a single primary shooting screen: the user monitors a running exposure's remaining time without navigating away from the calculator. Full timer management (inspecting and acting on every timer at once) is a separate full-screen destination, deliberately reached from that compact presence rather than folded into the shooting screen. (Scenario 3, 5)
 - **FR-6.2** The primary surface shall adapt to the device's vertical room without rearranging its conceptual structure: the same elements are present at every density, only the spacing changes. (Scenario 1)
-- **FR-6.3** The workspace surface shall offer the user two distinct presentations — a glanceable summary that prioritizes the calculator above, and an expanded view that prioritizes the timer list. Intermediate states are out of scope. (Scenario 3, 5)
-- **FR-6.4** The workspace surface shall coexist with the calculator without obscuring it; the user can adjust calculator inputs while a timer runs without dismissing or moving the timer surface. (Scenario 3, 5; placement is a design choice, not a requirement.)
+- **FR-6.3** The compact dock and the full-screen Timers workspace shall each show every running, paused, completed, and canceled timer from the same underlying collection — the compact dock glanceably on the shooting screen, the full-screen workspace with full per-timer management actions. Intermediate states between the two are out of scope. (Scenario 3, 5)
+- **FR-6.4** The compact dock shall coexist with the calculator without obscuring it; the user can adjust calculator inputs while a timer runs without dismissing or moving the compact dock. (Scenario 3, 5; placement is a design choice, not a requirement.)
 - **FR-6.5** The reciprocity details surface shall present its sections in a fixed order — *reciprocity model (source + calculation)* first, then *Graph*, then *source reference data* (formula expression or published table anchors; source-only) with an *app-derived comparison* when the active model is explicitly app-derived, then *Sources*. The order keeps the active model and its curve first, with the published source data and citations following. (Scenario 2)
 
 ### 3.7 Orientation and inputs
@@ -249,8 +253,8 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 ### 3.8 Camera slots
 
-- **FR-8.1** The system shall expose multiple camera slots within a single shooting session. The supported range is two to four slots; configurations outside that range are not part of the shooting workspace's scope. (Persona 1.3; out-of-scope for the inventory case is recorded in §5)
-- **FR-8.2** Each camera slot shall preserve its own calculator state — workflow mode (digital vs. film), selected film and active reciprocity profile (when film workflow), base shutter, ND, exposure scale, the most recently derived reciprocity result, and the slot's Target Shutter state (FR-9.1). Slots are independent: a calculator change made on the active slot — including enabling, disabling, or editing the Target Shutter — shall not propagate to inactive slots. (Persona 1.3; Scenario 1, 2)
+- **FR-8.1** The system shall expose four fixed camera slots within a single shooting session, designed and scoped for a photographer using two to four of them simultaneously; a workflow needing more than four falls outside the shooting workspace's scope (the inventory case recorded in §5). (Persona 1.3)
+- **FR-8.2** Each camera slot shall preserve its own calculator state — selected film and active reciprocity profile, base shutter, ND, exposure scale, the most recently derived reciprocity result, and the slot's Target Shutter state (FR-9.1). Digital-vs-film workflow is derived entirely from whether the slot has a selected film, not an independently stored slot field. Slots are independent: a calculator change made on the active slot — including enabling, disabling, or editing the Target Shutter — shall not propagate to inactive slots. (Persona 1.3; Scenario 1, 2)
 - **FR-8.3** Switching the active slot shall preserve every inactive slot's calculator state untouched. The transition shall not invoke any "reset" path on the calculator, the film selection, or the reciprocity result; the active-input set is replaced, not mutated. (Persona 1.3)
 - **FR-8.4** The user shall be able to switch the active camera slot from the main shooting workspace through a single, glanceable affordance — not a settings detour. The exact affordance (paged TabView, segmented control, swipe gesture, or other) is a design decision; the requirement is that the switch is one gesture away from the calculator. (Persona 1.3)
 - **FR-8.5** Each camera slot shall expose enough identity information — at minimum a stable id and a human-readable display label — for the user to associate calculator state, timers, and (eventually) record-system handoffs with the intended camera. The stable id is independent of the display label and shall not change when the user renames the slot. (Persona 1.3; complements FR-4.6 / FR-8.7)
@@ -314,13 +318,12 @@ The product intentionally excludes:
 
 - Aperture and ISO controls in the variable section. The four-variable model from wiki 3866625 is reserved for a future Epic; the current release is base-shutter + ND only.
 - Free-text shutter input.
-- A user-facing exposure scale selector. The shipping calculator runs only on the 1/3-stop scale; a Full / 1/2 / 1/3 stop preference is reserved for a future Settings surface (see [Calculator Spec](../specs/Calculator.md) §1.4).
+- A user-facing exposure scale selector. The shipping calculator runs only on the 1/3-stop scale; a Full / 1/2 / 1/3 stop preference is reserved for a future Settings surface (see [Exposure Calculator spec](../specs/calculator/exposure.md)).
 - Dropping a film selection by tapping outside a sheet without explicit confirmation. The "Clear" affordance is the only way to remove a selection.
 - Timer queueing / chaining (start B when A finishes). Multi-timer is independent timers running in parallel, not a sequence.
 - Studio strobe / flash duration modes.
 - Video mode / cinematography.
-- Cross-device sync. Each phone keeps its own catalog and persisted state. Remote sharing of user-authored custom reciprocity profiles is also out of scope; FR-2.9 covers local authoring only.
-- Table-derived custom reciprocity input. The current custom-profile workflow (FR-2.9 through FR-2.14) accepts a formula authored term-by-term; multi-row reference tables and point fitting as a custom calculation model are reserved for a future feature.
+- Cross-device sync. Each phone keeps its own catalog and persisted state. Remote sharing of user-authored custom reciprocity profiles is also out of scope; FR-2.9/FR-2.15 cover local authoring only.
 - Broad film-inventory management beyond the picker's select / create / edit / delete affordances. Bulk import/export, tagging, and per-stock notes outside the custom-profile editor are not part of this release.
 - TCA / Redux-style global stores.
 
@@ -330,10 +333,7 @@ The product intentionally excludes:
 
 These are not requirements — they are points where the wiki / tickets reserve a future decision. Listed here so they don't drift into implicit requirements.
 
-- **User-defined table input.** User-defined *formula* profiles are implemented (FR-2.9 through FR-2.14). A future user-defined *table-derived* workflow — multi-row reference tables and point fitting as a custom calculation model — has no entry/edit UX, validation rules, or persistence boundary specified.
-- **Multi-profile per identity.** The domain reserves the ability to attach multiple profiles to one identity, but the launch dataset ships one profile per identity and the active-profile selection rule is not pinned.
 - **Color correction metadata.** Velvia-style "M color correction" is mentioned in wiki 15138817 but has no schema entry yet.
-- **Android port.** A future Android port is anticipated and shared test-fixture material is being curated for cross-platform parity, but the Android codebase itself is not in scope for the current release.
 - **Aperture / ISO variable model.** Wiki 3866625 proposes a four-variable derivative model; the current release does not implement it.
 
 ---
@@ -342,7 +342,7 @@ These are not requirements — they are points where the wiki / tickets reserve 
 
 This file is the *requirements* layer. It sits between the user-need ground truth (the wiki problem statement) and everything downstream of requirements. References to downstream documents (architecture, specs, verification) are navigational only. Update triggers:
 
-- A new user scenario is added, or a scenario is closed (e.g. multi-profile selection ships).
+- A new user scenario is added, or a scenario is closed (e.g. a previously-reserved capability ships).
 - A new functional requirement is introduced or an existing one is retired.
 - A non-functional requirement threshold changes (e.g. coverage target raised, perf budget tightened).
 - An open question (§6) is resolved.
@@ -361,7 +361,7 @@ the wiki references below are supporting product-intent sources.
 - Wiki 3375105 — 제품 방향 초안 (product direction)
 - Wiki 3866625 — 화면 흐름 초안 (single screen unifies calculation and execution)
 - Wiki 16482307 — Film Selection and Reciprocity Calculator UI (workflow direction, terminology)
-- Wiki 9601025 — Bottom Sheet UI Architecture (current workspace shell implementation)
-- Wiki 8847362 — Floating Timer Dock UI Design (current multi-timer surface implementation)
+- Wiki 9601025 — Bottom Sheet UI Architecture (historical; the timer workspace shell has since moved to a compact dock plus a full-screen Timers workspace, see `docs/specs/timers/workspace.md`)
+- Wiki 8847362 — Floating Timer Dock UI Design (historical multi-timer surface design; superseded in the same move)
 
 These are *reference material*, not normative. The seven problems from wiki 3244033 are the user-need ground truth that every requirement traces back to.

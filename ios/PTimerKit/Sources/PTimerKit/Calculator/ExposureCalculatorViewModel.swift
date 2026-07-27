@@ -1527,7 +1527,16 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public func formatDateTime(_ date: Date) -> String {
-        Self.dateTimeFormatter.string(from: date)
+        formatDateTime(date, locale: .autoupdatingCurrent)
+    }
+
+    /// Locale seam for deterministic locale/hour-cycle regression tests.
+    /// Production call sites always use the public overload above, which
+    /// defaults to the live system locale.
+    func formatDateTime(_ date: Date, locale: Locale) -> String {
+        date.formatted(
+            Date.FormatStyle(date: .numeric, time: .standard, locale: locale, timeZone: .autoupdatingCurrent)
+        )
     }
 
     public func timerTargetContext(for timer: RunningTimerItem) -> String? {
@@ -2367,17 +2376,5 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             customDisplayNames: cameraSlotSessionModel.customDisplayNames
         )
     }
-
-    private static let dateTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        // Absolute event timestamps (completed / canceled / paused / ends)
-        // render in the device's local time zone, not UTC, so each event reads
-        // in the local time where it occurred.
-        formatter.timeZone = .autoupdatingCurrent
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
 
 }

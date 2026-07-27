@@ -83,15 +83,11 @@ final class BottomSheetWorkspaceSnapshotFactoryTests: XCTestCase {
     }
 
     /// The absolute timestamp renders in the device-local time zone
-    /// (PTIMER-146), so expected strings are derived locally rather than
-    /// hard-coded to UTC.
+    /// (PTIMER-146) using the active system locale and time-format
+    /// preference (PTIMER-229), so expected strings are derived with the
+    /// same locale-aware style rather than hard-coded to UTC or POSIX.
     private func localAbsoluteTime(_ secondsSince1970: TimeInterval) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.string(from: Date(timeIntervalSince1970: secondsSince1970))
+        Date(timeIntervalSince1970: secondsSince1970).formatted(date: .numeric, time: .standard)
     }
 
     @MainActor

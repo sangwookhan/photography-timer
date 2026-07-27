@@ -49,13 +49,17 @@ platform-specific.
 
 - **L10N-013** — Android's timer end-of-exposure display and iOS's
   pre-alert notification body text (the "ends at ..." text shown ahead of
-  completion) both format using the active system locale rather than a
-  fixed pattern or a hardcoded locale. iOS's completion notification
-  itself carries no end-time text to localize. This is a known
-  cross-platform gap, not a design choice: iOS's in-app running-timer
-  panel and Timers workspace still format their end-of-exposure text with
-  a hardcoded locale and fixed pattern, unlike the Android surface it
-  mirrors.
+  completion) both format using the active system locale and the user's
+  current time-format preference rather than a fixed pattern or a hardcoded
+  locale. The displayed value continues to represent the device-local time
+  zone. iOS's completion notification itself carries no end-time text to
+  localize.
+- **L10N-014** — iOS in-app absolute timer timestamps use the active system
+  locale, the user's current time-format preference, and the device-local
+  time zone rather than a fixed pattern or a hardcoded locale. This applies
+  consistently to the running timer end time, paused timestamp, completed
+  timestamp, and canceled timestamp in the shooting timer surface and Timers
+  workspace.
 
 ## Non-goals
 

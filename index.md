@@ -9,7 +9,7 @@ title: Photography Timer
 
 Exposure calculator and countdown timer for film and digital photography.
 
-Photography Timer is available now on iOS. Android is currently in closed testing.
+Photography Timer is available now on iOS and Android.
 
 ## Get the App
 
@@ -19,16 +19,10 @@ Photography Timer is available now on iOS. Android is currently in closed testin
       <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="44">
     </a>
   </div>
-  <div class="platform-block platform-block--android">
-    <a href="https://play.google.com/apps/testing/com.sangwook.ptimer">
+  <div class="platform-block">
+    <a href="https://play.google.com/store/apps/details?id=com.sangwook.ptimer">
       <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="65">
     </a>
-    <p class="badge-note">Currently in closed testing. Complete these steps to install:</p>
-    <ol>
-      <li><a href="https://groups.google.com/u/0/g/photography-timer-testers">Join the tester group</a></li>
-      <li><a href="https://play.google.com/apps/testing/com.sangwook.ptimer">Become a tester</a></li>
-      <li>On that page, follow the &quot;Download it on Google Play&quot; link.</li>
-    </ol>
   </div>
 </div>
 

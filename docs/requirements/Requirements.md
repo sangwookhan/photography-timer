@@ -54,14 +54,14 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Steps.**
 1. Set base shutter from the 1/3-stop densified ladder with camera-facing labels.
-2. Set ND from the ND ladder — as a single filter wheel, or as a stack of up to four wheels mirroring physically stacked filters.
+2. Build the Filter Stack from the Standard ND ladder, user-owned Filter Sets, or a mixture of both, using up to four wheels that mirror the mounted filters.
 3. Read the output shutter on the result row.
 4. (Optional) Start a timer from the output shutter when the value is long enough that an in-camera shutter or wristwatch is impractical.
 
 **Boundary conditions.**
 - The base shutter must come from the 1/3-stop densified ladder (55 values spanning 1/8000 .. 30 s) with conventional camera-facing labels. Free-text input is rejected.
-- ND values come from the whole-stop ladder `0, 1, 2, …, 30` plus the three fixed fractional commercial presets (`6.6`, `7.6`, `16.6`). One-third-stop applies to the base shutter only; the ND picker stays whole-stop apart from those presets because real-world fixed ND filters are sold in whole-stop strengths. Values outside the range are not accepted.
-- Up to four ND wheels can be stacked; the effective ND is their sum and the sum never exceeds 30 stops. Over-cap combinations are unrepresentable (each wheel's range shrinks to the remaining budget) rather than clamped after the fact.
+- Standard values come from the whole-stop ladder `0, 1, 2, …, 30` plus the three fixed fractional commercial presets (`6.6`, `7.6`, `16.6`). One-third-stop applies to the base shutter only; the Standard picker stays whole-stop apart from those presets. User-owned Filter Items may preserve other validated decimal values and units as specified by the Filter Set contract.
+- Up to four filter wheels can be stacked from Standard and Filter Set sources; the effective exposure loss is the sum of their active contributions and never exceeds 30 stops. Over-cap combinations are rejected or made unavailable rather than clamped after the fact.
 - The output shutter is reported using conventional photographic notation. In the shipping 1/3-stop scale the calculated value is reported directly (formatted by the standard time-display rules) without snapping to a coarser ladder; the precise value drives any downstream timer.
 - A future Settings preference may let a user request a coarser scale (Full / 1/2 stop). When such a preference exists, in-range full-stop results may snap to the conventional reference and long values above 30 s may present in a power-of-two doubling ladder (64, 128, 256 …). In the current release no such selector is exposed; all results follow the 1/3-stop reporting rule.
 
@@ -162,15 +162,34 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Goal.** Photographer's selected film stock and the calculator's working context survive app restart so they don't have to re-pick them after every interruption.
 
 **Steps.**
-1. Select a film, set base shutter and ND.
+1. Select a film, set base shutter, and build the Filter Stack.
 2. Force-quit the app.
-3. Reopen. The same film, base shutter, and ND are restored.
+3. Reopen. The same film, base shutter, Filter Stack, and last-used Filter Source are restored.
 
 **Boundary conditions.**
 - A persisted film id that no longer exists in the catalog drops the selection silently and writes a clean snapshot back so subsequent reads are not confused.
-- Base shutter and ND are sanitized on restore against the active exposure scale's ladders: out-of-range values are rejected, only ladder values are accepted.
-- A persisted ND filter stack restores wholesale — every wheel and its position. An invalid stack (wheel count, off-ladder value, or a sum over 30 stops) is rejected as a whole back to the legacy single ND value; it is never partially recovered or clamped.
-- A snapshot written by an older release that predates the exposure scale token (or fractional ND, or the ND filter stack) shall continue to restore correctly: missing fields shall resolve to the shipping 1/3-stop scale, a legacy whole-stop value shall be accepted because the shipping ladder is a strict superset of the legacy full-stop ladder, and a missing stack restores as a single wheel holding the legacy ND value.
+- Base shutter and Standard filter rows are sanitized on restore against the active exposure scale's ladders. Filter Set references and contributions are validated against the Filter Set contract; unresolved or invalid state is skipped safely rather than fabricated.
+- A persisted Filter Stack restores its wheels, source identity, physical-item references, and calculation modes while preserving the 30-stop cap. A legacy Standard-only stack retains its existing whole-stack validation and fallback behavior.
+- A snapshot written by an older release that predates the exposure scale token, fractional ND, the ND stack, or Filter Sets shall continue to restore correctly: missing fields resolve to shipping defaults, and a legacy whole-stop value restores as a single Standard wheel.
+
+### Scenario 9 — Use owned filters in a mixed Filter Stack
+
+**Goal.** A photographer wants the calculator to mirror the physical filters they carry and mount, including combinations drawn from more than one holder or Filter Set.
+
+**Steps.**
+1. Create named, color-coded Filter Sets and register each physical Filter Item separately, including equal-strength duplicates.
+2. On a camera, choose Standard or a Filter Set when adding each filter wheel.
+3. Select up to four mounted items across those sources and read the calculated exposure from their active contributions.
+4. For a CPL, choose the exposure-loss value appropriate to the current use; for a GND, choose whether it is recorded only or contributes its full registered value.
+5. Switch cameras and return later without rebuilding either camera's Filter Stack or last-used Filter Source.
+
+**Boundary conditions.**
+- Standard and multiple Filter Sets may coexist in one stack. Standard appears first and user Filter Sets follow their saved order.
+- One physical Filter Item cannot be selected twice on the same camera. Two equal physical filters remain selectable when they were registered as separate items.
+- Empty means that no physical filter is mounted. Record only means that an identified physical filter is mounted but contributes zero stops; the two states are not interchangeable.
+- CPL exposure-loss choices are user-editable decimal values because loss varies by product and use. GND calculation is either zero or its complete registered value; partial-frame estimation is not required.
+- The active contribution sum never exceeds 30 stops. A rejected change leaves the previous valid state intact.
+- Filter Set names and colors organize the inventory but do not determine calculation or identity, and color is never the only identifying cue.
 
 ---
 
@@ -182,11 +201,17 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 
 - **FR-1.1** The user shall enter base shutter values only from the shipping 1/3-stop densified ladder with conventional camera-facing labels (sub-1 s as `1/N` reciprocal fractions, ≥ 1 s as integer or `N.Ns` per camera convention). Free-form numeric entry is not accepted. (Scenario 1, 2)
 - **FR-1.2** The user shall enter ND values only from the shipping ND ladder — whole stops `0, 1, 2, …, 30` plus the three fixed fractional commercial presets. One-third-stop applies to the base shutter only; the ND ladder stays whole-stop apart from those presets in every shipping mode. (Scenario 1)
-- **FR-1.2a** The user shall be able to stack up to four ND filter wheels, each selecting from the shipping ND ladder. The system shall compute with the stack's sum as the effective ND value and shall keep that sum within 30 stops by construction — per-wheel selectable ranges shrink to the remaining budget, and a selection that would exceed the cap is rejected, never clamped. After a change commits, wheels shall order themselves descending by value (zeros last) while keeping per-wheel identity. (Scenario 1)
+- **FR-1.2a** The user shall be able to stack up to four filter wheels selected from the shipping Standard ND ladder, user-owned Filter Sets, or both. The system shall compute with the active contributions' sum as the effective filter value, keep that sum within 30 stops, and reject rather than clamp an over-cap selection. Reordering shall retain each wheel's identity and shall not change the sum. (Scenario 1, 9)
 - **FR-1.3** The system shall compute the output shutter from base shutter and ND using exposure-stop arithmetic. (Scenario 1)
 - **FR-1.4** The system shall present the output shutter using conventional photographic notation. In the shipping 1/3-stop scale the calculated value is reported directly, formatted by the standard time-display rules, without snapping back to a coarser ladder. The exact value is preserved for downstream timer use. A future Settings preference may enable snapping to a full-stop ladder (and the power-of-two ladder above 30 s) when the user opts into a coarser scale; until then no such snap is applied. (Scenario 1)
 - **FR-1.5** The system shall reject calculation inputs that produce non-finite results (overflow / NaN) by surfacing a typed failure to the caller rather than a number that could mislead. (Scenario 1 boundary)
 - **FR-1.6** While the user is dragging an input value, the system shall preview the resulting output without committing to the input until the gesture ends. The user can release on the original value to revert. (Scenario 1)
+
+- **FR-1.7** The user shall be able to create, name, color, reorder, edit, and delete Filter Sets and to register separate physical Filter Items within them. Equal names and exposure values shall be allowed for distinct physical items. (Scenario 9)
+- **FR-1.8** The user shall be able to combine Standard values and registered physical Filter Items in one stack while the system prevents the same physical item from appearing twice on one camera. (Scenario 9)
+- **FR-1.9** The system shall distinguish an empty wheel from a mounted record-only filter and shall preserve the mounted item, its chosen contribution, and its original registered representation in captured shot context. (Scenario 9)
+- **FR-1.10** The user shall be able to choose from configured CPL exposure-loss choices and to record a GND with either zero or its full registered contribution for the current shot. (Scenario 9)
+- **FR-1.11** Each camera shall preserve its mixed Filter Stack and last-used Filter Source independently across camera switches and app restarts. (Scenario 9)
 
 ### 3.2 Reciprocity
 

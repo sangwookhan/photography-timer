@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */; };
+		F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */; };
+		F2214F1D4F6B9B617788E938 /* FilterItemEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */; };
+		F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
 		A00000000000000000000A84 /* PTimerAboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000A83 /* PTimerAboutView.swift */; };
@@ -109,6 +113,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControl.swift; sourceTree = "<group>"; };
+		F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetManagementView.swift; sourceTree = "<group>"; };
+		F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterItemEditorView.swift; sourceTree = "<group>"; };
+		F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsFilterInventoryStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -289,6 +297,9 @@
 				A00000000000000000000127 /* Models */,
 				A00000000000000000000103 /* RunningTimerPanelView.swift */,
 				A00000000000000000000227 /* TargetShutterSectionView.swift */,
+				F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */,
+				F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */,
+				F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */,
 				A00000000000000000000106 /* ViewModelDependencyFactory.swift */,
 			);
 			path = ExposureCalculator;
@@ -400,6 +411,7 @@
 		A000000000000000000000F0 /* FilmContext */ = {
 			isa = PBXGroup;
 			children = (
+				F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */,
 				A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */,
 				EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */,
 				EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */,
@@ -620,6 +632,10 @@
 				A0000000000000000000000E /* LockScreenTimerLiveActivity.swift in Sources */,
 				A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */,
 				A00000000000000000000105 /* ViewModelDependencyFactory.swift in Sources */,
+				F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */,
+				F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */,
+				F2214F1D4F6B9B617788E938 /* FilterItemEditorView.swift in Sources */,
+				F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */,
 				A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */,
 				A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */,
 				A00000000000000000000B90 /* CustomFilmEditorLiveCheckView.swift in Sources */,

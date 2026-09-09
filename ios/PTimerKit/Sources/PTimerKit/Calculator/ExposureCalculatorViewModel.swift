@@ -1908,6 +1908,29 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         ndWheelInteractionState != .reshaping
     }
 
+    /// Expanded label for a Filter Set wheel in motion
+    /// (FILTER-STACK-007): the full item name and active contribution
+    /// of the wheel's live (or, failing that, committed) row. `nil`
+    /// while no Filter Set wheel is moving — Standard wheels have no
+    /// item name to expose.
+    public var movingWheelExpandedLabel: String? {
+        let wheels = calculatorModel.filterWheels
+        for (offset, wheelID) in calculatorModel.ndFilterWheelIDs.enumerated() {
+            guard wheels.indices.contains(offset),
+                  unresolvedNDWheelIDs.contains(wheelID),
+                  !wheels[offset].isStandard else {
+                continue
+            }
+            let selection = calculatorModel.liveSelections[wheelID] ?? wheels[offset].selection
+            let wheel = FilterWheel(source: wheels[offset].source, selection: selection)
+            guard let row = FilterStack.resolvedRow(for: wheel, inventory: calculatorModel.filterInventory) else {
+                continue
+            }
+            return FilterWheelPresenter.rowDisplay(for: row, notationMode: ndNotationMode).expandedLabelText
+        }
+        return nil
+    }
+
     /// Whether a wheel's motion has concluded — the owned picker
     /// enforces its displayed row only while resolved, so display
     /// re-sync can never fight a finger or a decelerating wheel.

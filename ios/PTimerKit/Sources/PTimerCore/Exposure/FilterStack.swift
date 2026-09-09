@@ -448,10 +448,12 @@ public struct FilterStack: Equatable, Sendable {
             let budget = remainingBudget(excludingWheelAt: index)
             let mountedElsewhere = mountedItemIDs(excludingWheelAt: index)
             let current = wheel.selection
-            var options = [FilterWheelRowOption(
-                row: ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil),
-                unavailability: nil
-            )]
+            var options = [
+                FilterWheelRowOption(
+                    row: ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil),
+                    unavailability: nil
+                ),
+            ]
             for item in filterSet.items {
                 for row in Self.rows(for: item) {
                     let unavailability: FilterStackRejection?

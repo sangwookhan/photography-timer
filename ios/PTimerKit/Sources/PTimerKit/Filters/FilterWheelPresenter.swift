@@ -9,7 +9,7 @@ import PTimerCore
 /// a short calculation-mode caption, the item name for the expanded
 /// label, and the accessibility text. Pure value; the view owns
 /// fonts and colors.
-public struct FilterWheelRowDisplay: Equatable, Sendable {
+public struct FilterWheelRowDisplay: Hashable, Sendable {
     public let selection: FilterWheelSelection
     /// Compact value shown in the wheel column: the Standard value in
     /// the active notation, an item's contribution in stops, or the
@@ -109,7 +109,7 @@ public enum FilterWheelPresenter {
             }
             return FilterWheelRowDisplay(
                 selection: row.selection,
-                compactValueText: NDNotationFormatter.display(forStops: row.contributionStops, mode: .stops).value,
+                compactValueText: decimalStopsValue(row.contributionStops),
                 modeCaption: modeCaption,
                 itemName: name,
                 expandedLabelText: expanded,
@@ -122,11 +122,30 @@ public enum FilterWheelPresenter {
 
     /// `N stops` / `1 stop` text for a contribution.
     public static func stopsText(_ stops: Double) -> String {
-        let value = NDNotationFormatter.display(forStops: stops, mode: .stops).value
         if abs(stops - 1) <= ExposureCalculator.stabilityEpsilon {
             return String(localized: "1 stop")
         }
-        return String(localized: "\(value) stops")
+        return String(localized: "\(decimalStopsValue(stops)) stops")
+    }
+
+    /// Plain decimal rendering of a registered or contributed stops
+    /// value: whole values as integers, otherwise up to two trimmed
+    /// decimals (`1.5`, `3.33`, `6.6`). Filter Item values are user
+    /// decimals — never ladder values — so they deliberately bypass
+    /// the Standard ladder's mixed-fraction notation.
+    public static func decimalStopsValue(_ stops: Double) -> String {
+        if abs(stops - stops.rounded()) <= ExposureCalculator.stabilityEpsilon {
+            return String(Int(stops.rounded()))
+        }
+        let formatted = String(format: "%.2f", stops)
+        var trimmed = formatted
+        while trimmed.contains("."), trimmed.hasSuffix("0") {
+            trimmed.removeLast()
+        }
+        if trimmed.hasSuffix(".") {
+            trimmed.removeLast()
+        }
+        return trimmed
     }
 
     /// Original registered representation for the editor and the
@@ -204,7 +223,7 @@ public enum FilterWheelPresenter {
         }
     }
 
-    static func trimmedNumber(_ value: Double) -> String {
+    public static func trimmedNumber(_ value: Double) -> String {
         let formatted = String(format: "%.3f", value)
         var trimmed = formatted
         while trimmed.contains("."), trimmed.hasSuffix("0") {

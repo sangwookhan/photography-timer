@@ -20,13 +20,18 @@ import UIKit
 /// decision point; this type only MEASURES low-level input (row
 /// changes, touch state, overscroll distance) and stamps every event
 /// with the generation it was issued under.
-struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
-    /// Ladder of selectable values, top-truncated to the wheel's
-    /// remaining budget. Changing it triggers a locked reload.
-    let steps: [NDStep]
-    /// The wheel's DISPLAY value (pending selection during an open
-    /// set commit, committed value otherwise).
-    let selectedStep: NDStep
+struct NDWheelPickerView<Row: Hashable, RowContent: View>: UIViewRepresentable {
+    /// Rows the wheel can select — the budget-truncated Standard
+    /// ladder, or Empty plus a Filter Set's item rows (Filter Set
+    /// contract). Changing them triggers a locked reload.
+    let steps: [Row]
+    /// The wheel's DISPLAY row (pending selection during an open set
+    /// commit, committed row otherwise).
+    let selectedStep: Row
+    /// Whether a row is a cleanable state (Standard 0 / Empty): the
+    /// overscroll removal gesture arms only when the touch begins on
+    /// such a row.
+    let isCleanableRow: (Row) -> Bool
     /// While false (the wheel's motion has not concluded) the
     /// representable never enforces the displayed row, so it cannot
     /// fight a finger or a decelerating wheel.
@@ -41,12 +46,12 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
     /// stayed equal.
     let rowConfiguration: AnyHashable
     let rowHeight: CGFloat
-    @ViewBuilder let rowContent: (NDStep) -> RowContent
+    @ViewBuilder let rowContent: (Row) -> RowContent
 
     /// Low-level measurements, generation-stamped. The parent view
     /// adds the wheel identity and forwards to the ViewModel.
-    let onRowObserved: (NDStep, Int) -> Void
-    let onSelected: (NDStep, Int) -> Void
+    let onRowObserved: (Row, Int) -> Void
+    let onSelected: (Row, Int) -> Void
     let onTouchBegan: (Int) -> Void
     let onTouchEnded: () -> Void
     let onOverscrollReleased: (Int) -> Void
@@ -239,7 +244,7 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
                 isTouchActive = true
                 view.onTouchBegan(view.generation)
                 isOverscrollArmed = picker?.selectedRow(inComponent: 0) == 0
-                    && view.steps.first?.stops == 0
+                    && view.steps.first.map(view.isCleanableRow) == true
                 isOverscrollPastThreshold = false
                 if isOverscrollArmed {
                     overscrollHaptic.prepare()

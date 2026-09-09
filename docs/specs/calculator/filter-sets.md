@@ -77,8 +77,10 @@ could be confused.
   than 30 stops; the calculator shall not snap it to the Standard ladder.
 - **FILTER-ITEM-005** — Editing an item shall update every active camera stack
   that references that stable item id. A save that would make any affected
-  stack invalid or exceed 30 stops shall show the affected cameras and remain
-  uncommitted until the conflict is resolved.
+  stack invalid, exceed 30 stops, or remove a CPL exposure-loss choice currently
+  selected on an affected camera shall show the affected cameras and remain
+  uncommitted until the conflict is resolved. The system shall not silently
+  replace a selected CPL choice with another configured value.
 - **FILTER-ITEM-006** — Deleting an item shall first identify affected cameras.
   After confirmation, every wheel that references the item shall become Empty.
   Deleting a Filter Set shall remove its wheels; a camera left with no wheel
@@ -143,16 +145,26 @@ could be confused.
 - **FILTER-STACK-005** — After all moving wheels settle, actual wheels shall
   sort by source: Standard first, then Filter Sets in user-defined order.
   Within one source, non-empty rows shall sort by canonical registered value
-  descending with stable order for ties; Empty shall sort last. Reordering
-  shall preserve wheel identity and the effective sum.
+  descending with stable order for ties; Empty shall sort last. A CPL row's
+  sort value is its selected exposure-loss choice. A GND row's sort value is
+  its registered full-density value in both Record only and Apply full value
+  modes, so changing mode does not move the wheel. Reordering shall preserve
+  wheel identity and the effective sum.
 - **FILTER-STACK-006** — Standard 0 and Filter Set Empty wheels in a multi-wheel
   stack shall follow the existing idle-cleanup and explicit-removal contract in
-  `nd-filters.md`. A mounted Record-only item shall not be cleaned up.
+  `nd-filters.md`. For this mixed stack, FILTER-STACK-006 narrows the immediate
+  30-stop cleanup rule: immediate cleanup applies only when the wheel can accept
+  no usable row. A Filter Set Empty wheel with an unmounted, selectable
+  Record-only item shall remain available for the normal idle interval. A
+  mounted Record-only item shall not be cleaned up.
 - **FILTER-STACK-007** — A filter wheel shall show compact value, Filter Set
-  color, and calculation mode while idle. While moving, a larger non-blocking
-  label shall expose the full item name and active contribution without moving
-  the touch center. Long names shall remain readable without being inferred or
-  silently rewritten.
+  color, and calculation mode while idle. A Filter Item's compact value shall
+  preserve its registered representation independently of the app-global
+  Standard notation: for example `ND1000`, `OD 0.9`, `3 stops`, or
+  `CPL 1.5`. While moving, a larger non-blocking label shall expose the full
+  item name, registered representation, and active contribution in canonical
+  stops without moving the touch center. Long names shall remain readable
+  without being inferred or silently rewritten.
 
 ### Plus wheel and per-camera source memory
 
@@ -179,16 +191,26 @@ could be confused.
 - **FILTER-PERSIST-001** — The inventory, Filter Set order and colors, every
   camera's mixed stack and per-row calculation mode, and every camera's last
   Filter Source shall survive app restart through backward-compatible additive
-  persistence. A legacy Standard-only snapshot shall continue to restore.
+  persistence. A legacy Standard-only snapshot shall continue to restore. When
+  writing a mixed stack, the additive mixed-stack field is authoritative for
+  new builds; pre-Filter-Set stack and scalar fields shall describe only its
+  Standard wheels, using one Standard 0 wheel when none exist, so older builds
+  restore a valid Standard-only projection.
 - **FILTER-PERSIST-002** — Inventory records shall decode independently under
   `cross-cutting/persistence.md`. An unresolved Filter Set or item reference in
-  a camera stack shall be skipped safely; the restored stack shall still end in
+  a camera stack shall be skipped safely; a CPL selection whose configured
+  exposure-loss choice no longer exists shall restore that wheel as Empty
+  rather than selecting another choice. The restored stack shall still end in
   a valid one-to-four-wheel state, falling back to Standard 0 when necessary.
-- **FILTER-PERSIST-003** — Starting a timer shall capture an immutable filter
-  summary sufficient to reconstruct the shot basis: source kind, Filter Set id
-  and name when present, item id and name when present, original value and unit,
-  canonical stops, selected calculation mode, and actual contributed stops.
-  Later inventory edits shall not rewrite the captured summary.
+- **FILTER-PERSIST-003** — Starting a timer shall capture an immutable
+  calculation record containing the effective canonical total in stops and
+  each row's actual contributed stops and selected calculation mode. The Timer
+  list shall present that canonical total as its primary filter value and a
+  human-readable reference string generated at start time from the Filter Set
+  and Filter Item names, registered representations, and modes. The reference
+  string is descriptive only: Filter Set identity, color, later inventory
+  lookup, rename, reorder, edit, or deletion shall not drive calculation or
+  rewrite an already captured Timer list entry.
 - **FILTER-PERSIST-004** — A broader Shooting Collection or record-management
   workflow is outside this capability. It may consume the same immutable
   summary later but shall not redefine Filter Set behavior.
@@ -221,11 +243,16 @@ could be confused.
    camera or a running timer.
 5. Configure one CPL with 1, 1.5, and 2; select 1.5 and verify every row for that
    item is unavailable in sibling wheels. Verify decimal keyboards and rejection
-   of 0, 10, and 1.25 on both platforms.
+   of 0, 10, and 1.25 on both platforms. Attempt to remove the selected 1.5
+   choice in the editor; verify save remains blocked and identifies every
+   affected camera until its wheel selection is changed.
 6. At a 30-stop total, add a Record-only item when a slot is free; then verify
    that enabling its non-zero contribution is rejected without changing state.
 7. Rename, recolor, and reorder a Filter Set; verify stable ids, active stacks,
    accessible names, and captured timer summaries remain correct.
+8. Start a timer from a mixed stack; verify the Timer list leads with the
+   canonical total in stops and preserves its start-time Filter Set reference
+   string after the source inventory is renamed, edited, reordered, or deleted.
 
 ## Non-goals
 

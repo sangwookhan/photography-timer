@@ -48,18 +48,31 @@ public final class CalculatorModel {
             // the sum fits. Flooring every wheel bounds the sum by
             // the original (legal) sum, so this always terminates
             // within the cap — no crash, no clamp of the whole stack.
-            let originals = ndFilterStack.entries
-            var snapped = originals.map { sanitizedNDStep($0, for: scaleMode) }
-            if !NDFilterStack.isWithinTotalLimit(snapped) {
+            //
+            // Filter Set wheels are untouched: their values are
+            // user-registered, never ladder values (Filter Set
+            // contract), so only Standard wheels re-snap.
+            let originals = filterStack.wheels
+            var snapped = originals.map { wheel -> FilterWheel in
+                guard let step = wheel.standardStep else { return wheel }
+                return .standard(sanitizedNDStep(step, for: scaleMode))
+            }
+            if FilterStack.validated(wheels: snapped, inventory: filterInventory) == nil {
                 for index in snapped.indices.reversed() {
-                    guard !NDFilterStack.isWithinTotalLimit(snapped) else {
-                        break
+                    guard FilterStack.validated(wheels: snapped, inventory: filterInventory) == nil,
+                          let original = originals[index].standardStep else {
+                        continue
                     }
-                    snapped[index] = sanitizedNDStepRoundingDown(originals[index], for: scaleMode)
+                    snapped[index] = .standard(sanitizedNDStepRoundingDown(original, for: scaleMode))
                 }
             }
-            ndFilterStack = NDFilterStack(entries: snapped)
-            liveNDSteps = liveNDSteps.mapValues { sanitizedNDStep($0, for: scaleMode) }
+            if let restacked = FilterStack.validated(wheels: snapped, inventory: filterInventory) {
+                filterStack = restacked
+            }
+            liveSelections = liveSelections.mapValues { selection in
+                guard case .standard(let step) = selection else { return selection }
+                return .standard(sanitizedNDStep(step, for: scaleMode))
+            }
 
             // Same reasoning for the shutter ladder: a scale flip
             // away from the active ladder must collapse the committed
@@ -104,14 +117,26 @@ public final class CalculatorModel {
     /// for `effectiveBaseShutter` while the user is dragging the wheel.
     public var baseShutterSeconds: Double
 
-    /// The ND filter wheel stack (PTIMER-199): 1–4 committed wheel
-    /// values in display order, collapsing to one effective summed
-    /// value. Shape rules (add/remove/sort/budget) live on the
-    /// domain type; the model owns lifecycle and observation.
-    public private(set) var ndFilterStack = NDFilterStack(single: NDStep(stops: 0))
+    /// The mixed Filter Stack (Filter Set contract, generalizing the
+    /// PTIMER-199 Standard stack): 1–4 committed wheels drawn from
+    /// Standard and Filter Set sources in display order, collapsing to
+    /// one effective summed value. Shape rules (add/remove/sort/budget/
+    /// exclusivity) live on the domain type; the model owns lifecycle
+    /// and observation.
+    public private(set) var filterStack = FilterStack(single: NDStep(stops: 0))
+
+    /// Resolution input for Filter Set wheels — a read-only mirror of
+    /// the inventory owned by `FilterInventoryModel`, refreshed by the
+    /// facade through `applyFilterInventory(_:)`. Never mutated here.
+    public private(set) var filterInventory: FilterInventory = .empty
+
+    /// The active slot's last settled Filter Source — what the Plus
+    /// wheel adds next. Per camera; the facade carries it through slot
+    /// snapshots.
+    public private(set) var lastFilterSource: FilterSource = .standard
 
     /// Stable per-wheel identity (PTIMER-199 §4.3): `ndFilterWheelIDs[i]`
-    /// names the wheel at `ndFilterSteps[i]` and follows it through
+    /// names the wheel at `filterWheels[i]` and follows it through
     /// the commit sort, so the UI can render a reorder as wheels
     /// MOVING rather than values teleporting between columns.
     /// Presentation-side bookkeeping only — never persisted, never
@@ -129,13 +154,25 @@ public final class CalculatorModel {
     }
 
     private func regenerateNDFilterWheelIDs() {
-        ndFilterWheelIDs = ndFilterStack.entries.map { _ in makeNDFilterWheelID() }
+        ndFilterWheelIDs = filterStack.wheels.map { _ in makeNDFilterWheelID() }
     }
 
-    /// Individual ND filter wheel values in display order (1–4).
-    /// Convenience projection of `ndFilterStack`.
+    /// Per-wheel active contributions in display order (1–4): a
+    /// Standard wheel's value, or a Filter Set row's contribution (0
+    /// for Empty and Record only). Convenience projection of
+    /// `filterStack`.
     public var ndFilterSteps: [NDStep] {
-        ndFilterStack.entries
+        filterStack.contributions.map(NDStep.init(stops:))
+    }
+
+    /// The wheels themselves — source and selection per wheel.
+    public var filterWheels: [FilterWheel] {
+        filterStack.wheels
+    }
+
+    /// Resolved rows parallel to `filterWheels`.
+    public var filterRows: [ResolvedFilterRow] {
+        filterStack.rows
     }
 
     /// Canonical ND input as a fractional-aware `NDStep`. ONE meaning
@@ -143,127 +180,262 @@ public final class CalculatorModel {
     /// EFFECTIVE (summed) value — the value the calc engine consumes.
     /// Writing is the single-filter assignment surface kept for
     /// compatibility (legacy `ndStop` mirror, persistence restore,
-    /// tests): it replaces the whole stack with one wheel holding the
-    /// value. Per-wheel writes go through `setNDFilterStep(_:at:)`.
+    /// tests): it replaces the whole stack with one Standard wheel
+    /// holding the value. Per-wheel writes go through
+    /// `setWheelSelection(_:at:)`.
     public var ndStep: NDStep {
-        get { ndFilterStack.effectiveStep }
+        get { filterStack.effectiveStep }
         set {
-            ndFilterStack = NDFilterStack(single: newValue)
+            filterStack = FilterStack(single: newValue)
             regenerateNDFilterWheelIDs()
         }
     }
 
-    /// Commits one wheel of the stack, then applies the agreed
-    /// post-commit ordering (descending, zeros rightmost, stable).
-    /// Commits only happen once a wheel has settled, so sorting here
-    /// never reorders mid-scroll. Out-of-range indices are ignored
-    /// (defensive: the UI only offers existing wheels).
-    public func setNDFilterStep(_ step: NDStep, at index: Int) {
-        let replaced = ndFilterStack.replacingWheel(at: index, with: step)
-        let permutation = replaced.commitSortPermutation()
-        ndFilterStack = replaced.sortedForCommit()
-        ndFilterWheelIDs = permutation.map { ndFilterWheelIDs[$0] }
+    /// Replaces the resolution inventory and re-resolves the committed
+    /// stack against it: a wheel whose Filter Set vanished is dropped
+    /// (its identity with it), an item that vanished reads Empty, a
+    /// stale last source falls back to Standard. Should the resolved
+    /// contributions no longer fit the cap — the facade blocks such
+    /// edits up front — every mounted item reads Empty instead of
+    /// clamping any value.
+    public func applyFilterInventory(_ inventory: FilterInventory) {
+        filterInventory = inventory
+        var wheels: [FilterWheel] = []
+        var ids: [Int] = []
+        for (index, wheel) in filterStack.wheels.enumerated() {
+            guard let normalized = FilterStack.normalizedWheel(wheel, inventory: inventory) else {
+                continue
+            }
+            wheels.append(normalized)
+            ids.append(ndFilterWheelIDs.indices.contains(index) ? ndFilterWheelIDs[index] : makeNDFilterWheelID())
+        }
+        if wheels.isEmpty {
+            wheels = [.standard(NDStep(stops: 0))]
+            ids = [makeNDFilterWheelID()]
+        }
+        var mounted: Set<FilterItemID> = []
+        wheels = wheels.map { wheel in
+            guard let itemID = wheel.mountedItemID, !mounted.insert(itemID).inserted else { return wheel }
+            return FilterWheel(source: wheel.source, selection: .empty)
+        }
+        if let stack = FilterStack.validated(wheels: wheels, inventory: inventory) {
+            filterStack = stack
+        } else {
+            let emptied = wheels.map { wheel -> FilterWheel in
+                wheel.isStandard ? wheel : FilterWheel(source: wheel.source, selection: .empty)
+            }
+            filterStack = FilterStack.validated(wheels: emptied, inventory: inventory)
+                ?? FilterStack(single: CalculatorDefaults.ndStep)
+            if filterStack.wheels.count != ids.count {
+                ids = filterStack.wheels.map { _ in makeNDFilterWheelID() }
+            }
+        }
+        ndFilterWheelIDs = ids
+        liveSelections = liveSelections.filter { ndFilterWheelIDs.contains($0.key) }
+        if !inventory.contains(lastFilterSource) {
+            lastFilterSource = .standard
+        }
     }
 
-    /// Whether another wheel can be added (PTIMER-199 C1): below
-    /// four wheels AND the NEW wheel's allowed ladder must contain
-    /// at least one value greater than 0. A remaining budget above
-    /// zero is not sufficient — if the ladder truncated to the
-    /// remaining budget is [0] only (e.g. a 29.6-stop sum leaves
-    /// 0.4, below every integer and preset), a new wheel could never
-    /// hold a value, so the Add affordance hides.
-    public var canAddFilterWheel: Bool {
-        guard ndFilterStack.canAddWheel else {
-            return false
+    /// Settles the Plus wheel on `source`. Unknown Filter Sets are
+    /// refused; merely changing the source never touches the stack.
+    public func selectFilterSource(_ source: FilterSource) {
+        guard filterInventory.contains(source) else {
+            return
         }
-        let newWheelBudget = Double(ExposureScale.maximumWholeNDStops)
-            - ndFilterStack.effectiveStep.stops
-        return exposureScale.ndSteps(upToStops: newWheelBudget)
-            .contains { $0.stops > 0 }
+        lastFilterSource = source
+    }
+
+    /// Commits one wheel of the stack, then applies the agreed
+    /// post-commit ordering (Standard first, Filter Sets in user order;
+    /// descending within a source, Empty last, stable). Commits only
+    /// happen once a wheel has settled, so sorting here never reorders
+    /// mid-scroll. Returns the rejection when the domain refuses the
+    /// write (over the cap, item mounted elsewhere, unresolved row) —
+    /// the stack is unchanged in that case. Out-of-range indices are
+    /// ignored (defensive: the UI only offers existing wheels).
+    @discardableResult
+    public func setWheelSelection(_ selection: FilterWheelSelection, at index: Int) -> FilterStackRejection? {
+        guard filterStack.wheels.indices.contains(index) else {
+            return nil
+        }
+        switch filterStack.replacingWheel(at: index, with: selection, inventory: filterInventory) {
+        case .success(let replaced):
+            let permutation = replaced.commitSortPermutation(inventory: filterInventory)
+            filterStack = replaced.sortedForCommit(inventory: filterInventory)
+            ndFilterWheelIDs = permutation.map { ndFilterWheelIDs[$0] }
+            return nil
+        case .failure(let rejection):
+            return rejection
+        }
+    }
+
+    /// Standard-wheel commit (legacy surface, tests): the same write
+    /// path as `setWheelSelection(.standard(step), at:)`.
+    public func setNDFilterStep(_ step: NDStep, at index: Int) {
+        setWheelSelection(.standard(step), at: index)
+    }
+
+    /// Why `source` cannot add a usable wheel right now (`nil` when it
+    /// can): below four wheels AND the new wheel could hold a usable
+    /// row — for Standard a ladder value above 0 (PTIMER-199 C1), for a
+    /// Filter Set an unmounted item whose row fits the remaining
+    /// budget (a Record-only row fits even at the 30-stop total).
+    public func filterAddUnavailability(for source: FilterSource) -> FilterAddUnavailability? {
+        filterStack.addUnavailability(for: source, inventory: filterInventory, scale: exposureScale)
+    }
+
+    /// Whether another wheel can be added for the settled last source
+    /// (PTIMER-199 C1 generalized). Drives the Plus control and the
+    /// "Add filter" accessibility action.
+    public var canAddFilterWheel: Bool {
+        filterAddUnavailability(for: lastFilterSource) == nil
     }
 
     /// Whether a wheel can be removed: more than one wheel AND at
-    /// least one wheel sitting at 0 stops (wheels holding a value are
-    /// never removed).
+    /// least one cleanable wheel (Standard 0 or Empty; a mounted
+    /// Record-only item is never removed).
     public var canRemoveEmptyFilterWheel: Bool {
-        ndFilterStack.canRemoveEmptyWheel
+        filterStack.canRemoveEmptyWheel
     }
 
-    /// Appends one wheel at 0 stops. The C1 rule is enforced HERE,
-    /// not just on the Add affordance: a direct command call is
-    /// refused (no-op) at the 4-wheel maximum and whenever the new
-    /// wheel's ladder could not hold a value above 0 — the same
-    /// condition that hides the UI control.
+    /// Appends one wheel for the settled last source — Standard 0 or
+    /// Filter Set Empty. The availability rule is enforced HERE, not
+    /// just on the Plus affordance: a direct command call is refused
+    /// (no-op) whenever the new wheel could not hold a usable row.
     public func addFilterWheel() {
-        guard canAddFilterWheel else {
+        addFilterWheel(for: lastFilterSource)
+    }
+
+    public func addFilterWheel(for source: FilterSource) {
+        guard filterAddUnavailability(for: source) == nil else {
             return
         }
-        ndFilterStack = ndFilterStack.addingWheel()
+        filterStack = filterStack.addingWheel(for: source, inventory: filterInventory)
         ndFilterWheelIDs.append(makeNDFilterWheelID())
     }
 
-    /// A2 cleanup (PTIMER-199 §4.2.2): removes every CLEANABLE
-    /// 0-stop wheel — all zeros while a non-zero wheel exists; all
-    /// but one when every wheel is 0-stop.
+    /// A2 cleanup (PTIMER-199 §4.2.2): removes every CLEANABLE wheel
+    /// — all Standard 0 / Empty wheels while a non-cleanable wheel
+    /// exists; all but one when every wheel is cleanable.
     public func cleanupEmptyFilterWheels() {
         while canRemoveEmptyFilterWheel {
             removeEmptyFilterWheel()
         }
     }
 
-    /// Removes the 0-stop wheel at `index` — the overscroll
+    /// Whether the cleanable wheel at `index` could still accept a
+    /// usable row: a Standard 0 wheel needs a ladder value above 0 in
+    /// its remaining budget; an Empty Filter Set wheel needs any
+    /// selectable item row (a Record-only row counts, so an Empty
+    /// wheel stays usable even at the 30-stop total — FILTER-PLUS-005).
+    public func cleanableWheelIsUsable(at index: Int) -> Bool {
+        guard filterStack.wheels.indices.contains(index), filterStack.wheels[index].isCleanable else {
+            return false
+        }
+        return rowOptions(forWheel: index).contains { option in
+            guard option.isAvailable else { return false }
+            switch option.selection {
+            case .standard(let step): return step.stops > 0
+            case .empty: return false
+            case .item: return true
+            }
+        }
+    }
+
+    /// Whether an immediately removable wheel exists: cleanable AND
+    /// unable to accept any usable row (ND-CLEANUP-003 at budget
+    /// saturation), while keeping at least one wheel.
+    public var canRemoveUnusableEmptyFilterWheel: Bool {
+        filterStack.wheels.count > 1
+            && filterStack.wheels.indices.contains { filterStack.wheels[$0].isCleanable && !cleanableWheelIsUsable(at: $0) }
+    }
+
+    /// A0 cleanup (ND-CLEANUP-003 generalized): removes every cleanable
+    /// wheel that could not hold a usable row, keeping at least one
+    /// wheel. An Empty Filter Set wheel with a fitting row (e.g. a
+    /// Record-only item at the cap) is left to the idle cleanup rule.
+    public func cleanupUnusableEmptyFilterWheels() {
+        while canRemoveUnusableEmptyFilterWheel,
+              let index = filterStack.wheels.indices.last(where: {
+                  filterStack.wheels[$0].isCleanable && !cleanableWheelIsUsable(at: $0)
+              }) {
+            removeEmptyFilterWheel(at: index)
+        }
+    }
+
+    /// Removes the cleanable wheel at `index` — the overscroll
     /// gesture's target (§4.2.3): exactly the wheel the photographer
-    /// pulled, not the rightmost zero. No-op when the index is not a
-    /// removable zero.
+    /// pulled, not the rightmost one. No-op when the index is not a
+    /// removable cleanable wheel.
     public func removeEmptyFilterWheel(at index: Int) {
-        let countBefore = ndFilterStack.entries.count
-        ndFilterStack = ndFilterStack.removingEmptyWheel(at: index)
-        if ndFilterStack.entries.count < countBefore {
+        let countBefore = filterStack.wheels.count
+        filterStack = filterStack.removingEmptyWheel(at: index)
+        if filterStack.wheels.count < countBefore {
             ndFilterWheelIDs.remove(at: index)
         }
     }
 
-    /// Removes the rightmost 0-stop wheel (no-op when unavailable).
+    /// Removes the rightmost cleanable wheel (no-op when unavailable).
     public func removeEmptyFilterWheel() {
-        let removedIndex = ndFilterStack.entries.lastIndex { $0.stops == 0 }
-        let countBefore = ndFilterStack.entries.count
-        ndFilterStack = ndFilterStack.removingRightmostEmptyWheel()
-        if ndFilterStack.entries.count < countBefore, let removedIndex {
+        let removedIndex = filterStack.wheels.lastIndex(where: \.isCleanable)
+        let countBefore = filterStack.wheels.count
+        filterStack = filterStack.removingRightmostEmptyWheel()
+        if filterStack.wheels.count < countBefore, let removedIndex {
             ndFilterWheelIDs.remove(at: removedIndex)
         }
     }
 
-    /// Restores a wheel stack from persistence or a slot switch. The
-    /// caller (persistence validation, slot snapshots) supplies
-    /// pre-validated values; this guard is the last defensive shield
-    /// so corrupted input can never trip the domain type's
-    /// programmer-error preconditions — a violating stack restores
-    /// as the default single wheel instead (reject, never clamp).
+    /// Restores a Standard-only wheel stack (legacy restore surface).
     public func restoreNDFilterSteps(_ steps: [NDStep]) {
-        guard (1...NDFilterStack.maximumWheelCount).contains(steps.count),
-              steps.allSatisfy({ $0.stops >= 0 && $0.stops.isFinite }),
-              NDFilterStack.isWithinTotalLimit(steps) else {
-            ndFilterStack = NDFilterStack(single: CalculatorDefaults.ndStep)
-            regenerateNDFilterWheelIDs()
-            return
-        }
-        clearLiveNDStopPreview()
-        ndFilterStack = NDFilterStack(entries: steps)
-        regenerateNDFilterWheelIDs()
+        restoreFilterWheels(steps.map(FilterWheel.standard), lastFilterSource: .standard)
     }
 
-    /// Picker ladder for one wheel: the active scale's ND ladder
-    /// truncated from the top to that wheel's remaining budget under
-    /// the 30-stop total limit. Derives from COMMITTED values only,
-    /// so sibling ladders never reload while another wheel is being
-    /// dragged.
+    /// Restores a mixed wheel stack from persistence or a slot switch.
+    /// The caller supplies pre-validated wheels; this guard is the
+    /// last defensive shield so corrupted input can never trip the
+    /// domain type's programmer-error preconditions — a violating
+    /// stack restores as the default single wheel instead (reject,
+    /// never clamp). A last source the inventory no longer knows
+    /// falls back to Standard.
+    public func restoreFilterWheels(_ wheels: [FilterWheel], lastFilterSource source: FilterSource) {
+        clearLiveNDStopPreview()
+        if let normalized = FilterStack.normalizedWheels(wheels, inventory: filterInventory),
+           let stack = FilterStack.validated(wheels: normalized, inventory: filterInventory) {
+            filterStack = stack
+        } else {
+            filterStack = FilterStack(single: CalculatorDefaults.ndStep)
+        }
+        regenerateNDFilterWheelIDs()
+        lastFilterSource = filterInventory.contains(source) ? source : .standard
+    }
+
+    /// Picker rows for one wheel — the single source for what a wheel
+    /// can select. Standard wheels get the active scale's ND ladder
+    /// truncated from the top to the remaining budget; Filter Set
+    /// wheels get Empty plus the set's item rows with per-row
+    /// unavailability. Derives from COMMITTED values only, so sibling
+    /// rows never reload while another wheel is being dragged.
+    public func rowOptions(forWheel index: Int) -> [FilterWheelRowOption] {
+        filterStack.rowOptions(forWheelAt: index, inventory: filterInventory, scale: exposureScale)
+    }
+
+    /// Standard ladder for a Standard wheel (legacy surface). Returns
+    /// the full ladder for an out-of-range index and an empty list for
+    /// a Filter Set wheel.
     public func pickerNDSteps(forWheel index: Int) -> [NDStep] {
-        guard ndFilterStack.entries.indices.contains(index) else {
+        guard filterStack.wheels.indices.contains(index) else {
             return exposureScale.ndSteps
         }
-        return exposureScale.ndSteps(
-            upToStops: ndFilterStack.remainingBudget(excludingWheelAt: index)
-        )
+        guard filterStack.wheels[index].isStandard else {
+            return []
+        }
+        return rowOptions(forWheel: index).compactMap { option in
+            if case .standard(let step) = option.selection {
+                return step
+            }
+            return nil
+        }
     }
 
     /// Working ND stop, integer-binding compatibility wrapper around
@@ -286,31 +458,46 @@ public final class CalculatorModel {
     /// Transient per-wheel selections shown while wheels are in
     /// motion, before the epoch's set commit (PTIMER-199 §4.5).
     /// Several wheels can be live at once (multi-touch / overlapping
-    /// flings): each key is a wheel index whose value overlays that
-    /// wheel's committed entry in `effectiveNDStep`. Values are
-    /// `NDStep` so the reserved fractional path never loses
-    /// precision through this preview.
-    /// Keys are WHEEL IDENTITY values (`ndFilterWheelIDs` entries),
-    /// never positions (PTIMER-199 v2 계약 3): entries survive the
-    /// commit sort untouched because identity moves with the wheel.
-    public private(set) var liveNDSteps: [Int: NDStep] = [:]
+    /// flings): each entry overlays that wheel's committed selection
+    /// in `effectiveNDStep`. Keys are WHEEL IDENTITY values
+    /// (`ndFilterWheelIDs` entries), never positions (PTIMER-199 v2
+    /// 계약 3): entries survive the commit sort untouched because
+    /// identity moves with the wheel.
+    public private(set) var liveSelections: [Int: FilterWheelSelection] = [:]
+
+    /// Legacy projection of `liveSelections`: each live wheel's
+    /// contribution in stops, keyed by wheel identity.
+    public var liveNDSteps: [Int: NDStep] {
+        var result: [Int: NDStep] = [:]
+        for (wheelID, selection) in liveSelections {
+            if let contribution = liveContribution(of: selection, forWheelID: wheelID) {
+                result[wheelID] = NDStep(stops: contribution)
+            }
+        }
+        return result
+    }
 
     /// Which wheel the LAST live update touched. Backs the legacy
     /// single-overlay projection below; wheel 0 for the
     /// single-filter workflow and all legacy callers.
     private var liveNDWheelID = 0
 
-    /// Legacy single-overlay view of `liveNDSteps`: the most recently
-    /// updated wheel's live value. Kept so pre-stack callers and the
-    /// integer wrapper keep compiling; multi-wheel-aware callers read
-    /// `liveNDSteps` directly.
+    /// Legacy single-overlay view of the live preview: the most
+    /// recently updated wheel's live Standard value. Kept so pre-stack
+    /// callers and the integer wrapper keep compiling; multi-wheel-
+    /// aware callers read `liveSelections` directly.
     public var liveNDStep: NDStep? {
-        get { liveNDSteps[liveNDWheelID] }
+        get {
+            guard case .standard(let step)? = liveSelections[liveNDWheelID] else {
+                return nil
+            }
+            return step
+        }
         set {
             if let newValue {
-                liveNDSteps[liveNDWheelID] = newValue
+                liveSelections[liveNDWheelID] = .standard(newValue)
             } else {
-                liveNDSteps.removeValue(forKey: liveNDWheelID)
+                liveSelections.removeValue(forKey: liveNDWheelID)
             }
         }
     }
@@ -329,24 +516,37 @@ public final class CalculatorModel {
         liveBaseShutter ?? baseShutterSeconds
     }
 
+    /// Contribution of a live (uncommitted) selection on the wheel
+    /// `wheelID`, resolved against the wheel's source. `nil` when the
+    /// selection does not belong to that wheel.
+    private func liveContribution(of selection: FilterWheelSelection, forWheelID wheelID: Int) -> Double? {
+        guard let index = ndFilterWheelIDs.firstIndex(of: wheelID),
+              filterStack.wheels.indices.contains(index) else {
+            return nil
+        }
+        let wheel = FilterWheel(source: filterStack.wheels[index].source, selection: selection)
+        return FilterStack.resolvedRow(for: wheel, inventory: filterInventory)?.contributionStops
+    }
+
     /// Effective ND step — the value the calculator actually uses:
-    /// the stack's sum, with the dragging wheel's live value
-    /// substituted for its committed value while a preview is active
+    /// the stack's sum, with each moving wheel's live contribution
+    /// substituted for its committed one while a preview is active
     /// (PTIMER-199 §4.5: live wheel + committed others).
     public var effectiveNDStep: NDStep {
-        guard !liveNDSteps.isEmpty else {
-            return ndFilterStack.effectiveStep
+        guard !liveSelections.isEmpty else {
+            return filterStack.effectiveStep
         }
         // Sum of every wheel's current value: live overlay when the
         // wheel is in motion, committed value otherwise. During a
-        // multi-wheel epoch the frozen ladders can transiently allow
-        // a combined sum above the 30-stop cap; the display shows
-        // the actual transient sum and the set commit resolves it by
+        // multi-wheel epoch the frozen rows can transiently allow a
+        // combined sum above the 30-stop cap; the display shows the
+        // actual transient sum and the set commit resolves it by
         // rejection (§4.5).
-        let total = ndFilterStack.entries.enumerated().reduce(0.0) { sum, entry in
+        let total = filterStack.rows.enumerated().reduce(0.0) { sum, entry in
             let wheelID = ndFilterWheelIDs.indices.contains(entry.offset)
                 ? ndFilterWheelIDs[entry.offset] : -1
-            return sum + (liveNDSteps[wheelID]?.stops ?? entry.element.stops)
+            let live = liveSelections[wheelID].flatMap { liveContribution(of: $0, forWheelID: wheelID) }
+            return sum + (live ?? entry.element.contributionStops)
         }
         return NDStep(stops: total)
     }
@@ -368,7 +568,7 @@ public final class CalculatorModel {
     ) {
         self.calculator = calculator
         self.baseShutterSeconds = baseShutterSeconds
-        self.ndFilterStack = NDFilterStack(single: ndStep)
+        self.filterStack = FilterStack(single: ndStep)
         self.scaleMode = scaleMode
     }
 
@@ -433,25 +633,33 @@ public final class CalculatorModel {
     /// to the wheel's committed value clears the overlay, matching
     /// the single-wheel idle-state rule.
     public func updateLiveNDFilterStep(_ value: NDStep, forWheel index: Int) {
-        guard ndFilterStack.entries.indices.contains(index),
+        guard filterStack.wheels.indices.contains(index),
               ndFilterWheelIDs.indices.contains(index) else {
             return
         }
         updateLiveNDStep(value, forWheelID: ndFilterWheelIDs[index])
     }
 
-    /// Identity-keyed live preview write (PTIMER-199 v2 계약 3): the
-    /// canonical entry point — the index overload above is a legacy
-    /// shim that derives the id at call time.
+    /// Identity-keyed live Standard write (PTIMER-199 v2 계약 3) —
+    /// legacy shim over `updateLiveSelection(_:forWheelID:)`.
     public func updateLiveNDStep(_ value: NDStep, forWheelID wheelID: Int) {
-        guard let index = ndFilterWheelIDs.firstIndex(of: wheelID) else {
+        updateLiveSelection(.standard(value), forWheelID: wheelID)
+    }
+
+    /// Identity-keyed live preview write — the canonical entry point
+    /// for every wheel kind. A selection that does not belong to the
+    /// wheel's source is ignored; a preview equal to the committed
+    /// selection clears the overlay.
+    public func updateLiveSelection(_ selection: FilterWheelSelection, forWheelID wheelID: Int) {
+        guard let index = ndFilterWheelIDs.firstIndex(of: wheelID),
+              liveContribution(of: selection, forWheelID: wheelID) != nil else {
             return
         }
         liveNDWheelID = wheelID
-        if value == ndFilterStack.entries[index] {
-            liveNDSteps.removeValue(forKey: wheelID)
+        if selection == filterStack.wheels[index].selection {
+            liveSelections.removeValue(forKey: wheelID)
         } else {
-            liveNDSteps[wheelID] = value
+            liveSelections[wheelID] = selection
         }
     }
 
@@ -460,7 +668,7 @@ public final class CalculatorModel {
     }
 
     public func clearLiveNDStopPreview() {
-        liveNDSteps.removeAll()
+        liveSelections.removeAll()
     }
 
     /// Computes the calculation result from the current inputs with the

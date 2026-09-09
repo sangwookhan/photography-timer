@@ -333,46 +333,52 @@ public struct FilterStack: Equatable, Sendable {
             return nil
         }
         var normalized: [FilterWheel] = []
+        var mounted: Set<FilterItemID> = []
         for wheel in wheels {
-            guard wheel.isConsistent else {
+            guard var resolved = normalizedWheel(wheel, inventory: inventory) else {
                 continue
             }
-            switch wheel.selection {
-            case .standard(let step):
-                guard step.stops.isFinite, step.stops >= 0 else { continue }
-                normalized.append(wheel)
-            case .empty:
-                guard inventory.contains(wheel.source) else { continue }
-                normalized.append(wheel)
-            case .item(let selection):
-                guard let filterSetID = wheel.source.filterSetID,
-                      let filterSet = inventory.filterSet(withID: filterSetID) else {
-                    continue
-                }
-                guard let item = filterSet.item(withID: selection.itemID) else {
-                    normalized.append(.empty(in: filterSetID))
-                    continue
-                }
-                if resolvedRow(item: item, choice: selection.choice) != nil {
-                    normalized.append(wheel)
-                } else if let fallback = rows(for: item).first {
-                    normalized.append(FilterWheel(source: wheel.source, selection: fallback.selection))
-                } else {
-                    normalized.append(.empty(in: filterSetID))
-                }
+            // A physical item may be mounted once per camera: a later
+            // duplicate reference becomes Empty.
+            if let itemID = resolved.mountedItemID, !mounted.insert(itemID).inserted {
+                resolved = FilterWheel(source: resolved.source, selection: .empty)
             }
-        }
-        // A physical item may be mounted once per camera: a later
-        // duplicate reference becomes Empty.
-        var mounted: Set<FilterItemID> = []
-        normalized = normalized.map { wheel in
-            guard let itemID = wheel.mountedItemID else { return wheel }
-            if mounted.insert(itemID).inserted {
-                return wheel
-            }
-            return FilterWheel(source: wheel.source, selection: .empty)
+            normalized.append(resolved)
         }
         return normalized.isEmpty ? [.standard(NDStep(stops: 0))] : normalized
+    }
+
+    /// Single-wheel step of `normalizedWheels(_:inventory:)`: the wheel
+    /// as it should now read, or `nil` when it must be dropped
+    /// (inconsistent, invalid Standard value, or unknown Filter Set).
+    /// Exposed so a caller keeping per-wheel identity can follow each
+    /// wheel through re-resolution.
+    public static func normalizedWheel(_ wheel: FilterWheel, inventory: FilterInventory) -> FilterWheel? {
+        guard wheel.isConsistent else {
+            return nil
+        }
+        switch wheel.selection {
+        case .standard(let step):
+            guard step.stops.isFinite, step.stops >= 0 else { return nil }
+            return wheel
+        case .empty:
+            return inventory.contains(wheel.source) ? wheel : nil
+        case .item(let selection):
+            guard let filterSetID = wheel.source.filterSetID,
+                  let filterSet = inventory.filterSet(withID: filterSetID) else {
+                return nil
+            }
+            guard let item = filterSet.item(withID: selection.itemID) else {
+                return .empty(in: filterSetID)
+            }
+            if resolvedRow(item: item, choice: selection.choice) != nil {
+                return wheel
+            }
+            if let fallback = rows(for: item).first {
+                return FilterWheel(source: wheel.source, selection: fallback.selection)
+            }
+            return .empty(in: filterSetID)
+        }
     }
 
     // MARK: Derived values

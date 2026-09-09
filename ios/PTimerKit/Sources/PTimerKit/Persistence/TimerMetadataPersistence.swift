@@ -75,6 +75,10 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     /// timers (where it is an intermediate distinct from the final
     /// timer duration).
     public let adjustedShutterSeconds: Double?
+    /// Immutable per-wheel filter summary captured at start (Filter
+    /// Set contract). Additive Optional; a malformed array decodes as
+    /// absent so the rest of the record still restores.
+    public let filterSummary: [FilterSummaryEntry]?
 
     public init(
         id: UUID,
@@ -91,7 +95,8 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         selectedModelLabel: String? = nil,
         ndStops: Double? = nil,
         baseShutterSeconds: Double? = nil,
-        adjustedShutterSeconds: Double? = nil
+        adjustedShutterSeconds: Double? = nil,
+        filterSummary: [FilterSummaryEntry]? = nil
     ) {
         self.id = id
         self.order = order
@@ -108,6 +113,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         self.ndStops = ndStops
         self.baseShutterSeconds = baseShutterSeconds
         self.adjustedShutterSeconds = adjustedShutterSeconds
+        self.filterSummary = filterSummary
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -126,6 +132,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         case ndStops
         case baseShutterSeconds
         case adjustedShutterSeconds
+        case filterSummary
     }
 
     public init(from decoder: Decoder) throws {
@@ -160,6 +167,10 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
             Double.self,
             forKey: .adjustedShutterSeconds
         )
+        self.filterSummary = (try? container.decodeIfPresent(
+            [FilterSummaryEntry].self,
+            forKey: .filterSummary
+        )) ?? nil
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -182,6 +193,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         try container.encodeIfPresent(ndStops, forKey: .ndStops)
         try container.encodeIfPresent(baseShutterSeconds, forKey: .baseShutterSeconds)
         try container.encodeIfPresent(adjustedShutterSeconds, forKey: .adjustedShutterSeconds)
+        try container.encodeIfPresent(filterSummary, forKey: .filterSummary)
     }
 }
 

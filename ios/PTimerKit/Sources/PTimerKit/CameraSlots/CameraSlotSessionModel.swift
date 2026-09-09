@@ -237,6 +237,30 @@ public final class CameraSlotSessionModel: ObservableObject {
         inactiveSnapshots
     }
 
+    /// Applies `transform` to every inactive slot snapshot (Filter Set
+    /// contract: an inventory edit or deletion must follow into every
+    /// camera stack that references the affected item or set).
+    /// `transform` returns the replacement snapshot, or `nil` to leave
+    /// that slot untouched. Returns the slots whose snapshot changed so
+    /// the caller can persist and republish only when needed.
+    @discardableResult
+    public func updateInactiveSnapshots(
+        _ transform: (CameraSlotID, CameraSlotCalculatorSnapshot) -> CameraSlotCalculatorSnapshot?
+    ) -> Set<CameraSlotID> {
+        var touched: Set<CameraSlotID> = []
+        for (slotID, snapshot) in inactiveSnapshots {
+            guard let updated = transform(slotID, snapshot), updated != snapshot else {
+                continue
+            }
+            inactiveSnapshots[slotID] = updated
+            touched.insert(slotID)
+        }
+        if !touched.isEmpty {
+            objectWillChange.send()
+        }
+        return touched
+    }
+
     /// Scrubs `filmID` from every inactive slot snapshot
     /// so a custom-film deletion does not leave the other slots
     /// dangling on a no-longer-existing reference. The active slot

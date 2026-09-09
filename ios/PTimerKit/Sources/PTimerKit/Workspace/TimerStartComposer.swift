@@ -98,7 +98,11 @@ public struct TimerStartComposer {
         /// names, original value and unit, canonical stops, calculation
         /// mode, and contributed stops. `nil` for manual timers.
         public let filterSummary: [FilterSummaryEntry]?
-        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?, ndStops: Double? = nil, baseShutterSeconds: TimeInterval? = nil, adjustedShutterSeconds: TimeInterval? = nil, filterSummary: [FilterSummaryEntry]? = nil) {
+        /// Human-readable, start-time reference string built from the
+        /// summary (FILTER-PERSIST-003). Descriptive only; stored so
+        /// later inventory edits never rewrite it.
+        public let filterReferenceText: String?
+        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?, ndStops: Double? = nil, baseShutterSeconds: TimeInterval? = nil, adjustedShutterSeconds: TimeInterval? = nil, filterSummary: [FilterSummaryEntry]? = nil, filterReferenceText: String? = nil) {
             self.name = name
             self.basisSummary = basisSummary
             self.cameraSlot = cameraSlot
@@ -112,6 +116,7 @@ public struct TimerStartComposer {
             self.baseShutterSeconds = baseShutterSeconds
             self.adjustedShutterSeconds = adjustedShutterSeconds
             self.filterSummary = filterSummary
+            self.filterReferenceText = filterReferenceText
         }
     }
 
@@ -200,6 +205,9 @@ public struct TimerStartComposer {
         let adjustedShutterSeconds: TimeInterval? = input.filmModeResult != nil
             ? input.result?.resultShutterSeconds
             : nil
+        // The immutable filter record (Filter Set contract): captured
+        // only for calculator-bound sources with a result.
+        let filterSummary = captured && input.result != nil ? input.filterSummary : nil
 
         return Payload(
             name: name,
@@ -214,7 +222,8 @@ public struct TimerStartComposer {
             ndStops: ndStops,
             baseShutterSeconds: baseShutterSeconds,
             adjustedShutterSeconds: adjustedShutterSeconds,
-            filterSummary: captured && input.result != nil ? input.filterSummary : nil
+            filterSummary: filterSummary,
+            filterReferenceText: filterSummary.flatMap(FilterSummaryReferencePresenter.referenceText(for:))
         )
     }
 

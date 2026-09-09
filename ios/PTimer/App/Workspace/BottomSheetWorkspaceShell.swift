@@ -943,7 +943,7 @@ private struct LargeWorkspaceTimerRowView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            if item.timingText != nil || item.contextText != nil {
+            if item.timingText != nil || item.contextText != nil || item.filterReferenceText != nil {
                 HStack(alignment: .lastTextBaseline, spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
                         if let timingText = item.timingText {
@@ -967,6 +967,18 @@ private struct LargeWorkspaceTimerRowView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+
+                        if let filterReferenceText = item.filterReferenceText {
+                            // Start-time Filter Set reference (Filter
+                            // Set contract): descriptive only, same
+                            // caption style as the basis line, two lines
+                            // so set and item names stay readable.
+                            Text(filterReferenceText)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(2)
                                 .truncationMode(.tail)
                         }
                     }

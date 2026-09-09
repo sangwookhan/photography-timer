@@ -79,6 +79,9 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     /// Set contract). Additive Optional; a malformed array decodes as
     /// absent so the rest of the record still restores.
     public let filterSummary: [FilterSummaryEntry]?
+    /// Start-time reference string for the Timer list (Filter Set
+    /// contract). Additive Optional.
+    public let filterReferenceText: String?
 
     public init(
         id: UUID,
@@ -96,7 +99,8 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         ndStops: Double? = nil,
         baseShutterSeconds: Double? = nil,
         adjustedShutterSeconds: Double? = nil,
-        filterSummary: [FilterSummaryEntry]? = nil
+        filterSummary: [FilterSummaryEntry]? = nil,
+        filterReferenceText: String? = nil
     ) {
         self.id = id
         self.order = order
@@ -114,6 +118,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         self.baseShutterSeconds = baseShutterSeconds
         self.adjustedShutterSeconds = adjustedShutterSeconds
         self.filterSummary = filterSummary
+        self.filterReferenceText = filterReferenceText
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -133,6 +138,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         case baseShutterSeconds
         case adjustedShutterSeconds
         case filterSummary
+        case filterReferenceText
     }
 
     public init(from decoder: Decoder) throws {
@@ -167,10 +173,11 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
             Double.self,
             forKey: .adjustedShutterSeconds
         )
-        self.filterSummary = (try? container.decodeIfPresent(
+        self.filterSummary = try? container.decodeIfPresent(
             [FilterSummaryEntry].self,
             forKey: .filterSummary
-        )) ?? nil
+        )
+        self.filterReferenceText = try? container.decodeIfPresent(String.self, forKey: .filterReferenceText)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -194,6 +201,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         try container.encodeIfPresent(baseShutterSeconds, forKey: .baseShutterSeconds)
         try container.encodeIfPresent(adjustedShutterSeconds, forKey: .adjustedShutterSeconds)
         try container.encodeIfPresent(filterSummary, forKey: .filterSummary)
+        try container.encodeIfPresent(filterReferenceText, forKey: .filterReferenceText)
     }
 }
 

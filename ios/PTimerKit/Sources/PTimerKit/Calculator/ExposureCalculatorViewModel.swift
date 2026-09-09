@@ -1525,7 +1525,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             ndStops: payload.ndStops,
             baseShutterSeconds: payload.baseShutterSeconds,
             adjustedShutterSeconds: payload.adjustedShutterSeconds,
-            filterSummary: payload.filterSummary
+            filterSummary: payload.filterSummary,
+            filterReferenceText: payload.filterReferenceText
         )
     }
 

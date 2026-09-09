@@ -32,8 +32,22 @@ public enum TimerBasisPresenter {
         guard let ndStops, let baseShutterSeconds else {
             return nil
         }
+        return compose(
+            ndText: NDNotationFormatter.display(forStops: ndStops, mode: notationMode).inline,
+            baseShutterSeconds: baseShutterSeconds,
+            adjustedShutterSeconds: adjustedShutterSeconds,
+            exposureSource: exposureSource,
+            formatShutter: formatShutter
+        )
+    }
 
-        let ndText = NDNotationFormatter.display(forStops: ndStops, mode: notationMode).inline
+    private static func compose(
+        ndText: String,
+        baseShutterSeconds: TimeInterval,
+        adjustedShutterSeconds: TimeInterval?,
+        exposureSource: ExposureTimerSource?,
+        formatShutter: (TimeInterval) -> String
+    ) -> String {
         let baseText = formatShutter(baseShutterSeconds)
 
         if includesAdjustedSegment(for: exposureSource),
@@ -54,7 +68,21 @@ public enum TimerBasisPresenter {
         notationMode: NDNotationMode,
         formatShutter: (TimeInterval) -> String
     ) -> String? {
-        basisText(
+        // A mixed Filter Stack's primary filter value is the captured
+        // canonical total in plain decimal stops (FILTER-PERSIST-003):
+        // neither the Standard OD / ND notation nor the ladder's
+        // third-stop fractions apply to it. Standard-only timers keep
+        // following the global notation.
+        if usesMixedFilterStack(timer), let ndStops = timer.ndStops, let baseShutterSeconds = timer.baseShutterSeconds {
+            return compose(
+                ndText: FilterWheelPresenter.stopsText(ndStops),
+                baseShutterSeconds: baseShutterSeconds,
+                adjustedShutterSeconds: timer.adjustedShutterSeconds,
+                exposureSource: timer.exposureSource,
+                formatShutter: formatShutter
+            )
+        }
+        return basisText(
             ndStops: timer.ndStops,
             baseShutterSeconds: timer.baseShutterSeconds,
             adjustedShutterSeconds: timer.adjustedShutterSeconds,
@@ -62,6 +90,11 @@ public enum TimerBasisPresenter {
             notationMode: notationMode,
             formatShutter: formatShutter
         )
+    }
+
+    /// Whether the timer captured at least one Filter Set row.
+    public static func usesMixedFilterStack(_ timer: RunningTimerItem) -> Bool {
+        timer.filterSummary?.contains { $0.sourceKind == .filterSet } ?? false
     }
 
     /// The adjusted shutter is a distinct intermediate only for the

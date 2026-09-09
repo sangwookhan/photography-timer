@@ -119,12 +119,23 @@ All in `PTimerKit`, one directory per feature area:
 `Calculator/CalculatorModel`, `Reciprocity/ReciprocityModel`,
 `Workspace/TimerWorkspaceModel`, `Film/FilmSelectionModel`,
 `CameraSlots/CameraSlotSessionModel`,
-`TargetShutter/TargetShutterModel`; presenters sit next to their
-feature (e.g. `FilmDetails/FilmModeDetailsPresenter`).
+`TargetShutter/TargetShutterModel`,
+`Filters/FilterInventoryModel`; presenters sit next to their
+feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
+`Filters/FilterWheelPresenter`).
 
 `@Observable` feature models, each owning one slice of state:
 
 - **`CalculatorModel`** — calculator inputs and pure ND calculation.
+  Owns the mixed `FilterStack` (Standard and Filter Set wheels), the
+  per-camera last Filter Source, and a read-only mirror of the filter
+  inventory used to resolve Filter Set rows; the facade refreshes that
+  mirror whenever `FilterInventoryModel` publishes a change.
+- **`FilterInventoryModel`** — the user's Filter Sets and physical
+  filter items (`PTimerCore` `FilterInventory`), persisted through
+  `FilterInventoryStoring`. Stack reconciliation after an inventory
+  edit runs on the facade, which is the one place that reads both the
+  inventory and the calculator / camera-slot state.
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
 - **`TimerWorkspaceModel`** — timer collection metadata and timer
   lifecycle commands around `TimerManager`.
@@ -220,9 +231,10 @@ stores live in the app target.
   `UserDefaultsCalculatorContextStore` (app
   `ExposureCalculator/FilmContext/`) — persists selected film plus
   calculator inputs across relaunches.
-- Same pattern for the custom-film library, camera-slot session, and
-  timer metadata: `Persistent*` schema + `*Storing` protocol in Kit
-  `Persistence/`, `UserDefaults*Store` in the app.
+- Same pattern for the custom-film library, camera-slot session,
+  filter inventory, and timer metadata: `Persistent*` schema +
+  `*Storing` protocol in Kit `Persistence/`, `UserDefaults*Store` in
+  the app.
 
 All persistence stores follow a `*Storing` protocol pair pattern with a
 real implementation plus a `NoOp*` implementation that unit tests use.
@@ -254,8 +266,10 @@ the app's `ExposureCalculator/CameraSlot/`).
   supplied label set through the rename surface; it lives on the
   session model and is merged into the identity on read.
 - `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
-  calculator working state (base shutter, ND, scale mode, selected
-  film, profile override, optional `targetShutterSeconds`).
+  calculator working state (base shutter, the mixed Filter Stack's
+  wheels with their per-wheel contributions, the last Filter Source,
+  scale mode, selected film, profile override, optional
+  `targetShutterSeconds`).
   Live-preview overlays (`CalculatorModel.liveBaseShutter` /
   `liveNDStep`) deliberately stay out of the snapshot — a preview
   only exists while a wheel drag is in flight on the active slot.
@@ -267,8 +281,10 @@ the app's `ExposureCalculator/CameraSlot/`).
   (`PersistentCameraSlotSessionSnapshot` +
   `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
   session. Stores raw `CameraSlotID` raw values, film/profile ids,
-  and an Optional photographer-supplied `customDisplayName` per
-  slot. The runtime resolves ids back through the preset catalog
+  an Optional photographer-supplied `customDisplayName` per slot,
+  and — additively — the mixed `filterStack` plus last Filter
+  Source. `ndStack` and the legacy scalar keep describing Standard
+  wheels only so an older build degrades to a valid Standard stack. The runtime resolves ids back through the preset catalog
   and falls back to "No film" for any id no longer in the catalog.
   The `customDisplayName` field is additive; pre-PTIMER-123
   snapshots decode unchanged and the schema version stays at `1`.
@@ -333,7 +349,9 @@ maintain a parallel copy.
 
 | State | Owner |
 |---|---|
-| Calculator inputs (base shutter, ND) | `CalculatorModel` |
+| Calculator inputs (base shutter, mixed Filter Stack, last Filter Source) | `CalculatorModel` |
+| Filter inventory (Filter Sets, physical items, order, colors) | `FilterInventoryModel` |
+| Filter summary captured on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.filterSummary` and `PersistentTimerMetadataSnapshot.filterSummary`) |
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |

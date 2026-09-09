@@ -82,6 +82,17 @@
         }
       }
     },
+    "A choice of this filter is currently selected on %@. Keep that choice, or change the wheel selection on those cameras first." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 필터의 선택지가 %@에서 현재 선택되어 있습니다. 그 선택지를 유지하거나, 먼저 해당 카메라의 휠 선택을 바꾸세요."
+          }
+        }
+      }
+    },
     "A color is required. Several Filter Sets may share one color." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {

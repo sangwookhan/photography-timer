@@ -205,7 +205,7 @@ final class FilterSetViewModelTests: XCTestCase {
 
         var tooBig = item
         tooBig.behavior = .fixed(FilterRegisteredValue(value: 11, unit: .stops))
-        XCTAssertEqual(viewModel.saveFilterItem(tooBig, in: set.id), .blocked(affectedCameras: ["Camera 1"]))
+        XCTAssertEqual(viewModel.saveFilterItem(tooBig, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .exceedsTotalLimit))
         XCTAssertEqual(viewModel.ndStep.stops, 23, accuracy: 1e-9, "A blocked save changes nothing.")
         XCTAssertEqual(viewModel.filterInventory.item(withID: item.id)?.item, edited)
     }
@@ -235,7 +235,7 @@ final class FilterSetViewModelTests: XCTestCase {
         var withoutOnePointFive = cpl
         withoutOnePointFive.behavior = .cpl(CPLExposureLossChoices(fields: [1, nil, 2]))
         XCTAssertEqual(viewModel.filterItemSaveConflicts(for: withoutOnePointFive, in: set.id), ["Camera 1"])
-        XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFive, in: set.id), .blocked(affectedCameras: ["Camera 1"]))
+        XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFive, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
         XCTAssertEqual(viewModel.filterWheels, cameraOneWheels, "The previous valid stack stays intact.")
         XCTAssertEqual(viewModel.filterInventory, inventoryBefore, "The previous inventory stays intact.")
         XCTAssertEqual(sessionStore.stored, persistedBefore, "A blocked save persists nothing.")
@@ -249,7 +249,7 @@ final class FilterSetViewModelTests: XCTestCase {
         var onlyOne = cpl
         onlyOne.behavior = .cpl(CPLExposureLossChoices(fields: [1, nil, nil]))
         XCTAssertEqual(Set(viewModel.filterItemSaveConflicts(for: onlyOne, in: set.id)), ["Camera 1", "Camera 2"])
-        XCTAssertEqual(viewModel.saveFilterItem(onlyOne, in: set.id), .blocked(affectedCameras: ["Camera 1", "Camera 2"]))
+        XCTAssertEqual(viewModel.saveFilterItem(onlyOne, in: set.id), .blocked(affectedCameras: ["Camera 1", "Camera 2"], reason: .removesSelectedChoice))
         XCTAssertEqual(viewModel.filterWheels[1].selection, select(cpl, .cplLoss(2)))
 
         // Keeping every selected choice (adding a fourth value is not
@@ -281,7 +281,7 @@ final class FilterSetViewModelTests: XCTestCase {
         viewModel.setWheelSelection(select(item), at: 1)
         var asGND = item
         asGND.behavior = .gnd(FilterRegisteredValue(value: 3, unit: .stops))
-        XCTAssertEqual(viewModel.saveFilterItem(asGND, in: set.id), .blocked(affectedCameras: ["Camera 1"]))
+        XCTAssertEqual(viewModel.saveFilterItem(asGND, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
         XCTAssertEqual(viewModel.filterWheels[1].selection, select(item))
     }
 

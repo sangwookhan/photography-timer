@@ -4,13 +4,24 @@
 import Foundation
 import PTimerCore
 
+/// Why an item save is blocked (FILTER-ITEM-005).
+public enum FilterItemSaveBlockReason: Equatable, Sendable {
+    /// A camera's active contributions would exceed 30 stops.
+    case exceedsTotalLimit
+    /// A camera currently mounts a row of this item that the edit
+    /// removes — a selected CPL exposure-loss choice, or a row lost to
+    /// a kind change. The selection is never replaced silently.
+    case removesSelectedChoice
+}
+
 /// Outcome of saving a physical filter item (FILTER-ITEM-005): the
 /// save commits only when every camera stack that references the item
-/// still fits the 30-stop cap afterwards.
+/// stays valid afterwards.
 public enum FilterItemSaveOutcome: Equatable, Sendable {
     case saved
-    /// Display names of the cameras whose stack would become invalid.
-    case blocked(affectedCameras: [String])
+    /// Display names of the cameras whose stack would become invalid,
+    /// with the dominant reason (a removed selection outranks the cap).
+    case blocked(affectedCameras: [String], reason: FilterItemSaveBlockReason)
 }
 
 /// Filter Set glue split from the main facade (Filter Set contract):
@@ -156,6 +167,16 @@ extension ExposureCalculatorViewModel {
     /// kind change. Empty when the save is safe. The system never
     /// replaces a selected CPL choice with another configured value.
     public func filterItemSaveConflicts(for item: FilterItem, in filterSetID: FilterSetID) -> [String] {
+        filterItemSaveConflictDetails(for: item, in: filterSetID).map(\.cameraName)
+    }
+
+    /// One conflicting camera and why it conflicts.
+    public struct FilterItemSaveConflict: Equatable, Sendable {
+        public let cameraName: String
+        public let reason: FilterItemSaveBlockReason
+    }
+
+    public func filterItemSaveConflictDetails(for item: FilterItem, in filterSetID: FilterSetID) -> [FilterItemSaveConflict] {
         guard item.isWellFormed else {
             return []
         }
@@ -168,7 +189,7 @@ extension ExposureCalculatorViewModel {
         } else {
             candidate.filterSets[setIndex].items.append(item)
         }
-        var names: [String] = []
+        var conflicts: [FilterItemSaveConflict] = []
         for slotID in cameraSlotSessionModel.availableSlots {
             let wheels: [FilterWheel]
             if slotID == cameraSlotSessionModel.activeSlotID {
@@ -178,37 +199,44 @@ extension ExposureCalculatorViewModel {
             } else {
                 continue
             }
-            if Self.stackConflicts(wheels, itemID: item.id, candidate: candidate) {
-                names.append(cameraSlotSessionModel.identity(for: slotID).displayName)
+            if let reason = Self.stackConflict(wheels, itemID: item.id, candidate: candidate) {
+                conflicts.append(FilterItemSaveConflict(
+                    cameraName: cameraSlotSessionModel.identity(for: slotID).displayName,
+                    reason: reason
+                ))
             }
         }
-        return names
+        return conflicts
     }
 
     /// A stack conflicts with the candidate inventory when a wheel
     /// mounting `itemID` no longer resolves (its selected row is gone)
     /// or when the re-resolved stack would exceed the cap.
-    private static func stackConflicts(_ wheels: [FilterWheel], itemID: FilterItemID, candidate: FilterInventory) -> Bool {
+    private static func stackConflict(_ wheels: [FilterWheel], itemID: FilterItemID, candidate: FilterInventory) -> FilterItemSaveBlockReason? {
         let selectedRowVanishes = wheels.contains { wheel in
             wheel.mountedItemID == itemID
                 && FilterStack.resolvedRow(for: wheel, inventory: candidate) == nil
         }
         if selectedRowVanishes {
-            return true
+            return .removesSelectedChoice
         }
-        guard let normalized = FilterStack.normalizedWheels(wheels, inventory: candidate) else {
-            return true
+        guard let normalized = FilterStack.normalizedWheels(wheels, inventory: candidate),
+              FilterStack.validated(wheels: normalized, inventory: candidate) != nil else {
+            return .exceedsTotalLimit
         }
-        return FilterStack.validated(wheels: normalized, inventory: candidate) == nil
+        return nil
     }
 
     /// Saves a new or edited item into `filterSetID`. Blocked — and
     /// nothing changes — when any camera stack would exceed the cap.
     @discardableResult
     public func saveFilterItem(_ item: FilterItem, in filterSetID: FilterSetID) -> FilterItemSaveOutcome {
-        let conflicts = filterItemSaveConflicts(for: item, in: filterSetID)
+        let conflicts = filterItemSaveConflictDetails(for: item, in: filterSetID)
         guard conflicts.isEmpty else {
-            return .blocked(affectedCameras: conflicts)
+            let reason: FilterItemSaveBlockReason = conflicts.contains { $0.reason == .removesSelectedChoice }
+                ? .removesSelectedChoice
+                : .exceedsTotalLimit
+            return .blocked(affectedCameras: conflicts.map(\.cameraName), reason: reason)
         }
         if filterInventory.item(withID: item.id) != nil {
             filterInventoryModel.updateItem(item)

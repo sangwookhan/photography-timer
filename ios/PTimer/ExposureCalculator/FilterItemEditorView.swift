@@ -33,7 +33,13 @@ struct FilterItemEditorView: View {
     @State private var valueText: String
     @State private var unit: FilterValueUnit
     @State private var cplFields: [String]
-    @State private var blockedCameras: [String]?
+    @State private var blockedSave: BlockedSave?
+
+    private struct BlockedSave: Identifiable {
+        let cameras: [String]
+        let reason: FilterItemSaveBlockReason
+        var id: String { cameras.joined(separator: ",") + "\(reason)" }
+    }
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -172,14 +178,19 @@ struct FilterItemEditorView: View {
             .alert(
                 Text("Cannot save"),
                 isPresented: Binding(
-                    get: { blockedCameras != nil },
-                    set: { if !$0 { blockedCameras = nil } }
+                    get: { blockedSave != nil },
+                    set: { if !$0 { blockedSave = nil } }
                 ),
-                presenting: blockedCameras
+                presenting: blockedSave
             ) { _ in
-                Button("OK", role: .cancel) { blockedCameras = nil }
-            } message: { cameras in
-                Text("This value would push the filter stack past 30 stops on \(cameras.joined(separator: ", ")). Change the mounted filters there first, or use a smaller value.")
+                Button("OK", role: .cancel) { blockedSave = nil }
+            } message: { blocked in
+                switch blocked.reason {
+                case .exceedsTotalLimit:
+                    Text("This value would push the filter stack past 30 stops on \(blocked.cameras.joined(separator: ", ")). Change the mounted filters there first, or use a smaller value.")
+                case .removesSelectedChoice:
+                    Text("A choice of this filter is currently selected on \(blocked.cameras.joined(separator: ", ")). Keep that choice, or change the wheel selection on those cameras first.")
+                }
             }
             .onAppear {
                 if context.item == nil {
@@ -267,8 +278,8 @@ struct FilterItemEditorView: View {
         switch viewModel.saveFilterItem(item, in: context.filterSetID) {
         case .saved:
             onDismiss()
-        case .blocked(let cameras):
-            blockedCameras = cameras
+        case .blocked(let cameras, let reason):
+            blockedSave = BlockedSave(cameras: cameras, reason: reason)
         }
     }
 }

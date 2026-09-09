@@ -210,6 +210,81 @@ final class FilterSetViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filterInventory.item(withID: item.id)?.item, edited)
     }
 
+    // MARK: FILTER-ITEM-005 — removing an active CPL choice is blocked
+
+    func testRemovingASelectedCPLChoiceIsBlockedAndNamesEveryAffectedCamera() throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        inventory.addItem(cpl, to: set.id)
+        let sessionStore = InMemoryMixedSessionStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: FakeTimerManaging(),
+            cameraSlotSessionPersistenceStore: sessionStore,
+            filterInventoryModel: inventory
+        )
+        viewModel.selectFilterSource(.filterSet(set.id))
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(cpl, .cplLoss(1.5)), at: 1)
+        let cameraOneWheels = viewModel.filterWheels
+        let persistedBefore = sessionStore.stored
+        let inventoryBefore = viewModel.filterInventory
+
+        // One camera affected.
+        var withoutOnePointFive = cpl
+        withoutOnePointFive.behavior = .cpl(CPLExposureLossChoices(fields: [1, nil, 2]))
+        XCTAssertEqual(viewModel.filterItemSaveConflicts(for: withoutOnePointFive, in: set.id), ["Camera 1"])
+        XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFive, in: set.id), .blocked(affectedCameras: ["Camera 1"]))
+        XCTAssertEqual(viewModel.filterWheels, cameraOneWheels, "The previous valid stack stays intact.")
+        XCTAssertEqual(viewModel.filterInventory, inventoryBefore, "The previous inventory stays intact.")
+        XCTAssertEqual(sessionStore.stored, persistedBefore, "A blocked save persists nothing.")
+        XCTAssertEqual(viewModel.ndStep.stops, 1.5, accuracy: 1e-9)
+
+        // Two cameras affected: camera 2 mounts the same CPL at 2.
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.selectFilterSource(.filterSet(set.id))
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(cpl, .cplLoss(2)), at: 1)
+        var onlyOne = cpl
+        onlyOne.behavior = .cpl(CPLExposureLossChoices(fields: [1, nil, nil]))
+        XCTAssertEqual(Set(viewModel.filterItemSaveConflicts(for: onlyOne, in: set.id)), ["Camera 1", "Camera 2"])
+        XCTAssertEqual(viewModel.saveFilterItem(onlyOne, in: set.id), .blocked(affectedCameras: ["Camera 1", "Camera 2"]))
+        XCTAssertEqual(viewModel.filterWheels[1].selection, select(cpl, .cplLoss(2)))
+
+        // Keeping every selected choice (adding a fourth value is not
+        // possible, but changing the unselected slot is) saves.
+        var keepsSelected = cpl
+        keepsSelected.behavior = .cpl(CPLExposureLossChoices(fields: [0.5, 1.5, 2]))
+        XCTAssertEqual(viewModel.saveFilterItem(keepsSelected, in: set.id), .saved)
+        XCTAssertEqual(viewModel.filterWheels[1].selection, select(cpl, .cplLoss(2)))
+        viewModel.selectCameraSlot(.camera1)
+        XCTAssertEqual(viewModel.filterWheels[1].selection, select(cpl, .cplLoss(1.5)))
+
+        // After the camera changes its wheel, the removal is allowed.
+        viewModel.setWheelSelection(select(cpl, .cplLoss(2)), at: 1)
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.setWheelSelection(.empty, at: 1)
+        var withoutOnePointFiveAgain = cpl
+        withoutOnePointFiveAgain.behavior = .cpl(CPLExposureLossChoices(fields: [0.5, nil, 2]))
+        XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFiveAgain, in: set.id), .saved)
+    }
+
+    func testChangingAMountedItemsKindIsBlockedLikeARemovedRow() throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
+        let item = fixed("X", 3)
+        inventory.addItem(item, to: set.id)
+        let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.selectFilterSource(.filterSet(set.id))
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(item), at: 1)
+        var asGND = item
+        asGND.behavior = .gnd(FilterRegisteredValue(value: 3, unit: .stops))
+        XCTAssertEqual(viewModel.saveFilterItem(asGND, in: set.id), .blocked(affectedCameras: ["Camera 1"]))
+        XCTAssertEqual(viewModel.filterWheels[1].selection, select(item))
+    }
+
     // MARK: FILTER-STACK-002 — rejection notice for a mounted item
 
     func testSelectingAnItemMountedElsewhereIsRejectedWithANotice() throws {
@@ -266,6 +341,80 @@ final class FilterSetViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.saveFilterItem(renamed, in: set.id), .saved)
         XCTAssertEqual(viewModel.timers.first?.filterSummary, summary, "Captured summaries never change.")
         XCTAssertEqual(viewModel.filterRows[1].item?.name, "Renamed item", "The live stack follows the rename.")
+    }
+
+    func testTimerReferenceTextIsCapturedAtStartAndSurvivesInventoryChanges() throws {
+        let inventory = FilterInventoryModel()
+        let haida = try XCTUnwrap(inventory.createFilterSet(name: "Haida 100mm", color: .red))
+        let nd400 = FilterItem(name: "ND400", behavior: .fixed(FilterRegisteredValue(value: 400, unit: .filterFactor)))
+        let gnd = FilterItem(name: "GND 2", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
+        inventory.addItem(nd400, to: haida.id)
+        inventory.addItem(gnd, to: haida.id)
+        let timerManager = RuntimeBackedTimerManaging(tickInterval: 60, dateProvider: { Date(timeIntervalSince1970: 100) })
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: timerManager,
+            filterInventoryModel: inventory
+        )
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
+        viewModel.selectFilterSource(.filterSet(haida.id))
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(nd400, .fixed), at: 1)
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 2)
+        viewModel.startTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        let expected = "Standard 2 stops · Haida 100mm: ND400 ND400 + GND 2 2 stops (Record only)"
+        XCTAssertEqual(timer.filterReferenceText, expected)
+        XCTAssertEqual(try XCTUnwrap(timer.ndStops), 2 + log2(400), accuracy: 1e-9, "The primary value is the canonical total.")
+        XCTAssertEqual(timer.filterSummary?.last?.contributedStops, 0, "Record only contributes 0 yet appears in the reference.")
+
+        // Rename, edit, reorder, delete — the captured record never moves.
+        viewModel.renameFilterSet(id: haida.id, name: "Renamed")
+        var edited = nd400
+        edited.name = "Edited"
+        XCTAssertEqual(viewModel.saveFilterItem(edited, in: haida.id), .saved)
+        viewModel.moveFilterItems(in: haida.id, fromOffsets: IndexSet(integer: 1), toOffset: 0)
+        viewModel.deleteFilterSet(id: haida.id)
+        XCTAssertEqual(viewModel.timers.first?.filterReferenceText, expected)
+        XCTAssertEqual(viewModel.timers.first?.filterSummary, timer.filterSummary)
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 2))], "The live stack lost the deleted set's wheels.")
+    }
+
+    func testStalePersistedCPLChoiceRestoresAsEmpty() throws {
+        let sessionStore = InMemoryMixedSessionStore()
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, 2])))
+        inventory.addItem(cpl, to: set.id)
+        sessionStore.stored = PersistentCameraSlotSessionSnapshot(
+            schemaVersion: 1,
+            activeSlotIDRaw: CameraSlotID.camera1.rawValue,
+            slots: [
+                PersistentCameraSlotCalculatorSnapshot(
+                    slotIDRaw: CameraSlotID.camera1.rawValue,
+                    selectedPresetFilmID: nil,
+                    selectedProfileID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: 3,
+                    ndStack: [PersistentNDFilterWheelSnapshot(ndStop: 3)],
+                    filterStack: [
+                        PersistentFilterWheelSnapshot(sourceKind: "standard", ndStop: 3),
+                        PersistentFilterWheelSnapshot(sourceKind: "filterSet", filterSetID: set.id.rawValue, itemID: cpl.id.rawValue, rowKind: "cpl", cplLossStops: 1.5),
+                    ]
+                ),
+            ]
+        )
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: FakeTimerManaging(),
+            cameraSlotSessionPersistenceStore: sessionStore,
+            filterInventoryModel: inventory
+        )
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 3)), .empty(in: set.id)])
+        XCTAssertEqual(viewModel.ndStep.stops, 3)
     }
 
     func testManualTimerCapturesNoFilterSummary() throws {

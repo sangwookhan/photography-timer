@@ -250,15 +250,53 @@ final class FilterStackTests: XCTestCase {
         XCTAssertNil(FilterStack.normalizedWheels(Array(repeating: .standard(NDStep(stops: 0)), count: 5), inventory: inventory))
     }
 
-    func testNormalizationFallsBackToAnItemsFirstRowWhenTheChosenRowIsGone() {
+    func testNormalizationRestoresAVanishedCPLChoiceAsEmptyNeverAnotherChoice() {
+        // FILTER-PERSIST-002: a persisted CPL selection whose configured
+        // choice no longer exists restores as Empty.
         let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 2, nil])))
         let set = FilterSet(name: "CPL", color: .orange, items: [cpl])
         let inventory = FilterInventory(filterSets: [set])
         let wheel = FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1.5)))
         XCTAssertEqual(
             FilterStack.normalizedWheels([wheel], inventory: inventory),
-            [FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1)))]
+            [.empty(in: set.id)]
         )
+        // A kind change that removes the mounted row restores as Empty too.
+        let nowGND = FilterItem(id: cpl.id, name: "CPL", behavior: .gnd(stops(2)))
+        let changed = FilterInventory(filterSets: [FilterSet(id: set.id, name: "CPL", color: .orange, items: [nowGND])])
+        XCTAssertEqual(FilterStack.normalizedWheels([wheel], inventory: changed), [.empty(in: set.id)])
+    }
+
+    // MARK: FILTER-STACK-005 — CPL and GND sort keys
+
+    func testCPLSortsByItsSelectedChoiceAndGNDByRegisteredDensityInBothModes() throws {
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let gnd = FilterItem(name: "GND", behavior: .gnd(stops(1.8)))
+        let two = fixed("Two", 2)
+        let set = FilterSet(name: "S", color: .red, items: [cpl, gnd, two])
+        let inventory = FilterInventory(filterSets: [set])
+        let base = FilterStack(
+            wheels: [
+                FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1))),
+                FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))),
+                FilterWheel(source: .filterSet(set.id), selection: select(two)),
+            ],
+            inventory: inventory
+        )
+        // Registered values: CPL 1 < GND 1.8 < Two 2 -> [two, gnd, cpl].
+        XCTAssertEqual(base.commitSortPermutation(inventory: inventory), [2, 1, 0])
+
+        // Raising the CPL choice to 2 ties with Two: the stable sort keeps
+        // the CPL (index 0) ahead of Two (index 2).
+        let cplTwo = try base.replacingWheel(at: 0, with: select(cpl, .cplLoss(2)), inventory: inventory).get()
+        XCTAssertEqual(cplTwo.commitSortPermutation(inventory: inventory), [0, 2, 1])
+
+        // Switching the GND to Apply full value must not move it.
+        let gndFull = try base.replacingWheel(at: 1, with: select(gnd, .gnd(.applyFullValue)), inventory: inventory).get()
+        XCTAssertEqual(gndFull.commitSortPermutation(inventory: inventory), base.commitSortPermutation(inventory: inventory))
+        XCTAssertEqual(gndFull.rows[1].registeredStops, 1.8)
+        XCTAssertEqual(gndFull.rows[1].contributionStops, 1.8)
+        XCTAssertEqual(base.rows[1].contributionStops, 0)
     }
 
     func testValidatedRejectsOverCapDuplicateAndUnresolvedWheels() {

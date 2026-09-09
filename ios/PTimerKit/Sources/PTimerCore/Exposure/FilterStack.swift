@@ -320,14 +320,13 @@ public struct FilterStack: Equatable, Sendable {
 
     /// Safe re-resolution of persisted or previously valid wheels
     /// against the current inventory: a wheel whose Filter Set no
-    /// longer exists is dropped, a wheel whose item no longer exists
-    /// becomes Empty, and a wheel whose row is gone falls back to the
-    /// item's first row (a CPL whose chosen loss was removed takes the
-    /// smallest remaining choice; a GND keeps its mode). An
-    /// inconsistent wheel is dropped. A result with no wheel becomes
-    /// one Standard 0 wheel. Returns `nil` only when more than four
-    /// wheels were supplied — that is corruption, not recoverable
-    /// state.
+    /// longer exists is dropped, and a wheel whose item or selected row
+    /// no longer exists becomes Empty — a CPL selection whose configured
+    /// exposure-loss choice is gone is never replaced by another choice
+    /// (FILTER-PERSIST-002). An inconsistent wheel is dropped. A result
+    /// with no wheel becomes one Standard 0 wheel. Returns `nil` only
+    /// when more than four wheels were supplied — that is corruption,
+    /// not recoverable state.
     public static func normalizedWheels(_ wheels: [FilterWheel], inventory: FilterInventory) -> [FilterWheel]? {
         guard wheels.count <= maximumWheelCount else {
             return nil
@@ -368,16 +367,11 @@ public struct FilterStack: Equatable, Sendable {
                   let filterSet = inventory.filterSet(withID: filterSetID) else {
                 return nil
             }
-            guard let item = filterSet.item(withID: selection.itemID) else {
+            guard let item = filterSet.item(withID: selection.itemID),
+                  resolvedRow(item: item, choice: selection.choice) != nil else {
                 return .empty(in: filterSetID)
             }
-            if resolvedRow(item: item, choice: selection.choice) != nil {
-                return wheel
-            }
-            if let fallback = rows(for: item).first {
-                return FilterWheel(source: wheel.source, selection: fallback.selection)
-            }
-            return .empty(in: filterSetID)
+            return wheel
         }
     }
 

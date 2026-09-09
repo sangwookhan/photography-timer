@@ -149,8 +149,12 @@ extension ExposureCalculatorViewModel {
         }
     }
 
-    /// Cameras whose stack would exceed 30 stops if `item` were saved
-    /// as given (FILTER-ITEM-005). Empty when the save is safe.
+    /// Cameras whose stack would become invalid if `item` were saved as
+    /// given (FILTER-ITEM-005): a total over 30 stops, or a mounted row
+    /// of this item that would no longer exist — a CPL exposure-loss
+    /// choice currently selected on that camera, or a row removed by a
+    /// kind change. Empty when the save is safe. The system never
+    /// replaces a selected CPL choice with another configured value.
     public func filterItemSaveConflicts(for item: FilterItem, in filterSetID: FilterSetID) -> [String] {
         guard item.isWellFormed else {
             return []
@@ -165,19 +169,37 @@ extension ExposureCalculatorViewModel {
             candidate.filterSets[setIndex].items.append(item)
         }
         var names: [String] = []
-        let activeWheels = calculatorModel.filterWheels
-        if let normalized = FilterStack.normalizedWheels(activeWheels, inventory: candidate),
-           FilterStack.validated(wheels: normalized, inventory: candidate) == nil {
-            names.append(cameraSlotSessionModel.activeSlot.displayName)
-        }
-        for slotID in cameraSlotSessionModel.availableSlots where slotID != cameraSlotSessionModel.activeSlotID {
-            guard let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID),
-                  snapshot.reresolvingFilterStack(against: candidate) == nil else {
+        for slotID in cameraSlotSessionModel.availableSlots {
+            let wheels: [FilterWheel]
+            if slotID == cameraSlotSessionModel.activeSlotID {
+                wheels = calculatorModel.filterWheels
+            } else if let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) {
+                wheels = snapshot.filterWheels
+            } else {
                 continue
             }
-            names.append(cameraSlotSessionModel.identity(for: slotID).displayName)
+            if Self.stackConflicts(wheels, itemID: item.id, candidate: candidate) {
+                names.append(cameraSlotSessionModel.identity(for: slotID).displayName)
+            }
         }
         return names
+    }
+
+    /// A stack conflicts with the candidate inventory when a wheel
+    /// mounting `itemID` no longer resolves (its selected row is gone)
+    /// or when the re-resolved stack would exceed the cap.
+    private static func stackConflicts(_ wheels: [FilterWheel], itemID: FilterItemID, candidate: FilterInventory) -> Bool {
+        let selectedRowVanishes = wheels.contains { wheel in
+            wheel.mountedItemID == itemID
+                && FilterStack.resolvedRow(for: wheel, inventory: candidate) == nil
+        }
+        if selectedRowVanishes {
+            return true
+        }
+        guard let normalized = FilterStack.normalizedWheels(wheels, inventory: candidate) else {
+            return true
+        }
+        return FilterStack.validated(wheels: normalized, inventory: candidate) == nil
     }
 
     /// Saves a new or edited item into `filterSetID`. Blocked — and

@@ -183,12 +183,12 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         // Same isolation for the Filter Set fields: a malformed mixed
         // stack or source decodes as absent and the slot falls back
         // through `ndStack` / the legacy scalar / Standard.
-        filterStack = (try? container.decodeIfPresent(
+        filterStack = try? container.decodeIfPresent(
             [PersistentFilterWheelSnapshot].self,
             forKey: .filterStack
-        )) ?? nil
-        lastFilterSourceKind = (try? container.decodeIfPresent(String.self, forKey: .lastFilterSourceKind)) ?? nil
-        lastFilterSetID = (try? container.decodeIfPresent(String.self, forKey: .lastFilterSetID)) ?? nil
+        )
+        lastFilterSourceKind = try? container.decodeIfPresent(String.self, forKey: .lastFilterSourceKind)
+        lastFilterSetID = try? container.decodeIfPresent(String.self, forKey: .lastFilterSetID)
     }
 }
 

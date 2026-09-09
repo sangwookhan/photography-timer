@@ -5,22 +5,12 @@ import SwiftUI
 import PTimerKit
 
 struct ContentView: View {
-    #if DEBUG
-    @State private var showDebugRibbon = true
-    #endif
-
     var body: some View {
         ExposureCalculatorScreen()
             .ptimerComponentTheme(.system)
             #if DEBUG
             .overlay(alignment: .topTrailing) {
-                if showDebugRibbon {
-                    DebugBuildRibbon()
-                }
-            }
-            .task {
-                try? await Task.sleep(for: .seconds(10))
-                showDebugRibbon = false
+                DebugBuildRibbon()
             }
             #endif
     }
@@ -31,8 +21,26 @@ struct ContentView: View {
 /// install is visually distinguishable from release on screen, not just by
 /// launcher icon/name. Auto-hides after 10s so it doesn't linger over
 /// screenshots taken later in the session.
+///
+/// The ribbon owns its hide state: keeping it out of `ContentView`
+/// means the auto-hide does not re-evaluate `ContentView.body` and
+/// therefore does not run `ExposureCalculatorScreen.init()` again,
+/// which would build a throwaway `WorkspaceCoordinator` (with its own
+/// restore, persistence, and cleanup timers) beside the live one.
 private struct DebugBuildRibbon: View {
+    @State private var isVisible = true
+
     var body: some View {
+        if isVisible {
+            ribbon
+                .task {
+                    try? await Task.sleep(for: .seconds(10))
+                    isVisible = false
+                }
+        }
+    }
+
+    private var ribbon: some View {
         Text("DEBUG")
             .font(.caption2.bold())
             .foregroundStyle(.white)

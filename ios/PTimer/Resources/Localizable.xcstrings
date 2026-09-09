@@ -214,6 +214,17 @@
         }
       }
     },
+    "CPL %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPL %@"
+          }
+        }
+      }
+    },
     "Create, edit, and reorder your Filter Sets" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -782,6 +793,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Standard"
+          }
+        }
+      }
+    },
+    "Standard %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard %@"
           }
         }
       }

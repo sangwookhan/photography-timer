@@ -1081,13 +1081,15 @@ private struct NDWheelView: View {
     }
 
     /// Mode-dependent unit shown in the selection band (`stops` / `OD`
-    /// / `ND`). Filter Set rows always read in stops.
+    /// / `ND`) for Standard wheels. Filter Set rows carry their own
+    /// registered representation (`OD 0.9`, `ND1000`, `3 stops`), so
+    /// the band shows no unit for them.
     private var unitText: String {
         switch source {
         case .standard:
             return NDNotationFormatter.display(for: committedRow.contributionStops.asNDStep, mode: ndNotationMode).unit
         case .filterSet:
-            return String(localized: "stops")
+            return ""
         }
     }
 

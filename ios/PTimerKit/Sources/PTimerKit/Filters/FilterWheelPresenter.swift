@@ -12,12 +12,16 @@ import PTimerCore
 public struct FilterWheelRowDisplay: Hashable, Sendable {
     public let selection: FilterWheelSelection
     /// Compact value shown in the wheel column: the Standard value in
-    /// the active notation, an item's contribution in stops, or the
-    /// Empty marker.
+    /// the active notation, an item's registered representation
+    /// (`ND1000`, `OD 0.9`, `3 stops`, `CPL 1.5`) independent of that
+    /// notation, or the Empty marker (FILTER-STACK-007).
     public let compactValueText: String
-    /// Short mode caption under the value (`Rec` / `Full` for GND,
-    /// `CPL` for a CPL row); `nil` for Standard, Fixed, and Empty.
+    /// Short mode caption under the value (`Rec` / `Full` for GND);
+    /// `nil` for Standard, Fixed, CPL, and Empty.
     public let modeCaption: String?
+    /// The item's registered representation as the user entered it;
+    /// `nil` for Standard and Empty rows.
+    public let registeredText: String?
     /// Full item name for the expanded moving label; `nil` for Standard
     /// and Empty rows.
     public let itemName: String?
@@ -31,10 +35,11 @@ public struct FilterWheelRowDisplay: Hashable, Sendable {
     public let isEmpty: Bool
     public let isMounted: Bool
 
-    public init(selection: FilterWheelSelection, compactValueText: String, modeCaption: String?, itemName: String?, expandedLabelText: String, unavailabilityText: String?, isEmpty: Bool, isMounted: Bool) {
+    public init(selection: FilterWheelSelection, compactValueText: String, modeCaption: String?, registeredText: String? = nil, itemName: String?, expandedLabelText: String, unavailabilityText: String?, isEmpty: Bool, isMounted: Bool) {
         self.selection = selection
         self.compactValueText = compactValueText
         self.modeCaption = modeCaption
+        self.registeredText = registeredText
         self.itemName = itemName
         self.expandedLabelText = expandedLabelText
         self.unavailabilityText = unavailabilityText
@@ -91,32 +96,61 @@ public enum FilterWheelPresenter {
         case .item(let selection):
             let name = row.item?.name ?? ""
             let contribution = stopsText(row.contributionStops)
+            // Registered representation as the user entered it — never
+            // the Standard notation (FILTER-STACK-007). A CPL's
+            // representation is its selected exposure-loss choice.
+            let registered = registeredText(for: row.item, choice: selection.choice, fallbackStops: row.registeredStops)
             let modeCaption: String?
-            let expanded: String
+            let modeName: String?
             switch selection.choice {
-            case .fixed:
+            case .fixed, .cplLoss:
                 modeCaption = nil
-                expanded = String(localized: "\(name) · \(contribution)")
-            case .cplLoss:
-                modeCaption = String(localized: "CPL")
-                expanded = String(localized: "\(name) · CPL \(contribution)")
+                modeName = nil
             case .gnd(.recordOnly):
                 modeCaption = String(localized: "Rec")
-                expanded = String(localized: "\(name) · Record only · \(contribution)")
+                modeName = gndModeName(.recordOnly)
             case .gnd(.applyFullValue):
                 modeCaption = String(localized: "Full")
-                expanded = String(localized: "\(name) · Apply full value · \(contribution)")
+                modeName = gndModeName(.applyFullValue)
+            }
+            // Expanded label: full name · registered representation ·
+            // (mode) · active contribution. A Fixed item registered in
+            // stops would print its value twice, so the contribution is
+            // shown once in that case.
+            var segments = [name, registered]
+            if let modeName {
+                segments.append(modeName)
+            }
+            if registered != contribution || modeName != nil {
+                segments.append(contribution)
             }
             return FilterWheelRowDisplay(
                 selection: row.selection,
-                compactValueText: decimalStopsValue(row.contributionStops),
+                compactValueText: registered,
                 modeCaption: modeCaption,
+                registeredText: registered,
                 itemName: name,
-                expandedLabelText: expanded,
+                expandedLabelText: segments.joined(separator: " · "),
                 unavailabilityText: unavailabilityText,
                 isEmpty: false,
                 isMounted: true
             )
+        }
+    }
+
+    /// Registered representation of a mounted row: the Fixed / GND
+    /// value as entered (`ND1000`, `OD 0.9`, `3 stops`) or the CPL's
+    /// selected choice (`CPL 1.5`). `fallbackStops` covers an item that
+    /// could not be resolved (defensive; rows are always resolved).
+    public static func registeredText(for item: FilterItem?, choice: FilterRowChoice, fallbackStops: Double) -> String {
+        switch choice {
+        case .cplLoss(let loss):
+            return String(localized: "CPL \(decimalStopsValue(loss))")
+        case .fixed, .gnd:
+            if let value = item?.behavior.registeredValue {
+                return registeredValueText(value)
+            }
+            return stopsText(fallbackStops)
         }
     }
 

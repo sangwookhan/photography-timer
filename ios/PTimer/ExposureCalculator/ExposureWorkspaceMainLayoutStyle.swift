@@ -412,24 +412,29 @@ enum ExposureWorkspaceMainLayoutStyle {
     /// stay fully legible instead of relying on minimum-scale
     /// squeezing alone.
     func stackedNDValueFont(forWheelCount count: Int) -> Font {
+        // Sized so a six-character registered representation
+        // (`ND1000`, `OD 0.9`, `CPL 1.5`) fits the column at three
+        // wheels plus Plus and at four wheels without ellipsis
+        // (FILTER-STACK-007); the minimum scale factor only absorbs
+        // longer user values.
         switch self {
         case .regular:
             switch count {
-            case ...2: return .system(size: 28, weight: .bold, design: .rounded)
-            case 3: return .system(size: 24, weight: .bold, design: .rounded)
-            default: return .system(size: 20, weight: .semibold, design: .rounded)
+            case ...2: return .system(size: 26, weight: .bold, design: .rounded)
+            case 3: return .system(size: 20, weight: .bold, design: .rounded)
+            default: return .system(size: 16, weight: .semibold, design: .rounded)
             }
         case .compact:
             switch count {
-            case ...2: return .system(size: 23, weight: .bold, design: .rounded)
-            case 3: return .system(size: 20, weight: .semibold, design: .rounded)
-            default: return .system(size: 17, weight: .semibold, design: .rounded)
+            case ...2: return .system(size: 22, weight: .bold, design: .rounded)
+            case 3: return .system(size: 18, weight: .semibold, design: .rounded)
+            default: return .system(size: 14, weight: .semibold, design: .rounded)
             }
         case .dense:
             switch count {
-            case ...2: return .system(size: 18, weight: .semibold, design: .rounded)
-            case 3: return .system(size: 16, weight: .semibold, design: .rounded)
-            default: return .system(size: 14, weight: .semibold, design: .rounded)
+            case ...2: return .system(size: 17, weight: .semibold, design: .rounded)
+            case 3: return .system(size: 14, weight: .semibold, design: .rounded)
+            default: return .system(size: 12, weight: .semibold, design: .rounded)
             }
         }
     }
@@ -438,7 +443,44 @@ enum ExposureWorkspaceMainLayoutStyle {
     /// with the wheel count so narrow columns spend their width on
     /// glyphs.
     func stackedNDValueHorizontalPadding(forWheelCount count: Int) -> CGFloat {
-        count >= 4 ? 2 : 4
+        count >= 3 ? 1 : 3
+    }
+
+    /// Spacing between the filter wheels (and Plus) inside the ND
+    /// group — deliberately narrower than the outer column spacing so
+    /// three or four columns keep their width for complete registered
+    /// representations (FILTER-STACK-007).
+    var filterWheelSpacing: CGFloat {
+        switch self {
+        case .regular:
+            return 4
+        case .compact, .dense:
+            return 3
+        }
+    }
+
+    /// Fixed height reserved for the single transient status region
+    /// under the wheel row (FILTER-STACK-008): two caption lines. The
+    /// region keeps this geometry whether or not it shows content, so
+    /// no picker or touch center moves when it appears or changes.
+    var filterStatusRegionHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 34
+        case .compact:
+            return 32
+        case .dense:
+            return 30
+        }
+    }
+
+    var filterStatusRegionFont: Font {
+        switch self {
+        case .regular, .compact:
+            return .caption
+        case .dense:
+            return .caption2
+        }
     }
 
     /// THE wheel-row value font (user rule, 2026-07-15): every wheel
@@ -461,13 +503,16 @@ enum ExposureWorkspaceMainLayoutStyle {
         guard count >= 3 else {
             return nil
         }
+        // Tightened for the Filter Set contract: the released width
+        // goes to the filter columns so `ND1000` / `OD 0.9` / `CPL 1.5`
+        // stay complete; `1/8000` still fits at the shared value font.
         switch self {
         case .regular:
-            return count == 3 ? 118 : 88
+            return count == 3 ? 96 : 76
         case .compact:
-            return count == 3 ? 108 : 84
+            return count == 3 ? 90 : 72
         case .dense:
-            return count == 3 ? 100 : 80
+            return count == 3 ? 84 : 68
         }
     }
 
@@ -594,11 +639,17 @@ struct VariableSectionView: View {
     let onSelectFilterSource: (FilterSource) -> Void
     let addUnavailabilityText: String?
     let onManageFilterSets: () -> Void
-    /// Expanded label of a Filter Set wheel currently in motion.
-    let movingWheelLabel: String?
+    /// The wheel currently in motion (expanded label + live
+    /// contribution) for the status region.
+    let movingWheelStatus: MovingWheelStatus?
     let filterRejectionNotice: FilterRejectionNotice?
     let ndStackTotalDisplayState: NDStackTotalDisplayState
     let style: ExposureWorkspaceMainLayoutStyle
+
+    /// Candidate source while the Plus wheel is being browsed
+    /// (FILTER-PLUS-002); rendered in the status region below the
+    /// row, never over a picker.
+    @State private var browsingSource: FilterSource?
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
@@ -650,15 +701,71 @@ struct VariableSectionView: View {
                     onSelectFilterSource: onSelectFilterSource,
                     addUnavailabilityText: addUnavailabilityText,
                     onManageFilterSets: onManageFilterSets,
-                    movingWheelLabel: movingWheelLabel,
-                    filterRejectionNotice: filterRejectionNotice,
+                    onBrowsingSourceChanged: { browsingSource = $0 },
                     totalDisplayState: ndStackTotalDisplayState,
                     pickerHeight: style.pickerHeight,
                     style: style
                 )
             }
+
+            // The ONE transient status region (FILTER-STACK-008): below
+            // both columns, outside every picker viewport, with fixed
+            // height so its content never moves a wheel.
+            FilterStatusRegionView(
+                content: FilterStatusRegionPresenter.content(
+                    moving: movingWheelStatus,
+                    browsingSourceName: browsingSource.map(filterSourceName),
+                    rejection: filterRejectionNotice,
+                    total: ndStackTotalDisplayState
+                ),
+                style: style
+            )
         }
         .sectionCardStyle(style: style)
+    }
+}
+
+/// Renders the single transient status region: two caption lines in a
+/// fixed-height slot. Content, priority, and the one-at-a-time rule
+/// come from `FilterStatusRegionPresenter`; fade timing and stale-task
+/// safety come from `TransientStatusRegionController`. The slot keeps
+/// its geometry while empty, so pickers and touch centers never move.
+private struct FilterStatusRegionView: View {
+    let content: FilterStatusRegionContent?
+    let style: ExposureWorkspaceMainLayoutStyle
+
+    @StateObject private var controller = TransientStatusRegionController()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            if let visible = controller.visibleContent {
+                if let primary = visible.primaryText {
+                    Text(primary)
+                        .font(style.filterStatusRegionFont.weight(.semibold))
+                        .foregroundStyle(visible.isWarning ? Color.orange : Color.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .truncationMode(.tail)
+                }
+                if let secondary = visible.secondaryText {
+                    Text(secondary)
+                        .font(style.filterStatusRegionFont)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: style.filterStatusRegionHeight, alignment: .top)
+        .clipped()
+        .animation(.easeInOut(duration: 0.15), value: controller.visibleContent)
+        .onAppear { controller.apply(content) }
+        .onChange(of: content) { _, newValue in
+            controller.apply(newValue)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("filter-status-region")
     }
 }
 
@@ -706,15 +813,12 @@ private struct NDFilterGroupView: View {
     let onSelectFilterSource: (FilterSource) -> Void
     let addUnavailabilityText: String?
     let onManageFilterSets: () -> Void
-    let movingWheelLabel: String?
-    let filterRejectionNotice: FilterRejectionNotice?
+    /// Candidate source while Plus is browsed, reported to the parent
+    /// which renders it in the status region (FILTER-PLUS-002).
+    let onBrowsingSourceChanged: (FilterSource?) -> Void
     let totalDisplayState: NDStackTotalDisplayState
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
-
-    /// Candidate source while the Plus wheel is being browsed; drives
-    /// the expanded source-name label (FILTER-PLUS-002).
-    @State private var browsingSource: FilterSource?
 
     /// ForEach data pairing each wheel's stable id with its current
     /// position. Falls back to positional identity if the two arrays
@@ -732,13 +836,6 @@ private struct NDFilterGroupView: View {
             )
         }
     }
-
-    /// Transient Total-overlay visibility (PTIMER-199 §4.6). Pure
-    /// view-layer timing state: the overlay re-shows on any effective
-    /// change while stacked, then fades after a short idle — slightly
-    /// longer right after a wheel was added.
-    @State private var isTotalOverlayVisible = false
-    @State private var totalOverlayHideTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
@@ -780,7 +877,7 @@ private struct NDFilterGroupView: View {
             }
             .frame(height: pickerHeaderHeight)
 
-            HStack(spacing: style.inputColumnSpacing) {
+            HStack(spacing: style.filterWheelSpacing) {
                 ForEach(wheelSlots) { slot in
                     let index = slot.index
                     NDWheelView(
@@ -826,44 +923,14 @@ private struct NDFilterGroupView: View {
                         onSelectSource: onSelectFilterSource,
                         onAdd: onAddFilterWheel,
                         onManage: onManageFilterSets,
-                        onBrowsingChanged: { browsingSource = $0 }
+                        onBrowsingChanged: onBrowsingSourceChanged
                     )
                 }
             }
-            // Transient overlays: the expanded label of a moving
-            // Filter Set wheel or the browsed Plus source
-            // (FILTER-STACK-007 / FILTER-PLUS-002), a rejection notice
-            // (FILTER-STACK-004), and the Total badge (§4.6). All
-            // non-blocking — touches always pass through to the wheels
-            // beneath; fade timing for the total lives here.
-            .overlay(alignment: .top) {
-                VStack(spacing: 4) {
-                    if let expandedLabel {
-                        NDWheelExpandedLabelBadge(text: expandedLabel, style: style)
-                    }
-                    if let filterRejectionNotice {
-                        NDWheelExpandedLabelBadge(text: filterRejectionNotice.text, style: style, isWarning: true)
-                    }
-                    if isTotalOverlayVisible, totalDisplayState.isVisibleCandidate {
-                        NDStackTotalOverlayBadge(state: totalDisplayState, style: style)
-                            .transition(.opacity)
-                    }
-                }
-                .allowsHitTesting(false)
-                .padding(.top, 2)
-            }
-            .onChange(of: totalDisplayState) { oldValue, newValue in
-                guard newValue.isVisibleCandidate else {
-                    totalOverlayHideTask?.cancel()
-                    isTotalOverlayVisible = false
-                    return
-                }
-                // Any effective change re-shows; a fresh wheel shows
-                // slightly longer so the add is acknowledged.
-                showTotalOverlay(
-                    for: newValue.wheelCount > oldValue.wheelCount ? 2.5 : 1.5
-                )
-            }
+            // No overlay over the pickers: the expanded label, the
+            // browsed source, a rejection reason, and the live total all
+            // render in the single status region below the row
+            // (FILTER-STACK-007/008).
             // Drives the wheel add/remove transitions (incl. the
             // delayed auto-removal fired from the view model, which
             // mutates state outside any withAnimation scope).
@@ -886,16 +953,6 @@ private struct NDFilterGroupView: View {
         }
     }
 
-    /// The browsed Plus source wins over a moving wheel's label: only
-    /// one finger drives the row at a time in practice, and the source
-    /// name is what the photographer is choosing right now.
-    private var expandedLabel: String? {
-        if let browsingSource {
-            return filterSourceName(browsingSource)
-        }
-        return movingWheelLabel
-    }
-
     /// The stack total stays in the accessibility tree regardless of
     /// the overlay's visual state (§4.6), e.g. "4 filters, total 19
     /// stops". Single wheel: no stack, no value.
@@ -906,54 +963,6 @@ private struct NDFilterGroupView: View {
         return Text(
             "\(totalDisplayState.wheelCount) filters, total \(totalDisplayState.totalStopsText) stops"
         )
-    }
-
-    private func showTotalOverlay(for seconds: Double) {
-        totalOverlayHideTask?.cancel()
-        withAnimation(.easeIn(duration: 0.15)) {
-            isTotalOverlayVisible = true
-        }
-        totalOverlayHideTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            guard !Task.isCancelled else {
-                return
-            }
-            withAnimation(.easeOut(duration: 0.4)) {
-                isTotalOverlayVisible = false
-            }
-        }
-    }
-
-}
-
-/// Expanded, non-blocking label shown above the wheel row while a
-/// Filter Set wheel moves or the Plus wheel browses sources: the full
-/// item / source name stays readable without moving the touch center
-/// (FILTER-STACK-007, FILTER-PLUS-002). `isWarning` renders a refused
-/// change's reason (FILTER-STACK-004).
-private struct NDWheelExpandedLabelBadge: View {
-    let text: String
-    let style: ExposureWorkspaceMainLayoutStyle
-    var isWarning = false
-
-    var body: some View {
-        Text(text)
-            .font(.subheadline.weight(.semibold))
-            .lineLimit(2)
-            .multilineTextAlignment(.center)
-            .foregroundStyle(isWarning ? Color.orange : Color.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(.regularMaterial)
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .strokeBorder(isWarning ? Color.orange.opacity(0.6) : Color(.separator), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.3), radius: 5, y: 2)
-            .accessibilityHidden(true)
     }
 }
 
@@ -978,43 +987,6 @@ extension AnyTransition {
             active: NDWheelCollapseModifier(collapsed: true),
             identity: NDWheelCollapseModifier(collapsed: false)
         )
-    }
-}
-
-/// Transient Total badge over the ND wheel row (PTIMER-199 §4.6):
-/// the effective sum, always in stops, plus a Maximum marker at the
-/// 30-stop cap. Rendering only — visibility timing and hit-test
-/// pass-through are owned by `NDFilterGroupView`.
-private struct NDStackTotalOverlayBadge: View {
-    let state: NDStackTotalDisplayState
-    let style: ExposureWorkspaceMainLayoutStyle
-
-    var body: some View {
-        Group {
-            if state.isAtMaximum {
-                Text("Total \(state.totalStopsText) stops · Maximum")
-            } else {
-                Text("Total \(state.totalStopsText) stops")
-            }
-        }
-        .font(.footnote.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(
-            // User field feedback: the ultra-thin capsule blended
-            // into the wheel area. A more opaque material plus a
-            // soft drop shadow lifts the badge off the wheels
-            // without redesigning it.
-            Capsule(style: .continuous)
-                .fill(.regularMaterial)
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .strokeBorder(Color(.separator), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.3), radius: 5, y: 2)
     }
 }
 
@@ -1370,7 +1342,8 @@ private struct NDStopPickerValue: View {
                         .font(style.wheelRowValueFont(forNDWheelCount: stackedWheelCount))
                         .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.5)
+                        .minimumScaleFactor(0.6)
+                        .allowsTightening(true)
                     if let caption {
                         Text(caption)
                             .font(.system(size: 9, weight: .semibold, design: .rounded))

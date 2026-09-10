@@ -1915,11 +1915,19 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// while no Filter Set wheel is moving — Standard wheels have no
     /// item name to expose.
     public var movingWheelExpandedLabel: String? {
+        movingWheelStatus?.expandedLabel
+    }
+
+    /// The wheel currently in motion, for the single transient status
+    /// region (FILTER-STACK-008): its expanded label (full item name,
+    /// registered representation, mode — or the Standard value in the
+    /// active notation) and its live contribution in canonical stops.
+    /// `nil` while no wheel is moving.
+    public var movingWheelStatus: MovingWheelStatus? {
         let wheels = calculatorModel.filterWheels
         for (offset, wheelID) in calculatorModel.ndFilterWheelIDs.enumerated() {
             guard wheels.indices.contains(offset),
-                  unresolvedNDWheelIDs.contains(wheelID),
-                  !wheels[offset].isStandard else {
+                  unresolvedNDWheelIDs.contains(wheelID) else {
                 continue
             }
             let selection = calculatorModel.liveSelections[wheelID] ?? wheels[offset].selection
@@ -1927,7 +1935,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             guard let row = FilterStack.resolvedRow(for: wheel, inventory: calculatorModel.filterInventory) else {
                 continue
             }
-            return FilterWheelPresenter.rowDisplay(for: row, notationMode: ndNotationMode).expandedLabelText
+            let display = FilterWheelPresenter.rowDisplay(for: row, notationMode: ndNotationMode)
+            return MovingWheelStatus(expandedLabel: display.expandedLabelText, contributionStops: row.contributionStops)
         }
         return nil
     }

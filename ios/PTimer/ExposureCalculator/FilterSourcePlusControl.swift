@@ -86,8 +86,8 @@ struct FilterSourcePlusControl: View {
                         .foregroundStyle(tint.opacity(0.7))
                 }
             }
-            .frame(width: 26, height: pickerHeight)
-            .contentShape(Rectangle().inset(by: -9))
+            .frame(width: 20, height: pickerHeight)
+            .contentShape(Rectangle().inset(by: -12))
             // One gesture decides tap / long press / browse from the
             // touch's travel and duration, so the three never compete:
             // a press that stays put is a tap (add) or, held half a

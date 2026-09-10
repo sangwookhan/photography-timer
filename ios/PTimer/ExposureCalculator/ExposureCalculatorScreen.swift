@@ -834,7 +834,7 @@ private struct CameraSlotCalculatorPage: View {
                     guard pageState.isActive else { return }
                     onManageFilterSets()
                 },
-                movingWheelLabel: pageState.isActive ? viewModel.movingWheelExpandedLabel : nil,
+                movingWheelStatus: pageState.isActive ? viewModel.movingWheelStatus : nil,
                 filterRejectionNotice: pageState.isActive ? viewModel.filterRejectionNotice : nil,
 
                 ndStackTotalDisplayState: pageState.isActive

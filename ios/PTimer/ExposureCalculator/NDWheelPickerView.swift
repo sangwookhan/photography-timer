@@ -194,6 +194,16 @@ struct NDWheelPickerView<Row: Hashable, RowContent: View>: UIViewRepresentable {
             view.rowHeight
         }
 
+        /// UIPickerView insets its single component by about 9 pt on
+        /// each side by default, which is width the stacked columns
+        /// cannot spare (FILTER-STACK-007: complete registered
+        /// representations without ellipsis). Row views span the full
+        /// picker width instead; the selection band overlay already
+        /// draws at that width.
+        func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
+            max(pickerView.bounds.width, 1)
+        }
+
         func pickerView(
             _ pickerView: UIPickerView,
             viewForRow row: Int,

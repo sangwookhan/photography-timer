@@ -161,10 +161,25 @@ could be confused.
   color, and calculation mode while idle. A Filter Item's compact value shall
   preserve its registered representation independently of the app-global
   Standard notation: for example `ND1000`, `OD 0.9`, `3 stops`, or
-  `CPL 1.5`. While moving, a larger non-blocking label shall expose the full
-  item name, registered representation, and active contribution in canonical
-  stops without moving the touch center. Long names shall remain readable
-  without being inferred or silently rewritten.
+  `CPL 1.5`. For every allowed composition, including three actual wheels
+  with Plus and four actual wheels, the centered row's complete registered
+  representation shall remain legible without ellipsis at the default and
+  every supported standard text size. While moving, a larger non-blocking
+  presentation shall expose the full item name, registered representation,
+  and active contribution in canonical stops without moving the touch center.
+  Non-blocking means both that hit testing passes through and that no transient
+  surface visually covers any Base Shutter or filter-wheel viewport, including
+  its centered or adjacent rows. Long names shall remain readable without being
+  inferred or silently rewritten.
+- **FILTER-STACK-008** — The mixed-stack interaction shall use at most one
+  transient visual region for the expanded item or source, rejection reason,
+  and live total required by `nd-filters.md` ND-INTERACT-020. These states
+  shall replace or combine their content within that one region rather than
+  stacking separate bubbles. The region shall reserve stable layout geometry
+  so appearing, changing, or disappearing does not move any picker or its
+  touch center. While a wheel or Plus is moving, the region shall keep the
+  active expanded information and current live total available; a rejection
+  shall replace that state with its reason and unchanged total.
 
 ### Plus wheel and per-camera source memory
 
@@ -253,6 +268,12 @@ could be confused.
 8. Start a timer from a mixed stack; verify the Timer list leads with the
    canonical total in stops and preserves its start-time Filter Set reference
    string after the source inventory is renamed, edited, reordered, or deleted.
+9. At default and every supported standard text size, verify `ND1000`,
+   `OD 0.9`, and `CPL 1.5` remain complete in the centered row for one
+   through four wheels and for three wheels plus Plus. Move a Filter Set wheel
+   and Plus, trigger both a valid total update and a rejection, and verify one
+   stable transient region carries the expanded information and total without
+   covering or moving any picker.
 
 ## Non-goals
 

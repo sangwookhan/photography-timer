@@ -56,7 +56,10 @@ public struct TimerStartComposer {
         public let selectedProfileOverride: ReciprocityProfile?
         public let activeCameraSlot: CameraSlotIdentity?
         public let targetShutterSeconds: TimeInterval?
-        public init(targetDuration: TimeInterval, result: ExposureCalculationResult?, filmModeResult: FilmModeExposureResultState?, source: Source, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, activeCameraSlot: CameraSlotIdentity?, targetShutterSeconds: TimeInterval?) {
+        /// The active camera's mixed Filter Stack summary at start time,
+        /// captured only for calculator-bound sources.
+        public let filterSummary: [FilterSummaryEntry]?
+        public init(targetDuration: TimeInterval, result: ExposureCalculationResult?, filmModeResult: FilmModeExposureResultState?, source: Source, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, activeCameraSlot: CameraSlotIdentity?, targetShutterSeconds: TimeInterval?, filterSummary: [FilterSummaryEntry]? = nil) {
             self.targetDuration = targetDuration
             self.result = result
             self.filmModeResult = filmModeResult
@@ -65,6 +68,7 @@ public struct TimerStartComposer {
             self.selectedProfileOverride = selectedProfileOverride
             self.activeCameraSlot = activeCameraSlot
             self.targetShutterSeconds = targetShutterSeconds
+            self.filterSummary = filterSummary
         }
     }
 
@@ -89,7 +93,16 @@ public struct TimerStartComposer {
         public let ndStops: Double?
         public let baseShutterSeconds: TimeInterval?
         public let adjustedShutterSeconds: TimeInterval?
-        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?, ndStops: Double? = nil, baseShutterSeconds: TimeInterval? = nil, adjustedShutterSeconds: TimeInterval? = nil) {
+        /// Immutable per-wheel filter summary captured at start (Filter
+        /// Set contract): source kind, Filter Set and item identity and
+        /// names, original value and unit, canonical stops, calculation
+        /// mode, and contributed stops. `nil` for manual timers.
+        public let filterSummary: [FilterSummaryEntry]?
+        /// Human-readable, start-time reference string built from the
+        /// summary (FILTER-PERSIST-003). Descriptive only; stored so
+        /// later inventory edits never rewrite it.
+        public let filterReferenceText: String?
+        public init(name: String, basisSummary: String, cameraSlot: CameraSlotIdentity?, filmDisplayName: String?, filmProfileQualifier: String?, selectedModelLabel: String?, exposureSource: ExposureTimerSource?, isOutsideManufacturerGuidance: Bool, customProfileSummary: String?, ndStops: Double? = nil, baseShutterSeconds: TimeInterval? = nil, adjustedShutterSeconds: TimeInterval? = nil, filterSummary: [FilterSummaryEntry]? = nil, filterReferenceText: String? = nil) {
             self.name = name
             self.basisSummary = basisSummary
             self.cameraSlot = cameraSlot
@@ -102,6 +115,8 @@ public struct TimerStartComposer {
             self.ndStops = ndStops
             self.baseShutterSeconds = baseShutterSeconds
             self.adjustedShutterSeconds = adjustedShutterSeconds
+            self.filterSummary = filterSummary
+            self.filterReferenceText = filterReferenceText
         }
     }
 
@@ -190,6 +205,9 @@ public struct TimerStartComposer {
         let adjustedShutterSeconds: TimeInterval? = input.filmModeResult != nil
             ? input.result?.resultShutterSeconds
             : nil
+        // The immutable filter record (Filter Set contract): captured
+        // only for calculator-bound sources with a result.
+        let filterSummary = captured && input.result != nil ? input.filterSummary : nil
 
         return Payload(
             name: name,
@@ -203,7 +221,9 @@ public struct TimerStartComposer {
             customProfileSummary: customProfileSummary,
             ndStops: ndStops,
             baseShutterSeconds: baseShutterSeconds,
-            adjustedShutterSeconds: adjustedShutterSeconds
+            adjustedShutterSeconds: adjustedShutterSeconds,
+            filterSummary: filterSummary,
+            filterReferenceText: filterSummary.flatMap(FilterSummaryReferencePresenter.referenceText(for:))
         )
     }
 

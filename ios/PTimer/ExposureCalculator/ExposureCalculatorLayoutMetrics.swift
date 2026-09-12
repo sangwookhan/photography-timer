@@ -84,13 +84,18 @@ struct ExposureWorkspaceLayoutMetrics {
     /// allowed to render the page without overflowing required
     /// visible content.
     static func estimatedMainContentHeight(for density: ExposureWorkspaceLayoutDensity) -> CGFloat {
+        // Includes the fixed-height filter status region under the
+        // wheel row (FILTER-STACK-008), which the ND card now always
+        // reserves.
+        // ... and the persistent type / mode label row above the
+        // wheels (FILTER-STACK-007).
         switch density {
         case .regular:
-            return 700
+            return 750
         case .compact:
-            return 600
+            return 646
         case .dense:
-            return 488
+            return 532
         }
     }
 }

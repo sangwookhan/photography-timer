@@ -17,6 +17,9 @@ public struct ViewModelDependencies {
     public let displaySettingStore: DisplaySettingStoring
     public let lockScreenTargetExposer: any LockScreenTimerTargetExposing
     public let customFilmLibrary: CustomFilmLibrary
+    /// Filter inventory store (Filter Set contract). Defaults to the
+    /// no-op store so existing call sites and tests stay unchanged.
+    public let filterInventoryStore: FilterInventoryStoring
 
     public init(
         calculator: ExposureCalculator,
@@ -27,7 +30,8 @@ public struct ViewModelDependencies {
         metadataPersistenceStore: TimerMetadataPersistenceStoring,
         displaySettingStore: DisplaySettingStoring = NoOpDisplaySettingStore(),
         lockScreenTargetExposer: any LockScreenTimerTargetExposing,
-        customFilmLibrary: CustomFilmLibrary
+        customFilmLibrary: CustomFilmLibrary,
+        filterInventoryStore: FilterInventoryStoring = NoOpFilterInventoryStore()
     ) {
         self.calculator = calculator
         self.timerManager = timerManager
@@ -38,5 +42,6 @@ public struct ViewModelDependencies {
         self.displaySettingStore = displaySettingStore
         self.lockScreenTargetExposer = lockScreenTargetExposer
         self.customFilmLibrary = customFilmLibrary
+        self.filterInventoryStore = filterInventoryStore
     }
 }

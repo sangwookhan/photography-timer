@@ -94,6 +94,19 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     /// app build downgrades to a valid single filter instead of
     /// falling back to defaults.
     public let ndStack: [PersistentNDFilterWheelSnapshot]?
+    /// The mixed Filter Stack (Filter Set contract), one entry per
+    /// wheel in display order — Standard wheels AND Filter Set wheels.
+    /// Additive Optional: pre-Filter-Set snapshots omit the key and
+    /// restore through `ndStack`, then the legacy scalar. When
+    /// present and valid it is the source of truth; `ndStack` keeps
+    /// being written with the Standard wheels only so an older build
+    /// still degrades to a valid Standard stack.
+    public let filterStack: [PersistentFilterWheelSnapshot]?
+    /// The slot's last settled Filter Source: `"standard"` or
+    /// `"filterSet"` (with `lastFilterSetID`). Additive Optional;
+    /// absent or unresolvable restores as Standard.
+    public let lastFilterSourceKind: String?
+    public let lastFilterSetID: String?
 
     public init(
         slotIDRaw: String,
@@ -106,7 +119,10 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         exposureScaleMode: String? = nil,
         customDisplayName: String? = nil,
         targetShutterSeconds: TimeInterval? = nil,
-        ndStack: [PersistentNDFilterWheelSnapshot]? = nil
+        ndStack: [PersistentNDFilterWheelSnapshot]? = nil,
+        filterStack: [PersistentFilterWheelSnapshot]? = nil,
+        lastFilterSourceKind: String? = nil,
+        lastFilterSetID: String? = nil
     ) {
         self.slotIDRaw = slotIDRaw
         self.selectedPresetFilmID = selectedPresetFilmID
@@ -119,6 +135,9 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         self.customDisplayName = customDisplayName
         self.targetShutterSeconds = targetShutterSeconds
         self.ndStack = ndStack
+        self.filterStack = filterStack
+        self.lastFilterSourceKind = lastFilterSourceKind
+        self.lastFilterSetID = lastFilterSetID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -133,6 +152,9 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         case customDisplayName
         case targetShutterSeconds
         case ndStack
+        case filterStack
+        case lastFilterSourceKind
+        case lastFilterSetID
     }
 
     /// Custom decode ONLY for `ndStack` isolation (PTIMER-199 §7): a
@@ -158,6 +180,136 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
             [PersistentNDFilterWheelSnapshot].self,
             forKey: .ndStack
         )) ?? nil
+        // Same isolation for the Filter Set fields: a malformed mixed
+        // stack or source decodes as absent and the slot falls back
+        // through `ndStack` / the legacy scalar / Standard.
+        filterStack = try? container.decodeIfPresent(
+            [PersistentFilterWheelSnapshot].self,
+            forKey: .filterStack
+        )
+        lastFilterSourceKind = try? container.decodeIfPresent(String.self, forKey: .lastFilterSourceKind)
+        lastFilterSetID = try? container.decodeIfPresent(String.self, forKey: .lastFilterSetID)
+    }
+}
+
+/// One wheel of the mixed Filter Stack in its on-disk shape (Filter
+/// Set contract). A Standard wheel reuses the lossless
+/// `ndStop` / `ndStopThirds` / `ndStopsExact` triple; a Filter Set
+/// wheel names its set and — when an item is mounted — the item id,
+/// the row kind, and the row's parameter (CPL loss in stops or the
+/// GND mode). Every field beyond `sourceKind` is Optional so the
+/// shape stays additive.
+public struct PersistentFilterWheelSnapshot: Codable, Equatable {
+    public static let standardSourceKind = "standard"
+    public static let filterSetSourceKind = "filterSet"
+
+    public let sourceKind: String
+    public let filterSetID: String?
+    public let ndStop: Int?
+    public let ndStopThirds: Int?
+    public let ndStopsExact: Double?
+    public let itemID: String?
+    /// `FilterItemKind.rawValue` of the mounted row's item.
+    public let rowKind: String?
+    public let cplLossStops: Double?
+    /// `GNDCalculationMode.rawValue`.
+    public let gndMode: String?
+
+    public init(
+        sourceKind: String,
+        filterSetID: String? = nil,
+        ndStop: Int? = nil,
+        ndStopThirds: Int? = nil,
+        ndStopsExact: Double? = nil,
+        itemID: String? = nil,
+        rowKind: String? = nil,
+        cplLossStops: Double? = nil,
+        gndMode: String? = nil
+    ) {
+        self.sourceKind = sourceKind
+        self.filterSetID = filterSetID
+        self.ndStop = ndStop
+        self.ndStopThirds = ndStopThirds
+        self.ndStopsExact = ndStopsExact
+        self.itemID = itemID
+        self.rowKind = rowKind
+        self.cplLossStops = cplLossStops
+        self.gndMode = gndMode
+    }
+
+    public init(wheel: FilterWheel) {
+        switch (wheel.source, wheel.selection) {
+        case (.standard, .standard(let step)):
+            let triple = PersistentNDFilterWheelSnapshot(step: step)
+            self.init(
+                sourceKind: Self.standardSourceKind,
+                ndStop: triple.ndStop,
+                ndStopThirds: triple.ndStopThirds,
+                ndStopsExact: triple.ndStopsExact
+            )
+        case (.filterSet(let id), .empty):
+            self.init(sourceKind: Self.filterSetSourceKind, filterSetID: id.rawValue)
+        case (.filterSet(let id), .item(let selection)):
+            switch selection.choice {
+            case .fixed:
+                self.init(sourceKind: Self.filterSetSourceKind, filterSetID: id.rawValue, itemID: selection.itemID.rawValue, rowKind: FilterItemKind.fixed.rawValue)
+            case .cplLoss(let loss):
+                self.init(sourceKind: Self.filterSetSourceKind, filterSetID: id.rawValue, itemID: selection.itemID.rawValue, rowKind: FilterItemKind.cpl.rawValue, cplLossStops: loss)
+            case .gnd(let mode):
+                self.init(sourceKind: Self.filterSetSourceKind, filterSetID: id.rawValue, itemID: selection.itemID.rawValue, rowKind: FilterItemKind.gnd.rawValue, gndMode: mode.rawValue)
+            }
+        default:
+            // Inconsistent runtime wheels never exist; persist the
+            // safest equivalent so decode still resolves.
+            self.init(sourceKind: Self.standardSourceKind, ndStop: 0)
+        }
+    }
+
+    /// Restores the wheel reference. Standard wheels follow the triple
+    /// rule of `PersistentNDFilterWheelSnapshot.restoredNDStep` (one
+    /// populated field, ladder-envelope values only). Filter Set
+    /// wheels restore as references; whether the set / item still
+    /// exist is decided against the live inventory by the caller.
+    /// `nil` marks a structurally corrupted wheel.
+    public var restoredWheel: FilterWheel? {
+        switch sourceKind {
+        case Self.standardSourceKind:
+            guard let step = PersistentNDFilterWheelSnapshot(
+                ndStop: ndStop,
+                ndStopThirds: ndStopThirds,
+                ndStopsExact: ndStopsExact
+            ).restoredNDStep else {
+                return nil
+            }
+            return .standard(step)
+        case Self.filterSetSourceKind:
+            guard let filterSetID, !filterSetID.isEmpty else {
+                return nil
+            }
+            let source = FilterSource.filterSet(FilterSetID(rawValue: filterSetID))
+            guard let itemID, !itemID.isEmpty else {
+                return FilterWheel(source: source, selection: .empty)
+            }
+            let choice: FilterRowChoice
+            switch rowKind.flatMap(FilterItemKind.init(rawValue:)) {
+            case .fixed:
+                choice = .fixed
+            case .cpl:
+                guard let cplLossStops, cplLossStops.isFinite else { return nil }
+                choice = .cplLoss(cplLossStops)
+            case .gnd:
+                guard let mode = gndMode.flatMap(GNDCalculationMode.init(rawValue:)) else { return nil }
+                choice = .gnd(mode)
+            case nil:
+                return nil
+            }
+            return FilterWheel(
+                source: source,
+                selection: .item(FilterRowSelection(itemID: FilterItemID(rawValue: itemID), choice: choice))
+            )
+        default:
+            return nil
+        }
     }
 }
 

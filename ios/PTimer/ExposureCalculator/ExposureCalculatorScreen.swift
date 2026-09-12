@@ -52,6 +52,10 @@ struct ExposureCalculatorScreen: View {
     /// sheet's `onDismiss`.
     @State private var pendingFormulaSeedFilmID: String?
     @State private var isAboutPresented = false
+    /// Visibility of the Filter Set management sheet (Filter Set
+    /// contract): reached from the ND header entry and by
+    /// long-pressing the Plus wheel.
+    @State private var isFilterSetManagementPresented = false
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
@@ -195,6 +199,9 @@ struct ExposureCalculatorScreen: View {
                     },
                     onRequestRename: { slotID in
                         slotIDPendingRename = slotID
+                    },
+                    onManageFilterSets: {
+                        isFilterSetManagementPresented = true
                     },
                     onShowAbout: {
                         isAboutPresented = true
@@ -374,6 +381,11 @@ struct ExposureCalculatorScreen: View {
                             presentedFilmDetails = viewModel.filmModeDetailsDisplayState
                         }
                     )
+                }
+            }
+            .sheet(isPresented: $isFilterSetManagementPresented) {
+                FilterSetManagementView(viewModel: viewModel) {
+                    isFilterSetManagementPresented = false
                 }
             }
             .sheet(item: $slotIDPendingRename) { slotID in
@@ -589,6 +601,7 @@ private struct ExposureWorkspaceMainContent: View {
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
+    let onManageFilterSets: () -> Void
     let onShowAbout: () -> Void
 
     var body: some View {
@@ -604,6 +617,7 @@ private struct ExposureWorkspaceMainContent: View {
                         onRequestRename: {
                             onRequestRename(slotID)
                         },
+                        onManageFilterSets: onManageFilterSets,
                         onShowAbout: onShowAbout
                     )
                     .tag(slotID)
@@ -673,6 +687,7 @@ private struct CameraSlotCalculatorPage: View {
     /// through only on the active page; inactive pages pass `nil`
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
+    let onManageFilterSets: () -> Void
     let onShowAbout: () -> Void
 
     var body: some View {
@@ -728,17 +743,30 @@ private struct CameraSlotCalculatorPage: View {
             VariableSectionView(
                 baseShutter: baseShutterBinding,
                 ndFilterSteps: viewModel.ndFilterSteps(forPage: pageState),
-                ndDisplaySteps: viewModel.ndDisplayFilterSteps(forPage: pageState),
+                filterWheels: viewModel.filterWheels(forPage: pageState),
+                filterRows: viewModel.filterRows(forPage: pageState),
+                displaySelections: pageState.isActive
+                    ? viewModel.displayWheelSelections
+                    : viewModel.filterWheels(forPage: pageState).map(\.selection),
+                trackedSelections: pageState.isActive
+                    ? viewModel.trackedWheelSelections
+                    : viewModel.filterWheels(forPage: pageState).map(\.selection),
                 ndFilterWheelIDs: viewModel.ndFilterWheelIDs(forPage: pageState),
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
-                ndStepValuesForWheel: { index in
-                    // Active page: budget-truncated per-wheel ladder
-                    // (30-stop structural limit). Inactive pages show
-                    // a single snapshot wheel on the full ladder.
-                    pageState.isActive
-                        ? viewModel.pickerNDSteps(forWheel: index)
-                        : viewModel.pickerNDSteps(forPage: pageState)
+                rowOptionsForWheel: { index in
+                    // Active page: budget-truncated per-wheel rows
+                    // (30-stop structural limit, item exclusivity).
+                    // Inactive pages render static snapshot wheels:
+                    // each shows just its own committed row.
+                    if pageState.isActive {
+                        return viewModel.filterWheelRowOptions(forWheel: index)
+                    }
+                    let rows = viewModel.filterRows(forPage: pageState)
+                    guard rows.indices.contains(index) else { return [] }
+                    return [FilterWheelRowOption(row: rows[index], unavailability: nil)]
                 },
+                filterSetColor: { viewModel.filterSetColor(for: $0) },
+                filterSourceName: { viewModel.filterSourceName($0) },
                 formatShutter: viewModel.formatShutterStepLabel,
                 ndNotationMode: viewModel.ndNotationMode,
                 onSelectNotationMode: { viewModel.ndNotationMode = $0 },
@@ -758,13 +786,13 @@ private struct CameraSlotCalculatorPage: View {
                 // no animation scope here — the ViewModel's state
                 // machine judges every event (identity + generation)
                 // and owns the barrier's withAnimation.
-                onNDWheelRowObserved: { wheelID, value, generation in
+                onNDWheelRowObserved: { wheelID, selection, generation in
                     guard pageState.isActive else { return }
-                    viewModel.ndWheelDidObserveRow(value, wheelID: wheelID, generation: generation)
+                    viewModel.filterWheelDidObserveRow(selection, wheelID: wheelID, generation: generation)
                 },
-                onNDWheelSelected: { wheelID, value, generation in
+                onNDWheelSelected: { wheelID, selection, generation in
                     guard pageState.isActive else { return }
-                    viewModel.ndWheelDidSelect(value, wheelID: wheelID, generation: generation)
+                    viewModel.filterWheelDidSelect(selection, wheelID: wheelID, generation: generation)
                 },
                 onNDWheelTouchBegan: { wheelID, generation in
                     guard pageState.isActive else { return }
@@ -796,6 +824,21 @@ private struct CameraSlotCalculatorPage: View {
                     guard pageState.isActive else { return }
                     viewModel.cleanupEmptyFilterWheels()
                 },
+                filterSources: viewModel.filterSources,
+                selectedFilterSource: pageState.isActive
+                    ? viewModel.selectedFilterSource
+                    : .standard,
+                onSelectFilterSource: { source in
+                    guard pageState.isActive else { return }
+                    viewModel.selectFilterSource(source)
+                },
+                addUnavailabilityText: pageState.isActive ? viewModel.filterAddUnavailabilityText : nil,
+                onManageFilterSets: {
+                    guard pageState.isActive else { return }
+                    onManageFilterSets()
+                },
+                movingWheelStatus: pageState.isActive ? viewModel.movingWheelStatus : nil,
+                filterRejectionNotice: pageState.isActive ? viewModel.filterRejectionNotice : nil,
 
                 ndStackTotalDisplayState: pageState.isActive
                     ? viewModel.ndStackTotalDisplayState

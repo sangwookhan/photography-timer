@@ -71,10 +71,14 @@ could be confused.
 - **FILTER-ITEM-003** — The user shall explicitly choose an item's behavior
   kind: Fixed, CPL, or GND. The app shall not infer a kind from the name.
 - **FILTER-ITEM-004** — Fixed and GND items shall accept a decimal value in
-  Stops, OD, or ND factor and preserve the original value and unit for display.
-  Conversion to canonical stops shall use: Stops unchanged, `OD / 0.3`, and
-  `log2(ND factor)`. The result shall be finite, greater than 0, and no greater
-  than 30 stops; the calculator shall not snap it to the Standard ladder.
+  Stops, OD, or ND factor and preserve the original value and unit as equipment
+  reference metadata. Conversion to canonical stops shall use Stops unchanged
+  and `OD / 0.3`. An ND factor that exactly matches a commercial label emitted
+  by the shared Standard formatter in `nd-filters.md` shall use that label's
+  canonical ladder value; therefore ND1000 is exactly 10 stops, not
+  `log2(1000)`. Other positive ND factors shall use `log2(ND factor)` without
+  snapping. The result shall be finite, greater than 0, and no greater than
+  30 stops.
 - **FILTER-ITEM-005** — Editing an item shall update every active camera stack
   that references that stable item id. A save that would make any affected
   stack invalid, exceed 30 stops, or remove a CPL exposure-loss choice currently
@@ -157,20 +161,34 @@ could be confused.
   no usable row. A Filter Set Empty wheel with an unmounted, selectable
   Record-only item shall remain available for the normal idle interval. A
   mounted Record-only item shall not be cleaned up.
-- **FILTER-STACK-007** — A filter wheel shall show compact value, Filter Set
-  color, and calculation mode while idle. A Filter Item's compact value shall
-  preserve its registered representation independently of the app-global
-  Standard notation: for example `ND1000`, `OD 0.9`, `3 stops`, or
-  `CPL 1.5`. For every allowed composition, including three actual wheels
-  with Plus and four actual wheels, the centered row's complete registered
-  representation shall remain legible without ellipsis at the default and
-  every supported standard text size. While moving, a larger non-blocking
-  presentation shall expose the full item name, registered representation,
-  and active contribution in canonical stops without moving the touch center.
-  Non-blocking means both that hit testing passes through and that no transient
-  surface visually covers any Base Shutter or filter-wheel viewport, including
-  its centered or adjacent rows. Long names shall remain readable without being
-  inferred or silently rewritten.
+- **FILTER-STACK-007** — Every filter wheel shall keep its scrolling value
+  viewport numeric-only and shall place a persistent type and mode label
+  immediately above that viewport. Fixed and Standard wheels use `ND`; CPL
+  uses `CPL`; GND uses `GND` with `REC` or `FULL`; Empty uses `EMPTY`
+  with a blank centered value. A Filter Set color shall remain adjacent as a
+  redundant cue and shall never replace the text label. While a Filter Set
+  wheel moves, the label shall follow the candidate at the touch center; at
+  rest, it shall describe the settled row.
+  
+  Fixed and GND numeric values shall follow the app-global Stops / OD / ND
+  notation through the same formatter and rounding policy as Standard, showing
+  only its numeric value component: for example, canonical 10 stops renders
+  `10`, `3.0`, or `1000`; canonical 3 stops renders `3`, `0.9`, or
+  `8`. A Record-only GND shall display its registered full-density value while
+  `REC` communicates that its active contribution is zero. CPL choices are
+  exposure loss in stops and shall remain `1`, `1.5`, or `2` independently
+  of the global notation.
+  
+  For every allowed composition, including three actual wheels with Plus and
+  four actual wheels, the type/mode label and centered numeric value shall
+  remain legible without ellipsis at the default and every supported standard
+  text size. While moving, the stable non-blocking region from
+  FILTER-STACK-008 shall expose the full item name, original registered
+  representation, and active contribution in canonical stops without moving
+  the touch center. Non-blocking means both that hit testing passes through and
+  that no transient surface visually covers any Base Shutter or filter-wheel
+  viewport, including its centered or adjacent rows. Long names shall remain
+  readable without being inferred or silently rewritten.
 - **FILTER-STACK-008** — The mixed-stack interaction shall use at most one
   transient visual region for the expanded item or source, rejection reason,
   and live total required by `nd-filters.md` ND-INTERACT-020. These states
@@ -268,12 +286,18 @@ could be confused.
 8. Start a timer from a mixed stack; verify the Timer list leads with the
    canonical total in stops and preserves its start-time Filter Set reference
    string after the source inventory is renamed, edited, reordered, or deleted.
-9. At default and every supported standard text size, verify `ND1000`,
-   `OD 0.9`, and `CPL 1.5` remain complete in the centered row for one
-   through four wheels and for three wheels plus Plus. Move a Filter Set wheel
-   and Plus, trigger both a valid total update and a rejection, and verify one
-   stable transient region carries the expanded information and total without
-   covering or moving any picker.
+9. Register ND1000 and verify its canonical value, contribution, 30-stop
+   cap behavior, persisted state, and Timer record all use exactly 10 stops.
+   Switch the app-global notation and verify its numeric wheel value becomes
+   `10`, `3.0`, and `1000`; verify a 3-stop Fixed or GND value becomes
+   `3`, `0.9`, and `8`, while CPL 1.5 remains `1.5`.
+10. At default and every supported standard text size, verify the persistent
+   `ND`, `CPL`, `GND` plus `REC`/`FULL`, and `EMPTY` labels and their
+   centered numeric values remain complete for one through four wheels and for
+   three wheels plus Plus. Move a Filter Set wheel and Plus, trigger both a
+   valid total update and a rejection, and verify one stable transient region
+   carries the expanded information and total without covering or moving any
+   picker.
 
 ## Non-goals
 

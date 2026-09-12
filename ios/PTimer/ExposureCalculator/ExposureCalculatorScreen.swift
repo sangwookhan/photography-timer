@@ -748,6 +748,9 @@ private struct CameraSlotCalculatorPage: View {
                 displaySelections: pageState.isActive
                     ? viewModel.displayWheelSelections
                     : viewModel.filterWheels(forPage: pageState).map(\.selection),
+                trackedSelections: pageState.isActive
+                    ? viewModel.trackedWheelSelections
+                    : viewModel.filterWheels(forPage: pageState).map(\.selection),
                 ndFilterWheelIDs: viewModel.ndFilterWheelIDs(forPage: pageState),
                 shutterSpeeds: viewModel.pickerShutterStepSeconds(forPage: pageState),
                 rowOptionsForWheel: { index in

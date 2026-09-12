@@ -1734,6 +1734,21 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         }
     }
 
+    /// Per-wheel selection the persistent type / mode label follows
+    /// (FILTER-STACK-007): the live row at the touch center while the
+    /// wheel moves, else the pending selection during an open set
+    /// commit, else the committed row.
+    public var trackedWheelSelections: [FilterWheelSelection] {
+        let ids = calculatorModel.ndFilterWheelIDs
+        return displayWheelSelections.enumerated().map { entry in
+            guard ids.indices.contains(entry.offset),
+                  let live = calculatorModel.liveSelections[ids[entry.offset]] else {
+                return entry.element
+            }
+            return live
+        }
+    }
+
     /// The active stack's wheels (source + committed selection).
     public var filterWheels: [FilterWheel] {
         calculatorModel.filterWheels

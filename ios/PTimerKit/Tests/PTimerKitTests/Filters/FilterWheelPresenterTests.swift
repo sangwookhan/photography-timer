@@ -5,10 +5,12 @@ import XCTest
 import PTimerCore
 @testable import PTimerKit
 
-/// FILTER-STACK-007: Filter Item rows keep their registered
-/// representation independently of the Standard notation, and the
-/// expanded label carries name, representation, mode, and canonical
-/// contribution. FILTER-PERSIST-003: the start-time reference string.
+/// FILTER-STACK-007 (spec revision `b46c9102`): every wheel viewport
+/// is numeric-only with a persistent type / mode label above it; Fixed
+/// and GND values follow the app-global notation through the shared
+/// Standard formatter, CPL values stay exposure loss in stops, Empty is
+/// blank, and the original registered representation survives for the
+/// status region. FILTER-PERSIST-003: the start-time reference string.
 final class FilterWheelPresenterTests: XCTestCase {
     private func row(_ item: FilterItem, _ choice: FilterRowChoice) throws -> ResolvedFilterRow {
         try XCTUnwrap(FilterStack.resolvedRow(
@@ -17,51 +19,72 @@ final class FilterWheelPresenterTests: XCTestCase {
         ))
     }
 
-    func testFixedAndGNDCompactValuesPreserveTheRegisteredRepresentation() throws {
-        let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
-        let od = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        let stops = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
-
-        let big = FilterWheelPresenter.rowDisplay(for: try row(nd1000, .fixed), notationMode: .stops)
-        XCTAssertEqual(big.compactValueText, "ND1000")
-        XCTAssertEqual(big.registeredText, "ND1000")
-        XCTAssertNil(big.modeCaption)
-        XCTAssertEqual(big.expandedLabelText, "Big Stopper · ND1000 · 9.97 stops")
-
-        let rec = FilterWheelPresenter.rowDisplay(for: try row(od, .gnd(.recordOnly)), notationMode: .stops)
-        XCTAssertEqual(rec.compactValueText, "OD 0.9")
-        XCTAssertEqual(rec.modeCaption, "Rec")
-        XCTAssertEqual(rec.expandedLabelText, "Lee GND 0.9 · OD 0.9 · Record only · 0 stops")
-
-        let full = FilterWheelPresenter.rowDisplay(for: try row(od, .gnd(.applyFullValue)), notationMode: .stops)
-        XCTAssertEqual(full.compactValueText, "OD 0.9")
-        XCTAssertEqual(full.modeCaption, "Full")
-        XCTAssertEqual(full.expandedLabelText, "Lee GND 0.9 · OD 0.9 · Apply full value · 3 stops")
-
-        let eight = FilterWheelPresenter.rowDisplay(for: try row(stops, .fixed), notationMode: .stops)
-        XCTAssertEqual(eight.compactValueText, "3 stops")
-        XCTAssertEqual(eight.expandedLabelText, "ND8 · 3 stops", "A stops-registered item shows its value once.")
+    private func display(_ item: FilterItem, _ choice: FilterRowChoice, _ mode: NDNotationMode) throws -> FilterWheelRowDisplay {
+        FilterWheelPresenter.rowDisplay(for: try row(item, choice), notationMode: mode)
     }
 
-    func testCPLCompactValueIsTheSelectedChoice() throws {
+    // MARK: Numeric viewport in every notation (ND1000 = exactly 10 stops)
+
+    func testFixedValuesFollowTheGlobalNotationNumericOnly() throws {
+        let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
+        XCTAssertEqual(try display(nd1000, .fixed, .stops).compactValueText, "10")
+        XCTAssertEqual(try display(nd1000, .fixed, .opticalDensity).compactValueText, "3.0")
+        XCTAssertEqual(try display(nd1000, .fixed, .filterFactor).compactValueText, "1000")
+
+        let three = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        XCTAssertEqual(try display(three, .fixed, .stops).compactValueText, "3")
+        XCTAssertEqual(try display(three, .fixed, .opticalDensity).compactValueText, "0.9")
+        XCTAssertEqual(try display(three, .fixed, .filterFactor).compactValueText, "8")
+
+        let big = try display(nd1000, .fixed, .stops)
+        XCTAssertEqual(big.typeLabel, "ND")
+        XCTAssertNil(big.modeLabel)
+        XCTAssertEqual(big.registeredText, "ND1000", "The original representation survives as reference text.")
+        XCTAssertEqual(big.expandedLabelText, "Big Stopper · ND1000 · 10 stops")
+    }
+
+    func testGNDShowsRegisteredDensityInBothModesWithRecOrFullLabels() throws {
+        let od = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
+        let rec = try display(od, .gnd(.recordOnly), .stops)
+        XCTAssertEqual(rec.compactValueText, "3", "Record only still shows the registered full density.")
+        XCTAssertEqual(rec.typeLabel, "GND")
+        XCTAssertEqual(rec.modeLabel, "REC")
+        XCTAssertEqual(rec.expandedLabelText, "Lee GND 0.9 · OD 0.9 · Record only · 0 stops")
+
+        let full = try display(od, .gnd(.applyFullValue), .opticalDensity)
+        XCTAssertEqual(full.compactValueText, "0.9")
+        XCTAssertEqual(full.modeLabel, "FULL")
+        XCTAssertEqual(full.expandedLabelText, "Lee GND 0.9 · OD 0.9 · Apply full value · 3 stops")
+        XCTAssertEqual(try display(od, .gnd(.applyFullValue), .filterFactor).compactValueText, "8")
+    }
+
+    func testCPLValuesStayInStopsInEveryNotation() throws {
         let cpl = FilterItem(name: "Lee CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        let display = FilterWheelPresenter.rowDisplay(for: try row(cpl, .cplLoss(1.5)), notationMode: .stops)
-        XCTAssertEqual(display.compactValueText, "CPL 1.5")
-        XCTAssertNil(display.modeCaption)
+        for mode in NDNotationMode.allCases {
+            let display = try display(cpl, .cplLoss(1.5), mode)
+            XCTAssertEqual(display.compactValueText, "1.5", "\(mode)")
+            XCTAssertEqual(display.typeLabel, "CPL")
+            XCTAssertNil(display.modeLabel)
+        }
+        let display = try display(cpl, .cplLoss(1.5), .stops)
+        XCTAssertEqual(display.registeredText, "CPL 1.5")
         XCTAssertEqual(display.expandedLabelText, "Lee CPL · CPL 1.5 · 1.5 stops")
     }
 
-    func testStandardNotationDoesNotChangeFilterItemValuesButChangesStandardRows() throws {
-        let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
-        let item = try row(nd1000, .fixed)
-        for mode in NDNotationMode.allCases {
-            XCTAssertEqual(FilterWheelPresenter.rowDisplay(for: item, notationMode: mode).compactValueText, "ND1000")
-        }
+    func testEmptyAndStandardRows() {
+        let empty = FilterWheelPresenter.rowDisplay(
+            for: ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil),
+            notationMode: .filterFactor
+        )
+        XCTAssertEqual(empty.compactValueText, "", "Empty keeps a blank centered value.")
+        XCTAssertEqual(empty.typeLabel, "EMPTY")
+        XCTAssertTrue(empty.isEmpty)
+
         let standard = ResolvedFilterRow(selection: .standard(NDStep(stops: 9)), contributionStops: 9, registeredStops: 9, item: nil)
         XCTAssertEqual(FilterWheelPresenter.rowDisplay(for: standard, notationMode: .stops).compactValueText, "9")
         XCTAssertEqual(FilterWheelPresenter.rowDisplay(for: standard, notationMode: .opticalDensity).compactValueText, "2.7")
-        // The Standard wheel's band carries the `ND` unit; the row shows the factor.
         XCTAssertEqual(FilterWheelPresenter.rowDisplay(for: standard, notationMode: .filterFactor).compactValueText, "512")
+        XCTAssertEqual(FilterWheelPresenter.rowDisplay(for: standard, notationMode: .stops).typeLabel, "ND")
     }
 
     func testUnavailableRowsCarryTheirReason() throws {

@@ -5,21 +5,28 @@ import Foundation
 import PTimerCore
 
 /// How one picker row of a filter wheel reads (Filter Set contract,
-/// FILTER-STACK-003/007): the compact value the wheel shows at rest,
-/// a short calculation-mode caption, the item name for the expanded
-/// label, and the accessibility text. Pure value; the view owns
+/// FILTER-STACK-003/007): the numeric value the scrolling viewport
+/// shows, the persistent type / mode label above the viewport, the
+/// item name and original registered representation for the status
+/// region, and the accessibility text. Pure value; the view owns
 /// fonts and colors.
 public struct FilterWheelRowDisplay: Hashable, Sendable {
     public let selection: FilterWheelSelection
-    /// Compact value shown in the wheel column: the Standard value in
-    /// the active notation, an item's registered representation
-    /// (`ND1000`, `OD 0.9`, `3 stops`, `CPL 1.5`) independent of that
-    /// notation, or the Empty marker (FILTER-STACK-007).
+    /// Numeric-only value for the scrolling viewport: Standard, Fixed,
+    /// and GND values in the app-global notation through the shared
+    /// Standard formatter (10 stops → `10` / `3.0` / `1000`), CPL
+    /// exposure loss in stops regardless of notation (`1.5`), and a
+    /// blank value for Empty (FILTER-STACK-007).
     public let compactValueText: String
-    /// Short mode caption under the value (`Rec` / `Full` for GND);
-    /// `nil` for Standard, Fixed, CPL, and Empty.
-    public let modeCaption: String?
-    /// The item's registered representation as the user entered it;
+    /// Persistent type label above the viewport: `ND` (Standard and
+    /// Fixed), `CPL`, `GND`, or `EMPTY`.
+    public let typeLabel: String
+    /// Persistent mode label beside the type: `REC` / `FULL` for GND;
+    /// `nil` otherwise.
+    public let modeLabel: String?
+    /// The item's registered representation as the user entered it
+    /// (`ND1000`, `OD 0.9`, `3 stops`, `CPL 1.5`) — equipment reference
+    /// text for the status region, management UI, and accessibility;
     /// `nil` for Standard and Empty rows.
     public let registeredText: String?
     /// Full item name for the expanded moving label; `nil` for Standard
@@ -35,10 +42,11 @@ public struct FilterWheelRowDisplay: Hashable, Sendable {
     public let isEmpty: Bool
     public let isMounted: Bool
 
-    public init(selection: FilterWheelSelection, compactValueText: String, modeCaption: String?, registeredText: String? = nil, itemName: String?, expandedLabelText: String, unavailabilityText: String?, isEmpty: Bool, isMounted: Bool) {
+    public init(selection: FilterWheelSelection, compactValueText: String, typeLabel: String, modeLabel: String? = nil, registeredText: String? = nil, itemName: String?, expandedLabelText: String, unavailabilityText: String?, isEmpty: Bool, isMounted: Bool) {
         self.selection = selection
         self.compactValueText = compactValueText
-        self.modeCaption = modeCaption
+        self.typeLabel = typeLabel
+        self.modeLabel = modeLabel
         self.registeredText = registeredText
         self.itemName = itemName
         self.expandedLabelText = expandedLabelText
@@ -75,7 +83,7 @@ public enum FilterWheelPresenter {
             return FilterWheelRowDisplay(
                 selection: row.selection,
                 compactValueText: display.value,
-                modeCaption: nil,
+                typeLabel: TypeLabel.nd,
                 itemName: nil,
                 expandedLabelText: String(localized: "Standard · \(display.inline)"),
                 unavailabilityText: unavailabilityText,
@@ -85,8 +93,8 @@ public enum FilterWheelPresenter {
         case .empty:
             return FilterWheelRowDisplay(
                 selection: .empty,
-                compactValueText: "—",
-                modeCaption: nil,
+                compactValueText: "",
+                typeLabel: TypeLabel.empty,
                 itemName: nil,
                 expandedLabelText: String(localized: "Empty · no filter mounted"),
                 unavailabilityText: unavailabilityText,
@@ -100,17 +108,34 @@ public enum FilterWheelPresenter {
             // the Standard notation (FILTER-STACK-007). A CPL's
             // representation is its selected exposure-loss choice.
             let registered = registeredText(for: row.item, choice: selection.choice, fallbackStops: row.registeredStops)
-            let modeCaption: String?
+            // Viewport value: Fixed and GND follow the global notation
+            // through the shared Standard formatter (numeric component
+            // only, GND showing its registered full density in both
+            // modes); CPL stays exposure loss in stops.
+            let compactValue: String
+            let typeLabel: String
+            let modeLabel: String?
             let modeName: String?
             switch selection.choice {
-            case .fixed, .cplLoss:
-                modeCaption = nil
+            case .fixed:
+                compactValue = NDNotationFormatter.display(forStops: row.registeredStops, mode: notationMode).value
+                typeLabel = TypeLabel.nd
+                modeLabel = nil
+                modeName = nil
+            case .cplLoss(let loss):
+                compactValue = decimalStopsValue(loss)
+                typeLabel = TypeLabel.cpl
+                modeLabel = nil
                 modeName = nil
             case .gnd(.recordOnly):
-                modeCaption = String(localized: "Rec")
+                compactValue = NDNotationFormatter.display(forStops: row.registeredStops, mode: notationMode).value
+                typeLabel = TypeLabel.gnd
+                modeLabel = TypeLabel.rec
                 modeName = gndModeName(.recordOnly)
             case .gnd(.applyFullValue):
-                modeCaption = String(localized: "Full")
+                compactValue = NDNotationFormatter.display(forStops: row.registeredStops, mode: notationMode).value
+                typeLabel = TypeLabel.gnd
+                modeLabel = TypeLabel.full
                 modeName = gndModeName(.applyFullValue)
             }
             // Expanded label: full name · registered representation ·
@@ -126,8 +151,9 @@ public enum FilterWheelPresenter {
             }
             return FilterWheelRowDisplay(
                 selection: row.selection,
-                compactValueText: registered,
-                modeCaption: modeCaption,
+                compactValueText: compactValue,
+                typeLabel: typeLabel,
+                modeLabel: modeLabel,
                 registeredText: registered,
                 itemName: name,
                 expandedLabelText: segments.joined(separator: " · "),
@@ -136,6 +162,18 @@ public enum FilterWheelPresenter {
                 isMounted: true
             )
         }
+    }
+
+    /// Persistent type / mode label tokens above every wheel viewport
+    /// (FILTER-STACK-007). Deliberately short so they stay complete at
+    /// four wheels; identical on both platforms.
+    public enum TypeLabel {
+        public static let nd = String(localized: "ND")
+        public static let cpl = String(localized: "CPL")
+        public static let gnd = String(localized: "GND")
+        public static let rec = String(localized: "REC")
+        public static let full = String(localized: "FULL")
+        public static let empty = String(localized: "EMPTY")
     }
 
     /// Registered representation of a mounted row: the Fixed / GND

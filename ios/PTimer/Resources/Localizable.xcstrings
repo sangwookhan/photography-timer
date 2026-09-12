@@ -302,6 +302,17 @@
         }
       }
     },
+    "EMPTY" : {
+      "comment" : "Filter wheel type / mode label (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EMPTY"
+          }
+        }
+      }
+    },
     "Empty · no filter mounted" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -533,6 +544,17 @@
         }
       }
     },
+    "FULL" : {
+      "comment" : "Filter wheel type / mode label (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FULL"
+          }
+        }
+      }
+    },
     "Full density" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -628,6 +650,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이름"
+          }
+        }
+      }
+    },
+    "ND" : {
+      "comment" : "Filter wheel type / mode label (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ND"
           }
         }
       }
@@ -749,6 +782,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "기록"
+          }
+        }
+      }
+    },
+    "REC" : {
+      "comment" : "Filter wheel type / mode label (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REC"
           }
         }
       }

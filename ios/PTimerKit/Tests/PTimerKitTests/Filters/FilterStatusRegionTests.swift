@@ -99,6 +99,25 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(controller.visibleContent?.secondaryText, "Total 18 stops")
     }
 
+    func testMovingStatusKeepsOriginalRepresentationAndExactContributionForND1000() async throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
+        let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
+        inventory.addItem(nd1000, to: set.id)
+        let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: FakeTimerManaging(), filterInventoryModel: inventory)
+        viewModel.ndWheelReshapeDuration = 0
+        viewModel.selectFilterSource(.filterSet(set.id))
+        viewModel.addFilterWheel()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        let wheelID = viewModel.ndFilterWheelIDs[1]
+        viewModel.filterWheelDidObserveRow(.item(FilterRowSelection(itemID: nd1000.id, choice: .fixed)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        let status = try XCTUnwrap(viewModel.movingWheelStatus)
+        XCTAssertEqual(status.expandedLabel, "Big Stopper · ND1000 · 10 stops")
+        XCTAssertEqual(status.contributionStops, 10)
+        let content = FilterStatusRegionPresenter.content(moving: status, browsingSourceName: nil, rejection: nil, total: viewModel.ndStackTotalDisplayState)
+        XCTAssertEqual(content?.secondaryText, "+10 stops · Total 10 stops")
+    }
+
     func testViewModelMovingWheelStatusCarriesLabelAndContribution() async throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee holder", color: .red))

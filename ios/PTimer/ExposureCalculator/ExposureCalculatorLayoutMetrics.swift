@@ -87,13 +87,15 @@ struct ExposureWorkspaceLayoutMetrics {
         // Includes the fixed-height filter status region under the
         // wheel row (FILTER-STACK-008), which the ND card now always
         // reserves.
+        // ... and the persistent type / mode label row above the
+        // wheels (FILTER-STACK-007).
         switch density {
         case .regular:
-            return 734
+            return 750
         case .compact:
-            return 632
+            return 646
         case .dense:
-            return 518
+            return 532
         }
     }
 }

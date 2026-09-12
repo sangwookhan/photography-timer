@@ -459,6 +459,22 @@ enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
+    /// Height of the persistent type / mode label row above every
+    /// wheel viewport (FILTER-STACK-007). The Base Shutter column keeps
+    /// an equal blank row so all wheel tops stay aligned.
+    var filterWheelLabelRowHeight: CGFloat {
+        switch self {
+        case .regular:
+            return 16
+        case .compact, .dense:
+            return 14
+        }
+    }
+
+    var filterWheelLabelFont: Font {
+        .system(size: 10, weight: .semibold, design: .rounded)
+    }
+
     /// Fixed height reserved for the single transient status region
     /// under the wheel row (FILTER-STACK-008): two caption lines. The
     /// region keeps this geometry whether or not it shows content, so
@@ -604,6 +620,9 @@ struct VariableSectionView: View {
     let filterRows: [ResolvedFilterRow]
     /// Per-wheel BINDING selections (pending over committed).
     let displaySelections: [FilterWheelSelection]
+    /// Per-wheel selection the persistent label follows: the live row
+    /// at the touch center while moving, else the display selection.
+    let trackedSelections: [FilterWheelSelection]
     let ndFilterWheelIDs: [Int]
     let shutterSpeeds: [Double]
     let rowOptionsForWheel: (Int) -> [FilterWheelRowOption]
@@ -661,6 +680,7 @@ struct VariableSectionView: View {
                     onContinuousSelectionChange: onContinuousBaseShutterChange,
                     onInteractionEnd: onBaseShutterInteractionEnd,
                     ndWheelCount: ndFilterSteps.count,
+                    labelRowHeight: style.filterWheelLabelRowHeight,
                     pickerHeight: style.pickerHeight,
                     style: style
                 )
@@ -677,6 +697,7 @@ struct VariableSectionView: View {
                     filterWheels: filterWheels,
                     filterRows: filterRows,
                     displaySelections: displaySelections,
+                    trackedSelections: trackedSelections,
                     ndFilterWheelIDs: ndFilterWheelIDs,
                     rowOptionsForWheel: rowOptionsForWheel,
                     filterSetColor: filterSetColor,
@@ -786,6 +807,7 @@ private struct NDFilterGroupView: View {
     /// selection must never be visually reverted before the set
     /// commit lands.
     let displaySelections: [FilterWheelSelection]
+    let trackedSelections: [FilterWheelSelection]
     /// Stable identity parallel to `ndFilterSteps` (PTIMER-199 (S)4.3)
     /// so the ForEach keys wheels by wheel, not by position, and a
     /// commit-sort reorder animates as movement.
@@ -884,6 +906,9 @@ private struct NDFilterGroupView: View {
                         displaySelection: displaySelections.indices.contains(index)
                             ? displaySelections[index]
                             : filterWheels[index].selection,
+                        trackedSelection: trackedSelections.indices.contains(index)
+                            ? trackedSelections[index]
+                            : filterWheels[index].selection,
                         committedRow: filterRows.indices.contains(index)
                             ? filterRows[index]
                             : ResolvedFilterRow(selection: filterWheels[index].selection, contributionStops: ndFilterSteps[index].stops, registeredStops: ndFilterSteps[index].stops, item: nil),
@@ -912,6 +937,8 @@ private struct NDFilterGroupView: View {
                 }
 
                 if showsAddFilterWheelControl {
+                    // Plus has no type label; keep its body aligned with
+                    // the wheel viewports below the label row.
                     FilterSourcePlusControl(
                         sources: filterSources,
                         selectedSource: selectedFilterSource,
@@ -925,6 +952,7 @@ private struct NDFilterGroupView: View {
                         onManage: onManageFilterSets,
                         onBrowsingChanged: onBrowsingSourceChanged
                     )
+                    .padding(.top, style.filterWheelLabelRowHeight)
                 }
             }
             // No overlay over the pickers: the expanded label, the
@@ -1002,6 +1030,10 @@ private struct NDWheelView: View {
     /// The wheel's display selection (pending selection while the set
     /// commit is open, committed value otherwise).
     let displaySelection: FilterWheelSelection
+    /// The row the persistent label follows: the live candidate at the
+    /// touch center while moving, the settled row at rest
+    /// (FILTER-STACK-007).
+    let trackedSelection: FilterWheelSelection
     let committedRow: ResolvedFilterRow
     let rowOptions: [FilterWheelRowOption]
     let source: FilterSource
@@ -1069,7 +1101,48 @@ private struct NDWheelView: View {
         FilterWheelPresenter.rowDisplay(for: committedRow, notationMode: ndNotationMode)
     }
 
+    /// Display of the row the label tracks; falls back to the committed
+    /// row for a transient selection the picker no longer offers.
+    private var trackedDisplay: FilterWheelRowDisplay {
+        rowDisplays.first { $0.selection == trackedSelection } ?? committedDisplay
+    }
+
     var body: some View {
+        VStack(spacing: 0) {
+            // Persistent type / mode label immediately above the
+            // viewport (FILTER-STACK-007): `ND`, `CPL`, `GND REC` /
+            // `GND FULL`, or `EMPTY`, with the Filter Set color as an
+            // adjacent redundant cue. Follows the candidate at the
+            // touch center while the wheel moves.
+            HStack(spacing: 3) {
+                if let sourceColor {
+                    Circle()
+                        .fill(Color.filterSet(sourceColor))
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                }
+                Text(trackedDisplay.typeLabel)
+                    .font(style.filterWheelLabelFont)
+                    .foregroundStyle(.secondary)
+                if let modeLabel = trackedDisplay.modeLabel {
+                    Text(modeLabel)
+                        .font(style.filterWheelLabelFont)
+                        .foregroundStyle(.primary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity)
+            .frame(height: style.filterWheelLabelRowHeight)
+            .accessibilityHidden(true)
+
+            wheel
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(wheelAccessibilityLabel))
+    }
+
+    private var wheel: some View {
         NDWheelPickerView(
             steps: rows,
             selectedStep: selectedRow,
@@ -1097,7 +1170,6 @@ private struct NDWheelView: View {
                     )
                 NDStopPickerValue(
                     valueText: display.compactValueText,
-                    caption: display.modeCaption,
                     isDimmed: !display.isAvailable,
                     style: style,
                     layout: layout,
@@ -1123,21 +1195,6 @@ private struct NDWheelView: View {
                 layout: layout
             )
         }
-        // Filter Set color as a top edge bar — a secondary cue; the
-        // wheel's accessibility label names the set (FILTER-SET-005).
-        .overlay(alignment: .top) {
-            if let sourceColor {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(Color.filterSet(sourceColor))
-                    .frame(height: 3)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 3)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(wheelAccessibilityLabel))
     }
 
     /// `Filter 2 of 3, Lee holder, Big Stopper · 10 stops` — source,
@@ -1241,6 +1298,9 @@ private struct ShutterSelectionRow: View {
     /// font and band metrics condense with it — otherwise labels like
     /// "1/8000" truncate instead of scaling.
     let ndWheelCount: Int
+    /// Height of the filter wheels' type-label row, kept blank here so
+    /// the Base Shutter viewport top aligns with the filter viewports.
+    var labelRowHeight: CGFloat = 0
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
 
@@ -1266,6 +1326,9 @@ private struct ShutterSelectionRow: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(height: pickerHeaderHeight, alignment: .leading)
+
+            Color.clear
+                .frame(height: labelRowHeight)
 
             Picker("Base Shutter", selection: $baseShutter) {
                 ForEach(shutterSpeeds, id: \.self) { speed in

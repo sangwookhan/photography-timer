@@ -417,6 +417,61 @@ final class FilterSetViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.ndStep.stops, 3)
     }
 
+    func testND1000IsExactlyTenStopsInTimerCaptureAndReference() throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
+        let item = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
+        inventory.addItem(item, to: set.id)
+        let timerManager = RuntimeBackedTimerManaging(tickInterval: 60, dateProvider: { Date(timeIntervalSince1970: 100) })
+        let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: timerManager, filterInventoryModel: inventory)
+        viewModel.baseShutter = 1.0 / 30.0
+        viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
+        viewModel.selectFilterSource(.filterSet(set.id))
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(item), at: 1)
+        XCTAssertEqual(viewModel.ndStep.stops, 12, "2 + exactly 10.")
+        viewModel.startTimer()
+
+        let timer = try XCTUnwrap(viewModel.timers.first)
+        XCTAssertEqual(timer.ndStops, 12)
+        let entry = try XCTUnwrap(timer.filterSummary?[1])
+        XCTAssertEqual(entry.canonicalStops, 10)
+        XCTAssertEqual(entry.contributedStops, 10)
+        XCTAssertEqual(entry.originalValue, 1000)
+        XCTAssertEqual(entry.originalUnit, .filterFactor)
+        XCTAssertEqual(timer.filterReferenceText, "Standard 2 stops · Lee: Big Stopper ND1000")
+        XCTAssertEqual(
+            TimerBasisPresenter.basisText(for: timer, notationMode: .filterFactor, formatShutter: { _ in "1/30s" }),
+            "Base 1/30s · 12 stops"
+        )
+    }
+
+    func testTrackedSelectionsFollowTheLiveRowAndSettleAfterCommit() async throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
+        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
+        inventory.addItem(gnd, to: set.id)
+        let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.ndWheelReshapeDuration = 0
+        viewModel.selectFilterSource(.filterSet(set.id))
+        viewModel.addFilterWheel()
+        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(viewModel.trackedWheelSelections[1], select(gnd, .gnd(.recordOnly)))
+
+        // The label follows the candidate at the touch center while moving.
+        let wheelID = viewModel.ndFilterWheelIDs[1]
+        viewModel.filterWheelDidObserveRow(select(gnd, .gnd(.applyFullValue)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        XCTAssertEqual(viewModel.trackedWheelSelections[1], select(gnd, .gnd(.applyFullValue)))
+        XCTAssertEqual(viewModel.filterWheels[1].selection, select(gnd, .gnd(.recordOnly)), "Committed row unchanged until the commit.")
+
+        // Selecting settles: the tracked selection is the committed row.
+        viewModel.filterWheelDidSelect(select(gnd, .gnd(.applyFullValue)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(viewModel.filterWheels[1].selection, select(gnd, .gnd(.applyFullValue)))
+        XCTAssertEqual(viewModel.trackedWheelSelections[1], select(gnd, .gnd(.applyFullValue)))
+    }
+
     func testManualTimerCapturesNoFilterSummary() throws {
         let timerManager = RuntimeBackedTimerManaging(tickInterval: 60, dateProvider: { Date(timeIntervalSince1970: 100) })
         let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: timerManager)

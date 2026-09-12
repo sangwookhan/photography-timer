@@ -89,7 +89,10 @@ public struct FilterRegisteredValue: Hashable, Codable, Sendable {
 
     /// Canonical stops, or `nil` when the value cannot be registered:
     /// non-finite, zero or negative stops, or above the 30-stop cap.
-    /// The result is never snapped to the Standard ladder.
+    /// An ND factor that exactly matches a commercial Standard label
+    /// (`NDCommercialFactorMapping`) takes that label's ladder value —
+    /// ND1000 is exactly 10 stops; any other factor uses `log2` without
+    /// snapping.
     public var canonicalStops: Double? {
         Self.canonicalStops(value: value, unit: unit)
     }
@@ -109,7 +112,11 @@ public struct FilterRegisteredValue: Hashable, Codable, Sendable {
         case .opticalDensity:
             stops = value / 0.3
         case .filterFactor:
-            stops = value > 0 ? log2(value) : -.infinity
+            if let ladderStops = NDCommercialFactorMapping.canonicalStops(matchingCommercialFactor: value) {
+                stops = ladderStops
+            } else {
+                stops = value > 0 ? log2(value) : -.infinity
+            }
         }
         guard stops.isFinite,
               stops > 0,

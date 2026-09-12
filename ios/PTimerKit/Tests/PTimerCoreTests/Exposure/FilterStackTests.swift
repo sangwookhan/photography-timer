@@ -224,6 +224,38 @@ final class FilterStackTests: XCTestCase {
         )
     }
 
+    // MARK: FILTER-ITEM-004 — ND1000 is exactly 10 stops through the stack
+
+    func testND1000ContributesExactlyTenStopsThroughSumSortAndCap() throws {
+        let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
+        let nd8 = fixed("ND8", 3)
+        let set = FilterSet(name: "Lee", color: .red, items: [nd8, nd1000])
+        let inventory = FilterInventory(filterSets: [set])
+
+        var stack = FilterStack(wheels: [.standard(NDStep(stops: 17)), .empty(in: set.id), .empty(in: set.id)], inventory: inventory)
+        stack = try stack.replacingWheel(at: 1, with: select(nd8), inventory: inventory).get()
+        stack = try stack.replacingWheel(at: 2, with: select(nd1000), inventory: inventory).get()
+        XCTAssertEqual(stack.rows[2].contributionStops, 10, "Exact, not log2(1000).")
+        XCTAssertEqual(stack.effectiveStep.stops, 30, "17 + 3 + 10 lands exactly on the cap.")
+        XCTAssertTrue(FilterStack.isWithinTotalLimit(stack.contributions))
+
+        // Sorting within the set: ND1000 (10) before ND8 (3).
+        let sorted = stack.sortedForCommit(inventory: inventory)
+        XCTAssertEqual(sorted.wheels[1].selection, select(nd1000))
+        XCTAssertEqual(sorted.wheels[2].selection, select(nd8))
+
+        // Cap: one more Standard stop with ND1000 mounted is refused.
+        XCTAssertEqual(
+            stack.replacingWheel(at: 0, with: .standard(NDStep(stops: 18)), inventory: inventory),
+            .failure(.exceedsTotalLimit)
+        )
+        // A 9.97-stop reading would have left room; the exact 10 does not.
+        XCTAssertEqual(
+            FilterStack.validated(wheels: [.standard(NDStep(stops: 21)), FilterWheel(source: .filterSet(set.id), selection: select(nd1000))], inventory: inventory),
+            nil
+        )
+    }
+
     // MARK: FILTER-PERSIST-002 — safe normalization
 
     func testNormalizationDropsUnknownSetsEmptiesUnknownItemsAndFallsBackToStandardZero() {

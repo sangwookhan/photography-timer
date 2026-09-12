@@ -24,11 +24,44 @@ final class FilterInventoryTests: XCTestCase {
         XCTAssertEqual(od2, 2.0 / 0.3, accuracy: 1e-9)
     }
 
-    func testFilterFactorUsesLog2() throws {
+    func testFilterFactorMatchingACommercialLabelTakesTheLadderValue() throws {
         let nd8 = try XCTUnwrap(FilterRegisteredValue(value: 8, unit: .filterFactor).canonicalStops)
-        XCTAssertEqual(nd8, 3, accuracy: 1e-9)
+        XCTAssertEqual(nd8, 3, accuracy: 1e-12)
+        // ND1000 is the Standard label of 10 stops: exactly 10, not log2(1000).
         let nd1000 = try XCTUnwrap(FilterRegisteredValue(value: 1000, unit: .filterFactor).canonicalStops)
-        XCTAssertEqual(nd1000, log2(1000), accuracy: 1e-9)
+        XCTAssertEqual(nd1000, 10)
+        XCTAssertEqual(FilterRegisteredValue(value: 2000, unit: .filterFactor).canonicalStops, 11)
+        XCTAssertEqual(FilterRegisteredValue(value: 8000, unit: .filterFactor).canonicalStops, 13)
+        XCTAssertEqual(FilterRegisteredValue(value: 100, unit: .filterFactor).canonicalStops, 6.6)
+        XCTAssertEqual(FilterRegisteredValue(value: 100_000, unit: .filterFactor).canonicalStops, 16.6)
+        XCTAssertEqual(FilterRegisteredValue(value: 16384, unit: .filterFactor).canonicalStops, 14)
+    }
+
+    func testFilterFactorWithoutACommercialLabelUsesLog2() throws {
+        let nd500 = try XCTUnwrap(FilterRegisteredValue(value: 500, unit: .filterFactor).canonicalStops)
+        XCTAssertEqual(nd500, log2(500), accuracy: 1e-12)
+        let nd64000 = try XCTUnwrap(FilterRegisteredValue(value: 64_000, unit: .filterFactor).canonicalStops)
+        XCTAssertEqual(nd64000, log2(64_000), accuracy: 1e-12)
+    }
+
+    // MARK: Shared commercial mapping — the formatter's table inverted
+
+    func testCommercialMappingRoundTripsEveryLadderValue() {
+        let ladder = (0...ExposureScale.maximumWholeNDStops).map(Double.init) + ExposureScale.commercialFractionalNDStops
+        for stops in ladder {
+            let factor = NDCommercialFactorMapping.commercialFactor(forStops: stops)
+            XCTAssertNotNil(factor, "stops=\(stops)")
+            XCTAssertEqual(
+                NDCommercialFactorMapping.canonicalStops(matchingCommercialFactor: factor ?? -1),
+                stops,
+                "stops=\(stops)"
+            )
+        }
+        XCTAssertEqual(NDCommercialFactorMapping.commercialFactor(forStops: 10), 1000)
+        XCTAssertEqual(NDCommercialFactorMapping.commercialFactor(forStops: 9), 512)
+        XCTAssertEqual(NDCommercialFactorMapping.commercialFactor(forStops: 14), 16384)
+        XCTAssertNil(NDCommercialFactorMapping.commercialFactor(forStops: 3.3), "Off-ladder values have no label.")
+        XCTAssertNil(NDCommercialFactorMapping.canonicalStops(matchingCommercialFactor: 500))
     }
 
     func testInvalidRegisteredValuesAreRejected() {

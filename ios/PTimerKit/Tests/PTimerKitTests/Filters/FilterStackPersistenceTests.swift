@@ -20,7 +20,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         let inventoryStore = InMemoryFilterInventoryStore()
         let inventory = FilterInventoryModel(store: inventoryStore)
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
-        let item = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 10, unit: .stops)))
+        let item = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
         inventory.addItem(item, to: set.id)
         let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
         inventory.addItem(gnd, to: set.id)
@@ -44,6 +44,7 @@ final class FilterStackPersistenceTests: XCTestCase {
             FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))),
         ])
         XCTAssertEqual(restored.ndStep.stops, 16.6, accuracy: 1e-9)
+        XCTAssertEqual(restored.ndFilterSteps[1].stops, 10, "ND1000 restores as exactly 10 stops.")
         XCTAssertEqual(restored.selectedFilterSource, .filterSet(set.id))
     }
 

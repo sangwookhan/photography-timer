@@ -195,11 +195,9 @@ construction rather than by clamping after the fact.
 
 ## Non-goals
 
-- A user-defined physical filter inventory ("My Filters") is out of scope
-  for this capability; it has not shipped. This file describes only the
-  standard-ladder stack that currently exists and is not generalized in
-  anticipation of a future capability's requirements — see
-  `SpecificationWorkflow.md` §5.
+- User-defined Filter Sets and mixed-source stacks are owned by
+  `filter-sets.md`. This file continues to own the Standard ladder and the
+  zero-wheel interaction rules reused by that mixed stack.
 - Restricting duplicate values across wheels in a stack; the same stop value
   may appear on more than one wheel.
 - Filter classification (ND / CPL / color) or purchase recommendations.

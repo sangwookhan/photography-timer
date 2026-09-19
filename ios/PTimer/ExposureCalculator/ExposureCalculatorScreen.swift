@@ -52,6 +52,10 @@ struct ExposureCalculatorScreen: View {
     /// sheet's `onDismiss`.
     @State private var pendingFormulaSeedFilmID: String?
     @State private var isAboutPresented = false
+    /// Visibility of the Filter Set management sheet (Filter Set
+    /// contract): reached from the ND header entry and by
+    /// long-pressing the Plus wheel.
+    @State private var isFilterSetManagementPresented = false
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
@@ -195,6 +199,9 @@ struct ExposureCalculatorScreen: View {
                     },
                     onRequestRename: { slotID in
                         slotIDPendingRename = slotID
+                    },
+                    onManageFilterSets: {
+                        isFilterSetManagementPresented = true
                     },
                     onShowAbout: {
                         isAboutPresented = true
@@ -374,6 +381,11 @@ struct ExposureCalculatorScreen: View {
                             presentedFilmDetails = viewModel.filmModeDetailsDisplayState
                         }
                     )
+                }
+            }
+            .sheet(isPresented: $isFilterSetManagementPresented) {
+                FilterSetManagementView(viewModel: viewModel) {
+                    isFilterSetManagementPresented = false
                 }
             }
             .sheet(item: $slotIDPendingRename) { slotID in
@@ -589,6 +601,7 @@ private struct ExposureWorkspaceMainContent: View {
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
+    let onManageFilterSets: () -> Void
     let onShowAbout: () -> Void
 
     var body: some View {
@@ -604,6 +617,7 @@ private struct ExposureWorkspaceMainContent: View {
                         onRequestRename: {
                             onRequestRename(slotID)
                         },
+                        onManageFilterSets: onManageFilterSets,
                         onShowAbout: onShowAbout
                     )
                     .tag(slotID)
@@ -673,6 +687,7 @@ private struct CameraSlotCalculatorPage: View {
     /// through only on the active page; inactive pages pass `nil`
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
+    let onManageFilterSets: () -> Void
     let onShowAbout: () -> Void
 
     var body: some View {

@@ -137,6 +137,24 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   `FilterInventoryStoring`. Stack reconciliation after an inventory
   edit runs on the facade, which is the one place that reads both the
   inventory and the calculator / camera-slot state.
+- **Filter Set editor session** — the registered-value notation a
+  Filter Set editing session remembers between consecutive new items
+  (Stops, OD, or ND; the kind always starts Fixed) is the pure value
+  `Filters/FilterItemEditorSessionMemory`. It is owned as view state
+  by the open `FilterSetDetailView` in the app target, so it lives
+  exactly as long as that editor is open and is never persisted;
+  editing an existing item does not update it.
+- **Plus wheel gestures** — `Filters/FilterSourcePlusGestureArbiter`
+  classifies one touch on the Plus wheel (tap, stationary long press,
+  browse) and decides the release outcome; the app's
+  `FilterSourcePlusControl` renders it. A tap or a browse that settled
+  on a different source calls the facade's
+  `addFilterWheel(from:)`, which adds exactly one wheel inside the
+  commit barrier, shows a refused add as the one-row status reason,
+  and moves the camera's remembered Filter Source only after a
+  successful addition. Browsing never mutates the stack or the memory
+  on its own; the accessibility adjustable action is the one explicit
+  source-selection path that does not add.
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
 - **`TimerWorkspaceModel`** — timer collection metadata and timer
   lifecycle commands around `TimerManager`.

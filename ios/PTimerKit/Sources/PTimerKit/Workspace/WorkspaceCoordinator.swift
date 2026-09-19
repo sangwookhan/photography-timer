@@ -25,9 +25,13 @@ public final class WorkspaceCoordinator: ObservableObject {
     public let cameraSlotSessionModel: CameraSlotSessionModel
     public let targetShutterModel: TargetShutterModel
     public let customFilmLibrary: CustomFilmLibrary
+    public let filterInventoryModel: FilterInventoryModel
     public let viewModel: ExposureCalculatorViewModel
 
-    public init(dependencies: ViewModelDependencies) {
+    public init(
+        dependencies: ViewModelDependencies,
+        isFilterStackOrderingSuspended: Bool = false
+    ) {
         let calculatorModel = CalculatorModel(calculator: dependencies.calculator)
         let reciprocityModel = ReciprocityModel()
         let timerWorkspaceModel = TimerWorkspaceModel(
@@ -53,6 +57,7 @@ public final class WorkspaceCoordinator: ObservableObject {
             currentCustomFilms: { customLibrary.customFilms }
         )
         let targetShutterModel = TargetShutterModel()
+        let filterInventoryModel = FilterInventoryModel(store: dependencies.filterInventoryStore)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
@@ -60,6 +65,7 @@ public final class WorkspaceCoordinator: ObservableObject {
         self.cameraSlotSessionModel = cameraSlotSessionModel
         self.targetShutterModel = targetShutterModel
         self.customFilmLibrary = dependencies.customFilmLibrary
+        self.filterInventoryModel = filterInventoryModel
         self.viewModel = ExposureCalculatorViewModel(
             dependencies: dependencies,
             calculatorModel: calculatorModel,
@@ -68,7 +74,9 @@ public final class WorkspaceCoordinator: ObservableObject {
             filmSelectionModel: filmSelectionModel,
             cameraSlotSessionModel: cameraSlotSessionModel,
             targetShutterModel: targetShutterModel,
-            customFilmLibrary: dependencies.customFilmLibrary
+            customFilmLibrary: dependencies.customFilmLibrary,
+            filterInventoryModel: filterInventoryModel,
+            isFilterStackOrderingSuspended: isFilterStackOrderingSuspended
         )
     }
 }

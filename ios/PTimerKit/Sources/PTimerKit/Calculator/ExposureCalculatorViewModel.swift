@@ -118,12 +118,28 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     @Published public private(set) var cameraSlotCustomDisplayNames: [CameraSlotID: String] = [:]
     /// Custom films, mirrored from `customFilmLibrary`.
     @Published public private(set) var customFilms: [FilmIdentity] = []
+    /// The user's filter inventory, mirrored from `filterInventoryModel`
+    /// (Filter Set contract). Views read Filter Set names, colors, and
+    /// items from here; the calculator model holds its own resolution
+    /// mirror refreshed on every change.
+    @Published public internal(set) var filterInventory: FilterInventory = .empty
+    /// Transient notice for a refused wheel change (over the 30-stop
+    /// cap, item already mounted). Set at the set-commit barrier when
+    /// the domain rejects a pending selection and cleared shortly
+    /// after; the wheel itself reverts to its committed row.
+    @Published public private(set) var filterRejectionNotice: FilterRejectionNotice?
+    private var filterRejectionNoticeTask: Task<Void, Never>?
+    /// Platform-neutral policy input for FILTER-A11Y-006. The iOS app
+    /// maps VoiceOver status into this flag; future Android wiring can
+    /// map screen-reader touch exploration without naming a service.
+    @Published public private(set) var isFilterStackOrderingSuspended: Bool
+    private var needsFilterStackOrderReconciliation = false
 
     /// Calculation responsibility (calculator instance, inputs, result).
     /// The ViewModel mirrors `baseShutter` / `ndStop` here through the
     /// `didSet` observers above so views and tests can bind to either
     /// surface.
-    private let calculatorModel: CalculatorModel
+    let calculatorModel: CalculatorModel
     private var calculator: ExposureCalculator { calculatorModel.calculator }
     private let reciprocityModel: ReciprocityModel
     /// Timer collection, metadata persistence, and lifecycle ops. The
@@ -142,7 +158,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Camera-slot session state: which slot is currently active, plus
     /// the calculator snapshot for every inactive slot. The facade
     /// orchestrates snapshot capture/load on slot switching.
-    private let cameraSlotSessionModel: CameraSlotSessionModel
+    let cameraSlotSessionModel: CameraSlotSessionModel
     /// Optional Target Shutter slice — owns the photographer-supplied
     /// final exposure duration that the calculator compares its
     /// current result against. The facade reads the model's
@@ -158,6 +174,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Source of truth for photographer-authored custom
     /// films. Internal so the +CustomFilm extension can write.
     public let customFilmLibrary: CustomFilmLibrary
+    /// Source of truth for the user's Filter Sets and physical filter
+    /// items (Filter Set contract). The +FilterSets extension writes
+    /// through it; stack reconciliation runs here on every change.
+    public let filterInventoryModel: FilterInventoryModel
     /// App-global display-settings store (ND notation mode). Display
     /// preferences only; never participates in calculation.
     private let displaySettingStore: DisplaySettingStoring
@@ -185,7 +205,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// dependency bundle. Used by `RecordReplayBaselineSmokeTests` and
     /// any future caller that already has a `ViewModelDependencies`
     /// but does not need to share child models with a coordinator.
-    public convenience init(dependencies: ViewModelDependencies) {
+    public convenience init(
+        dependencies: ViewModelDependencies,
+        isFilterStackOrderingSuspended: Bool = false
+    ) {
         let calculatorModel = CalculatorModel(calculator: dependencies.calculator)
         let timerWorkspaceModel = TimerWorkspaceModel(
             timerManager: dependencies.timerManager,
@@ -213,7 +236,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             filmSelectionModel: filmSelectionModel,
             cameraSlotSessionModel: cameraSlotSessionModel,
             targetShutterModel: TargetShutterModel(),
-            customFilmLibrary: dependencies.customFilmLibrary
+            customFilmLibrary: dependencies.customFilmLibrary,
+            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore),
+            isFilterStackOrderingSuspended: isFilterStackOrderingSuspended
         )
     }
 
@@ -229,10 +254,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         filmSelectionModel: FilmSelectionModel,
         cameraSlotSessionModel: CameraSlotSessionModel? = nil,
         targetShutterModel: TargetShutterModel? = nil,
-        customFilmLibrary: CustomFilmLibrary? = nil
+        customFilmLibrary: CustomFilmLibrary? = nil,
+        filterInventoryModel: FilterInventoryModel? = nil,
+        isFilterStackOrderingSuspended: Bool = false
     ) {
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         let resolvedCustomLibrary = customFilmLibrary ?? dependencies.customFilmLibrary
+        let resolvedInventory = filterInventoryModel
+            ?? FilterInventoryModel(store: dependencies.filterInventoryStore)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
@@ -242,9 +271,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
             presetFilms: dependencies.presetFilms,
-            currentCustomFilms: { resolvedCustomLibrary.customFilms }
+            currentCustomFilms: { resolvedCustomLibrary.customFilms },
+            currentFilterInventory: { resolvedInventory.inventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
+        self.filterInventoryModel = resolvedInventory
+        self.filterInventory = resolvedInventory.inventory
+        self.isFilterStackOrderingSuspended = isFilterStackOrderingSuspended
+        calculatorModel.applyFilterInventory(resolvedInventory.inventory)
         self.displaySettingStore = dependencies.displaySettingStore
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
@@ -271,6 +305,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         restoreDisplaySettings()
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
+        bindFilterInventoryChanges()
     }
 
     public init(
@@ -284,11 +319,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
         cameraSlotSessionModel: CameraSlotSessionModel? = nil,
         targetShutterModel: TargetShutterModel? = nil,
-        customFilmLibrary: CustomFilmLibrary? = nil
+        customFilmLibrary: CustomFilmLibrary? = nil,
+        filterInventoryModel: FilterInventoryModel? = nil,
+        isFilterStackOrderingSuspended: Bool = false
     ) {
         let calculatorModel = CalculatorModel(calculator: calculator)
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         let resolvedCustomLibrary = customFilmLibrary ?? CustomFilmLibrary()
+        let resolvedInventory = filterInventoryModel ?? FilterInventoryModel()
         self.calculatorModel = calculatorModel
         self.reciprocityModel = ReciprocityModel()
         self.timerWorkspaceModel = TimerWorkspaceModel(
@@ -312,9 +350,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: cameraSlotSessionPersistenceStore,
             presetFilms: presetFilms,
-            currentCustomFilms: { resolvedCustomLibrary.customFilms }
+            currentCustomFilms: { resolvedCustomLibrary.customFilms },
+            currentFilterInventory: { resolvedInventory.inventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
+        self.filterInventoryModel = resolvedInventory
+        self.filterInventory = resolvedInventory.inventory
+        self.isFilterStackOrderingSuspended = isFilterStackOrderingSuspended
+        calculatorModel.applyFilterInventory(resolvedInventory.inventory)
         self.displaySettingStore = displaySettingStore
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
@@ -335,6 +378,20 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         restoreDisplaySettings()
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
+        bindFilterInventoryChanges()
+    }
+
+    /// Every inventory mutation flows through here: the published
+    /// mirror refreshes, the active stack and every inactive slot
+    /// snapshot re-resolve against the new inventory (Filter Set
+    /// contract FILTER-ITEM-005/006), and the session persists once.
+    private func bindFilterInventoryChanges() {
+        filterInventoryModel.$inventory
+            .dropFirst()
+            .sink { [weak self] inventory in
+                MainActor.assumeIsolated { self?.applyFilterInventoryChange(inventory) }
+            }
+            .store(in: &cancellables)
     }
 
     /// Wires the lock-screen coordinator to the ViewModel's `$timers`
@@ -1070,7 +1127,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     private func currentCameraSlotSnapshot() -> CameraSlotCalculatorSnapshot {
         CameraSlotCalculatorSnapshot(
             baseShutterSeconds: calculatorModel.baseShutterSeconds,
-            ndFilterSteps: calculatorModel.ndFilterSteps,
+            filterStack: calculatorModel.filterStack,
+            lastFilterSource: calculatorModel.lastFilterSource,
             scaleMode: calculatorModel.scaleMode,
             selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
             selectedProfileOverride: filmSelectionModel.selectedProfileOverride,
@@ -1113,8 +1171,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // (PTIMER-199 M2): the slot's wheel layout is part of its
         // shooting context. The published `ndStep` mirror refreshes
         // from the model afterwards.
-        if calculatorModel.ndFilterSteps != snapshot.ndFilterSteps {
-            calculatorModel.restoreNDFilterSteps(snapshot.ndFilterSteps)
+        if calculatorModel.filterWheels != snapshot.filterWheels
+            || calculatorModel.lastFilterSource != snapshot.lastFilterSource {
+            calculatorModel.restoreFilterWheels(
+                snapshot.filterWheels,
+                lastFilterSource: snapshot.lastFilterSource
+            )
             syncNDStepMirrorFromModel()
             objectWillChange.send()
         }
@@ -1134,6 +1196,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // restart) — cleanable zeros in the restored state start the
         // idle timer, and A0 saturation cleans immediately.
         reexamineNDWheelCleanup()
+        attemptFilterStackOrderReconciliation()
     }
 
     public var calculationResult: Result<ExposureCalculationResult, ExposureCalculatorError> {
@@ -1454,7 +1517,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
                 selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
                 selectedProfileOverride: filmSelectionModel.selectedProfileOverride,
                 activeCameraSlot: cameraSlotSessionModel.activeSlot,
-                targetShutterSeconds: targetShutterModel.targetSeconds
+                targetShutterSeconds: targetShutterModel.targetSeconds,
+                filterSummary: FilterSummaryEntry.summary(
+                    for: calculatorModel.filterStack,
+                    inventory: calculatorModel.filterInventory
+                )
             )
         )
 
@@ -1471,7 +1538,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             selectedModelLabel: payload.selectedModelLabel,
             ndStops: payload.ndStops,
             baseShutterSeconds: payload.baseShutterSeconds,
-            adjustedShutterSeconds: payload.adjustedShutterSeconds
+            adjustedShutterSeconds: payload.adjustedShutterSeconds,
+            filterSummary: payload.filterSummary,
+            filterReferenceText: payload.filterReferenceText
         )
     }
 
@@ -1656,15 +1725,52 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// selection and kills the pan), and change exactly once at the
     /// wheel's own commit.
     public var ndDisplayFilterSteps: [NDStep] {
+        zip(displayWheelSelections, calculatorModel.ndFilterSteps).map { selection, committed in
+            if case .standard(let step) = selection {
+                return step
+            }
+            return committed
+        }
+    }
+
+    /// Per-wheel BINDING selections for every wheel kind: the pending
+    /// selection while the set commit is open, else the committed one.
+    /// Same stability rule as `ndDisplayFilterSteps`.
+    public var displayWheelSelections: [FilterWheelSelection] {
         let ids = calculatorModel.ndFilterWheelIDs
-        return calculatorModel.ndFilterSteps.enumerated().map { entry in
+        return calculatorModel.filterWheels.enumerated().map { entry in
             guard ids.indices.contains(entry.offset) else {
-                return entry.element
+                return entry.element.selection
             }
             let id = ids[entry.offset]
-            return pendingNDWheelCommits.last(where: { $0.id == id })?.step
-                ?? entry.element
+            return pendingNDWheelCommits.last(where: { $0.id == id })?.selection
+                ?? entry.element.selection
         }
+    }
+
+    /// Per-wheel selection the persistent type / mode label follows
+    /// (FILTER-STACK-007): the live row at the touch center while the
+    /// wheel moves, else the pending selection during an open set
+    /// commit, else the committed row.
+    public var trackedWheelSelections: [FilterWheelSelection] {
+        let ids = calculatorModel.ndFilterWheelIDs
+        return displayWheelSelections.enumerated().map { entry in
+            guard ids.indices.contains(entry.offset),
+                  let live = calculatorModel.liveSelections[ids[entry.offset]] else {
+                return entry.element
+            }
+            return live
+        }
+    }
+
+    /// The active stack's wheels (source + committed selection).
+    public var filterWheels: [FilterWheel] {
+        calculatorModel.filterWheels
+    }
+
+    /// Resolved rows parallel to `filterWheels`.
+    public var filterRows: [ResolvedFilterRow] {
+        calculatorModel.filterRows
     }
 
     /// Page-aware companion of `ndDisplayFilterSteps`.
@@ -1684,14 +1790,21 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             && calculatorModel.canAddFilterWheel
     }
 
-    /// LAYOUT presence of the Add control, deliberately separate
-    /// from `canAddFilterWheel`: presence derives from committed
-    /// values only (stable mid-epoch — the control must not appear
-    /// or vanish and resize wheels under a moving finger), while
-    /// availability adds the quiescence gate and only dims the
-    /// control.
+    /// LAYOUT presence of the Plus wheel, deliberately separate from
+    /// `canAddFilterWheel`: the Plus wheel stays at the end of the row
+    /// while fewer than four actual wheels exist (FILTER-PLUS-001) so
+    /// source browsing remains possible even when adding is currently
+    /// disabled (FILTER-PLUS-005); the presence never flickers under
+    /// a moving finger because it depends on the committed count only.
     public var showsAddFilterWheelControl: Bool {
-        calculatorModel.canAddFilterWheel
+        calculatorModel.filterWheels.count < FilterStack.maximumWheelCount
+    }
+
+    /// Why the settled source cannot add a wheel right now, or `nil`
+    /// when it can (FILTER-PLUS-005). Quiescence gating lives on
+    /// `canAddFilterWheel`; this is the domain reason only.
+    public var filterAddUnavailability: FilterAddUnavailability? {
+        calculatorModel.filterAddUnavailability(for: calculatorModel.lastFilterSource)
     }
 
     /// Whether a CLEANABLE 0-stop wheel exists (removal would change
@@ -1704,21 +1817,43 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             && calculatorModel.canRemoveEmptyFilterWheel
     }
 
-    /// Appends one 0-stop wheel at the right (no-op while C1 denies
-    /// it). A 0-stop wheel leaves the effective value unchanged, but
-    /// the wheel LAYOUT is part of the slot's persisted shooting
-    /// context (M2), so an actual add persists — an add-only session
-    /// must survive relaunch; no-ops skip the write. The fresh wheel
-    /// is itself cleanable, so the cleanup timer re-arms (A3) —
-    /// 0-stop wheels are ephemeral regardless of origin.
+    /// Adds one wheel for the camera's remembered source (the Plus
+    /// tap and the "Add filter" accessibility action).
     public func addFilterWheel() {
+        addFilterWheel(from: calculatorModel.lastFilterSource)
+    }
+
+    /// Adds exactly one wheel for `source` (FILTER-PLUS-003 / FR-1.13):
+    /// a Plus tap adds the displayed source, a Plus browse that
+    /// settled on a different source adds that final source. The add
+    /// waits for the commit barrier (no add while a wheel is touched
+    /// or reshaping) and runs inside the reshaping window like every
+    /// stack mutation. A refused add — the stack is full, the source
+    /// has nothing addable, or every candidate would exceed the cap —
+    /// creates no wheel, leaves the stack and total untouched, and
+    /// reports the reason in the status region for the usual interval.
+    /// The camera's remembered source changes only after a successful
+    /// addition (FR-1.11), so a refused browse leaves the memory as it
+    /// was. A fresh Standard wheel is 0 stops and cleanable, so the
+    /// cleanup timer re-arms (A3); an actual add persists (M2).
+    public func addFilterWheel(from source: FilterSource) {
         exitNDWheelReshapingIfNeeded()
-        guard canAddFilterWheel else {
+        guard filterInventory.contains(source) else {
+            return
+        }
+        guard ndWheelInteractionState == .idle, touchedNDWheelIDs.isEmpty else {
+            return
+        }
+        if let unavailability = calculatorModel.filterAddUnavailability(for: source) {
+            showFilterAddUnavailabilityNotice(unavailability)
             return
         }
         enterNDWheelReshaping()
         withAnimation(.easeInOut(duration: 0.35)) {
-            calculatorModel.addFilterWheel()
+            calculatorModel.addFilterWheel(for: source)
+            if calculatorModel.lastFilterSource != source {
+                calculatorModel.selectFilterSource(source)
+            }
             objectWillChange.send()
         }
         persistCalculatorContext()
@@ -1737,6 +1872,24 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         performNDWheelCleanup()
     }
 
+    /// Updates the platform-neutral screen-reader ordering policy
+    /// (FILTER-A11Y-006). Enabling freezes the complete order now in
+    /// the model and cancels a queued resume. Disabling queues one
+    /// reconciliation, which runs only when the wheel state machine is
+    /// fully quiescent.
+    public func setFilterStackOrderingSuspended(_ isSuspended: Bool) {
+        guard isFilterStackOrderingSuspended != isSuspended else {
+            return
+        }
+        isFilterStackOrderingSuspended = isSuspended
+        if isSuspended {
+            needsFilterStackOrderReconciliation = false
+        } else {
+            needsFilterStackOrderReconciliation = true
+            attemptFilterStackOrderReconciliation()
+        }
+    }
+
     /// Commits one wheel's value: writes the wheel through the model
     /// (which applies the agreed post-commit sort), clears a live
     /// preview that settled on the committed value, refreshes the
@@ -1747,6 +1900,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// cancels a pending cleanup and re-examines the resulting stack
     /// (A3), which also applies the A0 budget-saturation rule.
     public func setNDFilterStep(_ step: NDStep, at index: Int) {
+        setWheelSelection(.standard(step), at: index)
+    }
+
+    /// Commits one wheel's selection of any kind (Standard value,
+    /// Filter Set Empty, or a mounted item row) through the same
+    /// set-commit path the pickers use.
+    public func setWheelSelection(_ selection: FilterWheelSelection, at index: Int) {
         // Programmatic surface (tests, VoiceOver adjustments routed
         // through legacy call sites): a command arriving inside the
         // RESHAPING window force-completes it first — real picker
@@ -1756,7 +1916,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         guard calculatorModel.ndFilterWheelIDs.indices.contains(index) else {
             return
         }
-        commitNDWheelSelection(step, wheelID: calculatorModel.ndFilterWheelIDs[index])
+        commitNDWheelSelection(selection, wheelID: calculatorModel.ndFilterWheelIDs[index])
     }
 
     // MARK: ND wheel interaction state machine (PTIMER-199 v2)
@@ -1798,7 +1958,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     /// Selections recorded in settle order, applied as ONE SET at
     /// the barrier. Keyed by wheel identity.
-    private var pendingNDWheelCommits: [(id: Int, step: NDStep)] = []
+    private var pendingNDWheelCommits: [(id: Int, selection: FilterWheelSelection)] = []
 
     private var ndWheelResolutionTasks: [Int: Task<Void, Never>] = [:]
     private var ndWheelReshapeExitTask: Task<Void, Never>?
@@ -1816,6 +1976,56 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// window is BLOCKED, never silently dropped (v2 contract 2).
     public var areNDWheelsInteractive: Bool {
         ndWheelInteractionState != .reshaping
+    }
+
+    /// Expanded label for a Filter Set wheel in motion
+    /// (FILTER-STACK-007): the full item name and active contribution
+    /// of the wheel's live (or, failing that, committed) row. `nil`
+    /// while no Filter Set wheel is moving — Standard wheels have no
+    /// item name to expose.
+    public var movingWheelExpandedLabel: String? {
+        movingWheelStatus?.expandedLabel
+    }
+
+    /// The wheel currently in motion, for the single transient status
+    /// region (FILTER-STACK-008): its expanded label (full item name,
+    /// registered representation, mode — or the Standard value in the
+    /// active notation) and its live contribution in canonical stops.
+    /// `nil` while no wheel is moving.
+    public var movingWheelStatus: MovingWheelStatus? {
+        let wheels = calculatorModel.filterWheels
+        for (offset, wheelID) in calculatorModel.ndFilterWheelIDs.enumerated() {
+            guard wheels.indices.contains(offset),
+                  unresolvedNDWheelIDs.contains(wheelID) else {
+                continue
+            }
+            let selection = calculatorModel.liveSelections[wheelID] ?? wheels[offset].selection
+            let wheel = FilterWheel(source: wheels[offset].source, selection: selection)
+            guard let row = FilterStack.resolvedRow(for: wheel, inventory: calculatorModel.filterInventory) else {
+                continue
+            }
+            let display = FilterWheelPresenter.rowDisplay(for: row, notationMode: ndNotationMode)
+            return MovingWheelStatus(expandedLabel: display.expandedLabelText, contributionStops: row.contributionStops)
+        }
+        return nil
+    }
+
+    /// Idle source identity for the status region (FILTER-STACK-008):
+    /// each source of the settled stack once, left to right, with a
+    /// wheel count when it owns several — `nil` for a Standard-only
+    /// stack, which keeps the existing ND total behavior.
+    public var filterSourceSummaryText: String? {
+        filterSourceSummary.map(FilterStatusRegionPresenter.summaryText)
+    }
+
+    /// Structured idle summary (FILTER-STACK-008): each settled source
+    /// with its wheel count and, for Filter Sets, its source color.
+    public var filterSourceSummary: [FilterStatusSourceSummaryItem]? {
+        FilterStatusRegionPresenter.sourceSummary(
+            wheels: calculatorModel.filterWheels,
+            sourceName: filterSourceName,
+            sourceColor: filterSetColor(for:)
+        )
     }
 
     /// Whether a wheel's motion has concluded — the owned picker
@@ -1845,6 +2055,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// picker). Motion detection is data-based: any row change marks
     /// the wheel unresolved — there is no "missed begin" class.
     public func ndWheelDidObserveRow(_ value: NDStep, wheelID: Int, generation: Int) {
+        filterWheelDidObserveRow(.standard(value), wheelID: wheelID, generation: generation)
+    }
+
+    /// Selection-typed companion of `ndWheelDidObserveRow` for every
+    /// wheel kind (Filter Set contract).
+    public func filterWheelDidObserveRow(_ selection: FilterWheelSelection, wheelID: Int, generation: Int) {
         guard generation == ndWheelGeneration,
               ndWheelInteractionState != .reshaping,
               calculatorModel.ndFilterWheelIDs.contains(wheelID) else {
@@ -1854,9 +2070,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             ndWheelInteractionState = .scrolling
         }
         unresolvedNDWheelIDs.insert(wheelID)
-        calculatorModel.updateLiveNDStep(value, forWheelID: wheelID)
+        calculatorModel.updateLiveSelection(selection, forWheelID: wheelID)
         objectWillChange.send()
-        scheduleNDWheelResolution(for: wheelID, observedValue: value)
+        scheduleNDWheelResolution(for: wheelID, observedSelection: selection)
     }
 
     /// `didSelectRow` from the OWNED picker — outside a reload lock
@@ -1864,11 +2080,16 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// construction (v2 §4). VoiceOver adjustments arrive through
     /// the same path; no separate carve-out exists.
     public func ndWheelDidSelect(_ value: NDStep, wheelID: Int, generation: Int) {
+        filterWheelDidSelect(.standard(value), wheelID: wheelID, generation: generation)
+    }
+
+    /// Selection-typed companion of `ndWheelDidSelect`.
+    public func filterWheelDidSelect(_ selection: FilterWheelSelection, wheelID: Int, generation: Int) {
         guard generation == ndWheelGeneration,
               ndWheelInteractionState != .reshaping else {
             return
         }
-        commitNDWheelSelection(value, wheelID: wheelID)
+        commitNDWheelSelection(selection, wheelID: wheelID)
     }
 
     public func ndWheelTouchBegan(wheelID: Int, generation: Int) {
@@ -1895,8 +2116,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               ndWheelInteractionState == .idle,
               touchedNDWheelIDs.subtracting([wheelID]).isEmpty,
               let index = calculatorModel.ndFilterWheelIDs.firstIndex(of: wheelID),
-              calculatorModel.ndFilterSteps[index].stops == 0,
-              calculatorModel.ndFilterSteps.count > 1 else {
+              calculatorModel.filterWheels[index].isCleanable,
+              calculatorModel.filterWheels.count > 1 else {
             return
         }
         touchedNDWheelIDs.remove(wheelID)
@@ -1923,17 +2144,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     // MARK: Unresolved tracking and the set-commit barrier
 
-    private func scheduleNDWheelResolution(for wheelID: Int, observedValue: NDStep) {
+    private func scheduleNDWheelResolution(for wheelID: Int, observedSelection: FilterWheelSelection) {
         ndWheelResolutionTasks[wheelID]?.cancel()
         guard let index = calculatorModel.ndFilterWheelIDs.firstIndex(of: wheelID) else {
             return
         }
-        let committed = calculatorModel.ndFilterSteps[index]
+        let committed = calculatorModel.filterWheels[index].selection
         // v2 §3.1 ②: a row resting ON the committed value resolves
         // after S (no commit will follow); any other stable row is a
         // didSelectRow waiting to happen, so it only gets the long
         // backstop W as a safety net.
-        let delay = observedValue == committed
+        let delay = observedSelection == committed
             ? ndWheelResolutionDelay
             : ndWheelResolutionBackstopDelay
         let generation = ndWheelGeneration
@@ -1954,18 +2175,18 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         evaluateNDWheelQuiescence()
     }
 
-    private func commitNDWheelSelection(_ step: NDStep, wheelID: Int) {
+    private func commitNDWheelSelection(_ selection: FilterWheelSelection, wheelID: Int) {
         guard calculatorModel.ndFilterWheelIDs.contains(wheelID) else {
             return
         }
         pendingNDWheelCommits.removeAll { $0.id == wheelID }
-        pendingNDWheelCommits.append((id: wheelID, step: step))
+        pendingNDWheelCommits.append((id: wheelID, selection: selection))
         unresolvedNDWheelIDs.remove(wheelID)
         ndWheelResolutionTasks[wheelID]?.cancel()
         ndWheelResolutionTasks[wheelID] = nil
         // The chosen value holds in the display overlay until the
         // barrier so results stay correct wheel by wheel.
-        calculatorModel.updateLiveNDStep(step, forWheelID: wheelID)
+        calculatorModel.updateLiveSelection(selection, forWheelID: wheelID)
         objectWillChange.send()
         evaluateNDWheelQuiescence()
     }
@@ -1984,39 +2205,54 @@ public final class ExposureCalculatorViewModel: ObservableObject {
                 calculatorModel.clearLiveNDStopPreview()
                 objectWillChange.send()
             }
+            attemptFilterStackOrderReconciliation()
             return
         }
         runNDWheelBarrier()
     }
 
     /// The set commit (v2 §7): applies pendings in settle order (the
-    /// domain refuses over-30 applications; that wheel reverts),
-    /// sorts once, clears the overlay, persists once — all inside
-    /// the RESHAPING window so the resulting reloads and moves are
-    /// inert. A0 saturation cleanup runs in the same window.
+    /// domain refuses over-30 applications; that wheel reverts), uses
+    /// the active normal-or-preserved ordering policy, clears the
+    /// overlay, and persists once inside the RESHAPING window. A0
+    /// saturation cleanup runs in the same window.
     private func runNDWheelBarrier() {
         let pending = pendingNDWheelCommits
         pendingNDWheelCommits = []
         enterNDWheelReshaping()
         var stackChanged = false
+        var rejection: FilterStackRejection?
+        let orderingPolicy: FilterStackCommitOrderingPolicy =
+            isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
+            ? .preserveCurrentOrder
+            : .automatic
         withAnimation(.easeInOut(duration: 0.35)) {
             for entry in pending {
                 guard let index = calculatorModel.ndFilterWheelIDs.firstIndex(of: entry.id) else {
                     continue
                 }
-                let before = calculatorModel.ndFilterSteps
-                calculatorModel.setNDFilterStep(entry.step, at: index)
-                if calculatorModel.ndFilterSteps != before {
+                let before = calculatorModel.filterWheels
+                if let refused = calculatorModel.setWheelSelection(
+                    entry.selection,
+                    at: index,
+                    orderingPolicy: orderingPolicy
+                ) {
+                    rejection = refused
+                }
+                if calculatorModel.filterWheels != before {
                     stackChanged = true
                 }
             }
             calculatorModel.clearLiveNDStopPreview()
             // A0: a set that saturates the 30-stop budget sheds its
-            // leftover zeros immediately, inside the same window.
+            // leftover unusable zeros immediately, inside the same
+            // window. An Empty Filter Set wheel that can still mount a
+            // Record-only item is NOT unusable (FILTER-PLUS-005) and
+            // stays for the idle rule.
             let saturated = calculatorModel.ndStep.stops
                 >= Double(ExposureScale.maximumWholeNDStops) - ExposureCalculator.stabilityEpsilon
-            if saturated, calculatorModel.canRemoveEmptyFilterWheel {
-                calculatorModel.cleanupEmptyFilterWheels()
+            if saturated, calculatorModel.canRemoveUnusableEmptyFilterWheel {
+                calculatorModel.cleanupUnusableEmptyFilterWheels()
                 stackChanged = true
             }
             objectWillChange.send()
@@ -2024,6 +2260,41 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         if stackChanged {
             syncNDStepMirrorFromModel()
             persistCalculatorContext()
+        }
+        if let rejection {
+            showFilterRejectionNotice(rejection)
+        }
+    }
+
+    /// Surfaces the reason a pending change was refused
+    /// (FILTER-STACK-004: rejected with its reason, never clamped) for
+    /// a short interval; the wheel display reverts on its own.
+    /// A refused Plus addition reads through the same one-row notice
+    /// as a refused wheel change (FILTER-PLUS-003/005).
+    private func showFilterAddUnavailabilityNotice(_ unavailability: FilterAddUnavailability) {
+        presentFilterRejectionNotice(FilterRejectionNotice(
+            sequence: (filterRejectionNotice?.sequence ?? 0) + 1,
+            addUnavailability: unavailability
+        ))
+    }
+
+    private func showFilterRejectionNotice(_ rejection: FilterStackRejection) {
+        presentFilterRejectionNotice(FilterRejectionNotice(
+            sequence: (filterRejectionNotice?.sequence ?? 0) + 1,
+            rejection: rejection
+        ))
+    }
+
+    private func presentFilterRejectionNotice(_ notice: FilterRejectionNotice) {
+        filterRejectionNoticeTask?.cancel()
+        filterRejectionNotice = notice
+        filterRejectionNoticeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard let self, !Task.isCancelled,
+                  self.filterRejectionNotice?.sequence == notice.sequence else {
+                return
+            }
+            self.filterRejectionNotice = nil
         }
     }
 
@@ -2070,12 +2341,40 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         ndWheelInteractionState = .idle
         objectWillChange.send()
         armNDWheelCleanup()
+        attemptFilterStackOrderReconciliation()
+    }
+
+    /// Executes the one queued FILTER-STACK-005 reconciliation after
+    /// VoiceOver/touch exploration becomes inactive. All interaction
+    /// and barrier state must be quiet; otherwise the request remains
+    /// pending and the state machine retries at its next quiescent edge.
+    private func attemptFilterStackOrderReconciliation() {
+        guard needsFilterStackOrderReconciliation,
+              !isFilterStackOrderingSuspended,
+              ndWheelInteractionState == .idle,
+              unresolvedNDWheelIDs.isEmpty,
+              touchedNDWheelIDs.isEmpty,
+              pendingNDWheelCommits.isEmpty else {
+            return
+        }
+        needsFilterStackOrderReconciliation = false
+        let changed = withAnimation(.easeInOut(duration: 0.35)) {
+            guard calculatorModel.reconcileFilterStackOrder() else {
+                return false
+            }
+            enterNDWheelReshaping()
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
+            return true
+        }
+        guard changed else { return }
+        persistCalculatorContext()
     }
 
     /// Drops every interaction trace without applying it — slot
     /// switches and restores discard in-flight selections along with
     /// the outgoing slot's transient UI state (v2 §2.2).
-    private func resetNDWheelInteractionState() {
+    func resetNDWheelInteractionState() {
         ndWheelGeneration += 1
         ndWheelInteractionState = .idle
         unresolvedNDWheelIDs.removeAll()
@@ -2111,12 +2410,15 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             disarmNDWheelCleanup()
             return
         }
-        // A0: budget saturation sheds zeros immediately when the
-        // machine is quiet (the barrier also applies A0 inline).
+        // A0: budget saturation sheds UNUSABLE zeros immediately when
+        // the machine is quiet (the barrier also applies A0 inline).
+        // An Empty Filter Set wheel that can still mount a Record-only
+        // item keeps the idle interval (FILTER-PLUS-005).
         let saturated = calculatorModel.ndStep.stops
             >= Double(ExposureScale.maximumWholeNDStops) - ExposureCalculator.stabilityEpsilon
-        if saturated, ndWheelInteractionState == .idle, touchedNDWheelIDs.isEmpty {
-            performNDWheelCleanup()
+        if saturated, ndWheelInteractionState == .idle, touchedNDWheelIDs.isEmpty,
+           calculatorModel.canRemoveUnusableEmptyFilterWheel {
+            performUnusableNDWheelCleanup()
             return
         }
         guard ndWheelCleanupTask == nil else { return }
@@ -2170,6 +2472,19 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         persistCalculatorContext()
     }
 
+    /// A0 variant: removes only wheels that can hold no usable row;
+    /// usable Empty wheels stay and the idle timer re-arms for them.
+    private func performUnusableNDWheelCleanup() {
+        disarmNDWheelCleanup()
+        guard calculatorModel.canRemoveUnusableEmptyFilterWheel else { return }
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            calculatorModel.cleanupUnusableEmptyFilterWheels()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+    }
+
     /// v2 compatibility alias: call sites that used to "re-examine"
     /// now simply (re)arm the fire-time-judged timer.
     public func reexamineNDWheelCleanup() {
@@ -2192,6 +2507,30 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         }
         return cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.ndFilterSteps
             ?? [pageState.ndStep]
+    }
+
+    /// Page-aware wheels: live for the active slot, the stored slot
+    /// snapshot for inactive pages.
+    public func filterWheels(forPage pageState: CameraSlotPageState) -> [FilterWheel] {
+        if pageState.isActive {
+            return filterWheels
+        }
+        return cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.filterWheels
+            ?? [.standard(pageState.ndStep)]
+    }
+
+    /// Page-aware resolved rows parallel to `filterWheels(forPage:)`.
+    /// Inactive pages resolve their stored wheels against the current
+    /// inventory; a wheel that no longer resolves reads as Empty.
+    public func filterRows(forPage pageState: CameraSlotPageState) -> [ResolvedFilterRow] {
+        if pageState.isActive {
+            return filterRows
+        }
+        let inventory = calculatorModel.filterInventory
+        return filterWheels(forPage: pageState).map { wheel in
+            FilterStack.resolvedRow(for: wheel, inventory: inventory)
+                ?? ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil)
+        }
     }
 
     /// Page-aware companion of `ndFilterWheelIDs`. Inactive pages
@@ -2219,7 +2558,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     /// Refreshes the published `ndStep` mirror from the model's
     /// effective (summed) value without re-entering the write path.
-    private func syncNDStepMirrorFromModel() {
+    func syncNDStepMirrorFromModel() {
         let effective = calculatorModel.ndStep
         guard ndStep != effective else {
             return
@@ -2351,7 +2690,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    private func persistCalculatorContext() {
+    func persistCalculatorContext() {
         // During a camera-slot snapshot apply we suppress per-mutation
         // persistence so the transition writes a single coherent
         // snapshot at the end (see `applyCameraSlotSnapshot`).

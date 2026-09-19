@@ -59,6 +59,8 @@
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
+		A00000000000000000000928 /* ExposureWorkspaceMainLayoutStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */; };
+		A0000000000000000000092A /* NDWheelPickerCenterRowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */; };
 		A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */; };
 		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
 		A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */; };
@@ -168,6 +170,8 @@
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyleTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerCenterRowTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCustomFilmLibraryStore.swift; sourceTree = "<group>"; };
@@ -371,6 +375,8 @@
 				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
 				A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */,
 				A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */,
+				A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */,
+				A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -679,6 +685,8 @@
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
 				A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */,
 				A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */,
+				A00000000000000000000928 /* ExposureWorkspaceMainLayoutStyleTests.swift in Sources */,
+				A0000000000000000000092A /* NDWheelPickerCenterRowTests.swift in Sources */,
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 				A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */,
 				A00000000000000000000D01 /* CustomFilmLibraryQuarantineTests.swift in Sources */,

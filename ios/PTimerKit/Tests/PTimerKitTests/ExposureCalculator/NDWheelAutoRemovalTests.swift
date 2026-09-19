@@ -143,10 +143,14 @@ final class NDWheelAutoRemovalTests: XCTestCase {
 
     func testTouchBlocksCleanupAtFireTime() async {
         let viewModel = makeViewModel()
-        viewModel.ndWheelCleanupDelay = 0.05
+        // Margins sized for a loaded host: the settle wait clears the
+        // 0.02 s reshape well before the cleanup fires, and the hold
+        // outlasts the cleanup delay several times over, so a late
+        // scheduler cannot turn either wait into the other.
+        viewModel.ndWheelCleanupDelay = 0.15
         viewModel.addFilterWheel()
         viewModel.setNDFilterStep(NDStep(stops: 10), at: 0)
-        await settleWindow(0.03)  // leave RESHAPING (< cleanup delay)
+        await settleWindow(0.06)  // leave RESHAPING (< cleanup delay)
         let zeroID = viewModel.ndFilterWheelIDs[1]
 
         // A motionless hold (no row changes) — data-invisible, so
@@ -154,7 +158,7 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         viewModel.ndWheelTouchBegan(
             wheelID: zeroID, generation: viewModel.ndWheelGeneration
         )
-        await settleWindow(0.2)
+        await settleWindow(0.45)
         XCTAssertEqual(
             viewModel.ndFilterSteps.count, 2,
             "A wheel never vanishes under a resting finger."

@@ -70,6 +70,13 @@ public struct RunningTimerItem: Identifiable, Equatable {
     /// (PTIMER-187); the basis `Adj` segment for corrected/target
     /// timers.
     public let adjustedShutterSeconds: TimeInterval?
+    /// Immutable per-wheel filter summary captured at start (Filter
+    /// Set contract). `nil` for manual timers and older snapshots.
+    public let filterSummary: [FilterSummaryEntry]?
+    /// Start-time reference string for the Timer list (Filter Set and
+    /// item names, registered representations, modes). Descriptive
+    /// only; never rewritten after start.
+    public let filterReferenceText: String?
     /// Remaining time recorded when the timer was canceled. Non-nil
     /// only for canceled records; lets the history surface show how
     /// much was left at the stop (e.g. "Canceled · 51s left").
@@ -97,6 +104,8 @@ public struct RunningTimerItem: Identifiable, Equatable {
         ndStops: Double? = nil,
         baseShutterSeconds: TimeInterval? = nil,
         adjustedShutterSeconds: TimeInterval? = nil,
+        filterSummary: [FilterSummaryEntry]? = nil,
+        filterReferenceText: String? = nil,
         canceledRemainingTime: TimeInterval? = nil
     ) {
         self.id = id
@@ -120,6 +129,8 @@ public struct RunningTimerItem: Identifiable, Equatable {
         self.ndStops = ndStops
         self.baseShutterSeconds = baseShutterSeconds
         self.adjustedShutterSeconds = adjustedShutterSeconds
+        self.filterSummary = filterSummary
+        self.filterReferenceText = filterReferenceText
         self.canceledRemainingTime = canceledRemainingTime
     }
 

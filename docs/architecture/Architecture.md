@@ -370,6 +370,7 @@ maintain a parallel copy.
 |---|---|
 | Calculator inputs (base shutter, mixed Filter Stack, last successfully added Filter Source) | `CalculatorModel` |
 | Filter inventory (Filter Sets, physical items, order, colors) | `FilterInventoryModel` |
+| Filter summary captured on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.filterSummary` and `PersistentTimerMetadataSnapshot.filterSummary`) |
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |

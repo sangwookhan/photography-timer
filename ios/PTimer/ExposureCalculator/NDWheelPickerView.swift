@@ -20,13 +20,18 @@ import UIKit
 /// decision point; this type only MEASURES low-level input (row
 /// changes, touch state, overscroll distance) and stamps every event
 /// with the generation it was issued under.
-struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
-    /// Ladder of selectable values, top-truncated to the wheel's
-    /// remaining budget. Changing it triggers a locked reload.
-    let steps: [NDStep]
-    /// The wheel's DISPLAY value (pending selection during an open
-    /// set commit, committed value otherwise).
-    let selectedStep: NDStep
+struct NDWheelPickerView<Row: Hashable, RowContent: View>: UIViewRepresentable {
+    /// Rows the wheel can select — the budget-truncated Standard
+    /// ladder, or Empty plus a Filter Set's item rows (Filter Set
+    /// contract). Changing them triggers a locked reload.
+    let steps: [Row]
+    /// The wheel's DISPLAY row (pending selection during an open set
+    /// commit, committed row otherwise).
+    let selectedStep: Row
+    /// Whether a row is a cleanable state (Standard 0 / Empty): the
+    /// overscroll removal gesture arms only when the touch begins on
+    /// such a row.
+    let isCleanableRow: (Row) -> Bool
     /// While false (the wheel's motion has not concluded) the
     /// representable never enforces the displayed row, so it cannot
     /// fight a finger or a decelerating wheel.
@@ -41,12 +46,12 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
     /// stayed equal.
     let rowConfiguration: AnyHashable
     let rowHeight: CGFloat
-    @ViewBuilder let rowContent: (NDStep) -> RowContent
+    @ViewBuilder let rowContent: (Row) -> RowContent
 
     /// Low-level measurements, generation-stamped. The parent view
     /// adds the wheel identity and forwards to the ViewModel.
-    let onRowObserved: (NDStep, Int) -> Void
-    let onSelected: (NDStep, Int) -> Void
+    let onRowObserved: (Row, Int) -> Void
+    let onSelected: (Row, Int) -> Void
     let onTouchBegan: (Int) -> Void
     let onTouchEnded: () -> Void
     let onOverscrollReleased: (Int) -> Void
@@ -189,6 +194,16 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
             view.rowHeight
         }
 
+        /// UIPickerView insets its single component by about 9 pt on
+        /// each side by default, which is width the stacked columns
+        /// cannot spare (FILTER-STACK-007: complete registered
+        /// representations without ellipsis). Row views span the full
+        /// picker width instead; the selection band overlay already
+        /// draws at that width.
+        func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
+            max(pickerView.bounds.width, 1)
+        }
+
         func pickerView(
             _ pickerView: UIPickerView,
             viewForRow row: Int,
@@ -200,10 +215,11 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
             }
             let content = view.rowContent(view.steps[row])
             if let cell = reusingView as? NDWheelRowHostView<RowContent> {
+                cell.rowIndex = row
                 cell.update(rootView: content)
                 return cell
             }
-            return NDWheelRowHostView(rootView: content)
+            return NDWheelRowHostView(rowIndex: row, rootView: content)
         }
 
         func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
@@ -216,11 +232,22 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
 
         // MARK: Row polling (live preview)
 
+        /// Reports the candidate at the VISUAL center (FILTER-STACK-007).
+        /// `selectedRow(inComponent:)` only changes once UIKit settles
+        /// on a row, so during a drag or inertial scroll it still names
+        /// the previously committed candidate while a different row is
+        /// centered — the persistent label and status text would then
+        /// disagree with the centered number and rail. The hosted row
+        /// views know their row index, so the row whose frame midpoint
+        /// is nearest the picker's vertical center is the live
+        /// candidate; `selectedRow` remains the fallback before any row
+        /// view exists. Sampled by the 30 fps display link, so a
+        /// crossing is reported within one poll interval.
         @objc private func handleTick() {
             guard let picker, !isPerformingProgrammaticChange else {
                 return
             }
-            let row = picker.selectedRow(inComponent: 0)
+            let row = visualCenterRow(in: picker) ?? picker.selectedRow(inComponent: 0)
             guard row >= 0, row != lastObservedRow else {
                 return
             }
@@ -231,6 +258,25 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
             view.onRowObserved(view.steps[row], view.generation)
         }
 
+        private func visualCenterRow(in picker: UIPickerView) -> Int? {
+            var candidates: [(row: Int, midY: CGFloat)] = []
+            Self.collectRowHosts(in: picker) { host in
+                let frame = host.convert(host.bounds, to: picker)
+                candidates.append((row: host.rowIndex, midY: frame.midY))
+            }
+            return NDWheelPickerCenterRow.row(nearest: picker.bounds.midY, among: candidates)
+        }
+
+        private static func collectRowHosts(in view: UIView, _ visit: (NDWheelRowHostView<RowContent>) -> Void) {
+            for subview in view.subviews {
+                if let host = subview as? NDWheelRowHostView<RowContent> {
+                    visit(host)
+                } else {
+                    collectRowHosts(in: subview, visit)
+                }
+            }
+        }
+
         // MARK: Own pan (touch state + overscroll)
 
         @objc func handlePan(_ pan: UIPanGestureRecognizer) {
@@ -239,7 +285,7 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
                 isTouchActive = true
                 view.onTouchBegan(view.generation)
                 isOverscrollArmed = picker?.selectedRow(inComponent: 0) == 0
-                    && view.steps.first?.stops == 0
+                    && view.steps.first.map(view.isCleanableRow) == true
                 isOverscrollPastThreshold = false
                 if isOverscrollArmed {
                     overscrollHaptic.prepare()
@@ -291,8 +337,12 @@ struct NDWheelPickerView<RowContent: View>: UIViewRepresentable {
 /// `Picker` implementation.
 private final class NDWheelRowHostView<Content: View>: UIView {
     private let host: UIHostingController<Content>
+    /// The picker row this host currently renders; updated on reuse so
+    /// the visual-center scan maps a frame back to its candidate.
+    var rowIndex: Int
 
-    init(rootView: Content) {
+    init(rowIndex: Int, rootView: Content) {
+        self.rowIndex = rowIndex
         host = UIHostingController(rootView: rootView)
         super.init(frame: .zero)
         host.view.backgroundColor = .clear
@@ -313,5 +363,23 @@ private final class NDWheelRowHostView<Content: View>: UIView {
 
     func update(rootView: Content) {
         host.rootView = rootView
+    }
+}
+
+/// Pure helper behind the visual-center scan: the row whose midpoint
+/// lies nearest the picker's center line. Ties resolve to the lower
+/// row index so a boundary crossing is reported exactly once.
+enum NDWheelPickerCenterRow {
+    static func row(nearest centerY: CGFloat, among candidates: [(row: Int, midY: CGFloat)]) -> Int? {
+        candidates
+            .min { lhs, rhs in
+                let lhsDistance = abs(lhs.midY - centerY)
+                let rhsDistance = abs(rhs.midY - centerY)
+                if lhsDistance != rhsDistance {
+                    return lhsDistance < rhsDistance
+                }
+                return lhs.row < rhs.row
+            }?
+            .row
     }
 }

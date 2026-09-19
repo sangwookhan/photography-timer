@@ -85,7 +85,9 @@ public final class TimerWorkspaceModel: ObservableObject {
         selectedModelLabel: String? = nil,
         ndStops: Double? = nil,
         baseShutterSeconds: TimeInterval? = nil,
-        adjustedShutterSeconds: TimeInterval? = nil
+        adjustedShutterSeconds: TimeInterval? = nil,
+        filterSummary: [FilterSummaryEntry]? = nil,
+        filterReferenceText: String? = nil
     ) -> UUID? {
         let order = nextTimerOrder
         timerMetadata[id] = TimerMetadataEntry(
@@ -101,7 +103,9 @@ public final class TimerWorkspaceModel: ObservableObject {
             selectedModelLabel: selectedModelLabel,
             ndStops: ndStops,
             baseShutterSeconds: baseShutterSeconds,
-            adjustedShutterSeconds: adjustedShutterSeconds
+            adjustedShutterSeconds: adjustedShutterSeconds,
+            filterSummary: filterSummary,
+            filterReferenceText: filterReferenceText
         )
 
         guard timerManager.start(id: id, duration: duration) != nil else {
@@ -156,7 +160,9 @@ public final class TimerWorkspaceModel: ObservableObject {
             selectedModelLabel: source.selectedModelLabel,
             ndStops: source.ndStops,
             baseShutterSeconds: source.baseShutterSeconds,
-            adjustedShutterSeconds: source.adjustedShutterSeconds
+            adjustedShutterSeconds: source.adjustedShutterSeconds,
+            filterSummary: source.filterSummary,
+            filterReferenceText: source.filterReferenceText
         )
     }
 
@@ -266,7 +272,9 @@ public final class TimerWorkspaceModel: ObservableObject {
                         selectedModelLabel: entry.selectedModelLabel,
                         ndStops: entry.ndStops,
                         baseShutterSeconds: entry.baseShutterSeconds,
-                        adjustedShutterSeconds: entry.adjustedShutterSeconds
+                        adjustedShutterSeconds: entry.adjustedShutterSeconds,
+                        filterSummary: entry.filterSummary,
+                        filterReferenceText: entry.filterReferenceText
                     )
                 )
             }
@@ -300,7 +308,9 @@ public final class TimerWorkspaceModel: ObservableObject {
                         selectedModelLabel: metadata.selectedModelLabel,
                         ndStops: metadata.ndStops,
                         baseShutterSeconds: metadata.baseShutterSeconds,
-                        adjustedShutterSeconds: metadata.adjustedShutterSeconds
+                        adjustedShutterSeconds: metadata.adjustedShutterSeconds,
+                        filterSummary: metadata.filterSummary,
+                        filterReferenceText: metadata.filterReferenceText
                     )
                 }
                 .sorted { lhs, rhs in
@@ -349,6 +359,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                     ndStops: metadata?.ndStops,
                     baseShutterSeconds: metadata?.baseShutterSeconds,
                     adjustedShutterSeconds: metadata?.adjustedShutterSeconds,
+                    filterSummary: metadata?.filterSummary,
+                    filterReferenceText: metadata?.filterReferenceText,
                     canceledRemainingTime: state.remainingAtCancel
                 )
             }
@@ -427,6 +439,8 @@ private struct TimerMetadataEntry {
     let ndStops: Double?
     let baseShutterSeconds: TimeInterval?
     let adjustedShutterSeconds: TimeInterval?
+    let filterSummary: [FilterSummaryEntry]?
+    let filterReferenceText: String?
 
     init(
         order: Int,
@@ -441,7 +455,9 @@ private struct TimerMetadataEntry {
         selectedModelLabel: String? = nil,
         ndStops: Double? = nil,
         baseShutterSeconds: TimeInterval? = nil,
-        adjustedShutterSeconds: TimeInterval? = nil
+        adjustedShutterSeconds: TimeInterval? = nil,
+        filterSummary: [FilterSummaryEntry]? = nil,
+        filterReferenceText: String? = nil
     ) {
         self.order = order
         self.name = name
@@ -456,5 +472,7 @@ private struct TimerMetadataEntry {
         self.ndStops = ndStops
         self.baseShutterSeconds = baseShutterSeconds
         self.adjustedShutterSeconds = adjustedShutterSeconds
+        self.filterSummary = filterSummary
+        self.filterReferenceText = filterReferenceText
     }
 }

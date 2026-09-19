@@ -5,117 +5,134 @@ import XCTest
 import PTimerKit
 @testable import PTimer
 
+/// SHELL-011/012: density-tier eligibility is derived from each tier's
+/// complete worst-case content budget — the same production estimate
+/// the screen uses to pick a tier — never from a hand-tuned floor.
 final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
+    /// iPhone 17 (844 pt tall, 59 + 34 pt safe areas) and iPhone 17 Pro
+    /// (874 pt, 62 + 34) workspace budgets after the rail reservation.
+    private let iPhone17Budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 844 - 59 - 34)
+    private let iPhone17ProBudget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 874 - 62 - 34)
 
-    /// iPhone 17 budget lands in the compact tier (at/above the compact
-    /// floor, below the regular floor) and clears the dense minimum —
-    /// the compact/dense fallback boundary guard.
-    func testIPhone17BudgetUsesCompactTierAndFitsDenseMinimum() {
-        let area: CGFloat = 844 - 59 - 34
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: area
-        )
-        let regularFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .regular)
-        let compactFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .compact)
-        let denseFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .dense)
+    func testTierSelectionAndThresholdsUseTheProductionBudget() {
+        for density in [ExposureWorkspaceLayoutDensity.regular, .compact, .dense] {
+            XCTAssertEqual(
+                ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: density),
+                ExposureWorkspaceMainLayoutStyle(density: density).worstCaseContentBudget.total,
+                "The floor is the derived budget, not a separate constant."
+            )
+        }
+        let regular = ExposureWorkspaceMainLayoutStyle.regular.worstCaseContentBudget.total
+        let compact = ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget.total
+        let dense = ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total
+        XCTAssertLessThan(dense, compact)
+        XCTAssertLessThan(compact, regular)
 
-        XCTAssertGreaterThanOrEqual(budget, compactFloor)
-        XCTAssertLessThan(budget, regularFloor)
-        XCTAssertGreaterThanOrEqual(budget, denseFloor)
+        // Exactly the requirement selects its tier; one point less falls back.
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: regular), .regular)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: regular - 1), .compact)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: compact), .compact)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: compact - 1), .dense)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: dense), .dense)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: dense - 1), .dense, "Dense is the floor tier.")
     }
 
-    /// Compact-tier intrinsic for the worst case (film result
-    /// hierarchy + Target Shutter active + Reset row) fits within
-    /// the compact floor plus the page Spacer's slack.
-    func testCompactTierIntrinsicFitsWorstCaseInsideCompactFloor() {
-        let style = ExposureWorkspaceMainLayoutStyle.compact
-        let intrinsic = Self.estimatedPageIntrinsicHeight(
-            style: style,
-            includesFilmResultHierarchy: true,
-            includesTargetShutterRow: true,
-            includesResetRow: true
-        )
-        let compactFloor = ExposureWorkspaceLayoutMetrics.estimatedMainContentHeight(for: .compact)
-
-        XCTAssertLessThanOrEqual(
-            intrinsic,
-            compactFloor + style.resultFlowSpacerMinLength
-        )
+    /// The 611 pt iPhone 17 workspace uses Dense, and Dense fits it.
+    func testIPhone17BudgetUsesDenseAndDenseFits() {
+        let style = ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: iPhone17Budget)
+        XCTAssertEqual(iPhone17Budget, 611)
+        XCTAssertEqual(style, .dense)
+        XCTAssertLessThanOrEqual(ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total, iPhone17Budget)
     }
 
-    /// Worst-case page intrinsic fits the iPhone 17 budget after
-    /// rail reservation.
-    @MainActor
-    func testWorstCasePageIntrinsicFitsIPhone17Budget() {
-        let area: CGFloat = 844 - 59 - 34
-        let budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-            workspaceArea: area
-        )
-        let style = ExposureWorkspaceMainLayoutStyle.compact
-        let intrinsic = Self.estimatedPageIntrinsicHeight(
-            style: style,
-            includesFilmResultHierarchy: true,
-            includesTargetShutterRow: true,
-            includesResetRow: true
-        )
-        let pagePadding = style.topPadding + style.bottomPadding
+    /// SHELL-012 / FILTER-STACK-008 reference outcome (spec revision
+    /// 56e381e2): with the status region reduced to one row, Compact's
+    /// complete derived worst case fits the approximately 638 pt
+    /// iPhone 17 Pro workspace, so the Pro renders Compact (one wheel at
+    /// 26 pt, not Dense 19 pt); the approximately 720 pt iPhone 17 Pro
+    /// Max workspace also qualifies for Compact.
+    func testIPhone17ProAndIPhone17ProMaxUseCompact() {
+        let compact = ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget.total
+        XCTAssertEqual(iPhone17ProBudget, 638)
+        XCTAssertLessThanOrEqual(compact, iPhone17ProBudget, "The worst film-result plus active-Target-Shutter composition fits Compact on the Pro.")
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: iPhone17ProBudget), .compact)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: iPhone17ProBudget).wheelRowValuePointSize(forNDWheelCount: 1), 26)
 
-        XCTAssertGreaterThanOrEqual(
-            budget,
-            intrinsic + pagePadding,
-            "Worst-case page intrinsic (film + Target Shutter active + Reset row) must fit the iPhone 17 workspace budget."
-        )
+        let proMaxBudget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 956 - 62 - 34)
+        XCTAssertEqual(proMaxBudget, 720)
+        XCTAssertLessThanOrEqual(compact, proMaxBudget)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: proMaxBudget), .compact)
     }
 
-    /// Estimated page-VStack intrinsic height derived from style
-    /// constants. Mirrors `CameraSlotCalculatorPage`'s section
-    /// stack so changes to style values propagate without
-    /// re-deriving magic numbers.
-    private static func estimatedPageIntrinsicHeight(
-        style: ExposureWorkspaceMainLayoutStyle,
-        includesFilmResultHierarchy: Bool,
-        includesTargetShutterRow: Bool,
-        includesResetRow: Bool
-    ) -> CGFloat {
-        // HeaderView card: title line + film selector row + inter-row
-        // spacings + outer card padding. PTIMER-172 moved Reset onto the
-        // title row (beside the title), so it no longer contributes a
-        // separate row of height. `includesResetRow` is retained for
-        // call-site clarity / worst-case intent but adds no height.
-        _ = includesResetRow
-        let titleApprox: CGFloat = 30
-        let filmRowApprox: CGFloat = 75
-        let headerInner = titleApprox
-            + style.headerContentSpacing
-            + filmRowApprox
-        let headerCard = headerInner + 2 * style.sectionCardPadding
+    /// The derived budgets after the status region became one row
+    /// (spec revision 56e381e2): about 793 / 636 / 582 points for
+    /// Regular / Compact / Dense with the current style (previously
+    /// 811 / 652 / 597 with the two-line region).
+    func testDerivedBudgetsMatchTheApprovedReferenceValues() {
+        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.regular.worstCaseContentBudget.total, 793, accuracy: 1.5)
+        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget.total, 636, accuracy: 1.5)
+        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total, 582, accuracy: 1.5)
+    }
 
-        // VariableSectionView: label + label spacing + picker + outer
-        // card padding.
-        let variableLabelApprox: CGFloat = 17
-        let variableInner = variableLabelApprox
-            + style.pickerLabelSpacing
-            + style.pickerHeight
-        let variableCard = variableInner + 2 * style.sectionCardPadding
+    /// The status region is counted once, as exactly one caption row
+    /// plus its padding — no stale second-line capacity anywhere in
+    /// the budget (FILTER-STACK-008, spec revision 56e381e2).
+    func testStatusRegionIsCountedOnceAsOneRow() {
+        for style in [ExposureWorkspaceMainLayoutStyle.regular, .compact, .dense] {
+            let budget = style.worstCaseContentBudget
+            let oneRow = UIFont.preferredFont(
+                forTextStyle: style.filterStatusRegionTextStyle,
+                compatibleWith: UITraitCollection(preferredContentSizeCategory: .large)
+            ).lineHeight
+            XCTAssertEqual(budget.statusRegion, style.filterStatusRegionHeight, "\(style): the budget reads the style's region height.")
+            XCTAssertEqual(style.filterStatusRegionHeight, oneRow + 2 * style.filterStatusRegionVerticalPadding, accuracy: 0.001, "\(style): one caption row plus padding.")
+            XCTAssertLessThan(style.filterStatusRegionHeight, 2 * oneRow, "\(style): no room for a second line.")
+            XCTAssertEqual(
+                budget.variableCard,
+                budget.pickerHeader + budget.pickerLabelSpacing + budget.wheelLabelRow + budget.picker + budget.wheelBodySpacing + budget.statusRegion + 2 * budget.cardPadding,
+                accuracy: 0.001,
+                "\(style): the region appears exactly once in the variable card."
+            )
+        }
+    }
 
-        // ResultSectionView: film mode uses the filmResultCardMinHeight
-        // floor (already includes resultBlockPadding); digital mode
-        // sizes to its single result row plus that padding.
-        let resultInnerBlock: CGFloat = includesFilmResultHierarchy
-            ? style.filmResultCardMinHeight
-            : (50 + 2 * style.resultBlockPadding)
-        let resultCard = resultInnerBlock + 2 * style.sectionCardPadding
+    /// Changing a contributing style value moves the derived
+    /// requirement by the same amount — there is no parallel formula.
+    func testContributingValuesMoveTheDerivedRequirement() {
+        let base = ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget
+        var taller = base
+        taller.picker += 10
+        XCTAssertEqual(taller.total, base.total + 10, accuracy: 0.001)
+        var wider = base
+        wider.statusRegion += 6
+        XCTAssertEqual(wider.total, base.total + 6, accuracy: 0.001)
+        var padded = base
+        padded.cardPadding += 1
+        XCTAssertEqual(padded.total, base.total + 8, accuracy: 0.001, "Card padding counts twice on each of four cards.")
+        var spaced = base
+        spaced.headerContentSpacing += 2
+        XCTAssertEqual(spaced.total, base.total + 4, accuracy: 0.001, "Header spacing separates the film row and the model row.")
+    }
 
-        // TargetShutterSectionView active row: HStack height ≈
-        // max(label line, timer-action button) + outer card padding.
-        // PTIMER-172 shrank the row's play button to timerActionSize - 8.
-        let targetRowApprox: CGFloat = includesTargetShutterRow
-            ? (max(17, style.timerActionSize - 8))
-            : 0
-        let targetCard = includesTargetShutterRow
-            ? (targetRowApprox + 2 * style.sectionCardPadding)
-            : 0
-
-        return headerCard + variableCard + resultCard + targetCard
+    /// Records the derived totals in the test log so a style change
+    /// leaves a visible trace of the new requirements.
+    func testDerivedTotalsAreReported() {
+        for style in [ExposureWorkspaceMainLayoutStyle.regular, .compact, .dense] {
+            let budget = style.worstCaseContentBudget
+            XCTContext.runActivity(named: "\(style) budget") { activity in
+                let attachment = XCTAttachment(string: """
+                    total=\(budget.total) header=\(budget.headerCard) target=\(budget.targetCard) \
+                    variable=\(budget.variableCard) result=\(budget.resultCard) \
+                    titleRow=\(budget.headerTitleRow) filmLabel=\(budget.filmLabelRow) filmButton=\(budget.filmSelectorButton) \
+                    modelRow=\(budget.modelRow) targetRow=\(budget.targetRow) spacer=\(budget.resultSpacer) \
+                    padding=\(budget.topPadding + budget.bottomPadding)
+                    """)
+                attachment.lifetime = .keepAlways
+                activity.add(attachment)
+            }
+            XCTAssertGreaterThan(budget.total, 0)
+            // Also on stdout so a plain `xcodebuild` log shows the totals.
+            print("BUDGET_TOTALS \(style) total=\(budget.total) statusRegion=\(budget.statusRegion) picker=\(budget.picker) labelRow=\(budget.wheelLabelRow)")
+        }
     }
 }

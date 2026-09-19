@@ -131,7 +131,12 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   per-camera last successfully added Filter Source, and a read-only
   mirror of the filter inventory used to resolve Filter Set rows; the
   facade refreshes that mirror whenever `FilterInventoryModel`
-  publishes a change.
+  publishes a change. A successful wheel commit receives an explicit
+  ordering policy: normal interaction applies the value-based
+  `FilterStack` commit order, while screen-reader touch exploration
+  preserves the current complete order. The model also exposes the
+  single explicit reconciliation back to normal order, carrying stable
+  wheel IDs through the resulting permutation.
 - **`FilterInventoryModel`** — the user's Filter Sets and physical
   filter items (`PTimerCore` `FilterInventory`), persisted through
   `FilterInventoryStoring`. Stack reconciliation after an inventory
@@ -155,6 +160,26 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   successful addition. Browsing never mutates the stack or the memory
   on its own; the accessibility adjustable action is the one explicit
   source-selection path that does not add.
+- **Screen-reader ordering suspension** — the
+  `ExposureCalculatorViewModel` owns the platform-neutral suspension
+  flag and one pending-resume bit. It applies the same policy to touch
+  and assistive commits at the existing set-commit barrier. When the
+  policy resumes, reconciliation waits until touches, wheel motion,
+  pending commits, and reshaping are all clear, then runs exactly once.
+  The iOS `ExposureCalculatorScreen` is the platform adapter: it reads
+  the initial `UIAccessibility.isVoiceOverRunning` value before model
+  restoration and observes VoiceOver status-change notifications.
+  UIKit does not cross into `PTimerKit`; Android can map touch
+  exploration into the same policy input without identifying a
+  particular screen-reader package.
+  The two sides of the ordering policy are therefore: in normal mode
+  the settled order is applied directly at the commit barrier and the
+  wheel row animates each wheel to its new position; while
+  screen-reader touch exploration is active, the current wheel order
+  is preserved. `Filters/FilterWheelRowOrderTransition` remains as a
+  value describing a whole-row fade between complete arrangements,
+  but the shipped row does not apply it because the fade briefly hid
+  every wheel.
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
 - **`TimerWorkspaceModel`** — timer collection metadata and timer
   lifecycle commands around `TimerManager`.

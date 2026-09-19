@@ -132,7 +132,8 @@ struct ExposureCalculatorScreen: View {
         // view-model facade used by current views.
         self.init(
             coordinator: WorkspaceCoordinator(
-                dependencies: ViewModelDependencyFactory.production()
+                dependencies: ViewModelDependencyFactory.production(),
+                isFilterStackOrderingSuspended: UIAccessibility.isVoiceOverRunning
             ),
             bottomSheetStateStore: BottomSheetWorkspaceStateStore()
         )
@@ -467,6 +468,16 @@ struct ExposureCalculatorScreen: View {
             silentModeAdvisory.handleAppBecameActive(
                 isAlarmSounding: alarmPlayer.soundingTimerID != nil
             )
+        }
+        .onAppear {
+            viewModel.setFilterStackOrderingSuspended(UIAccessibility.isVoiceOverRunning)
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: UIAccessibility.voiceOverStatusDidChangeNotification
+            )
+        ) { _ in
+            viewModel.setFilterStackOrderingSuspended(UIAccessibility.isVoiceOverRunning)
         }
         .overlay(alignment: .bottom) {
             silentModeAdvisoryBanner

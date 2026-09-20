@@ -5,6 +5,24 @@ and digital photography. The current app helps calculate adjusted shutter
 times, film reciprocity-corrected exposures, target shutter differences,
 and shooting timers. PTIMER is the project and repository code name.
 
+## What the App Does
+
+- Exposure calculator: base shutter, an ND filter stack of up to four
+  wheels, and the adjusted shutter time, with Stops, OD, or ND factor
+  notation.
+- Filter Sets: register the physical filters you carry (fixed ND,
+  CPL with its exposure-loss choices, GND with Record-only or Apply
+  full value) in named, color-coded sets. On a camera, each wheel comes
+  from Standard or from one of your Filter Sets; tap the Plus wheel to
+  add a wheel from the displayed source, or drag it to another source
+  and let it settle to add from that source directly. Each camera
+  remembers its stack and the source of its last successful addition.
+- Film reciprocity: reciprocity-corrected exposures for the selected
+  film, target shutter differences, and a per-camera workspace.
+- Timers: countdown timers started from the calculator, with the
+  filter summary captured at start time, plus Live Activity and
+  lock-screen delivery.
+
 ## Current Status
 
 - iPhone is the first release target.

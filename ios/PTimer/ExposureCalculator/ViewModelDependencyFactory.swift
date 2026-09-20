@@ -29,7 +29,8 @@ enum ViewModelDependencyFactory {
             lockScreenTargetExposer: ActivityKitLockScreenTimerTargetExposer(),
             customFilmLibrary: CustomFilmLibrary(
                 store: UserDefaultsCustomFilmLibraryStore()
-            )
+            ),
+            filterInventoryStore: UserDefaultsFilterInventoryStore()
         )
     }
 

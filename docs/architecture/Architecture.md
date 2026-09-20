@@ -119,12 +119,90 @@ All in `PTimerKit`, one directory per feature area:
 `Calculator/CalculatorModel`, `Reciprocity/ReciprocityModel`,
 `Workspace/TimerWorkspaceModel`, `Film/FilmSelectionModel`,
 `CameraSlots/CameraSlotSessionModel`,
-`TargetShutter/TargetShutterModel`; presenters sit next to their
-feature (e.g. `FilmDetails/FilmModeDetailsPresenter`).
+`TargetShutter/TargetShutterModel`,
+`Filters/FilterInventoryModel`; presenters sit next to their
+feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
+`Filters/FilterWheelPresenter`).
 
 `@Observable` feature models, each owning one slice of state:
 
 - **`CalculatorModel`** — calculator inputs and pure ND calculation.
+  Owns the mixed `FilterStack` (Standard and Filter Set wheels), the
+  per-camera last successfully added Filter Source, and a read-only
+  mirror of the filter inventory used to resolve Filter Set rows; the
+  facade refreshes that mirror whenever `FilterInventoryModel`
+  publishes a change. A successful wheel commit receives an explicit
+  ordering policy: normal interaction applies the value-based
+  `FilterStack` commit order, while screen-reader touch exploration
+  preserves the current complete order. The model also exposes the
+  single explicit reconciliation back to normal order, carrying stable
+  wheel IDs through the resulting permutation.
+- **`FilterInventoryModel`** — the user's Filter Sets and physical
+  filter items (`PTimerCore` `FilterInventory`), persisted through
+  `FilterInventoryStoring`. Stack reconciliation after an inventory
+  edit runs on the facade, which is the one place that reads both the
+  inventory and the calculator / camera-slot state.
+- **Filter Set editor session** — the registered-value notation a
+  Filter Set editing session remembers between consecutive new items
+  (Stops, OD, or ND; the kind always starts Fixed) is the pure value
+  `Filters/FilterItemEditorSessionMemory`. It is owned as view state
+  by the open `FilterSetDetailView` in the app target, so it lives
+  exactly as long as that editor is open and is never persisted;
+  editing an existing item does not update it.
+- **Plus wheel gestures** — `Filters/FilterSourcePlusGestureArbiter`
+  classifies one touch on the Plus wheel (tap, stationary long press,
+  browse) and decides the release outcome; the app's
+  `FilterSourcePlusControl` renders it. A tap, a browse that settled
+  on a different source, or an assistive activation calls the
+  facade's `addFilterWheel(from:)`, which adds exactly one wheel
+  inside the commit barrier, shows a refused add as the one-row status
+  reason, and moves the camera's remembered Filter Source only after a
+  successful addition. Browsing never mutates the stack or the memory
+  on its own. With a screen reader the Plus control is one focusable
+  element: its adjustable value steps a transient displayed candidate
+  held as view state (nothing is persisted until an add succeeds), its
+  enabled state and spoken reason are asked of the facade for the
+  source it displays (`filterAddUnavailabilityText(for:)`), and Add
+  and Manage Filter Sets are its named actions; the wheel-group
+  container carries no actions of its own.
+- **Automatic cleanup announcement** — the facade publishes
+  `Filters/EmptyFilterWheelRemoval` only when idle cleanup actually
+  removed at least one Standard 0 or Filter Set Empty wheel — the idle
+  timer, the on-demand cleanup, and the immediate 30-stop saturation
+  cleanup inside the commit barrier alike — never on scheduling,
+  deferral, or a cleanup that found nothing; the iOS screen
+  announces each removal once while VoiceOver runs. A settle (a commit
+  or motion returning to the committed row) restarts the idle interval,
+  so a cleanable wheel never inherits an almost-expired timer.
+- **Assistive adjustment** — `Filters/FilterWheelAccessibilityAdjustment`
+  scans a wheel's rows in the requested direction and yields the first
+  available row, the nearest rejection when unavailable rows prevented
+  progress, or a boundary when the wheel simply ended; the app
+  announces the rejection or the boundary reason. A commit that no
+  motion preceded keeps its row detail in the status region through
+  the reshaping window, so the full item name is visible during
+  adjustment exactly as it is while a touched wheel moves.
+- **Screen-reader ordering suspension** — the
+  `ExposureCalculatorViewModel` owns the platform-neutral suspension
+  flag and one pending-resume bit. It applies the same policy to touch
+  and assistive commits at the existing set-commit barrier. When the
+  policy resumes, reconciliation waits until touches, wheel motion,
+  pending commits, and reshaping are all clear, then runs exactly once.
+  The iOS `ExposureCalculatorScreen` is the platform adapter: it reads
+  the initial `UIAccessibility.isVoiceOverRunning` value before model
+  restoration and observes VoiceOver status-change notifications.
+  UIKit does not cross into `PTimerKit`; Android can map touch
+  exploration into the same policy input without identifying a
+  particular screen-reader package.
+  The two sides of the ordering policy are therefore: in normal mode
+  the settled order is applied directly at the commit barrier and each
+  stable wheel identity moves directly to its new position with its
+  value, label, source cue, and accessibility identity attached; while
+  screen-reader touch exploration is active, the current wheel order
+  is preserved. A programmatic command arriving inside the reshaping
+  window (a Plus add, an assistive or test selection) completes the
+  window first and runs the queued reconciliation after itself, so
+  neither the command nor the reconciliation is lost.
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
 - **`TimerWorkspaceModel`** — timer collection metadata and timer
   lifecycle commands around `TimerManager`.
@@ -220,9 +298,13 @@ stores live in the app target.
   `UserDefaultsCalculatorContextStore` (app
   `ExposureCalculator/FilmContext/`) — persists selected film plus
   calculator inputs across relaunches.
-- Same pattern for the custom-film library, camera-slot session, and
-  timer metadata: `Persistent*` schema + `*Storing` protocol in Kit
-  `Persistence/`, `UserDefaults*Store` in the app.
+- Same pattern for the custom-film library, camera-slot session,
+  filter inventory, and timer metadata: `Persistent*` schema +
+  `*Storing` protocol in Kit `Persistence/`, `UserDefaults*Store` in
+  the app. The filter summary captured on a timer is stored through
+  `Persistence/PersistentFilterSummaryEntry` (raw string tokens per
+  enum, entries decoded independently so one damaged entry never
+  discards the rest); the Core `FilterSummaryEntry` is a plain value.
 
 All persistence stores follow a `*Storing` protocol pair pattern with a
 real implementation plus a `NoOp*` implementation that unit tests use.
@@ -254,8 +336,10 @@ the app's `ExposureCalculator/CameraSlot/`).
   supplied label set through the rename surface; it lives on the
   session model and is merged into the identity on read.
 - `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
-  calculator working state (base shutter, ND, scale mode, selected
-  film, profile override, optional `targetShutterSeconds`).
+  calculator working state (base shutter, the mixed Filter Stack's
+  wheels with their per-wheel contributions, the last Filter Source,
+  scale mode, selected film, profile override, optional
+  `targetShutterSeconds`).
   Live-preview overlays (`CalculatorModel.liveBaseShutter` /
   `liveNDStep`) deliberately stay out of the snapshot — a preview
   only exists while a wheel drag is in flight on the active slot.
@@ -267,8 +351,10 @@ the app's `ExposureCalculator/CameraSlot/`).
   (`PersistentCameraSlotSessionSnapshot` +
   `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
   session. Stores raw `CameraSlotID` raw values, film/profile ids,
-  and an Optional photographer-supplied `customDisplayName` per
-  slot. The runtime resolves ids back through the preset catalog
+  an Optional photographer-supplied `customDisplayName` per slot,
+  and — additively — the mixed `filterStack` plus last Filter
+  Source. `ndStack` and the legacy scalar keep describing Standard
+  wheels only so an older build degrades to a valid Standard stack. The runtime resolves ids back through the preset catalog
   and falls back to "No film" for any id no longer in the catalog.
   The `customDisplayName` field is additive; pre-PTIMER-123
   snapshots decode unchanged and the schema version stays at `1`.
@@ -333,7 +419,9 @@ maintain a parallel copy.
 
 | State | Owner |
 |---|---|
-| Calculator inputs (base shutter, ND) | `CalculatorModel` |
+| Calculator inputs (base shutter, mixed Filter Stack, last successfully added Filter Source) | `CalculatorModel` |
+| Filter inventory (Filter Sets, physical items, order, colors) | `FilterInventoryModel` |
+| Filter summary captured on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.filterSummary` and `PersistentTimerMetadataSnapshot.filterSummary`) |
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |

@@ -1783,34 +1783,6 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.filterRows
     }
 
-    /// Standard-only projection of `displayWheelSelections` for the
-    /// ND-only picker binding: a wheel's pending Standard step, else
-    /// its committed step. Filter Set selections fall back to the
-    /// committed step.
-    public var ndDisplayFilterSteps: [NDStep] {
-        zip(displayWheelSelections, calculatorModel.ndFilterSteps).map { selection, committed in
-            if case .standard(let step) = selection {
-                return step
-            }
-            return committed
-        }
-    }
-
-    /// Page-aware companion of `ndDisplayFilterSteps`.
-    public func ndDisplayFilterSteps(forPage pageState: CameraSlotPageState) -> [NDStep] {
-        if pageState.isActive {
-            return ndDisplayFilterSteps
-        }
-        return ndFilterSteps(forPage: pageState)
-    }
-
-    /// Whether another wheel can be added from the remembered source
-    /// right now (C1): the interaction is quiet and that source has an
-    /// addable row.
-    public var canAddFilterWheel: Bool {
-        isNDWheelInteractionQuiet && calculatorModel.canAddFilterWheel
-    }
-
     /// The structural half of the Plus control's availability: no
     /// wheel is in motion, reshaping, or under a finger. The control
     /// combines it with the availability of whichever source it is
@@ -1845,20 +1817,6 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         ndWheelInteractionState == .idle
             && touchedNDWheelIDs.isEmpty
             && calculatorModel.canRemoveEmptyFilterWheel
-    }
-
-    /// A2 cleanup on demand (PTIMER-199): removes ALL 0-stop wheels
-    /// when a non-zero wheel exists; keeps exactly one when every wheel
-    /// is 0-stop. The programmatic form of the idle cleanup; publishes
-    /// an actual removal like the timer path. The layout change
-    /// persists (M2).
-    public func cleanupEmptyFilterWheels() {
-        exitNDWheelReshapingForCommand()
-        defer { attemptFilterStackOrderReconciliation() }
-        guard canRemoveEmptyFilterWheel else {
-            return
-        }
-        performNDWheelCleanup()
     }
 
     /// Adds one wheel for the camera's remembered source (a Plus tap
@@ -2074,17 +2032,6 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     // MARK: Picker events (identity + generation stamped)
-
-    /// Standard-step form of `filterWheelDidObserveRow` for the ND-only
-    /// picker binding.
-    public func ndWheelDidObserveRow(_ value: NDStep, wheelID: Int, generation: Int) {
-        filterWheelDidObserveRow(.standard(value), wheelID: wheelID, generation: generation)
-    }
-
-    /// Standard-step form of `filterWheelDidSelect`.
-    public func ndWheelDidSelect(_ value: NDStep, wheelID: Int, generation: Int) {
-        filterWheelDidSelect(.standard(value), wheelID: wheelID, generation: generation)
-    }
 
     /// A row change observed on a wheel (30 fps polling of the OWNED
     /// picker). Motion detection is data-based: any row change marks

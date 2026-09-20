@@ -28,15 +28,21 @@ public struct CameraSlotSessionPersistenceController {
     /// slot. Default `{ [] }` preserves the legacy
     /// empty-list behavior for callers that pre-date custom films.
     public let currentCustomFilms: () -> [FilmIdentity]
+    /// Live filter inventory at restore time (Filter Set contract).
+    /// Persisted Filter Set / item references resolve against it; an
+    /// unresolved reference is skipped safely rather than fabricated.
+    public let currentFilterInventory: () -> FilterInventory
 
     public init(
         sessionStore: CameraSlotSessionPersistenceStoring,
         presetFilms: [FilmIdentity],
-        currentCustomFilms: @escaping () -> [FilmIdentity] = { [] }
+        currentCustomFilms: @escaping () -> [FilmIdentity] = { [] },
+        currentFilterInventory: @escaping () -> FilterInventory = { .empty }
     ) {
         self.sessionStore = sessionStore
         self.presetFilms = presetFilms
         self.currentCustomFilms = currentCustomFilms
+        self.currentFilterInventory = currentFilterInventory
     }
 
     /// Restored session ready to apply to the runtime. The active
@@ -196,14 +202,81 @@ public struct CameraSlotSessionPersistenceController {
             return nil
         }()
 
+        let inventory = currentFilterInventory()
+        let stack = restoredFilterStack(from: entry, inventory: inventory)
         return CameraSlotCalculatorSnapshot(
             baseShutterSeconds: entry.baseShutterSeconds ?? CalculatorDefaults.baseShutterSeconds,
-            ndFilterSteps: restoredNDFilterSteps(from: entry),
+            filterStack: stack,
+            lastFilterSource: restoredLastFilterSource(from: entry, inventory: inventory),
             scaleMode: entry.restoredScaleMode,
             selectedPresetFilm: film,
             selectedProfileOverride: profile,
             targetShutterSeconds: sanitizedTargetShutterSeconds(entry.targetShutterSeconds)
         )
+    }
+
+    /// Restores the mixed Filter Stack (Filter Set contract). A present
+    /// `filterStack` that validates wins; otherwise the Standard-only
+    /// `ndStack` / legacy scalar path applies unchanged.
+    private func restoredFilterStack(
+        from entry: PersistentCameraSlotCalculatorSnapshot,
+        inventory: FilterInventory
+    ) -> FilterStack {
+        if let persisted = entry.filterStack,
+           let stack = Self.validatedFilterStack(persisted, inventory: inventory) {
+            return stack
+        }
+        return FilterStack(standardSteps: restoredNDFilterSteps(from: entry))
+    }
+
+    /// Validates persisted mixed wheels BEFORE any `FilterStack`
+    /// construction. Whole-stack rejection (`nil`) for structural
+    /// corruption: wheel count outside 1–4, a Standard wheel that
+    /// does not resolve to a ladder value, or a resolved total over
+    /// the 30-stop cap. Filter Set references are normalized
+    /// individually instead — an unknown set drops its wheel, an
+    /// unknown item becomes Empty — so the stack still ends in a valid
+    /// one-to-four-wheel state.
+    static func validatedFilterStack(
+        _ wheels: [PersistentFilterWheelSnapshot],
+        inventory: FilterInventory
+    ) -> FilterStack? {
+        guard (1...FilterStack.maximumWheelCount).contains(wheels.count) else {
+            return nil
+        }
+        var restored: [FilterWheel] = []
+        for wheel in wheels {
+            guard let restoredWheel = wheel.restoredWheel else {
+                return nil
+            }
+            if let step = restoredWheel.standardStep {
+                guard step.stops >= 0,
+                      step.stops <= Double(ExposureScale.maximumWholeNDStops)
+                          + ExposureCalculator.stabilityEpsilon else {
+                    return nil
+                }
+            }
+            restored.append(restoredWheel)
+        }
+        guard let normalized = FilterStack.normalizedWheels(restored, inventory: inventory) else {
+            return nil
+        }
+        return FilterStack.validated(wheels: normalized, inventory: inventory)
+    }
+
+    /// Restores the slot's last Filter Source; a missing kind, an
+    /// unknown kind, or a Filter Set that no longer exists falls back
+    /// to Standard.
+    private func restoredLastFilterSource(
+        from entry: PersistentCameraSlotCalculatorSnapshot,
+        inventory: FilterInventory
+    ) -> FilterSource {
+        guard entry.lastFilterSourceKind == PersistentFilterWheelSnapshot.filterSetSourceKind,
+              let rawID = entry.lastFilterSetID,
+              inventory.filterSet(withID: FilterSetID(rawValue: rawID)) != nil else {
+            return .standard
+        }
+        return .filterSet(FilterSetID(rawValue: rawID))
     }
 
     /// Restores the ND wheel stack (PTIMER-199 §7). A present, VALID
@@ -281,7 +354,14 @@ public struct CameraSlotSessionPersistenceController {
         // older app build restoring this snapshot degrades to a valid
         // single filter: the effective sum could be off-ladder (e.g.
         // 13.2) and legacy validation would reject it to defaults.
-        let legacyScalarStep = snapshot.ndFilterSteps
+        // Only STANDARD wheels can be represented in the pre-Filter-Set
+        // fields: the scalar carries the maximum Standard wheel and
+        // `ndStack` the Standard wheels (one 0-stop wheel when the
+        // stack holds none), so an older build degrades to a valid
+        // Standard stack. The mixed stack itself goes to `filterStack`.
+        let standardSteps = snapshot.filterWheels.compactMap(\.standardStep)
+        let downgradeSteps = standardSteps.isEmpty ? [CalculatorDefaults.ndStep] : standardSteps
+        let legacyScalarStep = downgradeSteps
             .max(by: { $0.stops < $1.stops }) ?? CalculatorDefaults.ndStep
 
         return PersistentCameraSlotCalculatorSnapshot(
@@ -308,7 +388,12 @@ public struct CameraSlotSessionPersistenceController {
             // The stack itself is ALWAYS written, single wheel
             // included, so the array is the forward-facing source of
             // truth from the first save (PTIMER-199 §7).
-            ndStack: snapshot.ndFilterSteps.map(PersistentNDFilterWheelSnapshot.init(step:))
+            ndStack: downgradeSteps.map(PersistentNDFilterWheelSnapshot.init(step:)),
+            filterStack: snapshot.filterWheels.map(PersistentFilterWheelSnapshot.init(wheel:)),
+            lastFilterSourceKind: snapshot.lastFilterSource == .standard
+                ? PersistentFilterWheelSnapshot.standardSourceKind
+                : PersistentFilterWheelSnapshot.filterSetSourceKind,
+            lastFilterSetID: snapshot.lastFilterSource.filterSetID?.rawValue
         )
     }
 }

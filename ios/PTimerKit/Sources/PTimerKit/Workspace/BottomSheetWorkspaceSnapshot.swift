@@ -83,6 +83,11 @@ public struct BottomSheetLargeItem: Identifiable, Equatable {
     public let totalDurationText: String?
     public let timingText: String?
     public let contextText: String?
+    /// Start-time Filter Set reference string (Filter Set contract,
+    /// FILTER-PERSIST-003): descriptive text captured with the timer,
+    /// shown under the basis line. `nil` for Standard-only and legacy
+    /// timers.
+    public let filterReferenceText: String?
     public let progress: Double
     public let actions: [BottomSheetLargeAction]
     /// Stable per-timer sequence number (the timer's creation order),
@@ -294,6 +299,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                     totalDurationText: nil,
                     timingText: largeTimingText(for: timer, timeContext: timeContext),
                     contextText: contextText,
+                    filterReferenceText: timer.filterReferenceText,
                     progress: progress(for: timer),
                     actions: largeActions(for: timer.status),
                     sequenceNumberText: "\(timer.order)"

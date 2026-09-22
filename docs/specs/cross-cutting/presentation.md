@@ -48,6 +48,23 @@ compact presence, not folded into the shooting screen itself.
   spacing), Compact (reduced spacing on shorter viewports), and Dense
   (minimum padding so the layout remains stable on the smallest supported
   viewport). Tier selection is a function of available height only.
+- **SHELL-012** — A density tier's eligibility threshold shall be derived
+  from that tier's own worst-case visible-content budget rather than maintained
+  as an independent hand-tuned constant. The budget shall include every
+  conditionally visible row and region that can coexist, section spacing, page
+  padding, and required minimum spacer that the tier renders. Changing any
+  contributing style value or adding persistent content shall update the shared
+  estimate used by both tier selection and layout tests. A tier shall not be
+  selected below its derived requirement, and a roomier tier shall not be
+  withheld when the available height satisfies that requirement.
+
+  On the current iOS reference implementation, the complete derived budgets are
+  approximately 811 points for Regular, 652 for Compact, and 597 for Dense.
+  The approximately 611-point iPhone 17 and 638-point iPhone 17 Pro workspaces
+  therefore use Dense, while the approximately 720-point iPhone 17 Pro Max
+  workspace uses Compact. Dense shall fit the 611-point reference workspace.
+  These device outcomes are consequences of the derived budgets, not separate
+  device-specific thresholds.
 
 ### Large text and constrained height
 

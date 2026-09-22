@@ -177,19 +177,23 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Goal.** A photographer wants the calculator to mirror the physical filters they carry and mount, including combinations drawn from more than one holder or Filter Set.
 
 **Steps.**
-1. Create named, color-coded Filter Sets and register each physical Filter Item separately, including equal-strength duplicates.
-2. On a camera, choose Standard or a Filter Set when adding each filter wheel.
+1. Create named, color-coded Filter Sets and register each physical Filter Item separately, including equal-strength duplicates. When adding several new Fixed or GND items in one editor session, reuse the preceding successfully saved new item's Stops, OD, or ND notation while each new item's behavior kind still starts as Fixed.
+2. On a camera, tap Plus to add its displayed source, or drag/fling Plus to another source and let it settle to add that final source directly.
 3. Select up to four mounted items across those sources and read the calculated exposure from their active contributions.
 4. For a CPL, choose the exposure-loss value appropriate to the current use; for a GND, choose whether it is recorded only or contributes its full registered value.
-5. Switch cameras and return later without rebuilding either camera's Filter Stack or last-used Filter Source.
+5. Switch cameras and return later without rebuilding either camera's Filter Stack or last successfully added Filter Source.
 
 **Boundary conditions.**
-- Standard and multiple Filter Sets may coexist in one stack. Standard appears first and user Filter Sets follow their saved order.
+- Standard and multiple Filter Sets may coexist in one stack. Wheels from the same source remain together, and source groups are ordered by their registered subtotal from greatest to least; equal subtotals place Standard first and then follow the user-defined Filter Set order.
 - One physical Filter Item cannot be selected twice on the same camera. Two equal physical filters remain selectable when they were registered as separate items.
 - Empty means that no physical filter is mounted. Record only means that an identified physical filter is mounted but contributes zero stops; the two states are not interchangeable.
 - CPL exposure-loss choices are user-editable decimal values because loss varies by product and use. GND calculation is either zero or its complete registered value; partial-frame estimation is not required.
 - The active contribution sum never exceeds 30 stops. A rejected change leaves the previous valid state intact.
 - Filter Set names and colors organize the inventory but do not determine calculation or identity, and color is never the only identifying cue.
+- Registered-value notation memory is limited to one open Filter Set editing session. Only a successfully saved new Fixed or GND item updates it; editing an existing item, saving a CPL, canceling, or a failed save does not. The memory does not cause a new item's behavior kind to inherit from the previous item.
+- An assistive-technology adjustment shall not become trapped on an unavailable adjacent filter. It skips unavailable candidates in the requested direction and selects the next available candidate; if none exists before the end of the wheel, the current selection remains and the reason is announced.
+- While the platform screen reader or touch-exploration mode is active, changing a filter value shall not automatically move any wheel. The current wheel order remains stable for spatial memory and focus continuity. When that mode is turned off, the system resumes its normal value-based order after the current interaction settles.
+- Plus source browsing creates no intermediate wheels. A changed final source adds exactly once only after final snap and the commit barrier; returning to the starting source adds nothing, and a rejected add preserves the stack, total, and remembered source.
 
 ---
 
@@ -211,7 +215,12 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-1.8** The user shall be able to combine Standard values and registered physical Filter Items in one stack while the system prevents the same physical item from appearing twice on one camera. (Scenario 9)
 - **FR-1.9** The system shall distinguish an empty wheel from a mounted record-only filter and shall preserve the mounted item, its chosen contribution, and its original registered representation in captured shot context. (Scenario 9)
 - **FR-1.10** The user shall be able to choose from configured CPL exposure-loss choices and to record a GND with either zero or its full registered contribution for the current shot. (Scenario 9)
-- **FR-1.11** Each camera shall preserve its mixed Filter Stack and last-used Filter Source independently across camera switches and app restarts. (Scenario 9)
+- **FR-1.11** Each camera shall preserve its mixed Filter Stack and last successfully added Filter Source independently across camera switches and app restarts. (Scenario 9)
+- **FR-1.12** Within one open Filter Set editing session, successfully saving a newly created Fixed or GND item shall make its selected registered-value notation (Stops, OD, or ND) the initial notation for the next new item. Editing an existing item, saving a CPL, canceling, or a failed save shall not change this memory. Closing the editor or restarting the app shall reset the initial notation to Stops, and every new item shall still initialize its behavior kind to Fixed independently of the remembered notation. (Scenario 9)
+- **FR-1.13** Plus shall add with one direct gesture: a tap adds its currently displayed source exactly once; a drag or fling that settles on a different source adds that final source exactly once after final snap and the commit barrier. Intermediate candidates and a return to the starting source shall add nothing. Browsing shall cancel management long press for that gesture, while a stationary long press shall open management without adding. A rejected add shall preserve the stack, total, and remembered source. (Scenario 9)
+- **FR-1.14** When assistive technology adjusts a Filter Set wheel, an unavailable adjacent candidate shall not block movement toward later available candidates. The system shall skip unavailable candidates in the requested direction and select the first available candidate; if none exists before that end of the wheel, it shall preserve the current selection and announce the reason. (Scenario 9)
+- **FR-1.15** Each filter wheel shall expose a concise stable identity separately from its current selection to assistive technology. A successful adjustment shall interrupt any ongoing focus description and announce the newly committed selection without repeating the wheel identity, usage guidance, or Total; after rapid consecutive adjustments, the final committed selection shall be announced while the complete Total remains separately reachable through the status region. A rejected adjustment shall preserve the selection and announce only the actual unavailability or boundary reason. Plus shall expose Add, source selection, and Filter Set management on its focusable control. Automatic cleanup need not expose a separate Remove action, but an actual empty-wheel removal shall be announced once while a screen reader is active. (Scenario 9)
+- **FR-1.16** While a platform screen reader or touch-exploration mode is active, automatic value-based Filter Stack reordering shall be suspended so wheel positions and accessibility focus remain stable. Turning that mode off shall resume the normal ordering once after the current interaction and commit settle, without changing wheel identity, selection, or total. (Scenario 9)
 
 ### 3.2 Reciprocity
 

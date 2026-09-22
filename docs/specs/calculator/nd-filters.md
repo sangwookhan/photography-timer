@@ -166,11 +166,16 @@ construction rather than by clamping after the fact.
 
 - **ND-A11Y-001** — Each wheel shall be exposed as an adjustable
   accessibility element identifying its position in the stack.
-- **ND-A11Y-002** — "Add filter" and "Remove empty filter" shall be exposed
-  as assistive-technology actions, each available only while the
-  corresponding operation is actually possible (matching ND-STACK-010 and
-  ND-CLEANUP-010/011 respectively) — performing "Remove empty filter" runs
-  the same cleanup rule as ND-CLEANUP-004 in one action.
+- **ND-A11Y-002** — "Add filter" shall remain an explicit
+  assistive-technology action on the focusable Plus control and shall be
+  available only while adding is actually possible under ND-STACK-010.
+  Automatic cleanup under ND-CLEANUP-001–006 and the sighted overscroll
+  gesture in ND-CLEANUP-010/011 shall not require a separate
+  "Remove empty filter" assistive-technology action. When automatic cleanup
+  actually removes an eligible empty wheel while a screen reader is active,
+  including immediate removal under ND-CLEANUP-003, the removal shall be
+  announced exactly once. Scheduling, deferral, cancellation, or a cleanup
+  attempt that removes nothing shall not produce a removal announcement.
 - **ND-A11Y-003** — The current effective total shall remain available to
   assistive technology at all times, independent of the total overlay's
   visual fade state.

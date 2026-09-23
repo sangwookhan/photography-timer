@@ -39,14 +39,18 @@ rather than averaged:
 | --- | --- |
 | `496a4ec4` | `09`, `13`, `13-b`, `15`, `16`, `17`, `18`, `19`, `19-b`, `21`, `28` |
 | `120bb559` | `07` |
-| `ed233a07` | `25`, `26`, `26-b`, `26-c`, `26-d` |
+| `5d6db106` | `25`, `26`, `26-b`, `26-c`, `26-d` |
 | `79b339c9` | every scenario not listed above, unchanged from the first pass |
 
-Each later commit touches only the timer card, which is why exactly the
-timer-card frames were reshot against it and the rest stay valid:
-`120bb559` changed how a mixed stack's total is formatted, `ed233a07`
-let the reference line wrap. The five `ed233a07` frames come from one
-seeding, so the scenario 26 sequence reads as one run. `07` was
+`120bb559` changed how a mixed stack's total is formatted and
+`ed233a07` let the timer's reference line wrap, so only the timer-card
+frames were reshot against those. `5d6db106` then relaid the shooting
+card out from measured widths, which is visible in every frame that
+shows that card — the `ND 필터` label moves left, the base-shutter
+column narrows from about 45% of the card to 28%, and the wheels become
+separate boxes with their own type-cue rails. The five frames listed
+against it were retaken from one seeding for that reason; the timer
+card inside them is unchanged. `07` was
 additionally verified on `496a4ec4` before `120bb559` landed — same
 keypad, same input type, same focus behaviour — so it is cross-checked
 on both.
@@ -99,7 +103,7 @@ dump` node `bounds` on Android.
 | `23-camera-switch` | Camera 2's independent stack and remembered Plus source, then camera 1 restored (`-b`). |
 | `24-after-relaunch` | The same stack after force-stop and relaunch. |
 | `25-timer-reference` | A timer started from a mixed stack; primary total line and secondary reference line. |
-| `26-timer-reference-after-delete` | The Filter Set behind that running timer renamed (Android `ios`/`android` first frame), then deleted: the confirmation dialog (`-b` iOS / `-c` Android), the collapsed stack (`-c` iOS / `-d` Android), and the timer entry after cancelling (`-d` iOS / `-e` Android). |
+| `26-timer-reference-after-delete` | The Filter Set behind that running timer renamed, then deleted. iOS: the timer card after the delete (`ios`), the confirmation dialog (`-b`), the collapsed stack (`-c`), the timer entry after cancelling (`-d`). Android: the timer card after the **rename**, with the set still named as captured (`android`), then the confirmation dialog (`-b`), the collapsed stack (`-c`), and the timer card after the delete (`-d`). The two platforms' supplementary frames are therefore not index-for-index; each is named for what it shows. |
 | `27-a11y-wheel` | One wheel's accessibility label and value. iOS read from source (the simulator accessibility tree tool was unavailable); Android label read from `uiautomator dump`, value read from source because the dump does not serialise `stateDescription`. |
 | `28-a11y-status` | The status region's accessibility structure: leading detail and total as separate elements. |
 

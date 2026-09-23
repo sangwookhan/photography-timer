@@ -84,6 +84,15 @@ private val FilterWheelLabelFontStep = 0.25.sp
  * rail; the Plus control on the trailing edge; and the one-row status
  * region underneath.
  *
+ * FILTER-STACK-008 wants that status row aligned to the mixed-stack
+ * card's own content insets, not to the filter sub-column — so the
+ * wheels go through the [wheelRow] slot, which the card uses to place
+ * them beside Base Shutter, while this composable keeps the status
+ * region directly underneath at the full content width. Inverting the
+ * slot rather than hoisting the region keeps [browsing] — the only
+ * state the presenter needs that the controller does not own — here
+ * instead of pushing it into the screen.
+ *
  * All stack STATE stays out of this layer — it renders, and times only
  * its own presentation (the status region's linger and fade) and the
  * transient Plus browsing candidate, which never leaves the view.
@@ -99,6 +108,7 @@ internal fun FilterStackGroup(
     onFilterAddUnavailability: (FilterSource) -> FilterAddUnavailability?,
     onManageFilterSets: () -> Unit,
     modifier: Modifier = Modifier,
+    wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
 ) {
     val wheels = state.filterWheels
     val palette = filterTypePalette()
@@ -114,42 +124,44 @@ internal fun FilterStackGroup(
     AnnounceEmptyWheelRemoval(state)
 
     Column(modifier = modifier.fillMaxWidth()) {
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val plusSlot = if (state.plus.isVisible) FilterPlusControlWidth + WheelSpacing else 0.dp
-            val wheelWidth = (maxWidth - plusSlot - WheelSpacing * (wheels.size - 1)) / wheels.size
+        wheelRow {
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val plusSlot = if (state.plus.isVisible) FilterPlusControlWidth + WheelSpacing else 0.dp
+                val wheelWidth = (maxWidth - plusSlot - WheelSpacing * (wheels.size - 1)) / wheels.size
 
-            LazyRow(
-                userScrollEnabled = false,
-                horizontalArrangement = Arrangement.spacedBy(WheelSpacing),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                itemsIndexed(wheels, key = { _, wheel -> wheel.id }) { index, wheel ->
-                    FilterWheelColumn(
-                        wheel = wheel,
-                        position = index + 1,
-                        wheelCount = wheels.size,
-                        palette = palette,
-                        dense = wheels.size >= 3,
-                        totalText = totalText,
-                        onActiveChange = { onWheelActive(wheel.id, it) },
-                        onSelectedIndexChange = { onWheelValue(wheel.id, it) },
-                        onOverscrollRemove = { onOverscrollRemove(wheel.id) },
-                        onAdjust = { direction -> onAdjustFilterWheel(wheel.id, direction) },
-                        modifier = Modifier.width(wheelWidth).animateItem(),
-                    )
-                }
-                if (state.plus.isVisible) {
-                    item(key = "filter-plus") {
-                        Column(modifier = Modifier.animateItem()) {
-                            Spacer(Modifier.height(FilterWheelLabelRowHeight))
-                            FilterSourcePlusControl(
-                                plus = state.plus,
-                                height = WheelItemHeight * WheelVisibleCount,
-                                onAdd = onAddFilterWheel,
-                                onManage = onManageFilterSets,
-                                onBrowsingChanged = { browsing = it },
-                                onAddUnavailability = onFilterAddUnavailability,
-                            )
+                LazyRow(
+                    userScrollEnabled = false,
+                    horizontalArrangement = Arrangement.spacedBy(WheelSpacing),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    itemsIndexed(wheels, key = { _, wheel -> wheel.id }) { index, wheel ->
+                        FilterWheelColumn(
+                            wheel = wheel,
+                            position = index + 1,
+                            wheelCount = wheels.size,
+                            palette = palette,
+                            dense = wheels.size >= 3,
+                            totalText = totalText,
+                            onActiveChange = { onWheelActive(wheel.id, it) },
+                            onSelectedIndexChange = { onWheelValue(wheel.id, it) },
+                            onOverscrollRemove = { onOverscrollRemove(wheel.id) },
+                            onAdjust = { direction -> onAdjustFilterWheel(wheel.id, direction) },
+                            modifier = Modifier.width(wheelWidth).animateItem(),
+                        )
+                    }
+                    if (state.plus.isVisible) {
+                        item(key = "filter-plus") {
+                            Column(modifier = Modifier.animateItem()) {
+                                Spacer(Modifier.height(FilterWheelLabelRowHeight))
+                                FilterSourcePlusControl(
+                                    plus = state.plus,
+                                    height = WheelItemHeight * WheelVisibleCount,
+                                    onAdd = onAddFilterWheel,
+                                    onManage = onManageFilterSets,
+                                    onBrowsingChanged = { browsing = it },
+                                    onAddUnavailability = onFilterAddUnavailability,
+                                )
+                            }
                         }
                     }
                 }

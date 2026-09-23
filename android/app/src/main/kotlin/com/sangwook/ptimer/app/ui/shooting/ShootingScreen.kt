@@ -327,94 +327,102 @@ fun ShootingScreen(
 
                     // Base shutter + ND wheels (compact: 3 visible rows).
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(CardRowPadding),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                        // The stack owns the card's whole content column so
+                        // its one-row status region spans the full content
+                        // width (FILTER-STACK-008) instead of starting at
+                        // the filter sub-column; the wheels come back
+                        // through the slot to sit beside Base Shutter.
+                        FilterStackGroup(
+                            state = pageState,
+                            onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
+                            onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
+                            onAddFilterWheel = if (writesActiveSlot) onAddFilterWheel else { _ -> },
+                            onAdjustFilterWheel = if (writesActiveSlot) {
+                                onAdjustFilterWheel
+                            } else {
+                                { _, _ -> FilterWheelAdjustmentOutcome.Boundary }
+                            },
+                            onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
+                            onFilterAddUnavailability = onFilterAddUnavailability,
+                            onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
+                            modifier = Modifier.padding(CardRowPadding),
+                        ) { wheels ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
                             ) {
-                                // Header height matches the ND column's title+toggle
-                                // row so the two wheels stay vertically aligned.
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
-                                    contentAlignment = Alignment.CenterStart,
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
-                                    Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
-                                }
-                                // Reserve the filter columns' persistent
-                                // type/mode label height (FILTER-STACK-007) so
-                                // both pickers' viewports, selection bands, and
-                                // touch centers share one vertical axis.
-                                Spacer(Modifier.height(FilterWheelLabelRowHeight))
-                                SnapWheel(
-                                    pageState.shutterLabels,
-                                    pageState.shutterIndex,
-                                    onShutterForPage,
-                                    visibleCount = 3,
-                                    itemHeight = 34.dp,
-                                    accessibilityLabel = stringResource(R.string.shooting_base_shutter),
-                                )
-                            }
-                            Column(
-                                // The ND column widens once wheels stack so
-                                // 3–4 side-by-side ladders keep readable
-                                // labels; the shutter wheel needs less room.
-                                modifier = Modifier.weight(
-                                    if (pageState.filterWheels.size >= 2) 1.6f else 1f,
-                                ),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                // One horizontal header row: a stronger "ND Filter"
-                                // title with the compact notation toggle, matching
-                                // the iOS placement (PTIMER-187).
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(stringResource(R.string.shooting_nd_filter), style = MaterialTheme.typography.labelLarge)
-                                    Spacer(Modifier.weight(1f))
-                                    NotationToggle(
-                                        mode = pageState.ndNotationMode,
-                                        enabled = writesActiveSlot,
-                                        onSelect = onSelectNotation,
+                                    // Header height matches the ND column's title+toggle
+                                    // row so the two wheels stay vertically aligned.
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
+                                        contentAlignment = Alignment.CenterStart,
+                                    ) {
+                                        Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
+                                    }
+                                    // Reserve the filter columns' persistent
+                                    // type/mode label height (FILTER-STACK-007) so
+                                    // both pickers' viewports, selection bands, and
+                                    // touch centers share one vertical axis.
+                                    Spacer(Modifier.height(FilterWheelLabelRowHeight))
+                                    SnapWheel(
+                                        pageState.shutterLabels,
+                                        pageState.shutterIndex,
+                                        onShutterForPage,
+                                        visibleCount = 3,
+                                        itemHeight = 34.dp,
+                                        accessibilityLabel = stringResource(R.string.shooting_base_shutter),
                                     )
-                                    // Persistent management entry (FILTER-SET-001):
-                                    // available even when the stack already holds
-                                    // Filter Set wheels.
-                                    CappedFontScale(maxFontScale = 1f) {
-                                        Box(
-                                            modifier = Modifier
-                                                .expandedTouchHeight(MinTouchTargetSize)
-                                                .size(NotationTrackHeight)
-                                                .clip(CircleShape)
-                                                .clickable(enabled = writesActiveSlot, onClick = onManageFilterSets),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Outlined.Settings,
-                                                contentDescription = stringResource(R.string.filter_manage_sets),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(16.dp),
-                                            )
+                                }
+                                Column(
+                                    // The ND column widens once wheels stack so
+                                    // 3–4 side-by-side ladders keep readable
+                                    // labels; the shutter wheel needs less room.
+                                    modifier = Modifier.weight(
+                                        if (pageState.filterWheels.size >= 2) 1.6f else 1f,
+                                    ),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    // One horizontal header row: a stronger "ND Filter"
+                                    // title with the compact notation toggle, matching
+                                    // the iOS placement (PTIMER-187).
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(stringResource(R.string.shooting_nd_filter), style = MaterialTheme.typography.labelLarge)
+                                        Spacer(Modifier.weight(1f))
+                                        NotationToggle(
+                                            mode = pageState.ndNotationMode,
+                                            enabled = writesActiveSlot,
+                                            onSelect = onSelectNotation,
+                                        )
+                                        // Persistent management entry (FILTER-SET-001):
+                                        // available even when the stack already holds
+                                        // Filter Set wheels.
+                                        CappedFontScale(maxFontScale = 1f) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .expandedTouchHeight(MinTouchTargetSize)
+                                                    .size(NotationTrackHeight)
+                                                    .clip(CircleShape)
+                                                    .clickable(enabled = writesActiveSlot, onClick = onManageFilterSets),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.Settings,
+                                                    contentDescription = stringResource(R.string.filter_manage_sets),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
                                         }
                                     }
+                                    wheels()
                                 }
-                                FilterStackGroup(
-                                    state = pageState,
-                                    onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
-                                    onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
-                                    onAddFilterWheel = if (writesActiveSlot) onAddFilterWheel else { _ -> },
-                                    onAdjustFilterWheel = if (writesActiveSlot) {
-                                        onAdjustFilterWheel
-                                    } else {
-                                        { _, _ -> FilterWheelAdjustmentOutcome.Boundary }
-                                    },
-                                    onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
-                                    onFilterAddUnavailability = onFilterAddUnavailability,
-                                    onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
-                                )
                             }
                         }
                     }

@@ -80,6 +80,7 @@ import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.app.ui.shooting.filterNotationText
+import com.sangwook.ptimer.app.ui.shooting.filterStopsText
 import com.sangwook.ptimer.core.timer.TimerBasisPresenter
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.delay
@@ -714,6 +715,12 @@ private fun TimerCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Whether this timer captured at least one Filter Set row. It
+            // decides both the basis line's number form and whether the
+            // reference line below exists at all (FILTER-PERSIST-003).
+            val capturedSummary = card.identity.filterSummary
+            val showsReference = capturedSummary
+                ?.any { it.sourceKind == FilterSummaryEntry.SourceKind.filterSet } == true
             // Basis line rendered from structured ND/base inputs in the current
             // notation mode (PTIMER-187); falls back to any precomposed baseLine
             // from a pre-update timer that has no structured fields.
@@ -726,10 +733,21 @@ private fun TimerCard(
                 formatShutter = ::basisShutterLabel,
                 baseNdFormat = stringResource(R.string.timer_basis_base_nd),
                 baseNdAdjustedFormat = stringResource(R.string.timer_basis_base_nd_adj),
-                // FILTER-A11Y-003: the STOPS unit is a word, so the core
-                // default would leave an English `stops` in a Korean line.
+                // FILTER-PERSIST-003: a mixed Filter Stack's primary value is
+                // the captured canonical total, which is a plain decimal in
+                // stops — neither the global OD/ND notation nor the ladder's
+                // reserved third-stop fractions describe it. A 29.6-stop
+                // stack reads `29.6 스톱`, not `29 2/3 스톱` and not `OD 8.9`.
+                // A Standard-only timer keeps following the global notation.
+                // FILTER-A11Y-003: either way the unit is a word, so the
+                // core default would leave an English `stops` in a Korean
+                // line.
                 formatNotation = { stops, notation ->
-                    filterNotationText(stops, notation, resources)
+                    if (showsReference) {
+                        filterStopsText(stops, resources)
+                    } else {
+                        filterNotationText(stops, notation, resources)
+                    }
                 },
             ) ?: card.identity.baseLine.takeIf { it.isNotEmpty() }
             if (basisText != null) {
@@ -772,9 +790,6 @@ private fun TimerCard(
             // editing, or deleting the inventory afterwards never rewrites it.
             // The basis line above keeps the canonical total. A Standard-only
             // timer has no Filter Set entry and shows no extra line.
-            val capturedSummary = card.identity.filterSummary
-            val showsReference = capturedSummary
-                ?.any { it.sourceKind == FilterSummaryEntry.SourceKind.filterSet } == true
             val filterReference = when {
                 !showsReference -> null
                 // What the timer captured at start, in the language then

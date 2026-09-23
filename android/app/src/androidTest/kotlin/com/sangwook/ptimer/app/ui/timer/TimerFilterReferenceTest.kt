@@ -5,6 +5,7 @@ package com.sangwook.ptimer.app.ui.timer
 
 import android.content.res.Configuration
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertIsDisplayed
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
+import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -65,7 +67,11 @@ class TimerFilterReferenceTest {
         now = Instant.EPOCH,
     )
 
-    private fun show(identity: TimerIdentity, locale: Locale? = null) {
+    private fun show(
+        identity: TimerIdentity,
+        locale: Locale? = null,
+        notation: NDNotationMode = NDNotationMode.DEFAULT,
+    ) {
         composeTestRule.setContent {
             val list = @androidx.compose.runtime.Composable {
                 PTimerTheme {
@@ -74,6 +80,7 @@ class TimerFilterReferenceTest {
                         onEvent = {},
                         onCollapse = {},
                         focusId = null,
+                        ndNotationMode = notation,
                     )
                 }
             }
@@ -151,5 +158,70 @@ class TimerFilterReferenceTest {
         composeTestRule.onAllNodesWithText("스톱", substring = true).assertCountEquals(1)
         composeTestRule.onAllNodesWithText("stops", substring = true).assertCountEquals(0)
         composeTestRule.onAllNodesWithText("stop", substring = true).assertCountEquals(0)
+    }
+
+    /**
+     * FILTER-PERSIST-003: a mixed Filter Stack's primary value is the
+     * captured canonical total. It is a plain decimal in stops — the
+     * ladder's reserved third-stop fractions do not describe it, and
+     * neither does the global OD / ND notation. 29.6 stops is `29.6`,
+     * not `29 2/3` and not `OD 8.9`.
+     */
+    @Test
+    fun aMixedStackTotalIsPlainDecimalStopsInEveryNotation() {
+        val mixed = TimerIdentity(
+            title = "Camera 1",
+            ndStops = 29.6,
+            baseShutterSeconds = 0.033,
+            basisIncludesAdjusted = false,
+            filterSummary = listOf(capturedEntry),
+            filterReferenceText = "NiSi kit: Big Stopper ND1000",
+        )
+        // One composition, notation switched underneath it: setContent can
+        // only be called once per test, and switching is closer to what the
+        // user does anyway.
+        val notation = mutableStateOf(NDNotationMode.STOPS)
+        composeTestRule.setContent {
+            val base = InstrumentationRegistry.getInstrumentation().targetContext
+            val config = Configuration(base.resources.configuration).apply { setLocale(Locale.KOREA) }
+            CompositionLocalProvider(
+                LocalContext provides base.createConfigurationContext(config),
+                LocalConfiguration provides config,
+            ) {
+                PTimerTheme {
+                    FullTimerList(
+                        state = state(mixed),
+                        onEvent = {},
+                        onCollapse = {},
+                        focusId = null,
+                        ndNotationMode = notation.value,
+                    )
+                }
+            }
+        }
+        for (mode in NDNotationMode.entries) {
+            composeTestRule.runOnUiThread { notation.value = mode }
+            composeTestRule.waitForIdle()
+            composeTestRule.onAllNodesWithText("29.6 스톱", substring = true).assertCountEquals(1)
+            composeTestRule.onAllNodesWithText("29 2/3", substring = true).assertCountEquals(0)
+            composeTestRule.onAllNodesWithText("OD ", substring = true).assertCountEquals(0)
+            composeTestRule.onAllNodesWithText("ND5", substring = true).assertCountEquals(0)
+        }
+    }
+
+    /** A Standard-only timer keeps following the global notation. */
+    @Test
+    fun aStandardOnlyTotalStillFollowsTheNotation() {
+        show(
+            TimerIdentity(
+                title = "Camera 1",
+                ndStops = 9.0,
+                baseShutterSeconds = 0.033,
+                basisIncludesAdjusted = false,
+            ),
+            locale = Locale.KOREA,
+            notation = NDNotationMode.OPTICAL_DENSITY,
+        )
+        composeTestRule.onAllNodesWithText("OD 2.7", substring = true).assertCountEquals(1)
     }
 }

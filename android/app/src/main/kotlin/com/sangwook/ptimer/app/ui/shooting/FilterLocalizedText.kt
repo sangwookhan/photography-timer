@@ -43,16 +43,24 @@ internal fun localizedSourceName(name: String): String = when (name) {
     else -> name
 }
 
-/** `N stops` / `1 stop`. */
-@Composable
-internal fun filterStopsText(stops: Double): String {
+/**
+ * `N stops` / `1 stop` / `N 스톱`, with the value as a plain decimal.
+ * Takes [Resources] so callers outside a composition can use it;
+ * [filterStopsText] is the composable form.
+ */
+internal fun filterStopsText(stops: Double, resources: Resources): String {
     val value = FilterWheelPresenter.decimalStopsValue(stops)
     return if (value == "1") {
-        stringResource(R.string.filter_one_stop)
+        resources.getString(R.string.filter_one_stop)
     } else {
-        stringResource(R.string.filter_stops, value)
+        resources.getString(R.string.filter_stops, value)
     }
 }
+
+/** Composable form of [filterStopsText]. */
+@Composable
+internal fun filterStopsText(stops: Double): String =
+    filterStopsText(stops, LocalContext.current.resources)
 
 /**
  * The app-global notation rendering of a canonical stops value as a

@@ -804,7 +804,15 @@ private fun TimerCard(
                     filterReference,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    // FILTER-PERSIST-003 asks the list to present the
+                    // reference string, and a realistic one — two Filter Set
+                    // items plus a Standard segment — does not fit a single
+                    // line on a phone. One line truncated it to a fragment
+                    // that no longer said which filters the timer used. Wrap
+                    // to a second line, as iOS does; the ellipsis stays for
+                    // anything longer still, and the node keeps the complete
+                    // string for accessibility either way.
+                    maxLines = FilterReferenceMaxLines,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -814,6 +822,9 @@ private fun TimerCard(
         }
     }
 }
+
+/** Lines the timer card's Filter Set reference may occupy. */
+private const val FilterReferenceMaxLines = 2
 
 @Composable
 private fun StatusBadge(status: TimerStatus) {

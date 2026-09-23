@@ -9,10 +9,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.height
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
@@ -21,6 +23,7 @@ import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
 import com.sangwook.ptimer.ui.theme.PTimerTheme
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import androidx.test.platform.app.InstrumentationRegistry
@@ -223,5 +226,57 @@ class TimerFilterReferenceTest {
             notation = NDNotationMode.OPTICAL_DENSITY,
         )
         composeTestRule.onAllNodesWithText("OD 2.7", substring = true).assertCountEquals(1)
+    }
+
+    /**
+     * FILTER-PERSIST-003 asks the list to present the reference string.
+     * A realistic one — two Filter Set items plus a Standard segment —
+     * does not fit one line on a phone, and truncating it to a fragment
+     * stops it naming the filters the timer used. It wraps to a second
+     * line, as iOS does.
+     *
+     * Both cards are in one list so the two heights are measured under
+     * identical width and typography.
+     */
+    @Test
+    fun aLongReferenceLineWrapsInsteadOfBecomingAFragment() {
+        val short = "NiSi kit: Big Stopper"
+        val long = "Standard 16.6 스톱 · NiSi kit: Big Stopper ND1000 + NiSi GND OD 0.9 (전체 값 적용)"
+        fun card(reference: String) = TimerCardState(
+            id = UUID.randomUUID(),
+            order = 1,
+            identity = TimerIdentity(
+                title = "Camera 1",
+                filterSummary = listOf(capturedEntry),
+                filterReferenceText = reference,
+            ),
+            status = TimerStatus.running,
+            remainingSeconds = 120.0,
+            endDate = Instant.EPOCH.plusSeconds(120),
+            remainingAtCancelSeconds = null,
+            durationSeconds = 120.0,
+        )
+        composeTestRule.setContent {
+            PTimerTheme {
+                FullTimerList(
+                    state = ShootingUiState(
+                        active = listOf(card(short), card(long)),
+                        now = Instant.EPOCH,
+                    ),
+                    onEvent = {},
+                    onCollapse = {},
+                    focusId = null,
+                )
+            }
+        }
+        val oneLine = composeTestRule.onNodeWithText(short).getUnclippedBoundsInRoot().height
+        val wrapped = composeTestRule.onNodeWithText(long).getUnclippedBoundsInRoot().height
+        assertTrue(
+            "The long reference must occupy two lines, not one: one line is " +
+                "$oneLine, the long one is $wrapped",
+            wrapped.value > oneLine.value * 1.5f,
+        )
+        // And it is still the complete string, not a fragment.
+        composeTestRule.onNodeWithText(long).assertIsDisplayed()
     }
 }

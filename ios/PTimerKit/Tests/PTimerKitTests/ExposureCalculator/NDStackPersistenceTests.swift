@@ -50,15 +50,16 @@ final class NDStackPersistenceTests: XCTestCase {
         )
     }
 
-    func testRemoveOnlyChangeSurvivesRelaunch() {
+    func testRemoveOnlyChangeSurvivesRelaunch() async {
         let store = InMemoryStackSessionStore()
         let viewModel = makeViewModel(sessionStore: store)
+        viewModel.ndWheelCleanupDelay = 0.05
 
         viewModel.addFilterWheel()
         viewModel.setNDFilterStep(NDStep(stops: 10), at: 0)
         // [10, 0] persisted; now clean up the empty wheel and nothing
         // else — the removal alone must persist.
-        viewModel.cleanupEmptyFilterWheels()
+        await awaitCleanupFire()
 
         let restored = makeViewModel(sessionStore: store)
 
@@ -277,6 +278,15 @@ final class NDStackPersistenceTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// The self-cleaning timer is the only cleanup path
+    /// (FILTER-STACK-006) — there is no on-demand command. Tests
+    /// shorten `ndWheelCleanupDelay` when they build the view model
+    /// and then wait here for one fire. The window also covers the
+    /// reshaping animation, which the fire-time judgment waits out.
+    private func awaitCleanupFire() async {
+        try? await Task.sleep(nanoseconds: 700_000_000)
+    }
 
     private func decodedSlotEntry(json: String) throws -> PersistentCameraSlotCalculatorSnapshot {
         try JSONDecoder().decode(

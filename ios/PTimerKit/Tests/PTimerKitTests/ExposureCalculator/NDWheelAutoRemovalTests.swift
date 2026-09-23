@@ -17,12 +17,21 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
     }
 
+    /// The Plus control's own composition (FILTER-PLUS-005): the
+    /// machine is quiet and the displayed source has an addable row.
+    /// The view model exposes the two halves separately because the
+    /// Plus may display a transient assistive candidate.
+    private func canAddStandardWheel(_ viewModel: ExposureCalculatorViewModel) -> Bool {
+        viewModel.isNDWheelInteractionQuiet
+            && viewModel.filterAddUnavailabilityText(for: .standard) == nil
+    }
+
     /// Simulates a user scroll passing a row (owned-picker polling).
     private func observeRow(
         _ viewModel: ExposureCalculatorViewModel, _ stops: Double, wheel index: Int
     ) {
-        viewModel.ndWheelDidObserveRow(
-            NDStep(stops: stops),
+        viewModel.filterWheelDidObserveRow(
+            .standard(NDStep(stops: stops)),
             wheelID: viewModel.ndFilterWheelIDs[index],
             generation: viewModel.ndWheelGeneration
         )
@@ -33,8 +42,8 @@ final class NDWheelAutoRemovalTests: XCTestCase {
     private func select(
         _ viewModel: ExposureCalculatorViewModel, _ stops: Double, wheel index: Int
     ) {
-        viewModel.ndWheelDidSelect(
-            NDStep(stops: stops),
+        viewModel.filterWheelDidSelect(
+            .standard(NDStep(stops: stops)),
             wheelID: viewModel.ndFilterWheelIDs[index],
             generation: viewModel.ndWheelGeneration
         )
@@ -143,10 +152,14 @@ final class NDWheelAutoRemovalTests: XCTestCase {
 
     func testTouchBlocksCleanupAtFireTime() async {
         let viewModel = makeViewModel()
-        viewModel.ndWheelCleanupDelay = 0.05
+        // Margins sized for a loaded host: the settle wait clears the
+        // 0.02 s reshape well before the cleanup fires, and the hold
+        // outlasts the cleanup delay several times over, so a late
+        // scheduler cannot turn either wait into the other.
+        viewModel.ndWheelCleanupDelay = 0.15
         viewModel.addFilterWheel()
         viewModel.setNDFilterStep(NDStep(stops: 10), at: 0)
-        await settleWindow(0.03)  // leave RESHAPING (< cleanup delay)
+        await settleWindow(0.06)  // leave RESHAPING (< cleanup delay)
         let zeroID = viewModel.ndFilterWheelIDs[1]
 
         // A motionless hold (no row changes) — data-invisible, so
@@ -154,7 +167,7 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         viewModel.ndWheelTouchBegan(
             wheelID: zeroID, generation: viewModel.ndWheelGeneration
         )
-        await settleWindow(0.2)
+        await settleWindow(0.45)
         XCTAssertEqual(
             viewModel.ndFilterSteps.count, 2,
             "A wheel never vanishes under a resting finger."
@@ -257,17 +270,20 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         viewModel.addFilterWheel()
         viewModel.setNDFilterStep(NDStep(stops: 10), at: 0)
         await settleWindow(0.1)
-        XCTAssertTrue(viewModel.canAddFilterWheel)
+        XCTAssertTrue(canAddStandardWheel(viewModel))
         XCTAssertTrue(viewModel.canRemoveEmptyFilterWheel)
 
         // Motion: availability drops, the layout slot stays, and the
-        // commands are no-ops.
+        // armed cleanup refuses to fire.
         observeRow(viewModel, 3, wheel: 1)
-        XCTAssertFalse(viewModel.canAddFilterWheel)
+        XCTAssertFalse(canAddStandardWheel(viewModel))
         XCTAssertTrue(viewModel.showsAddFilterWheelControl)
         XCTAssertFalse(viewModel.canRemoveEmptyFilterWheel)
-        viewModel.cleanupEmptyFilterWheels()
+        viewModel.ndWheelCleanupDelay = 0.05
+        viewModel.reexamineNDWheelCleanup()
+        await settleWindow(0.15)
         XCTAssertEqual(viewModel.ndFilterSteps.count, 2)
+        viewModel.ndWheelCleanupDelay = 4.0
 
         // Conclude and let the machine go quiet.
         select(viewModel, 3, wheel: 1)
@@ -280,12 +296,12 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         viewModel.ndWheelTouchBegan(
             wheelID: heldID, generation: viewModel.ndWheelGeneration
         )
-        XCTAssertFalse(viewModel.canAddFilterWheel)
+        XCTAssertFalse(canAddStandardWheel(viewModel))
         viewModel.addFilterWheel()
         XCTAssertEqual(viewModel.ndFilterSteps.count, 2)
 
         viewModel.ndWheelTouchEnded(wheelID: heldID)
-        XCTAssertTrue(viewModel.canAddFilterWheel)
+        XCTAssertTrue(canAddStandardWheel(viewModel))
         viewModel.addFilterWheel()
         XCTAssertEqual(viewModel.ndFilterSteps.count, 3)
     }
@@ -307,11 +323,11 @@ final class NDWheelAutoRemovalTests: XCTestCase {
 
         // Late callbacks from the previous generation must be inert
         // even though the machine is IDLE now.
-        viewModel.ndWheelDidSelect(
-            NDStep(stops: 9), wheelID: zeroID, generation: staleGeneration
+        viewModel.filterWheelDidSelect(
+            .standard(NDStep(stops: 9)), wheelID: zeroID, generation: staleGeneration
         )
-        viewModel.ndWheelDidObserveRow(
-            NDStep(stops: 9), wheelID: zeroID, generation: staleGeneration
+        viewModel.filterWheelDidObserveRow(
+            .standard(NDStep(stops: 9)), wheelID: zeroID, generation: staleGeneration
         )
         XCTAssertEqual(viewModel.ndFilterSteps, [NDStep(stops: 10)])
         XCTAssertEqual(viewModel.ndWheelInteractionState, .idle)
@@ -326,8 +342,8 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         // Events arriving inside the window are programmatic
         // artifacts by definition (input is blocked) — dropped even
         // with a CURRENT generation stamp.
-        viewModel.ndWheelDidSelect(
-            NDStep(stops: 9),
+        viewModel.filterWheelDidSelect(
+            .standard(NDStep(stops: 9)),
             wheelID: viewModel.ndFilterWheelIDs[0],
             generation: viewModel.ndWheelGeneration
         )
@@ -391,22 +407,22 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         XCTAssertEqual(viewModel.ndFilterSteps, [NDStep(stops: 0)])
     }
 
-    // MARK: §4.2.4 — accessibility cleanup command
+    // MARK: §4.2.4 — the A2 rule runs in one pass
 
-    func testAccessibilityCleanupRunsTheFullA2RuleInOneAction() async {
+    func testAutomaticCleanupRunsTheFullA2RuleInOnePass() async {
         let viewModel = makeViewModel()
+        viewModel.ndWheelCleanupDelay = 0.05
         viewModel.addFilterWheel()
         viewModel.addFilterWheel()
         viewModel.setNDFilterStep(NDStep(stops: 7), at: 0)
-        await settleWindow(0.1)
         // [7, 0, 0]
 
-        viewModel.cleanupEmptyFilterWheels()
+        await settleWindow()
 
         XCTAssertEqual(
             viewModel.ndFilterSteps,
             [NDStep(stops: 7)],
-            "One action cleans every zero — no repetition needed."
+            "One fire cleans every zero — the timer never repeats itself."
         )
     }
 
@@ -423,7 +439,7 @@ final class NDWheelAutoRemovalTests: XCTestCase {
         viewModel.setNDFilterStep(NDStep(stops: 3), at: 2)
         viewModel.setNDFilterStep(NDStep(stops: 1), at: 3)
         await settleWindow(0.1)
-        XCTAssertFalse(viewModel.canAddFilterWheel)
+        XCTAssertFalse(canAddStandardWheel(viewModel))
 
         viewModel.setNDFilterStep(NDStep(stops: 0), at: 3)
 
@@ -432,7 +448,7 @@ final class NDWheelAutoRemovalTests: XCTestCase {
             viewModel.ndFilterSteps,
             [NDStep(stops: 10), NDStep(stops: 6), NDStep(stops: 3)]
         )
-        XCTAssertTrue(viewModel.canAddFilterWheel)
+        XCTAssertTrue(canAddStandardWheel(viewModel))
     }
 
     // MARK: C1 on the add command

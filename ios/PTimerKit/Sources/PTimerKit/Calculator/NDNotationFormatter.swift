@@ -142,7 +142,11 @@ public enum NDNotationFormatter {
             return label
         }
 
-        let factor = pow(2.0, stops)
+        // Ladder values take their factor from the shared commercial
+        // mapping (the same table Filter Item registration inverts, so
+        // a registered ND1000 and the Standard ND1000 row agree);
+        // off-ladder values fall back to the raw power of two.
+        let factor = NDCommercialFactorMapping.commercialFactor(forStops: stops) ?? pow(2.0, stops)
 
         // 0–9 stops: the exact factor (1, 2, 4, … 512).
         if factor < 1000 {

@@ -214,6 +214,25 @@ class CalculatorController(
     private var isFilterStackOrderingSuspended = false
     private var needsFilterStackOrderReconciliation = false
 
+    /**
+     * The FILTER-STACK-005 settle order with FILTER-A11Y-006 layered on
+     * top, in one place: returns [stack] rearranged into committed
+     * source-group order together with [ids] carried through the same
+     * permutation, so every wheel keeps its stable identity. A frozen —
+     * or about-to-reconcile — stack is returned untouched, and so is one
+     * whose identity list has drifted out of step with its wheels.
+     */
+    private fun applyingSettledOrder(
+        stack: FilterStack,
+        ids: List<Int>,
+        inventory: FilterInventory,
+    ): Pair<FilterStack, List<Int>> {
+        if (isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation) return stack to ids
+        if (ids.size != stack.wheels.size) return stack to ids
+        val permutation = stack.commitSortPermutation(inventory)
+        return stack.sortedForCommit(inventory) to permutation.map { ids[it] }
+    }
+
     private var filterRejectionNotice: FilterRejectionNotice? = null
     private var filterRejectionNoticeJob: Job? = null
     private var emptyFilterWheelRemoval: EmptyFilterWheelRemoval? = null
@@ -409,11 +428,9 @@ class CalculatorController(
 
         // FILTER-A11Y-006: a frozen (or about-to-reconcile) stack keeps
         // its complete spatial order through the commit.
-        val preserveOrder = isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
-        if (!preserveOrder && ids.size == applied.wheels.size) {
-            val permutation = applied.commitSortPermutation(current)
-            ids = permutation.map { ids[it] }
-            applied = applied.sortedForCommit(current)
+        applyingSettledOrder(applied, ids, current).let { (sorted, sortedIds) ->
+            applied = sorted
+            ids = sortedIds
         }
 
         // A0: a set that saturates the 30-stop budget sheds its leftover
@@ -511,14 +528,11 @@ class CalculatorController(
             showFilterAddUnavailabilityNotice(unavailability)
             return
         }
-        var applied = stack.addingWheel(source, current)
-        var ids = ndWheelIds + makeNdWheelId()
-        val preserveOrder = isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
-        if (!preserveOrder && ids.size == applied.wheels.size) {
-            val permutation = applied.commitSortPermutation(current)
-            ids = permutation.map { ids[it] }
-            applied = applied.sortedForCommit(current)
-        }
+        val (applied, ids) = applyingSettledOrder(
+            stack.addingWheel(source, current),
+            ndWheelIds + makeNdWheelId(),
+            current,
+        )
         ndWheelIds = ids
         writeFilterStack(applied, lastSource = source)
         attemptFilterStackOrderReconciliation()
@@ -612,13 +626,10 @@ class CalculatorController(
         if (!needsFilterStackOrderReconciliation || isFilterStackOrderingSuspended) return
         if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty()) return
         needsFilterStackOrderReconciliation = false
-        val current = inventory
-        val stack = activeFilterStack()
-        if (ndWheelIds.size != stack.wheels.size) return
-        val permutation = stack.commitSortPermutation(current)
-        if (permutation == stack.wheels.indices.toList()) return
-        ndWheelIds = permutation.map { ndWheelIds[it] }
-        writeFilterStack(stack.sortedForCommit(current))
+        val (sorted, ids) = applyingSettledOrder(activeFilterStack(), ndWheelIds, inventory)
+        if (ids == ndWheelIds) return
+        ndWheelIds = ids
+        writeFilterStack(sorted)
     }
 
     // --- Assistive adjustment (FILTER-A11Y-004/005) ---

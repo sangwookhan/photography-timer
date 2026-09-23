@@ -1043,8 +1043,8 @@ class FilterSetControllerTest {
         assertEquals(1000.0, entry.originalValue!!, 1e-9)
         assertEquals(FilterValueUnit.filterFactor, entry.originalUnit)
         assertEquals(
-            "Lee holder: Big Stopper ND1000 · Standard 2 stops",
-            identity.filterReferenceText,
+            listOf("Lee holder" to "Big Stopper", null to null),
+            identity.filterSummary!!.map { it.filterSetName to it.itemName },
         )
 
         c.renameFilterSet(lee.id, "Renamed kit")
@@ -1052,10 +1052,9 @@ class FilterSetControllerTest {
 
         assertEquals(
             "A captured entry is descriptive only; later edits never rewrite it.",
-            "Lee holder: Big Stopper ND1000 · Standard 2 stops",
-            f.started.single().second.filterReferenceText,
+            listOf("Lee holder" to "Big Stopper", null to null),
+            f.started.single().second.filterSummary!!.map { it.filterSetName to it.itemName },
         )
-        assertEquals("Lee holder", f.started.single().second.filterSummary!!.first().filterSetName)
     }
 
     @Test
@@ -1071,7 +1070,7 @@ class FilterSetControllerTest {
             listOf(FilterSummaryEntry.SourceKind.standard),
             identity.filterSummary!!.map { it.sourceKind },
         )
-        assertEquals("Standard 5 stops", identity.filterReferenceText)
+        assertEquals(5.0, identity.filterSummary!!.single().contributedStops, 1e-9)
     }
 
     // MARK: - rejection notice lifetime (FILTER-STACK-004)

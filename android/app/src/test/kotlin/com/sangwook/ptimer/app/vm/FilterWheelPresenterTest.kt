@@ -132,14 +132,9 @@ class FilterWheelPresenterTest {
     }
 
     @Test
-    fun sourceNameAndRegisteredValueTextUseCanonicalEnglish() {
+    fun sourceNameUsesCanonicalEnglish() {
         assertEquals("Standard", FilterWheelPresenter.sourceName(FilterSource.Standard, inventory))
         assertEquals("Lee holder", FilterWheelPresenter.sourceName(source, inventory))
-
-        assertEquals("OD 0.9", FilterWheelPresenter.registeredValueText(FilterRegisteredValue(0.9, FilterValueUnit.opticalDensity)))
-        assertEquals("ND8", FilterWheelPresenter.registeredValueText(FilterRegisteredValue(8.0, FilterValueUnit.filterFactor)))
-        assertEquals("3 stops", FilterWheelPresenter.registeredValueText(FilterRegisteredValue(3.0, FilterValueUnit.stops)))
-        assertEquals("1 stop", FilterWheelPresenter.registeredValueText(FilterRegisteredValue(1.0, FilterValueUnit.stops)))
     }
 
     @Test

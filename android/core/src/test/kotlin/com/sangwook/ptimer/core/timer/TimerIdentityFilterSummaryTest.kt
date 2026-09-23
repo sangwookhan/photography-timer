@@ -59,7 +59,6 @@ class TimerIdentityFilterSummaryTest {
             TimerIdentity(
                 title = "Camera 1 · HP5 Plus",
                 filterSummary = listOf(entry),
-                filterReferenceText = "Lee holder · GND REC",
             ),
         )
         val json = WorkspaceSnapshotCodec.encode(snapshot)
@@ -70,7 +69,6 @@ class TimerIdentityFilterSummaryTest {
         assertEquals(snapshot, decoded)
         val identity = decoded!!.timers.single().identity
         assertEquals(listOf(entry), identity.filterSummary)
-        assertEquals("Lee holder · GND REC", identity.filterReferenceText)
     }
 
     @Test fun oneMalformedEntryIsDroppedAndTheTimerSurvives() {
@@ -119,7 +117,6 @@ class TimerIdentityFilterSummaryTest {
             .decodeFromString<TimerIdentity>("""{"title":"t","slotLabel":"C1"}""")
         assertEquals("t", identity.title)
         assertNull(identity.filterSummary)
-        assertNull(identity.filterReferenceText)
     }
 
     /** A stored value that is not an array degrades to an empty summary

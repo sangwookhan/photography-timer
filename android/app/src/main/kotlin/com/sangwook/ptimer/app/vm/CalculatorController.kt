@@ -1252,7 +1252,6 @@ class CalculatorController(
             basisIncludesAdjusted = includesAdjusted,
             filmName = filmName,
             filterSummary = summary.takeIf { it.isNotEmpty() },
-            filterReferenceText = FilterSummaryReferencePresenter.referenceText(summary),
         )
     }
 

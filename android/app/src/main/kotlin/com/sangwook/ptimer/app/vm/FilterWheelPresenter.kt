@@ -9,7 +9,6 @@ import com.sangwook.ptimer.core.exposure.FilterRegisteredValue
 import com.sangwook.ptimer.core.exposure.FilterRowChoice
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
-import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.exposure.FilterWheelRowOption
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
@@ -140,14 +139,6 @@ object FilterWheelPresenter {
     private fun notationValue(stops: Double, mode: NDNotationMode): String =
         NDNotationFormatter.display(stops, mode).value
 
-    /** Canonical `N stops` / `1 stop` text for a contribution. */
-    fun stopsText(stops: Double): String =
-        if (abs(stops - 1) <= ExposureCalculator.STABILITY_EPSILON) {
-            "1 $STOP_SINGULAR"
-        } else {
-            "${decimalStopsValue(stops)} $STOP_PLURAL"
-        }
-
     /**
      * Plain decimal rendering of a registered or contributed stops value:
      * whole values as integers, otherwise up to two trimmed decimals
@@ -159,19 +150,6 @@ object FilterWheelPresenter {
 
     /** Trimmed three-decimal rendering of a registered numeric value. */
     fun trimmedNumber(value: Double): String = trimmed(value, decimals = 3)
-
-    /**
-     * Original registered representation for the editor, the status
-     * region, and the captured reference: `OD 0.9`, `ND8`, or `3 stops`.
-     */
-    fun registeredValueText(value: FilterRegisteredValue): String {
-        val number = trimmedNumber(value.value)
-        return when (value.unit) {
-            FilterValueUnit.stops -> stopsText(value.value)
-            FilterValueUnit.opticalDensity -> "$OPTICAL_DENSITY_PREFIX$number"
-            FilterValueUnit.filterFactor -> "$FILTER_FACTOR_PREFIX$number"
-        }
-    }
 
     private fun trimmed(value: Double, decimals: Int): String {
         if (abs(value - value.roundToLong()) <= ExposureCalculator.STABILITY_EPSILON) {
@@ -186,16 +164,4 @@ object FilterWheelPresenter {
     /** Canonical English vocabulary; the display layer localizes it. */
     const val STANDARD_SOURCE_NAME: String = "Standard"
     const val FALLBACK_FILTER_SET_NAME: String = "Filter Set"
-    const val FALLBACK_ITEM_NAME: String = "Filter"
-    const val RECORD_ONLY_MODE_NAME: String = "Record only"
-    const val APPLY_FULL_VALUE_MODE_NAME: String = "Apply full value"
-    const val STOP_SINGULAR: String = "stop"
-    const val STOP_PLURAL: String = "stops"
-    private const val OPTICAL_DENSITY_PREFIX = "OD "
-    private const val FILTER_FACTOR_PREFIX = "ND"
-
-    fun gndModeName(mode: GndCalculationMode): String = when (mode) {
-        GndCalculationMode.recordOnly -> RECORD_ONLY_MODE_NAME
-        GndCalculationMode.applyFullValue -> APPLY_FULL_VALUE_MODE_NAME
-    }
 }

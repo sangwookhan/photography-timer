@@ -284,7 +284,8 @@ private fun registeredWithConversionText(value: FilterRegisteredValue): String {
  * Set they were mounted from, in captured order:
  * `Lee holder: Big Stopper ND1000 + Lee GND 0.9 OD 0.9 (Record only) ·
  * NiSi kit: NiSi CPL 1.5 stops · Standard 2 stops`.
- * (Canonical-English twin: `FilterSummaryReferencePresenter`.)
+ * The only path: the line is composed here, at render time, so a
+ * per-app language change reaches a timer that is already running.
  */
 @Composable
 internal fun localizedFilterReferenceText(summary: List<FilterSummaryEntry>): String? {

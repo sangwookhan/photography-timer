@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -257,6 +258,31 @@ fun SnapWheel(
         ) {
             listState.scrollToItem(selectedIndex)
         }
+    }
+
+    // At rest the viewport must show the CALLER's selection, never whichever
+    // row the gesture last passed over. The effect above fires only when
+    // [selectedIndex] changes, so a settle the caller REFUSES leaves nothing to
+    // re-trigger it: the commit barrier rejects the candidate, the committed
+    // index is unchanged, and the wheel would stay parked on the rejected row
+    // indefinitely — showing a value the stack does not hold (PTIMER-221
+    // FILTER-STACK-004: an unavailable row never commits and the previous
+    // selection remains). Re-checking on every transition to quiescence closes
+    // that gap, and also covers a commit that lands while the settle animation
+    // is still finishing (which the guard above drops). A wheel whose selection
+    // did follow the gesture finds centered == selected here and does nothing,
+    // so the base-shutter and Standard ladders are unaffected.
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+    val currentLabelCount by rememberUpdatedState(labels.size)
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .filter { !it }
+            .collect {
+                val target = currentSelectedIndex
+                if (centeredIndex != null && centeredIndex != target && target < currentLabelCount && target >= 0) {
+                    listState.scrollToItem(target)
+                }
+            }
     }
 
     // PTIMER-182: expose the whole wheel as ONE adjustable accessibility

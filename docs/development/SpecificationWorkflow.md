@@ -3,10 +3,9 @@
 
 # Specification Workflow
 
-**Status:** v1 — established during the PTIMER-225 baseline migration.
-This is a working contract, not a finished process document. It will be
-revised after real feature work (starting with PTIMER-221) has exercised it,
-to reflect what actually worked rather than what was planned.
+**Status:** v2 — revised after PTIMER-221 exercised the workflow in real
+feature work. This remains a working contract and should continue to evolve
+when later delivery exposes a concrete process defect.
 
 This document describes the *process* by which PTimer's living behavior
 specifications are created, changed, and implemented. It does not itself
@@ -56,20 +55,30 @@ material must never appear inside a `docs/specs/**` file's normative body.
 
 ## 2. What a living behavior specification is
 
-A file under `docs/specs/**` describes **current, shipped product behavior**
-for one product capability — **on `main`**. This is a branch-scoped
-statement, not a path-scoped one: the same path means something different
-depending on which branch it is read from.
+A file under `docs/specs/**` describes the **current approved product
+behavior contract** for one product capability. "Current" means the contract
+the product is presently committed to, not a snapshot of behavior that every
+platform already ships.
 
-- On `main`, `docs/specs/**` describes only what is actually implemented and
-  shipping. Nothing proposed, planned, or partially built belongs there.
-- On an open Spec PR branch (§10.1), the same path describes a **proposed**
-  contract that is not yet implemented, and is expected to keep changing
-  until it is approved. It is not a violation of "current-only" for a Spec
-  PR branch to contain not-yet-shipped behavior — that is exactly what a
-  Spec PR is for. It becomes a "current-only" violation only if it merges
-  to `main` before the Code PR that implements it does (§10.5 forbids this
-  merge order).
+- On `main`, `docs/specs/**` contains the latest approved contract. An
+  approved capability may be delivered incrementally by platform; therefore a
+  merged spec may describe behavior implemented on one platform while another
+  supported platform is still pending. This is an approved contract, not
+  speculative planning. Which platform is implemented first is a delivery
+  choice, not part of the contract model.
+- On an open Spec PR branch (§10.1), the same path describes a **proposed
+  revision** of that contract. Before initial approval it is still being
+  decided; after initial approval it is the exact revision implementation
+  consumes and may continue to change through the spec-feedback protocol until
+  final conformance.
+- Merging a spec does not freeze it permanently. Implementation on another
+  supported platform may expose a genuine product ambiguity, platform
+  constraint, or contract defect. That feedback revises the living spec through
+  a new Spec PR. Already-implemented platforms are then re-checked against the
+  revised contract: if they already conform, no code change is required; if
+  they do not, each affected platform receives a follow-up Code PR. During that
+  follow-up window, the approved spec on `main` is allowed to lead an older
+  platform implementation.
 
 A file under `docs/specs/**` is otherwise:
 
@@ -82,10 +91,10 @@ A file under `docs/specs/**` is otherwise:
 - **The first artifact changed when a new requirement is proposed.** Per §1,
   it sits between Requirements.md and engineering design — a new capability
   or behavior change starts here, not in code.
-- **Current-only.** A living spec describes what the product does today. It
-  does not describe planned or anticipated future behavior, even when a
-  future ticket is already known. (See §5, PTIMER-221 / My Filters as the
-  concrete precedent.)
+- **Approved-only.** A living spec records the behavior the product has
+  actually approved, including approved cross-platform behavior that may be
+  implemented in stages. It does not contain speculative ideas, unapproved
+  alternatives, or roadmap guesses merely because a future ticket is known.
 
 ## 3. Capability ownership
 
@@ -118,14 +127,13 @@ docs/specs/
 ```
 
 A new independent capability gets a new file in the appropriate directory
-(e.g. `calculator/my-filters.md`). The tree is not grown speculatively on
-`main`: on `main`, a capability file exists only once its capability has
-actually shipped, not in anticipation. On an open Spec PR branch (§10.1),
-creating that new file *is* the proposal — a Spec PR for a brand-new
-capability is expected to add the not-yet-implemented file, exactly as §2
-already allows for existing files. It only becomes a "current-only"
-violation if it merges to `main` ahead of the Code PR that implements it
-(§10.5 forbids that merge order).
+(e.g. `calculator/my-filters.md`). The tree is not grown speculatively:
+creating that new file in a Spec PR is the proposal. Its first merge to
+`main` occurs only after the contract is approved and at least one Code PR
+has reached final conformance against it (§10). The capability may then be
+implemented on additional platforms against that merged contract. If a later
+implementation changes the approved behavior, the same capability file is
+revised through a new Spec PR rather than treated as frozen history.
 
 **Cross-capability inheritance.** When a new capability extends or shares
 mechanics already owned by another file, it must not duplicate those
@@ -194,16 +202,20 @@ is internally structured to achieve it.
 
 ## 5. Current baseline discipline
 
-The baseline established by this migration describes **only currently
-shipped behavior**, verified against the truth hierarchy in §6. Concretely:
+The baseline established by the initial migration deliberately started from
+**currently shipped behavior**, verified against the truth hierarchy in §6.
+That was a bootstrap rule for reconstructing a trustworthy baseline, not a
+definition that future living specs must always lag implementation.
+Concretely:
 
-- The ND filter stack (`calculator/nd-filters.md`) describes the shipping
-  stack over the standard ND ladder only. It is not generalized in
-  anticipation of PTIMER-221 (My Filters). That generalization, if the
-  verified requirements of PTIMER-221 turn out to need it, happens inside
-  PTIMER-221's own Spec PR.
-- No capability file for a feature that has not shipped is created during a
-  baseline or reconciliation pass.
+- During the initial migration, the ND filter stack
+  (`calculator/nd-filters.md`) described the shipping stack over the
+  standard ND ladder only and was intentionally not generalized in
+  anticipation of PTIMER-221 (My Filters). Any generalization required by
+  PTIMER-221 belonged in PTIMER-221's own Spec PR rather than the baseline
+  migration.
+- During a baseline or reconciliation pass, no capability file is created
+  merely for speculative future behavior.
 - Historical material (see §6) is a candidate source of *evidence* about
   current behavior, never a source of *future* behavior.
 
@@ -331,101 +343,132 @@ can resolve within the rules in this document are not escalated.
 
 ## 10. Spec PR / Code PR model
 
-A feature or behavior change is normally represented by two pull requests
-against the application repository, both branched from `main`:
+A behavior change that creates or revises the approved product contract uses
+a **Spec PR** plus one or more **Code PRs**. Platform implementations may
+proceed sequentially or in parallel; iOS and Android have no workflow-defined
+priority.
 
-```
-main
- ├── spec/<ticket>-...
- │      └── Spec PR — docs/specs/** documentation only
- │
- └── feature/<ticket>-...
-        └── Code PR — implementation and tests
-```
-
-Both branches normally branch from `main` directly. A Code PR is not
-stacked on top of its Spec branch by default — implementation consumes an
-explicit, recorded revision of the Spec PR (see §10.3), not an in-progress
-branch tip that might still move.
+A later platform may also implement a contract that is already merged on
+`main` without opening a new Spec PR. That Code PR is a normal path, not an
+exception.
 
 ### 10.1 Spec PR
 
 - Touches `docs/specs/**` only (and, rarely, a clarifying note in
   `docs/requirements/Requirements.md` — see §1).
-- Is opened as a **Draft PR** and stays draft while product behavior is
-  still being decided. It describes a **proposed** product contract that is
-  not yet implemented.
-- Is revised in place as product decisions change. A change of mind does
-  not produce a new PR; the same Spec PR is updated until the contract is
-  approved.
-- Passes through two distinct approval points, not one (see §10.4):
-  **initial approval** (the user and ChatGPT agree the drafted contract is
-  what should ship — this is what unlocks starting a Code PR) and **final
-  conformance confirmation** (after implementation, confirming the Code PR
-  satisfies the Spec PR's latest revision and any spec feedback raised
-  during implementation has been resolved — this is what unlocks merge).
-  A Spec PR can be initially approved, then revised again mid-implementation
-  if a `[SPEC-CONFLICT]` or `[SPEC-QUESTION]` (§12) surfaces a real gap;
-  each revision re-opens final conformance confirmation, not initial
-  approval.
+- Is opened as a **Draft PR** and stays draft while product behavior is still
+  being decided.
+- Is revised in place as product decisions change. A change of mind does not
+  produce a new PR; the same Spec PR is updated until the contract is approved.
+- **Initial approval** means the user and ChatGPT agree that the revision is
+  the contract implementations should target. Initial approval may unlock
+  Code PRs for any supported platforms, including multiple platform Code PRs
+  in parallel.
+- If implementation surfaces a `[SPEC-CONFLICT]`,
+  `[SPEC-OBJECTION]`, or `[SPEC-QUESTION]` (§12) that changes the
+  contract, the Spec PR is revised. Every in-progress Code PR that targets the
+  affected behavior must re-check itself against the new approved revision.
+- A Spec revision reaches `main` only as part of a **spec delivery group**
+  (§10.5): the Spec PR plus at least one Code PR that has reached final
+  conformance against that revision. Other platform implementations may merge
+  later.
 
 ### 10.2 Code PR
 
-- Touches implementation and tests. It must not also modify
-  `docs/specs/**` — a behavior change discovered during implementation goes
-  back to the Spec PR, not into the Code PR directly.
-- States which Spec PR it implements and against which revision (commit SHA)
-  of that Spec PR (see the checklist in §11).
-- Is reviewed, tested, and (for user-visible behavior) verified on-device
-  against the Spec PR's latest approved revision before merge.
+A Code PR touches implementation and tests. It must not also modify
+`docs/specs/**`; product-contract changes go through a Spec PR.
 
-### 10.3 Recording the Spec revision an implementation consumes
+A Code PR consumes one of two kinds of spec baseline:
 
-Because a Spec PR can be revised after implementation starts, the Code PR
-must record the exact Spec PR revision (a commit SHA on the Spec branch) it
-was built against, and confirm that revision matches what was actually
-implemented before requesting final review. If the Spec PR moves after
-implementation started, the Code PR is checked against the new revision —
-either the implementation already satisfies it, or the Code PR is updated
-and the check is repeated.
+1. **Open Spec PR baseline.** When implementing a proposed or newly approved
+   revision, the Code PR records the Spec PR number and the exact approved
+   Spec PR commit SHA it implements.
+2. **Merged living-spec baseline.** When implementing an already-merged
+   contract and no Spec PR is in play, the Code PR records the relevant spec
+   path(s) and the `main` commit SHA containing the approved contract it
+   implements. The originating Spec PR may also be recorded for traceability
+   when known, but an open Spec PR is not required.
 
-### 10.4 Lifecycle states
+A Code PR is reviewed, tested, and — for user-visible behavior — verified
+on-device against its recorded baseline before merge.
 
-A Spec PR moves through:
+### 10.3 Recording and updating the consumed Spec revision
 
-1. **Proposed** — product behavior is being drafted/discussed. No approval
-   yet; a Code PR must not start from this state.
-2. **Initially approved, awaiting implementation** — the user and ChatGPT
-   agree the drafted contract is what should ship. This unlocks starting a
-   Code PR against this revision. It does not yet mean implementation
-   matches it — nothing has been built against it yet.
-3. **Implementation in progress** — a Code PR exists and records which
-   Spec PR revision it targets (§10.3). If implementation surfaces a
-   `[SPEC-QUESTION]`/`[SPEC-OBJECTION]`/`[SPEC-CONFLICT]` that changes the
-   contract, the Spec PR is revised and returns to state 2 for the changed
-   part; unaffected parts do not need to be re-approved.
-4. **Final conformance confirmed** — the Code PR implements the Spec PR's
-   latest revision, verification passes, and any spec feedback raised
-   during implementation has been resolved. This — not state 2 — is the
-   gate for merge.
-5. **Merged** — Spec PR and Code PR merge in the agreed sequence (§10.5).
+The recorded baseline is part of the Code PR's review contract.
 
-### 10.5 Merge sequence
+- For an open Spec PR, use the exact approved commit SHA on the Spec branch.
+- For a merged living spec, use the `main` commit SHA containing the
+  relevant approved spec content.
+- Multiple platform Code PRs may consume the same initially approved Spec PR
+  revision in parallel.
+- If the relevant Spec PR or merged living spec changes while a Code PR is in
+  progress, the Code PR is checked against the newer approved revision before
+  final review. Either it already conforms, or its implementation and tests
+  are updated and the check is repeated.
+- A Code PR that discovers a required contract change does not reinterpret the
+  baseline locally. It opens or returns to the Spec PR process (§12).
 
-Merge only when: the product spec reached final conformance confirmation
-(state 4 above) for everything the Code PR implements, automated
-verification passes, user-device verification (where applicable) passes,
-and both PRs are merge-ready.
+### 10.4 Lifecycle and final conformance
 
-Then, in this order: **the Code PR merges first, the Spec PR merges
-immediately after.** This order is not arbitrary — §2 requires that
-`main`'s `docs/specs/**` describe only implemented behavior, and merging
-the Spec PR first would put unimplemented behavior on `main`, even if only
-for the short window until the Code PR follows. Merging the Code PR first
-briefly leaves shipped behavior undocumented instead, which is the lesser
-and shorter-lived gap, closed by the very next merge. The originating
-ticket closes only after both have merged, once the actual product and the
-living spec agree.
+For a new or revised contract, the Spec PR moves through:
+
+1. **Proposed** — product behavior is being drafted/discussed.
+2. **Initially approved** — implementation may start on any supported
+   platform against this exact revision.
+3. **Implementation in progress** — one or more Code PRs consume an approved
+   revision. A contract-changing feedback item returns the affected behavior to
+   the Spec PR for revision and re-approval.
+4. **Final conformance confirmed for an implementation increment** — a Code
+   PR implements every requirement applicable to its declared platform/scope,
+   verification passes, and spec feedback for that increment is resolved.
+5. **Spec revision delivered** — the Spec PR and at least one conforming Code
+   PR have both merged to `main` as one spec delivery group (§10.5).
+
+Final conformance is **platform/scope-specific**. Confirming it for one Code
+PR does not claim that every supported platform implements the capability.
+
+A later platform Code PR implementing the already-merged contract follows
+steps 2–4 against the merged living-spec baseline and may merge on its own if
+it does not change the contract.
+
+### 10.5 Merge semantics
+
+A **spec delivery group** consists of one Spec PR and one or more Code PRs
+that are ready to deliver that Spec revision. Merge the group only when:
+
+- the Spec revision is approved;
+- at least one Code PR has final conformance confirmed against that revision;
+- required automated verification passes;
+- required user-device verification passes; and
+- every PR included in that merge group is merge-ready.
+
+The Spec PR and included Code PR(s) are one logical delivery. GitHub cannot
+merge multiple PRs atomically, so their temporary click order has **no
+product or SDD meaning**. Any PR in the group may be merged first. The group
+is considered delivered only after the Spec PR and every Code PR intentionally
+included in that group are on `main`.
+
+A Spec PR is not intentionally merged by itself. At least one implementation
+increment accompanies its first merge. Additional platform Code PRs do not
+need to wait for that first platform to merge before development starts:
+after initial Spec approval they may develop in parallel against the same
+recorded revision.
+
+After the Spec revision is on `main`, a later platform Code PR that
+implements it without changing the contract may merge independently after its
+own final conformance. If that later work requires a contract change, create a
+new Spec PR; that new revision again uses a spec delivery group with at least
+one conforming Code PR. Already-implemented platforms are re-checked against
+the new contract, and any platform that no longer conforms receives a
+follow-up Code PR. The approved spec may temporarily lead those older
+implementations while the follow-up work is completed.
+
+Ticket closure follows the **declared scope of the ticket**, not the order in
+which platforms happen to merge. A platform-scoped ticket may close when that
+platform's acceptance criteria are satisfied. A cross-platform ticket closes
+only after every platform named in its scope is complete. If later platform
+work is intentionally split into a separate ticket, that separate ticket owns
+its completion.
 
 ## 11. PR checklist (candidate, no CI enforcement yet)
 
@@ -441,9 +484,10 @@ justifies automating a specific check — see §13.
 - [ ] The PR does not mix in implementation changes.
 
 **Code PR:**
-- [ ] States the Spec PR it implements.
-- [ ] States the exact Spec PR revision (commit SHA) implemented against.
-- [ ] States that the implementation was reviewed against that revision.
+- [ ] Records its exact approved spec baseline: either Spec PR + commit SHA,
+      or relevant `main` spec path(s) + baseline commit SHA.
+- [ ] States the platform/scope for which final conformance is claimed.
+- [ ] States that the implementation was reviewed against that exact baseline.
 
 ## 12. Spec feedback protocol
 

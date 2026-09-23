@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,9 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.rememberTouchExplorationEnabled
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.FilterRowTypeCategory
@@ -61,6 +66,15 @@ private const val WheelVisibleCount = 3
  * axis.
  */
 internal val FilterWheelLabelRowHeight = 18.dp
+
+/**
+ * Floor for the persistent label's shrink-to-fit (FILTER-STACK-007). The
+ * narrowest supported column — four actual wheels, Plus hidden — has to
+ * hold `GND FULL` next to its source cue; the reference `labelSmall` size
+ * is the ceiling and this is how far it may step down to get there.
+ */
+private val FilterWheelLabelMinFontSize = 7.sp
+private val FilterWheelLabelFontStep = 0.25.sp
 
 /**
  * The mixed Filter Stack wheel row (FILTER-STACK): 1–4 side-by-side
@@ -260,9 +274,34 @@ private fun FilterWheelColumn(
  * with the Filter Set's source cue leading it. Excluded from the
  * accessibility tree: the wheel is one element and its dynamic value
  * already carries the type and mode (FILTER-A11Y-001).
+ *
+ * FILTER-STACK-007 requires the label — cue included — to stay legible
+ * "without ellipsis at the default and every supported standard text
+ * size", for every allowed composition up to four actual wheels. The
+ * widest label, `GND FULL`, does not fit the reference size once the
+ * column narrows, so two things keep it whole:
+ *
+ * - The row holds its own text at scale 1x. Its height is fixed
+ *   ([FilterWheelLabelRowHeight] is shared with the Base Shutter
+ *   column's spacer and anchors the wheels' vertical axis,
+ *   FILTER-STACK-008), so the label cannot grow with the system font
+ *   scale in the first place; letting it try only clipped it. Nothing
+ *   the contract sizes — the numeric values, the status region, the
+ *   rest of the screen — is capped by this.
+ * - Within that fixed budget the text shrinks to fit the column instead
+ *   of truncating. Ellipsis stays as the floor's last resort only, so a
+ *   truncation could never again be silent.
+ *
+ * [onLabelTextLayout] is a measurement hook: the label is deliberately
+ * outside the semantics tree, so the regression test reads its layout
+ * (complete text, one line, no visual overflow) from here.
  */
 @Composable
-private fun FilterWheelLabelRow(label: String, cueColor: Color?) {
+internal fun FilterWheelLabelRow(
+    label: String,
+    cueColor: Color?,
+    onLabelTextLayout: (TextLayoutResult) -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -275,13 +314,23 @@ private fun FilterWheelLabelRow(label: String, cueColor: Color?) {
             SourceCue(cueColor)
             Spacer(Modifier.width(3.dp))
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
+        CappedFontScale(maxFontScale = 1f) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = FilterWheelLabelMinFontSize,
+                    maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                    stepSize = FilterWheelLabelFontStep,
+                ),
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = onLabelTextLayout,
+            )
+        }
     }
 }
 

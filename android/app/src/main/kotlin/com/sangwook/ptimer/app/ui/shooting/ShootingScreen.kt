@@ -381,8 +381,21 @@ fun ShootingScreen(
                                     // The ND column widens once wheels stack so
                                     // 3–4 side-by-side ladders keep readable
                                     // labels; the shutter wheel needs less room.
+                                    //
+                                    // Even at one wheel the split is not even
+                                    // (FILTER-A11Y-002). This column has to seat a
+                                    // whole header — title, three-option toggle,
+                                    // management entry — whose width is fixed in dp,
+                                    // while the shutter column only has to seat
+                                    // `1/8000` and its caption. An even split left
+                                    // the header short and ellipsized `ND Filter` at
+                                    // the DEFAULT text size. Measured on a 411dp
+                                    // screen: the header needs 500px of the 954px
+                                    // row, so the split has to be at least 1.101;
+                                    // 1.05 leaves the title 11px short, 1.10 clears
+                                    // it by nothing at all, and this leaves ~4dp.
                                     modifier = Modifier.weight(
-                                        if (pageState.filterWheels.size >= 2) 1.6f else 1f,
+                                        if (pageState.filterWheels.size >= 2) 1.6f else 1.15f,
                                     ),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
@@ -393,8 +406,34 @@ fun ShootingScreen(
                                         modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Text(stringResource(R.string.shooting_nd_filter), style = MaterialTheme.typography.labelLarge)
-                                        Spacer(Modifier.weight(1f))
+                                        // The title yields, the controls do not
+                                        // (FILTER-A11Y-002). At large text the row
+                                        // used to give the title its full intrinsic
+                                        // width and squeeze the notation options and
+                                        // the management entry out of the layout —
+                                        // in English at 130% they lost their labels
+                                        // entirely and the gear stopped being drawn,
+                                        // leaving two unlabelled hit targets. A
+                                        // heading can truncate; a required control
+                                        // cannot disappear.
+                                        //
+                                        // The weight is what reverses the order: a
+                                        // Row measures its unweighted children first,
+                                        // so the toggle and the gear now take their
+                                        // intrinsic widths and the title gets what is
+                                        // left. It fills that remainder — which is
+                                        // also why it replaces the trailing-alignment
+                                        // Spacer rather than sitting beside one:
+                                        // sharing the slack with a weighted Spacer
+                                        // would halve the title's width and ellipsize
+                                        // it long before the row is actually full.
+                                        Text(
+                                            stringResource(R.string.shooting_nd_filter),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f),
+                                        )
                                         NotationToggle(
                                             mode = pageState.ndNotationMode,
                                             enabled = writesActiveSlot,

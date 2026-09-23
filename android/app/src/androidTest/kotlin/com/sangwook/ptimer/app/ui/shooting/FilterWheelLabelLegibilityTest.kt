@@ -233,47 +233,47 @@ class FilterWheelLabelLegibilityTest {
     }
 
     private fun key(label: String, wheels: Int, scale: Float) = "$label at ${wheels}w, scale $scale"
+}
 
-    /** Minimal wiring: only the stack's own callbacks do anything. */
-    @Composable
-    private fun ShootingScreenHarness(state: CalculatorUiState) {
-        ShootingScreen(
-            state = state,
-            onShutterIndex = {},
-            onNdWheelActive = { _, _ -> },
-            onNdWheelValue = { _, _ -> },
-            onAddFilterWheel = {},
-            onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
-            onFilterAddUnavailability = { null },
-            onRemoveNdWheelOverscroll = {},
-            onManageFilterSets = {},
-            onSelectNotation = {},
-            onSelectFilm = {},
-            onSelectProfile = {},
-            onSelectSlot = {},
-            onRenameSlot = {},
-            onSetTarget = {},
-            onStartTarget = {},
-            onStartAdjusted = {},
-            onStartCorrected = {},
-            onOpenDetails = {},
-            onResetSettings = {},
-            onResetSettingsAndName = {},
-            onCreateCustomFilm = { _, _ -> true },
-            onCreateCustomTableFilm = { _, _ -> true },
-            onEditCustomFilm = { null },
-            onDeleteCustomFilm = {},
-            onPreviewCustomFilm = { null },
-            onPreviewCustomTableFilm = { null },
-            onFormulaCheckpoints = { emptyList() },
-            onTableCheckpoints = { emptyList() },
-            onCalculationBasis = { "" },
-            onPreviewTableFit = { null },
-            onCreateFormulaFromTable = { _, _ -> true },
-            onReferencePoints = { _, _ -> emptyList() },
-            onOpenAbout = {},
-            showExactAlarmSettingsAction = false,
-            onOpenExactAlarmSettings = {},
-        )
-    }
+/** Minimal wiring: only the stack's own callbacks do anything. */
+@Composable
+internal fun ShootingScreenHarness(state: CalculatorUiState) {
+    ShootingScreen(
+        state = state,
+        onShutterIndex = {},
+        onNdWheelActive = { _, _ -> },
+        onNdWheelValue = { _, _ -> },
+        onAddFilterWheel = {},
+        onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
+        onFilterAddUnavailability = { null },
+        onRemoveNdWheelOverscroll = {},
+        onManageFilterSets = {},
+        onSelectNotation = {},
+        onSelectFilm = {},
+        onSelectProfile = {},
+        onSelectSlot = {},
+        onRenameSlot = {},
+        onSetTarget = {},
+        onStartTarget = {},
+        onStartAdjusted = {},
+        onStartCorrected = {},
+        onOpenDetails = {},
+        onResetSettings = {},
+        onResetSettingsAndName = {},
+        onCreateCustomFilm = { _, _ -> true },
+        onCreateCustomTableFilm = { _, _ -> true },
+        onEditCustomFilm = { null },
+        onDeleteCustomFilm = {},
+        onPreviewCustomFilm = { null },
+        onPreviewCustomTableFilm = { null },
+        onFormulaCheckpoints = { emptyList() },
+        onTableCheckpoints = { emptyList() },
+        onCalculationBasis = { "" },
+        onPreviewTableFit = { null },
+        onCreateFormulaFromTable = { _, _ -> true },
+        onReferencePoints = { _, _ -> emptyList() },
+        onOpenAbout = {},
+        showExactAlarmSettingsAction = false,
+        onOpenExactAlarmSettings = {},
+    )
 }

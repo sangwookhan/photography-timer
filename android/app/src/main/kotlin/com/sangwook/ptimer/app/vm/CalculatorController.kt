@@ -492,18 +492,35 @@ class CalculatorController(
      * is busy, or when the source can hold no usable row, in which case
      * the reason surfaces in the status region. Only a successful addition
      * moves the camera's remembered source.
+     *
+     * The new wheel enters the settled FILTER-STACK-005 order at once:
+     * its own sort value is zero, so it sorts last inside its group, but
+     * its GROUP takes its subtotal position immediately rather than
+     * waiting for some other wheel to move. FILTER-A11Y-006 still wins —
+     * while the order is frozen (or a reconciliation is queued) the
+     * addition changes membership only and triggers no subtotal-based
+     * reorder.
      */
     fun addFilterWheel(source: FilterSource = lastFilterSource) {
         if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty()) return
-        if (!inventory.contains(source)) return
+        val current = inventory
+        if (!current.contains(source)) return
         val stack = activeFilterStack()
-        val unavailability = stack.addUnavailability(source, inventory)
+        val unavailability = stack.addUnavailability(source, current)
         if (unavailability != null) {
             showFilterAddUnavailabilityNotice(unavailability)
             return
         }
-        ndWheelIds = ndWheelIds + makeNdWheelId()
-        writeFilterStack(stack.addingWheel(source, inventory), lastSource = source)
+        var applied = stack.addingWheel(source, current)
+        var ids = ndWheelIds + makeNdWheelId()
+        val preserveOrder = isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
+        if (!preserveOrder && ids.size == applied.wheels.size) {
+            val permutation = applied.commitSortPermutation(current)
+            ids = permutation.map { ids[it] }
+            applied = applied.sortedForCommit(current)
+        }
+        ndWheelIds = ids
+        writeFilterStack(applied, lastSource = source)
         attemptFilterStackOrderReconciliation()
     }
 

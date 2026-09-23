@@ -190,6 +190,116 @@ class FilterSetControllerTest {
     }
 
     @Test
+    fun addingAStandardWheelReturnsAGroupedAndSortedStack() {
+        val threeStop = stops("Lee ND 3", 3.0)
+        // A second, unmounted item keeps the source addable (FILTER-PLUS-005).
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(threeStop, stops("Soft", 1.0)))
+        val f = fixture(lee)
+        val c = f.controller
+
+        commit(c, 0, standard(2.0))
+        c.addFilterWheel(source(lee))
+        commit(c, indexOfWheel(c, wheels(c).first { it.source == source(lee) }.id), itemSelection(threeStop))
+
+        // The add is the LAST interaction: nothing scrolls afterwards.
+        c.addFilterWheel(FilterSource.Standard)
+
+        assertEquals(
+            "Lee (3) first, then the two contiguous Standard wheels.",
+            listOf(source(lee), FilterSource.Standard, FilterSource.Standard),
+            wheels(c).map { it.source },
+        )
+        assertEquals(
+            listOf(itemSelection(threeStop), standard(2.0), standard(0.0)),
+            committed(c),
+        )
+        assertEquals("5", total(c))
+    }
+
+    @Test
+    fun anAddedWheelJoinsItsSourceGroupImmediately() {
+        val bigStopper = ndFactor("Big Stopper", 1000.0)
+        // A second, unmounted item keeps the source addable (FILTER-PLUS-005).
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(bigStopper, stops("Soft", 1.0)))
+        val f = fixture(lee)
+        val c = f.controller
+
+        commit(c, 0, standard(2.0))
+        c.addFilterWheel(source(lee))
+        commit(c, indexOfWheel(c, wheels(c).first { it.source == source(lee) }.id), itemSelection(bigStopper))
+        assertEquals(listOf(source(lee), FilterSource.Standard), wheels(c).map { it.source })
+
+        // Lee (10) outranks Standard (2): the added Empty wheel lands
+        // inside the Lee group at once, with no further interaction.
+        c.addFilterWheel(source(lee))
+        assertEquals(
+            "The new wheel joins the settled Lee group instead of trailing the stack.",
+            listOf(source(lee), source(lee), FilterSource.Standard),
+            wheels(c).map { it.source },
+        )
+        assertEquals(
+            "Its own sort value is zero, so it sorts last inside its group.",
+            listOf(itemSelection(bigStopper), FilterWheelSelection.Empty, standard(2.0)),
+            committed(c),
+        )
+        assertEquals("12", total(c))
+    }
+
+    @Test
+    fun anAddedWheelSortsLastInsideItsOwnGroup() {
+        val f = fixture()
+        val c = f.controller
+
+        commit(c, 0, standard(2.0))
+        c.addFilterWheel(FilterSource.Standard)
+        commit(c, indexOfWheel(c, wheels(c)[1].id), standard(6.0))
+        assertEquals(listOf(standard(6.0), standard(2.0)), committed(c))
+
+        c.addFilterWheel(FilterSource.Standard)
+        assertEquals(
+            "Standard 0 is Empty-like, so it sorts last within Standard immediately.",
+            listOf(standard(6.0), standard(2.0), standard(0.0)),
+            committed(c),
+        )
+    }
+
+    @Test
+    fun anAdditionWhileOrderingIsSuspendedDefersToTheSingleReconciliation() {
+        val bigStopper = ndFactor("Big Stopper", 1000.0)
+        // A second, unmounted item keeps the source addable (FILTER-PLUS-005).
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(bigStopper, stops("Soft", 1.0)))
+        val f = fixture(lee)
+        val c = f.controller
+
+        commit(c, 0, standard(2.0))
+        c.addFilterWheel(source(lee))
+        commit(c, indexOfWheel(c, wheels(c).first { it.source == source(lee) }.id), itemSelection(bigStopper))
+        val big = wheels(c)[0].id
+        val standardWheel = wheels(c)[1].id
+
+        c.setFilterStackOrderingSuspended(true)
+        c.addFilterWheel(source(lee))
+        val added = wheels(c).last().id
+        assertEquals(
+            "FILTER-A11Y-006: membership changes, but no subtotal-based reorder runs.",
+            listOf(source(lee), FilterSource.Standard, source(lee)),
+            wheels(c).map { it.source },
+        )
+        assertEquals(listOf(big, standardWheel, added), wheels(c).map { it.id })
+
+        c.setFilterStackOrderingSuspended(false)
+        assertEquals(
+            "One reconciliation sorts the deferred addition into its group.",
+            listOf(big, added, standardWheel),
+            wheels(c).map { it.id },
+        )
+        assertEquals(
+            listOf(itemSelection(bigStopper), FilterWheelSelection.Empty, standard(2.0)),
+            committed(c),
+        )
+    }
+
+    @Test
     fun aGndModeSwitchChangesTheContributionButNotTheGroupPosition() {
         val leeGnd = gnd("Lee GND 0.9", 0.9)
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd))

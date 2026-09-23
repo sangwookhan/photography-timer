@@ -139,7 +139,7 @@
     <string name="filter_cpl_choice_cd">감광량 선택지 %1$d</string>
     <string name="filter_cpl_footer">촬영 중 휠에서 선택할 수 있는 감광량(스톱) 선택지입니다. 빈 칸은 생략되고 중복 값은 한 번만 표시됩니다.</string>
     <string name="filter_cpl_required">최소 한 개의 선택지가 필요합니다.</string>
-    <string name="filter_cpl_field_error">소수 한 자리까지 0.1~9.9 사이 값을 사용하세요.</string>
+    <string name="filter_cpl_field_error">0.1~9.9 범위에서 소수점 한 자리까지 입력하세요.</string>
     <!-- GND calculation modes (FILTER-GND-003) -->
     <string name="filter_gnd_modes">계산 모드</string>
     <string name="filter_gnd_modes_body">촬영 중 GND 휠은 기록만(0스톱)과 전체 값 적용(등록한 전체 농도)을 제공합니다. 기본값은 기록만입니다.</string>

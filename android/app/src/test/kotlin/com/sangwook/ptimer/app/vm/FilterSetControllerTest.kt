@@ -28,6 +28,7 @@ import com.sangwook.ptimer.core.timer.TimerIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -364,6 +365,60 @@ class FilterSetControllerTest {
         )
         assertNull("A committed fallback leaves no rejection to show.", c.state.value.filterStatus.rejection)
         assertEquals("7", total(c))
+    }
+
+    /**
+     * FILTER-STACK-004 / 007 / 008, spec owner's disposition of
+     * 2026-09-24: once a sighted fallback commits, the wheel, its
+     * persistent label, the status detail and the Total must all
+     * describe the same committed row. The rejected candidate must not
+     * survive into the settled status.
+     *
+     * Atomicity is what this asserts, and it is structural: all four
+     * come from one immutable state emission, so they cannot disagree.
+     * The test pins both sides of that emission — the candidate while
+     * the wheel is still active, the committed row the moment it is
+     * not — so a future change that let the candidate linger would have
+     * to break one of the two.
+     */
+    @Test
+    fun aCommittedFallbackLeavesNoTraceOfTheRejectedCandidate() {
+        val (set, items, src) = ladderSet()
+        val f = fixture(set)
+        val c = f.controller
+        c.addFilterWheel(src)
+        c.addFilterWheel(src)
+        commit(c, 1, itemSelection(items[2]))
+        val free = wheels(c).last { it.source == src && it.rows[it.committedIndex].selection == FilterWheelSelection.Empty }.id
+        val freeIndex = indexOfWheel(c, free)
+
+        // Mid-gesture: the status describes the candidate under the
+        // touch center, including its contribution in the total.
+        c.setNdWheelActive(free, true)
+        c.setNdWheelValue(free, rowIndex(c, freeIndex, itemSelection(items[2])))
+        assertEquals("Four", c.state.value.filterStatus.movingRow?.itemName)
+        assertEquals("8", total(c))
+
+        // Settle: the fallback commits the traversed 3-stop row.
+        c.setNdWheelActive(free, false)
+
+        val settled = c.state.value.filterStatus
+        assertEquals(
+            "The wheel holds the fallback row.",
+            itemSelection(items[1]),
+            committed(c)[freeIndex],
+        )
+        assertNotEquals(
+            "The rejected candidate must not remain as settled status.",
+            "Four",
+            settled.movingRow?.itemName,
+        )
+        assertEquals(
+            "The Total is the committed one, not the candidate's.",
+            "7",
+            settled.totalStopsText,
+        )
+        assertNull("A committed fallback leaves no rejection to show.", settled.rejection)
     }
 
     @Test

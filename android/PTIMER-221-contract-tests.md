@@ -226,6 +226,7 @@ editor / detail surface.
 - `com.sangwook.ptimer.core.exposure.FilterStackTest.standardRowsAreTruncatedToTheRemainingBudget`
 - `com.sangwook.ptimer.core.exposure.FilterStackTest.nd1000ContributesExactlyTenStopsThroughSumSortAndCap`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aSettleOnAMountedRowFallsBackToTheNearestTraversedSelectableRow`
+- `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aCommittedFallbackLeavesNoTraceOfTheRejectedCandidate` — the wheel, the status detail and the Total switch together on the settle emission; the rejected candidate does not survive into the settled status
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.theFallbackSkipsEveryUnavailableRowItTraverses`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.noSelectableTraversedRowKeepsThePreviousSelectionAndShowsTheReason`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.theFallbackNeverSearchesBeyondTheAttemptedRowOrWraps`

@@ -1,9 +1,20 @@
 # PTIMER-221 paired iOS/Android capture set
 
-Review evidence for the Android Code PR. One directory per scenario, each
-holding the iOS reference and the Android result for the same seeded
-state. Supplementary shots of the same scenario are suffixed `-b`, `-c`,
-`-d`.
+Review evidence for the Android Code PR. One directory per scenario,
+each holding the iOS reference and the Android result for that scenario.
+Supplementary shots of the same scenario are suffixed `-b`, `-c`, `-d`.
+
+**The comparison itself is in [COMPARISON.md](COMPARISON.md)** — one row
+per scenario with the observed behavior on each platform, the contract
+id, and the classification.
+
+**Not every pair is identically seeded.** The first pass drove each
+platform to the same *situation*, not to the same set names, totals and
+interaction phase. COMPARISON.md marks every row `SAME SEED`,
+`DIFFERENT SEED`, or `RESEED PENDING`. Only a `SAME SEED` row may be read
+as visual or transition parity evidence; a `DIFFERENT SEED` row supports
+its behavioral claim only. Scenario 22 is Android-only and is not parity
+evidence at all.
 
 ## Provenance
 
@@ -41,7 +52,7 @@ dump` node `bounds` on Android.
 | `04-edit-mode-controls` | One Filter Set in the list, at rest and in edit mode (`-b`). |
 | `05-editor-fixed-nd1000` | New Fixed item, value `1000`, ND notation; live conversion line. |
 | `06-editor-gnd-od` | New GND item, OD `0.9`; calculation-modes section. Android `-b`: the next new item opening with the remembered notation (FILTER-ITEM-007). |
-| `07-editor-cpl` | New CPL item with choices `1`, `1.5`, `2`; decimal keypad raised. |
+| `07-editor-cpl` | New CPL item with choices `1`, `1.5`, `2`. Note: the first-pass frames show the QWERTY keyboard of the autofocused *name* field on both platforms, so they do not evidence the decimal keypad; that claim now rests on its own recaptured frames. |
 | `08-editor-cpl-invalid` | `2.341` typed into a CPL choice; inline validation and disabled save. |
 | `09-set-detail-three-items` | One set holding a Fixed, a GND and a CPL item, in registration order. |
 | `10-add-immediate-order` | A settled mixed stack, then one Plus add of a source whose group already leads. The frame is taken immediately after the add with nothing else touched. iOS `-b` is mid-animation, iOS `-c` and Android `-b` are the discriminating three-then-four-wheel case. |

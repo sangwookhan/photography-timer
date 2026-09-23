@@ -45,6 +45,20 @@ sealed class FilterWheelSelection {
     data class Item(val selection: FilterRowSelection) : FilterWheelSelection()
 
     val itemId: FilterItemId? get() = (this as? Item)?.selection?.itemId
+
+    /**
+     * Standard 0 and Filter Set Empty are the cleanable states: no
+     * physical item is mounted and nothing contributes. A mounted
+     * Record-only item is NOT cleanable (FILTER-STACK-006). Lives on
+     * the selection so the wheel, the picker row, and the display layer
+     * all read the same rule.
+     */
+    val isCleanable: Boolean
+        get() = when (this) {
+            is Standard -> stops == 0.0
+            is Empty -> true
+            is Item -> false
+        }
 }
 
 /**
@@ -57,17 +71,9 @@ data class FilterWheel(val source: FilterSource, val selection: FilterWheelSelec
 
     val standardStops: Double? get() = (selection as? FilterWheelSelection.Standard)?.stops
 
-    /**
-     * Standard 0 and Filter Set Empty are the cleanable states: no
-     * physical item is mounted and nothing contributes. A mounted
-     * Record-only item is NOT cleanable (FILTER-STACK-006).
-     */
-    val isCleanable: Boolean
-        get() = when (val current = selection) {
-            is FilterWheelSelection.Standard -> current.stops == 0.0
-            is FilterWheelSelection.Empty -> true
-            is FilterWheelSelection.Item -> false
-        }
+    /** Whether an overscroll pull may remove this wheel; see
+     *  [FilterWheelSelection.isCleanable]. */
+    val isCleanable: Boolean get() = selection.isCleanable
 
     val mountedItemId: FilterItemId? get() = selection.itemId
 

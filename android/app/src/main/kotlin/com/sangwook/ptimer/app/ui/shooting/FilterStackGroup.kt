@@ -42,12 +42,10 @@ import com.sangwook.ptimer.app.vm.FilterWheelRowUiState
 import com.sangwook.ptimer.app.vm.FilterWheelUiState
 import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
 import com.sangwook.ptimer.core.exposure.FilterSource
-import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.ui.theme.FilterTypePalette
 import com.sangwook.ptimer.ui.theme.filterSetColor
 import com.sangwook.ptimer.ui.theme.filterTypePalette
-import kotlin.math.abs
 
 /** Gap between stacked wheels (tighter than the card's 8dp rhythm so
  *  four wheels keep usable value width). */
@@ -322,14 +320,3 @@ private fun FilterRowTypeCategory.railColor(palette: FilterTypePalette): Color =
     FilterRowTypeCategory.gnd -> palette.gnd
     FilterRowTypeCategory.empty -> palette.empty
 }
-
-/** Standard 0 and Filter Set Empty: the states an overscroll pull may
- *  remove (a mounted Record-only item is not one of them). */
-private val FilterWheelRowUiState.isCleanable: Boolean
-    get() = when (val selection = selection) {
-        is FilterWheelSelection.Empty -> true
-        is FilterWheelSelection.Standard -> abs(selection.stops) < CleanableZeroTolerance
-        is FilterWheelSelection.Item -> false
-    }
-
-private const val CleanableZeroTolerance = 1e-9

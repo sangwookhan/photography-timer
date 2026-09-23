@@ -60,6 +60,10 @@ data class FilterWheelRowUiState(
     val unavailability: FilterStackRejection? = null,
 ) {
     val isAvailable: Boolean get() = unavailability == null
+
+    /** Whether an overscroll pull may remove a wheel resting on this
+     *  row; see [FilterWheelSelection.isCleanable]. */
+    val isCleanable: Boolean get() = selection.isCleanable
 }
 
 /**

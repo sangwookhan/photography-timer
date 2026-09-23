@@ -62,7 +62,7 @@ dragging the Plus control through the sources on the emulator.
 ### FILTER-SET-005 — names and colors are presentation only
 
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.theCapturedSummaryAndReferenceSurviveLaterRenames`
-- `com.sangwook.ptimer.app.vm.FilterWheelPresenterTest.sourceNameAndRegisteredValueTextUseCanonicalEnglish`
+- `com.sangwook.ptimer.app.vm.FilterWheelPresenterTest.sourceNameUsesCanonicalEnglish`
 
 Manual only: "color shall never be the only means of identification" in
 the rendered surfaces. Verify with TalkBack on the Filter Set list and
@@ -407,14 +407,16 @@ emulator.
 - `com.sangwook.ptimer.core.timer.TimerIdentityFilterSummaryTest.anUnknownOptionalTokenDegradesToNull`
 - `com.sangwook.ptimer.core.timer.TimerIdentityFilterSummaryTest.aLegacyIdentityWithoutTheFilterKeysDecodes`
 - `com.sangwook.ptimer.core.timer.TimerIdentityFilterSummaryTest.aNonArraySummaryDecodesAsEmpty`
-- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.groupsItemsBySetWithRepresentationAndMode`
-- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.applyFullValueIsNamedAndAStandardZeroIsOmitted`
-- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.aStandardOnlyZeroStackHasNoReferenceText`
-- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.interleavedSourcesFlushEachGroupInStackOrder`
-- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.missingNamesFallBackToCanonicalEnglishTokens`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.theCapturedSummaryAndReferenceSurviveLaterRenames`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aStandardOnlyTimerCapturesAStandardOnlySummary`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aMixedStackRoundTripsThroughExportSession`
+
+Manual only: the rendered reference string itself. Android composes it
+from the captured summary at render time (`localizedFilterReferenceText`,
+a composable), so no JVM test asserts the finished line; the tests above
+cover the captured structure it is composed from. Verify on the emulator
+by starting a timer from a Filter Set stack and reading the second line
+of the timer card.
 
 ### FILTER-PERSIST-004 — Shooting Collection workflow is out of scope
 
@@ -448,8 +450,7 @@ size on the emulator.
 
 Partially covered at the canonical-token boundary —
 
-- `com.sangwook.ptimer.app.vm.FilterWheelPresenterTest.sourceNameAndRegisteredValueTextUseCanonicalEnglish`
-- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.missingNamesFallBackToCanonicalEnglishTokens`
+- `com.sangwook.ptimer.app.vm.FilterWheelPresenterTest.sourceNameUsesCanonicalEnglish`
 
 Manual only: the actual English/Korean parity of the shipped strings.
 Verify by reviewing `values/strings.xml` against `values-ko/strings.xml`.

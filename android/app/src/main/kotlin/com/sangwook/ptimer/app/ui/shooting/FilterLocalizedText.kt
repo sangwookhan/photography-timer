@@ -27,6 +27,7 @@ import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
 import com.sangwook.ptimer.core.exposure.NDNotationFormatter
 import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 
 // Display-boundary localization for the mixed Filter Stack (FILTER-A11Y-003).
 // The state layer emits structured rows and canonical English vocabulary; the
@@ -328,6 +329,26 @@ internal fun localizedFilterReferenceText(summary: List<FilterSummaryEntry>): St
         summary,
         filterReferenceVocabulary(LocalContext.current.resources),
     )
+
+/**
+ * Camera names for an affected-camera message, in the user's language
+ * (FILTER-A11Y-003). A photographer-supplied name is the photographer's
+ * text and passes through byte for byte; only the default `Camera N`
+ * label, which the state layer keeps locale-stable because it has no
+ * resources, is localized here.
+ */
+internal fun localizedCameraNames(cameras: List<CameraSlotIdentity>, resources: Resources): String =
+    cameras.joinToString(CAMERA_NAME_SEPARATOR) { identity ->
+        identity.customDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+            ?: resources.getString(R.string.camera_default_name, identity.id.ordinal + 1)
+    }
+
+/** Composable form of [localizedCameraNames]. */
+@Composable
+internal fun localizedCameraNames(cameras: List<CameraSlotIdentity>): String =
+    localizedCameraNames(cameras, LocalContext.current.resources)
+
+private const val CAMERA_NAME_SEPARATOR = ", "
 
 /** Separator between the segments of one status detail. */
 internal const val DetailSeparator: String = " · "

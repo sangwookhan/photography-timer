@@ -7,6 +7,7 @@ import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
+import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 
 /**
  * One wheel of the mixed Filter Stack as the shooting surface renders it
@@ -135,7 +136,7 @@ sealed class FilterItemSaveOutcome {
     /** Display names of the cameras whose stack would become invalid,
      *  with the dominant reason (a removed selection outranks the cap). */
     data class Blocked(
-        val affectedCameras: List<String>,
+        val affectedCameras: List<CameraSlotIdentity>,
         val reason: FilterItemSaveBlockReason,
     ) : FilterItemSaveOutcome()
 }

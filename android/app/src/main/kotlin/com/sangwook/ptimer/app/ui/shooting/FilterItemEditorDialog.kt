@@ -225,7 +225,7 @@ internal fun FilterItemEditorDialog(
     }
 
     blocked?.let { outcome ->
-        val cameras = outcome.affectedCameras.joinToString(", ")
+        val cameras = localizedCameraNames(outcome.affectedCameras)
         AlertDialog(
             onDismissRequest = { blocked = null },
             title = { CappedFontScale { Text(stringResource(R.string.filter_item_save_blocked_title)) } },

@@ -83,6 +83,7 @@ import com.sangwook.ptimer.core.exposure.FilterItemId
 import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSetId
+import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 import com.sangwook.ptimer.ui.theme.filterSetColor
 
 /**
@@ -100,8 +101,8 @@ internal class FilterSetManagementActions(
     val moveFilterItem: (FilterSetId, Int, Int) -> Unit,
     val deleteFilterItem: (FilterItemId) -> Unit,
     val saveFilterItem: (FilterItem, FilterSetId) -> FilterItemSaveOutcome,
-    val camerasAffectedByDeletingFilterSet: (FilterSetId) -> List<String>,
-    val camerasAffectedByDeletingItem: (FilterItemId) -> List<String>,
+    val camerasAffectedByDeletingFilterSet: (FilterSetId) -> List<CameraSlotIdentity>,
+    val camerasAffectedByDeletingItem: (FilterItemId) -> List<CameraSlotIdentity>,
 )
 
 /**
@@ -263,7 +264,7 @@ private fun FilterSetListLevel(
             message = if (cameras.isEmpty()) {
                 stringResource(R.string.filter_set_delete_message)
             } else {
-                stringResource(R.string.filter_set_delete_message_cameras, cameras.joinToString(", "))
+                stringResource(R.string.filter_set_delete_message_cameras, localizedCameraNames(cameras))
             },
             confirmLabel = stringResource(R.string.filter_delete_named, filterSet.name),
             onConfirm = {
@@ -480,7 +481,7 @@ private fun FilterSetDetailLevel(
             message = if (cameras.isEmpty()) {
                 stringResource(R.string.filter_item_delete_message)
             } else {
-                stringResource(R.string.filter_item_delete_message_cameras, cameras.joinToString(", "))
+                stringResource(R.string.filter_item_delete_message_cameras, localizedCameraNames(cameras))
             },
             confirmLabel = stringResource(R.string.filter_delete_named, item.name),
             onConfirm = {

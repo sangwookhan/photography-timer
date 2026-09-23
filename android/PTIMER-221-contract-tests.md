@@ -452,6 +452,11 @@ size on the emulator.
 
 ### FILTER-A11Y-003 — equivalent English and Korean terminology
 
+- `com.sangwook.ptimer.app.ui.shooting.AffectedCameraNameTest.theRenderedConfirmationNamesTheDefaultSlotAndKeepsACustomName`
+- `com.sangwook.ptimer.app.ui.shooting.AffectedCameraNameTest.theDefaultSlotLabelIsLocalizedAndACustomNameIsNot`
+- `com.sangwook.ptimer.app.ui.shooting.AffectedCameraNameTest.aMixedListLocalizesOnlyTheDefaultLabel`
+- `com.sangwook.ptimer.app.ui.shooting.AffectedCameraNameTest.aBlankCustomNameFallsBackToTheLocalizedDefault`
+
 Partially covered at the canonical-token boundary —
 
 - `com.sangwook.ptimer.app.vm.FilterWheelPresenterTest.sourceNameUsesCanonicalEnglish`

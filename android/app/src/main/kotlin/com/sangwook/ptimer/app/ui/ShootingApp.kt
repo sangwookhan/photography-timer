@@ -547,8 +547,8 @@ fun ShootingApp(
                         moveFilterItem = controller::moveFilterItem,
                         deleteFilterItem = controller::deleteFilterItem,
                         saveFilterItem = controller::saveFilterItem,
-                        camerasAffectedByDeletingFilterSet = controller::cameraNamesAffectedByDeletingFilterSet,
-                        camerasAffectedByDeletingItem = controller::cameraNamesAffectedByDeletingItem,
+                        camerasAffectedByDeletingFilterSet = controller::camerasAffectedByDeletingFilterSet,
+                        camerasAffectedByDeletingItem = controller::camerasAffectedByDeletingItem,
                     )
                 },
                 onDismiss = { manageFilterSets = false },

@@ -36,6 +36,7 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenter
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
 import com.sangwook.ptimer.core.slots.CameraSlotId
+import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 import com.sangwook.ptimer.core.slots.CameraSlotSession
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.slots.restoredFilterWheels
@@ -804,12 +805,12 @@ class CalculatorController(
 
     /** Cameras whose stack currently mounts [itemId] — shown before a
      *  delete is confirmed (FILTER-ITEM-006). */
-    fun cameraNamesAffectedByDeletingItem(itemId: FilterItemId): List<String> =
-        cameraNames { wheels -> wheels.any { it.mountedItemId == itemId } }
+    fun camerasAffectedByDeletingItem(itemId: FilterItemId): List<CameraSlotIdentity> =
+        cameraIdentities { wheels -> wheels.any { it.mountedItemId == itemId } }
 
     /** Cameras whose stack holds a wheel of the Filter Set. */
-    fun cameraNamesAffectedByDeletingFilterSet(setId: FilterSetId): List<String> =
-        cameraNames { wheels -> wheels.any { it.source == FilterSource.FilterSet(setId) } }
+    fun camerasAffectedByDeletingFilterSet(setId: FilterSetId): List<CameraSlotIdentity> =
+        cameraIdentities { wheels -> wheels.any { it.source == FilterSource.FilterSet(setId) } }
 
     /** Every camera's wheels: the live stack for the active slot, each
      *  inactive slot's stored stack re-resolved against the inventory. */
@@ -820,10 +821,14 @@ class CalculatorController(
             session.snapshot(slotId)?.restoredFilterWheels(inventory).orEmpty()
         }
 
-    private fun cameraNames(predicate: (List<FilterWheel>) -> Boolean): List<String> =
+    /** Identities, not resolved names: only the display boundary knows
+     *  the user's language, and a default slot label has to be spoken in
+     *  it (FILTER-A11Y-003). A photographer-supplied name passes through
+     *  untouched. */
+    private fun cameraIdentities(predicate: (List<FilterWheel>) -> Boolean): List<CameraSlotIdentity> =
         session.availableSlots
             .filter { predicate(wheelsForSlot(it)) }
-            .map { session.identity(it).displayName }
+            .map { session.identity(it) }
 
     /**
      * Cameras whose stack would become invalid if [item] were saved as
@@ -833,7 +838,7 @@ class CalculatorController(
     private fun filterItemSaveConflicts(
         item: FilterItem,
         setId: FilterSetId,
-    ): List<Pair<String, FilterItemSaveBlockReason>> {
+    ): List<Pair<CameraSlotIdentity, FilterItemSaveBlockReason>> {
         if (!item.isWellFormed) return emptyList()
         val current = inventory
         val setIndex = current.filterSets.indexOfFirst { it.id == setId }
@@ -850,7 +855,7 @@ class CalculatorController(
         )
         return session.availableSlots.mapNotNull { slotId ->
             val reason = stackConflict(wheelsForSlot(slotId), item.id, candidate) ?: return@mapNotNull null
-            session.identity(slotId).displayName to reason
+            session.identity(slotId) to reason
         }
     }
 

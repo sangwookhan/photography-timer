@@ -22,6 +22,7 @@ import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
+import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 import com.sangwook.ptimer.core.slots.PersistentFilterWheel
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.timer.TimerIdentity
@@ -757,7 +758,10 @@ class FilterSetControllerTest {
             c.addFilterWheel(source(lee))
             commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(item))
         }
-        assertEquals(listOf("Camera 1", "Camera 2"), c.cameraNamesAffectedByDeletingItem(item.id).sorted())
+        assertEquals(
+            listOf(CameraSlotId.camera1, CameraSlotId.camera2),
+            c.camerasAffectedByDeletingItem(item.id).map { it.id }.sorted(),
+        )
 
         c.deleteFilterItem(item.id)
 
@@ -777,7 +781,10 @@ class FilterSetControllerTest {
         // Leave the camera with ONLY the Filter Set wheel.
         c.removeNdWheelFromOverscroll(wheels(c).first { it.source == FilterSource.Standard }.id)
         assertEquals(listOf(source(lee)), wheels(c).map { it.source })
-        assertEquals(listOf("Camera 1"), c.cameraNamesAffectedByDeletingFilterSet(lee.id))
+        assertEquals(
+            listOf(CameraSlotId.camera1),
+            c.camerasAffectedByDeletingFilterSet(lee.id).map { it.id },
+        )
 
         c.deleteFilterSet(lee.id)
 
@@ -812,7 +819,10 @@ class FilterSetControllerTest {
             behavior = FilterItemBehavior.Fixed(FilterRegisteredValue(5.0, FilterValueUnit.stops)),
         )
         assertEquals(
-            FilterItemSaveOutcome.Blocked(listOf("Camera 2"), FilterItemSaveBlockReason.exceedsTotalLimit),
+            FilterItemSaveOutcome.Blocked(
+                listOf(CameraSlotIdentity(CameraSlotId.camera2)),
+                FilterItemSaveBlockReason.exceedsTotalLimit,
+            ),
             c.saveFilterItem(overCap, lee.id),
         )
         assertEquals("A blocked save changes nothing.", "3", total(c))
@@ -846,7 +856,7 @@ class FilterSetControllerTest {
 
         assertEquals(
             FilterItemSaveOutcome.Blocked(
-                listOf("Camera 1", "Camera 2"),
+                listOf(CameraSlotIdentity(CameraSlotId.camera1), CameraSlotIdentity(CameraSlotId.camera2)),
                 FilterItemSaveBlockReason.removesSelectedChoice,
             ),
             outcome,
@@ -869,7 +879,10 @@ class FilterSetControllerTest {
         )
 
         assertEquals(
-            FilterItemSaveOutcome.Blocked(listOf("Camera 1"), FilterItemSaveBlockReason.removesSelectedChoice),
+            FilterItemSaveOutcome.Blocked(
+                listOf(CameraSlotIdentity(CameraSlotId.camera1)),
+                FilterItemSaveBlockReason.removesSelectedChoice,
+            ),
             outcome,
         )
         assertTrue(committed(c).contains(itemSelection(item)))

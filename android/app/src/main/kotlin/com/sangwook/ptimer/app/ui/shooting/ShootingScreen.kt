@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -48,16 +49,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -347,120 +354,68 @@ fun ShootingScreen(
                             onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
                             modifier = Modifier.padding(CardRowPadding),
                         ) { wheels ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                            ) {
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    // Header height matches the ND column's title+toggle
-                                    // row so the two wheels stay vertically aligned.
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
-                                        contentAlignment = Alignment.CenterStart,
-                                    ) {
-                                        Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
-                                    }
-                                    // Reserve the filter columns' persistent
-                                    // type/mode label height (FILTER-STACK-007) so
-                                    // both pickers' viewports, selection bands, and
-                                    // touch centers share one vertical axis.
-                                    Spacer(Modifier.height(FilterWheelLabelRowHeight))
-                                    SnapWheel(
-                                        pageState.shutterLabels,
-                                        pageState.shutterIndex,
-                                        onShutterForPage,
-                                        visibleCount = 3,
-                                        itemHeight = 34.dp,
-                                        accessibilityLabel = stringResource(R.string.shooting_base_shutter),
-                                    )
-                                }
-                                Column(
-                                    // The ND column widens once wheels stack so
-                                    // 3–4 side-by-side ladders keep readable
-                                    // labels; the shutter wheel needs less room.
-                                    //
-                                    // Even at one wheel the split is not even
-                                    // (FILTER-A11Y-002). This column has to seat a
-                                    // whole header — title, three-option toggle,
-                                    // management entry — whose width is fixed in dp,
-                                    // while the shutter column only has to seat
-                                    // `1/8000` and its caption. An even split left
-                                    // the header short and ellipsized `ND Filter` at
-                                    // the DEFAULT text size. Measured on a 411dp
-                                    // screen: the header needs 500px of the 954px
-                                    // row, so the split has to be at least 1.101;
-                                    // 1.05 leaves the title 11px short, 1.10 clears
-                                    // it by nothing at all, and this leaves ~4dp.
-                                    modifier = Modifier.weight(
-                                        if (pageState.filterWheels.size >= 2) 1.6f else 1.15f,
-                                    ),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    // One horizontal header row: a stronger "ND Filter"
-                                    // title with the compact notation toggle, matching
-                                    // the iOS placement (PTIMER-187).
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        // The title yields, the controls do not
-                                        // (FILTER-A11Y-002). At large text the row
-                                        // used to give the title its full intrinsic
-                                        // width and squeeze the notation options and
-                                        // the management entry out of the layout —
-                                        // in English at 130% they lost their labels
-                                        // entirely and the gear stopped being drawn,
-                                        // leaving two unlabelled hit targets. A
-                                        // heading can truncate; a required control
-                                        // cannot disappear.
-                                        //
-                                        // The weight is what reverses the order: a
-                                        // Row measures its unweighted children first,
-                                        // so the toggle and the gear now take their
-                                        // intrinsic widths and the title gets what is
-                                        // left. It fills that remainder — which is
-                                        // also why it replaces the trailing-alignment
-                                        // Spacer rather than sitting beside one:
-                                        // sharing the slack with a weighted Spacer
-                                        // would halve the title's width and ellipsize
-                                        // it long before the row is actually full.
-                                        Text(
-                                            stringResource(R.string.shooting_nd_filter),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                        NotationToggle(
+                            val baseShutterCaption = stringResource(R.string.shooting_base_shutter)
+                            val ndFilterTitle = stringResource(R.string.shooting_nd_filter)
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val split = ndCardColumnSplit(
+                                    available = maxWidth - NdColumnGutter,
+                                    ndTitle = ndFilterTitle,
+                                    baseShutterCaption = baseShutterCaption,
+                                    shutterLabels = pageState.shutterLabels,
+                                )
+                                // Two rows, not two columns: the header band is
+                                // its own Row, so whatever height the ND header
+                                // reflows into is the height BOTH columns
+                                // reserve, and the pickers below start on one
+                                // line without anyone measuring anyone
+                                // (FILTER-STACK-008).
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        // No fixed height: the caption has no
+                                        // maxLines and no overflow, so a box too
+                                        // short for the line it needs used to cut
+                                        // it off in silence.
+                                        Box(
+                                            modifier = Modifier
+                                                .width(split.shutterWidth)
+                                                .heightIn(min = NotationToggleHeight),
+                                            contentAlignment = Alignment.CenterStart,
+                                        ) {
+                                            Text(baseShutterCaption, style = MaterialTheme.typography.labelLarge)
+                                        }
+                                        Spacer(Modifier.width(NdColumnGutter))
+                                        NdFilterHeader(
+                                            title = ndFilterTitle,
+                                            reflowed = split.reflowed,
                                             mode = pageState.ndNotationMode,
                                             enabled = writesActiveSlot,
-                                            onSelect = onSelectNotation,
+                                            onSelectNotation = onSelectNotation,
+                                            onManageFilterSets = onManageFilterSets,
+                                            modifier = Modifier.width(split.ndWidth),
                                         )
-                                        // Persistent management entry (FILTER-SET-001):
-                                        // available even when the stack already holds
-                                        // Filter Set wheels.
-                                        CappedFontScale(maxFontScale = 1f) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .expandedTouchHeight(MinTouchTargetSize)
-                                                    .size(NotationTrackHeight)
-                                                    .clip(CircleShape)
-                                                    .clickable(enabled = writesActiveSlot, onClick = onManageFilterSets),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    Icons.Outlined.Settings,
-                                                    contentDescription = stringResource(R.string.filter_manage_sets),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(16.dp),
-                                                )
-                                            }
-                                        }
                                     }
-                                    wheels()
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        Column(
+                                            modifier = Modifier.width(split.shutterWidth),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            // Reserve the filter columns' persistent
+                                            // type/mode label height (FILTER-STACK-007) so
+                                            // both pickers' viewports, selection bands, and
+                                            // touch centers share one vertical axis.
+                                            Spacer(Modifier.height(FilterWheelLabelRowHeight))
+                                            SnapWheel(
+                                                pageState.shutterLabels,
+                                                pageState.shutterIndex,
+                                                onShutterForPage,
+                                                visibleCount = 3,
+                                                itemHeight = 34.dp,
+                                                accessibilityLabel = baseShutterCaption,
+                                            )
+                                        }
+                                        Spacer(Modifier.width(NdColumnGutter))
+                                        Box(modifier = Modifier.width(split.ndWidth)) { wheels() }
+                                    }
                                 }
                             }
                         }
@@ -578,8 +533,44 @@ private val CardRowPadding = 8.dp
 /** Header-row height reserved for the ND notation toggle (PTIMER-187). */
 private val NotationToggleHeight = 30.dp
 
+/**
+ * Gutter between the Base Shutter column and the ND column. Without
+ * one, a case where the shutter column gets exactly the width its
+ * caption needs — a narrow screen at a raised font scale — runs the two
+ * captions together: `Base ShutterND Filter`, observed at 360dp.
+ */
+private val NdColumnGutter = 8.dp
+
 /** Height of the notation toggle's rounded track. */
 private val NotationTrackHeight = 26.dp
+
+/** Inset between the notation toggle's track and its segments. */
+private val NotationTrackPadding = 2.dp
+
+/** Gap between two notation segments. */
+private val NotationSegmentSpacing = 2.dp
+
+/** Horizontal inset inside one notation segment, around its label. */
+private val NotationSegmentPadding = 7.dp
+
+/**
+ * The notation modes the toggle offers, in display order. Shared with
+ * [notationToggleWidth] so the width the layout reserves is derived
+ * from the control that is actually drawn, not from a second list.
+ */
+private val NotationOptionModes = listOf(
+    NDNotationMode.STOPS,
+    NDNotationMode.OPTICAL_DENSITY,
+    NDNotationMode.FILTER_FACTOR,
+)
+
+/** Labels for [NotationOptionModes], in the same order. */
+@Composable
+private fun notationOptionLabels(): List<String> = listOf(
+    stringResource(R.string.notation_stops),
+    "OD",
+    "ND",
+)
 
 /** Minimum accessible touch/semantics target size (PTIMER-218). */
 private val MinTouchTargetSize = 48.dp
@@ -673,6 +664,206 @@ private fun Modifier.expandedTouchHeight(minHeight: Dp): Modifier = layout { mea
 }
 
 /**
+ * How the mixed-stack card divides its content row between the Base
+ * Shutter column and the ND column, and whether the ND header has to
+ * reflow onto two lines to keep its title whole.
+ */
+private data class NdCardColumnSplit(
+    val shutterWidth: Dp,
+    val ndWidth: Dp,
+    val reflowed: Boolean,
+)
+
+/**
+ * Divides the card row by what each side actually needs at the current
+ * width, locale and font scale (SHELL-020, FILTER-A11Y-002).
+ *
+ * The split used to be a pair of fixed weights — a RATIO of whatever
+ * width the device happened to have. The ND header's need is not a
+ * ratio: the title scales with the font setting and the two controls
+ * are held at 1x, so the header needs a width in dp that a 360dp phone
+ * simply does not hand it at any ratio tuned on a 411dp one. Measuring
+ * both sides makes the decision exact instead.
+ *
+ * Precedence, in order:
+ *
+ *  1. The base-shutter VALUE never clips. Its rows are
+ *     `maxLines = 1, softWrap = false` with no overflow, so a column a
+ *     pixel too narrow cuts a digit off in silence.
+ *  2. The base-shutter CAPTION gets its own line's width — it is a
+ *     required persistent label, and the header may not buy its room
+ *     out of it.
+ *  3. The ND header keeps at least what it needs with the title
+ *     reflowed onto its own line above the controls. Reflowing is the
+ *     header's way of yielding; ellipsizing a required label is not.
+ *  4. Anything left over is split evenly while the header still fits
+ *     on one line, and goes to the ND column once it does not — by
+ *     then width is scarce and the wheels are the side still short of
+ *     it.
+ */
+@Composable
+private fun ndCardColumnSplit(
+    available: Dp,
+    ndTitle: String,
+    baseShutterCaption: String,
+    shutterLabels: List<String>,
+): NdCardColumnSplit {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val labelStyle = MaterialTheme.typography.labelLarge
+    // The centered row of a non-dense SnapWheel: what the base-shutter
+    // values are drawn with.
+    val valueStyle = MaterialTheme.typography.titleMedium
+    val segmentStyle = MaterialTheme.typography.labelSmall
+    val optionLabels = notationOptionLabels()
+
+    fun textWidth(text: String, style: TextStyle, at: Density) = with(density) {
+        measurer.measure(
+            text,
+            style,
+            softWrap = false,
+            maxLines = 1,
+            density = at,
+            layoutDirection = layoutDirection,
+        ).size.width.toDp()
+    }
+
+    val valueNeed = remember(shutterLabels, valueStyle, density, layoutDirection) {
+        shutterLabels.maxOfOrNull { textWidth(it, valueStyle, density) } ?: 0.dp
+    }
+    val captionNeed = textWidth(baseShutterCaption, labelStyle, density)
+    val titleNeed = textWidth(ndTitle, labelStyle, density)
+    // The toggle and the gear hold their own labels at 1x
+    // (CappedFontScale), so their width does not move with the font
+    // setting — measure them at the same cap they render at.
+    val controlsNeed = notationToggleWidth(optionLabels) { label ->
+        textWidth(label, segmentStyle, Density(density.density, fontScale = 1f))
+    } + NotationTrackHeight
+
+    val shutterNeed = maxOf(valueNeed, captionNeed)
+    val headerOnOneLine = titleNeed + controlsNeed
+    val headerReflowed = maxOf(titleNeed, controlsNeed)
+
+    val shutterWidth = if (shutterNeed + headerOnOneLine <= available) {
+        shutterNeed + (available - shutterNeed - headerOnOneLine) / 2
+    } else {
+        shutterNeed.coerceAtMost((available - headerReflowed).coerceAtLeast(valueNeed))
+    }.coerceIn(0.dp, available)
+
+    val ndWidth = available - shutterWidth
+    return NdCardColumnSplit(shutterWidth, ndWidth, reflowed = headerOnOneLine > ndWidth)
+}
+
+/**
+ * Width of the drawn [NotationToggle] for [labels]: its track inset,
+ * the gaps between segments, each segment's own inset, and the labels
+ * themselves as [labelWidth] measures them.
+ */
+private fun notationToggleWidth(labels: List<String>, labelWidth: (String) -> Dp): Dp =
+    NotationTrackPadding * 2 +
+        NotationSegmentSpacing * (labels.size - 1) +
+        NotationSegmentPadding * 2 * labels.size +
+        labels.fold(0.dp) { total, label -> total + labelWidth(label) }
+
+/**
+ * The ND column's header: the `ND Filter` title, the notation toggle,
+ * and the persistent Filter Set management entry (FILTER-SET-001).
+ *
+ * The title yields, the controls do not (FILTER-A11Y-002). At large
+ * text the row used to give the title its full intrinsic width and
+ * squeeze the notation options and the management entry out of the
+ * layout — in English at 130% they lost their labels entirely and the
+ * gear stopped being drawn, leaving two unlabelled hit targets.
+ *
+ * But a required label yielding all the way to an ellipsis is not
+ * acceptable either (SHELL-020), and on a 360dp phone at a raised font
+ * scale there is no one-line arrangement that keeps both. So when the
+ * column cannot seat the title beside the controls, the header
+ * [reflowed]s: the title takes the full column width on its own line
+ * and the controls sit under it, still on the trailing edge where they
+ * were. [ndCardColumnSplit] decides which of the two it is, because
+ * the column width depends on the answer.
+ *
+ * Neither row is given a fixed height — at 2x the title's own line is
+ * taller than the toggle, and a fixed row cropped it.
+ */
+@Composable
+private fun NdFilterHeader(
+    title: String,
+    reflowed: Boolean,
+    mode: NDNotationMode,
+    enabled: Boolean,
+    onSelectNotation: (NDNotationMode) -> Unit,
+    onManageFilterSets: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val titleText: @Composable (Modifier) -> Unit = { textModifier ->
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = textModifier,
+        )
+    }
+    // Fixed height, deliberately: `expandedTouchHeight` reports 48dp of
+    // touch bounds from a 26dp control, and an unfixed row would take
+    // that as content and grow to it — 18dp of dead space on a screen
+    // that has to fit without scrolling. The expanded bounds overflow
+    // this row instead, which is the whole point of that modifier.
+    val controls: @Composable (Modifier) -> Unit = { rowModifier ->
+        Row(
+            modifier = rowModifier.height(NotationToggleHeight),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NotationToggle(mode = mode, enabled = enabled, onSelect = onSelectNotation)
+            CappedFontScale(maxFontScale = 1f) {
+                Box(
+                    modifier = Modifier
+                        .expandedTouchHeight(MinTouchTargetSize)
+                        .size(NotationTrackHeight)
+                        .clip(CircleShape)
+                        .clickable(enabled = enabled, onClick = onManageFilterSets),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Outlined.Settings,
+                        contentDescription = stringResource(R.string.filter_manage_sets),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+        }
+    }
+
+    if (reflowed) {
+        Column(modifier = modifier) {
+            titleText(Modifier.fillMaxWidth())
+            controls(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(
+            modifier = modifier.heightIn(min = NotationToggleHeight),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The weight is what reverses the measure order: a Row
+            // measures its unweighted children first, so the toggle and
+            // the gear take their intrinsic widths and the title gets
+            // what is left. It fills that remainder — which is also why
+            // it replaces a trailing-alignment Spacer rather than
+            // sitting beside one: sharing the slack with a weighted
+            // Spacer would halve the title's width and ellipsize it long
+            // before the row is actually full.
+            titleText(Modifier.weight(1f))
+            controls(Modifier)
+        }
+    }
+}
+
+/**
  * Compact 3-state ND notation toggle (Stops / OD / ND) for the ND Filter
  * header. Reads as one cohesive segmented control: a single low-emphasis
  * rounded track with the current mode rendered as a filled segment. Current
@@ -685,11 +876,7 @@ internal fun NotationToggle(
     enabled: Boolean,
     onSelect: (NDNotationMode) -> Unit,
 ) {
-    val options = listOf(
-        NDNotationMode.STOPS to stringResource(R.string.notation_stops),
-        NDNotationMode.OPTICAL_DENSITY to "OD",
-        NDNotationMode.FILTER_FACTOR to "ND",
-    )
+    val options = NotationOptionModes.zip(notationOptionLabels())
     // The track shares its row with the "ND Filter" title (PTIMER-219), so it
     // only ever gets the ND column's leftover width — not enough room left
     // for 3 segments once the system font scale grows past 1x, which silently
@@ -705,8 +892,8 @@ internal fun NotationToggle(
             // control and the option labels never blend into the card.
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .padding(2.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+            .padding(NotationTrackPadding),
+        horizontalArrangement = Arrangement.spacedBy(NotationSegmentSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         options.forEach { (optionMode, label) ->
@@ -728,7 +915,7 @@ internal fun NotationToggle(
                     .selectable(selected = selected, enabled = enabled, role = Role.Button) {
                         onSelect(optionMode)
                     }
-                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                    .padding(horizontal = NotationSegmentPadding, vertical = 3.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 // Compact selector labels, a step smaller than the "ND Filter"

@@ -4,11 +4,16 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -22,6 +27,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -48,9 +54,11 @@ import java.util.Locale
  * persistent labels, and type cues shall remain reachable and readable
  * under the large-text … rules".
  *
- * The header is one `Row`: the `ND Filter` title, the three-option
- * notation toggle, and the persistent Filter Set management entry. The
- * title used to be measured first at its full intrinsic width, so at a
+ * The header holds the `ND Filter` title, the three-option notation
+ * toggle, and the persistent Filter Set management entry — on one row
+ * where they fit, and with the title reflowed onto its own line above
+ * the controls where they do not. The title used to be measured first
+ * at its full intrinsic width in a single fixed row, so at a
  * raised system font scale it took the row and squeezed the two
  * controls out — measured on a real device in English with a single
  * wheel (the widest title against the narrowest column): at 1.15x the
@@ -61,13 +69,13 @@ import java.util.Locale
  * cover both languages.
  *
  * Each case renders the real screen through [ShootingScreenHarness] at
- * one (locale, font scale, wheel count) and asserts on the MERGED
- * semantics tree — the one TalkBack consumes — that everything in the
- * header band still carries a name and a usable target. A last
- * assertion holds the other side of the trade: the title may shorten
- * only as far as the controls force it to, so the ordinary rendering at
- * one, three and four wheels keeps a heading that is not needlessly
- * ellipsized.
+ * one (locale, font scale, wheel count, viewport) and asserts on the
+ * MERGED semantics tree — the one TalkBack consumes — that everything
+ * in the header band still carries a name and a usable target. The
+ * rest holds the other side of the trade: every required label reads
+ * whole, the two columns keep a gutter between them, and neither the
+ * base-shutter value nor its caption is clipped to pay for the
+ * header's room.
  *
  * The locale is imposed with a `LocalContext` / `LocalConfiguration`
  * provider. That does not reach into a Compose `Dialog`, which hosts
@@ -75,19 +83,38 @@ import java.util.Locale
  * shooting screen is not a dialog — [ndFilterTitle] resolving to the
  * Korean string in the rendered tree is this suite's own proof that the
  * provider took.
+ *
+ * ## Viewport sweep
+ *
+ * Naming a font scale is not enough. The header's need is a width in
+ * dp — title plus the two controls — while the column split used to be
+ * a ratio, so the same scale passes on a 411dp phone and fails on a
+ * 360dp one. `SHELL-020` admits no such gap: required shooting-flow
+ * controls "remain reachable and readable when the system font scale is
+ * set large", with no device-width escape clause. So every case renders
+ * at an explicit [Case.viewport] as well, and the 360dp cases are the
+ * ones that pin the fix. [Case.viewport] `null` keeps the original
+ * sweep at the running device's own width.
  */
 @RunWith(Parameterized::class)
 class NdHeaderLargeTextTest(private val case: Case) {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    /** One (locale, font scale, wheel count) rendering of the header. */
+    /**
+     * One (locale, font scale, wheel count, viewport) rendering of the
+     * header. A `null` [viewport] renders at the running device's own
+     * width.
+     */
     data class Case(
         val locale: Locale,
         val fontScale: Float,
         val wheelCount: Int,
+        val viewport: Dp? = null,
     ) {
-        override fun toString() = "${locale.toLanguageTag()} ${fontScale}x ${wheelCount}w"
+        override fun toString() =
+            "${locale.toLanguageTag()} ${fontScale}x ${wheelCount}w " +
+                (viewport?.let { "${it.value.toInt()}dp" } ?: "device")
     }
 
     companion object {
@@ -108,6 +135,31 @@ class NdHeaderLargeTextTest(private val case: Case) {
          */
         private val RowChildGapSlack = 3.dp
 
+        /**
+         * The two phone widths the sweep pins. 411dp is the reference
+         * device this branch is verified on (1080px at 420dpi); 360dp
+         * is the common narrow Android phone the ratio-based split
+         * failed on and which `SHELL-020` gives no licence to exclude.
+         */
+        private val Viewports = listOf(360.dp, 411.dp)
+
+        /** Android's largest system "Font size" step. */
+        private const val MaxSupportedFontScale = 2.0f
+
+        /**
+         * The gutter the card keeps between its two columns, so the
+         * `Base Shutter` caption and the `ND Filter` title never abut.
+         */
+        private val MinColumnGutter = 8.dp
+
+        /**
+         * A measured width may miss the laid-out one by a rounding
+         * step: [TextMeasurer] and the composition round the same
+         * float independently. One pixel of slack, not enough to hide
+         * a clipped glyph.
+         */
+        private const val RoundingSlackPx = 1f
+
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases(): List<Array<Any>> {
@@ -125,7 +177,17 @@ class NdHeaderLargeTextTest(private val case: Case) {
                     listOf(1.0f, 2.0f).map { scale -> Case(locale, scale, wheelCount = wheels) }
                 }
             }
-            return (largeText + stacked).map { arrayOf<Any>(it) }
+            // The width sweep the header's dp-sized need actually
+            // lives or dies on, at the default and the maximum
+            // supported font scale, in both languages.
+            val viewports = Viewports.flatMap { viewport ->
+                locales.flatMap { locale ->
+                    listOf(1.0f, MaxSupportedFontScale).flatMap { scale ->
+                        listOf(1, 3, 4).map { wheels -> Case(locale, scale, wheels, viewport) }
+                    }
+                }
+            }
+            return (largeText + stacked + viewports).map { arrayOf<Any>(it) }
         }
     }
 
@@ -179,6 +241,12 @@ class NdHeaderLargeTextTest(private val case: Case) {
     private fun widthOf(text: String, style: TextStyle) =
         measurer().measure(text, style, maxLines = 1, softWrap = false).size.width
 
+    /**
+     * The viewport the case renders into: the constrained box, or the
+     * whole root when the case takes the device's own width.
+     */
+    private lateinit var viewportBounds: Rect
+
     private fun render() {
         val controller = stack(case.wheelCount)
         val base = instrumentation.targetContext
@@ -203,18 +271,46 @@ class NdHeaderLargeTextTest(private val case: Case) {
                     wheelStyle = LocalTextStyle.current.merge(MaterialTheme.typography.titleMedium)
                     fontResolver = LocalFontFamilyResolver.current
                     layoutDirection = LocalLayoutDirection.current
-                    ShootingScreenHarness(state)
+                    // A narrower phone is imposed as a width, not by
+                    // resizing the device: the screen reads its width
+                    // from the constraints it is measured with, so a
+                    // constrained box reproduces the 360dp layout
+                    // exactly while the suite keeps the device's own
+                    // density and stays runnable on any emulator.
+                    val viewport = case.viewport
+                    if (viewport == null) {
+                        ShootingScreenHarness(state)
+                    } else {
+                        Box(Modifier.width(viewport).fillMaxHeight()) {
+                            ShootingScreenHarness(state)
+                        }
+                    }
                 }
             }
         }
         composeTestRule.waitForIdle()
+
+        val root = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
+        viewportBounds = case.viewport?.let { Rect(root.left, root.top, root.left + it.px(), root.bottom) }
+            ?: root
     }
 
     /**
-     * The header band: the vertical slice the `Base Shutter` caption
-     * occupies. It is the ND header row's sibling in the same `Row` and
-     * shares its height, so it locates the band without depending on
-     * any of the nodes under test.
+     * The header band: the vertical slice both columns reserve above
+     * their pickers.
+     *
+     * Its floor is exact and independent of everything under test —
+     * the base-shutter picker's own top, less the persistent
+     * label-row height both columns reserve below the header
+     * (FILTER-STACK-008). Its ceiling is the higher of the two
+     * captions that sit in the band, which is the band's own top
+     * whenever either of them is top-aligned in it.
+     *
+     * Anchoring the ceiling on the `Base Shutter` caption alone — as
+     * this did while the header was one fixed 30dp row — stops working
+     * the moment the header may reflow: a one-line caption centred in
+     * a two-row header marks a thin slice in the middle of the band
+     * and drops the controls row out of it.
      */
     private fun headerBand(): ClosedFloatingPointRange<Float> {
         val captions = mergedNodes().filter { baseShutterTitle in it.texts() }
@@ -223,8 +319,17 @@ class NdHeaderLargeTextTest(private val case: Case) {
             1,
             captions.size,
         )
-        val bounds = captions.single().boundsInRoot
-        return bounds.top..bounds.bottom
+        val titles = mergedNodes().filter { ndFilterTitle in it.texts() }
+        assertEquals("$case: no `$ndFilterTitle` title to anchor the header band.", 1, titles.size)
+        val top = minOf(captions.single().boundsInRoot.top, titles.single().boundsInRoot.top)
+        return top..(baseShutterWheel().boundsInRoot.top - FilterWheelLabelRowHeight.px())
+    }
+
+    /** The base-shutter picker, the one node below the whole band. */
+    private fun baseShutterWheel(): SemanticsNode {
+        val wheels = mergedNodes().filter { baseShutterTitle in it.descriptions() }
+        assertEquals("$case: expected one base-shutter wheel node.", 1, wheels.size)
+        return wheels.single()
     }
 
     private fun mergedNodes(): List<SemanticsNode> {
@@ -266,15 +371,18 @@ class NdHeaderLargeTextTest(private val case: Case) {
         val visible = inHeader.joinToString(" | ") { node ->
             val name = node.names().joinToString("/").ifEmpty { "<unnamed>" }
             val b = node.boundsInRoot
-            "$name ${b.width.toDp().value.toInt()}x${b.height.toDp().value.toInt()}dp"
+            "$name ${b.left.toDp().value.toInt()}..${b.right.toDp().value.toInt()}dp " +
+                "${b.width.toDp().value.toInt()}x${b.height.toDp().value.toInt()}dp"
         }
+        val geometry = "Viewport ${viewportBounds.width.toDp()}, header band " +
+            "${(band.endInclusive - band.start).toDp()} tall. Header nodes were: $visible"
 
         // (a) The management entry: one named, clickable node with a
         //     touch target a finger can actually hit.
         val entries = inHeader.filter { manageFilterSets in it.descriptions() }
         assertEquals(
             "$case: the `$manageFilterSets` entry is not in the ND header's merged " +
-                "semantics tree. Header nodes were: $visible",
+                "semantics tree. $geometry",
             1,
             entries.size,
         )
@@ -290,14 +398,26 @@ class NdHeaderLargeTextTest(private val case: Case) {
             touch.width.toDp() >= MinTouchTarget && touch.height.toDp() >= MinTouchTarget,
         )
 
-        // (b) Every notation option, still named.
+        // (b) Every notation option, still named, still selectable, and
+        //     still on the 48dp touch height the segments are given by
+        //     `expandedTouchHeight`. The segments' WIDTH is deliberately
+        //     content-sized, not 48dp — see the note on that modifier —
+        //     so the height is what this pins; nothing here may shrink
+        //     it to buy the title room.
         notationOptions.forEach { option ->
             val matches = inHeader.filter { option in it.names() }
             assertEquals(
                 "$case: the `$option` notation option is not in the ND header's merged " +
-                    "semantics tree. Header nodes were: $visible",
+                    "semantics tree. $geometry",
                 1,
                 matches.size,
+            )
+            val optionTouch = matches.single().touchBoundsInRoot
+            assertTrue(
+                "$case: the `$option` option's touch target is " +
+                    "${optionTouch.width.toDp()} x ${optionTouch.height.toDp()}; its height " +
+                    "is under $MinTouchTarget. $geometry",
+                optionTouch.height.toDp() >= MinTouchTarget,
             )
         }
 
@@ -310,7 +430,7 @@ class NdHeaderLargeTextTest(private val case: Case) {
         }
         assertTrue(
             "$case: ${anonymous.size} clickable header node(s) have no text and no content " +
-                "description: ${anonymous.map { it.boundsInRoot }}. Header nodes were: $visible",
+                "description: ${anonymous.map { it.boundsInRoot }}. $geometry",
             anonymous.isEmpty(),
         )
 
@@ -334,24 +454,23 @@ class NdHeaderLargeTextTest(private val case: Case) {
             "$case: the title is laid out ${title.size.width}px wide; the row leaves " +
                 "${available}px before the first control and the text needs ${intrinsic}px, " +
                 "so it should have had ${deserved}px. It is ellipsized harder than the " +
-                "layout requires. Header nodes were: $visible",
+                "layout requires. $geometry",
             title.size.width >= deserved - RowChildGapSlack.px(),
         )
 
-        // (e) The other half of the contract. At the DEFAULT text size the
-        //     heading does not yield at all: an ordinary user, who never
-        //     touches the font-size setting, must read `ND Filter` whole at
-        //     every wheel count. Only a raised scale may shorten it — and
-        //     even then (a)-(c) keep the controls intact.
-        if (case.fontScale == 1.0f) {
-            assertTrue(
-                "$case: at the default text size the title only gets " +
-                    "${title.size.width}px but needs ${intrinsic}px, so it renders " +
-                    "ellipsized on first launch. The ND column is too narrow for its " +
-                    "own header. Header nodes were: $visible",
-                title.size.width >= intrinsic,
-            )
-        }
+        // (e) The other half of the contract, and the reviewer's
+        //     "complete required labels": the heading is a required
+        //     label, so it reads whole at EVERY supported width, scale
+        //     and wheel count — not only at the default text size it
+        //     used to be checked at. If the header cannot fit the title
+        //     beside the controls it has to reflow and give the title
+        //     its own line, not ellipsize it.
+        assertTrue(
+            "$case: the title only gets ${title.size.width}px but needs ${intrinsic}px, so " +
+                "`$ndFilterTitle` renders ellipsized. The ND column is too narrow for its " +
+                "own header and the header did not reflow. $geometry",
+            title.size.width >= intrinsic,
+        )
 
         // (f) Paying for the ND column out of the base-shutter column is
         //     only free while the shutter wheel still fits its widest
@@ -359,28 +478,85 @@ class NdHeaderLargeTextTest(private val case: Case) {
         //     overflow, so a column one pixel too narrow clips them in
         //     silence; and `clearAndSetSemantics` hides the rows, so the
         //     wheel's own node is what gets measured.
-        val wheels = mergedNodes().filter { baseShutterTitle in it.descriptions() }
-        assertEquals("$case: expected one base-shutter wheel node.", 1, wheels.size)
+        val wheel = baseShutterWheel()
+        val column = wheel.size.width
         val widest = ExposureScale.oneThirdStopShutterCameraLabels
             .maxBy { widthOf(it, wheelStyle) }
         assertTrue(
-            "$case: the base-shutter column is ${wheels.single().size.width}px wide but its " +
+            "$case: the base-shutter column is ${column}px wide but its " +
                 "widest value `$widest` needs ${widthOf(widest, wheelStyle)}px — the ND " +
-                "column has taken too much of the row and the wheel clips its values.",
-            wheels.single().size.width >= widthOf(widest, wheelStyle),
+                "column has taken too much of the row and the wheel clips its values. " +
+                geometry,
+            column >= widthOf(widest, wheelStyle),
         )
-        // The caption over that wheel has no `maxLines` and no overflow,
-        // so it too clips in silence. It does not survive every scale
-        // even today, and repairing that is a separate ticket — but at
-        // the default text size it must read whole at every wheel count,
-        // whatever the ND column takes.
-        if (case.fontScale == 1.0f) {
-            assertTrue(
-                "$case: the base-shutter column is ${wheels.single().size.width}px wide but " +
-                    "its caption `$baseShutterTitle` needs " +
-                    "${widthOf(baseShutterTitle, titleStyle)}px at the default text size.",
-                wheels.single().size.width >= widthOf(baseShutterTitle, titleStyle),
-            )
+
+        // (g) The caption over that wheel has no `maxLines` and no
+        //     overflow, so it clips in silence in BOTH directions: too
+        //     narrow a column cuts it at the trailing edge, and a
+        //     header row too short for the line it then needs cuts it
+        //     from below. Laying the text out against the column the
+        //     app actually gave it says what the caption needs; the
+        //     node's own box says what it got.
+        val captions = inHeader.filter { baseShutterTitle in it.texts() }
+        assertEquals("$case: no `$baseShutterTitle` caption in the header. $geometry", 1, captions.size)
+        val caption = captions.single().boundsInRoot
+        val captionNeeds = measurer().measure(
+            baseShutterTitle,
+            titleStyle,
+            constraints = Constraints(maxWidth = column),
+        ).size
+        assertTrue(
+            "$case: the `$baseShutterTitle` caption is laid out " +
+                "${caption.width}x${caption.height}px, but in the ${column}px column the " +
+                "app gave it the text needs ${captionNeeds.width}x${captionNeeds.height}px. " +
+                "It is clipped. $geometry",
+            caption.width >= captionNeeds.width - RoundingSlackPx &&
+                caption.height >= captionNeeds.height - RoundingSlackPx,
+        )
+
+        // (g2) …and it stays a separate word from the ND title. When
+        //      the shutter column gets exactly the width its caption
+        //      needs — a narrow screen at a raised font scale — the two
+        //      run together with no gap at all, which reads as one
+        //      string: `Base ShutterND Filter`, seen on the device at
+        //      360dp before the columns were given a gutter.
+        assertTrue(
+            "$case: `$baseShutterTitle` ends at ${caption.right}px and `$ndFilterTitle` " +
+                "starts at ${title.boundsInRoot.left}px — the two captions run together. " +
+                geometry,
+            title.boundsInRoot.left - caption.right >= MinColumnGutter.px() - RoundingSlackPx,
+        )
+
+        // (h) Nothing in the header may be laid out outside the
+        //     viewport. A child that overflows its parent still reports
+        //     bounds and still answers a semantics query, so (a)-(c)
+        //     alone would pass on a control pushed off the screen edge.
+        val escaped = inHeader.filter {
+            val b = it.boundsInRoot
+            b.width > 0f && (b.left < viewportBounds.left - RoundingSlackPx ||
+                b.right > viewportBounds.right + RoundingSlackPx)
         }
+        assertTrue(
+            "$case: ${escaped.size} header node(s) are laid out outside the viewport " +
+                "(${viewportBounds.left}..${viewportBounds.right}px): " +
+                escaped.joinToString { "${it.names().joinToString("/")}@${it.boundsInRoot}" } +
+                ". $geometry",
+            escaped.isEmpty(),
+        )
+
+        // (i) And the two columns stay two columns: the ND header's own
+        //     controls never reach back over the base-shutter column,
+        //     which is the other way the header can "fit" while making
+        //     the caption or the value unreadable.
+        val overlapping = (entries + notationOptions.mapNotNull { option ->
+            inHeader.firstOrNull { option in it.names() }
+        }).filter { it.boundsInRoot.left < wheel.boundsInRoot.right - RoundingSlackPx }
+        assertTrue(
+            "$case: ${overlapping.size} ND-header control(s) overhang the base-shutter " +
+                "column, whose right edge is at ${wheel.boundsInRoot.right}px: " +
+                overlapping.joinToString { "${it.names().joinToString("/")}@${it.boundsInRoot}" } +
+                ". $geometry",
+            overlapping.isEmpty(),
+        )
     }
 }

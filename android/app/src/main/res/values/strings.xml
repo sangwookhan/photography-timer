@@ -40,15 +40,66 @@
     <string name="wheel_action_previous">Previous value</string>
     <string name="wheel_action_next">Next value</string>
     <!-- ND filter wheel stack (PTIMER-199) -->
-    <string name="nd_wheel_cd">ND filter %1$d of %2$d</string>
     <string name="nd_add_filter">Add filter</string>
-    <string name="nd_remove_empty_filter">Remove empty filter</string>
     <string name="nd_total_stops">Total %1$s stops</string>
     <string name="nd_total_stops_maximum">Total %1$s stops · Maximum</string>
-    <!-- Persistent stack-total announcement for TalkBack, independent of the
-         transient visual badge (%1$d = wheel count, %2$s = total stops) -->
-    <string name="nd_stack_total_cd">%1$d filters, total %2$s stops</string>
-    <string name="nd_stack_total_max_cd">%1$d filters, total %2$s stops, maximum</string>
+
+    <!-- Mixed Filter Stack (PTIMER-221) -->
+    <!-- Sources, states, and calculation modes -->
+    <string name="filter_source_standard">Standard</string>
+    <string name="filter_source_filter_set">Filter Set</string>
+    <string name="filter_empty">Empty</string>
+    <string name="filter_empty_detail">Empty · no filter mounted</string>
+    <string name="filter_item_fallback">Filter</string>
+    <string name="filter_kind_fixed">Fixed</string>
+    <string name="filter_mode_record_only">Record only</string>
+    <string name="filter_mode_apply_full_value">Apply full value</string>
+    <!-- Persistent type/mode labels above each wheel viewport. Deliberately
+         short so they stay complete at four wheels; identical in every locale -->
+    <string name="filter_type_nd">ND</string>
+    <string name="filter_type_cpl">CPL</string>
+    <string name="filter_type_gnd">GND</string>
+    <string name="filter_type_gnd_rec">REC</string>
+    <string name="filter_type_gnd_full">FULL</string>
+    <string name="filter_type_empty">EMPTY</string>
+    <!-- Registered and contributed values -->
+    <string name="filter_stops">%1$s stops</string>
+    <string name="filter_one_stop">1 stop</string>
+    <string name="filter_value_od">OD %1$s</string>
+    <string name="filter_value_nd">ND%1$s</string>
+    <string name="filter_value_cpl">CPL %1$s</string>
+    <!-- Refused selection reasons -->
+    <string name="filter_reject_exceeds_limit">Exceeds 30 stops</string>
+    <string name="filter_reject_already_mounted">Already mounted on this camera</string>
+    <string name="filter_reject_unavailable">Filter not available</string>
+    <!-- Refused addition reasons -->
+    <string name="filter_add_stack_full">Four filters already mounted</string>
+    <string name="filter_add_no_standard_value">No Standard value fits the remaining budget</string>
+    <string name="filter_add_unknown_set">Filter Set no longer exists</string>
+    <string name="filter_add_set_has_no_items">This Filter Set has no filters yet</string>
+    <string name="filter_add_all_items_mounted">Every filter in this set is already mounted</string>
+    <!-- Screen-reader announcements -->
+    <string name="filter_boundary">No more filters in this direction</string>
+    <string name="filter_empty_wheel_removed">Empty filter wheel removed</string>
+    <string name="filter_empty_wheels_removed">%1$d empty filter wheels removed</string>
+    <!-- Stable wheel identity (%1$d = position, %2$d = wheel count, %3$s = source) -->
+    <string name="filter_wheel_cd">Filter %1$d of %2$d, %3$s</string>
+    <!-- Idle source summary entry owning more than one wheel -->
+    <string name="filter_summary_count">%1$s ×%2$d</string>
+    <string name="filter_manage_sets">Manage Filter Sets</string>
+    <!-- Filter Set source-color names: color is never the only cue -->
+    <string name="filter_color_red">Red</string>
+    <string name="filter_color_orange">Orange</string>
+    <string name="filter_color_yellow">Yellow</string>
+    <string name="filter_color_green">Green</string>
+    <string name="filter_color_mint">Mint</string>
+    <string name="filter_color_teal">Teal</string>
+    <string name="filter_color_cyan">Cyan</string>
+    <string name="filter_color_blue">Blue</string>
+    <string name="filter_color_indigo">Indigo</string>
+    <string name="filter_color_purple">Purple</string>
+    <string name="filter_color_pink">Pink</string>
+    <string name="filter_color_brown">Brown</string>
     <string name="reset_shooting_title">Reset shooting setup?</string>
     <string name="reset_settings">Reset settings</string>
     <string name="reset_settings_and_name">Reset settings and name</string>

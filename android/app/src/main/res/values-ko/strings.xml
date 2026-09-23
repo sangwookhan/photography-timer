@@ -33,14 +33,65 @@
     <string name="wheel_action_previous">이전 값</string>
     <string name="wheel_action_next">다음 값</string>
     <!-- ND filter wheel stack (PTIMER-199) -->
-    <string name="nd_wheel_cd">ND 필터 %2$d개 중 %1$d번째</string>
     <string name="nd_add_filter">필터 추가</string>
-    <string name="nd_remove_empty_filter">빈 필터 제거</string>
     <string name="nd_total_stops">합계 %1$s 스톱</string>
     <string name="nd_total_stops_maximum">합계 %1$s 스톱 · 최대</string>
-    <!-- TalkBack용 상시 합계 안내 (시각 배지와 독립) -->
-    <string name="nd_stack_total_cd">필터 %1$d개, 합계 %2$s 스톱</string>
-    <string name="nd_stack_total_max_cd">필터 %1$d개, 합계 %2$s 스톱, 최대</string>
+
+    <!-- 혼합 Filter Stack (PTIMER-221) -->
+    <!-- 소스, 상태, 계산 모드 -->
+    <string name="filter_source_standard">Standard</string>
+    <string name="filter_source_filter_set">Filter Set</string>
+    <string name="filter_empty">비어 있음</string>
+    <string name="filter_empty_detail">비어 있음 · 장착된 필터 없음</string>
+    <string name="filter_item_fallback">필터</string>
+    <string name="filter_kind_fixed">고정</string>
+    <string name="filter_mode_record_only">기록만</string>
+    <string name="filter_mode_apply_full_value">전체 값 적용</string>
+    <!-- 휠 위 상시 유형/모드 라벨. 네 개까지 잘리지 않도록 짧게, 모든 로케일 공통 -->
+    <string name="filter_type_nd">ND</string>
+    <string name="filter_type_cpl">CPL</string>
+    <string name="filter_type_gnd">GND</string>
+    <string name="filter_type_gnd_rec">REC</string>
+    <string name="filter_type_gnd_full">FULL</string>
+    <string name="filter_type_empty">EMPTY</string>
+    <!-- 등록 값과 기여 값 -->
+    <string name="filter_stops">%1$s 스톱</string>
+    <string name="filter_one_stop">1 스톱</string>
+    <string name="filter_value_od">OD %1$s</string>
+    <string name="filter_value_nd">ND%1$s</string>
+    <string name="filter_value_cpl">CPL %1$s</string>
+    <!-- 선택 거부 사유 -->
+    <string name="filter_reject_exceeds_limit">30스톱 초과</string>
+    <string name="filter_reject_already_mounted">이 카메라에 이미 장착됨</string>
+    <string name="filter_reject_unavailable">사용할 수 없는 필터</string>
+    <!-- 추가 거부 사유 -->
+    <string name="filter_add_stack_full">필터 네 개가 이미 장착됨</string>
+    <string name="filter_add_no_standard_value">남은 예산에 맞는 Standard 값이 없음</string>
+    <string name="filter_add_unknown_set">Filter Set이 더 이상 없음</string>
+    <string name="filter_add_set_has_no_items">이 Filter Set에는 아직 필터가 없음</string>
+    <string name="filter_add_all_items_mounted">이 세트의 모든 필터가 이미 장착됨</string>
+    <!-- 스크린 리더 안내 -->
+    <string name="filter_boundary">이 방향에는 더 이상 필터가 없습니다</string>
+    <string name="filter_empty_wheel_removed">빈 필터 휠이 제거되었습니다</string>
+    <string name="filter_empty_wheels_removed">빈 필터 휠 %1$d개가 제거되었습니다</string>
+    <!-- 고정 휠 식별 (%1$d = 위치, %2$d = 휠 개수, %3$s = 소스) -->
+    <string name="filter_wheel_cd">필터 %1$d/%2$d, %3$s</string>
+    <!-- 휠을 둘 이상 가진 소스의 요약 항목 -->
+    <string name="filter_summary_count">%1$s ×%2$d</string>
+    <string name="filter_manage_sets">Filter Set 관리</string>
+    <!-- Filter Set 소스 색상 이름: 색만으로 식별하지 않음 -->
+    <string name="filter_color_red">빨강</string>
+    <string name="filter_color_orange">주황</string>
+    <string name="filter_color_yellow">노랑</string>
+    <string name="filter_color_green">초록</string>
+    <string name="filter_color_mint">민트</string>
+    <string name="filter_color_teal">청록</string>
+    <string name="filter_color_cyan">시안</string>
+    <string name="filter_color_blue">파랑</string>
+    <string name="filter_color_indigo">남색</string>
+    <string name="filter_color_purple">보라</string>
+    <string name="filter_color_pink">핑크</string>
+    <string name="filter_color_brown">갈색</string>
     <string name="reset_shooting_title">촬영 설정을 초기화할까요?</string>
     <string name="reset_settings">설정 초기화</string>
     <string name="reset_settings_and_name">설정과 이름 초기화</string>

@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +67,16 @@ import kotlin.math.roundToInt
 /** Fraction of an overscroll pull that moves the wheel content, so the
  *  removal gesture (PTIMER-199 §4.2.3) gives damped, elastic feedback. */
 private const val OverscrollVisualDamping = 0.5f
+
+/** Width of the per-row type-color rail (FILTER-STACK-007). */
+private val RowRailWidth = 3.dp
+
+/** Share of the row height the rail spans, so it reads as a mark on the
+ *  row rather than a divider between rows. */
+private const val RowRailHeightFraction = 0.6f
+
+/** Extra fade of a row the wheel cannot currently select. */
+private const val UnavailableRowAlpha = 0.35f
 
 /**
  * A wheel's scroll must never leak into outer surfaces. When a fling
@@ -121,6 +133,22 @@ fun SnapWheel(
     overscrollRemovalEnabled: Boolean = false,
     onOverscrollRemoval: (() -> Unit)? = null,
     extraAccessibilityActions: List<CustomAccessibilityAction> = emptyList(),
+    // PTIMER-221 (mixed Filter Stack) additions; every default keeps the
+    // pre-Filter-Set call sites (base shutter, target shutter) unchanged.
+    /** Type-color rail of each row (FILTER-STACK-007): a narrow vertical
+     *  mark at the row's leading edge, inside the row's own bounds, so it
+     *  never moves the centered value or changes the wheel's width.
+     *  `null` (or a `null` result) draws no rail. */
+    rowRailColor: ((index: Int) -> Color?)? = null,
+    /** Availability of each row: an unavailable row renders faded. */
+    rowEnabled: ((index: Int) -> Boolean)? = null,
+    /** Replaces the default one-row step for assistive adjustment
+     *  (FILTER-A11Y-004): receives the direction and reports whether the
+     *  adjustment was applied. The caller announces refusals itself. */
+    onAccessibilityAdjust: ((forward: Boolean) -> Boolean)? = null,
+    /** Overrides the default `labels[selectedIndex]` state description
+     *  (FILTER-A11Y-005). */
+    accessibilityValue: String? = null,
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -246,10 +274,28 @@ fun SnapWheel(
     // scrolling, and live-emission behavior are untouched.
     val previousActionLabel = stringResource(R.string.wheel_action_previous)
     val nextActionLabel = stringResource(R.string.wheel_action_next)
+    // A Filter Set wheel scans its own rows for the next AVAILABLE one
+    // (FILTER-A11Y-004), so the index-stepping default is replaced rather
+    // than extended; the caller reports a refusal or a boundary itself.
+    val currentOnAccessibilityAdjust by rememberUpdatedState(onAccessibilityAdjust)
+    val adjust: (Boolean) -> Boolean = { forward ->
+        val override = currentOnAccessibilityAdjust
+        if (override != null) {
+            override(forward)
+        } else {
+            val target = selectedIndex + if (forward) 1 else -1
+            if (target in labels.indices) {
+                currentOnSelectedIndexChange(target)
+                true
+            } else {
+                false
+            }
+        }
+    }
     val accessibilityModifier = if (accessibilityLabel != null) {
         Modifier.clearAndSetSemantics {
             contentDescription = accessibilityLabel
-            labels.getOrNull(selectedIndex)?.let { stateDescription = it }
+            (accessibilityValue ?: labels.getOrNull(selectedIndex))?.let { stateDescription = it }
             // Adjustable role: rangeInfo tells TalkBack this is a seek-style
             // control; setProgress receives the requested target value and
             // is collapsed to a single step in the requested direction so
@@ -261,38 +307,15 @@ fun SnapWheel(
                 steps = (labels.size - 2).coerceAtLeast(0),
             )
             setProgress { targetValue ->
-                val direction = when {
-                    targetValue > selectedIndex -> 1
-                    targetValue < selectedIndex -> -1
-                    else -> 0
-                }
-                val target = selectedIndex + direction
-                if (direction != 0 && target in labels.indices) {
-                    currentOnSelectedIndexChange(target)
-                    true
-                } else {
-                    false
+                when {
+                    targetValue > selectedIndex -> adjust(true)
+                    targetValue < selectedIndex -> adjust(false)
+                    else -> false
                 }
             }
             customActions = listOf(
-                CustomAccessibilityAction(previousActionLabel) {
-                    val target = selectedIndex - 1
-                    if (target in labels.indices) {
-                        currentOnSelectedIndexChange(target)
-                        true
-                    } else {
-                        false
-                    }
-                },
-                CustomAccessibilityAction(nextActionLabel) {
-                    val target = selectedIndex + 1
-                    if (target in labels.indices) {
-                        currentOnSelectedIndexChange(target)
-                        true
-                    } else {
-                        false
-                    }
-                },
+                CustomAccessibilityAction(previousActionLabel) { adjust(false) },
+                CustomAccessibilityAction(nextActionLabel) { adjust(true) },
             ) + extraAccessibilityActions
         }
     } else {
@@ -349,13 +372,31 @@ fun SnapWheel(
             itemsIndexed(labels) { index, label ->
                 val distance = abs((centeredIndex ?: selectedIndex) - index)
                 val isCenter = distance == 0
-                val alpha = (1f - 0.26f * distance).coerceAtLeast(0.18f)
+                val available = rowEnabled?.invoke(index) ?: true
+                val alpha = (1f - 0.26f * distance).coerceAtLeast(0.18f) *
+                    (if (available) 1f else UnavailableRowAlpha)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(itemHeight),
                     contentAlignment = Alignment.Center,
                 ) {
+                    // Type-color rail inside the row's own bounds
+                    // (FILTER-STACK-007): it rides the leading edge, fades
+                    // with the same distance alpha as the value, and leaves
+                    // the centered numeric column untouched.
+                    rowRailColor?.invoke(index)?.let { railColor ->
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .width(RowRailWidth)
+                                .height(itemHeight * RowRailHeightFraction)
+                                .background(
+                                    color = railColor.copy(alpha = railColor.alpha * alpha),
+                                    shape = RoundedCornerShape(RowRailWidth / 2),
+                                ),
+                        )
+                    }
                     Text(
                         text = label,
                         textAlign = TextAlign.Center,

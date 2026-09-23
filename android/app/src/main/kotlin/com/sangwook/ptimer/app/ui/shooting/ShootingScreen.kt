@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -69,6 +70,8 @@ import com.sangwook.ptimer.core.customfilm.CustomFilmReferencePointRow
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
+import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
+import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.reciprocity.CustomProfileSourceType
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
@@ -77,6 +80,8 @@ import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
@@ -94,13 +99,16 @@ import com.sangwook.ptimer.app.ui.localizedFilmName
 fun ShootingScreen(
     state: CalculatorUiState,
     onShutterIndex: (Int) -> Unit,
-    // ND wheel stack (PTIMER-199): per-wheel activity/selection plus the
-    // structural add/remove/cleanup commands, all keyed by wheel identity.
+    // Mixed Filter Stack (PTIMER-199 / PTIMER-221): per-wheel activity and
+    // selection, the Plus addition for a chosen source, the assistive row
+    // scan, and the overscroll removal — all keyed by wheel identity.
     onNdWheelActive: (Int, Boolean) -> Unit,
     onNdWheelValue: (Int, Int) -> Unit,
-    onAddNdWheel: () -> Unit,
+    onAddFilterWheel: (FilterSource) -> Unit,
+    onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
+    onFilterAddUnavailability: (FilterSource) -> FilterAddUnavailability?,
     onRemoveNdWheelOverscroll: (Int) -> Unit,
-    onCleanupEmptyNdWheels: () -> Unit,
+    onManageFilterSets: () -> Unit,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
@@ -335,6 +343,11 @@ fun ShootingScreen(
                                 ) {
                                     Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
                                 }
+                                // Reserve the filter columns' persistent
+                                // type/mode label height (FILTER-STACK-007) so
+                                // both pickers' viewports, selection bands, and
+                                // touch centers share one vertical axis.
+                                Spacer(Modifier.height(FilterWheelLabelRowHeight))
                                 SnapWheel(
                                     pageState.shutterLabels,
                                     pageState.shutterIndex,
@@ -349,7 +362,7 @@ fun ShootingScreen(
                                 // 3–4 side-by-side ladders keep readable
                                 // labels; the shutter wheel needs less room.
                                 modifier = Modifier.weight(
-                                    if (pageState.ndWheels.size >= 2) 1.6f else 1f,
+                                    if (pageState.filterWheels.size >= 2) 1.6f else 1f,
                                 ),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
@@ -367,14 +380,40 @@ fun ShootingScreen(
                                         enabled = writesActiveSlot,
                                         onSelect = onSelectNotation,
                                     )
+                                    // Persistent management entry (FILTER-SET-001):
+                                    // available even when the stack already holds
+                                    // Filter Set wheels.
+                                    CappedFontScale(maxFontScale = 1f) {
+                                        Box(
+                                            modifier = Modifier
+                                                .expandedTouchHeight(MinTouchTargetSize)
+                                                .size(NotationTrackHeight)
+                                                .clip(CircleShape)
+                                                .clickable(enabled = writesActiveSlot, onClick = onManageFilterSets),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                Icons.Outlined.Settings,
+                                                contentDescription = stringResource(R.string.filter_manage_sets),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        }
+                                    }
                                 }
-                                NdFilterStackGroup(
+                                FilterStackGroup(
                                     state = pageState,
                                     onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
                                     onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
-                                    onAddWheel = if (writesActiveSlot) onAddNdWheel else fun() {},
+                                    onAddFilterWheel = if (writesActiveSlot) onAddFilterWheel else { _ -> },
+                                    onAdjustFilterWheel = if (writesActiveSlot) {
+                                        onAdjustFilterWheel
+                                    } else {
+                                        { _, _ -> FilterWheelAdjustmentOutcome.Boundary }
+                                    },
                                     onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
-                                    onCleanupEmptyWheels = if (writesActiveSlot) onCleanupEmptyNdWheels else fun() {},
+                                    onFilterAddUnavailability = onFilterAddUnavailability,
+                                    onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
                                 )
                             }
                         }

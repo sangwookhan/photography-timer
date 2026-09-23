@@ -125,6 +125,15 @@ fun ShootingApp(
     val controller = holder.calculator
     val library = holder.library
     val displaySettingsStore = bootstrap.displaySettingsStore
+
+    // FILTER-A11Y-006: while the platform's touch-exploration mode is
+    // active the Filter Stack freezes its wheel order; turning the mode
+    // off queues exactly one reconciliation. Detected as a platform
+    // capability, so every compatible screen reader behaves alike.
+    val touchExplorationEnabled = rememberTouchExplorationEnabled()
+    LaunchedEffect(touchExplorationEnabled) {
+        controller.setFilterStackOrderingSuspended(touchExplorationEnabled)
+    }
     val aboutVersion = remember {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unavailable"
@@ -364,9 +373,12 @@ fun ShootingApp(
                     onShutterIndex = controller::setShutterIndex,
                     onNdWheelActive = controller::setNdWheelActive,
                     onNdWheelValue = controller::setNdWheelValue,
-                    onAddNdWheel = controller::addNdWheel,
+                    onAddFilterWheel = controller::addFilterWheel,
+                    onAdjustFilterWheel = controller::adjustFilterWheel,
+                    onFilterAddUnavailability = controller::filterAddUnavailability,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
-                    onCleanupEmptyNdWheels = controller::cleanupEmptyNdWheels,
+                    // Phase 3b owns the Filter Set management surface.
+                    onManageFilterSets = {},
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }

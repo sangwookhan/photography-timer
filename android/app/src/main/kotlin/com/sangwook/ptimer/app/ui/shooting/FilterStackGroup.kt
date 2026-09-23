@@ -47,6 +47,7 @@ import com.sangwook.ptimer.app.vm.FilterWheelRowUiState
 import com.sangwook.ptimer.app.vm.FilterWheelUiState
 import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
 import com.sangwook.ptimer.core.exposure.FilterSource
+import com.sangwook.ptimer.ui.component.LocalWheelRenderProbe
 import com.sangwook.ptimer.ui.component.SnapWheel
 import com.sangwook.ptimer.ui.theme.FilterTypePalette
 import com.sangwook.ptimer.ui.theme.filterSetColor
@@ -54,7 +55,7 @@ import com.sangwook.ptimer.ui.theme.filterTypePalette
 
 /** Gap between stacked wheels (tighter than the card's 8dp rhythm so
  *  four wheels keep usable value width). */
-private val WheelSpacing = 4.dp
+internal val FilterWheelRowSpacing = 4.dp
 
 private val WheelItemHeight = 34.dp
 private const val WheelVisibleCount = 3
@@ -126,12 +127,12 @@ internal fun FilterStackGroup(
     Column(modifier = modifier.fillMaxWidth()) {
         wheelRow {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val plusSlot = if (state.plus.isVisible) FilterPlusControlWidth + WheelSpacing else 0.dp
-                val wheelWidth = (maxWidth - plusSlot - WheelSpacing * (wheels.size - 1)) / wheels.size
+                val plusSlot = if (state.plus.isVisible) FilterPlusControlWidth + FilterWheelRowSpacing else 0.dp
+                val wheelWidth = (maxWidth - plusSlot - FilterWheelRowSpacing * (wheels.size - 1)) / wheels.size
 
                 LazyRow(
                     userScrollEnabled = false,
-                    horizontalArrangement = Arrangement.spacedBy(WheelSpacing),
+                    horizontalArrangement = Arrangement.spacedBy(FilterWheelRowSpacing),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     itemsIndexed(wheels, key = { _, wheel -> wheel.id }) { index, wheel ->
@@ -249,10 +250,22 @@ private fun FilterWheelColumn(
             }
         }
 
+    // Also the wheel's key in the render probe, so a suite can match a
+    // label report to the numeric rows under it.
+    val wheelDescription = stringResource(
+        R.string.filter_wheel_cd,
+        position,
+        wheelCount,
+        localizedSourceName(wheel.sourceName),
+    )
+    val cueColor = wheel.sourceColor?.let { filterSetColor(it) }
+    val renderProbe = LocalWheelRenderProbe.current
+
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         FilterWheelLabelRow(
             label = displayed?.let { filterTypeLabelText(it) }.orEmpty(),
-            cueColor = wheel.sourceColor?.let { filterSetColor(it) },
+            cueColor = cueColor,
+            onLabelTextLayout = { renderProbe?.onLabel(wheelDescription, cueColor != null, it) },
         )
         SnapWheel(
             labels = wheel.rows.map { it.compactValueText },
@@ -261,12 +274,7 @@ private fun FilterWheelColumn(
             modifier = Modifier.fillMaxWidth(),
             visibleCount = WheelVisibleCount,
             itemHeight = WheelItemHeight,
-            accessibilityLabel = stringResource(
-                R.string.filter_wheel_cd,
-                position,
-                wheelCount,
-                localizedSourceName(wheel.sourceName),
-            ),
+            accessibilityLabel = wheelDescription,
             dense = dense,
             onActiveChange = onActiveChange,
             // Visual gate only — the controller re-validates the removal

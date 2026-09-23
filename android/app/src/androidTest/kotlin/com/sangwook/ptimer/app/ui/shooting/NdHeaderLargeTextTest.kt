@@ -399,11 +399,14 @@ class NdHeaderLargeTextTest(private val case: Case) {
         )
 
         // (b) Every notation option, still named, still selectable, and
-        //     still on the 48dp touch height the segments are given by
-        //     `expandedTouchHeight`. The segments' WIDTH is deliberately
-        //     content-sized, not 48dp — see the note on that modifier —
-        //     so the height is what this pins; nothing here may shrink
-        //     it to buy the title room.
+        //     laid out on a full 48dp target in BOTH dimensions
+        //     (SHELL-030). Nothing here may shrink one to buy the title
+        //     room. The laid-out box is what is asserted, not
+        //     `touchBoundsInRoot`: Compose pads that out to the platform
+        //     minimum by itself for any node with a click action, so it
+        //     reads 48dp of a 14dp segment.
+        //     `FilterStackViewportLegibilityTest` carries the same
+        //     assertion across the viewport matrix.
         notationOptions.forEach { option ->
             val matches = inHeader.filter { option in it.names() }
             assertEquals(
@@ -412,12 +415,12 @@ class NdHeaderLargeTextTest(private val case: Case) {
                 1,
                 matches.size,
             )
-            val optionTouch = matches.single().touchBoundsInRoot
+            val laidOut = matches.single().boundsInRoot
             assertTrue(
-                "$case: the `$option` option's touch target is " +
-                    "${optionTouch.width.toDp()} x ${optionTouch.height.toDp()}; its height " +
-                    "is under $MinTouchTarget. $geometry",
-                optionTouch.height.toDp() >= MinTouchTarget,
+                "$case: the `$option` option is laid out " +
+                    "${laidOut.width.toDp()} x ${laidOut.height.toDp()}, under $MinTouchTarget. " +
+                    geometry,
+                laidOut.width.toDp() >= MinTouchTarget && laidOut.height.toDp() >= MinTouchTarget,
             )
         }
 
@@ -544,19 +547,30 @@ class NdHeaderLargeTextTest(private val case: Case) {
             escaped.isEmpty(),
         )
 
-        // (i) And the two columns stay two columns: the ND header's own
-        //     controls never reach back over the base-shutter column,
-        //     which is the other way the header can "fit" while making
-        //     the caption or the value unreadable.
-        val overlapping = (entries + notationOptions.mapNotNull { option ->
+        // (i) And the controls never take the caption's or the value's
+        //     room, which is the other way the header can "fit" while
+        //     making one of them unreadable.
+        //
+        //     This used to be stated as a horizontal one: no control's
+        //     left edge before the base-shutter wheel's right edge. That
+        //     was the right guard while the controls sat inside the ND
+        //     column, and the wrong one now that they have their own row
+        //     across the card — spanning the card is the whole reason
+        //     each option can own 48dp at 360dp. So the guard is the
+        //     rectangle it always meant: a control may sit ABOVE the
+        //     base-shutter column, never ON it.
+        val controls = entries + notationOptions.mapNotNull { option ->
             inHeader.firstOrNull { option in it.names() }
-        }).filter { it.boundsInRoot.left < wheel.boundsInRoot.right - RoundingSlackPx }
-        assertTrue(
-            "$case: ${overlapping.size} ND-header control(s) overhang the base-shutter " +
-                "column, whose right edge is at ${wheel.boundsInRoot.right}px: " +
-                overlapping.joinToString { "${it.names().joinToString("/")}@${it.boundsInRoot}" } +
-                ". $geometry",
-            overlapping.isEmpty(),
-        )
+        }
+        listOf("caption" to caption, "wheel" to wheel.boundsInRoot).forEach { (what, area) ->
+            val overlapping = controls.filter { it.boundsInRoot.overlaps(area.deflate(RoundingSlackPx)) }
+            assertTrue(
+                "$case: ${overlapping.size} ND-header control(s) overlap the base-shutter " +
+                    "$what at $area: " +
+                    overlapping.joinToString { "${it.names().joinToString("/")}@${it.boundsInRoot}" } +
+                    ". $geometry",
+                overlapping.isEmpty(),
+            )
+        }
     }
 }

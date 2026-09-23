@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -53,6 +54,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -99,6 +101,32 @@ private object WheelNestedScrollFence : NestedScrollConnection {
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
         available
 }
+
+/**
+ * Measurement hook for the layout regression suites (PTIMER-221).
+ *
+ * A wheel's numeric rows, its persistent type/mode label, its Filter Set
+ * source cue and its per-row type-color rail are all deliberately outside
+ * the semantics tree — the wheel is one accessibility element
+ * (FILTER-A11Y-001), and the label row clears its own semantics — so no
+ * semantics assertion can see a row clipped in silence or a cue that
+ * stopped being drawn. FILTER-STACK-007 asks for exactly those things to
+ * stay legible at every supported text size, so the suites read the
+ * laid-out text and the drawn cues from here instead of asserting
+ * something weaker.
+ *
+ * `null` in production: nothing reads the probe unless a test provides one.
+ */
+internal interface WheelRenderProbe {
+    /** One numeric row of the wheel named [wheel], as it was laid out. */
+    fun onRow(wheel: String, index: Int, isCenter: Boolean, hasRail: Boolean, layout: TextLayoutResult)
+
+    /** The persistent type/mode label above [wheel]'s viewport. */
+    fun onLabel(wheel: String, hasSourceCue: Boolean, layout: TextLayoutResult)
+}
+
+/** @see WheelRenderProbe */
+internal val LocalWheelRenderProbe = staticCompositionLocalOf<WheelRenderProbe?> { null }
 
 /**
  * Reusable snap wheel (the Android analogue of the iOS picker wheel; used for
@@ -153,6 +181,7 @@ fun SnapWheel(
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
+    val renderProbe = LocalWheelRenderProbe.current
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -411,7 +440,8 @@ fun SnapWheel(
                     // (FILTER-STACK-007): it rides the leading edge, fades
                     // with the same distance alpha as the value, and leaves
                     // the centered numeric column untouched.
-                    rowRailColor?.invoke(index)?.let { railColor ->
+                    val railColor = rowRailColor?.invoke(index)
+                    if (railColor != null) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
@@ -435,6 +465,13 @@ fun SnapWheel(
                             else -> MaterialTheme.typography.bodyLarge
                         },
                         color = LocalContentColor.current.copy(alpha = alpha),
+                        // The rows are inside the wheel's cleared semantics,
+                        // so only the laid-out text can show a silent clip.
+                        onTextLayout = { layout ->
+                            if (accessibilityLabel != null) {
+                                renderProbe?.onRow(accessibilityLabel, index, isCenter, railColor != null, layout)
+                            }
+                        },
                     )
                 }
             }

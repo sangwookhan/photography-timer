@@ -38,14 +38,18 @@ rather than averaged:
 | build | frames |
 | --- | --- |
 | `496a4ec4` | `09`, `13`, `13-b`, `15`, `16`, `17`, `18`, `19`, `19-b`, `21`, `28` |
-| `120bb559` | `07`, `25`, `26`, `26-b`, `26-c`, `26-d` |
+| `120bb559` | `07` |
+| `ed233a07` | `25`, `26`, `26-b`, `26-c`, `26-d` |
 | `79b339c9` | every scenario not listed above, unchanged from the first pass |
 
-`120bb559` changes only how a mixed stack's total is formatted on the
-timer card, which is why exactly the timer-card frames were reshot
-against it and the rest stay valid. `07` was additionally verified on
-`496a4ec4` before that commit landed — same keypad, same input type,
-same focus behaviour — so it is cross-checked on both.
+Each later commit touches only the timer card, which is why exactly the
+timer-card frames were reshot against it and the rest stay valid:
+`120bb559` changed how a mixed stack's total is formatted, `ed233a07`
+let the reference line wrap. The five `ed233a07` frames come from one
+seeding, so the scenario 26 sequence reads as one run. `07` was
+additionally verified on `496a4ec4` before `120bb559` landed — same
+keypad, same input type, same focus behaviour — so it is cross-checked
+on both.
 
 Superseded frames are not in the working tree but are not lost: the
 first-pass images are in this repository's history, at the commit that
@@ -54,13 +58,6 @@ showed the wrong thing — `07` captured the item editor's autofocused
 name field instead of a focused choice field, `13` was taken after the
 status region's linger had expired, and the rest were driven to
 different set names, totals and stack compositions than iOS.
-
-### One incidental difference in the scenario 26 frames
-
-Their shot-sequence badge reads `2` where the iOS references read `1`.
-The Android app's data was wiped by a reinstall between passes, so that
-camera's counter had already advanced. It is consistent across all four
-frames of the sequence and is unrelated to what they demonstrate.
 
 Because the two platforms render in different appearances, **no colour
 comparison in the matrix is a measured hue match** — colour differences

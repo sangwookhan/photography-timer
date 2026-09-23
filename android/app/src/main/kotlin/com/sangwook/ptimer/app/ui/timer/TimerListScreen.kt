@@ -70,11 +70,13 @@ import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedFilmName
 import com.sangwook.ptimer.app.ui.localizedTimerSubtitle
 import com.sangwook.ptimer.app.ui.localizedTimerTitle
+import com.sangwook.ptimer.app.ui.shooting.localizedFilterReferenceText
 import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
+import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.timer.TimerBasisPresenter
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -756,6 +758,28 @@ private fun TimerCard(
                         }
                     }
                 }
+            }
+            // Filter Set reference (FILTER-PERSIST-003): a descriptive second
+            // line composed from the summary captured at start, so renaming,
+            // editing, or deleting the inventory afterwards never rewrites it.
+            // The basis line above keeps the canonical total. A Standard-only
+            // timer has no Filter Set entry and shows no extra line.
+            val capturedSummary = card.identity.filterSummary
+            val filterReference = when {
+                capturedSummary == null -> card.identity.filterReferenceText
+                capturedSummary.any { it.sourceKind == FilterSummaryEntry.SourceKind.filterSet } ->
+                    localizedFilterReferenceText(capturedSummary)
+
+                else -> null
+            }
+            if (filterReference != null) {
+                Text(
+                    filterReference,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
 
             Spacer(Modifier.size(12.dp))

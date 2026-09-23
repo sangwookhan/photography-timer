@@ -61,6 +61,8 @@ import com.sangwook.ptimer.core.timer.TimerStatus
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
+import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementActions
+import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBar
@@ -233,6 +235,11 @@ fun ShootingApp(
 
     var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }
     var showAbout by remember { mutableStateOf(false) }
+    // The Filter Set management surface (FILTER-SET-001), reached from the ND
+    // header entry and the Plus wheel's management long press. It reads the
+    // inventory live so an edit inside it redraws the list it was made from.
+    var manageFilterSets by remember { mutableStateOf(false) }
+    val filterInventory by holder.filterInventory.inventory.collectAsStateWithLifecycle()
     var showExactAlarmInfo by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()
@@ -377,8 +384,7 @@ fun ShootingApp(
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onFilterAddUnavailability = controller::filterAddUnavailability,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
-                    // Phase 3b owns the Filter Set management surface.
-                    onManageFilterSets = {},
+                    onManageFilterSets = { manageFilterSets = true },
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }
@@ -521,6 +527,28 @@ fun ShootingApp(
                     },
                 )
             }
+        }
+
+        if (manageFilterSets) {
+            FilterSetManagementScreen(
+                inventory = filterInventory,
+                actions = remember(controller) {
+                    FilterSetManagementActions(
+                        suggestCreationColor = controller::suggestFilterSetCreationColor,
+                        createFilterSet = { name, color -> controller.createFilterSet(name, color) },
+                        renameFilterSet = controller::renameFilterSet,
+                        recolorFilterSet = controller::recolorFilterSet,
+                        moveFilterSet = controller::moveFilterSet,
+                        deleteFilterSet = controller::deleteFilterSet,
+                        moveFilterItem = controller::moveFilterItem,
+                        deleteFilterItem = controller::deleteFilterItem,
+                        saveFilterItem = controller::saveFilterItem,
+                        camerasAffectedByDeletingFilterSet = controller::cameraNamesAffectedByDeletingFilterSet,
+                        camerasAffectedByDeletingItem = controller::cameraNamesAffectedByDeletingItem,
+                    )
+                },
+                onDismiss = { manageFilterSets = false },
+            )
         }
 
         if (showAbout) {

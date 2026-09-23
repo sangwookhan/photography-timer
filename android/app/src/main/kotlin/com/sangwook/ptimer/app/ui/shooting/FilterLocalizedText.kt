@@ -11,9 +11,13 @@ import com.sangwook.ptimer.app.vm.FilterRowTypeCategory
 import com.sangwook.ptimer.app.vm.FilterWheelPresenter
 import com.sangwook.ptimer.app.vm.FilterWheelRowUiState
 import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
+import com.sangwook.ptimer.core.exposure.FilterItem
+import com.sangwook.ptimer.core.exposure.FilterItemBehavior
+import com.sangwook.ptimer.core.exposure.FilterItemKind
 import com.sangwook.ptimer.core.exposure.FilterRegisteredValue
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
+import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
@@ -230,6 +234,129 @@ internal fun filterColorName(token: FilterSetColor): String = stringResource(
         FilterSetColor.brown -> R.string.filter_color_brown
     },
 )
+
+/** Behavior kind as the editor's segmented control and the inventory
+ *  rows name it (FILTER-ITEM-003). */
+@Composable
+internal fun localizedFilterKindName(kind: FilterItemKind): String = stringResource(
+    when (kind) {
+        FilterItemKind.fixed -> R.string.filter_kind_fixed
+        FilterItemKind.cpl -> R.string.filter_kind_cpl
+        FilterItemKind.gnd -> R.string.filter_kind_gnd
+    },
+)
+
+/**
+ * Inventory-row detail for one physical filter: kind, registered
+ * representation, and — when the registered unit is not stops — the
+ * canonical conversion. `Fixed · OD 0.9 · 3 stops`, `GND · ND8 ·
+ * 3 stops`, `CPL · 1 / 1.5 / 2 stops`.
+ */
+@Composable
+internal fun filterItemDetailText(item: FilterItem): String {
+    val kind = localizedFilterKindName(item.behavior.kind)
+    val detail = when (val behavior = item.behavior) {
+        is FilterItemBehavior.Fixed -> registeredWithConversionText(behavior.value)
+        is FilterItemBehavior.Gnd -> registeredWithConversionText(behavior.value)
+        is FilterItemBehavior.Cpl -> {
+            val list = behavior.choices.shootingChoices
+                .joinToString(" / ") { FilterWheelPresenter.decimalStopsValue(it) }
+            stringResource(R.string.filter_stops, list)
+        }
+    }
+    return "$kind$DetailSeparator$detail"
+}
+
+/** `OD 0.9 · 3 stops`; a value registered in stops reads once. */
+@Composable
+private fun registeredWithConversionText(value: FilterRegisteredValue): String {
+    val original = filterRegisteredValueText(value)
+    val stops = value.canonicalStops
+    if (value.unit == FilterValueUnit.stops || stops == null) return original
+    return original + DetailSeparator + filterStopsText(stops)
+}
+
+/**
+ * The Timer list's descriptive Filter Set reference (FILTER-PERSIST-003),
+ * composed at render time from the IMMUTABLE captured summary — never
+ * from the live inventory, so a later rename, edit, or deletion cannot
+ * rewrite an already started timer. Items are grouped under the Filter
+ * Set they were mounted from, in captured order:
+ * `Lee holder: Big Stopper ND1000 + Lee GND 0.9 OD 0.9 (Record only) ·
+ * NiSi kit: NiSi CPL 1.5 stops · Standard 2 stops`.
+ * (Canonical-English twin: `FilterSummaryReferencePresenter`.)
+ */
+@Composable
+internal fun localizedFilterReferenceText(summary: List<FilterSummaryEntry>): String? {
+    val segments = ArrayList<String>()
+    var currentSetName: String? = null
+    val currentItems = ArrayList<String>()
+    val standardName = stringResource(R.string.filter_source_standard)
+    val fallbackSetName = stringResource(R.string.filter_source_filter_set)
+
+    fun flushSet() {
+        val setName = currentSetName
+        if (setName != null && currentItems.isNotEmpty()) {
+            segments.add("$setName: ${currentItems.joinToString(" + ")}")
+        }
+        currentSetName = null
+        currentItems.clear()
+    }
+
+    for (entry in summary) {
+        when (entry.sourceKind) {
+            FilterSummaryEntry.SourceKind.standard -> {
+                flushSet()
+                if (entry.contributedStops > 0) {
+                    segments.add("$standardName ${filterStopsText(entry.contributedStops)}")
+                }
+            }
+
+            FilterSummaryEntry.SourceKind.filterSet -> {
+                val setName = entry.filterSetName ?: fallbackSetName
+                if (currentSetName != setName) {
+                    flushSet()
+                    currentSetName = setName
+                }
+                currentItems.add(filterSummaryItemText(entry))
+            }
+        }
+    }
+    flushSet()
+    return segments.joinToString(DetailSeparator).takeIf { it.isNotEmpty() }
+}
+
+/** One captured item: name, registered representation, GND mode. */
+@Composable
+private fun filterSummaryItemText(entry: FilterSummaryEntry): String {
+    val name = entry.itemName ?: stringResource(R.string.filter_item_fallback)
+    val value = entry.originalValue
+    val unit = entry.originalUnit
+    val registered = when (entry.calculationMode) {
+        FilterSummaryEntry.CalculationMode.cplLoss ->
+            entry.canonicalStops?.let { filterStopsText(it) }
+
+        else -> if (value != null && unit != null) {
+            filterRegisteredValueText(FilterRegisteredValue(value, unit))
+        } else {
+            entry.canonicalStops?.let { filterStopsText(it) }
+        }
+    }
+    val mode = when (entry.calculationMode) {
+        FilterSummaryEntry.CalculationMode.gndRecordOnly ->
+            localizedGndModeName(GndCalculationMode.recordOnly)
+
+        FilterSummaryEntry.CalculationMode.gndApplyFullValue ->
+            localizedGndModeName(GndCalculationMode.applyFullValue)
+
+        else -> null
+    }
+    return buildString {
+        append(name)
+        if (registered != null) append(" ").append(registered)
+        if (mode != null) append(" (").append(mode).append(")")
+    }
+}
 
 /** Separator between the segments of one status detail. */
 internal const val DetailSeparator: String = " · "

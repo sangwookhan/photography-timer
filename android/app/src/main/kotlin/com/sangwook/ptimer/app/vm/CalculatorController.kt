@@ -65,22 +65,6 @@ data class FilmOption(
 
 data class ModelOption(val id: String, val label: String)
 
-/**
- * One ND filter wheel of the stack (PTIMER-199). [id] is the wheel's
- * stable identity (monotonic from 101, position-independent — the
- * Compose row keys on it so the commit sort animates as movement);
- * [labels] is the wheel's row list in the current notation;
- * [selectedIndex] points at the wheel's DISPLAY value (pending selection
- * while the set commit is open, committed value otherwise).
- *
- * Legacy Standard-shaped projection of [CalculatorUiState.filterWheels],
- * kept while the mixed-stack UI is built (PTIMER-221 phase 3).
- */
-data class NdWheelUiState(
-    val id: Int,
-    val labels: List<String>,
-    val selectedIndex: Int,
-)
 data class SlotTab(val id: CameraSlotId, val displayName: String, val isActive: Boolean)
 
 /** Immutable state the shooting calculator surface renders. */
@@ -101,21 +85,6 @@ data class CalculatorUiState(
     val emptyWheelRemoval: EmptyFilterWheelRemoval? = null,
     /** FILTER-A11Y-006: value-based ordering is frozen while true. */
     val isFilterStackOrderingSuspended: Boolean = false,
-    /** ND wheel stack (PTIMER-199): 1..4 wheels in display order. */
-    val ndWheels: List<NdWheelUiState> = emptyList(),
-    /** Layout presence of the Add control (committed-only). */
-    val showsAddNdWheel: Boolean = false,
-    /** Add availability (presence AND the machine is quiet AND the
-     *  remembered source can hold a usable row). */
-    val canAddNdWheel: Boolean = false,
-    /** True while a removable cleanable wheel (Standard 0 or Filter Set
-     *  Empty) exists on the COMMITTED stack. */
-    val canRemoveEmptyNdWheel: Boolean = false,
-    /** True only while the one-shot cleanup would actually run NOW —
-     *  a removable cleanable wheel exists AND the machine is quiet. Gates
-     *  the TalkBack "Remove empty filter" custom action so assistive
-     *  users are never offered a command that would no-op. */
-    val canCleanupEmptyNdWheels: Boolean = false,
     /** Stack total in stops ("18", "13.2"); null below two wheels. */
     val ndTotalStopsText: String? = null,
     /** True when the LIVE total (pending selections included, the
@@ -363,9 +332,8 @@ class CalculatorController(
             pendingNdCommits.remove(wheelId)?.let { pendingNdCommits[wheelId] = it }
             commitNdSetIfQuiet()
         }
-        // Activity flips the quiet-gated availability flags
-        // (canAddNdWheel, canCleanupEmptyNdWheels) even when no value
-        // has changed yet; equal states dedup downstream.
+        // Activity flips the quiet-gated availability flag (plus.canAdd)
+        // even when no value has changed yet; equal states dedup downstream.
         publish()
     }
 
@@ -538,9 +506,6 @@ class CalculatorController(
         writeFilterStack(stack.addingWheel(source, inventory), lastSource = source)
         attemptFilterStackOrderReconciliation()
     }
-
-    /** Plus tap: adds a wheel from the camera's remembered source. */
-    fun addNdWheel() = addFilterWheel()
 
     /** Why [source] cannot add a usable wheel right now; `null` when it can. */
     fun filterAddUnavailability(source: FilterSource): FilterAddUnavailability? =
@@ -1399,14 +1364,6 @@ class CalculatorController(
             filterStatus = filterStatus,
             emptyWheelRemoval = if (isActiveSlot) emptyFilterWheelRemoval else null,
             isFilterStackOrderingSuspended = isFilterStackOrderingSuspended,
-            // Legacy Standard-shaped projection; phase 3 replaces the UI.
-            ndWheels = filterWheels.map {
-                NdWheelUiState(it.id, it.rows.map { row -> row.compactValueText }, it.selectedIndex)
-            },
-            showsAddNdWheel = plus.isVisible,
-            canAddNdWheel = plus.canAdd,
-            canRemoveEmptyNdWheel = committedStack.canRemoveEmptyWheel,
-            canCleanupEmptyNdWheels = committedStack.canRemoveEmptyWheel && isQuiet,
             ndTotalStopsText = if (committedStack.wheels.size >= 2) filterStatus.totalStopsText else null,
             // Same live basis as the total text, so the badge never
             // shows "30" without its Maximum marker mid-scroll.

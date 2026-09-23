@@ -100,6 +100,64 @@
     <string name="filter_color_purple">Purple</string>
     <string name="filter_color_pink">Pink</string>
     <string name="filter_color_brown">Brown</string>
+
+    <!-- Filter Set management surface (FILTER-SET-001..005) -->
+    <string name="filter_sets_title">Filter Sets</string>
+    <string name="filter_sets_empty">No Filter Sets yet. Create one to register the physical filters you carry.</string>
+    <string name="filter_sets_finish_editing">Finish Editing</string>
+    <string name="filter_set_new">New Filter Set</string>
+    <string name="filter_set_name">Filter Set name</string>
+    <string name="filter_set_section_name">Name</string>
+    <string name="filter_set_section_color">Color</string>
+    <string name="filter_set_color_footer">A color is required. Several Filter Sets may share one color.</string>
+    <string name="filter_set_section_set">Filter Set</string>
+    <string name="filter_set_identity_footer">Renaming or recoloring never changes the set\'s identity or any camera\'s stack.</string>
+    <string name="filter_set_one_filter">1 filter</string>
+    <string name="filter_set_filter_count">%1$d filters</string>
+    <string name="filter_set_missing">This Filter Set no longer exists.</string>
+    <string name="filter_set_delete_title">Delete Filter Set?</string>
+    <string name="filter_delete_named">Delete %1$s</string>
+    <string name="filter_set_delete_message">Its filters are removed from the inventory. Timers already started keep their captured summary.</string>
+    <string name="filter_set_delete_message_cameras">Filter wheels from this set are removed on %1$s. Timers already started keep their captured summary.</string>
+    <string name="filter_action_move_up">Move up</string>
+    <string name="filter_action_move_down">Move down</string>
+
+    <!-- Physical filter inventory (FILTER-ITEM-001..007) -->
+    <string name="filter_set_section_filters">Filters</string>
+    <string name="filter_items_empty">No filters registered yet.</string>
+    <string name="filter_items_footer">Register each physical filter separately, even two filters of the same strength, so both can be mounted together.</string>
+    <string name="filter_item_delete_title">Delete filter?</string>
+    <string name="filter_item_delete_message">No camera currently mounts this filter. Timers already started keep their captured summary.</string>
+    <string name="filter_item_delete_message_cameras">Wheels mounting this filter become Empty on %1$s. Timers already started keep their captured summary.</string>
+    <string name="filter_item_new">New filter</string>
+    <string name="filter_item_edit">Edit filter</string>
+    <string name="filter_item_name">Filter name</string>
+    <string name="filter_item_kind">Kind</string>
+    <string name="filter_item_kind_footer">The kind is your choice; the app never guesses it from the name.</string>
+    <string name="filter_kind_cpl" translatable="false">CPL</string>
+    <string name="filter_kind_gnd" translatable="false">GND</string>
+    <!-- Fixed / GND registered value -->
+    <string name="filter_item_exposure_loss">Exposure loss</string>
+    <string name="filter_item_full_density">Full density</string>
+    <string name="filter_item_value">Value</string>
+    <string name="filter_item_conversion">= %1$s</string>
+    <string name="filter_item_value_error">Enter a value above 0 and at most 30 stops.</string>
+    <string name="filter_item_value_footer">Stops are kept as entered; OD divides by 0.3; an ND factor converts as log2. The value is never snapped to the Standard ladder.</string>
+    <!-- CPL exposure-loss choices (FILTER-CPL-001..004) -->
+    <string name="filter_cpl_section">Exposure loss choices</string>
+    <string name="filter_cpl_choice">Choice %1$d</string>
+    <string name="filter_cpl_choice_cd">Exposure loss choice %1$d</string>
+    <string name="filter_cpl_footer">Exposure loss choices (stops) available from the wheel while shooting. Empty fields are skipped; duplicate values appear once.</string>
+    <string name="filter_cpl_required">At least one choice is required.</string>
+    <string name="filter_cpl_field_error">Use 0.1 to 9.9 with at most one decimal digit.</string>
+    <!-- GND calculation modes (FILTER-GND-003) -->
+    <string name="filter_gnd_modes">Calculation modes</string>
+    <string name="filter_gnd_modes_body">While shooting, a GND wheel offers Record only (0 stops) and Apply full value (its full registered density). Record only is the default.</string>
+    <string name="filter_gnd_modes_warning">Apply full value suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation.</string>
+    <!-- Refused item save (FILTER-ITEM-005) -->
+    <string name="filter_item_save_blocked_title">Cannot save</string>
+    <string name="filter_item_save_blocked_limit">This value would push the filter stack past 30 stops on %1$s. Change the mounted filters there first, or use a smaller value.</string>
+    <string name="filter_item_save_blocked_choice">A choice of this filter is currently selected on %1$s. Keep that choice, or change the wheel selection on those cameras first.</string>
     <string name="reset_shooting_title">Reset shooting setup?</string>
     <string name="reset_settings">Reset settings</string>
     <string name="reset_settings_and_name">Reset settings and name</string>

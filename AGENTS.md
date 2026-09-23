@@ -172,13 +172,13 @@ it (see Escalation Triggers below and
 For each ticket:
 
 1. Read the execution-ready task spec first, alongside the behavior
-   it targets. If the task/Code PR implements a Spec PR
+   it targets. If the task/Code PR consumes an open Spec PR
    (`docs/development/SpecificationWorkflow.md` §10), read the exact
-   Spec PR revision (commit SHA) it records — not whatever
-   `docs/specs/**` shows on `main`, which is still the old shipped
-   contract for that capability until the Spec PR merges. For every
-   other capability the ticket does not touch, `main`'s current
-   living spec remains the baseline.
+   approved Spec PR revision (commit SHA) recorded by the Code PR. If no
+   Spec PR is in play because the capability contract is already merged,
+   read the relevant `docs/specs/**` content at the `main` baseline
+   commit recorded by the Code PR. For every other capability the ticket
+   does not touch, `main`'s current living spec remains the baseline.
 2. Restate the goal, scope, and protected areas
 3. Limit changes to the declared scope
 4. Do not broaden the task through interpretation
@@ -585,9 +585,9 @@ Implementation output should always include:
 4. Remaining risks or follow-up items
 5. Notes for human review
 
-Review should be done against the exact approved living-spec revision
-the change targets (the Spec PR revision it records, or `main`'s
-current spec when no Spec PR is in play) and the delivery scope
+Review should be done against the exact approved living-spec baseline
+the change records (the Spec PR revision, or the relevant `main` spec
+content at its recorded baseline commit when no Spec PR is in play) and the delivery scope
 captured in the execution-ready task spec — not personal preference
 alone.
 

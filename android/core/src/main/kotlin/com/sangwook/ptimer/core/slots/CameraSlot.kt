@@ -96,6 +96,22 @@ data class SlotCalculatorSnapshot(
      * time (never clamped) and fall back to the legacy scalar.
      */
     val ndStack: List<Double>? = null,
+    /**
+     * Mixed Filter Stack (Filter Set contract, FILTER-PERSIST-001): every
+     * wheel in display order, Standard and Filter Set sources alike.
+     * Additive optional so pre-Filter-Set payloads decode unchanged. When
+     * present and structurally sound it is authoritative, and [ndStack] /
+     * [ndIndex] / [ndStops] carry the Standard-only projection an older
+     * build restores.
+     */
+    val filterStack: List<PersistentFilterWheel>? = null,
+    /**
+     * The slot's last settled Filter Source (FILTER-PLUS-004):
+     * `"standard"` or `"filterSet"` (with [lastFilterSetId]). Additive
+     * optional; absent or unresolvable restores as Standard.
+     */
+    val lastFilterSourceKind: String? = null,
+    val lastFilterSetId: String? = null,
 )
 
 /**

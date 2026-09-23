@@ -3,6 +3,8 @@
 
 package com.sangwook.ptimer.core.timer
 
+import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
+import com.sangwook.ptimer.core.exposure.LossyFilterSummaryListSerializer
 import kotlinx.serialization.Serializable
 
 /**
@@ -34,6 +36,16 @@ data class TimerIdentity(
     // show the same film identity the iOS mini does. Defaulted/nullable so
     // snapshots written before this field decode unchanged.
     val filmName: String? = null,
+    // Immutable per-wheel filter record captured at start (Filter Set
+    // contract, FILTER-PERSIST-003): each mounted row's source, item,
+    // registered value, calculation mode, and contributed stops, plus the
+    // human-readable reference string generated at start time. Additive
+    // optional so snapshots written before these fields decode unchanged.
+    // The list decodes entry by entry: one damaged entry is skipped and the
+    // timer survives.
+    @Serializable(with = LossyFilterSummaryListSerializer::class)
+    val filterSummary: List<FilterSummaryEntry>? = null,
+    val filterReferenceText: String? = null,
 )
 
 /**

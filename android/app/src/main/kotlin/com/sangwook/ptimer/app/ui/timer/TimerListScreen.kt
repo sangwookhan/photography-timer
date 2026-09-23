@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +79,7 @@ import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.app.ui.shooting.filterNotationText
 import com.sangwook.ptimer.core.timer.TimerBasisPresenter
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.delay
@@ -578,6 +580,7 @@ private fun TimerCard(
     // which ignores the user's locale conventions entirely. Recomputed on
     // locale/configuration change via LocalConfiguration.
     val locale = LocalConfiguration.current.locales[0]
+    val resources = LocalContext.current.resources
     val endFormatter = remember(locale) {
         DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale).withZone(ZoneId.systemDefault())
     }
@@ -723,6 +726,11 @@ private fun TimerCard(
                 formatShutter = ::basisShutterLabel,
                 baseNdFormat = stringResource(R.string.timer_basis_base_nd),
                 baseNdAdjustedFormat = stringResource(R.string.timer_basis_base_nd_adj),
+                // FILTER-A11Y-003: the STOPS unit is a word, so the core
+                // default would leave an English `stops` in a Korean line.
+                formatNotation = { stops, notation ->
+                    filterNotationText(stops, notation, resources)
+                },
             ) ?: card.identity.baseLine.takeIf { it.isNotEmpty() }
             if (basisText != null) {
                 Row(

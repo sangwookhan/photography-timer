@@ -3,7 +3,13 @@
 
 package com.sangwook.ptimer.app.ui.timer
 
+import android.content.res.Configuration
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sangwook.ptimer.app.vm.ShootingUiState
@@ -15,7 +21,9 @@ import com.sangwook.ptimer.core.timer.TimerStatus
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 import org.junit.Rule
 import org.junit.Test
+import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -57,15 +65,27 @@ class TimerFilterReferenceTest {
         now = Instant.EPOCH,
     )
 
-    private fun show(identity: TimerIdentity) {
+    private fun show(identity: TimerIdentity, locale: Locale? = null) {
         composeTestRule.setContent {
-            PTimerTheme {
-                FullTimerList(
-                    state = state(identity),
-                    onEvent = {},
-                    onCollapse = {},
-                    focusId = null,
-                )
+            val list = @androidx.compose.runtime.Composable {
+                PTimerTheme {
+                    FullTimerList(
+                        state = state(identity),
+                        onEvent = {},
+                        onCollapse = {},
+                        focusId = null,
+                    )
+                }
+            }
+            if (locale == null) {
+                list()
+            } else {
+                val base = InstrumentationRegistry.getInstrumentation().targetContext
+                val config = Configuration(base.resources.configuration).apply { setLocale(locale) }
+                CompositionLocalProvider(
+                    LocalContext provides base.createConfigurationContext(config),
+                    LocalConfiguration provides config,
+                ) { list() }
             }
         }
     }
@@ -109,5 +129,27 @@ class TimerFilterReferenceTest {
             ),
         )
         composeTestRule.onNodeWithText("Lee holder: Big Stopper ND1000").assertIsDisplayed()
+    }
+
+    /**
+     * FILTER-A11Y-003 on the rendered card: the basis line's unit noun is
+     * a word, so it must be the user's. It used to come from a
+     * locale-independent core formatter and read `10 stops` inside an
+     * otherwise Korean card.
+     */
+    @Test
+    fun theKoreanBasisLineUsesTheKoreanStopsNoun() {
+        show(
+            TimerIdentity(
+                title = "Camera 1",
+                ndStops = 10.0,
+                baseShutterSeconds = 5.0,
+                basisIncludesAdjusted = false,
+            ),
+            locale = Locale.KOREA,
+        )
+        composeTestRule.onAllNodesWithText("스톱", substring = true).assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("stops", substring = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("stop", substring = true).assertCountEquals(0)
     }
 }

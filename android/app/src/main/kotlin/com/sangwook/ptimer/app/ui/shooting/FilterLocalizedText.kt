@@ -54,21 +54,29 @@ internal fun filterStopsText(stops: Double): String {
     }
 }
 
-/** The app-global notation rendering of a canonical stops value as a
- *  standalone phrase: `9 stops`, `OD 2.7`, `ND512`. */
-@Composable
-internal fun filterNotationText(stops: Double, mode: NDNotationMode): String {
+/**
+ * The app-global notation rendering of a canonical stops value as a
+ * standalone phrase: `9 stops` / `9 스톱`, `OD 2.7`, `ND512`. Takes
+ * [Resources] so the state layer and the timer card can render it
+ * outside a composition; [filterNotationText] is the composable form.
+ */
+internal fun filterNotationText(stops: Double, mode: NDNotationMode, resources: Resources): String {
     val value = NDNotationFormatter.display(stops, mode).value
     return when (mode) {
         NDNotationMode.STOPS -> if (value == "1") {
-            stringResource(R.string.filter_one_stop)
+            resources.getString(R.string.filter_one_stop)
         } else {
-            stringResource(R.string.filter_stops, value)
+            resources.getString(R.string.filter_stops, value)
         }
-        NDNotationMode.OPTICAL_DENSITY -> stringResource(R.string.filter_value_od, value)
-        NDNotationMode.FILTER_FACTOR -> stringResource(R.string.filter_value_nd, value)
+        NDNotationMode.OPTICAL_DENSITY -> resources.getString(R.string.filter_value_od, value)
+        NDNotationMode.FILTER_FACTOR -> resources.getString(R.string.filter_value_nd, value)
     }
 }
+
+/** Composable form of [filterNotationText]. */
+@Composable
+internal fun filterNotationText(stops: Double, mode: NDNotationMode): String =
+    filterNotationText(stops, mode, LocalContext.current.resources)
 
 /** The registered Fixed / GND value as the user entered it. */
 @Composable

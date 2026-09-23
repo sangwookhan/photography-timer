@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.sangwook.ptimer.app.vm.CalculatorUiState
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
 import com.sangwook.ptimer.app.vm.ModelOption
 import com.sangwook.ptimer.app.vm.SlotTab
 import com.sangwook.ptimer.core.exposure.NDNotationMode
@@ -65,7 +66,13 @@ class ShootingScreenDialogRestorationTest {
                 ShootingScreen(
                     state = minimalState(),
                     onShutterIndex = {},
-                    onNdIndex = {},
+                    onNdWheelActive = { _, _ -> },
+                    onNdWheelValue = { _, _ -> },
+                    onAddFilterWheel = {},
+                    onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
+                    onFilterAddUnavailability = { null },
+                    onRemoveNdWheelOverscroll = {},
+                    onManageFilterSets = {},
                     onSelectNotation = {},
                     onSelectFilm = {},
                     onSelectProfile = {},

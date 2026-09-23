@@ -113,9 +113,10 @@ internal class FilterSetManagementActions(
  * Two levels in one full-screen dialog. Material puts dismissal on the
  * leading navigation icon, so the list level closes the surface with a
  * Close icon while the detail level goes Back with an arrow; the system
- * back button follows the same path. The Edit / Finish Editing toggle
- * stays a directly visible trailing text action, never behind an
- * overflow menu, and is worded apart from the dismissal.
+ * back button follows the same path. Wherever edit mode is actionable
+ * the Edit / Finish Editing toggle stays a directly visible trailing
+ * text action, never behind an overflow menu, and is worded apart from
+ * the dismissal; an empty list presents no such control at all.
  * (iOS: `FilterSetManagementView`.)
  */
 @Composable
@@ -178,6 +179,11 @@ private fun FilterSetListLevel(
     // reorder underneath cannot redirect the delete (FILTER-SET-001).
     var pendingDeletion by remember { mutableStateOf<FilterSet?>(null) }
 
+    // Deleting the last Filter Set leaves reorder/delete edit mode with
+    // nothing to act on, so the mode ends with the control that exits it
+    // (FILTER-SET-001) instead of stranding the user in it.
+    LaunchedEffect(filterSets.isEmpty()) { if (filterSets.isEmpty()) isEditing = false }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -188,12 +194,17 @@ private fun FilterSetListLevel(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { isEditing = !isEditing }) {
-                        Text(
-                            stringResource(
-                                if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
-                            ),
-                        )
+                    // No sets, nothing to reorder or delete: an Edit
+                    // control here would be a no-op, so it is absent.
+                    // Close and New stay.
+                    if (filterSets.isNotEmpty()) {
+                        TextButton(onClick = { isEditing = !isEditing }) {
+                            Text(
+                                stringResource(
+                                    if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
+                                ),
+                            )
+                        }
                     }
                     IconButton(onClick = { creationColor = actions.suggestCreationColor() }) {
                         Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.filter_set_new))
@@ -351,6 +362,9 @@ private fun FilterSetDetailLevel(
     LaunchedEffect(filterSet.name) {
         if (nameDraft.trim() != filterSet.name) nameDraft = filterSet.name
     }
+    // Same rule as the list level: deleting the last Filter Item ends
+    // edit mode along with the control that exits it.
+    LaunchedEffect(filterSet.items.isEmpty()) { if (filterSet.items.isEmpty()) isEditing = false }
 
     Scaffold(
         topBar = {
@@ -365,12 +379,16 @@ private fun FilterSetDetailLevel(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { isEditing = !isEditing }) {
-                        Text(
-                            stringResource(
-                                if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
-                            ),
-                        )
+                    // No items, nothing to reorder or delete: no no-op
+                    // Edit control (FILTER-SET-001).
+                    if (filterSet.items.isNotEmpty()) {
+                        TextButton(onClick = { isEditing = !isEditing }) {
+                            Text(
+                                stringResource(
+                                    if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
+                                ),
+                            )
+                        }
                     }
                 },
             )

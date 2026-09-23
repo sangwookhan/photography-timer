@@ -3,10 +3,14 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import android.content.res.Resources
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.vm.FilterReferenceVocabulary
 import com.sangwook.ptimer.app.vm.FilterRejectionNotice
+import com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenter
 import com.sangwook.ptimer.app.vm.FilterRowTypeCategory
 import com.sangwook.ptimer.app.vm.FilterWheelPresenter
 import com.sangwook.ptimer.app.vm.FilterWheelRowUiState
@@ -277,87 +281,37 @@ private fun registeredWithConversionText(value: FilterRegisteredValue): String {
 }
 
 /**
- * The Timer list's descriptive Filter Set reference (FILTER-PERSIST-003),
- * composed at render time from the IMMUTABLE captured summary — never
- * from the live inventory, so a later rename, edit, or deletion cannot
- * rewrite an already started timer. Items are grouped under the Filter
- * Set they were mounted from, in captured order:
- * `Lee holder: Big Stopper ND1000 + Lee GND 0.9 OD 0.9 (Record only) ·
- * NiSi kit: NiSi CPL 1.5 stops · Standard 2 stops`.
- * The only path: the line is composed here, at render time, so a
- * per-app language change reaches a timer that is already running.
+ * The words the timer's start-time reference string is written in
+ * (FILTER-PERSIST-003), resolved from resources so the capture lands in
+ * the user's language. Read outside Compose at timer start; the Timer
+ * list's legacy fallback reads the same words through [LocalContext].
+ */
+internal fun filterReferenceVocabulary(resources: Resources) = FilterReferenceVocabulary(
+    standardSource = resources.getString(R.string.filter_source_standard),
+    fallbackFilterSet = resources.getString(R.string.filter_source_filter_set),
+    fallbackItem = resources.getString(R.string.filter_item_fallback),
+    oneStop = resources.getString(R.string.filter_one_stop),
+    stopsFormat = resources.getString(R.string.filter_stops),
+    opticalDensityFormat = resources.getString(R.string.filter_value_od),
+    filterFactorFormat = resources.getString(R.string.filter_value_nd),
+    recordOnlyMode = resources.getString(R.string.filter_mode_record_only),
+    applyFullValueMode = resources.getString(R.string.filter_mode_apply_full_value),
+)
+
+/**
+ * Composes the Timer list's Filter Set reference from the IMMUTABLE
+ * captured summary. This is the FALLBACK path only: a timer started by
+ * this build carries the string it captured at start, and the Timer
+ * list shows that. A payload written before the string existed — or one
+ * whose string did not survive — still gets a line here, from the same
+ * algorithm and the current language, and never from the live inventory.
  */
 @Composable
-internal fun localizedFilterReferenceText(summary: List<FilterSummaryEntry>): String? {
-    val segments = ArrayList<String>()
-    var currentSetName: String? = null
-    val currentItems = ArrayList<String>()
-    val standardName = stringResource(R.string.filter_source_standard)
-    val fallbackSetName = stringResource(R.string.filter_source_filter_set)
-
-    fun flushSet() {
-        val setName = currentSetName
-        if (setName != null && currentItems.isNotEmpty()) {
-            segments.add("$setName: ${currentItems.joinToString(" + ")}")
-        }
-        currentSetName = null
-        currentItems.clear()
-    }
-
-    for (entry in summary) {
-        when (entry.sourceKind) {
-            FilterSummaryEntry.SourceKind.standard -> {
-                flushSet()
-                if (entry.contributedStops > 0) {
-                    segments.add("$standardName ${filterStopsText(entry.contributedStops)}")
-                }
-            }
-
-            FilterSummaryEntry.SourceKind.filterSet -> {
-                val setName = entry.filterSetName ?: fallbackSetName
-                if (currentSetName != setName) {
-                    flushSet()
-                    currentSetName = setName
-                }
-                currentItems.add(filterSummaryItemText(entry))
-            }
-        }
-    }
-    flushSet()
-    return segments.joinToString(DetailSeparator).takeIf { it.isNotEmpty() }
-}
-
-/** One captured item: name, registered representation, GND mode. */
-@Composable
-private fun filterSummaryItemText(entry: FilterSummaryEntry): String {
-    val name = entry.itemName ?: stringResource(R.string.filter_item_fallback)
-    val value = entry.originalValue
-    val unit = entry.originalUnit
-    val registered = when (entry.calculationMode) {
-        FilterSummaryEntry.CalculationMode.cplLoss ->
-            entry.canonicalStops?.let { filterStopsText(it) }
-
-        else -> if (value != null && unit != null) {
-            filterRegisteredValueText(FilterRegisteredValue(value, unit))
-        } else {
-            entry.canonicalStops?.let { filterStopsText(it) }
-        }
-    }
-    val mode = when (entry.calculationMode) {
-        FilterSummaryEntry.CalculationMode.gndRecordOnly ->
-            localizedGndModeName(GndCalculationMode.recordOnly)
-
-        FilterSummaryEntry.CalculationMode.gndApplyFullValue ->
-            localizedGndModeName(GndCalculationMode.applyFullValue)
-
-        else -> null
-    }
-    return buildString {
-        append(name)
-        if (registered != null) append(" ").append(registered)
-        if (mode != null) append(" (").append(mode).append(")")
-    }
-}
+internal fun localizedFilterReferenceText(summary: List<FilterSummaryEntry>): String? =
+    FilterSummaryReferencePresenter.referenceText(
+        summary,
+        filterReferenceVocabulary(LocalContext.current.resources),
+    )
 
 /** Separator between the segments of one status detail. */
 internal const val DetailSeparator: String = " · "

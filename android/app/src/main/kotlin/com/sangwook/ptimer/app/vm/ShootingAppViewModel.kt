@@ -85,6 +85,12 @@ class ShootingAppViewModel(
     /** Bootstrap-loaded inventory; `null` lets the model read the store. */
     initialInventory: FilterInventory? = null,
     clock: () -> Instant = { Instant.now() },
+    /** Words the timer's start-time filter reference is written in
+     *  (FILTER-PERSIST-003); the composition root reads them from
+     *  resources so the capture lands in the user's language. */
+    referenceVocabulary: () -> FilterReferenceVocabulary = {
+        FilterReferenceVocabulary.canonicalEnglish
+    },
     private val persistence: OrderedPersistenceWriter = AppPersistenceWriter,
 ) : ViewModel() {
 
@@ -120,6 +126,7 @@ class ShootingAppViewModel(
         // owned here, it keeps running across configuration changes
         // and dies with the owner, not with a UI generation.
         ndCleanupScope = viewModelScope,
+        referenceVocabulary = referenceVocabulary,
     )
 
     private val coordinator = AndroidTimerCoordinator(viewModelScope, timers, clock)

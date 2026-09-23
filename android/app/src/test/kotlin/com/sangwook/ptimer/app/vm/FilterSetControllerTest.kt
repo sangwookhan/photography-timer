@@ -77,11 +77,17 @@ class FilterSetControllerTest {
             initial = inventory,
             persistenceWriter = PersistenceWriter { it() },
         )
+
+        /** Stands in for the app language; the controller reads it once
+         *  per start, so a test can change it afterwards. */
+        var vocabulary = FilterReferenceVocabulary.canonicalEnglish
+
         val controller = CalculatorController(
             films = emptyList(),
             onStart = { duration, identity -> started += duration to identity },
             initialSession = session,
             inventoryModel = model,
+            referenceVocabulary = { vocabulary },
         )
     }
 
@@ -1046,12 +1052,22 @@ class FilterSetControllerTest {
             listOf("Lee holder" to "Big Stopper", null to null),
             identity.filterSummary!!.map { it.filterSetName to it.itemName },
         )
+        assertEquals(
+            "Lee holder: Big Stopper ND1000 · Standard 2 stops",
+            identity.filterReferenceText,
+        )
 
         c.renameFilterSet(lee.id, "Renamed kit")
         c.saveFilterItem(bigStopper.copy(name = "Renamed filter"), lee.id)
+        c.deleteFilterSet(lee.id)
 
         assertEquals(
-            "A captured entry is descriptive only; later edits never rewrite it.",
+            "A captured entry is descriptive only; a later rename, edit or " +
+                "deletion never rewrites it.",
+            "Lee holder: Big Stopper ND1000 · Standard 2 stops",
+            f.started.single().second.filterReferenceText,
+        )
+        assertEquals(
             listOf("Lee holder" to "Big Stopper", null to null),
             f.started.single().second.filterSummary!!.map { it.filterSetName to it.itemName },
         )
@@ -1071,6 +1087,43 @@ class FilterSetControllerTest {
             identity.filterSummary!!.map { it.sourceKind },
         )
         assertEquals(5.0, identity.filterSummary!!.single().contributedStops, 1e-9)
+        assertEquals("Standard 5 stops", identity.filterReferenceText)
+    }
+
+    @Test
+    fun aLaterLanguageChangeDoesNotRewriteAnAlreadyCapturedReference() {
+        val bigStopper = ndFactor("Big Stopper", 1000.0)
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(bigStopper))
+        val f = fixture(lee)
+        val c = f.controller
+        f.vocabulary = FilterReferenceVocabulary.canonicalEnglish.copy(
+            standardSource = "표준",
+            oneStop = "1 스톱",
+            stopsFormat = "%1\u0024s 스톱",
+        )
+
+        commit(c, 0, standard(2.0))
+        c.addFilterWheel(source(lee))
+        commit(c, indexOfWheel(c, wheels(c).first { it.source == source(lee) }.id), itemSelection(bigStopper))
+        c.startFromAdjusted()
+
+        val captured = f.started.single().second
+        assertEquals("Lee holder: Big Stopper ND1000 · 표준 2 스톱", captured.filterReferenceText)
+
+        // The app language changes afterwards.
+        f.vocabulary = FilterReferenceVocabulary.canonicalEnglish
+        assertEquals(
+            "The captured entry keeps the language it was started in.",
+            "Lee holder: Big Stopper ND1000 · 표준 2 스톱",
+            f.started.single().second.filterReferenceText,
+        )
+
+        // Only a new timer picks the new language up.
+        c.startFromAdjusted()
+        assertEquals(
+            "Lee holder: Big Stopper ND1000 · Standard 2 stops",
+            f.started.last().second.filterReferenceText,
+        )
     }
 
     // MARK: - rejection notice lifetime (FILTER-STACK-004)

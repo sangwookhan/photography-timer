@@ -765,9 +765,17 @@ private fun TimerCard(
             // The basis line above keeps the canonical total. A Standard-only
             // timer has no Filter Set entry and shows no extra line.
             val capturedSummary = card.identity.filterSummary
-            val filterReference = capturedSummary
-                ?.takeIf { entries -> entries.any { it.sourceKind == FilterSummaryEntry.SourceKind.filterSet } }
-                ?.let { localizedFilterReferenceText(it) }
+            val showsReference = capturedSummary
+                ?.any { it.sourceKind == FilterSummaryEntry.SourceKind.filterSet } == true
+            val filterReference = when {
+                !showsReference -> null
+                // What the timer captured at start, in the language then
+                // in use. Renames, edits, deletions and a later app-language
+                // change all leave it alone.
+                card.identity.filterReferenceText != null -> card.identity.filterReferenceText
+                // Legacy or damaged payload with no captured string.
+                else -> localizedFilterReferenceText(capturedSummary!!)
+            }
             if (filterReference != null) {
                 Text(
                     filterReference,

@@ -62,6 +62,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementActions
+import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
@@ -109,6 +110,9 @@ fun ShootingApp(
             slotStore = bootstrap.slotStore,
             inventoryStore = bootstrap.inventoryStore,
             initialInventory = bootstrap.initialInventory,
+            // Read per start, so the reference string a timer captures is
+            // written in the language in use at that moment.
+            referenceVocabulary = { filterReferenceVocabulary(context.resources) },
             // In-app completion alert, de-duped with the AlarmManager path in
             // TimerNotifications.notifyCompletion. The alarm remains the
             // delivery path when the app process is killed.

@@ -156,6 +156,13 @@ class CalculatorController(
      *  [clearFilterRejectionNotice] directly. */
     private val ndCleanupScope: CoroutineScope? = null,
     private val ndCleanupDelayMillis: Long = 4_000,
+    /** Words for the start-time reference string (FILTER-PERSIST-003),
+     *  read once per timer start so it captures the language then in
+     *  use. Production supplies the user's; the canonical-English
+     *  default keeps this type free of Android resources. */
+    private val referenceVocabulary: () -> FilterReferenceVocabulary = {
+        FilterReferenceVocabulary.canonicalEnglish
+    },
 ) {
     // Catalog + custom films; replaced via [setFilms] when the custom library changes.
     private var films: List<FilmIdentity> = films
@@ -1252,6 +1259,10 @@ class CalculatorController(
             basisIncludesAdjusted = includesAdjusted,
             filmName = filmName,
             filterSummary = summary.takeIf { it.isNotEmpty() },
+            filterReferenceText = FilterSummaryReferencePresenter.referenceText(
+                summary,
+                referenceVocabulary(),
+            ),
         )
     }
 

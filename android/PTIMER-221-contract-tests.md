@@ -409,14 +409,17 @@ emulator.
 - `com.sangwook.ptimer.core.timer.TimerIdentityFilterSummaryTest.aNonArraySummaryDecodesAsEmpty`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.theCapturedSummaryAndReferenceSurviveLaterRenames`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aStandardOnlyTimerCapturesAStandardOnlySummary`
+- `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aLaterLanguageChangeDoesNotRewriteAnAlreadyCapturedReference`
 - `com.sangwook.ptimer.app.vm.FilterSetControllerTest.aMixedStackRoundTripsThroughExportSession`
-
-Manual only: the rendered reference string itself. Android composes it
-from the captured summary at render time (`localizedFilterReferenceText`,
-a composable), so no JVM test asserts the finished line; the tests above
-cover the captured structure it is composed from. Verify on the emulator
-by starting a timer from a Filter Set stack and reading the second line
-of the timer card.
+- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.groupsItemsBySetWithRepresentationAndMode`
+- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.applyFullValueIsNamedAndAStandardZeroIsOmitted`
+- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.aStandardOnlyZeroStackHasNoReferenceText`
+- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.interleavedSourcesFlushEachGroupInStackOrder`
+- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.theSuppliedVocabularyIsTheOneWritten`
+- `com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest.missingNamesFallBackToTheSuppliedFallbackTokens`
+- `com.sangwook.ptimer.app.ui.timer.TimerFilterReferenceTest.theCapturedStringIsRenderedVerbatim`
+- `com.sangwook.ptimer.app.ui.timer.TimerFilterReferenceTest.aRenamedSetDoesNotReachTheCapturedLine`
+- `com.sangwook.ptimer.app.ui.timer.TimerFilterReferenceTest.aLegacyPayloadWithoutTheStringStillGetsALine`
 
 ### FILTER-PERSIST-004 — Shooting Collection workflow is out of scope
 

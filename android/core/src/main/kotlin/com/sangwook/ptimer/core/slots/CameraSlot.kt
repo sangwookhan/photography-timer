@@ -217,6 +217,17 @@ class CameraSlotSession(
     }
 
     /**
+     * Replaces any available slot's snapshot in place (active included);
+     * an unknown slot is a no-op. Used when a change outside the calculator
+     * — an inventory edit — has to be applied to every slot, not just the
+     * active one. (iOS: `updateInactiveSnapshots`.)
+     */
+    fun updateSnapshot(slotId: CameraSlotId, transform: (SlotCalculatorSnapshot) -> SlotCalculatorSnapshot) {
+        if (slotId !in availableSlots) return
+        snapshots[slotId] = transform(snapshots.getValue(slotId))
+    }
+
+    /**
      * Makes [targetSlotId] the active slot. Each slot keeps its own snapshot
      * entry, so no capture/restore crosses slots. Returns false for a no-op
      * (unknown target, or the slot is already active) so the caller can skip

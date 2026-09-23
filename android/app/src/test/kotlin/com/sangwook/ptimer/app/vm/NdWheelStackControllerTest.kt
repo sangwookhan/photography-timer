@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
+import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
@@ -214,15 +215,23 @@ class NdWheelStackControllerTest {
     @Test
     fun addRefusedWhenNewWheelCouldHoldNoValue() {
         // 16.6 + 13 = 29.6 leaves 0.4 stop — below every ladder value
-        // above 0, so C1 hides and refuses the add even though budget
-        // remains.
+        // above 0, so C1 refuses the add even though budget remains.
+        // PTIMER-221: Plus stays PRESENT (source browsing is always
+        // available below four wheels); only adding is disabled, with a
+        // reason (FILTER-PLUS-005).
         val c = controller()
         c.addNdWheel()
         commitStops(c, 0, "16.6")
         commitStops(c, 1, "13")
-        assertFalse(c.state.value.showsAddNdWheel)
+        assertTrue(c.state.value.showsAddNdWheel)
+        assertFalse(c.state.value.canAddNdWheel)
+        assertEquals(FilterAddUnavailability.noSelectableValue, c.state.value.plus.addUnavailability)
         c.addNdWheel()
         assertEquals(2, c.state.value.ndWheels.size)
+        assertEquals(
+            FilterAddUnavailability.noSelectableValue,
+            c.state.value.filterStatus.rejection?.addUnavailability,
+        )
     }
 
     @Test
@@ -231,10 +240,15 @@ class NdWheelStackControllerTest {
         c.addNdWheel()
         commitStops(c, 0, "29")
         commitStops(c, 1, "1")
-        // Saturated at 30: C1 hides and refuses the add.
-        assertFalse(c.state.value.showsAddNdWheel)
+        // Saturated at 30: Plus stays present but adding is refused.
+        assertTrue(c.state.value.showsAddNdWheel)
+        assertFalse(c.state.value.canAddNdWheel)
         c.addNdWheel()
         assertEquals(2, c.state.value.ndWheels.size)
+        assertEquals(
+            FilterAddUnavailability.noSelectableValue,
+            c.state.value.filterStatus.rejection?.addUnavailability,
+        )
 
         // While a wheel moves, availability drops but presence stays.
         val c2 = controller()

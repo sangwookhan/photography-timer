@@ -10,6 +10,11 @@ import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
 import com.sangwook.ptimer.app.persistence.PersistenceWriter
 import com.sangwook.ptimer.app.persistence.ScopePersistenceWriter
 import com.sangwook.ptimer.core.customfilm.CustomFilmLibrary
+import com.sangwook.ptimer.core.exposure.FilterInventory
+import com.sangwook.ptimer.core.exposure.FilterSet
+import com.sangwook.ptimer.core.exposure.FilterSetColor
+import com.sangwook.ptimer.core.persistence.FilterInventoryStoring
+import com.sangwook.ptimer.core.persistence.PersistentFilterInventorySnapshot
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.persistence.PersistentWorkspaceSnapshot
 import com.sangwook.ptimer.core.persistence.SlotSessionStoring
@@ -82,6 +87,13 @@ class ShootingAppViewModelTest {
         override fun clearSession() {}
     }
 
+    private class FakeInventoryStore : FilterInventoryStoring {
+        val saved = mutableListOf<PersistentFilterInventorySnapshot>()
+        override fun loadSnapshot(): PersistentFilterInventorySnapshot? = null
+        override fun saveSnapshot(snapshot: PersistentFilterInventorySnapshot) { saved += snapshot }
+        override fun clearSnapshot() {}
+    }
+
     /** In-memory alarm player; no Context, no real playback. */
     private class FakeAlarmPlayer : TimerAlarmPlayer {
         private val _soundingTimerId = MutableStateFlow<UUID?>(null)
@@ -98,6 +110,8 @@ class ShootingAppViewModelTest {
         initialSession: PersistentSlotSession? = null,
         completionNotifier: TimerCompletionNotifier = TimerCompletionNotifier {},
         clock: () -> Instant = { t0 },
+        inventoryStore: FilterInventoryStoring = FakeInventoryStore(),
+        initialInventory: FilterInventory? = null,
     ): ShootingAppViewModel = ShootingAppViewModel(
         films = emptyList(),
         library = CustomFilmLibrary(),
@@ -106,6 +120,8 @@ class ShootingAppViewModelTest {
         alarmPlayer = FakeAlarmPlayer(),
         slotStore = slotStore,
         completionNotifier = completionNotifier,
+        inventoryStore = inventoryStore,
+        initialInventory = initialInventory,
         clock = clock,
         // Shares the test scheduler so ordered reads and submitted writes run
         // under virtual time and the tests can assert exact debounce timing.
@@ -413,6 +429,33 @@ class ShootingAppViewModelTest {
         assertEquals(0, sut.timers.uiState.value.active.size)
         assertEquals(TimerStatus.completed, sut.timers.uiState.value.history.single().status)
         assertEquals(1, notified.size)
+    }
+
+    @Test
+    fun theRetainedFilterInventoryIsTheOneTheCalculatorReconcilesAndItPersistsThroughTheWriter() {
+        // PTIMER-221: the owner holds ONE inventory model, hands it to the
+        // calculator facade, and its writes go through the injected ordered
+        // writer (not the calling thread).
+        val inventoryStore = FakeInventoryStore()
+        val bootstrapped = FilterInventory(listOf(FilterSet("Bootstrap kit", FilterSetColor.teal)))
+        val sut = holder(inventoryStore = inventoryStore, initialInventory = bootstrapped)
+        scheduler.advanceUntilIdle()
+
+        assertEquals(bootstrapped, sut.filterInventory.inventory.value)
+        assertEquals(bootstrapped, sut.calculator.inventory)
+
+        sut.calculator.createFilterSet("NiSi kit", FilterSetColor.red)
+        assertEquals(
+            listOf("Bootstrap kit", "NiSi kit"),
+            sut.filterInventory.inventory.value.filterSets.map { it.name },
+        )
+        assertTrue("The store write is submitted, not run inline.", inventoryStore.saved.isEmpty())
+
+        scheduler.advanceUntilIdle()
+        assertEquals(
+            listOf("Bootstrap kit", "NiSi kit"),
+            inventoryStore.saved.last().filterSets.map { it.name },
+        )
     }
 
     @Test

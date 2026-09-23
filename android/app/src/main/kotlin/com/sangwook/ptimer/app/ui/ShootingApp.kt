@@ -105,6 +105,8 @@ fun ShootingApp(
             timerStore = DataStoreTimerWorkspaceStore.create(context),
             alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
             slotStore = bootstrap.slotStore,
+            inventoryStore = bootstrap.inventoryStore,
+            initialInventory = bootstrap.initialInventory,
             // In-app completion alert, de-duped with the AlarmManager path in
             // TimerNotifications.notifyCompletion. The alarm remains the
             // delivery path when the app process is killed.

@@ -435,6 +435,20 @@ fun ShootingScreen(
                                                 // (FILTER-STACK-007).
                                                 itemHeight = WheelItemHeight,
                                                 accessibilityLabel = baseShutterCaption,
+                                                // FILTER-STACK-007: the
+                                                // whole row steps down
+                                                // together as wheels are
+                                                // added, Base Shutter
+                                                // included. It used to
+                                                // keep its own larger
+                                                // size while the filter
+                                                // wheels went dense,
+                                                // which is the one thing
+                                                // "the same numeric
+                                                // size" rules out.
+                                                dense = isDenseFilterWheelRow(
+                                                    pageState.filterWheels.size,
+                                                ),
                                                 numericScale = numericScale,
                                             )
                                         }
@@ -783,10 +797,10 @@ private fun numericColumns(
     state: CalculatorUiState,
     split: NdCardColumnSplit,
 ): List<WheelNumericColumn> = buildList {
-    add(WheelNumericColumn(split.shutterWidth, state.shutterLabels, dense = false))
+    val dense = isDenseFilterWheelRow(state.filterWheels.size)
+    add(WheelNumericColumn(split.shutterWidth, state.shutterLabels, dense))
     if (state.filterWheels.isEmpty()) return@buildList
     val wheelWidth = filterWheelWidth(split.ndWidth, state.filterWheels.size, state.plus.isVisible)
-    val dense = isDenseFilterWheelRow(state.filterWheels.size)
     state.filterWheels.forEach { wheel ->
         add(WheelNumericColumn(wheelWidth, wheel.rows.map { it.compactValueText }, dense))
     }

@@ -24,6 +24,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sangwook.ptimer.R
@@ -313,6 +314,20 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     private data class WheelRender(
         var label: TextLayoutResult? = null,
         var hasSourceCue: Boolean = false,
+        /**
+         * The size the wheel last drew its centered value at, and the
+         * size it last drew a neighbouring one at.
+         *
+         * Taken as the wheel reports each row rather than looked up in
+         * [rows] afterwards. [rows] is keyed by index and keeps the last
+         * layout of each, so a row that was centered before the seeding
+         * moved the selection still holds its centered-size layout — and
+         * picking "a row that is not the centered one" out of that map
+         * reads a stale style, which is what the first version of
+         * [assertOneNumericSizeAcrossTheRow] did.
+         */
+        var centeredSize: TextUnit? = null,
+        var neighbouringSize: TextUnit? = null,
         val rows: MutableMap<Int, TextLayoutResult> = linkedMapOf(),
         val railedRows: MutableSet<Int> = linkedSetOf(),
     )
@@ -329,6 +344,8 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         ) {
             val entry = rendered.getOrPut(wheel) { WheelRender() }
             entry.rows[index] = layout
+            val size = layout.layoutInput.style.fontSize
+            if (isCenter) entry.centeredSize = size else entry.neighbouringSize = size
             if (hasRail) entry.railedRows += index else entry.railedRows -= index
         }
 
@@ -618,8 +635,41 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         render()
         assertTheWidestContentIsOnScreen()
         assertLabelsValuesAndCues()
+        assertOneNumericSizeAcrossTheRow()
         assertNotationOptionsOwnFullTouchTargets()
         assertSharedBaseShutterAxis()
+    }
+
+    /**
+     * FILTER-STACK-007's "Base Shutter and every filter wheel in the row
+     * shall use the same numeric size", read off the size each column
+     * actually laid its text out at.
+     *
+     * The centered row and its neighbours are deliberately different
+     * sizes WITHIN a column, so they are compared separately: the clause
+     * is that the columns agree with each other, not that a column is
+     * uniform. Nothing else in this suite would notice them disagreeing
+     * — a column that kept its own larger value would still clear its
+     * own width, still share the vertical axis, and still ellipsize
+     * nothing.
+     */
+    private fun assertOneNumericSizeAcrossTheRow() {
+        val live = liveWheels()
+        val sizes = listOf<Pair<String, (WheelRender) -> TextUnit?>>(
+            "centered value" to { render -> render.centeredSize },
+            "neighbouring value" to { render -> render.neighbouringSize },
+        )
+        sizes.forEach { (what, pick) ->
+            val drawn = live.mapValues { (_, render) -> pick(render) }
+            val distinct = drawn.values.filterNotNull().distinct()
+            assertTrue(
+                "$case: the row's columns drew their $what at ${distinct.size} different sizes — " +
+                    drawn.entries.joinToString { "`${it.key}`=${it.value}" } +
+                    ". FILTER-STACK-007 wants Base Shutter and every filter wheel in the row to " +
+                    "use the same numeric size. ${geometry()}",
+                distinct.size == 1,
+            )
+        }
     }
 
     /**
